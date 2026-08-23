@@ -34,6 +34,7 @@ import calendarModule from './js/calendar.js';
 import notesModule from './js/notes.js';
 import adminModule from './js/admin.js?v=20260716openrouter3';
 import settingsModule from './js/settings.js?v=20260815approvalsave1';
+import inventoryModule from './js/inventory.js?v=20260823inventory1';
 // Eagerly bind unified minimize/restore behavior across all tool modals.
 import './js/modalManager.js?v=20260723compareicon2';
 // Desktop window tiling — drag a modal near an edge/corner to snap.
@@ -60,6 +61,7 @@ window.sessionModule = sessionModule;
 window.uiModule = uiModule;
 window.adminModule = adminModule;
 window.cookbookModule = cookbookModule;
+window.inventoryModule = inventoryModule;
 
 function _isMobileChatInput() {
   return window.innerWidth <= 768;
@@ -1083,6 +1085,12 @@ function initializeEventListeners() {
         else calendarModule.openCalendar();
       }
     });
+  }
+
+  // Notes tool button
+  const toolInventoryBtn = el('tool-inventory-btn');
+  if (toolInventoryBtn) {
+    toolInventoryBtn.addEventListener('click', () => inventoryModule.togglePanel());
   }
 
   // Notes tool button

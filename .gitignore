@@ -102,3 +102,19 @@ compound.config.json
 *.error.log
 _scratch/
 /odysseus/
+
+# Preserved local recovery evidence. These files document historical patch
+# application order and bundle provenance; they are intentionally excluded
+# from the canonical runtime baseline (see docs/recovery-artifact-manifest-20260823.md).
+odysseus-hades.bundle
+BUNDLE_PIVOT.md
+odysseus_fasttrack_*.py
+odysseus_install_authorization_*.py
+odysseus_intent_fusion_*.py
+odysseus_network_recon_intent_*.py
+odysseus_orchestration_*.py
+odysseus_privileged_broker_*.py
+odysseus_route_policy_*.py
+odysseus_supervision_*.py
+docker-compose.override.raw-vault.disabled.yml
+static/app.js.pre-rag-default

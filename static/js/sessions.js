@@ -30,7 +30,7 @@ let _sortMode = Storage.get('odysseus-session-sort') || 'active'; // default to 
 const DATE_SECTION_COLLAPSE_KEY = 'ody-session-date-section-collapsed';
 let _autoCreateInProgress = false; // guard against recursive auto-create
 const _INCOGNITO_SESSIONS_KEY = 'ody-incognito-sessions'; // sessionStorage key for incognito session IDs
-const _isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+const _isMac = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform || '');
 const _mod = _isMac ? '⌘' : 'Ctrl';
 let _historyPager = null;
 

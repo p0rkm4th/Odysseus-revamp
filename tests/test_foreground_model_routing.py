@@ -33,6 +33,17 @@ def _collect(gen):
     return asyncio.run(_run())
 
 
+@pytest.fixture(autouse=True)
+def _disable_automatic_skills_for_routing_tests(monkeypatch):
+    """Keep routing assertions independent of the tainted-skill approval gate."""
+    monkeypatch.setattr(
+        agent_loop,
+        "_suppress_automatic_skills",
+        lambda *args, **kwargs: True,
+        raising=False,
+    )
+
+
 class _EmptyQuery:
     def filter(self, *args, **kwargs):
         return self

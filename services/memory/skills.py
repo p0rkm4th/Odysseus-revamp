@@ -581,12 +581,47 @@ class SkillsManager:
     # Index — the lightweight summary injected into the system prompt
     # ----------------------------------------------------------------------
 
+    def agent_eligible_skills(
+        self,
+        owner: Optional[str] = None,
+        *,
+        allow_teacher_drafts: bool = True,
+        min_confidence: float = 0.0,
+        active_toolsets: Optional[List[str]] = None,
+        platform: Optional[str] = None,
+    ) -> List[Dict]:
+        """Return skills permitted to influence automatic Agent behavior."""
+        out = []
+        for s in self.load(owner=owner):
+            status = s.get("status")
+            if status in ("published", None):
+                pass
+            elif status == "draft" and s.get("source") == "teacher-escalation" and allow_teacher_drafts:
+                if min_confidence > 0:
+                    c = s.get("confidence")
+                    if c is None or _to_float(c, 0.0) < min_confidence:
+                        continue
+            else:
+                continue
+            if platform and s.get("platforms") and platform not in s["platforms"]:
+                continue
+            req = s.get("requires_toolsets") or []
+            if req and active_toolsets is not None and not all(t in active_toolsets for t in req):
+                continue
+            fb = s.get("fallback_for_toolsets") or []
+            if fb and active_toolsets and any(t in active_toolsets for t in fb):
+                continue
+            out.append(s)
+        return out
+
     def index_for(
         self,
         owner: Optional[str] = None,
         *,
         active_toolsets: Optional[List[str]] = None,
         platform: Optional[str] = None,
+        allow_teacher_drafts: bool = True,
+        min_confidence: float = 0.0,
     ) -> List[Dict]:
         """Return the `[{name, description, category, status}]` list the
         agent sees in its system prompt.
@@ -604,29 +639,15 @@ class SkillsManager:
         prompt with half-finished procedures.
         """
         out = []
-        for s in self.load(owner=owner):
+        eligible = self.agent_eligible_skills(
+            owner=owner,
+            allow_teacher_drafts=allow_teacher_drafts,
+            min_confidence=min_confidence,
+            active_toolsets=active_toolsets,
+            platform=platform,
+        )
+        for s in eligible:
             status = s.get("status")
-            # Published + None (pre-status legacy) always included.
-            # Drafts only if the teacher wrote them.
-            if status not in ("published", None):
-                if status == "draft" and s.get("source") == "teacher-escalation":
-                    pass  # let it through
-                else:
-                    continue
-            # Platform gating
-            if platform and s.get("platforms") and platform not in s["platforms"]:
-                continue
-            # requires_toolsets: hide unless every required toolset is active.
-            # active_toolsets=None means the caller doesn't know the active
-            # set (API listings, chat preface) — don't gate in that case;
-            # only an explicit list filters.
-            req = s.get("requires_toolsets") or []
-            if req and active_toolsets is not None and not all(t in active_toolsets for t in req):
-                continue
-            # fallback_for_toolsets: hide when any of those toolsets is active
-            fb = s.get("fallback_for_toolsets") or []
-            if fb and active_toolsets and any(t in active_toolsets for t in fb):
-                continue
             out.append({
                 "name": s["name"],
                 "description": s.get("description") or s.get("title", ""),
@@ -690,6 +711,7 @@ class SkillsManager:
 
         query_tokens = _tokenize(query)
         scored = []
+        score_trace = []
         for sk in skills:
             text = " ".join([
                 sk.get("name", ""),
@@ -710,7 +732,15 @@ class SkillsManager:
             score *= 1.0 + _to_float(sk.get("confidence"), 0.5) * 0.1
             if sk.get("uses", 0) > 0:
                 score *= 1.05
+            score_trace.append((round(score, 4), sk.get("name"), sk.get("status"), sk.get("source"), sk.get("confidence"), sk.get("uses", 0)))
             if score >= threshold:
                 scored.append((score, sk))
         scored.sort(key=lambda x: x[0], reverse=True)
-        return [sk for _, sk in scored[:max_items]]
+        selected = scored[:max_items]
+        score_trace.sort(key=lambda x: x[0], reverse=True)
+        logger.debug(
+            "[skills-score] query=%r threshold=%.3f max=%d min_conf=%.3f eligible=%d scores=%s selected=%s",
+            query[:160], threshold, max_items, min_confidence, len(skills), score_trace,
+            [(round(score, 4), sk.get("name")) for score, sk in selected],
+        )
+        return [sk for _, sk in selected]

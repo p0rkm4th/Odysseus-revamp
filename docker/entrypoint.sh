@@ -140,6 +140,19 @@ export PATH="/app/.local/bin:$PATH"
 # || true so a setup failure never prevents the container from starting.
 "$GOSU_BIN" "$ODY_USER" "$PYTHON_BIN" /app/setup.py || true
 
+# Start the narrow root broker before the application becomes PID 1. The
+# broker authenticates the application by SO_PEERCRED and is configured to
+# accept only the eventual app PID 1 with the requested non-root identity.
+# This keeps privileged_action available after ordinary container recreates;
+# it does not grant the app a root shell, Docker socket, or broad host access.
+if [ -f /app/src/privileged_broker.py ] && [ ! -S /run/odysseus-privd.sock ]; then
+    "$PYTHON_BIN" -m src.privileged_broker --serve \
+        --allowed-pid 1 \
+        --allowed-uid "$PUID" \
+        --allowed-gid "$PGID" \
+        >/app/logs/privileged-broker-supervisor.log 2>&1 &
+fi
+
 # Drop root and run the actual app. `gosu` is preferred over `su` /
 # `sudo` because it cleans up the process tree (no extra shell layer)
 # so signals (SIGTERM from `docker stop`) reach uvicorn directly.

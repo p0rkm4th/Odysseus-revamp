@@ -52,6 +52,11 @@ def _patch_common(monkeypatch, exec_calls):
     monkeypatch.setattr(al, "estimate_tokens", lambda *a, **k: 10, raising=False)
     # These tests exercise tool-channel parsing, not owner authorization.
     monkeypatch.setattr(al, "blocked_tools_for_owner", lambda owner: set(), raising=False)
+    # These tests isolate transport parsing.  Editable skill context is
+    # intentionally tainted in production and would correctly require exact
+    # approval for shell execution; suppress it here so the assertions cover
+    # the parser/executor seam rather than the separate provenance gate.
+    monkeypatch.setattr(al, "_suppress_automatic_skills", lambda *args, **kwargs: True, raising=False)
 
     async def _fake_exec(block, *a, **k):
         exec_calls.append(block)

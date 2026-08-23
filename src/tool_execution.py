@@ -1198,3 +1198,220 @@ def format_tool_result(description: str, result: Dict) -> str:
             pass
 
     return "\n".join(parts)
+
+# _ODY_V34_EXECUTION_EXTENSION
+# Wrap the real dispatcher owner. Existing execution stays untouched.
+import asyncio as _ody_v34_asyncio
+import functools as _ody_v34_functools
+import json as _ody_v34_json
+import subprocess as _ody_v34_subprocess
+import sys as _ody_v34_sys
+
+_ody_v34_original_execute_tool_block = execute_tool_block
+
+
+def _ody_v34_asset_argv(args):
+    if not isinstance(args, dict):
+        raise ValueError("manage_assets arguments must be an object")
+
+    action = str(args.get("action") or "")
+    argv = [_ody_v34_sys.executable, "-m", "src.asset_inventory"]
+
+    if action == "summary":
+        return argv + ["summary"]
+
+    if action in ("list", "search"):
+        argv += [action]
+        if args.get("query"):
+            argv.append(str(args["query"]))
+        if args.get("type"):
+            argv += ["--type", str(args["type"])]
+        if args.get("status"):
+            argv += ["--status", str(args["status"])]
+        if args.get("limit") is not None:
+            argv += ["--limit", str(max(1, min(int(args["limit"]), 500)))]
+        return argv
+
+    if action == "get":
+        return argv + ["get", str(args["asset"])]
+
+    if action == "add":
+        argv += ["add", "--name", str(args["name"])]
+        for key in (
+            "id", "type", "status", "manufacturer", "model", "serial",
+            "system_uuid", "hostname", "mac", "location", "notes", "source"
+        ):
+            if args.get(key) is not None:
+                argv += ["--" + key.replace("_", "-"), str(args[key])]
+        if args.get("confidence") is not None:
+            argv += ["--confidence", str(float(args["confidence"]))]
+        if args.get("attributes") is not None:
+            if not isinstance(args["attributes"], dict):
+                raise ValueError("attributes must be an object")
+            argv += [
+                "--attributes",
+                _ody_v34_json.dumps(args["attributes"], sort_keys=True),
+            ]
+        return argv
+
+    if action == "update":
+        argv += ["update", str(args["asset"])]
+        for key in (
+            "name", "type", "status", "manufacturer", "model", "serial",
+            "system_uuid", "hostname", "mac", "location", "notes", "source"
+        ):
+            if args.get(key) is not None:
+                argv += ["--" + key.replace("_", "-"), str(args[key])]
+        if args.get("confidence") is not None:
+            argv += ["--confidence", str(float(args["confidence"]))]
+        if args.get("attributes") is not None:
+            if not isinstance(args["attributes"], dict):
+                raise ValueError("attributes must be an object")
+            argv += [
+                "--attributes",
+                _ody_v34_json.dumps(args["attributes"], sort_keys=True),
+            ]
+        return argv
+
+    if action == "record_observation":
+        argv += [
+            "observe",
+            "--kind",
+            str(args.get("kind") or "observation"),
+        ]
+        if args.get("asset"):
+            argv += ["--asset", str(args["asset"])]
+        if args.get("source"):
+            argv += ["--source", str(args["source"])]
+        if args.get("confidence") is not None:
+            argv += ["--confidence", str(float(args["confidence"]))]
+        if args.get("data") is not None:
+            if not isinstance(args["data"], dict):
+                raise ValueError("data must be an object")
+            argv += [
+                "--json",
+                _ody_v34_json.dumps(args["data"], sort_keys=True),
+            ]
+        elif args.get("text") is not None:
+            argv += ["--text", str(args["text"])]
+        return argv
+
+    if action == "link_component":
+        argv += [
+            "link",
+            str(args["parent"]),
+            str(args["child"]),
+            "--relation",
+            str(args.get("relation") or "installed_in"),
+        ]
+        if args.get("source"):
+            argv += ["--source", str(args["source"])]
+        if args.get("notes"):
+            argv += ["--notes", str(args["notes"])]
+        return argv
+
+    if action == "unlink_component":
+        return argv + [
+            "unlink",
+            "--parent", str(args["parent"]),
+            "--child", str(args["child"]),
+            "--relation", str(args.get("relation") or "installed_in"),
+        ]
+
+    if action == "retire":
+        return argv + ["retire", str(args["asset"])]
+
+    if action == "merge":
+        argv += [
+            "merge",
+            str(args["source_asset"]),
+            str(args["target_asset"]),
+        ]
+        if args.get("reason"):
+            argv += ["--reason", str(args["reason"])]
+        return argv
+
+    raise ValueError("unsupported manage_assets action: " + action)
+
+
+async def _execute_manage_assets_binding(block, owner=None):
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        argv = _ody_v34_asset_argv(payload)
+
+        def _run():
+            return _ody_v34_subprocess.run(
+                argv, cwd="/app", text=True, capture_output=True,
+                timeout=45, check=False,
+            )
+
+        cp = await _ody_v34_asyncio.to_thread(_run)
+        output = (cp.stdout or "") + (cp.stderr or "")
+        return "manage_assets", {"output": output[-30000:], "exit_code": cp.returncode}
+    except Exception as exc:
+        return "manage_assets", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
+async def _execute_privileged_action_binding(block, owner=None):
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        from src.privileged_broker import client_request as _ody_v34_priv_request
+        data = await _ody_v34_asyncio.to_thread(_ody_v34_priv_request, payload)
+        return "privileged_action", {
+            "output": _ody_v34_json.dumps(data, indent=2, sort_keys=True),
+            "exit_code": 0 if data.get("ok") else 1,
+            "data": data,
+        }
+    except Exception as exc:
+        return "privileged_action", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
+async def _execute_manage_homelab_binding(block, owner=None):
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        from src.homelab_operations import HomelabOperations
+        result = await HomelabOperations().execute(payload, owner=str(owner or ""))
+        return "manage_homelab", {"output": _ody_v34_json.dumps(result, indent=2, sort_keys=True), "exit_code": 0, "data": result}
+    except Exception as exc:
+        return "manage_homelab", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
+async def _execute_manage_osint_binding(block, owner=None):
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        from src.osint_policy import build_plan, validate_request
+        action, target, objective, sources = validate_request(payload)
+        if action == "plan":
+            result = build_plan(target, objective, sources)
+        elif action == "search":
+            from src.agent_tools.web_tools import WebSearchTool
+            result = await WebSearchTool().execute(_ody_v34_json.dumps({"query": f"{target} {objective}"}), {})
+        else:
+            from src.agent_tools.web_tools import WebFetchTool
+            result = await WebFetchTool().execute(target, {})
+        return "manage_osint", {"output": _ody_v34_json.dumps(result, indent=2, sort_keys=True), "exit_code": int(result.get("exit_code", 0)), "data": result, "untrusted_content": action != "plan"}
+    except Exception as exc:
+        return "manage_osint", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
+_CAPABILITY_V1_EXECUTORS = {
+    "manage_assets": _execute_manage_assets_binding,
+    "privileged_action": _execute_privileged_action_binding,
+    "manage_homelab": _execute_manage_homelab_binding,
+    "manage_osint": _execute_manage_osint_binding,
+}
+
+
+@_ody_v34_functools.wraps(_ody_v34_original_execute_tool_block)
+async def execute_tool_block(block, *args, **kwargs):
+    from src.tool_bindings import binding_for_tool
+    binding = binding_for_tool(block.tool_type)
+    executor = _CAPABILITY_V1_EXECUTORS.get(binding.executor_key) if binding else None
+    if executor is not None:
+        return await executor(block, owner=kwargs.get("owner"))
+
+    return await _ody_v34_original_execute_tool_block(
+        block,
+        *args,
+        **kwargs,
+    )

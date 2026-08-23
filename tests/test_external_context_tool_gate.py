@@ -1372,6 +1372,7 @@ def test_document_stream_events_are_derived_from_authorized_block():
 
 def test_authorized_document_stream_precedes_completed_update(monkeypatch):
     import src.agent_loop as agent_loop
+    from src.tool_capabilities import capabilities_for_action
 
     monkeypatch.setattr(
         agent_loop,
@@ -1405,6 +1406,29 @@ def test_authorized_document_stream_precedes_completed_update(monkeypatch):
     monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", fake_stream)
     monkeypatch.setattr(agent_loop, "execute_tool_block", fake_execute)
 
+    # This path is the post-approval continuation.  Current Hades correctly
+    # refuses to infer an active document or execute update_document from a
+    # bare model emission, so provide the same sealed exact action that the UI
+    # approval callback supplies in production.
+    pending = agent_loop.tool_approval_store.create(
+        owner="",
+        session_id="",
+        origin_run_id="document-stream-test",
+        tool_name="update_document",
+        content="New body",
+        workspace=None,
+        external_untrusted_context_seen=False,
+        capabilities=capabilities_for_action("update_document", "New body"),
+    )
+    exact_approval = agent_loop.tool_approval_store.consume(
+        pending.approval_id,
+        decision="approve",
+        owner="",
+        session_id="",
+        allow_continuation=False,
+    )
+    assert exact_approval is not None
+
     events = _collect_agent_events(
         agent_loop.stream_agent_loop(
             "http://local.test/v1",
@@ -1412,6 +1436,7 @@ def test_authorized_document_stream_precedes_completed_update(monkeypatch):
             [{"role": "user", "content": "update the active document"}],
             max_rounds=1,
             relevant_tools={"update_document"},
+            exact_approval=exact_approval,
         )
     )
     event_types = [event.get("type") for event in events]

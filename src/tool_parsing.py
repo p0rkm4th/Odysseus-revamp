@@ -886,7 +886,11 @@ def _parse_xml_invoke(name, body) -> Optional[ToolBlock]:
         params[pname] = pval.strip()
     # Local import to avoid a circular import at module load.
     from src.tool_schemas import function_call_to_tool_block
-    return function_call_to_tool_block(tool_name, json.dumps(params))
+    return function_call_to_tool_block(
+        tool_name,
+        json.dumps(params),
+        allow_empty_required=True,
+    )
 
 
 def _parse_xml_direct_tool(name, body) -> Optional[ToolBlock]:
@@ -1092,7 +1096,11 @@ def _parse_tool_code_block(raw: str) -> Optional[ToolBlock]:
     # correct per-tool content format apply — not a partial map + k:v blob.
     if xml_params:
         from src.tool_schemas import function_call_to_tool_block
-        block = function_call_to_tool_block(mapped or tool_name, json.dumps(xml_params))
+        block = function_call_to_tool_block(
+            mapped or tool_name,
+            json.dumps(xml_params),
+            allow_empty_required=True,
+        )
         if block:
             return block
 

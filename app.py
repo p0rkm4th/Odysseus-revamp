@@ -671,6 +671,23 @@ upload_router, upload_cleanup_func = setup_upload_routes(upload_handler)
 app.include_router(upload_router)
 upload_cleanup_task = None
 
+# Recovered Omarchy inventory surface.  It is mounted through the current
+# route/bootstrap boundary and keeps all writes owner-scoped and
+# revision/confirmation guarded; it does not reintroduce the old tool
+# registration architecture.
+from routes.inventory_routes import setup_inventory_routes
+app.include_router(setup_inventory_routes(upload_handler))
+
+# Recovered supervised control-plane surfaces. They manage durable authority,
+# receipts, pairing, and metadata only; no external economic execution,
+# Telegram polling, or artifact loading is started by route registration.
+from routes.economic_routes import setup_economic_routes
+from routes.improvement_routes import setup_improvement_routes
+from routes.telegram_routes import setup_telegram_routes
+app.include_router(setup_economic_routes())
+app.include_router(setup_improvement_routes())
+app.include_router(setup_telegram_routes(session_manager=session_manager))
+
 # Emoji SVG proxy (same-origin, lazy-cached Twemoji) — lets the chat render
 # emojis as flat SVG instead of system color glyphs.
 from routes.emoji_routes import setup_emoji_routes

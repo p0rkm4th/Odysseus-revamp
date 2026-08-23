@@ -508,6 +508,19 @@ _DOMAIN_RULES = {
 - Use file tools for real disk files. Use document tools only for editor documents.
 - Prefer `grep`, `glob`, and `ls` over shell equivalents when available.
 - Use `edit_file`/`write_file` for writes; avoid shell redirection/heredocs for editing files.""",
+    "operations": """\
+## Operations/diagnostic rules
+- For service, container, or daemon failures, inspect current state and logs before proposing changes.
+- Prefer read-only diagnosis first: status, logs, configuration inspection, process/container state, mounts, ports, and recent errors.
+- Do not restart, recreate, prune, delete volumes, or modify configuration merely as a diagnostic shortcut.
+""",
+    "shell_exec": """\
+## Explicit shell-command rules
+- The user explicitly requested command execution. Bash is available for this turn unless an actual tool result reports otherwise.
+- Execute the requested non-interactive command rather than merely describing how to run it.
+- Do not claim shell access is unavailable without an actual blocked or unavailable tool result.
+- Full-screen TTY programs such as htop, vim, and nano may not be usable interactively. Distinguish that from shell availability and use a non-interactive equivalent when appropriate.
+""",
     "settings": """\
 ## Settings/API rules
 - Use `manage_settings` for preferences and tool enable/disable.
@@ -522,7 +535,24 @@ _DOMAIN_RULES = {
 ## Integration/API rules
 - To query or control a configured service integration (Home Assistant, Miniflux, Gitea, Linkding, Jellyfin, or any other registered service), use `api_call` with the integration name, HTTP method, path, and optional JSON body.
 - Do not use shell, curl, or `app_api` to reach a user's connected integration when `api_call` is available.""",
+    "asset_inventory": "Asset inventory/CMDB tasks: use `python -m src.asset_inventory` for canonical asset state and observations. Keep observations separate from canonical state. Prefer system UUID/serial/MAC for identity; never identify or merge assets by IP address alone.",
 }
+
+_DOMAIN_RULES["network_ops"] = '## Local network discovery/diagnostic rules\n- This is an operational request about the local/internal network. Use local diagnostic tools rather than web search unless public web lookup was separately requested.\n- Start read-only/passive: hostname, interfaces and addresses, routes, DNS, neighbor tables, and SSH aliases or known-host clues.\n- Bound active discovery to directly connected private subnets and lightweight reachability/service identification. Do not modify network configuration or attempt authentication unless explicitly requested.\n- If bash is listed in TURN CAPABILITIES, use it for non-interactive network commands and do not claim shell access is unavailable.'
+
+_DOMAIN_RULES["storage_ops"] = '## Storage diagnostic/management rules\n- Start read-only: filesystem usage, block topology, mounts, inode usage, SMART/NVMe health, LVM/RAID/ZFS/Btrfs state, and relevant logs.\n- Diagnose before changing anything. Do not format, wipe signatures, remove volumes, destroy pools, shrink filesystems, or run automatic repair merely as a diagnostic shortcut.\n- Destructive or repair operations require explicit user intent and the normal approval path.'
+_DOMAIN_RULES["system_ops"] = '## Host/system diagnostic rules\n- Inspect current host state with real tools before diagnosing CPU, memory, swap, load, processes, boot, kernel, hardware, thermal, or general performance problems.\n- Prefer read-only evidence first: uptime/load, memory pressure, process state, system logs, hardware inventory, and recent errors.\n- Do not claim a diagnostic command ran until an actual tool result exists.'
+_DOMAIN_RULES["container_ops"] = '## Container runtime/Compose rules\n- Use real Docker/Podman/Compose inspection for container inventory, networks, volumes, images, exits, health, and runtime state.\n- Prefer inspect/ps/logs/config/read-only checks before restart, recreate, prune, volume removal, or configuration changes.\n- Treat persistent volumes and client data as valuable; never delete them as a troubleshooting shortcut.'
+_DOMAIN_RULES["remote_ops"] = '## Remote host/SSH rules\n- Distinguish the local Odysseus environment from the named remote target. Never silently substitute localhost for a remote host.\n- Prefer configured SSH aliases or explicitly supplied hostnames and perform read-only inspection first.\n- State which host produced evidence when reporting multi-host results.'
+_DOMAIN_RULES["security_audit"] = '## Security audit rules\n- Default to read-only posture assessment: listening services, firewall state, SSH configuration, authentication failures, permissions, TLS/certificate state, and obvious exposure.\n- Report evidence and severity separately from remediation.\n- Do not turn a security audit into exploitation, credential attacks, persistence, or destructive testing.'
+_DOMAIN_RULES["pentest_ops"] = '## Authorized security testing rules\n- Treat active security testing as scope-sensitive. Confirm or infer only the explicit target scope supplied by the user and keep activity inside it.\n- Start with discovery and service enumeration before more intrusive checks.\n- Do not broaden a private/lab target into unrelated public targets. Avoid destructive testing, persistence, or credential attacks unless separately and explicitly requested and permitted.\n- Prefer evidence-producing, bounded commands and summarize exactly what was tested.'
+_DOMAIN_RULES["osint"] = '## OSINT/research rules\n- Use public-information retrieval and corroboration rather than local shell inspection unless the user separately asks to analyze local artifacts.\n- Distinguish sourced facts, inference, and unresolved uncertainty.\n- Prefer multiple independent sources for identity, infrastructure, ownership, chronology, or attribution claims.'
+_DOMAIN_RULES["homelab"] = '## Homelab rules\n- Use manage_homelab for structured local operations. Start with status or a plan.\n- Network discovery is limited to explicit private scope and produces review-only inventory candidates.\n- Restarts and diagnostic installation require an owner-bound plan and exact approval.'
+
+_DOMAIN_RULES["container_ops"] += '\\n- If a read-only diagnostic command fails because an option or utility is unsupported, retry with a simpler portable command instead of claiming the shell or container tooling is unavailable.'
+_DOMAIN_RULES["storage_ops"] += '\\n- If a health utility is unavailable or a flag is unsupported, continue with the remaining read-only inventory and report that specific limitation.'
+_DOMAIN_RULES["system_ops"] += '\\n- If one diagnostic command is unsupported, retry with simpler portable commands and continue collecting evidence.'
+_DOMAIN_RULES["security_audit"] += '\\n- Missing firewall or audit utilities are evidence about that utility only; continue with other read-only checks rather than declaring the audit impossible.'
 
 _DOMAIN_TOOL_MAP = {
     "web": set(WEB_TOOL_NAMES),
@@ -533,10 +563,489 @@ _DOMAIN_TOOL_MAP = {
     "ui": {"ui_control"},
     "sessions": {"create_session", "list_sessions", "manage_session", "send_to_session", "search_chats"},
     "files": {"bash", "python", "read_file", "write_file", "edit_file", "apply_patch", "todowrite", "grep", "glob", "ls", "get_workspace", "manage_bg_jobs"},
+    "operations": {"bash", "read_file", "grep", "glob", "ls", "get_workspace"},
+    "network_ops": {"bash", "read_file", "grep", "ls"},
+    "storage_ops": {"bash", "read_file", "grep", "ls"},
+    "system_ops": {"bash", "read_file", "grep", "ls"},
+    "container_ops": {"bash", "read_file", "grep", "glob", "ls", "get_workspace"},
+    "remote_ops": {"bash", "read_file", "grep"},
+    "security_audit": {"bash", "read_file", "grep", "ls"},
+    "pentest_ops": {"bash", "read_file", "grep", "ls", "python"},
+    "osint": {"manage_osint", "web_search", "web_fetch", "trigger_research"},
+    "homelab": {"manage_homelab"},
+    "shell_exec": {"bash"},
     "settings": {"manage_settings", "manage_endpoints", "manage_mcp", "manage_webhooks", "manage_tokens", "app_api"},
     "contacts": {"resolve_contact", "manage_contact"},
     "integrations": {"api_call"},
+    "asset_inventory": {"bash", "read_file", "grep", "ls"},
 }
+
+# Capability V1 domain projection. These hints affect discovery/visibility;
+# policy, security gates, and execution remain owned by their existing layers.
+from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings
+for _binding in _capability_v1_bindings.values():
+    for _domain in _binding.domains:
+        _DOMAIN_TOOL_MAP.setdefault(_domain, set()).add(_binding.transport_name)
+_DOMAIN_RULES["asset_inventory"] = (
+    "Asset inventory/CMDB tasks: prefer first-class manage_assets for canonical "
+    "asset state, relationships, and observations. If privileged diagnostics or "
+    "approved installation of allowlisted diagnostic packages is required, use "
+    "privileged_action rather than sudo or an arbitrary root shell. Use UUID, "
+    "serial, or MAC as strong identity evidence and never merge solely by IP."
+)
+
+_DOMAIN_POLICIES = {
+    "shell_exec": {"hard": True, "action_required": True},
+    "operations": {"hard": True, "action_required": True},
+    "network_ops": {"hard": True, "action_required": True},
+    "storage_ops": {"hard": True, "action_required": True},
+    "system_ops": {"hard": True, "action_required": True},
+    "container_ops": {"hard": True, "action_required": True},
+    "remote_ops": {"hard": True, "action_required": True},
+    "security_audit": {"hard": True, "action_required": True},
+    "pentest_ops": {"hard": True, "action_required": True},
+    "osint": {"hard": False, "action_required": False},
+    "asset_inventory": {"hard": False, "action_required": False},
+    "homelab": {"hard": True, "action_required": True},
+}
+
+_HARD_TOOL_DOMAINS = frozenset(
+    name for name, policy in _DOMAIN_POLICIES.items()
+    if policy.get("hard")
+)
+
+_DETERMINISTIC_TOOL_DOMAINS = _HARD_TOOL_DOMAINS | frozenset({"osint", "asset_inventory"})
+_SPECIALIZED_OPERATIONAL_DOMAINS = frozenset({
+    "network_ops",
+    "storage_ops",
+    "system_ops",
+    "container_ops",
+    "remote_ops",
+    "security_audit",
+    "pentest_ops",
+})
+
+def _intent_requires_action(intent_domains) -> bool:
+    return any(
+        _DOMAIN_POLICIES.get(str(name), {}).get("action_required", False)
+        for name in (intent_domains or set())
+    )
+_HARD_ACTION_HINTS = {
+    "shell_exec": "Invoke bash with the exact non-interactive command the user requested.",
+    "operations": "Begin with a real read-only status/log/configuration inspection using bash or the available read tools.",
+    "network_ops": "Begin by invoking bash with a safe local discovery command such as: hostname; ip -brief address; ip route; ip neigh",
+    "storage_ops": "Begin by invoking bash with a safe storage inventory such as: lsblk; df -hT; df -i; findmnt",
+    "system_ops": "Begin by invoking bash with a safe host snapshot such as: uptime; free -h; ps -eo pid,ppid,stat,%cpu,%mem,comm --sort=-%cpu | head -25",
+    "container_ops": "Begin with portable container introspection. Check `command -v docker` and Docker socket access before invoking Docker CLI; otherwise inspect `/.dockerenv`, `/proc/1/cgroup`, hostname, mounts, and environment. Never treat missing Docker CLI/socket as shell failure.",
+    "remote_ops": "Use bash and the named/configured SSH target for read-only inspection. Do not substitute localhost for the requested remote host.",
+    "security_audit": "Begin by invoking bash with a safe local posture snapshot such as: ss -lntup; command -v nft >/dev/null 2>&1 && nft list ruleset || true",
+    "pentest_ops": "Begin only with scope-safe discovery for the explicitly authorized target. Do not broaden scope or perform destructive actions.",
+}
+
+def _hard_action_hint(intent_domains) -> str:
+    domains = set(intent_domains or set())
+    hints = [
+        _HARD_ACTION_HINTS[name]
+        for name in sorted(domains)
+        if name in _HARD_ACTION_HINTS
+    ]
+    if not hints:
+        return ""
+    return "ACTION STARTER: " + " ".join(hints)
+
+
+_HARD_ACTION_FALLBACK_COMMANDS = {
+    "network_ops": (
+        "set +e; "
+        "echo '=== HOST ==='; hostname; "
+        "echo '=== NETWORK TOOLS ==='; "
+        "for c in ip nmap ping getent hostname arp route netstat ss; do "
+        "command -v \"$c\" 2>/dev/null || true; done; "
+        "if command -v ip >/dev/null 2>&1; then "
+        "echo '=== ADDRESSES ==='; ip -brief address; "
+        "echo '=== ROUTES ==='; ip route; "
+        "echo '=== NEIGHBORS ==='; ip neigh; "
+        "else "
+        "echo '=== ROUTES (/proc/net/route) ==='; cat /proc/net/route 2>/dev/null || true; "
+        "echo '=== ARP (/proc/net/arp) ==='; cat /proc/net/arp 2>/dev/null || true; "
+        "echo '=== INTERFACES (/proc/net/dev) ==='; cat /proc/net/dev 2>/dev/null || true; "
+        "fi; "
+        "echo '=== RESOLVER ==='; cat /etc/resolv.conf 2>/dev/null || true; "
+        "exit 0"
+    ),
+    "storage_ops": "lsblk; df -hT; df -i; findmnt",
+    "system_ops": "uptime; free -h; ps -eo pid,ppid,stat,%cpu,%mem,comm --sort=-%cpu | head -25",
+    "container_ops": "set +e; echo '=== CONTAINER CONTEXT ==='; hostname; if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then docker ps --no-trunc; docker network ls; docker volume ls; else echo 'Docker CLI/socket unavailable in this runtime'; test -f /.dockerenv && echo '/.dockerenv present'; cat /proc/1/cgroup 2>/dev/null || true; findmnt 2>/dev/null | head -40 || true; fi; exit 0",
+    "security_audit": "hostname; ss -lntup 2>/dev/null || ss -lntp 2>/dev/null || true",
+}
+
+def _hard_action_fallback_command(intent_domains) -> str:
+    domains = set(intent_domains or set())
+    if domains & {"remote_ops", "pentest_ops", "operations"}:
+        return ""
+    for name in (
+        "network_ops",
+        "security_audit",
+        "storage_ops",
+        "container_ops",
+        "system_ops",
+    ):
+        if name in domains:
+            return _HARD_ACTION_FALLBACK_COMMANDS[name]
+    return ""
+
+
+def _hard_action_followup_hint(intent_domains) -> str:
+    domains = set(intent_domains or set())
+    if "network_ops" in domains:
+        return (
+            " FOLLOW-UP AFTER STARTER: The initial snapshot only establishes execution "
+            "context. Continue to the user's actual network objective. Determine the "
+            "directly connected private CIDR from observed evidence. If the user explicitly "
+            "authorized installing missing diagnostic tools, use the detected package manager "
+            "through bash and normal approval policy to install the minimum needed tools, then "
+            "perform bounded non-invasive host/service discovery. Do not repeat the starter."
+        )
+    if "security_audit" in domains:
+        return (
+            " FOLLOW-UP AFTER STARTER: A listener snapshot is only initial evidence. Continue "
+            "with the requested firewall, SSH/authentication, and other read-only audit checks. "
+            "Do not repeat the starter."
+        )
+    if "storage_ops" in domains:
+        return (
+            " FOLLOW-UP AFTER STARTER: Basic capacity/mount evidence is only initial evidence. "
+            "Continue with the requested health, SMART/NVMe/LVM/RAID/ZFS/Btrfs checks that are "
+            "available. Do not repeat the starter."
+        )
+    if "container_ops" in domains:
+        return (
+            " FOLLOW-UP AFTER STARTER: Container listing is only initial evidence. Continue "
+            "with the requested runtime/config/network/volume diagnosis. Do not repeat the starter."
+        )
+    if "system_ops" in domains:
+        return (
+            " FOLLOW-UP AFTER STARTER: The host snapshot is only initial evidence. Continue "
+            "with the requested system diagnosis using the observed results. Do not repeat the starter."
+        )
+    return ""
+
+
+def _explicitly_allows_diagnostic_install(query: str) -> bool:
+    # Mutating package installation requires affirmative user authorization.
+    # Recognize explicit permission or an imperative install/add clause, while
+    # informational mentions such as "explain how to install nmap" remain false.
+    q = str(query or "").lower().strip()
+
+    # Explicit denial always wins.
+    deny = bool(re.search(
+        r"(?:"
+        r"\b(?:do\s+not|don't|dont|never)\b.{0,36}\b(?:install|add)\b|"
+        r"\bwithout\s+(?:installing|adding)\b|"
+        r"\bno\s+(?:package\s+)?installs?\b|"
+        r"\b(?:avoid|skip)\b.{0,28}\b(?:installing|installation|packages?)\b"
+        r")",
+        q,
+    ))
+    if deny:
+        return False
+
+    # Explicit permission language.
+    permission = bool(re.search(
+        r"(?:"
+        r"\b(?:you\s+can|you\s+may|you(?:'re|\s+are)\s+(?:allowed|authorized)|"
+        r"feel\s+free\s+to|go\s+ahead\s+and)\b.{0,32}\b(?:install|add)\b|"
+        r"\bpermission\s+(?:is\s+)?granted\b.{0,32}\b(?:install|add)\b"
+        r")",
+        q,
+    ))
+    if permission:
+        return True
+
+    # Imperative install/add clause. Accept sentence/clause starts such as
+    # "Install ...", "Then install ...", "and then install ...", "please add ...".
+    imperative = bool(re.search(
+        r"(?:"
+        r"(?:^|[.!?;:]\s+|\bthen\s+|\band\s+then\s+)"
+        r"(?:please\s+)?(?:install|add)\b"
+        r")",
+        q,
+    ))
+    if imperative:
+        return True
+
+    # Conditional imperative forms where the condition comes first.
+    conditional = bool(re.search(
+        r"(?:"
+        r"(?:^|[.!?;:]\s+|\bthen\s+|\band\s+then\s+)"
+        r"if\b.{0,36}\b(?:missing|needed|required|necessary|unavailable)\b"
+        r".{0,52}\b(?:install|add)\b|"
+        r"(?:^|[.!?;:]\s+|\bthen\s+|\band\s+then\s+)"
+        r"(?:please\s+)?(?:install|add)\b.{0,52}\bif\b.{0,40}"
+        r"\b(?:missing|needed|required|necessary|unavailable)\b"
+        r")",
+        q,
+    ))
+    return conditional
+
+
+def _network_substantive_fallback_command(intent_domains, query: str) -> str:
+    domains = set(intent_domains or set())
+    if "network_ops" not in domains:
+        return ""
+    install_flag = "--install-authorized" if _explicitly_allows_diagnostic_install(query) else ""
+    return ("python -m src.asset_inventory network-discover " + install_flag + " --record-observations").strip()
+
+def _normalize_operational_intent_evidence(intent, query: str):
+    # Fuse operational intent from action + object + scope evidence.
+    # Existing classifier domains remain evidence, but do not erase adjacent
+    # capabilities needed to perform the same task.
+    if not isinstance(intent, dict):
+        return intent
+
+    import difflib
+
+    q = str(query or "").lower()
+    tokens = re.findall(r"[a-z0-9_.:/-]+", q)
+
+    def phrase(*patterns):
+        return any(re.search(p, q) for p in patterns)
+
+    def fuzzy(words, cutoff=0.82):
+        for tok in tokens:
+            if len(tok) < 5:
+                continue
+            for word in words:
+                if abs(len(tok) - len(word)) > 3:
+                    continue
+                if difflib.SequenceMatcher(None, tok, word).ratio() >= cutoff:
+                    return True
+        return False
+
+    explanatory_only = phrase(
+        r"\b(?:explain|define|what\s+is|what\s+are|teach\s+me|how\s+does)\b"
+    ) and not phrase(
+        r"\b(?:my|our|your|current|this)\b.{0,36}"
+        r"\b(?:host|machine|system|network|lan|subnet|container|disk|service)\b"
+    )
+
+    action = phrase(
+        r"\b(?:discover|discovery|inspect|check|scan|map|inventory|enumerate|"
+        r"diagnose|troubleshoot|debug|audit|probe|test|verify|measure|monitor|"
+        r"find|identify|determine|investigate|analyze|analyse|deep\s+dive|"
+        r"figure\s+out|look\s+into|run|execute|install|collect|show|list)\b"
+    ) or fuzzy({
+        "discover", "discovery", "inspect", "scan", "inventory", "enumerate",
+        "diagnose", "troubleshoot", "investigate", "analyze", "identify",
+    })
+
+    current_state_ask = phrase(
+        r"\b(?:what(?:'s|\s+is)|show\s+me|tell\s+me)\b.{0,40}"
+        r"\b(?:my|our|your|current|this)\b"
+    )
+
+    domains = set(intent.get("domains") or set())
+    before = set(domains)
+    evidence = {}
+
+    # ----- Network ---------------------------------------------------------
+    net_core = phrase(
+        r"\b(?:network|lan|vlan|subnet|cidr|gateway|router|switch|routing|route|"
+        r"arp|neighbor|neighbour|dns|dhcp|mac\s+address|interface|open\s+ports?)\b"
+    ) or fuzzy({"network", "subnet", "gateway", "routing", "discovery"})
+
+    net_tool = phrase(
+        r"\b(?:nmap|ping|traceroute|tracepath|arping|netstat|ss|iproute2|"
+        r"tcpdump|dig|nslookup)\b"
+    )
+
+    net_entities = phrase(r"\b(?:hosts?|devices?|servers?)\b")
+
+    local_scope = phrase(
+        r"\b(?:local|internal|private|home|homelab)\s+(?:network|lan|subnet)\b",
+        r"\b(?:our|my|your|current|this)\s+(?:network|lan|subnet)\b",
+        r"\bdirectly\s+connected\b",
+        r"\bcontainer\s+(?:network|subnet|environment)\b",
+        r"\bdocker\s+(?:network|bridge|subnet)\b",
+        r"\b(?:lan|vlan|rfc1918)\b",
+        r"\b(?:10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|"
+        r"172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})(?:/\d{1,2})?\b",
+    )
+
+    recon = phrase(
+        r"\b(?:recon|reconnaissance|enumerat(?:e|ion|ing)|host\s+discovery|"
+        r"port\s+scan|service\s+discovery)\b"
+    ) or fuzzy({"reconnaissance", "enumeration", "discovery"})
+
+    net_score = 0
+    net_score += 4 if net_core else 0
+    net_score += 4 if net_tool else 0
+    net_score += 2 if net_entities else 0
+    net_score += 3 if local_scope else 0
+    net_score += 3 if recon else 0
+    net_score += 2 if action or current_state_ask else 0
+    net_score += 2 if "pentest_ops" in domains and (net_tool or recon or net_core) else 0
+    net_score += 1 if "container_ops" in domains and (net_core or local_scope) else 0
+
+    network_actionable = bool(action or current_state_ask)
+    network_specific = bool(net_core or net_tool or recon)
+    public_target_only = phrase(
+        r"\b(?:https?://|www\.|[a-z0-9-]+\.(?:com|net|org|io|dev|gov|edu))\b"
+    ) and not local_scope
+
+    if (
+        not explanatory_only
+        and network_actionable
+        and network_specific
+        and net_score >= 7
+        and not public_target_only
+        and (local_scope or net_core or ("network_ops" in domains))
+    ):
+        domains.add("network_ops")
+        evidence["network_ops"] = net_score
+
+    # ----- Containers ------------------------------------------------------
+    container_obj = phrase(
+        r"\b(?:docker|podman|containers?|compose|containerd|kubernetes|k8s)\b"
+    )
+    if not explanatory_only and container_obj and (action or current_state_ask):
+        domains.add("container_ops")
+        evidence["container_ops"] = 6
+
+    # ----- Storage ---------------------------------------------------------
+    storage_obj = phrase(
+        r"\b(?:storage|disks?|drives?|filesystem|mounts?|raid|lvm|zfs|btrfs|"
+        r"smart|smartctl|nvme|lsblk|findmnt|inodes?)\b"
+    )
+    if not explanatory_only and storage_obj and (action or current_state_ask):
+        domains.add("storage_ops")
+        evidence["storage_ops"] = 6
+
+    # ----- System / hardware ----------------------------------------------
+    system_obj = phrase(
+        r"\b(?:cpu|memory|ram|swap|load|process(?:es)?|kernel|boot|thermal|"
+        r"temperature|hardware|uptime|lscpu|dmidecode|lspci|lsusb)\b"
+    )
+    if not explanatory_only and system_obj and (action or current_state_ask):
+        domains.add("system_ops")
+        evidence["system_ops"] = 6
+
+    # ----- Remote ----------------------------------------------------------
+    remote_obj = phrase(
+        r"\b(?:over|via)\s+ssh\b",
+        r"\bssh\s+(?:into|to)\b",
+        r"\bremote\s+(?:host|server|machine|system)\b",
+    )
+    if not explanatory_only and remote_obj and (action or current_state_ask):
+        domains.add("remote_ops")
+        evidence["remote_ops"] = 6
+
+    # ----- Service / daemon operations ------------------------------------
+    ops_obj = phrase(r"\b(?:systemd|daemon|service|unit|journalctl|systemctl)\b")
+    ops_problem = phrase(
+        r"\b(?:failed|failing|broken|down|unhealthy|crash(?:ed|ing)?|stuck|"
+        r"restart|recover|logs?|errors?)\b"
+    )
+    if not explanatory_only and ops_obj and (action or ops_problem):
+        domains.add("operations")
+        evidence["operations"] = 6
+
+    # ----- Security / pentest ---------------------------------------------
+    security_obj = phrase(
+        r"\b(?:firewall|nftables|iptables|ssh\s+(?:config|policy)|"
+        r"authentication|auth\s+logs?|listeners?|tls|certificates?|permissions?|"
+        r"security\s+(?:posture|audit|hardening))\b"
+    )
+    if not explanatory_only and security_obj and action:
+        domains.add("security_audit")
+        evidence["security_audit"] = 6
+
+    pentest_obj = phrase(
+        r"\b(?:pentest|penetration\s+test|reconnaissance|port\s+scan|"
+        r"vulnerability\s+scan|nmap)\b"
+    )
+    if not explanatory_only and pentest_obj and action:
+        domains.add("pentest_ops")
+        evidence["pentest_ops"] = 6
+
+    # Pentest constrains behavior; it does not erase network capability.
+    if (
+        "pentest_ops" in domains
+        and not public_target_only
+        and local_scope
+        and (net_core or net_tool or recon)
+        and network_actionable
+    ):
+        domains.add("network_ops")
+        evidence["network_ops"] = max(evidence.get("network_ops", 0), net_score)
+
+    if domains != before:
+        intent["domains"] = domains
+        logger.info(
+            "[agent-intent] operational intent fusion added=%s evidence=%s final=%s",
+            sorted(domains - before),
+            {k: evidence[k] for k in sorted(evidence) if k in (domains - before)},
+            sorted(domains),
+        )
+
+    return intent
+
+
+def _normalize_asset_inventory_intent(intent, query: str):
+    if not isinstance(intent, dict):
+        return intent
+    q = str(query or "").lower()
+    action = bool(re.search(r"\b(?:add|record|inventory|catalog|track|update|move|remove|retire|merge|find|show|list|search|scan|discover|collect|identify|what(?:'s| is)|where is)\b", q))
+    obj = bool(re.search(r"\b(?:asset|cmdb|hardware inventory|hardware|server inventory|parts?|components?|motherboard|cpu|processor|ram|memory|dimm|gpu|nvme|ssd|hdd|nic|serial|system uuid|spare|shelf|rack|chassis)\b", q))
+    if action and obj:
+        domains = set(intent.get("domains") or set())
+        if "asset_inventory" not in domains:
+            domains.add("asset_inventory")
+            intent["domains"] = domains
+            logger.info("[agent-intent] asset inventory normalization added asset_inventory final=%s", sorted(domains))
+    return intent
+
+
+def _normalize_homelab_intent(intent, query: str):
+    if not isinstance(intent, dict):
+        return intent
+    q = str(query or "").lower()
+    if re.search(r"\b(?:homelab|home lab|local service|systemd user service|network discovery|nmap discovery)\b", q):
+        domains = set(intent.get("domains") or set())
+        domains.add("homelab")
+        intent["domains"] = domains
+    return intent
+
+
+def _hard_turn_capability_directive(route_tools, disabled_tools, intent_domains) -> str:
+    domains = set(intent_domains or set())
+    # _ODY_V37_ASSET_CAPABILITY_ASSERTION
+    # Asset inventory is action-oriented but intentionally not a hard domain:
+    # it must not inherit shell fallback/repair behavior. It does, however,
+    # need the same authoritative capability assertion on strict-text routes
+    # so selected first-class tools are not mistaken for unavailable APIs.
+    _capability_assertion_domains = _HARD_TOOL_DOMAINS | frozenset({"asset_inventory"})
+    if route_tools is None or not (domains & _capability_assertion_domains):
+        return ""
+    available = sorted(set(route_tools) - set(disabled_tools or set()))
+    lines = [
+        "TURN CAPABILITIES",
+        "Intent domains: " + ", ".join(sorted(domains)),
+        "Available tools: " + (", ".join(available) if available else "none"),
+        "Rules:",
+        "- Every tool listed above is available for this turn unless an actual execution result reports otherwise.",
+        "- Do not claim a listed tool is unavailable.",
+        "- Do not claim a tool succeeded, failed, returned no output, or produced any result before it has actually executed.",
+        "- Shell execution is non-interactive. A full-screen TTY program may be unsuitable; distinguish that limitation from shell availability.",
+        "- Never use sudo or request an arbitrary root shell. If a required diagnostic package is missing and the user authorized installation, use privileged_action with install_packages.",
+        "- When a task needs several dependent shell checks, batch them into one bounded non-interactive Bash invocation when they share the same approval boundary.",
+        "- Relevant Skill procedures already injected in context are already loaded; follow them directly rather than re-fetching them.",
+    ]
+    _action_hint = _hard_action_hint(domains)
+    if _action_hint:
+        lines.append(_action_hint)
+    return chr(10).join(lines)
+
 
 _WORKSPACE_TERMINUS_TOOLS = (
     _DOMAIN_TOOL_MAP["files"]
@@ -689,7 +1198,7 @@ Generate an image. Line 1 = description, line 2 = model name, line 3 = WxH (e.g.
     "list_models": "- ```list_models``` — Show all available AI models across all endpoints. Use when user asks what models are available.",
     "manage_session": "- ```manage_session``` — Rename, archive, delete, fork, switch, or `list` chats (the UI calls them 'chats'; 'session' is internal). Line 1 = action (list/switch/rename/archive/unarchive/delete/important/unimportant/truncate/fork), Line 2 = exact chat id from `list_sessions` (or `current` where supported). For delete/archive/truncate, always list first and reuse the exact id; never invent placeholder ids. `switch`/`open` returns a clickable anchor link the user can tap to open the chat — use for \"open my X chat\".",
     "manage_memory": "- ```manage_memory``` — Manage the user's persistent memory (facts about the USER themselves, their preferences, context that persists across chats). Line 1 = action (list/add/edit/delete/search), rest = content. Use when user says 'remember this' about themselves, states identity facts like 'my name is <name>' / 'call me <name>' / 'I live in <place>', or asks about stored memories. DO NOT use for info about another person (their address, phone, email, birthday) — that goes in `manage_contact`. If the user pastes an address/phone with a name and says 'save this for <person>', use `manage_contact add` with the address arg, NOT manage_memory.",
-    "manage_skills": "- ```manage_skills``` — Skill registry (SKILL.md format). Args (JSON): {\"action\": \"list|view|view_ref|search|add|edit|patch|publish|delete\", ...}. `list` returns the index of available skills (published + teacher-escalation drafts); `view name=foo` fetches the full SKILL.md; `view_ref name=foo path=...` loads a reference file under the skill directory. For `add`, provide an explicit kebab-case `name` and only report the exact returned name, because storage may normalize or dedupe it. Use this BEFORE doing domain work — there may already be a procedure (published or draft) that prescribes the correct steps. Drafts written by the teacher loop are authoritative guidance even though they're not yet published.",
+    "manage_skills": "- ```manage_skills``` — Skill registry (SKILL.md format). Args (JSON): {\"action\": \"list|view|view_ref|search|add|edit|patch|publish|delete\", ...}. `list` returns the index of available skills (published + teacher-escalation drafts); `view name=foo` fetches the full SKILL.md; `view_ref name=foo path=...` loads a reference file under the skill directory. For `add`, provide an explicit kebab-case `name` and only report the exact returned name, because storage may normalize or dedupe it. Use this for explicit Skill-registry requests such as list, view, search, add, edit, publish, or delete. If a relevant Skill procedure is already injected in the current prompt, follow it directly and do not re-fetch it. Drafts written by the teacher loop are authoritative guidance even though they're not yet published.",
     "manage_tasks": "- ```manage_tasks``` — Create and manage scheduled background tasks (recurring AI jobs). Args (JSON): {\"action\": \"list|create|edit|delete|pause|resume|run\", ...}",
     "manage_endpoints": "- ```manage_endpoints``` — Add, remove, or configure AI model API endpoints. Args (JSON): {\"action\": \"list|add|delete|enable|disable\", ...}. Use when user wants to add a new AI provider.",
     "manage_mcp": "- ```manage_mcp``` — Manage MCP (Model Context Protocol) tool servers — external tools that extend your capabilities. Args (JSON): {\"action\": \"list|add|delete|reconnect|list_tools\", ...}",
@@ -796,6 +1305,10 @@ Body for POST/PUT/PATCH goes in `body` (object). Query params in `query` (object
 Blocked paths/routes (refused for safety): /api/auth/, /api/users/, /api/tokens/, /api/admin/, /api/shell/, /api/backup/restore, /api/email/accounts, POST /api/cookbook/packages/install, POST /api/cookbook/rebuild-engine, POST /api/cookbook/kill-pid.""",
 }
 
+# Capability V1 textual projection. The XML parser remains a separate concern.
+for _binding in _capability_v1_bindings.values():
+    TOOL_SECTIONS[_binding.transport_name] = _binding.textual_contract
+
 def get_builtin_overrides() -> dict:
     """User overrides for built-in tool descriptions (TOOL_SECTIONS).
     Stored globally in settings.json so the user can preview + edit how
@@ -841,10 +1354,15 @@ def _compact_tool_line(name: str, section: str) -> str:
     return f"- `{name}` — " + lines[0][:160]
 
 
-def _assemble_prompt(tool_names: set, disabled_tools: set = None, compact: bool = False) -> str:
+def _assemble_prompt(tool_names: set, disabled_tools: set = None, compact: bool = False, intent_domains: Optional[Set[str]] = None) -> str:
     """Build the system prompt with only the specified tools included."""
     disabled = disabled_tools or set()
     included = tool_names - disabled
+    domain_rules = (
+        [_DOMAIN_RULES[d] for d in sorted(intent_domains) if d in _DOMAIN_RULES]
+        if intent_domains is not None
+        else _domain_rules_for_tools(included)
+    )
 
     if compact:
         tool_lines = []
@@ -858,7 +1376,7 @@ def _assemble_prompt(tool_names: set, disabled_tools: set = None, compact: bool 
             "## Available tools\n" + ("\n".join(tool_lines) if tool_lines else "none"),
             _API_AGENT_RULES,
         ]
-        parts.extend(_domain_rules_for_tools(included))
+        parts.extend(domain_rules)
         return "\n\n".join(parts)
 
     parts = [_AGENT_PREAMBLE]
@@ -872,7 +1390,11 @@ def _assemble_prompt(tool_names: set, disabled_tools: set = None, compact: bool 
         if name not in included:
             continue
         section = _section_text(name, _default_section)
-        if section.startswith("```") or section.startswith("-"):
+        # _ODY_V362_TEXT_TOOL_RENDERER
+        # _section_text() returns the textual contract for a selected tool.
+        # Any non-empty contract is renderable. Only '- ' contracts use the
+        # compact Additional-tools list; everything else is a full block.
+        if section.strip():
             if section.startswith("- "):
                 one_liners.append(section)
             else:
@@ -885,7 +1407,7 @@ def _assemble_prompt(tool_names: set, disabled_tools: set = None, compact: bool 
         parts.append("## Additional tools\n" + "\n".join(one_liners))
 
     parts.append(_AGENT_RULES)
-    parts.extend(_domain_rules_for_tools(included))
+    parts.extend(domain_rules)
     return "\n\n".join(parts)
 
 
@@ -1305,6 +1827,15 @@ _EXPLICIT_CONTINUATION_RE = re.compile(
     r")\s*(?:[.!?]+\s*)?$",
     re.IGNORECASE,
 )
+_EXPLICIT_CONTINUATION_PHRASE_RE = re.compile(
+    r"^\s*(?:"
+    r"(?:yes|yeah|yep|ok|okay|sure)\s*(?:,\s*)?(?:please\s+)?"
+    r"(?:continue|carry\s+on|proceed|resume|go\s+ahead(?:\s+and\s+continue)?)|"
+    r"(?:please\s+)?(?:continue(?:\s+(?:with\s+that|the\s+task))?(?:\s+please)?|"
+    r"carry\s+on|proceed|resume|keep\s+going|go\s+ahead(?:\s+and\s+continue)?)"
+    r")\s*(?:[.!?]+\s*)?$",
+    re.IGNORECASE,
+)
 _RETRY_CONTINUATION_RE = re.compile(
     r"\b(?:try again|retry|again|rerun|re-run|run it again|launch it again|"
     r"start it again|failed|fails?|died|crashed|broke|insta|instantly)\b",
@@ -1317,8 +1848,22 @@ _COOKBOOK_CONTEXT_RE = re.compile(
     re.IGNORECASE,
 )
 def _is_explicit_continuation(text: str) -> bool:
-    """Only these terse replies may inherit older user turns for tool retrieval."""
-    return bool(_EXPLICIT_CONTINUATION_RE.match(str(text or "").strip()))
+    """Return true only for terse replies that explicitly resume prior work.
+
+    This remains deliberately narrow: substantive new requests must classify
+    from their own text and must not inherit stale tool context.
+    """
+    value = str(text or "").strip()
+    return bool(
+        _EXPLICIT_CONTINUATION_RE.match(value)
+        or _EXPLICIT_CONTINUATION_PHRASE_RE.match(value)
+    )
+
+
+def _privileged_action_requires_exact_approval(tool_type: str, content: str) -> bool:
+    """Compatibility name for the generic registry approval projection."""
+    from src.capability_registry import requires_exact_approval
+    return requires_exact_approval(tool_type, content)
 
 
 def _is_casual_low_signal(text: str) -> bool:
@@ -1384,6 +1929,43 @@ def _assistant_requested_followup(messages: List[Dict]) -> bool:
     return False
 
 
+def _looks_like_explicit_skill_request(text: str) -> bool:
+    q = str(text or "").strip().lower()
+    if not q:
+        return False
+    words = set(re.findall(r"[a-z0-9_-]+", q))
+    if not ({"skill", "skills"} & words):
+        return False
+    verbs = {"list", "show", "view", "open", "read", "search", "find", "inspect", "manage", "add", "create", "edit", "update", "patch", "publish", "delete", "remove"}
+    if words & verbs:
+        return True
+    return "my skill" in q or q.startswith("what skills do i") or q.startswith("which skills do i")
+
+
+def _suppress_automatic_skills(text: str, intent: Dict[str, object]) -> bool:
+    """Suppress automatic procedural skills only for clearly non-procedural turns."""
+    raw = str(text or "").strip()
+    if not raw or bool(_LOW_SIGNAL_RE.match(raw)) or _is_casual_low_signal(raw):
+        return True
+    q = raw.lower()
+    creative_prefixes = ("write ", "draft ", "compose ", "create ")
+    creative_terms = ("fictional", "fiction", "story", "poem", "novel", "screenplay")
+    if q.startswith(creative_prefixes) and any(term in q for term in creative_terms):
+        return True
+    operational_prefixes = ("what is wrong ", "what is causing ", "what is failing ", "what is broken ", "why does my ", "why does this ", "why can my ", "why can this ", "explain why my ", "explain why this ")
+    if q.startswith(operational_prefixes):
+        return False
+    if q.startswith(("what is ", "what are ", "why do ", "why does ", "why can ", "explain why ", "summarize the concept ")):
+        return True
+    if q.startswith("what does ") and " mean" in q:
+        return True
+    if q.startswith("explain what ") and " mean" in q:
+        return True
+    if q.startswith("explain how ") and (" work" in q or " works" in q):
+        return True
+    return False
+
+
 def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, object]:
     """Classify only whether this turn deserves domain tool retrieval.
 
@@ -1411,7 +1993,7 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
     def has(*patterns: str) -> bool:
         return any(re.search(p, q) for p in patterns)
 
-    if has(r"\b(cookbook|serve|serving|served|launch|start|preset|vllm|sglang|llama\.?cpp|ollama|download|downloading|pull|cached models?|running models?|model servers?|models? (?:are )?running|what models?|model picker|gpu box|workstation|server|qwen|gemma|llama|mistral|minimax)\b"):
+    if has(r"\b(cookbook|serve|serving|served|launch|start|preset|vllm|sglang|llama\.?cpp|ollama|download|downloading|pull|cached models?|running models?|model servers?|models? (?:are )?running|what models?|model picker|gpu box|workstation|qwen|gemma|llama|mistral|minimax)\b"):
         domains.add("cookbook")
     if has(r"\b(emails?|mails?|gmail|inbox|reply|forward|cc|bcc|send email|compose email|draft email|message chris|message him|message her)\b"):
         domains.add("email")
@@ -1426,11 +2008,26 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
         r"ruby|php|swift|kotlin|bash|shell|html|css|sql)\b",
         r"\b(?:code|script|program|game|function|class|module|app)\b",
     )
-    if has(r"\b(documents?|docs?|draft|compose|poem|story|essay|outline|letter|edit|rewrite|proofread|suggest|feedback|review this|make a file)\b"):
+    if has(
+        r"\b(documents?|docs?|draft|poem|story|essay|outline|letter|edit|rewrite|proofread|suggest|feedback|review this|make a file)\b",
+        r"\bcompose\b.{0,32}\b(document|doc|draft|letter|email|message|story|poem|essay|outline|report|proposal|memo|summary|client update)\b",
+    ):
         domains.add("documents")
     if "notes_calendar_tasks" not in domains and has(r"\bwrite\b"):
         domains.add("documents")
-    if has(r"\b(search|web|google|look up|latest|news|current|weather|forecast|stock price|price of|website|url|https?://|www\.)\b"):
+    _network_target = has(
+        '\\b(?:local|internal|current|home|private|our|my)\\b.{0,32}\\bnet\\w*work\\b',
+        '\\bnet\\w*work\\b.{0,40}\\b(?:hosts?|servers?|devices?|subnets?|lan|commands?)\\b',
+        '\\b(?:hosts?|servers?|devices?)\\b.{0,40}\\b(?:net\\w*work|lan|subnets?|reachable|online)\\b',
+        '\\b(?:ip\\s+addr|ip\\s+route|ip\\s+neigh|arp|nmcli|nmap|traceroute|known_hosts)\\b',
+    )
+    _network_action = has(
+        '\\b(?:discover\\w*|dicover\\w*|scan\\w*|inventory|map|inspect|probe|find|see|list|check|identify|reachable|online)\\b',
+        '\\b(?:run|execute)\\b.{0,24}\\bnet\\w*work\\s+commands?\\b',
+    )
+    if _network_target and _network_action:
+        domains.add("network_ops")
+    if has(r"\b(search|web|google|look up|latest|news|weather|forecast|stock price|price of|website|url|https?://|www\.)\b"):
         domains.add("web")
     if has(
         r"\b(wyszukaj|wyszukać|wyszukac)\b.*\b(internet|internecie|online|web)\b",
@@ -1438,13 +2035,24 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
         r"\b(aktualn\w*|bieżąc\w*|biezac\w*|dzisiaj|teraz)\b.*\b(pogod\w*|temperatur\w*)\b",
     ):
         domains.add("web")
-    if has(r"\b(research|deep dive|investigate|look into)\b"):
+    if "network_ops" not in domains and has(r"\b(research|deep dive|investigate|look into)\b"):
         domains.add("web")
     if has(r"\b(open|show|toggle|turn on|turn off|disable|enable|switch model|change model|settings|theme|panel)\b"):
         domains.add("ui")
     if has(r"\b(session|chat history|rename chat|delete chat|archive chat|fork chat|list chats)\b"):
         domains.add("sessions")
-    if has(r"\b(file|folder|directory|repo|git|grep|find in files|read file|edit file|shell|terminal|bash)\b"):
+    if has(
+        '^\\s*(?:please\\s+)?(?:run|execute)\\s+(?:sudo\\s+)?(?:echo|printf|top|htop|uname|pwd|whoami|uptime|ps|free|df|du|ls|cat|grep|rg|find|git|docker|podman|systemctl|journalctl|ip|ss|ping|curl|wget|bash|sh|fish|python|python3|node|npm|pnpm|yarn|make|cmake|gcc|clang|cargo|go|java|javac|dnf|apt|pacman|rpm|flatpak|nvidia-smi|lspci|lsblk|mount)\\b',
+        '^\\s*(?:can|could|would)\\s+you\\s+(?:please\\s+)?(?:run\\s+)?(?:echo|printf|top|htop|uname|pwd|whoami|uptime|ps|free|df|du|ls|cat|grep|rg|find|git|docker|podman|systemctl|journalctl|ip|ss|ping|curl|wget|bash|sh|fish|python|python3|node|npm|pnpm|yarn|make|cmake|gcc|clang|cargo|go|java|javac|dnf|apt|pacman|rpm|flatpak|nvidia-smi|lspci|lsblk|mount)\\b',
+        '\\buse\\s+(?:bash|shell|terminal)\\s+(?:to|like)\\b',
+    ):
+        domains.add("shell_exec")
+    if has(
+        '\\b(?:you|we)\\s+(?:have|got)\\s+(?:bash|shell|terminal)\\b.{0,48}\\b(?:run|execute)\\b',
+        '^\\s*(?:please\\s+)?(?:run|execute)\\s+(?:network\\s+)?commands?\\b',
+    ):
+        domains.add("shell_exec")
+    if "shell_exec" not in domains and "network_ops" not in domains and has(r"\b(file|folder|directory|repo|git|grep|find in files|read file|edit file|shell|terminal|bash)\b"):
         domains.add("files")
     if has(
         r"\b(run|execute|test|debug|fix|save|create|edit|read|open)\b.{0,40}\b("
@@ -1463,6 +2071,12 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
             or has(r"\b(kill|stop|cancel|terminate|check|tail|show|list)\b.{0,16}\bjobs?\b")
             or has(r"\bjobs?\b.{0,16}\b(output|status|done|finished|running)\b")):
         domains.add("files")
+    if has(
+        r"\b(docker(?:\s+compose)?|compose|containers?|systemd|daemons?|services?)\b",
+    ) and has(
+        r"\b(diagnose|diagnosis|debug|troubleshoot|troubleshooting|fix|broken|failing|failed|failure|restart|restarting|restart loop|crash|crashing|unhealthy|down|logs?|errors?|stuck)\b",
+    ):
+        domains.add("operations")
     if has(r"\b(endpoint|api token|mcp|webhook|preference|configure|config|setting)\b"):
         domains.add("settings")
     if has(r"\b(contact|contacts|phone|phone number|address book|vcard)\b"):
@@ -1477,6 +2091,83 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
            r"\b(?:home ?assistant|miniflux|gitea|linkding|jellyfin)\b"):
         domains.add("integrations")
 
+    # Specialized operational domains: deterministic capability routing.
+    _storage_subject = has(
+        r"\b(?:disk|disks|storage|filesystem|file system|mount|mounts|volume|volumes|partition|partitions|lvm|zfs|btrfs|raid|mdadm|smart|nvme|inode|inodes|i/o|io)\b",
+    )
+    _storage_action = has(
+        r"\b(?:inspect|check|diagnose|diagnosis|troubleshoot|investigate|find|show|list|health|usage|capacity|space|full|free|degraded|failed|failing|read-only|mounted|unmounted|missing|slow|why)\b",
+    )
+    if _storage_subject and _storage_action:
+        domains.add("storage_ops")
+
+    _container_subject = has(
+        r"\b(?:docker|podman|compose|containers?|container\s+(?:network|volume|image)|docker\s+(?:network|volume|image))\b",
+    )
+    _container_action = has(
+        r"\b(?:inspect|show|list|diagnose|diagnosis|troubleshoot|check|why|running|exited|exit|logs?|health|networks?|volumes?|images?|stuck|restart|restarting|failed|failing)\b",
+    )
+    if _container_subject and _container_action:
+        domains.add("container_ops")
+
+    _remote_subject = has(
+        r"\b(?:over ssh|via ssh|remote\s+(?:host|server|machine)|ssh\s+into|connect\s+to)\b",
+    )
+    _remote_action = has(
+        r"\b(?:check|inspect|diagnose|run|execute|show|list|compare|connect|ssh|read|tail|review)\b",
+    )
+    if _remote_subject and _remote_action:
+        domains.add("remote_ops")
+
+    _security_subject = has(
+        r"\b(?:security posture|security audit|sshd|ssh configuration|firewall|listening ports?|open ports?|failed logins?|authentication failures?|permissions?|tls|certificates?|exposure|hardening)\b",
+    )
+    _security_action = has(
+        r"\b(?:audit|assess|inspect|check|review|show|find|diagnose|evaluate)\b",
+    )
+    if _security_subject and _security_action:
+        domains.add("security_audit")
+
+    if has(
+        r"\b(?:pentest|pen test|penetration test|vulnerability scan|security assessment|authorized security test|authorized scan|enumerate services?|service enumeration|port scan|nmap scan)\b",
+    ):
+        domains.add("pentest_ops")
+
+    if has(
+        r"\b(?:osint|open[- ]source intelligence|public records?|public information)\b",
+    ) and has(
+        r"\b(?:research|investigate|find|search|look up|lookup|trace|profile|map|correlate|deep dive)\b",
+    ):
+        domains.add("osint")
+
+    _system_subject = has(
+        r"\b(?:cpu|memory|ram|swap|load average|processes?|kernel|boot|system logs?|journal|hardware|temperature|thermal|uptime|performance)\b",
+    )
+    _system_action = has(
+        r"\b(?:inspect|check|diagnose|diagnosis|troubleshoot|investigate|find|show|review|health|usage|pressure|slow|high|errors?|failed|failing|why)\b",
+    )
+    if _system_subject and _system_action:
+        domains.add("system_ops")
+
+    if "container_ops" in domains:
+        domains.discard("operations")
+    if "pentest_ops" in domains:
+        domains.discard("network_ops")
+        domains.discard("security_audit")
+    # Specific operational domains own overlapping generic vocabulary.
+    if "container_ops" in domains:
+        domains.discard("storage_ops")
+        domains.discard("operations")
+    if "security_audit" in domains:
+        domains.discard("operations")
+        domains.discard("remote_ops")
+    if "storage_ops" in domains and not has(
+        r"\b(?:cpu|memory|ram|swap|load average|processes?|kernel|boot|thermal|temperature)\b",
+    ):
+        domains.discard("system_ops")
+
+    if domains & _SPECIALIZED_OPERATIONAL_DOMAINS:
+        domains.discard("files")
     low_signal = not continuation and not domains
     return {
         "low_signal": low_signal,
@@ -2235,6 +2926,7 @@ def _build_system_prompt(
     suppress_skills: bool = False,
     active_email: Optional[Dict[str, str]] = None,
     workspace: Optional[str] = None,
+    intent_domains: Optional[Set[str]] = None,
 ) -> List[Dict]:
     """Build agent system prompt, inject MCP/document context, merge consecutive system msgs."""
     global _cached_base_prompt, _cached_base_prompt_key
@@ -2251,7 +2943,7 @@ def _build_system_prompt(
         _ov_sig = _hl.sha256(_json.dumps(get_builtin_overrides() or {}, sort_keys=True).encode()).hexdigest()
     except Exception:
         _ov_sig = ""
-    cache_key = (frozenset(disabled_tools or []), bool(mcp_mgr), needs_admin, _rt_key, compact, _ov_sig, owner, suppress_local_context, suppress_skills)
+    cache_key = (frozenset(disabled_tools or []), bool(mcp_mgr), needs_admin, _rt_key, compact, _ov_sig, owner, suppress_local_context, suppress_skills, frozenset(intent_domains or set()))
     if _cached_base_prompt and _cached_base_prompt_key == cache_key and not active_document:
         agent_prompt = _cached_base_prompt
         # Skill index is user-editable (name + description), so it must never
@@ -2262,6 +2954,7 @@ def _build_system_prompt(
             mcp_disabled_map=mcp_disabled_map, compact=compact, owner=owner,
             suppress_local_context=suppress_local_context,
             suppress_skills=suppress_skills,
+            intent_domains=intent_domains,
         )
     else:
         agent_prompt, _skill_index_block = _build_base_prompt(
@@ -2274,6 +2967,7 @@ def _build_system_prompt(
             owner=owner,
             suppress_local_context=suppress_local_context,
             suppress_skills=suppress_skills,
+            intent_domains=intent_domains,
         )
         if not active_document:
             _cached_base_prompt = agent_prompt
@@ -2658,13 +3352,23 @@ def _build_system_prompt(
                 except (TypeError, ValueError):
                     _skill_max_injected = 3
                 _skill_max_injected = max(0, min(12, _skill_max_injected))
+                _agent_skill_pool = sm.agent_eligible_skills(
+                    owner=owner,
+                    allow_teacher_drafts=bool(_prefs.get("auto_approve_skills", True)),
+                    min_confidence=_skill_min_conf,
+                )
                 relevant_skills = sm.get_relevant_skills(
                     last_user,
-                    skills=sm.load(owner=owner),
+                    skills=_agent_skill_pool,
                     threshold=0.25,
                     max_items=_skill_max_injected,
-                    min_confidence=_skill_min_conf,
+                    min_confidence=0.0,
                 ) if _skill_max_injected > 0 else []
+                logger.debug(
+                    "[skills-inject] eligible=%d max=%d min_conf=%.3f injected=%s",
+                    len(_agent_skill_pool), _skill_max_injected, _skill_min_conf,
+                    [sk.get("name") for sk in relevant_skills],
+                )
                 lines = [""]
                 if relevant_skills:
                     # Bump the "uses" counter on every skill we actually surface
@@ -2676,11 +3380,7 @@ def _build_system_prompt(
                         except Exception:
                             pass
                     lines.append("## Relevant skills for this request")
-                    lines.append("These skills are matched to your current request. Each is a "
-                                 "procedure proven to work. Follow them step by step. To see "
-                                 "the full SKILL.md (more detail, pitfalls, verification "
-                                 "steps), call `manage_skills` with action='view' and the "
-                                 "skill name.")
+                    lines.append("These skills are matched to the current request and their procedures are already loaded below. Follow them directly. Do not call `manage_skills` to re-fetch a matched Skill unless the user explicitly asks to inspect it or a referenced Skill resource is required.")
                     for sk in relevant_skills:
                         src_tag = ""
                         if sk.get("source") == "teacher-escalation":
@@ -2726,6 +3426,12 @@ def _build_system_prompt(
                     _skills_message = None
         except Exception as _sk_err:
             logger.debug(f"skill injection failed (non-fatal): {_sk_err}")
+
+    # The index is independently generated by _build_base_prompt and must be
+    # surfaced even when relevance matching is empty or the optional matched
+    # skill path is disabled. It remains an untrusted user-role message.
+    if _skills_message is None and _skill_index_block:
+        _skills_message = untrusted_context_message("skills", _skill_index_block)
 
     # Integration descriptions — user-editable fields, must not be in system role.
     if not suppress_local_context:
@@ -2854,6 +3560,7 @@ def _build_base_prompt(
     owner: Optional[str] = None,
     suppress_local_context: bool = False,
     suppress_skills: bool = False,
+    intent_domains: Optional[Set[str]] = None,
 ):
     """Build the agent prompt with only relevant tools included.
 
@@ -2877,10 +3584,17 @@ def _build_base_prompt(
         tool_names = set(relevant_tools) | {"ask_user", "update_plan"}
         if needs_admin:
             tool_names |= _ADMIN_TOOLS
-        agent_prompt = _assemble_prompt(tool_names, disabled, compact=compact)
+        agent_prompt = _assemble_prompt(tool_names, disabled, compact=compact, intent_domains=intent_domains)
     else:
         # Fallback: full prompt (RAG unavailable)
-        agent_prompt = AGENT_SYSTEM_PROMPT
+        agent_prompt = (
+            AGENT_SYSTEM_PROMPT
+            if intent_domains is None
+            else _assemble_prompt(
+                set(TOOL_SECTIONS.keys()), disabled, compact=compact,
+                intent_domains=intent_domains,
+            )
+        )
         if not needs_admin:
             # At least strip the management section
             mgmt_tools = set(TOOL_SECTIONS.keys()) - set(ALWAYS_AVAILABLE) - {
@@ -2888,10 +3602,10 @@ def _build_base_prompt(
                 "chat_with_model", "ask_teacher", "list_models",
             }
             agent_prompt = _assemble_prompt(
-                set(TOOL_SECTIONS.keys()) - mgmt_tools, disabled, compact=compact
+                set(TOOL_SECTIONS.keys()) - mgmt_tools, disabled, compact=compact, intent_domains=intent_domains
             )
         elif compact:
-            agent_prompt = _assemble_prompt(set(TOOL_SECTIONS.keys()), disabled, compact=True)
+            agent_prompt = _assemble_prompt(set(TOOL_SECTIONS.keys()), disabled, compact=True, intent_domains=intent_domains)
 
     # Inject the Level-0 skill index — one line per skill so the agent
     # knows what canonical procedures exist. Includes published skills
@@ -2910,17 +3624,32 @@ def _build_base_prompt(
         try:
             from services.memory.skills import SkillsManager
             from src.constants import DATA_DIR
+            _prefs = {}
+            try:
+                from routes.prefs_routes import _load_for_user as _load_prefs
+                _prefs = _load_prefs(owner) or {}
+            except Exception:
+                pass
             _sm = SkillsManager(DATA_DIR)
             active_tools = list(set(TOOL_SECTIONS.keys()) - set(disabled or []))
-            skill_idx = _sm.index_for(owner=owner, active_toolsets=active_tools)
+            _allow_idx_drafts = bool(_prefs.get("auto_approve_skills", True))
+            try:
+                _idx_min_conf = float(_prefs.get(
+                    "skill_min_confidence",
+                    get_setting("skill_autosave_min_confidence", 0.85)))
+            except (TypeError, ValueError):
+                _idx_min_conf = 0.85
+            skill_idx = _sm.index_for(
+                owner=owner,
+                active_toolsets=active_tools,
+                allow_teacher_drafts=_allow_idx_drafts,
+                min_confidence=_idx_min_conf,
+            )
             if skill_idx:
-                lines = ["## Available skills",
-                         "Procedures the assistant should consult before doing domain work. "
-                         "Fetch the full procedure with `manage_skills` action=view name=<name> "
-                         "when one looks relevant. Entries tagged `(draft)` were written by the "
-                         "teacher-escalation loop after a prior failure — treat them as authoritative "
-                         "guidance; if you follow one and it works, that's a good signal the procedure "
-                         "is correct."]
+                lines = [
+                    "## Available skills",
+                    "Catalogue of reusable procedures. Relevant full procedures, when matched, are injected separately and should be followed directly. Do not browse or fetch Skills automatically. Use `manage_skills` only when the user explicitly asks to inspect or manage the Skill registry, or when a referenced Skill resource is required.",
+                ]
                 by_cat: dict[str, list] = {}
                 for s in skill_idx:
                     by_cat.setdefault(s["category"], []).append(s)
@@ -2944,6 +3673,7 @@ def _resolve_tool_blocks(
     round_num: int,
     is_api_model: bool = False,
     allow_fenced_for_api: bool = False,
+    skip_fenced_tools: bool = False,
 ):
     """Choose native function calls or fenced code block parsing. Returns (tool_blocks, used_native)."""
     used_native = False
@@ -2975,11 +3705,15 @@ def _resolve_tool_blocks(
         # leaks into content as text is never illustrative — it's a real call
         # the model couldn't emit on its structured channel (e.g. DeepSeek-V
         # falling back to DSML). Dropping the whole parser would silently lose
-        # those too. Non-native / textual-only models keep every pattern,
-        # fenced blocks included, since that's their *only* tool channel.
-        tool_blocks = parse_tool_blocks(round_response, skip_fenced=(is_api_model and not allow_fenced_for_api))
+        # those too. Non-native / textual-only models normally keep every pattern. Routes with
+        # strict textual transport suppress bare fences while retaining explicit
+        # [TOOL_CALL]/<invoke>/<tool_code>/DSML invocation formats.
+        tool_blocks = parse_tool_blocks(
+            round_response,
+            skip_fenced=(skip_fenced_tools or (is_api_model and not allow_fenced_for_api)),
+        )
         if tool_blocks:
-            logger.info(f"Agent round {round_num}: {len(tool_blocks)} fenced tool block(s) detected")
+            logger.info(f"Agent round {round_num}: {len(tool_blocks)} textual tool block(s) detected")
 
     resp_preview = round_response[:200].replace('\n', '\\n') if round_response else "(empty)"
     logger.info(f"Agent round {round_num} summary: {len(round_response)} chars, "
@@ -3081,10 +3815,13 @@ def _append_tool_results(
             messages.append(result_message)
     else:
         tool_output_text = "\n\n".join(tool_results)
-        msg = {"role": "assistant", "content": round_response}
-        if round_reasoning:
-            msg["reasoning_content"] = round_reasoning
-        messages.append(msg)
+        # Approved-action replay can inject a sealed result without assistant
+        # prose. Do not create an empty assistant turn for that replay.
+        if round_response.strip() or round_reasoning:
+            msg = {"role": "assistant", "content": round_response}
+            if round_reasoning:
+                msg["reasoning_content"] = round_reasoning
+            messages.append(msg)
         # Tool output (shell/python stdout, file reads, fetched pages, email
         # bodies, MCP results) is sourced from outside the server. Wrap it as
         # untrusted data so prompt-injection inside a tool result is treated as
@@ -3103,7 +3840,9 @@ def _append_tool_results(
             untrusted_context_message(
                 "tool execution results",
                 tool_output_text,
+                provenance_origin="assistant_tool_invocation",
                 arm_tool_gate=arm_tool_gate,
+                assistant_tool_result=True,
             )
         )
 
@@ -3514,7 +4253,23 @@ async def stream_agent_loop(
         temperature = _ody_qwen_temperature_cap(temperature)
     _ody_memory_identity_turn = _looks_like_memory_identity_turn(_last_user)
     _intent = _classify_agent_request(messages, _last_user)
+    _intent = _normalize_asset_inventory_intent(
+        _intent,
+        str(_intent.get("retrieval_query") or _last_user) if isinstance(_intent, dict) else _last_user,
+    )
+    _intent = _normalize_homelab_intent(
+        _intent,
+        str(_intent.get("retrieval_query") or _last_user)
+        if isinstance(_intent, dict) else _last_user,
+    )
+    _intent = _normalize_operational_intent_evidence(
+        _intent,
+        str(_intent.get("retrieval_query") or _last_user)
+        if isinstance(_intent, dict)
+        else _last_user,
+    )
     _low_signal_turn = bool(_intent.get("low_signal"))
+    _suppress_auto_skills = _suppress_automatic_skills(_last_user, _intent)
     _casual_low_signal_turn = _is_casual_low_signal(_last_user)
     _existing_conversation = _user_turn_count(messages) > 1
     _active_document_relevant = _turn_targets_active_document(_intent, _last_user, active_document)
@@ -3851,7 +4606,18 @@ async def stream_agent_loop(
     # If caller provided a pre-computed set (e.g. task_scheduler), use that.
     _relevant_tools = relevant_tools
     _t1 = time.time()
-    if _relevant_tools:
+    _deterministic_intent_domains = set(_intent.get("domains") or set()) & _DETERMINISTIC_TOOL_DOMAINS
+    if not guide_only and not _relevant_tools and _deterministic_intent_domains:
+        from src.tool_index import ALWAYS_AVAILABLE
+        _relevant_tools = set(ALWAYS_AVAILABLE)
+        for _domain in (_intent.get("domains") or set()):
+            _relevant_tools.update(_DOMAIN_TOOL_MAP.get(str(_domain), set()))
+        logger.info(
+            "[tool-rag] Deterministic domain toolset domains=%s tools=%s",
+            sorted(_intent.get("domains") or set()),
+            sorted(_relevant_tools),
+        )
+    if relevant_tools:
         logger.info(f"[tool-rag] Using caller-provided relevant_tools ({len(_relevant_tools)} tools)")
     if not guide_only and not _relevant_tools and _low_signal_turn:
         from src.tool_index import ALWAYS_AVAILABLE
@@ -3970,6 +4736,7 @@ async def stream_agent_loop(
             )
             and not _active_document_relevant
             and not active_email
+            and not _deterministic_intent_domains
         ):
             _relevant_tools = set(_WORKSPACE_TERMINUS_TOOLS)
             logger.info("[tool-rag] Workspace file/terminal request; using Odysseus Terminus toolset")
@@ -4014,7 +4781,15 @@ async def stream_agent_loop(
         _relevant_tools.update(forced_set)
 
     if not guide_only and _relevant_tools is not None:
-        _relevant_tools = _expand_browser_mcp_tools(_relevant_tools, mcp_mgr)
+        _browser_expansion_authorized = bool(
+            forced_tools
+            and any(
+                str(t) == "builtin_browser" or str(t).startswith(_BROWSER_MCP_PREFIX)
+                for t in forced_tools
+            )
+        )
+        if _browser_expansion_authorized:
+            _relevant_tools = _expand_browser_mcp_tools(_relevant_tools, mcp_mgr)
 
     # The skill index injected by _build_system_prompt tells the model to
     # call `manage_skills action=view`, and Jaccard-matched skills are pasted
@@ -4023,21 +4798,34 @@ async def stream_agent_loop(
     # (grep, read_file, ...) that aren't in its schema list. Keep the schemas
     # in lockstep: manage_skills is callable whenever any skill is indexed,
     # and a matched skill's declared requires_toolsets ride along with it.
-    if not guide_only and _relevant_tools is not None and not _low_signal_turn:
+    if not guide_only and _relevant_tools is not None and not _suppress_auto_skills:
         try:
             from services.memory.skills import SkillsManager
             from src.constants import DATA_DIR
             _skills_on = True
+            _tool_skill_prefs = {}
             try:
                 from routes.prefs_routes import _load_for_user as _load_prefs
-                _skills_on = (_load_prefs(owner) or {}).get("skills_enabled", True)
+                _tool_skill_prefs = _load_prefs(owner) or {}
+                _skills_on = _tool_skill_prefs.get("skills_enabled", True)
             except Exception:
                 pass
             _sm = SkillsManager(DATA_DIR)
-            _owner_skills = _sm.load(owner=owner) if _skills_on else []
-            if _owner_skills:
+            _allow_tool_drafts = bool(_tool_skill_prefs.get("auto_approve_skills", True))
+            try:
+                _tool_skill_min_conf = float(_tool_skill_prefs.get(
+                    "skill_min_confidence",
+                    get_setting("skill_autosave_min_confidence", 0.85)))
+            except (TypeError, ValueError):
+                _tool_skill_min_conf = 0.85
+            _owner_skills = _sm.agent_eligible_skills(
+                owner=owner,
+                allow_teacher_drafts=_allow_tool_drafts,
+                min_confidence=_tool_skill_min_conf,
+            ) if _skills_on else []
+            if _looks_like_explicit_skill_request(_last_user):
                 _relevant_tools.add("manage_skills")
-                if _retrieval_query:
+            if _owner_skills and _retrieval_query:
                     # Validate against every known executable tool, not just
                     # TOOL_SECTIONS — code-nav tools (grep/glob/ls) ship as
                     # schemas without a prompt-prose section.
@@ -4053,6 +4841,43 @@ async def stream_agent_loop(
                         )
         except Exception as _e:
             logger.debug(f"[tool-rag] skill-aware tool include skipped: {_e}")
+
+    if (
+        not guide_only
+        and _relevant_tools is not None
+        and _deterministic_intent_domains
+    ):
+        from src.tool_index import ALWAYS_AVAILABLE
+        _deterministic_allowed = set(ALWAYS_AVAILABLE)
+        for _domain in _deterministic_intent_domains:
+            _deterministic_allowed.update(_DOMAIN_TOOL_MAP.get(str(_domain), set()))
+        if "osint" in _deterministic_intent_domains and "web" in set(_intent.get("domains") or set()):
+            _deterministic_allowed.update(_DOMAIN_TOOL_MAP.get("web", set()))
+            _deterministic_allowed.update(WEB_TOOL_NAMES)
+        if forced_tools:
+            _deterministic_allowed.update(
+                t for t in forced_tools if t not in disabled_tools
+            )
+        if _looks_like_explicit_skill_request(_last_user):
+            _deterministic_allowed.add("manage_skills")
+        if disabled_tools:
+            logger.info(
+                "[tool-rag] Deterministic policy context domains=%s disabled=%s forced=%s tool_policy=%r",
+                sorted(_deterministic_intent_domains),
+                sorted(disabled_tools),
+                sorted(forced_tools or set()),
+                tool_policy,
+            )
+        _deterministic_allowed.difference_update(disabled_tools)
+        _before_deterministic_clamp = set(_relevant_tools)
+        _relevant_tools = _deterministic_allowed
+        if _relevant_tools != _before_deterministic_clamp:
+            logger.info(
+                "[tool-rag] Deterministic final clamp domains=%s removed=%s final=%s",
+                sorted(_deterministic_intent_domains),
+                sorted(_before_deterministic_clamp - _relevant_tools),
+                sorted(_relevant_tools),
+            )
 
     _intent_domains = set(_intent.get("domains") or set())
     _base_relevant_tools = None if _relevant_tools is None else set(_relevant_tools)
@@ -4286,6 +5111,10 @@ async def stream_agent_loop(
             owner,
             headers=candidate_headers,
         )
+        strict_text_tools = (
+            not is_api
+            and "chatgpt.com/backend-api/codex" in (candidate_url or "").lower()
+        )
         route_messages, route_mcp_schemas = _build_system_prompt(
             _strip_agent_injected_messages(compacted_source),
             candidate_model,
@@ -4298,10 +5127,13 @@ async def stream_agent_loop(
             compact=is_api or is_native_ollama or is_ollama_compat,
             owner=owner,
             suppress_local_context=guide_only,
-            suppress_skills=_low_signal_turn,
+            suppress_skills=_suppress_auto_skills,
             active_email=active_email,
             workspace=workspace,
+            intent_domains=_intent_domains,
         )
+        if strict_text_tools and not guide_only:
+            _prepend_agent_directive(route_messages, 'TOOL TRANSPORT FOR THIS ROUTE: Bare Markdown fenced blocks are display-only and never execute. To invoke a tool, use explicit XML with the documented parameter names. Example for Bash: <invoke name="bash"><parameter name="command">top -b -n 1</parameter></invoke>. Do not invent a generic `arg` parameter. Use one or more documented parameter elements for structured arguments. Do not wrap invoke markup in a code fence.')
         if doc_mode and not plan_mode and not approved_plan and not guide_only:
             route_messages = _minimal_odysseus_doc_messages(
                 route_messages,
@@ -4327,11 +5159,18 @@ async def stream_agent_loop(
             _prepend_agent_directive(route_messages, build_active_plan_note(approved_plan))
         if guide_only:
             _prepend_agent_directive(route_messages, GUIDE_ONLY_DIRECTIVE)
+        if not guide_only:
+            _capability_directive = _hard_turn_capability_directive(
+                route_tools, disabled_tools, _intent_domains
+            )
+            if _capability_directive:
+                _prepend_agent_directive(route_messages, _capability_directive)
         return {
             "messages": route_messages,
             "mcp_schemas": route_mcp_schemas,
             "relevant_tools": route_tools,
             "is_api_model": is_api,
+            "strict_text_tools": strict_text_tools,
             "is_ollama_native": is_native_ollama,
             "ollama_openai_compat": is_ollama_compat,
             "ody_qwen_finetune_model": is_ody,
@@ -4353,6 +5192,7 @@ async def stream_agent_loop(
     mcp_schemas = _route_state["mcp_schemas"]
     _relevant_tools = _route_state["relevant_tools"]
     _is_api_model = _route_state["is_api_model"]
+    _strict_text_tools = _route_state["strict_text_tools"]
     _is_ollama_native = _route_state["is_ollama_native"]
     _ollama_openai_compat = _route_state["ollama_openai_compat"]
     if approved_plan and approved_plan.strip() and not guide_only:
@@ -4383,6 +5223,12 @@ async def stream_agent_loop(
     yield f"data: {json.dumps({'type': 'agent_prep', 'data': {k: round(v, 3) for k, v in prep_timings.items()}})}\n\n"
 
     full_response = ""
+    _hard_action_repair_count = 0
+    # _ODY_V38_FIRST_CLASS_NO_ACTION_REPAIR
+    _first_class_action_repair_count = 0
+    _hard_action_bash_completed = False
+    _hard_action_fallback_attempted = False
+    _hard_action_substantive_attempted = False
     total_start = time.time()
     time_to_first_token = None
     first_token_received = False
@@ -4752,10 +5598,61 @@ async def stream_agent_loop(
                 }
             ],
         )
+        _approved_fallback = _hard_action_fallback_command(_intent_domains)
+        _approved_substantive = _network_substantive_fallback_command(
+            _intent_domains, _retrieval_query
+        )
+        _approved_is_substantive = bool(
+            approved.tool_name == "bash"
+            and _approved_substantive
+            and approved.content.strip() == _approved_substantive.strip()
+        )
+        if _approved_is_substantive:
+            _hard_action_substantive_attempted = True
+            logger.info("[agent] approved substantive network fallback recorded as attempted")
+        _approved_is_deterministic_starter = bool(
+            approved.tool_name == "bash"
+            and _approved_fallback
+            and approved.content.strip() == _approved_fallback.strip()
+        )
+        if _approved_is_deterministic_starter:
+            _hard_action_fallback_attempted = True
+            logger.info("[agent] approved deterministic fallback recorded as attempted")
+        if (
+            approved.tool_name == "bash"
+            and isinstance(approved_result, dict)
+            and not approved_result.get("error")
+            and not approved_result.get("blocked")
+            and not approved_result.get("approval_required")
+            and approved_result.get("exit_code") == 0
+        ):
+            if _approved_is_substantive:
+                _hard_action_bash_completed = True
+                logger.info(
+                    "[agent] approved substantive network action satisfied hard action before round 1"
+                )
+            elif _approved_is_deterministic_starter:
+                _hard_action_bash_completed = False
+                _hard_action_repair_count = 0
+                logger.info(
+                    "[agent] approved deterministic starter succeeded; substantive follow-up still required"
+                )
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "HARD-DOMAIN STARTER COMPLETE: The approved diagnostic starter succeeded, "
+                        "but it does not complete the user's operational request."
+                        + _hard_action_followup_hint(_intent_domains)
+                    ),
+                })
+            else:
+                _hard_action_bash_completed = True
+                logger.info("[agent] approved bash satisfied hard action before round 1")
         _approved_result_injected = True
 
     for round_num in range(1, max_rounds + 1):
         round_response = ""
+        _round_text_buffered = False
         round_reasoning = ""  # reasoning_content deltas (DeepSeek-thinking, vLLM --reasoning-parser)
         native_tool_calls = []  # populated if model uses function calling
 
@@ -5124,6 +6021,7 @@ async def stream_agent_loop(
                             mcp_schemas = answering_state["mcp_schemas"]
                             _relevant_tools = answering_state["relevant_tools"]
                             _is_api_model = answering_state["is_api_model"]
+                            _strict_text_tools = answering_state["strict_text_tools"]
                             _is_ollama_native = answering_state["is_ollama_native"]
                             _ollama_openai_compat = answering_state["ollama_openai_compat"]
                             _ody_qwen_finetune_model = answering_state["ody_qwen_finetune_model"]
@@ -5195,10 +6093,14 @@ async def stream_agent_loop(
                             if _ody_qwen_finetune_model:
                                 _delta_text = _normalize_ody_qwen_text_artifacts(_delta_text)
                             round_response += _delta_text
-                            full_response += _delta_text
                             data["delta"] = _delta_text
-                        if not _ody_qwen_finetune_model or data.get("thinking"):
-                            yield f"data: {json.dumps(data)}\n\n"
+                            _buffer_this_delta = bool(_strict_text_tools and not guide_only)
+                            if _buffer_this_delta:
+                                _round_text_buffered = True
+                            else:
+                                full_response += _delta_text
+                            if data.get("thinking") or (not _ody_qwen_finetune_model and not _buffer_this_delta):
+                                yield "data: " + json.dumps(data) + chr(10) + chr(10)
                     elif data.get("error"):
                         err_msg = data.get("error", "unknown")
                         logger.error(f"Agent round {round_num}: stream error: {err_msg}")
@@ -5235,6 +6137,7 @@ async def stream_agent_loop(
             round_num,
             is_api_model=(_is_api_model and not guide_only),
             allow_fenced_for_api=_ody_doc_finetune_mode,
+            skip_fenced_tools=_strict_text_tools,
         )
         if _ody_doc_stream_create_mode and tool_blocks:
             create_idx = next(
@@ -5399,6 +6302,174 @@ async def stream_agent_loop(
                 logger.info(f"Auto-created document from {lang_tag} code block ({code_body.count(chr(10))+1} lines)")
                 break  # only auto-create one document per round
 
+        # _ODY_V38_FIRST_CLASS_NO_ACTION_REPAIR
+        # First-class asset/privilege turns are intentionally NOT hard domains,
+        # so they must not inherit Bash deterministic fallback behavior. But an
+        # explicit live request still deserves one bounded repair if a strict
+        # textual model answers in prose without emitting any tool invocation.
+        _ody_v38_user_text = str(_last_user or "")
+        _ody_v38_selected_first_class = (
+            {"manage_assets", "privileged_action"}
+            & set(_relevant_tools or set())
+        )
+        _ody_v38_explicit_first_class = bool(
+            re.search(
+                r"\b(?:manage_assets|privileged_action)\b",
+                _ody_v38_user_text,
+                re.IGNORECASE,
+            )
+            or (
+                "asset_inventory" in set(_intent_domains or set())
+                and re.search(
+                    r"\b(?:check|show|list|get|find|search|add|update|record|"
+                    r"link|unlink|retire|merge|inventory|summary|status|install)\b",
+                    _ody_v38_user_text,
+                    re.IGNORECASE,
+                )
+            )
+        )
+        _ody_v38_first_class_no_action = (
+            not guide_only
+            and not _force_answer
+            and _strict_text_tools
+            and bool(_ody_v38_selected_first_class)
+            and _ody_v38_explicit_first_class
+            and not tool_blocks
+            and total_tool_calls == 0
+            and not tool_events
+        )
+        if (
+            _ody_v38_first_class_no_action
+            and _first_class_action_repair_count < 1
+        ):
+            _first_class_action_repair_count += 1
+            logger.info(
+                "[agent] first-class no-action repair on round %s "
+                "domains=%s tools=%s: %r",
+                round_num,
+                sorted(set(_intent_domains or set())),
+                sorted(_ody_v38_selected_first_class),
+                _strip_think_blocks(round_response).strip()[:160],
+            )
+            if round_response and full_response.endswith(round_response):
+                full_response = full_response[:-len(round_response)]
+            _ody_v38_tool_list = ", ".join(
+                sorted(_ody_v38_selected_first_class)
+            )
+            messages.append({
+                "role": "system",
+                "content": (
+                    "FIRST-CLASS TOOL EXECUTION REPAIR: The user requested a "
+                    "live operation using selected first-class tools. Your "
+                    "previous response ended without making any tool call. "
+                    "The following tools are available and executable in this "
+                    "turn: "
+                    + _ody_v38_tool_list
+                    + ". Do not apologize, claim they are unavailable, or "
+                    "describe what you would do. Invoke the appropriate tool "
+                    "NOW using the documented strict-text XML <invoke> syntax. "
+                    "Do not substitute Bash for these operations. If the user "
+                    "requested multiple dependent operations, execute the first "
+                    "one now and continue with the next after receiving the "
+                    "actual tool result. Explain only after tool execution."
+                ),
+            })
+            yield (
+                "data: "
+                + json.dumps({"type": "agent_step", "round": round_num + 1})
+                + chr(10)
+                + chr(10)
+            )
+            continue
+
+        # Hard operational turns require an actual tool action before a final answer.
+        # Give strict textual routes one bounded repair when the model
+        # answers in prose without invoking an available operational tool.
+        _hard_action_fallback = _hard_action_fallback_command(_intent_domains)
+        _hard_action_no_action = (
+            not guide_only
+            and not _force_answer
+            and _strict_text_tools
+            and _intent_requires_action(_intent_domains)
+            and _relevant_tools is not None
+            and "bash" in _relevant_tools
+            and not tool_blocks
+            and (
+                (
+                    bool(_hard_action_fallback)
+                    and not _hard_action_bash_completed
+                )
+                or (
+                    not _hard_action_fallback
+                    and total_tool_calls == 0
+                    and not tool_events
+                )
+            )
+        )
+        if _hard_action_no_action and _hard_action_repair_count < 2:
+            _hard_action_repair_count += 1
+            logger.info(
+                "[agent] hard action no-action repair on round %s domains=%s: %r",
+                round_num,
+                sorted(set(_intent_domains or set()) & _HARD_TOOL_DOMAINS),
+                _strip_think_blocks(round_response).strip()[:160],
+            )
+            if round_response and full_response.endswith(round_response):
+                full_response = full_response[:-len(round_response)]
+            messages.append({
+                "role": "system",
+                "content": (
+                    "HARD-DOMAIN EXECUTION REPAIR: This turn requires real tool action. "
+                    "TURN CAPABILITIES lists the tools available for this turn. Your previous "
+                    "response ended without making any tool call. Do not apologize, claim an "
+                    "available tool is unavailable, or answer in prose before acting. Invoke an "
+                    "appropriate available diagnostic or action tool NOW. Prefer bash for "
+                    "non-interactive host, network, storage, container, remote, or security "
+                    "operations when applicable. "
+            + _hard_action_hint(_intent_domains)
+            + (_hard_action_followup_hint(_intent_domains) if _hard_action_fallback_attempted else "")
+            + " Explain only after seeing the actual tool result."
+                ),
+            })
+            _repair_substantive = _network_substantive_fallback_command(
+                _intent_domains, _retrieval_query
+            )
+            if (
+                _hard_action_repair_count >= 2
+                and _hard_action_fallback_attempted
+                and _repair_substantive
+                and not _hard_action_substantive_attempted
+            ):
+                logger.info(
+                    "[agent] repair budget exhausted; injecting substantive network fallback in current round domains=%s install_authorized=%s",
+                    sorted(set(_intent_domains or set()) & _HARD_TOOL_DOMAINS),
+                    _explicitly_allows_diagnostic_install(_retrieval_query),
+                )
+                _hard_action_substantive_attempted = True
+                if round_response and full_response.endswith(round_response):
+                    full_response = full_response[:-len(round_response)]
+                round_response = ""
+                tool_blocks.append(ToolBlock("bash", _repair_substantive))
+            else:
+                yield "data: " + json.dumps({"type": "agent_step", "round": round_num + 1}) + chr(10) + chr(10)
+                continue
+
+        if (
+            _hard_action_no_action
+            and _hard_action_repair_count >= 2
+            and _hard_action_fallback
+            and not _hard_action_fallback_attempted
+        ):
+            logger.info(
+                "[agent] hard action deterministic fallback domains=%s command=%r",
+                sorted(set(_intent_domains or set()) & _HARD_TOOL_DOMAINS),
+                _hard_action_fallback,
+            )
+            if round_response and full_response.endswith(round_response):
+                full_response = full_response[:-len(round_response)]
+            _hard_action_fallback_attempted = True
+            tool_blocks.append(ToolBlock("bash", _hard_action_fallback))
+
         # Save cleaned round text for history persistence
         # Keep <think> blocks so they render in the thinking section on reload
         # Mirror the same fenced-pattern gate used to resolve tool_blocks above:
@@ -5406,7 +6477,9 @@ async def stream_agent_loop(
         # model with no real native_tool_calls) must not be stripped from the
         # persisted text either — otherwise it streams once and then disappears
         # on reload (#3222 follow-up).
-        cleaned_round = strip_tool_blocks(round_response, skip_fenced=(_is_api_model and not used_native and not guide_only)).strip()
+        cleaned_round = strip_tool_blocks(round_response, skip_fenced=(_strict_text_tools or (_is_api_model and not used_native and not guide_only))).strip()
+        if _round_text_buffered and tool_blocks:
+            cleaned_round = ""
         round_texts.append(cleaned_round)
         round_models.append(_round_actual_model)
         round_endpoint_ids.append(_round_actual_endpoint_id)
@@ -5532,6 +6605,9 @@ async def stream_agent_loop(
                     + "\n\n"
                 )
                 break
+            if _round_text_buffered and cleaned_round:
+                full_response += cleaned_round
+                yield "data: " + json.dumps({"delta": cleaned_round}) + chr(10) + chr(10)
             break  # no tools — done
 
         # ── Loop-breaker (Terminus-style stall detector) ──────────────
@@ -5633,6 +6709,17 @@ async def stream_agent_loop(
                 block.tool_type,
                 block.content,
             )
+            # Capability V1 exact-approval bridge. The decision is derived
+            # from ActionSpec metadata, not from a tool-specific action list.
+            if _privileged_action_requires_exact_approval(
+                block.tool_type,
+                block.content,
+            ):
+                from types import SimpleNamespace as _OdyV34Decision
+                security_decision = _OdyV34Decision(
+                    allowed=False,
+                    reason="Privileged mutation requires exact user approval.",
+                )
             _ody_clamped_tool_allowed = (
                 _ody_notes_finetune_mode
                 and block.tool_type in {"manage_notes", "manage_calendar", "manage_tasks"}
@@ -5667,8 +6754,11 @@ async def stream_agent_loop(
                     "policy": "current_tool_policy",
                 }
                 logger.info(
-                    "Tool blocked before approval by current policy: %s",
+                    "Tool blocked before approval by current policy: tool=%s reason=%r policy_names=%s disabled_match=%s",
                     block.tool_type,
+                    reason,
+                    sorted(policy_names),
+                    sorted(policy_names & set(disabled_tools or set())),
                 )
             elif not security_decision.allowed:
                 approval_document = (
@@ -5816,6 +6906,76 @@ async def stream_agent_loop(
                             pass
 
             run_security.observe_tool_result(block.tool_type, result, block.content)
+            if block.tool_type == "bash" and isinstance(result, dict):
+                _bash_exit = result.get("exit_code")
+                _is_deterministic_starter = bool(
+                    _hard_action_fallback
+                    and block.content.strip() == _hard_action_fallback.strip()
+                )
+                _current_substantive = _network_substantive_fallback_command(
+                    _intent_domains, _retrieval_query
+                )
+                _is_substantive_fallback = bool(
+                    _current_substantive
+                    and block.content.strip() == _current_substantive.strip()
+                )
+                if _is_substantive_fallback:
+                    _hard_action_substantive_attempted = True
+                if (
+                    not result.get("error")
+                    and not result.get("blocked")
+                    and not result.get("approval_required")
+                    and _bash_exit == 0
+                ):
+                    if _is_substantive_fallback:
+                        _hard_action_bash_completed = True
+                        logger.info(
+                            "[agent] substantive network action satisfied hard action on round %s",
+                            round_num,
+                        )
+                        messages.append({
+                            "role": "system",
+                            "content": (
+                                "SUBSTANTIVE NETWORK OBJECTIVE COMPLETE: bounded network discovery "
+                                "has executed and asset observations were recorded. Do not repeat the "
+                                "starter, rerun container inventory, or invoke more shell commands unless "
+                                "the actual tool result shows a specific unresolved objective. Prefer a "
+                                "concise evidence-based final summary now."
+                            ),
+                        })
+                    elif _is_deterministic_starter:
+                        _hard_action_fallback_attempted = True
+                        _hard_action_bash_completed = False
+                        _hard_action_repair_count = 0
+                        logger.info(
+                            "[agent] deterministic starter succeeded on round %s; substantive follow-up still required",
+                            round_num,
+                        )
+                        messages.append({
+                            "role": "system",
+                            "content": (
+                                "HARD-DOMAIN STARTER COMPLETE: The diagnostic starter succeeded, "
+                                "but it does not complete the user's operational request."
+                                + _hard_action_followup_hint(_intent_domains)
+                            ),
+                        })
+                    else:
+                        _hard_action_bash_completed = True
+                        logger.info("[agent] hard action bash satisfied on round %s", round_num)
+                elif (
+                    _is_deterministic_starter
+                    and not result.get("approval_required")
+                ):
+                    _hard_action_fallback_attempted = True
+                    # The two pre-fallback repair prompts have already been
+                    # consumed. Reset the bounded counter so the model gets one
+                    # normal adaptive repair cycle using the actual failure
+                    # evidence, but the single-shot guard prevents reinjection.
+                    _hard_action_repair_count = 0
+                    logger.info(
+                        "[agent] deterministic fallback failed exit=%r; allowing adaptive repair without reinjection",
+                        _bash_exit,
+                    )
 
             # A skill the model just loaded can prescribe tools that weren't
             # RAG-selected this turn (declared via requires_toolsets in its
@@ -6271,7 +7431,13 @@ async def stream_agent_loop(
         # tool_blocks but stayed in native_tool_calls, so indexing results by
         # native position mis-attached each result to the wrong tool_call_id
         # (and left the real call answered empty).
-        _append_tool_results(messages, round_response, converted_calls,
+        _history_round_response = round_response
+        if _round_text_buffered and tool_blocks and not used_native:
+            _history_round_response = chr(10).join(
+                "[Assistant invoked tool: " + str(b.tool_type) + "]"
+                for b in tool_blocks
+            )
+        _append_tool_results(messages, _history_round_response, converted_calls,
                              tool_results, tool_result_texts, used_native, round_num,
                              round_reasoning=round_reasoning,
                              tool_result_records=tool_result_records)
@@ -6433,3 +7599,7 @@ async def stream_agent_loop(
             logger.warning(f"teacher escalation hook failed: {_esc_err}", exc_info=True)
 
     yield "data: [DONE]\n\n"
+
+# V3.4/V3.5/V3.6.2 domain, visibility, and textual-contract seams were
+# replaced by the Capability V1 projection above. Their patch scripts remain
+# in the repository as historical records.

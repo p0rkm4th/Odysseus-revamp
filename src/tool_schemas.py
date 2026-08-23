@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 _REQUIRED_NATIVE_TOOL_ARGS = {
     "web_search": ("query", "queries"),
     "web_fetch": ("url",),
+    "bash": ("command", "cmd", "code", "script"),
     "read_file": ("path",),
     "write_file": ("path",),
     "edit_file": ("path",),
@@ -1367,7 +1368,12 @@ def _repair_document_function_args(tool_type: str, arguments: str) -> Optional[d
     return None
 
 
-def function_call_to_tool_block(name: str, arguments: str) -> Optional[ToolBlock]:
+def function_call_to_tool_block(
+    name: str,
+    arguments: str,
+    *,
+    allow_empty_required: bool = False,
+) -> Optional[ToolBlock]:
     """Convert a native function call into a ToolBlock for the existing execution pipeline."""
     tool_type = _TOOL_NAME_MAP.get(name, name)
     try:
@@ -1389,7 +1395,8 @@ def function_call_to_tool_block(name: str, arguments: str) -> Optional[ToolBlock
     # must fail closed so a malformed call cannot read the default mailbox.
     # Uses the shared BUILTIN_EMAIL_TOOLS (single source of truth) so the
     # fail-closed set can't drift from the dispatch/blocklist sets.
-    if not isinstance(args, dict):
+    _non_object_args = not isinstance(args, dict)
+    if _non_object_args:
         if tool_type.startswith("mcp__email__") or name in BUILTIN_EMAIL_TOOLS:
             logger.warning(f"Non-object email function call arguments for {name}: {args!r}; rejecting")
             return None
@@ -1397,7 +1404,16 @@ def function_call_to_tool_block(name: str, arguments: str) -> Optional[ToolBlock
         args = {}
 
     required_args = _REQUIRED_NATIVE_TOOL_ARGS.get(tool_type)
-    if required_args and not any(str(args.get(key) or "").strip() for key in required_args):
+    # A valid non-object JSON payload is already malformed for a function
+    # schema. Preserve the historical empty-tool-block behavior for ordinary
+    # tools so parser robustness does not turn into a stream abort; structured
+    # capability tools still fail closed in their executor.
+    if (
+        required_args
+        and not allow_empty_required
+        and not _non_object_args
+        and not any(str(args.get(key) or "").strip() for key in required_args)
+    ):
         logger.warning(f"Rejecting empty required arguments for function call {name}: {args!r}")
         return None
 
@@ -1414,7 +1430,13 @@ def function_call_to_tool_block(name: str, arguments: str) -> Optional[ToolBlock
 
     # Convert structured args back to the text format each tool expects
     if tool_type == "bash":
-        content = args.get("command", "")
+        content = (
+            args.get("command")
+            or args.get("cmd")
+            or args.get("code")
+            or args.get("script")
+            or ""
+        )
     elif tool_type == "python":
         content = args.get("code", "")
     elif tool_type == "web_search":
@@ -1593,3 +1615,17 @@ def function_call_to_tool_block(name: str, arguments: str) -> Optional[ToolBlock
         content = json.dumps(args)
 
     return ToolBlock(tool_type, content)
+
+# Capability V1 schema projection.  Keep the append-if-missing behavior for
+# callers that import this module through older compatibility paths.
+from src.tool_bindings import projected_schemas as _projected_capability_schemas
+
+_ody_v34_schema_names = {
+    schema.get("function", {}).get("name")
+    for schema in FUNCTION_TOOL_SCHEMAS
+    if isinstance(schema, dict)
+}
+for _capability_schema in _projected_capability_schemas():
+    _capability_schema_name = _capability_schema.get("function", {}).get("name")
+    if _capability_schema_name not in _ody_v34_schema_names:
+        FUNCTION_TOOL_SCHEMAS.append(dict(_capability_schema))
