@@ -90,8 +90,8 @@ def setup_work_routes(*, session_factory=SessionLocal):
             target = next((x for x in engagement["targets"] if x["id"] == payload.get("target_id")), None)
             if target is None: raise WorkError("security target not found")
             action = svc.create_action(o,run.id,{"capability_id":"security.target.resolve","action_id":"resolve","tool_binding_name":"manage_security_assessment","effect_class":"read_private","normalized_input":{"target_id":target["id"]}})
-            svc.complete_action(o,action["id"],{"result_reference":f"security-target://{target['id']}"})
-            return {"action": action, "target": target, "engagement_id": engagement["id"]}
+            completed = svc.complete_action(o,action["id"],{"result_reference":f"security-target://{target['id']}"})
+            return {"action": completed, "target": target, "engagement_id": engagement["id"]}
         return await tx(request, operation)
 
     @router.post("/runs/{run_id}/inventory-review", status_code=201)
@@ -101,7 +101,7 @@ def setup_work_routes(*, session_factory=SessionLocal):
             from src.inventory_service import get_inventory_service
             item = get_inventory_service().get_item(o,item_id)
             action = svc.create_action(o,run.id,{"capability_id":"inventory.manage","action_id":"get","tool_binding_name":"manage_assets","effect_class":"read_private","normalized_input":{"item_id":item_id}})
-            svc.complete_action(o,action["id"],{"result_reference":f"inventory-item://{item_id}"})
-            return {"action": action, "item": item, "proposal": {"review_required": True, "item_id": item_id}}
+            completed = svc.complete_action(o,action["id"],{"result_reference":f"inventory-item://{item_id}"})
+            return {"action": completed, "item": item, "proposal": {"review_required": True, "item_id": item_id}}
         return await tx(request, operation)
     return router
