@@ -280,6 +280,12 @@ _register(
     result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
 )
 _register(
+    {"manage_security_assessment"},
+    ToolEffect.READ_PRIVATE,
+    ToolEffect.WRITE_PRIVATE,
+    result_integrity=ResultIntegrity.SYSTEM,
+)
+_register(
     {"privileged_action"},
     ToolEffect.READ_PRIVATE,
     ToolEffect.EXECUTE_CODE,

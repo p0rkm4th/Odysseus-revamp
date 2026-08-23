@@ -1394,11 +1394,37 @@ async def _execute_manage_osint_binding(block, owner=None):
         return "manage_osint", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_security_assessment_binding(block, owner=None):
+    """Expose only read projections to the agent transport in V1."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        from core.database import SessionLocal
+        from src.security_assessment import SecurityAssessmentService
+        if not owner:
+            raise ValueError("an authenticated assessment owner is required")
+        action = str(payload.get("action") or "").strip().casefold()
+        with SessionLocal() as db:
+            service = SecurityAssessmentService(db)
+            if action == "list_engagements":
+                result = {"engagements": service.list_engagements(str(owner))}
+            elif action == "get_engagement":
+                result = service.get_engagement(str(owner), str(payload.get("engagement_id") or ""))
+            elif action == "list_findings":
+                from core.security_assessment_models import SecurityFinding
+                result = {"findings": [{column.name: getattr(row, column.name) for column in row.__table__.columns} for row in db.query(SecurityFinding).filter_by(owner=str(owner)).all()]}
+            else:
+                raise ValueError("unsupported read-only security assessment action")
+        return "manage_security_assessment", {"output": _ody_v34_json.dumps(result, default=str, indent=2, sort_keys=True), "exit_code": 0, "data": result}
+    except Exception as exc:
+        return "manage_security_assessment", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
     "manage_homelab": _execute_manage_homelab_binding,
     "manage_osint": _execute_manage_osint_binding,
+    "manage_security_assessment": _execute_security_assessment_binding,
 }
 
 

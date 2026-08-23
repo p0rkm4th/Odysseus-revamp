@@ -688,6 +688,12 @@ app.include_router(setup_economic_routes())
 app.include_router(setup_improvement_routes())
 app.include_router(setup_telegram_routes(session_manager=session_manager))
 
+# Bounded security assessment ledger.  This exposes durable authorization,
+# scope, run, evidence, finding, and report state; it does not expose exploit,
+# credential, persistence, or arbitrary-command execution.
+from routes.security_assessment_routes import setup_security_assessment_routes
+app.include_router(setup_security_assessment_routes())
+
 # Emoji SVG proxy (same-origin, lazy-cached Twemoji) — lets the chat render
 # emojis as flat SVG instead of system color glyphs.
 from routes.emoji_routes import setup_emoji_routes
