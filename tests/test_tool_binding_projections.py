@@ -31,8 +31,8 @@ def test_tags_contracts_domains_and_executors_are_projected():
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 4
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 5
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()

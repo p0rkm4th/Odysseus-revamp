@@ -104,6 +104,41 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             ActionSpec(action_id="fetch", executor_key="manage_osint"),
         ),
     ),
+    "security.assessment.read": CapabilitySpec(
+        capability_id="security.assessment.read",
+        description="Read owner-scoped bounded security assessment records.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("read_private",), executor_key="manage_security_assessment") for action in ("list_engagements", "get_engagement", "list_findings"))),
+    ),
+    "security.engagement.manage": CapabilitySpec(
+        capability_id="security.engagement.manage",
+        description="Manage draft and explicitly authorized security engagements.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("write_private",), approval=ApprovalMode.NORMAL, executor_key="security_assessment") for action in ("create_engagement", "authorize_engagement"))),
+    ),
+    "security.scope.manage": CapabilitySpec(
+        capability_id="security.scope.manage",
+        description="Manage explicit inclusion, exclusion, and action scope.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("write_private",), approval=ApprovalMode.NORMAL, executor_key="security_assessment") for action in ("add_scope", "add_target"))),
+    ),
+    "security.run.plan": CapabilitySpec(
+        capability_id="security.run.plan",
+        description="Plan a bounded, persisted assessment run after scope authorization.",
+        actions=_actions(ActionSpec(action_id="plan_run", effects=("network_plan",), approval=ApprovalMode.NORMAL, executor_key="security_assessment")),
+    ),
+    "security.recon.execute": CapabilitySpec(
+        capability_id="security.recon.execute",
+        description="Reserved exact-approval boundary; V1 exposes no recon executor.",
+        actions=_actions(ActionSpec(action_id="execute", effects=("external_network",), approval=ApprovalMode.EXACT)),
+    ),
+    "security.finding.manage": CapabilitySpec(
+        capability_id="security.finding.manage",
+        description="Record and advance findings with evidence references.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("write_private",), approval=ApprovalMode.NORMAL, executor_key="security_assessment") for action in ("add_evidence", "add_finding", "update_finding"))),
+    ),
+    "security.report.generate": CapabilitySpec(
+        capability_id="security.report.generate",
+        description="Generate a local projection report from canonical assessment state.",
+        actions=_actions(ActionSpec(action_id="generate", effects=("read_private",), executor_key="security_assessment")),
+    ),
 })
 
 
@@ -112,6 +147,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "privileged_action": "system.privileged_diagnostics",
     "manage_homelab": "homelab.manage",
     "manage_osint": "research.public_sources",
+    "manage_security_assessment": "security.assessment.read",
 })
 
 
