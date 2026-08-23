@@ -38,7 +38,7 @@ def setup_security_assessment_routes(*, session_factory=SessionLocal):
             return await asyncio.to_thread(run)
         except SecurityAssessmentError as exc:
             message = str(exc)
-            status = 409 if any(word in message for word in ("authorized", "scope", "expired", "outside", "lifecycle", "not completable")) else 400
+            status = 409 if any(word in message for word in ("authorized", "scope", "expired", "outside", "lifecycle", "not completable", "canonical target")) else 400
             raise HTTPException(status, message) from exc
 
     @router.get("/engagements")
@@ -65,6 +65,10 @@ def setup_security_assessment_routes(*, session_factory=SessionLocal):
     async def add_target(request: Request, engagement_id: str, payload: dict[str, Any] = Body(...)):
         return await transact(lambda svc, owner, user: svc.add_target(owner, engagement_id, payload), request)
 
+    @router.post("/targets/{target_id}/revalidate")
+    async def revalidate_target(request: Request, target_id: str):
+        return await transact(lambda svc, owner, user: svc.revalidate_target(owner, target_id), request)
+
     @router.post("/engagements/{engagement_id}/runs/plan", status_code=201)
     async def plan_run(request: Request, engagement_id: str, payload: dict[str, Any] = Body(...)):
         return await transact(lambda svc, owner, user: svc.plan_run(owner, user, engagement_id, payload), request)
@@ -72,6 +76,10 @@ def setup_security_assessment_routes(*, session_factory=SessionLocal):
     @router.post("/runs/{run_id}/complete")
     async def complete_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)):
         return await transact(lambda svc, owner, user: svc.complete_run(owner, run_id, payload), request)
+
+    @router.post("/runs/{run_id}/homelab-observation", status_code=201)
+    async def ingest_homelab_observation(request: Request, run_id: str, payload: dict[str, Any] = Body(...)):
+        return await transact(lambda svc, owner, user: svc.ingest_homelab_observation(owner, user, run_id, payload), request)
 
     @router.post("/engagements/{engagement_id}/evidence", status_code=201)
     async def add_evidence(request: Request, engagement_id: str, payload: dict[str, Any] = Body(...)):
@@ -93,6 +101,14 @@ def setup_security_assessment_routes(*, session_factory=SessionLocal):
     @router.patch("/findings/{finding_id}")
     async def update_finding(request: Request, finding_id: str, payload: dict[str, Any] = Body(...)):
         return await transact(lambda svc, owner, user: svc.update_finding(owner, finding_id, payload), request)
+
+    @router.post("/engagements/{engagement_id}/finding-candidates", status_code=201)
+    async def propose_finding(request: Request, engagement_id: str, payload: dict[str, Any] = Body(...)):
+        return await transact(lambda svc, owner, user: svc.propose_finding(owner, user, engagement_id, payload), request)
+
+    @router.post("/finding-candidates/{candidate_id}/confirm")
+    async def confirm_finding_candidate(request: Request, candidate_id: str):
+        return await transact(lambda svc, owner, user: svc.confirm_candidate(owner, user, candidate_id), request)
 
     @router.post("/engagements/{engagement_id}/reports", status_code=201)
     async def generate_report(request: Request, engagement_id: str):
