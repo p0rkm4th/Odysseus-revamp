@@ -50,3 +50,9 @@ def test_owner_isolation_and_restart_state(db):
     db.expire_all(); resumed = WorkEngine(db).get_run("alice", run["id"])
     assert resumed["status"] == "awaiting_approval"
     assert resumed["continuation_state"] == {"cursor":2}
+
+def test_awaiting_approval_action_promotes_parent_run(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain":"inventory"})
+    svc.create_action("alice", run["id"], {"capability_id":"inventory.manage", "action_id":"update", "status":"awaiting_approval"})
+    assert svc.get_run("alice", run["id"])["status"] == "awaiting_approval"
