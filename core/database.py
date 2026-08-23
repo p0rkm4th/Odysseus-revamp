@@ -2070,6 +2070,8 @@ from core import telegram_models as telegram_models  # noqa: E402,F401
 from core import telegram_migrations as telegram_migrations  # noqa: E402,F401
 from core import security_assessment_models as security_assessment_models  # noqa: E402,F401
 from core import security_assessment_migrations as security_assessment_migrations  # noqa: E402,F401
+from core import work_models as work_models  # noqa: E402,F401
+from core import work_migrations as work_migrations  # noqa: E402,F401
 from core.schema_migrations import run_schema_migrations  # noqa: E402
 
 
