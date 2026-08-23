@@ -102,7 +102,10 @@ class WorkEngine:
         row = WorkAction(id=ident("action"), run_id=run.id, sequence=sequence, capability_id=str(data.get("capability_id") or "").strip(), action_id=str(data.get("action_id") or "").strip(), tool_binding_name=data.get("tool_binding_name"), effect_class=str(data.get("effect_class") or "internal"), sealed_input_digest=digest, normalized_input=data.get("normalized_input") or {}, status=str(data.get("status") or "proposed"), approval_reference=data.get("approval_reference"))
         if not row.capability_id or not row.action_id: raise WorkError("capability_id and action_id are required")
         if row.status not in ACTION_STATUSES: raise WorkError("invalid action status")
-        self.db.add(row); self.event(owner, "approval.requested" if row.status == "awaiting_approval" else "action.proposed", run_id=run.id, action_id=row.id, payload={"capability_id": row.capability_id, "action_id": row.action_id}); self.db.commit(); self.db.refresh(row); return serialize(row)
+        self.db.add(row)
+        if row.status == "awaiting_approval":
+            run.status = "awaiting_approval"; run.current_step = f"approval required: {row.action_id}"; run.revision += 1
+        self.event(owner, "approval.requested" if row.status == "awaiting_approval" else "action.proposed", run_id=run.id, action_id=row.id, payload={"capability_id": row.capability_id, "action_id": row.action_id}); self.db.commit(); self.db.refresh(row); return serialize(row)
 
     def complete_action(self, owner, action_id, data):
         row = self.db.query(WorkAction).join(WorkRun, WorkRun.id == WorkAction.run_id).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
