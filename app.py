@@ -693,6 +693,8 @@ app.include_router(setup_telegram_routes(session_manager=session_manager))
 # credential, persistence, or arbitrary-command execution.
 from routes.security_assessment_routes import setup_security_assessment_routes
 app.include_router(setup_security_assessment_routes())
+from routes.work_routes import setup_work_routes
+app.include_router(setup_work_routes())
 
 # Emoji SVG proxy (same-origin, lazy-cached Twemoji) — lets the chat render
 # emojis as flat SVG instead of system color glyphs.

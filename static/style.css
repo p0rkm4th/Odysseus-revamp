@@ -41421,3 +41421,9 @@ body.settings-sidebar-resize-active {
 .security-badge.canonical { background:#245b4b; color:#c5ffe7; }
 .security-badge.unresolved, .security-badge.retired { background:#633c3c; color:#ffd0d0; }
 .security-error { color: var(--accent-error, #f88); }
+.work-pane { position: fixed; inset: 7vh 8vw; z-index: 40; overflow: auto; padding: 24px; color: var(--text-primary, #eee); background: var(--bg-primary, #151515); border: 1px solid var(--border, #333); border-radius: 14px; box-shadow: 0 18px 60px #0009; }
+.work-header, .work-actions { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+.work-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+.work-grid section { border:1px solid var(--border,#333); border-radius:10px; padding:14px; min-height:140px; }
+.work-card { display:grid; gap:5px; padding:10px 0; border-bottom:1px solid color-mix(in srgb, var(--border,#333) 65%, transparent); }
+.work-card span { font-size:11px; opacity:.75; text-transform:uppercase; } .work-card small { opacity:.7; }

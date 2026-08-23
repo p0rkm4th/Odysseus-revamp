@@ -36,6 +36,7 @@ import adminModule from './js/admin.js?v=20260716openrouter3';
 import settingsModule from './js/settings.js?v=20260815approvalsave1';
 import inventoryModule from './js/inventory.js?v=20260823inventory1';
 import securityModule from './js/security.js?v=20260823security1';
+import workModule from './js/work.js?v=20260823work1';
 // Eagerly bind unified minimize/restore behavior across all tool modals.
 import './js/modalManager.js?v=20260723compareicon2';
 // Desktop window tiling — drag a modal near an edge/corner to snap.
@@ -64,6 +65,7 @@ window.adminModule = adminModule;
 window.cookbookModule = cookbookModule;
 window.inventoryModule = inventoryModule;
 window.securityModule = securityModule;
+window.workModule = workModule;
 
 function _isMobileChatInput() {
   return window.innerWidth <= 768;
@@ -1096,6 +1098,8 @@ function initializeEventListeners() {
   }
   const toolSecurityBtn = el('tool-security-btn');
   if (toolSecurityBtn) toolSecurityBtn.addEventListener('click', () => securityModule.togglePanel());
+  const toolWorkBtn = el('tool-work-btn');
+  if (toolWorkBtn) toolWorkBtn.addEventListener('click', () => workModule.togglePanel());
 
   // Notes tool button
   const toolNotesBtn = el('tool-notes-btn');
