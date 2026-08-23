@@ -7,7 +7,7 @@ executor.
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 
 from core.database import Base, TimestampMixin, utcnow_naive
 
@@ -76,6 +76,9 @@ class SecurityTarget(TimestampMixin, Base):
     canonical_asset_id = Column(String, nullable=True, index=True)
     inventory_item_id = Column(String, nullable=True)
     metadata_json = Column(JSON, nullable=False, default=dict)
+    resolution_state = Column(String(32), nullable=False, default="external")
+    canonical_context_json = Column(JSON, nullable=False, default=dict)
+    last_validated_at = Column(DateTime, nullable=True)
     revision = Column(Integer, nullable=False, default=1)
 
 
@@ -111,6 +114,8 @@ class SecurityEvidence(TimestampMixin, Base):
     engagement_id = Column(String, ForeignKey("security_engagements.id", ondelete="CASCADE"), nullable=False, index=True)
     run_id = Column(String, ForeignKey("security_runs.id", ondelete="RESTRICT"), nullable=True, index=True)
     target_id = Column(String, ForeignKey("security_targets.id", ondelete="RESTRICT"), nullable=True)
+    cmdb_observation_id = Column(String, nullable=True)
+    idempotency_key = Column(String, nullable=True)
     owner = Column(String, nullable=False, index=True)
     evidence_kind = Column(String(64), nullable=False)
     reference = Column(String(1000), nullable=False)
@@ -119,6 +124,7 @@ class SecurityEvidence(TimestampMixin, Base):
     source_trust = Column(String(32), nullable=False, default="system")
     confidence = Column(String(32), nullable=False, default="medium")
     content_digest = Column(String(64), nullable=True)
+    __table_args__ = (UniqueConstraint("owner", "idempotency_key", name="uq_security_evidence_owner_idempotency"),)
 
 
 class SecurityFinding(TimestampMixin, Base):
@@ -149,6 +155,31 @@ class SecurityFinding(TimestampMixin, Base):
     )
 
 
+class SecurityFindingCandidate(TimestampMixin, Base):
+    __tablename__ = "security_finding_candidates"
+    id = Column(String, primary_key=True)
+    engagement_id = Column(String, ForeignKey("security_engagements.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_id = Column(String, ForeignKey("security_targets.id", ondelete="RESTRICT"), nullable=True)
+    run_id = Column(String, ForeignKey("security_runs.id", ondelete="RESTRICT"), nullable=True)
+    owner = Column(String, nullable=False, index=True)
+    evidence_refs_json = Column(JSON, nullable=False, default=list)
+    proposed_title = Column(String(300), nullable=False)
+    proposed_description = Column(Text, nullable=False)
+    proposed_category = Column(String(64), nullable=False)
+    proposed_severity = Column(String(32), nullable=False, default="informational")
+    confidence = Column(String(32), nullable=False, default="medium")
+    rationale = Column(Text, nullable=False, default="")
+    remediation = Column(Text, nullable=False, default="")
+    source_kind = Column(String(32), nullable=False, default="operator")
+    status = Column(String(32), nullable=False, default="proposed")
+    created_by = Column(String, nullable=False)
+    confirmed_by = Column(String, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+    confirmed_finding_id = Column(String, ForeignKey("security_findings.id", ondelete="RESTRICT"), nullable=True)
+    revision = Column(Integer, nullable=False, default=1)
+    __table_args__ = (CheckConstraint("status IN ('proposed','confirmed','rejected')", name="ck_security_finding_candidate_status"),)
+
+
 class SecurityReport(TimestampMixin, Base):
     __tablename__ = "security_reports"
     id = Column(String, primary_key=True)
@@ -163,4 +194,5 @@ class SecurityReport(TimestampMixin, Base):
 SECURITY_ASSESSMENT_TABLES = tuple(model.__table__ for model in (
     SecurityEngagement, SecurityAuthorization, SecurityScope, SecurityTarget,
     SecurityRun, SecurityEvidence, SecurityFinding, SecurityReport,
+    SecurityFindingCandidate,
 ))

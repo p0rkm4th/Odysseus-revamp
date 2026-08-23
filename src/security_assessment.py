@@ -7,7 +7,7 @@ credential tooling.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import ipaddress
 import json
 from typing import Any
@@ -19,7 +19,9 @@ from sqlalchemy.orm import Session
 from core.security_assessment_models import (
     SecurityAuthorization, SecurityEngagement, SecurityEvidence,
     SecurityFinding, SecurityReport, SecurityRun, SecurityScope, SecurityTarget,
+    SecurityFindingCandidate,
 )
+from src.cmdb_security_context import CmdbSecurityContext
 
 
 SAFE_RUN_CLASSES = frozenset({
@@ -32,6 +34,7 @@ FINDING_STATUSES = frozenset({
     "draft", "confirmed", "accepted_risk", "remediation_planned", "remediated",
     "verification_pending", "verified", "false_positive", "closed",
 })
+EVIDENCE_STALE_AFTER = timedelta(hours=24)
 
 
 class SecurityAssessmentError(ValueError):
@@ -114,6 +117,7 @@ def _target_matches(entry: Any, target: SecurityTarget) -> bool:
 class SecurityAssessmentService:
     def __init__(self, db: Session):
         self.db = db
+        self.cmdb = CmdbSecurityContext()
 
     def _engagement(self, owner: str, engagement_id: str) -> SecurityEngagement:
         row = self.db.query(SecurityEngagement).filter_by(id=engagement_id, owner=owner).one_or_none()
@@ -153,6 +157,12 @@ class SecurityAssessmentService:
         result["targets"] = [_serialize(x) for x in self.db.query(SecurityTarget).filter_by(owner=owner, engagement_id=row.id).all()]
         result["runs"] = [_serialize(x) for x in self.db.query(SecurityRun).filter_by(owner=owner, engagement_id=row.id).order_by(SecurityRun.created_at.desc()).all()]
         result["findings"] = [_serialize(x) for x in self.db.query(SecurityFinding).filter_by(owner=owner, engagement_id=row.id).order_by(SecurityFinding.updated_at.desc()).all()]
+        result["finding_candidates"] = [_serialize(x) for x in self.db.query(SecurityFindingCandidate).filter_by(owner=owner, engagement_id=row.id).order_by(SecurityFindingCandidate.updated_at.desc()).all()]
+        result["evidence"] = []
+        for evidence in self.db.query(SecurityEvidence).filter_by(owner=owner, engagement_id=row.id).order_by(SecurityEvidence.observed_at.desc()).all():
+            item = _serialize(evidence)
+            item["stale"] = bool(evidence.observed_at and evidence.observed_at < _now() - EVIDENCE_STALE_AFTER)
+            result["evidence"].append(item)
         return result
 
     def authorize(self, owner: str, engagement_id: str, actor: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -205,10 +215,31 @@ class SecurityAssessmentService:
             target_kind=kind, target_value=value[:500], canonical_asset_id=data.get("canonical_asset_id"),
             inventory_item_id=data.get("inventory_item_id"), metadata_json=data.get("metadata") or {},
         )
+        if target.canonical_asset_id:
+            context = self.cmdb.resolve(target.canonical_asset_id, owner=owner)
+            target.resolution_state = context.get("resolution_state", "unresolved")
+            target.canonical_context_json = context
+            target.last_validated_at = _now()
+        else:
+            target.resolution_state = "external"
         if not self._scope_contains(scope, target):
             raise SecurityAssessmentError("target is outside the explicit scope")
         self.db.add(target); self.db.commit(); self.db.refresh(target)
         return _serialize(target)
+
+    def revalidate_target(self, owner: str, target_id: str) -> dict[str, Any]:
+        target = self.db.query(SecurityTarget).filter_by(id=target_id, owner=owner).one_or_none()
+        if target is None: raise SecurityAssessmentError("target not found")
+        if target.canonical_asset_id:
+            context = self.cmdb.resolve(target.canonical_asset_id, owner=owner)
+            target.resolution_state = context.get("resolution_state", "unresolved")
+            target.canonical_context_json = context
+            target.last_validated_at = _now()
+        else:
+            target.resolution_state = "external"
+            target.last_validated_at = _now()
+        target.revision += 1; self.db.commit(); self.db.refresh(target)
+        return _serialize(target) | {"context": target.canonical_context_json}
 
     def _scope_allows(self, scope: SecurityScope, target: SecurityTarget, action_class: str) -> bool:
         if not self._scope_contains(scope, target):
@@ -235,6 +266,8 @@ class SecurityAssessmentService:
             raise SecurityAssessmentError("engagement authorization has expired")
         target = self.db.query(SecurityTarget).filter_by(id=str(data.get("target_id") or ""), owner=owner, engagement_id=engagement_id).one_or_none()
         if target is None: raise SecurityAssessmentError("target not found")
+        if target.canonical_asset_id and target.resolution_state in {"unresolved", "retired", "stale"}:
+            raise SecurityAssessmentError(f"canonical target is {target.resolution_state}")
         scope = self._scope(owner, target.scope_id)
         run_class = str(data.get("run_class") or "").strip().casefold()
         if run_class not in SAFE_RUN_CLASSES: raise SecurityAssessmentError("unsupported safe assessment run class")
@@ -263,15 +296,36 @@ class SecurityAssessmentService:
         self._engagement(owner, engagement_id)
         run_id = data.get("run_id")
         if run_id and self.db.query(SecurityRun).filter_by(id=run_id, owner=owner, engagement_id=engagement_id).one_or_none() is None: raise SecurityAssessmentError("run not found")
+        target_id = data.get("target_id")
+        if target_id and self.db.query(SecurityTarget).filter_by(id=target_id, owner=owner, engagement_id=engagement_id).one_or_none() is None: raise SecurityAssessmentError("target not found")
+        idempotency_key = str(data.get("idempotency_key") or "").strip() or None
+        if idempotency_key:
+            existing = self.db.query(SecurityEvidence).filter_by(owner=owner, idempotency_key=idempotency_key).one_or_none()
+            if existing is not None: return _serialize(existing) | {"replayed": True}
         row = SecurityEvidence(
-            id=_id("evidence"), engagement_id=engagement_id, run_id=run_id, target_id=data.get("target_id"), owner=owner,
+            id=_id("evidence"), engagement_id=engagement_id, run_id=run_id, target_id=target_id, owner=owner,
             evidence_kind=str(data.get("evidence_kind") or "structured_observation")[:64], reference=str(data.get("reference") or "").strip()[:1000],
             structured_facts_json=data.get("facts") or {}, observed_at=_dt(data.get("observed_at"), "observed_at") or _now(),
             source_trust=str(data.get("source_trust") or "system")[:32], confidence=str(data.get("confidence") or "medium")[:32], content_digest=data.get("content_digest"),
+            idempotency_key=idempotency_key, cmdb_observation_id=data.get("cmdb_observation_id"),
         )
         if not row.reference: raise SecurityAssessmentError("evidence reference is required")
         self.db.add(row); self.db.commit(); self.db.refresh(row)
         return _serialize(row)
+
+    def ingest_homelab_observation(self, owner: str, requester: str, run_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        run = self.db.query(SecurityRun).filter_by(id=run_id, owner=owner).one_or_none()
+        if run is None: raise SecurityAssessmentError("run not found")
+        if run.status not in {"planned", "approved", "running", "completed"} or run.authorization_decision != "authorized":
+            raise SecurityAssessmentError("homelab observation requires an authorized assessment run")
+        facts = data.get("observation") or data.get("facts") or {}
+        if not isinstance(facts, dict): raise SecurityAssessmentError("homelab observation must be structured")
+        return self.add_evidence(owner, requester, run.engagement_id, {
+            "run_id": run.id, "target_id": run.target_id,
+            "evidence_kind": "homelab_observation", "reference": data.get("reference") or f"homelab://assessment/{run.id}",
+            "facts": facts, "source_trust": "system", "confidence": data.get("confidence") or "high",
+            "cmdb_observation_id": data.get("cmdb_observation_id"), "idempotency_key": data.get("idempotency_key"),
+        })
 
     def add_finding(self, owner: str, created_by: str, engagement_id: str, data: dict[str, Any]) -> dict[str, Any]:
         self._engagement(owner, engagement_id)
@@ -298,6 +352,39 @@ class SecurityAssessmentService:
         if "evidence_refs" in data: row.evidence_refs_json = _json(data["evidence_refs"], "evidence_refs")
         row.revision += 1; row.last_seen = _now(); self.db.commit(); self.db.refresh(row)
         return _serialize(row)
+
+    def propose_finding(self, owner: str, created_by: str, engagement_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        self._engagement(owner, engagement_id)
+        refs = _json(data.get("evidence_refs"), "evidence_refs")
+        if not refs: raise SecurityAssessmentError("finding candidate requires evidence references")
+        severity = str(data.get("severity") or "informational").casefold()
+        if severity not in SEVERITIES: raise SecurityAssessmentError("invalid severity")
+        row = SecurityFindingCandidate(
+            id=_id("candidate"), engagement_id=engagement_id, target_id=data.get("target_id"), run_id=data.get("run_id"), owner=owner,
+            evidence_refs_json=refs, proposed_title=str(data.get("title") or "").strip()[:300], proposed_description=str(data.get("description") or "")[:20000],
+            proposed_category=str(data.get("category") or "observation")[:64], proposed_severity=severity, confidence=str(data.get("confidence") or "medium")[:32],
+            rationale=str(data.get("rationale") or "")[:20000], remediation=str(data.get("remediation") or "")[:20000], source_kind=str(data.get("source_kind") or "operator")[:32], created_by=created_by,
+        )
+        if not row.proposed_title or not row.proposed_description: raise SecurityAssessmentError("candidate title and description are required")
+        self.db.add(row); self.db.commit(); self.db.refresh(row)
+        return _serialize(row)
+
+    def confirm_candidate(self, owner: str, actor: str, candidate_id: str) -> dict[str, Any]:
+        candidate = self.db.query(SecurityFindingCandidate).filter_by(id=candidate_id, owner=owner).one_or_none()
+        if candidate is None: raise SecurityAssessmentError("finding candidate not found")
+        if candidate.status == "confirmed" and candidate.confirmed_finding_id:
+            finding = self.db.query(SecurityFinding).filter_by(id=candidate.confirmed_finding_id, owner=owner).one_or_none()
+            return {"candidate": _serialize(candidate), "finding": _serialize(finding), "replayed": True}
+        if candidate.status != "proposed": raise SecurityAssessmentError("finding candidate is not confirmable")
+        finding = SecurityFinding(
+            id=_id("finding"), engagement_id=candidate.engagement_id, target_id=candidate.target_id, run_id=candidate.run_id, owner=owner,
+            title=candidate.proposed_title, description=candidate.proposed_description, category=candidate.proposed_category,
+            severity=candidate.proposed_severity, confidence=candidate.confidence, status="confirmed", evidence_refs_json=candidate.evidence_refs_json,
+            remediation=candidate.remediation, created_by=actor, scoring_basis="explicit_candidate_confirmation",
+        )
+        candidate.status = "confirmed"; candidate.confirmed_by = actor; candidate.confirmed_at = _now(); candidate.confirmed_finding_id = finding.id; candidate.revision += 1
+        self.db.add(finding); self.db.commit(); self.db.refresh(candidate); self.db.refresh(finding)
+        return {"candidate": _serialize(candidate), "finding": _serialize(finding)}
 
     def report(self, owner: str, generated_by: str, engagement_id: str) -> dict[str, Any]:
         engagement = self._engagement(owner, engagement_id)

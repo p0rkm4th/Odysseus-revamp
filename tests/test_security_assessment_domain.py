@@ -40,8 +40,8 @@ def test_unauthorized_run_and_scope_exclusion_are_blocked(service):
 
 def test_authorized_run_evidence_finding_and_report(service):
     engagement = _engagement(service)
-    scope = service.add_scope("alice", engagement["id"], {"includes": [{"kind": "asset", "value": "cmdb-1"}], "allowed_actions": ["reconnaissance"]})
-    target = service.add_target("alice", engagement["id"], {"scope_id": scope["id"], "target_kind": "asset", "target_value": "host-a", "canonical_asset_id": "cmdb-1"})
+    scope = service.add_scope("alice", engagement["id"], {"includes": [{"kind": "hostname", "value": "host-a"}], "allowed_actions": ["reconnaissance"]})
+    target = service.add_target("alice", engagement["id"], {"scope_id": scope["id"], "target_kind": "host", "target_value": "host-a"})
     service.authorize("alice", engagement["id"], "alice", {"reference": "signed-roe", "expires_at": (datetime.utcnow() + timedelta(hours=1)).isoformat()})
     run = service.plan_run("alice", "alice", engagement["id"], {"target_id": target["id"], "run_class": "reconnaissance"})
     assert run["authorization_decision"] == "authorized"

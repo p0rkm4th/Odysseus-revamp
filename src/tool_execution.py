@@ -1412,6 +1412,9 @@ async def _execute_security_assessment_binding(block, owner=None):
             elif action == "list_findings":
                 from core.security_assessment_models import SecurityFinding
                 result = {"findings": [{column.name: getattr(row, column.name) for column in row.__table__.columns} for row in db.query(SecurityFinding).filter_by(owner=str(owner)).all()]}
+            elif action == "list_evidence":
+                from core.security_assessment_models import SecurityEvidence
+                result = {"evidence": [{column.name: getattr(row, column.name) for column in row.__table__.columns} for row in db.query(SecurityEvidence).filter_by(owner=str(owner)).all()]}
             else:
                 raise ValueError("unsupported read-only security assessment action")
         return "manage_security_assessment", {"output": _ody_v34_json.dumps(result, default=str, indent=2, sort_keys=True), "exit_code": 0, "data": result}
