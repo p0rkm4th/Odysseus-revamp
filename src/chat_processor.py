@@ -503,7 +503,25 @@ class ChatProcessor:
         # call the tool anyway, so the index would be noise.
         if agent_mode and not incognito and use_skills and self.skills_manager:
             try:
-                idx = self.skills_manager.index_for(owner=owner)
+                _skill_prefs = {}
+                try:
+                    from routes.prefs_routes import _load_for_user as _load_skill_prefs
+                    _skill_prefs = _load_skill_prefs(owner) or {}
+                except Exception:
+                    pass
+                _allow_teacher_drafts = bool(_skill_prefs.get("auto_approve_skills", True))
+                try:
+                    from src.settings import get_setting as _get_setting
+                    _skill_min_conf = float(_skill_prefs.get(
+                        "skill_min_confidence",
+                        _get_setting("skill_autosave_min_confidence", 0.85)))
+                except Exception:
+                    _skill_min_conf = 0.85
+                idx = self.skills_manager.index_for(
+                    owner=owner,
+                    allow_teacher_drafts=_allow_teacher_drafts,
+                    min_confidence=_skill_min_conf,
+                )
             except Exception as e:
                 logger.debug(f"Skills index unavailable: {e}")
                 idx = []

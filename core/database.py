@@ -2058,6 +2058,19 @@ def _migrate_seed_email_account():
 # Any future migrations or schema changes that temporarily violate foreign-key
 # constraints will fail. To perform such operations, foreign_keys must be
 # temporarily disabled around the migration workflow.
+# Inventory models and the versioned schema runner are imported here so the
+# existing database bootstrap owns their tables without creating a second DB.
+from core import inventory_models as inventory_models  # noqa: E402,F401
+from core import inventory_migrations as inventory_migrations  # noqa: E402,F401
+from core import economic_models as economic_models  # noqa: E402,F401
+from core import economic_migrations as economic_migrations  # noqa: E402,F401
+from core import improvement_models as improvement_models  # noqa: E402,F401
+from core import improvement_migrations as improvement_migrations  # noqa: E402,F401
+from core import telegram_models as telegram_models  # noqa: E402,F401
+from core import telegram_migrations as telegram_migrations  # noqa: E402,F401
+from core.schema_migrations import run_schema_migrations  # noqa: E402
+
+
 def init_db():
     """
     Initialize the database by creating all tables.
@@ -2065,6 +2078,7 @@ def init_db():
     """
     _migrate_model_endpoints()
     Base.metadata.create_all(bind=engine)
+    run_schema_migrations(engine)
     # Lock the DB file (and any SQLite sidecars) to 0o600 — it holds bearer-token
     # + bcrypt hashes and encrypted provider keys. POSIX only; safe_chmod no-ops
     # on Windows (ACL-restricted profile dir) and the path helper returns None for

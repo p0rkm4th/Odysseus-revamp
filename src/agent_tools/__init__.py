@@ -156,3 +156,80 @@ from src.tool_implementations import (  # noqa: E402, F401
     do_manage_tasks,
     do_api_call,
 )
+
+# Capability V1 transport projection.  This runs after the facade's schema and
+# parser imports have completed, preserving the existing import boundary.
+import src.tool_schemas as _ody_v34_tool_schemas
+import src.tool_parsing as _ody_v34_tool_parsing
+from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings
+
+
+def _ody_v34_add_tool_name(name):
+    global TOOL_TAGS
+    tags = TOOL_TAGS
+
+    if isinstance(tags, dict):
+        if name not in tags:
+            sample_key = (
+                "manage_memory"
+                if "manage_memory" in tags
+                else (next(iter(tags)) if tags else None)
+            )
+            sample = tags.get(sample_key) if sample_key is not None else name
+            if isinstance(sample, str):
+                value = (
+                    sample.replace(str(sample_key), name)
+                    if sample_key and str(sample_key) in sample
+                    else name
+                )
+            elif isinstance(sample, tuple):
+                value = tuple(
+                    x.replace(str(sample_key), name)
+                    if isinstance(x, str)
+                    and sample_key
+                    and str(sample_key) in x
+                    else x
+                    for x in sample
+                )
+            elif isinstance(sample, list):
+                value = [
+                    x.replace(str(sample_key), name)
+                    if isinstance(x, str)
+                    and sample_key
+                    and str(sample_key) in x
+                    else x
+                    for x in sample
+                ]
+            else:
+                value = sample
+            tags[name] = value
+
+    elif isinstance(tags, set):
+        tags.add(name)
+
+    elif isinstance(tags, frozenset):
+        TOOL_TAGS = tags | frozenset({name})
+
+    elif isinstance(tags, list):
+        if name not in tags:
+            tags.append(name)
+
+    elif isinstance(tags, tuple):
+        if name not in tags:
+            TOOL_TAGS = tags + (name,)
+
+    else:
+        raise TypeError(
+            "Unsupported TOOL_TAGS type: " + type(tags).__name__
+        )
+
+    # tool_schemas imported the original object/name during package init.
+    _ody_v34_tool_schemas.TOOL_TAGS = TOOL_TAGS
+
+    name_map = getattr(_ody_v34_tool_parsing, "_TOOL_NAME_MAP", None)
+    if isinstance(name_map, dict):
+        name_map.setdefault(name, name)
+
+
+for _capability_v1_name in _capability_v1_bindings:
+    _ody_v34_add_tool_name(_capability_v1_name)

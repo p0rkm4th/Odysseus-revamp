@@ -260,6 +260,33 @@ _register(
     # retain the action effect while treating every successful result as data.
     result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
 )
+_register(
+    {"manage_assets"},
+    ToolEffect.READ_PRIVATE,
+    ToolEffect.WRITE_PRIVATE,
+    result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
+)
+_register(
+    {"manage_homelab"},
+    ToolEffect.READ_PRIVATE,
+    ToolEffect.EXECUTE_CODE,
+    ToolEffect.ADMIN_CHANGE,
+    result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
+)
+_register(
+    {"manage_osint"},
+    ToolEffect.BROKERED_NETWORK_READ,
+    ToolEffect.NETWORK_EGRESS,
+    result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
+)
+_register(
+    {"privileged_action"},
+    ToolEffect.READ_PRIVATE,
+    ToolEffect.EXECUTE_CODE,
+    ToolEffect.ADMIN_CHANGE,
+    ToolEffect.DESTRUCTIVE,
+    result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
+)
 
 
 TOOL_CAPABILITIES: Mapping[str, ToolCapabilities] = MappingProxyType(dict(_REGISTRY))
@@ -459,7 +486,37 @@ def capabilities_for_action(tool_name: Any, content: Any) -> ToolCapabilities:
     if not isinstance(tool_name, str):
         return base
 
+    # First-class capabilities carry action metadata independently of the LLM
+    # transport.  Keep this lazy import to avoid the legacy facade's import
+    # cycle while the registry is being projected into schemas.
+    try:
+        from src.capability_registry import action_for_tool
+        first_class = action_for_tool(tool_name, content)
+    except Exception:
+        first_class = None
+    if first_class is not None:
+        effect_map = {effect.value: effect for effect in ToolEffect}
+        effects = frozenset(
+            effect_map[name]
+            for name in first_class.effects
+            if name in effect_map
+        )
+        if not first_class.known:
+            return _UNKNOWN_CAPABILITIES
+        integrity = next(
+            (value for value in ResultIntegrity if value.value == first_class.result_integrity),
+            ResultIntegrity.SYSTEM,
+        )
+        return ToolCapabilities(effects, integrity, known=True)
+
     action = _action_from_content(tool_name, content)
+    # Broker status is an internal, read-only health query. Keep it explicitly
+    # action-aware so an earlier external result cannot turn it into a
+    # mutation-style approval card merely because the multiplexed tool name is
+    # otherwise unknown to the base registry.
+    if tool_name == "privileged_action" and action == "status":
+        return _capabilities(result_integrity=ResultIntegrity.SYSTEM)
+
     destructive = action in _ACTION_DESTRUCTIVE.get(tool_name, ())
     if tool_name not in _PRIVATE_ACTION_READS:
         if not destructive:

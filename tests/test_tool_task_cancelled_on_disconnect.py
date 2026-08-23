@@ -49,6 +49,9 @@ def test_tool_task_cancelled_on_generator_close(monkeypatch):
     monkeypatch.setattr(al, "estimate_tokens", lambda *a, **k: 10, raising=False)
     # This test exercises task cancellation, not owner authorization.
     monkeypatch.setattr(al, "blocked_tools_for_owner", lambda owner: set(), raising=False)
+    # Isolate cancellation mechanics from the separately tested tainted-skill
+    # exact-approval gate.
+    monkeypatch.setattr(al, "_suppress_automatic_skills", lambda *args, **kwargs: True, raising=False)
     monkeypatch.setattr(al, "execute_tool_block", _slow_exec, raising=False)
 
     native_calls = [{"name": "bash", "arguments": json.dumps({"command": "sleep 60"})}]

@@ -1,0 +1,44 @@
+import json
+
+from src.capability_registry import (
+    ApprovalMode,
+    action_for_tool,
+    capability_for_tool,
+    requires_exact_approval,
+)
+from src.tool_capabilities import ToolEffect, capabilities_for_action
+
+
+def test_custom_capabilities_have_stable_ids_and_unique_actions():
+    inventory = capability_for_tool("manage_assets")
+    privileged = capability_for_tool("privileged_action")
+    assert inventory and inventory.capability_id == "inventory.manage"
+    assert privileged and privileged.capability_id == "system.privileged_diagnostics"
+    assert len(inventory.actions) == len(set(inventory.actions))
+    assert len(privileged.actions) == len(set(privileged.actions))
+
+
+def test_privileged_action_metadata_is_action_aware():
+    status = action_for_tool("privileged_action", json.dumps({"action": "status"}))
+    install = action_for_tool("privileged_action", {"action": "install_packages"})
+    assert status and status.approval is ApprovalMode.NONE
+    assert status.effects == ()
+    assert install and install.approval is ApprovalMode.EXACT
+    assert "admin_change" in install.effects
+    assert requires_exact_approval("privileged_action", {"action": "status"}) is False
+    assert requires_exact_approval("privileged_action", {"action": "install_packages"}) is True
+
+
+def test_unknown_privileged_action_fails_closed():
+    unknown = action_for_tool("privileged_action", {"action": "reboot"})
+    assert unknown and unknown.known is False
+    assert requires_exact_approval("privileged_action", {"action": "reboot"}) is True
+    classified = capabilities_for_action("privileged_action", {"action": "reboot"})
+    assert classified.known is False
+
+
+def test_security_classifier_projects_status_and_install_effects():
+    status = capabilities_for_action("privileged_action", {"action": "status"})
+    install = capabilities_for_action("privileged_action", {"action": "install_packages"})
+    assert status.known and not status.effects
+    assert install.known and ToolEffect.ADMIN_CHANGE in install.effects

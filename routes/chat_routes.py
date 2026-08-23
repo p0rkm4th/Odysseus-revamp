@@ -1002,8 +1002,22 @@ def setup_chat_routes(
         _explicit_browser_intent = False
         if isinstance(message, str):
             _msg_l = message.lower()
+            # This flag drives a web-only capability clamp, so keep it
+            # deliberately narrower than semantic web classification. Generic
+            # words such as current/today/latest/online/search/web/rate also
+            # occur in local operational requests ("current network",
+            # "web server", "search logs", "rate limit") and must not strip
+            # bash/file/memory capabilities.
             _explicit_web_intent = bool(re.search(
-                r"\b(search|look\s*up|lookup|google|browse|web|online|latest|current|today|news|weather|forecast|rate|exchange\s+rate)\b",
+                r"(?:"
+                r"\bgoogle\b|"
+                r"\bweb\s+search\b|"
+                r"\b(?:search|browse)\s+(?:the\s+)?(?:web|internet|online)\b|"
+                r"\b(?:look\s*up|lookup)\b.{0,24}\b(?:online|web|internet)\b|"
+                r"\b(?:news|weather|forecast)\b|"
+                r"\bexchange\s+rate\b|"
+                r"https?://|www\."
+                r")",
                 _msg_l,
             ))
             _explicit_browser_intent = bool(re.search(
@@ -1449,7 +1463,16 @@ def setup_chat_routes(
         # explicitly enable it.
         if allow_bash is not None and str(allow_bash).lower() != "true":
             disabled_tools.add("bash")
-        _explicit_web_intent = _explicit_web_intent or bool(_tool_intent and _tool_intent.category == "web")
+        # Explicit web intent is a security/capability boundary, not a semantic
+        # retrieval hint. A broad tool-intent classifier may label operational
+        # requests (for example network discovery) as "web"; that must not trigger
+        # the web-only denylist that removes bash/read_file/manage_memory/etc.
+        _semantic_web_intent = bool(_tool_intent and _tool_intent.category == "web")
+        if _semantic_web_intent and not _explicit_web_intent:
+            logger.info(
+                "[tool-policy] semantic web intent ignored for explicit-web clamp: %r",
+                message[:160],
+            )
         if is_web_search_explicitly_denied(allow_web_search) or not _search_enabled:
             disabled_tools.update(WEB_TOOL_NAMES)
         if _explicit_web_intent:

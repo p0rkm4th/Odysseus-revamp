@@ -1,0 +1,920 @@
+"""Transactional, owner-scoped inventory and recipe operations.
+
+The service deliberately accepts a session factory rather than a live session:
+every public mutation owns one database transaction, so callers cannot
+accidentally commit half of a multi-lot consumption or recipe cook.
+"""
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+from datetime import date, datetime
+from decimal import Decimal
+import hashlib
+import ipaddress
+import re
+from typing import Any, Iterable, Iterator
+from uuid import uuid4
+
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from core.database import SessionLocal
+from core.inventory_models import (
+    InventoryAssetDetail,
+    InventoryItem,
+    InventoryLocation,
+    InventoryLot,
+    InventoryMovement,
+    InventoryRecipe,
+    InventoryRecipeCook,
+    InventoryRecipeIngredient,
+)
+from src.inventory_planning import (
+    RecipeRequirement,
+    RecipeStockPlan,
+    StockLot,
+    normalize_item_name,
+    plan_recipe_stock,
+)
+from src.inventory_units import UnitError, normalize_amount, parse_decimal
+
+
+class InventoryError(ValueError):
+    """Base error safe for presentation at an API boundary."""
+
+
+class InventoryNotFound(InventoryError):
+    """The requested owner-scoped resource does not exist."""
+
+
+class InventoryConflict(InventoryError):
+    """An identifier or idempotency key conflicts with an existing operation."""
+
+
+class InsufficientStock(InventoryError):
+    def __init__(self, plan: RecipeStockPlan):
+        super().__init__("insufficient stock")
+        self.plan = plan
+
+
+_DOMAINS = frozenset({"it", "kitchen", "household"})
+_KINDS = frozenset({"asset", "consumable", "ingredient"})
+_QUANT = Decimal("0.000001")
+_ASSET_STATUSES = frozenset({"in_stock", "deployed", "repair", "retired", "disposed", "lost"})
+_MAC_ADDRESS = re.compile(r"^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$")
+_UNSET = object()
+
+
+def _required_text(value: Any, field: str, *, maximum: int = 500) -> str:
+    result = " ".join(str(value or "").strip().split())
+    if not result or len(result) > maximum:
+        raise InventoryError(f"{field} must contain 1 to {maximum} characters")
+    return result
+
+
+def _optional_text(value: Any, field: str, *, maximum: int = 2000) -> str | None:
+    if value is None:
+        return None
+    result = str(value).strip()
+    if not result:
+        return None
+    if len(result) > maximum:
+        raise InventoryError(f"{field} must contain at most {maximum} characters")
+    return result
+
+
+def _canonical_amount(quantity: Any, unit: Any, expected_unit: str) -> Decimal:
+    try:
+        amount = normalize_amount(quantity, unit)
+        expected = normalize_amount(Decimal("1"), expected_unit)
+    except UnitError as exc:
+        raise InventoryError(str(exc)) from exc
+    if amount.dimension != expected.dimension or amount.unit != expected.unit:
+        raise InventoryError(f"quantity must be compatible with {expected.unit}")
+    return amount.quantity
+
+
+def _movement_key(operation_key: str, index: int) -> str:
+    if index == 0:
+        return operation_key
+    digest = hashlib.sha256(operation_key.encode("utf-8")).hexdigest()[:24]
+    return f"{digest}:{index}"
+
+
+def _item_view(item: InventoryItem) -> dict[str, Any]:
+    return {
+        "id": item.id,
+        "owner": item.owner,
+        "domain": item.domain,
+        "item_kind": item.item_kind,
+        "name": item.name,
+        "category": item.category,
+        "description": item.description,
+        "brand": item.brand,
+        "manufacturer": item.manufacturer,
+        "model": item.model,
+        "sku": item.sku,
+        "barcode": item.barcode,
+        "default_unit": item.default_unit,
+        "reorder_point": item.reorder_point,
+        "location_id": item.location_id,
+        "metadata": dict(item.metadata_json or {}),
+        "image_refs": list(item.image_refs_json or []),
+        "archived": bool(item.archived),
+    }
+
+
+def _lot_view(lot: InventoryLot) -> dict[str, Any]:
+    return {
+        "id": lot.id,
+        "owner": lot.owner,
+        "item_id": lot.item_id,
+        "location_id": lot.location_id,
+        "quantity": lot.quantity,
+        "unit": lot.unit,
+        "expiry_date": lot.expiry_date,
+        "opened_at": lot.opened_at,
+        "purchase_date": lot.purchase_date,
+        "unit_cost": lot.unit_cost,
+        "currency": lot.currency,
+        "lot_code": lot.lot_code,
+    }
+
+
+def _movement_view(movement: InventoryMovement) -> dict[str, Any]:
+    return {
+        "id": movement.id,
+        "item_id": movement.item_id,
+        "lot_id": movement.lot_id,
+        "quantity_delta": movement.quantity_delta,
+        "unit": movement.unit,
+        "reason": movement.reason,
+        "idempotency_key": movement.idempotency_key,
+    }
+
+
+def _asset_view(detail: InventoryAssetDetail) -> dict[str, Any]:
+    return {
+        "item_id": detail.item_id,
+        "serial_number": detail.serial_number,
+        "asset_tag": detail.asset_tag,
+        "status": detail.status,
+        "condition": detail.condition,
+        "acquired_at": detail.acquired_at,
+        "purchase_price": detail.purchase_price,
+        "currency": detail.currency,
+        "warranty_expires_at": detail.warranty_expires_at,
+        "hostname": detail.hostname,
+        "mac_addresses": list(detail.mac_addresses_json or []),
+        "ip_addresses": list(detail.ip_addresses_json or []),
+        "specs": dict(detail.specs_json or {}),
+        "assigned_to": detail.assigned_to,
+        "parent_asset_id": detail.parent_asset_id,
+    }
+
+
+def _optional_date(value: Any, field: str) -> date | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError as exc:
+        raise InventoryError(f"{field} must be an ISO date") from exc
+
+
+class InventoryService:
+    def __init__(self, session_factory=SessionLocal):
+        self._session_factory = session_factory
+
+    @contextmanager
+    def _transaction(self) -> Iterator[Session]:
+        db = self._session_factory()
+        try:
+            with db.begin():
+                yield db
+        finally:
+            db.close()
+
+    @contextmanager
+    def _read(self) -> Iterator[Session]:
+        db = self._session_factory()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    @staticmethod
+    def _item(db: Session, owner: str, item_id: str) -> InventoryItem:
+        item = db.query(InventoryItem).filter_by(id=item_id, owner=owner).one_or_none()
+        if item is None:
+            raise InventoryNotFound("inventory item not found")
+        return item
+
+    @staticmethod
+    def _lot(db: Session, owner: str, lot_id: str) -> InventoryLot:
+        lot = db.query(InventoryLot).filter_by(id=lot_id, owner=owner).one_or_none()
+        if lot is None:
+            raise InventoryNotFound("inventory lot not found")
+        return lot
+
+    @staticmethod
+    def _location(db: Session, owner: str, location_id: str | None) -> None:
+        if location_id and not db.query(InventoryLocation.id).filter_by(
+            id=location_id, owner=owner
+        ).first():
+            raise InventoryNotFound("inventory location not found")
+
+    def create_item(
+        self,
+        owner: str,
+        *,
+        name: str,
+        domain: str,
+        item_kind: str,
+        default_unit: str = "each",
+        category: str | None = None,
+        description: str | None = None,
+        brand: str | None = None,
+        manufacturer: str | None = None,
+        model: str | None = None,
+        sku: str | None = None,
+        barcode: str | None = None,
+        reorder_point: Any | None = None,
+        location_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        image_refs: Iterable[str] | None = None,
+    ) -> dict[str, Any]:
+        owner = _required_text(owner, "owner", maximum=255)
+        display_name = _required_text(name, "name", maximum=200)
+        domain = str(domain).strip().casefold()
+        item_kind = str(item_kind).strip().casefold()
+        if domain not in _DOMAINS:
+            raise InventoryError("unsupported inventory domain")
+        if item_kind not in _KINDS:
+            raise InventoryError("unsupported inventory item kind")
+        try:
+            canonical_unit = normalize_amount(1, default_unit).unit
+        except UnitError as exc:
+            raise InventoryError(str(exc)) from exc
+        reorder = None
+        if reorder_point is not None:
+            reorder = _canonical_amount(reorder_point, default_unit, canonical_unit)
+        with self._transaction() as db:
+            self._location(db, owner, location_id)
+            item = InventoryItem(
+                id=str(uuid4()), owner=owner, domain=domain, item_kind=item_kind,
+                name=display_name, normalized_name=normalize_item_name(display_name),
+                category=_optional_text(category, "category"),
+                description=_optional_text(description, "description", maximum=10000),
+                brand=_optional_text(brand, "brand"),
+                manufacturer=_optional_text(manufacturer, "manufacturer"),
+                model=_optional_text(model, "model"), sku=_optional_text(sku, "sku"),
+                barcode=_optional_text(barcode, "barcode"), default_unit=canonical_unit,
+                reorder_point=reorder, location_id=location_id,
+                metadata_json=dict(metadata or {}),
+                image_refs_json=[str(ref) for ref in (image_refs or [])],
+            )
+            db.add(item)
+            db.flush()
+            return _item_view(item)
+
+    def get_item(self, owner: str, item_id: str) -> dict[str, Any]:
+        with self._read() as db:
+            return _item_view(self._item(db, owner, item_id))
+
+    @staticmethod
+    def _require_asset(db: Session, owner: str, item_id: str) -> InventoryItem:
+        item = InventoryService._item(db, owner, item_id)
+        if item.domain != "it" or item.item_kind != "asset":
+            raise InventoryError("asset details require an IT asset item")
+        return item
+
+    @staticmethod
+    def _validate_parent_asset(
+        db: Session, owner: str, item_id: str, parent_asset_id: str | None,
+    ) -> None:
+        current_id = parent_asset_id
+        visited: set[str] = set()
+        while current_id:
+            if current_id == item_id or current_id in visited:
+                raise InventoryConflict("asset component relationship would create a cycle")
+            visited.add(current_id)
+            InventoryService._require_asset(db, owner, current_id)
+            parent_detail = db.get(InventoryAssetDetail, current_id)
+            if parent_detail is not None and parent_detail.owner != owner:
+                raise InventoryNotFound("parent asset not found")
+            current_id = parent_detail.parent_asset_id if parent_detail else None
+
+    def get_asset_detail(self, owner: str, item_id: str) -> dict[str, Any] | None:
+        with self._read() as db:
+            self._require_asset(db, owner, item_id)
+            detail = db.get(InventoryAssetDetail, item_id)
+            if detail is None:
+                return None
+            if detail.owner != owner:
+                raise InventoryNotFound("asset detail not found")
+            return _asset_view(detail)
+
+    def list_asset_components(self, owner: str, parent_asset_id: str) -> list[dict[str, Any]]:
+        with self._read() as db:
+            self._require_asset(db, owner, parent_asset_id)
+            rows = db.query(InventoryAssetDetail).filter_by(
+                owner=owner, parent_asset_id=parent_asset_id,
+            ).order_by(InventoryAssetDetail.item_id).all()
+            return [{"item": _item_view(self._item(db, owner, row.item_id)),
+                     "asset": _asset_view(row)} for row in rows]
+
+    def update_asset_detail(
+        self, owner: str, item_id: str, *, serial_number: Any = _UNSET,
+        asset_tag: Any = _UNSET, status: Any = _UNSET, condition: Any = _UNSET,
+        acquired_at: Any = _UNSET, purchase_price: Any = _UNSET, currency: Any = _UNSET,
+        warranty_expires_at: Any = _UNSET, hostname: Any = _UNSET,
+        mac_addresses: Any = _UNSET, ip_addresses: Any = _UNSET, specs: Any = _UNSET,
+        assigned_to: Any = _UNSET, parent_asset_id: Any = _UNSET,
+        provenance: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        with self._transaction() as db:
+            item = self._require_asset(db, owner, item_id)
+            detail = db.get(InventoryAssetDetail, item_id)
+            if detail is not None and detail.owner != owner:
+                raise InventoryNotFound("asset detail not found")
+            if detail is None:
+                detail = InventoryAssetDetail(
+                    item_id=item_id, owner=owner, status="in_stock",
+                    mac_addresses_json=[], ip_addresses_json=[], specs_json={},
+                )
+                db.add(detail)
+            for field, value, maximum in (
+                ("serial_number", serial_number, 160), ("asset_tag", asset_tag, 160),
+                ("condition", condition, 80), ("hostname", hostname, 253),
+                ("assigned_to", assigned_to, 255),
+            ):
+                if value is not _UNSET:
+                    setattr(detail, field, _optional_text(value, field, maximum=maximum))
+            if status is not _UNSET:
+                normalized_status = str(status or "").strip().casefold()
+                if normalized_status not in _ASSET_STATUSES:
+                    raise InventoryError("unsupported asset status")
+                detail.status = normalized_status
+            if acquired_at is not _UNSET:
+                detail.acquired_at = _optional_date(acquired_at, "acquired_at")
+            if warranty_expires_at is not _UNSET:
+                detail.warranty_expires_at = _optional_date(warranty_expires_at, "warranty_expires_at")
+            if purchase_price is not _UNSET:
+                price = None
+                if purchase_price not in (None, ""):
+                    try:
+                        price = Decimal(str(purchase_price))
+                    except Exception as exc:
+                        raise InventoryError("purchase_price must be a number") from exc
+                    if not price.is_finite() or price < 0:
+                        raise InventoryError("purchase_price must be finite and nonnegative")
+                detail.purchase_price = price
+            if currency is not _UNSET:
+                normalized_currency = str(currency or "").strip().upper() or None
+                if normalized_currency is not None and (
+                    len(normalized_currency) != 3 or not normalized_currency.isalpha()
+                ):
+                    raise InventoryError("currency must be a three-letter code")
+                detail.currency = normalized_currency
+            if mac_addresses is not _UNSET:
+                normalized_macs = []
+                for value in mac_addresses or []:
+                    mac = str(value).strip().upper().replace("-", ":")
+                    if not _MAC_ADDRESS.fullmatch(mac):
+                        raise InventoryError("invalid MAC address")
+                    normalized_macs.append(mac)
+                detail.mac_addresses_json = normalized_macs
+            if ip_addresses is not _UNSET:
+                normalized_ips = []
+                for value in ip_addresses or []:
+                    try:
+                        normalized_ips.append(str(ipaddress.ip_address(str(value).strip())))
+                    except ValueError as exc:
+                        raise InventoryError("invalid IP address") from exc
+                detail.ip_addresses_json = normalized_ips
+            if specs is not _UNSET:
+                if specs is not None and not isinstance(specs, dict):
+                    raise InventoryError("asset specs must be an object")
+                detail.specs_json = dict(specs or {})
+            if parent_asset_id is not _UNSET:
+                parent_id = _optional_text(parent_asset_id, "parent_asset_id", maximum=255)
+                self._validate_parent_asset(db, owner, item_id, parent_id)
+                detail.parent_asset_id = parent_id
+            if provenance:
+                metadata = dict(item.metadata_json or {})
+                history = list(metadata.get("provenance") or [])
+                entry = dict(provenance)
+                identity = (entry.get("source_kind"), entry.get("source_id"))
+                if not any(
+                    (prior.get("source_kind"), prior.get("source_id")) == identity
+                    for prior in history if isinstance(prior, dict)
+                ):
+                    history.append(entry)
+                metadata["provenance"] = history[-50:]
+                item.metadata_json = metadata
+            try:
+                db.flush()
+            except IntegrityError as exc:
+                raise InventoryConflict("asset serial number or tag is already in use") from exc
+            return _asset_view(detail)
+
+    def list_items(
+        self, owner: str, *, domain: str | None = None,
+        include_archived: bool = False, limit: int = 100, offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        limit = max(1, min(int(limit), 500))
+        offset = max(0, int(offset))
+        with self._read() as db:
+            query = db.query(InventoryItem).filter(InventoryItem.owner == owner)
+            if domain is not None:
+                query = query.filter(InventoryItem.domain == str(domain).casefold())
+            if not include_archived:
+                query = query.filter(InventoryItem.archived.is_(False))
+            items = query.order_by(InventoryItem.normalized_name, InventoryItem.id).offset(offset).limit(limit)
+            return [_item_view(item) for item in items]
+
+    def search_items(
+        self, owner: str, query: str, *, domain: str | None = None, limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        term = normalize_item_name(query)
+        limit = max(1, min(int(limit), 200))
+        with self._read() as db:
+            statement = db.query(InventoryItem).filter(
+                InventoryItem.owner == owner,
+                InventoryItem.archived.is_(False),
+                InventoryItem.normalized_name.contains(term),
+            )
+            if domain is not None:
+                statement = statement.filter(InventoryItem.domain == str(domain).casefold())
+            return [_item_view(item) for item in statement.order_by(
+                InventoryItem.normalized_name, InventoryItem.id
+            ).limit(limit)]
+
+    def add_stock(
+        self, owner: str, item_id: str, *, quantity: Any, unit: str,
+        idempotency_key: str, location_id: str | None = None,
+        expiry_date: date | None = None, opened_at: datetime | None = None,
+        purchase_date: date | None = None, unit_cost: Any | None = None,
+        currency: str | None = None, lot_code: str | None = None,
+        actor: str | None = None, session_id: str | None = None,
+    ) -> dict[str, Any]:
+        key = _required_text(idempotency_key, "idempotency_key", maximum=255)
+        with self._transaction() as db:
+            prior = db.query(InventoryMovement).filter_by(owner=owner, idempotency_key=key).one_or_none()
+            if prior is not None:
+                expected = _canonical_amount(quantity, unit, prior.unit)
+                if prior.reason != "add" or prior.item_id != item_id or prior.quantity_delta != expected:
+                    raise InventoryConflict("idempotency key was already used for another operation")
+                lot = self._lot(db, owner, prior.lot_id)
+                return {"lot": _lot_view(lot), "movement": _movement_view(prior), "replayed": True}
+            item = self._item(db, owner, item_id)
+            self._location(db, owner, location_id)
+            amount = _canonical_amount(quantity, unit, item.default_unit)
+            cost = None
+            if unit_cost is not None:
+                try:
+                    cost = parse_decimal(unit_cost, positive=False)
+                except UnitError as exc:
+                    raise InventoryError(str(exc)) from exc
+                if cost < 0:
+                    raise InventoryError("unit_cost must not be negative")
+            lot = InventoryLot(
+                id=str(uuid4()), owner=owner, item_id=item.id,
+                location_id=location_id or item.location_id, quantity=amount,
+                unit=item.default_unit, expiry_date=expiry_date, opened_at=opened_at,
+                purchase_date=purchase_date, unit_cost=cost,
+                currency=str(currency).upper() if currency else None,
+                lot_code=_optional_text(lot_code, "lot_code"),
+            )
+            movement = InventoryMovement(
+                id=str(uuid4()), owner=owner, item_id=item.id, lot_id=lot.id,
+                quantity_delta=amount, unit=item.default_unit, reason="add",
+                source_kind="stock_add", source_id=key, idempotency_key=key,
+                actor=actor, session_id=session_id,
+            )
+            db.add_all([lot, movement])
+            db.flush()
+            return {"lot": _lot_view(lot), "movement": _movement_view(movement), "replayed": False}
+
+    def consume_stock(
+        self, owner: str, item_id: str, *, quantity: Any, unit: str,
+        idempotency_key: str, reason: str = "consume", actor: str | None = None,
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
+        key = _required_text(idempotency_key, "idempotency_key", maximum=255)
+        if reason not in {"consume", "dispose"}:
+            raise InventoryError("consume reason must be consume or dispose")
+        with self._transaction() as db:
+            prior = db.query(InventoryMovement).filter_by(
+                owner=owner, source_kind="stock_consume", source_id=key
+            ).order_by(InventoryMovement.idempotency_key).all()
+            if prior:
+                requested = _canonical_amount(quantity, unit, prior[0].unit)
+                consumed = sum((-movement.quantity_delta for movement in prior), Decimal("0"))
+                if any(m.item_id != item_id or m.reason != reason for m in prior) or consumed != requested:
+                    raise InventoryConflict("idempotency key was already used for another operation")
+                return {"movements": [_movement_view(m) for m in prior], "quantity": consumed, "replayed": True}
+            item = self._item(db, owner, item_id)
+            requested = _canonical_amount(quantity, unit, item.default_unit)
+            lots = db.query(InventoryLot).filter(
+                InventoryLot.owner == owner, InventoryLot.item_id == item.id,
+                InventoryLot.quantity > 0,
+            ).with_for_update().all()
+            stock_lots = [StockLot(
+                lot_id=lot.id, item_id=item.id, item_name=item.name,
+                quantity=lot.quantity, unit=lot.unit, expires_on=lot.expiry_date,
+            ) for lot in lots]
+            plan = plan_recipe_stock(
+                [RecipeRequirement(item.name, requested, item.default_unit)], stock_lots
+            )
+            if not plan.can_make:
+                raise InsufficientStock(plan)
+            by_id = {lot.id: lot for lot in lots}
+            movements: list[InventoryMovement] = []
+            for index, deduction in enumerate(plan.deductions):
+                lot = by_id[deduction.lot_id]
+                changed = db.query(InventoryLot).filter(
+                    InventoryLot.id == lot.id, InventoryLot.owner == owner,
+                    InventoryLot.item_id == item.id,
+                    InventoryLot.quantity >= deduction.quantity,
+                ).update(
+                    {InventoryLot.quantity: InventoryLot.quantity - deduction.quantity},
+                    synchronize_session=False,
+                )
+                if changed != 1:
+                    # Another transaction consumed this balance after the
+                    # plan. Raising rolls back all earlier legs as well.
+                    raise InsufficientStock(plan)
+                movement = InventoryMovement(
+                    id=str(uuid4()), owner=owner, item_id=item.id, lot_id=lot.id,
+                    quantity_delta=-deduction.quantity, unit=item.default_unit,
+                    reason=reason, source_kind="stock_consume", source_id=key,
+                    idempotency_key=_movement_key(key, index), actor=actor,
+                    session_id=session_id,
+                )
+                db.add(movement)
+                movements.append(movement)
+            db.flush()
+            return {"movements": [_movement_view(m) for m in movements], "quantity": requested, "replayed": False}
+
+    def adjust_lot(
+        self, owner: str, lot_id: str, *, quantity_delta: Any, unit: str,
+        idempotency_key: str, note: str | None = None,
+    ) -> dict[str, Any]:
+        key = _required_text(idempotency_key, "idempotency_key", maximum=255)
+        with self._transaction() as db:
+            prior = db.query(InventoryMovement).filter_by(owner=owner, idempotency_key=key).one_or_none()
+            if prior is not None:
+                delta = normalize_amount(quantity_delta, unit, positive=False).quantity
+                if prior.reason != "adjust" or prior.lot_id != lot_id or prior.quantity_delta != delta:
+                    raise InventoryConflict("idempotency key was already used for another operation")
+                return {"lot": _lot_view(self._lot(db, owner, lot_id)), "movement": _movement_view(prior), "replayed": True}
+            lot = self._lot(db, owner, lot_id)
+            try:
+                delta = normalize_amount(quantity_delta, unit, positive=False)
+                expected = normalize_amount(1, lot.unit)
+            except UnitError as exc:
+                raise InventoryError(str(exc)) from exc
+            if delta.unit != expected.unit:
+                raise InventoryError(f"quantity must be compatible with {lot.unit}")
+            if delta.quantity == 0:
+                raise InventoryError("quantity_delta must not be zero")
+            filters = [
+                InventoryLot.id == lot.id, InventoryLot.owner == owner,
+                InventoryLot.quantity + delta.quantity >= 0,
+            ]
+            changed = db.query(InventoryLot).filter(*filters).update(
+                {InventoryLot.quantity: InventoryLot.quantity + delta.quantity},
+                synchronize_session=False,
+            )
+            if changed != 1:
+                raise InsufficientStock(RecipeStockPlan((), ()))
+            db.expire(lot, ["quantity"])
+            movement = InventoryMovement(
+                id=str(uuid4()), owner=owner, item_id=lot.item_id, lot_id=lot.id,
+                quantity_delta=delta.quantity, unit=lot.unit, reason="adjust",
+                source_kind="stock_adjust", source_id=key, idempotency_key=key,
+                note=_optional_text(note, "note", maximum=10000),
+            )
+            db.add(movement)
+            db.flush()
+            return {"lot": _lot_view(lot), "movement": _movement_view(movement), "replayed": False}
+
+    def list_lots(self, owner: str, item_id: str) -> list[dict[str, Any]]:
+        with self._read() as db:
+            self._item(db, owner, item_id)
+            lots = db.query(InventoryLot).filter_by(owner=owner, item_id=item_id).order_by(
+                InventoryLot.expiry_date.is_(None), InventoryLot.expiry_date, InventoryLot.id
+            ).all()
+            return [_lot_view(lot) for lot in lots]
+
+
+class RecipeService(InventoryService):
+    @staticmethod
+    def _recipe(db: Session, owner: str, recipe_id: str) -> InventoryRecipe:
+        recipe = db.query(InventoryRecipe).filter_by(id=recipe_id, owner=owner).one_or_none()
+        if recipe is None:
+            raise InventoryNotFound("recipe not found")
+        return recipe
+
+    @staticmethod
+    def _recipe_view(db: Session, recipe: InventoryRecipe) -> dict[str, Any]:
+        ingredients = db.query(InventoryRecipeIngredient).filter_by(
+            owner=recipe.owner, recipe_id=recipe.id
+        ).order_by(InventoryRecipeIngredient.sort_order, InventoryRecipeIngredient.id).all()
+        return {
+            "id": recipe.id, "owner": recipe.owner, "name": recipe.name,
+            "instructions": recipe.instructions, "servings": recipe.servings,
+            "source_url": recipe.source_url, "tags": list(recipe.tags_json or []),
+            "image_refs": list(recipe.image_refs_json or []), "archived": bool(recipe.archived),
+            "ingredients": [{
+                "id": ingredient.id, "item_id": ingredient.item_id,
+                "name": ingredient.ingredient_name, "quantity": ingredient.quantity,
+                "unit": ingredient.unit, "optional": bool(ingredient.optional),
+                "substitution_group": ingredient.substitution_group,
+                "preparation": ingredient.preparation,
+            } for ingredient in ingredients],
+        }
+
+    def create_recipe(
+        self, owner: str, *, name: str, servings: Any,
+        ingredients: Iterable[dict[str, Any]], instructions: str = "",
+        source_url: str | None = None, tags: Iterable[str] | None = None,
+        image_refs: Iterable[str] | None = None,
+    ) -> dict[str, Any]:
+        display_name = _required_text(name, "name", maximum=200)
+        try:
+            serving_count = parse_decimal(servings)
+        except UnitError as exc:
+            raise InventoryError(str(exc)) from exc
+        specs = list(ingredients)
+        if not specs:
+            raise InventoryError("recipe must have at least one ingredient")
+        with self._transaction() as db:
+            recipe = InventoryRecipe(
+                id=str(uuid4()), owner=_required_text(owner, "owner", maximum=255),
+                name=display_name, normalized_name=normalize_item_name(display_name),
+                instructions=str(instructions or ""), servings=serving_count,
+                source_url=_optional_text(source_url, "source_url", maximum=4000),
+                tags_json=[str(tag) for tag in (tags or [])],
+                image_refs_json=[str(ref) for ref in (image_refs or [])],
+            )
+            db.add(recipe)
+            for index, spec in enumerate(specs):
+                item_id = spec.get("item_id")
+                item = self._item(db, owner, item_id) if item_id else None
+                ingredient_name = item.name if item else _required_text(spec.get("name"), "ingredient name", maximum=200)
+                expected_unit = item.default_unit if item else normalize_amount(1, spec.get("unit")).unit
+                quantity = _canonical_amount(spec.get("quantity"), spec.get("unit"), expected_unit)
+                db.add(InventoryRecipeIngredient(
+                    id=str(uuid4()), owner=owner, recipe_id=recipe.id,
+                    item_id=item.id if item else None, ingredient_name=ingredient_name,
+                    quantity=quantity, unit=expected_unit, optional=bool(spec.get("optional", False)),
+                    substitution_group=_optional_text(spec.get("substitution_group"), "substitution_group"),
+                    preparation=_optional_text(spec.get("preparation"), "preparation"),
+                    sort_order=index,
+                ))
+            db.flush()
+            return self._recipe_view(db, recipe)
+
+    def get_recipe(self, owner: str, recipe_id: str) -> dict[str, Any]:
+        with self._read() as db:
+            return self._recipe_view(db, self._recipe(db, owner, recipe_id))
+
+    def list_recipes(self, owner: str, *, include_archived: bool = False) -> list[dict[str, Any]]:
+        with self._read() as db:
+            query = db.query(InventoryRecipe).filter_by(owner=owner)
+            if not include_archived:
+                query = query.filter(InventoryRecipe.archived.is_(False))
+            recipes = query.order_by(InventoryRecipe.normalized_name, InventoryRecipe.id).all()
+            return [self._recipe_view(db, recipe) for recipe in recipes]
+
+    def _stock_plan(self, db: Session, owner: str, recipe: InventoryRecipe, servings: Any) -> RecipeStockPlan:
+        requested = parse_decimal(servings)
+        multiplier = requested / recipe.servings
+        ingredients = db.query(InventoryRecipeIngredient).filter_by(
+            owner=owner, recipe_id=recipe.id
+        ).order_by(InventoryRecipeIngredient.sort_order).all()
+        requirements: list[RecipeRequirement] = []
+        candidate_items: dict[str, tuple[InventoryItem, str]] = {}
+        for ingredient in ingredients:
+            item_query = db.query(InventoryItem).filter(
+                InventoryItem.owner == owner, InventoryItem.archived.is_(False)
+            )
+            if ingredient.item_id:
+                item_query = item_query.filter(InventoryItem.id == ingredient.item_id)
+            else:
+                item_query = item_query.filter(
+                    InventoryItem.normalized_name == normalize_item_name(ingredient.ingredient_name)
+                )
+            items = item_query.all()
+            requirements.append(RecipeRequirement(
+                ingredient.ingredient_name, ingredient.quantity,
+                ingredient.unit, bool(ingredient.optional),
+            ))
+            for item in items:
+                # A repeated ingredient must share one stock balance rather
+                # than duplicating the same lots in the planner input.
+                candidate_items[item.id] = (item, ingredient.ingredient_name)
+        lots: list[StockLot] = []
+        for item, ingredient_name in candidate_items.values():
+            for lot in db.query(InventoryLot).filter(
+                InventoryLot.owner == owner, InventoryLot.item_id == item.id,
+                InventoryLot.quantity > 0,
+            ).with_for_update().all():
+                lots.append(StockLot(
+                    lot.id, item.id, ingredient_name,
+                    lot.quantity, lot.unit, lot.expiry_date,
+                ))
+        return plan_recipe_stock(requirements, lots, servings_multiplier=multiplier)
+
+    def can_make(self, owner: str, recipe_id: str, *, servings: Any | None = None) -> RecipeStockPlan:
+        with self._read() as db:
+            recipe = self._recipe(db, owner, recipe_id)
+            return self._stock_plan(db, owner, recipe, servings if servings is not None else recipe.servings)
+
+    def cook(
+        self, owner: str, recipe_id: str, *, servings: Any | None = None,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        key = _required_text(idempotency_key, "idempotency_key", maximum=255)
+        with self._transaction() as db:
+            prior = db.query(InventoryRecipeCook).filter_by(owner=owner, idempotency_key=key).one_or_none()
+            if prior is not None:
+                requested = parse_decimal(servings if servings is not None else prior.servings)
+                if prior.recipe_id != recipe_id or prior.servings != requested:
+                    raise InventoryConflict("idempotency key was already used for another cook")
+                return {"id": prior.id, "recipe_id": prior.recipe_id, "servings": prior.servings,
+                        "movement_ids": list(prior.movement_ids_json or []), "replayed": True}
+            recipe = self._recipe(db, owner, recipe_id)
+            try:
+                requested = parse_decimal(servings if servings is not None else recipe.servings)
+            except UnitError as exc:
+                raise InventoryError(str(exc)) from exc
+            cook = InventoryRecipeCook(
+                id=str(uuid4()), owner=owner, recipe_id=recipe.id,
+                servings=requested, idempotency_key=key, status="pending",
+                movement_ids_json=[],
+            )
+            db.add(cook)
+            db.flush()
+            plan = self._stock_plan(db, owner, recipe, requested)
+            if not plan.can_make:
+                raise InsufficientStock(plan)
+            lots = {lot.id: lot for lot in db.query(InventoryLot).filter(
+                InventoryLot.owner == owner,
+                InventoryLot.id.in_([deduction.lot_id for deduction in plan.deductions]),
+            ).with_for_update().all()}
+            movement_ids: list[str] = []
+            for index, deduction in enumerate(plan.deductions):
+                lot = lots[deduction.lot_id]
+                changed = db.query(InventoryLot).filter(
+                    InventoryLot.id == lot.id, InventoryLot.owner == owner,
+                    InventoryLot.item_id == deduction.item_id,
+                    InventoryLot.quantity >= deduction.quantity,
+                ).update(
+                    {InventoryLot.quantity: InventoryLot.quantity - deduction.quantity},
+                    synchronize_session=False,
+                )
+                if changed != 1:
+                    raise InsufficientStock(plan)
+                movement = InventoryMovement(
+                    id=str(uuid4()), owner=owner, item_id=deduction.item_id,
+                    lot_id=lot.id, quantity_delta=-deduction.quantity,
+                    unit=deduction.unit, reason="recipe", source_kind="recipe_cook",
+                    source_id=cook.id, idempotency_key=f"cook:{cook.id}:{index}",
+                )
+                db.add(movement)
+                movement_ids.append(movement.id)
+            cook.movement_ids_json = movement_ids
+            cook.status = "completed"
+            db.flush()
+            return {"id": cook.id, "recipe_id": recipe.id, "servings": requested,
+                    "movement_ids": movement_ids, "replayed": False}
+
+    def manage_inventory(self, args: dict[str, Any], *, owner: str) -> dict[str, Any]:
+        """Dispatch the narrow model-facing inventory action vocabulary."""
+        action = str(args.get("action") or "")
+        if action == "list":
+            return {"items": self.list_items(
+                owner, domain=args.get("domain"),
+                include_archived=bool(args.get("include_archived", False)),
+            )}
+        if action == "search":
+            return {"items": self.search_items(
+                owner, args.get("query"), domain=args.get("domain"),
+            )}
+        if action == "get":
+            item = self.get_item(owner, _required_text(args.get("item_id"), "item_id"))
+            result = {"item": item, "lots": self.list_lots(owner, item["id"])}
+            if item["domain"] == "it" and item["item_kind"] == "asset":
+                result["asset"] = self.get_asset_detail(owner, item["id"])
+            return result
+        if action == "get_components":
+            item_id = _required_text(args.get("item_id"), "item_id")
+            return {"components": self.list_asset_components(owner, item_id)}
+        if action == "add_item":
+            item = self.create_item(
+                owner, name=args.get("name"), domain=args.get("domain"),
+                item_kind=args.get("item_kind"),
+                default_unit=args.get("default_unit") or args.get("unit") or "each",
+                category=args.get("category"), description=args.get("description"),
+                brand=args.get("brand"), manufacturer=args.get("manufacturer"),
+                model=args.get("model"), sku=args.get("sku"), barcode=args.get("barcode"),
+                location_id=args.get("location_id"),
+            )
+            return {"item": item}
+        if action == "add_stock":
+            kwargs: dict[str, Any] = {}
+            if args.get("expiry_date"):
+                try:
+                    kwargs["expiry_date"] = date.fromisoformat(str(args["expiry_date"]))
+                except ValueError as exc:
+                    raise InventoryError("expiry_date must be an ISO date") from exc
+            return self.add_stock(
+                owner, _required_text(args.get("item_id"), "item_id"),
+                quantity=args.get("quantity"), unit=args.get("unit"),
+                idempotency_key=args.get("idempotency_key"),
+                location_id=args.get("location_id"), **kwargs,
+            )
+        if action == "update_asset":
+            item_id = _required_text(args.get("item_id"), "item_id")
+            allowed = {
+                "serial_number", "asset_tag", "status", "condition", "acquired_at",
+                "purchase_price", "currency", "warranty_expires_at", "hostname",
+                "mac_addresses", "ip_addresses", "specs", "assigned_to", "parent_asset_id",
+            }
+            return {"asset": self.update_asset_detail(
+                owner, item_id, **{key: args[key] for key in allowed if key in args},
+            )}
+        if action == "consume_stock":
+            return self.consume_stock(
+                owner, _required_text(args.get("item_id"), "item_id"),
+                quantity=args.get("quantity"), unit=args.get("unit"),
+                idempotency_key=args.get("idempotency_key"),
+            )
+        if action == "adjust_stock":
+            return self.adjust_lot(
+                owner, _required_text(args.get("lot_id"), "lot_id"),
+                quantity_delta=args.get("quantity_delta"), unit=args.get("unit"),
+                idempotency_key=args.get("idempotency_key"), note=args.get("notes"),
+            )
+        if action in {"update_item", "move_stock", "archive_item"}:
+            raise InventoryError(f"{action} is not available in this service version")
+        raise InventoryError("unsupported inventory action")
+
+    def manage_recipes(self, args: dict[str, Any], *, owner: str) -> dict[str, Any]:
+        """Dispatch the narrow model-facing recipe action vocabulary."""
+        action = str(args.get("action") or "")
+        if action == "list":
+            return {"recipes": self.list_recipes(
+                owner, include_archived=bool(args.get("include_archived", False))
+            )}
+        if action == "search":
+            query = normalize_item_name(args.get("query"))
+            return {"recipes": [recipe for recipe in self.list_recipes(owner)
+                                if query in normalize_item_name(recipe["name"])]}
+        if action == "get":
+            return {"recipe": self.get_recipe(
+                owner, _required_text(args.get("recipe_id"), "recipe_id")
+            )}
+        if action == "can_make":
+            plan = self.can_make(
+                owner, _required_text(args.get("recipe_id"), "recipe_id"),
+                servings=args.get("servings"),
+            )
+            return {
+                "can_make": plan.can_make,
+                "deductions": [{
+                    "lot_id": row.lot_id, "item_id": row.item_id,
+                    "quantity": row.quantity, "unit": row.unit,
+                } for row in plan.deductions],
+                "shortages": [{
+                    "name": row.name, "missing": row.missing,
+                    "unit": row.unit, "optional": row.optional,
+                } for row in plan.shortages],
+            }
+        if action == "add":
+            return {"recipe": self.create_recipe(
+                owner, name=args.get("name"), servings=args.get("servings") or "1",
+                ingredients=args.get("ingredients") or [],
+                instructions=args.get("instructions") or "",
+            )}
+        if action == "cook":
+            return {"cook": self.cook(
+                owner, _required_text(args.get("recipe_id"), "recipe_id"),
+                servings=args.get("servings"),
+                idempotency_key=args.get("idempotency_key"),
+            )}
+        if action in {"update", "archive"}:
+            raise InventoryError(f"{action} is not available in this service version")
+        raise InventoryError("unsupported recipe action")
+
+
+def get_inventory_service(session_factory=SessionLocal) -> RecipeService:
+    """Return the combined inventory/recipe facade used by narrow adapters."""
+    return RecipeService(session_factory)
