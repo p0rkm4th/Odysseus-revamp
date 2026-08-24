@@ -3606,6 +3606,40 @@ def _build_system_prompt(
     if _datetime_message:
         merged.insert(last_user_idx, _datetime_message)
 
+    # Keep the immediately preceding assistant turn adjacent to the current
+    # user turn.  Skills, integrations, MCP descriptions, and clock/context
+    # projections are deliberately user-role messages for prompt-injection
+    # isolation, but placing large ones between the two conversational turns
+    # makes small local models treat the latest user-role block as the active
+    # exchange.  They are supplemental context, not conversation history.
+    # Move only non-protected injected supplements before the recent tail.
+    _supplement_indexes = [
+        i for i, msg in enumerate(merged)
+        if (
+            not msg.get("_protected")
+            and (
+                msg.get("_agent_injected") == "context"
+                or msg.get("_context_supplement")
+                or (msg.get("metadata") or {}).get("context_kind") == "supplement"
+            )
+        )
+    ]
+    if _supplement_indexes:
+        _supplements = [merged[i] for i in _supplement_indexes]
+        _remaining = [msg for i, msg in enumerate(merged) if i not in set(_supplement_indexes)]
+        _tail_start = None
+        for i in range(len(_remaining) - 1, -1, -1):
+            if _remaining[i].get("role") == "assistant":
+                _tail_start = i
+                break
+        if _tail_start is None:
+            for i in range(len(_remaining) - 1, -1, -1):
+                if _remaining[i].get("role") == "user":
+                    _tail_start = i
+                    break
+        if _tail_start is not None:
+            merged = _remaining[:_tail_start] + _supplements + _remaining[_tail_start:]
+
     return merged, mcp_schemas
 
 
@@ -5815,6 +5849,24 @@ async def stream_agent_loop(
             candidate_tools = _tool_schemas_for_route(state)
             state["tools"] = candidate_tools
             _candidate_request_states[index] = state
+            # This callback is immediately before the provider request.  It
+            # is the authoritative diagnostic point; the outer round log may
+            # still refer to the untrimmed route source used to build the
+            # candidate.
+            try:
+                from src.context_compactor import context_trace
+                logger.info(
+                    "[hades-provider-context] candidate=%s model=%s trace=%s",
+                    index,
+                    candidate_model,
+                    context_trace(
+                        request_messages,
+                        state["context_length"],
+                        tool_schemas=candidate_tools,
+                    ),
+                )
+            except Exception:
+                logger.debug("Provider candidate context trace unavailable", exc_info=True)
             return {
                 "messages": request_messages,
                 "kwargs": {
@@ -5891,7 +5943,7 @@ async def stream_agent_loop(
                 usage_source=usage_source,
             ))
         logger.info(
-            "[agent-timing] round_start round=%s model=%s endpoint=%s prompt_tokens=%s tools=%s native_tools=%s timeout=%s",
+            "[agent-timing] round_start round=%s model=%s endpoint=%s route_source_tokens=%s tools=%s native_tools=%s timeout=%s",
             round_num,
             model,
             endpoint_url,
@@ -5900,6 +5952,20 @@ async def stream_agent_loop(
             bool(all_tool_schemas),
             agent_stream_timeout,
         )
+        # This is the final provider-bound message list, after route shaping
+        # and the candidate-specific context trim.  Keep the diagnostic
+        # sanitized: hashes/roles/section sizes prove continuity without
+        # putting conversation content or credentials in logs.
+        try:
+            from src.context_compactor import context_trace
+            logger.info(
+                "[hades-provider-context] round=%s model=%s trace=%s",
+                round_num,
+                model,
+                context_trace(messages, _initial_route_context_length, tool_schemas=all_tool_schemas),
+            )
+        except Exception:
+            logger.debug("Provider context trace unavailable", exc_info=True)
         async for chunk in stream_llm_with_fallback(
             _candidates,
             messages,

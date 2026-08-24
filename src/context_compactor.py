@@ -8,6 +8,7 @@ Summarizes older messages via the same LLM, preserving key context.
 import json
 import logging
 import re
+import hashlib
 from typing import Any, Dict, List, Optional
 
 from src.model_context import get_context_length, estimate_tokens
@@ -131,6 +132,80 @@ def _message_text_token_estimate(text: str) -> int:
     return int(len(text) * 0.3) + 4
 
 
+def _is_context_supplement(msg: Dict[str, Any]) -> bool:
+    """Whether a non-system message is prompt metadata, not conversation.
+
+    Some integrations use a ``user`` role for cache-friendly contextual facts
+    (notably the rotating clock message).  Treating those as conversation turns
+    lets them displace the assistant turn immediately before the current user
+    message.  The marker is deliberately explicit; arbitrary user messages
+    remain conversational by default.
+    """
+    metadata = msg.get("metadata") or {}
+    return bool(
+        msg.get("_context_supplement")
+        or metadata.get("context_kind") == "supplement"
+        or metadata.get("source") in {
+            "current date/time",
+            "current_datetime",
+            "memory",
+            "rag",
+        }
+    )
+
+
+def context_trace(
+    messages: List[Dict],
+    context_length: int,
+    *,
+    tool_schemas: Optional[List[Dict]] = None,
+) -> Dict[str, Any]:
+    """Return sanitized evidence for the exact provider-bound prompt.
+
+    Content is never logged.  Hashes, roles, lengths, and token counts let us
+    prove whether a prior assistant turn survived reconnect/model switching
+    without placing conversation secrets in logs.
+    """
+    normalized = json.dumps(messages, ensure_ascii=False, sort_keys=True, default=str)
+    recent = [m for m in messages if not _is_context_supplement(m) and m.get("role") in {"user", "assistant", "tool"}]
+    recent = recent[-8:]
+    def _section(items):
+        return {"messages": len(items), "tokens": estimate_tokens(items)}
+    sections = {
+        "system": _section([m for m in messages if m.get("role") == "system" and not m.get("_protected")]),
+        "protected": _section([m for m in messages if m.get("_protected")]),
+        "recent_conversation": _section(recent),
+        "supplement": _section([m for m in messages if _is_context_supplement(m)]),
+    }
+    trace = {
+        "digest": hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16],
+        "messages": len(messages),
+        "tokens": estimate_tokens(messages),
+        "context_length": context_length,
+        "roles": [str(m.get("role") or "") for m in messages],
+        "recent": [
+            {
+                "role": str(m.get("role") or ""),
+                "tokens": estimate_tokens([m]),
+                "chars": len(_content_as_text(m.get("content"))),
+                "digest": hashlib.sha256(
+                    _content_as_text(m.get("content")).encode("utf-8")
+                ).hexdigest()[:16],
+            }
+            for m in recent
+        ],
+        "sections": sections,
+        "tool_schema_tokens": estimate_tokens(tool_schemas or []),
+        "tool_schema_count": len(tool_schemas or []),
+        "user_turns": sum(1 for m in messages if m.get("role") == "user" and not _is_context_supplement(m)),
+        "truncation": {
+            "recent_turn_priority": True,
+            "supplements_excluded_from_recent_turn_count": True,
+        },
+    }
+    return trace
+
+
 def _truncate_text_to_token_budget(text: str, token_budget: int) -> str:
     """Trim a too-large current user message instead of dropping it entirely."""
     if token_budget <= 32:
@@ -236,22 +311,44 @@ def trim_for_context(messages: List[Dict], context_length: int, reserve_tokens: 
 
     logger.info(f"Trimming messages: {used} tokens > {budget} budget (ctx={context_length})")
 
-    # Separate system messages from conversation.
+    # Separate system messages from conversation.  A user-role contextual
+    # supplement (for example the current clock) is not a conversational turn
+    # and must never be allowed to evict the immediately preceding assistant.
     # Messages marked _protected (e.g. active document) are never trimmed.
     system_msgs = []
     protected_msgs = []
     convo_msgs = []
+    supplements = []
     for msg in messages:
         if msg.get("_protected"):
             protected_msgs.append(msg)
         elif msg.get("role") == "system":
             system_msgs.append(msg)
+        elif _is_context_supplement(msg):
+            supplements.append(msg)
         else:
             convo_msgs.append(msg)
 
+    def _place_supplements(base: List[Dict]) -> List[Dict]:
+        """Place supplemental user-role blocks before the recent chat tail."""
+        if not supplements:
+            return base
+        tail_start = None
+        for i in range(len(base) - 1, -1, -1):
+            if base[i].get("role") == "assistant":
+                tail_start = i
+                break
+        if tail_start is None:
+            for i in range(len(base) - 1, -1, -1):
+                if base[i].get("role") == "user":
+                    tail_start = i
+                    break
+        if tail_start is None:
+            return base + supplements
+        return base[:tail_start] + supplements + base[tail_start:]
+
     # Protected messages count toward budget but are never dropped
     protected_tokens = estimate_tokens(protected_msgs)
-    budget -= protected_tokens
 
     # Priority: keep first system msg (preset prompt), drop others (memory, RAG, memo).
     # Exception: a research-spinoff primer (the seeded report that grounds a
@@ -266,17 +363,18 @@ def trim_for_context(messages: List[Dict], context_length: int, reserve_tokens: 
     extra_system = _non_primer[1:]
 
     # Try dropping extra system messages one by one (from the end)
-    trimmed = essential_system + convo_msgs
+    trimmed = essential_system + protected_msgs + convo_msgs
     if estimate_tokens(trimmed) <= budget:
         # Dropping extras was enough — try adding back some
         result = list(essential_system)
         for msg in extra_system:
-            candidate = result + [msg] + convo_msgs
+            candidate = result + [msg] + protected_msgs + convo_msgs
             if estimate_tokens(candidate) <= budget:
                 result.append(msg)
             else:
                 break
-        return _sanitize_tool_messages(result + protected_msgs + convo_msgs)
+        candidate = result + protected_msgs + convo_msgs
+        return _sanitize_tool_messages(_place_supplements(candidate))
 
     # Still too big — truncate the first system message (but keep more than 500 chars)
     if essential_system:
@@ -285,9 +383,9 @@ def trim_for_context(messages: List[Dict], context_length: int, reserve_tokens: 
             truncated_system = dict(essential_system[0])
             truncated_system["content"] = sys_text[:2000] + "\n[System prompt truncated for context limits]"
             essential_system[0] = truncated_system
-            trimmed = essential_system + convo_msgs
+            trimmed = essential_system + protected_msgs + convo_msgs
             if estimate_tokens(trimmed) <= budget:
-                return _sanitize_tool_messages(essential_system + protected_msgs + convo_msgs)
+                return _sanitize_tool_messages(_place_supplements(essential_system + protected_msgs + convo_msgs))
 
     # Still too big — drop older conversation turns BUT always keep the current
     # user turn. If a pasted message alone exceeds the model context, truncate
@@ -310,12 +408,28 @@ def trim_for_context(messages: List[Dict], context_length: int, reserve_tokens: 
         convo_msgs = prior_convo + current_msg
 
     # If the current message itself is too large, shrink only that message.
-    if current_msg and estimate_tokens(essential_system + protected_msgs + convo_msgs) > budget:
-        prefix = essential_system + protected_msgs + convo_msgs[:-1]
+    # Fit the high-priority recent conversation before lower-priority protected
+    # projections and supplements.  This is the key invariant for ordinary
+    # references such as “all of the above” and “do that”.
+    while convo_msgs and estimate_tokens(essential_system + convo_msgs) > budget:
+        if len(convo_msgs) <= 2:
+            break
+        convo_msgs.pop(0)
+
+    if current_msg and estimate_tokens(essential_system + convo_msgs) > budget:
+        prefix = essential_system + convo_msgs[:-1]
         available_for_current = max(64, budget - estimate_tokens(prefix))
         convo_msgs[-1] = _truncate_message_to_token_budget(convo_msgs[-1], available_for_current)
 
-    result = _sanitize_tool_messages(essential_system + protected_msgs + convo_msgs)
+    # Add protected Work/tool projections only after recent conversation has
+    # been selected.  They are bounded projections and may be omitted when
+    # there is no room; canonical state is rehydrated on the next request.
+    result = essential_system + convo_msgs
+    if estimate_tokens(result + protected_msgs) <= budget:
+        result += protected_msgs
+    # Keep the date/time supplement adjacent to the current user turn where
+    # possible, but never count it as a conversational turn.
+    result = _sanitize_tool_messages(_place_supplements(result))
     logger.info(f"Trimmed to {estimate_tokens(result)} tokens ({len(result)} messages)")
     return result
 
