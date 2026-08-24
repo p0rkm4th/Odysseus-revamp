@@ -53,3 +53,10 @@ def test_integration_projection_is_secret_free_and_maps_setup_health(tmp_path, m
     assert telegram["connection"] == "NOT_CONFIGURED"
     assert telegram["secret_values_exposed"] is False
     assert projection["authority_unchanged"] is True
+
+
+def test_contract_declares_telegram_setup_requirements():
+    telegram = next(item for item in setup_center.CONTRACTS if item.id == "communications.telegram")
+    assert telegram.dependencies == ("core.identity",)
+    assert "private chat" in telegram.permissions
+    assert telegram.supports_reconfigure is True
