@@ -1033,6 +1033,9 @@ async def build_chat_context(
         "section_tokens": estimate_tokens(_memory_context_messages),
         "context_trimmed": bool(_context_trimmed),
         "explicit_result_present_after_trim": bool(_explicit_memory_messages),
+        "provider_payload_memory_present": bool(_memory_context_messages),
+        "memory_section_roles": [str(m.get("role") or "") for m in _memory_context_messages],
+        "memory_section_location": "contextual user-role block" if _memory_context_messages else None,
         "content_logged": False,
     }
 

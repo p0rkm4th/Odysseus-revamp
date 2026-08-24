@@ -592,6 +592,14 @@ _DOMAIN_TOOL_MAP = {
     "asset_inventory": {"bash", "read_file", "grep", "ls"},
 }
 
+_DOMAIN_RULES["memory"] = (
+    "## Canonical Memory/Brain rules\n"
+    "- Explicit questions about what Hades remembers are owner-scoped reads of the canonical Brain memory store.\n"
+    "- Use the structured manage_memory actions summarize_owner_memory, search_memory, or inspect_memory when an explicit read is needed.\n"
+    "- Do not answer from Skills, procedural catalogs, or invented personal facts. Skills are not user memory.\n"
+    "- If the canonical result says retrieval failed, say retrieval failed. Only say zero memories when the canonical result explicitly says ZERO_RESULT."
+)
+
 # Capability V1 domain projection. These hints affect discovery/visibility;
 # policy, security gates, and execution remain owned by their existing layers.
 from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings
@@ -2095,6 +2103,11 @@ def _looks_like_explicit_skill_request(text: str) -> bool:
 def _suppress_automatic_skills(text: str, intent: Dict[str, object]) -> bool:
     """Suppress automatic procedural skills only for clearly non-procedural turns."""
     raw = str(text or "").strip()
+    # Explicit Brain reads are canonical data requests. Procedural Skill
+    # indexes/procedures must not compete with the owner-scoped Memory Result
+    # or tempt a model to answer a memory question through manage_skills.
+    if bool(intent.get("explicit_memory_query")) or is_explicit_memory_query(raw):
+        return True
     if not raw or bool(_LOW_SIGNAL_RE.match(raw)) or _is_casual_low_signal(raw):
         return True
     q = raw.lower()
@@ -2443,6 +2456,15 @@ def _minimal_saved_memory_message(messages: List[Dict]) -> Optional[Dict]:
         if not source.startswith("saved memory:"):
             continue
         content = str(message.get("content") or "")
+        # Qwen/compact routes use this projection instead of the full prompt.
+        # An explicit canonical result must retain its status even when it has
+        # no bullet facts (zero-result or retrieval failure); otherwise the
+        # model sees no memory message and can fabricate a false zero claim.
+        if (metadata or {}).get("context_kind") == "explicit_memory_result":
+            return untrusted_context_message(
+                "saved memory: explicit canonical result",
+                content[:20000],
+            )
         content = re.sub(r"(?m)^\s*Source:\s*saved memory:[^\n]*\n?", "", content)
         content = content.replace("Core facts about the user:", "")
         content = re.sub(

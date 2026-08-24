@@ -18,6 +18,8 @@ from src.memory import MemoryStoreUnreadable
 _EXPLICIT_MEMORY_RE = re.compile(
     r"\b(?:what\s+do\s+you\s+(?:remember|know)\s+about\s+me|"
     r"what\s+(?:personal\s+)?information\s+do\s+you\s+have\s+stored\s+about\s+me|"
+    r"(?:give|provide|show)\s+(?:me\s+)?(?:a\s+)?(?:concise\s+)?(?:breakdown|summary|list)\s+of\s+(?:all\s+)?(?:the\s+)?information\s+you\s+have\s+about\s+me|"
+    r"what\s+information\s+do\s+you\s+have\s+about\s+me|"
     r"check\s+(?:your\s+)?memories?|"
     r"show\s+(?:me\s+)?what\s+you\s+remember|"
     r"what\s+do\s+you\s+remember\s+about\s+my\s+(?:work|job|career|professional)|"
@@ -157,4 +159,3 @@ def render_explicit_memory_context(result: Dict[str, Any]) -> str:
             f"{memory.get('text')}"
         )
     return "\n".join(lines)
-
