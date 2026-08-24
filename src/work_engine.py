@@ -433,10 +433,30 @@ class WorkEngine:
         stale = []
         for claim in claims:
             until = parse_dt(claim.get("valid_until")) or parse_dt(claim.get("expires_at"))
-            if until and until < moment: stale.append(claim)
+            if until and until < moment or (claim.get("provenance") or {}).get("state") in {"stale", "unknown"}: stale.append(claim)
             elif claim.get("valid_from") and parse_dt(claim["valid_from"]) > moment: continue
             else: current.append(claim)
         return {"at": moment.isoformat(), "current": current, "stale": stale, "claim_count": len(current)}
+
+    def record_contradiction(self, owner, claim_id, contradicting_claim_id, *, resolution=None):
+        """Link competing claims without deleting either historical assertion."""
+        claim = self._one(EpistemicClaim, owner, claim_id, "claim")
+        other = self._one(EpistemicClaim, owner, contradicting_claim_id, "contradicting claim")
+        refs = list(claim.contradicting_references or [])
+        if other.id not in refs: refs.append(other.id)
+        claim.contradicting_references = refs[-100:]
+        provenance = dict(claim.provenance or {})
+        provenance.update({"resolution_status": str(resolution or "unresolved")[:32], "contradiction_updated_at": now().isoformat()})
+        claim.provenance = provenance
+        other_refs = list(other.contradicting_references or [])
+        if claim.id not in other_refs: other_refs.append(claim.id)
+        other.contradicting_references = other_refs[-100:]
+        other_provenance = dict(other.provenance or {})
+        other_provenance.setdefault("resolution_status", str(resolution or "unresolved")[:32])
+        other.provenance = other_provenance
+        self.event(owner, "claim.contradiction_recorded", run_id=claim.run_id, payload={"claim_id": claim.id, "contradicting_claim_id": other.id, "resolution": resolution or "unresolved"})
+        self.db.commit(); self.db.refresh(claim)
+        return serialize(claim)
 
     def add_result(self, owner, run_id, data):
         run = self._one(WorkRun, owner, run_id, "run")
