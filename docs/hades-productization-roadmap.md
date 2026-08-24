@@ -152,3 +152,9 @@ operator cancellation is durable; targeted invalidation marks matching current
 epistemic claims stale while retaining their historical evidence. This is a
 control-plane lifecycle foundation, not an executor: broker/tool bindings and
 approval policy remain the authority for real-world mutation.
+
+The World Model now has a visible first-class window using the shared Hades
+module grammar. It is discoverable from application navigation and the command
+palette, supports entity focus, displays provenance/status distinctions, and
+shows bounded blast-radius projections. It remains a read/projection surface;
+relationship mutation continues through the authenticated canonical Work API.
