@@ -60,6 +60,15 @@ approval/session binding, and runtime delivery remain owned by the existing
 Telegram store/runtime; voice, media, and live cross-channel dogfood remain
 future work.
 
+### Voice boundary hardening slice
+
+The existing Web STT/TTS routes now require an authenticated owner before
+reading audio uploads, synthesizing text, returning provider statistics, or
+clearing the TTS cache. Provider implementations and the shared Chat recorder
+remain canonical; this change does not create a second voice stack. Explicit
+voice retention, Telegram voice mirroring, and live microphone dogfood remain
+future work.
+
 ## V2 continuation checkpoint
 
 The first active batch is the census/grammar boundary. Existing canonical
