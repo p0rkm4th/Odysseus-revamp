@@ -84,3 +84,18 @@ def test_projection_resolves_dependency_readiness_without_granting_authority(tmp
     assert degraded["communications.telegram"]["missing_dependencies"] == ["core.identity"]
     assert degraded["communications.telegram"]["remediation_available"] is True
     assert degraded["communications.telegram"]["status"] == "NOT_CONFIGURED"
+
+
+def test_setup_profiles_only_change_selection_and_are_resumable(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "state.json")
+    service = setup_center.SetupCenterService()
+    profiles = {item["id"]: item for item in service.profiles()}
+    assert "communications.email" in profiles["PERSONAL"]["module_ids"]
+    projection = service.apply_profile("alice", "SECURITY_RESEARCH")
+    selected = {item["id"]: item["selected"] for item in projection["modules"]}
+    assert projection["selected_profile"] == "SECURITY_RESEARCH"
+    assert selected["investigation.osint"] is True
+    assert selected["communications.email"] is False
+    assert projection["authority_unchanged"] is True
+    with pytest.raises(ValueError, match="unknown setup profile"):
+        service.apply_profile("alice", "ROOT_ACCESS")

@@ -54,6 +54,15 @@ CONTRACTS: tuple[SetupContract, ...] = (
     SetupContract("advanced.automations", "Automations", "Reviewable schedules, Watches, and bounded responses.", "automations", "ADVANCED", dependencies=("core.identity",), permissions=("pre-authorized actions only",)),
 )
 
+SETUP_PROFILES: dict[str, tuple[str, ...]] = {
+    "PERSONAL": ("core.identity", "core.models", "core.memory", "communications.email", "communications.calendar", "communications.contacts"),
+    "HOME_HOMELAB": ("core.identity", "core.models", "core.memory", "home.smart-home", "technology.network", "technology.homelab"),
+    "BUSINESS": ("core.identity", "core.models", "core.memory", "communications.email", "communications.calendar", "communications.contacts", "business.crm"),
+    "SECURITY_RESEARCH": ("core.identity", "core.models", "core.memory", "technology.network", "investigation.osint"),
+    "DEVELOPER": ("core.identity", "core.models", "technology.homelab", "advanced.automations"),
+    "EVERYTHING": tuple(item.id for item in CONTRACTS),
+}
+
 
 def _safe_contract(contract: SetupContract) -> dict[str, Any]:
     value = asdict(contract)
@@ -105,10 +114,33 @@ class SetupCenterService:
     def contracts(self) -> list[dict[str, Any]]:
         return [_safe_contract(item) for item in CONTRACTS]
 
+    def profiles(self) -> list[dict[str, Any]]:
+        return [{"id": name, "module_ids": list(module_ids), "authority_unchanged": True} for name, module_ids in SETUP_PROFILES.items()]
+
+    def apply_profile(self, owner: str, profile_id: str) -> dict[str, Any]:
+        selected = SETUP_PROFILES.get(str(profile_id or "").upper())
+        if selected is None:
+            raise ValueError("unknown setup profile")
+        import datetime
+        with _STATE_LOCK:
+            state = _read_state()
+            owner_state = state.setdefault(owner, {})
+            selected_ids = set(selected)
+            for contract in CONTRACTS:
+                entry = owner_state.get(contract.id) if isinstance(owner_state.get(contract.id), dict) else {}
+                entry["selected"] = contract.id in selected_ids
+                owner_state[contract.id] = entry
+            owner_state["_profile"] = {"id": str(profile_id).upper(), "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+            atomic_write_json(SETUP_STATE_FILE, state, indent=2)
+        projection = self.projection(owner)
+        projection["selected_profile"] = str(profile_id).upper()
+        return projection
+
     def projection(self, owner: str) -> dict[str, Any]:
         if not owner:
             raise ValueError("setup owner is required")
         state = _read_state().get(owner, {})
+        selected_profile = state.get("_profile", {}).get("id") if isinstance(state, dict) and isinstance(state.get("_profile"), dict) else None
         integrations = _integration_names()
         modules = []
         for contract in CONTRACTS:
@@ -130,7 +162,7 @@ class SetupCenterService:
         categories: dict[str, list[dict[str, Any]]] = {}
         for module in modules:
             categories.setdefault(module["category"], []).append(module)
-        return {"version": 1, "owner": owner, "categories": categories, "modules": modules, "authority_unchanged": True, "secrets_exposed": False}
+        return {"version": 1, "owner": owner, "categories": categories, "modules": modules, "selected_profile": selected_profile, "authority_unchanged": True, "secrets_exposed": False}
 
     def integrations_projection(self, owner: str) -> dict[str, Any]:
         """Project integration readiness without exposing integration records."""

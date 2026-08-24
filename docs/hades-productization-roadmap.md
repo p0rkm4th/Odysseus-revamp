@@ -32,6 +32,11 @@ integration health remain separate checks.
 It reports no secret values and does not create a parallel integration store or
 authority path.
 
+Setup profiles now provide explicit PERSONAL, HOME_HOMELAB, BUSINESS,
+SECURITY_RESEARCH, DEVELOPER, EVERYTHING, and custom selection paths. Applying
+a profile changes only resumable module selection; it never changes policy,
+permissions, secret bindings, or execution authority.
+
 Telegram now has a module-specific Setup Center health operation. It reuses the
 owner-scoped `TelegramStore.lifecycle_status` projection to validate pairing,
 private-chat, replay-protection, and callback-approval prerequisites without
