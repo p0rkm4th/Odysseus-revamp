@@ -1,6 +1,8 @@
 // Small authenticated Security workspace for bounded assessment records.
 
 let pane = null;
+let windowEl = null;
+import { openWindow, close as closeWindow } from './workspaceWindowManager.js';
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -23,7 +25,7 @@ function render(data) {
   pane.innerHTML = `<div class="security-header"><div><h2>Security Assessments</h2><p>Authorized, bounded assessment records and evidence.</p></div><button id="security-close">Close</button></div>
     <div class="security-actions"><button id="security-new">New engagement</button><button id="security-refresh">Refresh</button></div>
     <div id="security-message" role="status"></div><div class="security-list">${rows || '<p class="muted">No engagements yet.</p>'}</div>`;
-  pane.querySelector('#security-close').onclick = () => pane.remove();
+  pane.querySelector('#security-close').onclick = () => { closeWindow('security-overview'); pane = null; windowEl = null; };
   pane.querySelector('#security-refresh').onclick = load;
   pane.querySelector('#security-new').onclick = create;
   pane.querySelectorAll('.security-open').forEach(button => button.onclick = () => openDetail(button.dataset.id));
@@ -62,9 +64,9 @@ async function openDetail(id) {
 }
 
 export function togglePanel() {
-  if (pane) { pane.remove(); pane = null; return; }
-  pane = document.createElement('section'); pane.id = 'security-pane'; pane.className = 'security-pane';
-  document.body.appendChild(pane); load();
+  if (pane) { closeWindow('security-overview'); pane = null; windowEl = null; return; }
+  windowEl = openWindow({id:'security-overview',view:'security',title:'Security Assessments',content:''});
+  pane = windowEl.querySelector('.hades-window-body'); load();
 }
 
 export default {togglePanel};

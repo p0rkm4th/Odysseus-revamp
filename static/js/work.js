@@ -1,4 +1,6 @@
 let pane = null;
+let windowEl = null;
+import { openWindow, close as closeWindow } from './workspaceWindowManager.js';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path, options={}) { const r=await fetch(path,{credentials:'same-origin',headers:options.body?{'Content-Type':'application/json'}:undefined,...options}); const d=await r.json().catch(()=>({})); if(!r.ok) throw Error(d.detail||`Request failed (${r.status})`); return d; }
 function render(d) {
@@ -10,6 +12,6 @@ function render(d) {
 }
 async function load(){try{render(await api('/api/work/overview'));}catch(e){if(pane)pane.innerHTML=`<p class="security-error">${esc(e.message)}</p>`;}}
 async function createGoal(){const title=prompt('Goal title'); if(!title?.trim())return; const outcome=prompt('Desired outcome')||''; try{await api('/api/work/goals',{method:'POST',body:JSON.stringify({title:title.trim(),desired_outcome:outcome})});await load();}catch(e){alert(e.message);}}
-function close(){pane?.remove();pane=null;document.getElementById('tool-work-btn')?.classList.remove('active');}
-export function togglePanel(){if(pane)close();else{pane=document.createElement('section');pane.id='work-pane';pane.className='work-pane';document.body.appendChild(pane);document.getElementById('tool-work-btn')?.classList.add('active');load();}}
+function close(){closeWindow('work-overview');pane=null;windowEl=null;document.getElementById('tool-work-btn')?.classList.remove('active');}
+export function togglePanel(){if(pane)close();else{windowEl=openWindow({id:'work-overview',view:'work',title:'Work',content:''});pane=windowEl.querySelector('.hades-window-body');document.getElementById('tool-work-btn')?.classList.add('active');load();}}
 export default {togglePanel};
