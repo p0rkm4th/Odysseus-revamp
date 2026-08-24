@@ -11,6 +11,7 @@ import ipaddress
 from typing import Any
 
 from src.capability_registry import ActionSpec, ApprovalMode, capability_for_id
+from src.tool_bindings import binding_for_tool
 from core.work_models import WorkAction, WorkGoal, WorkLock, WorkRun
 from src.work_engine import WorkEngine, WorkError, serialize
 
@@ -65,7 +66,41 @@ def _contract(spec: ActionSpec, action: dict[str, Any] | None = None) -> dict[st
         "execution_requirements": dict(spec.execution_requirements or {}),
         "execution_location": spec.execution_location,
         "executor_key": spec.executor_key,
+        "execution_path": _execution_path(spec, action),
     }
+
+
+def _execution_path(spec: ActionSpec, action: dict[str, Any]) -> dict[str, Any]:
+    """Describe the registered execution boundary without invoking it.
+
+    ToolBindings are optional for application-owned projections such as Work
+    and routing.  When a binding is declared or the ActionSpec names a
+    registered transport, however, the preview must expose the exact binding
+    and validation must fail closed on mismatches.
+    """
+    declared = str(action.get("tool_binding_name") or "").strip()
+    executor = str(spec.executor_key or "").strip()
+    binding = binding_for_tool(declared or executor) if (declared or executor) else None
+    binding_name = declared or (binding.transport_name if binding else None)
+    if declared and binding is None:
+        return {"available": False, "binding": declared, "executor_key": executor or None, "reason": "binding_not_registered"}
+    if binding and executor and binding.executor_key != executor:
+        return {"available": False, "binding": binding.transport_name, "executor_key": executor, "reason": "executor_binding_mismatch"}
+    if binding and binding.capability_id != "":
+        return {
+            "available": True,
+            "binding": binding.transport_name,
+            "executor_key": binding.executor_key,
+            "execution_location": binding.execution_location,
+            "target_scope": binding.target_scope,
+            "direct_container_access": binding.requires_direct_container_access,
+        }
+    if executor:
+        # No ToolBinding means this remains an application-owned path.  The
+        # executor key is still visible for policy/observability, but is not
+        # mistaken for a host or external authority boundary.
+        return {"available": True, "binding": None, "executor_key": executor, "execution_location": spec.execution_location, "application_owned": True}
+    return {"available": True, "binding": None, "executor_key": None, "execution_location": spec.execution_location, "application_owned": True}
 
 
 class RunPlanner:
@@ -197,6 +232,14 @@ class RunPlanner:
                 failures.append({"code": "unknown_action_spec", "sequence": action.get("sequence"), "message": "ActionSpec is not registered"})
                 continue
             contract = item["contract"]
+            normalized_input = action.get("normalized_input")
+            if normalized_input is not None and not isinstance(normalized_input, dict):
+                failures.append({"code": "invalid_action_input", "sequence": action.get("sequence"), "message": "normalized action input must be an object"})
+            execution_path = contract.get("execution_path") or {}
+            if not execution_path.get("available", False):
+                failures.append({"code": "execution_path_unavailable", "sequence": action.get("sequence"), "message": "declared ActionSpec execution path is unavailable", "path": execution_path})
+            if contract["target_scope"] and not contract["target_resources"]:
+                failures.append({"code": "target_required", "sequence": action.get("sequence"), "message": "scoped action requires a canonical target resource"})
             if mission_allowed and str(action.get("capability_id") or "") not in mission_allowed:
                 failures.append({"code": "mission_capability_restricted", "sequence": action.get("sequence"), "capability_id": action.get("capability_id"), "message": "Run Action capability is not allowed by its Mission"})
             if contract["precheck_actions"]:
@@ -219,6 +262,8 @@ class RunPlanner:
                     failures.append({"code": "scope_invalid", "sequence": action.get("sequence"), "message": "private-network action has an out-of-scope resource", "resources": invalid})
             if contract["approval"] != "none" and not action.get("approval_reference") and action.get("status") not in {"approved", "completed"}:
                 failures.append({"code": "approval_required", "sequence": action.get("sequence"), "message": "exact or normal approval is not bound"})
+            if contract["approval"] == "exact" and action.get("approval_reference") and not action.get("sealed_input_digest"):
+                failures.append({"code": "approval_digest_missing", "sequence": action.get("sequence"), "message": "exact approval is not bound to a sealed action-input digest"})
             if contract["risk_level"] in {"high", "critical"} and not contract["verification"]:
                 failures.append({"code": "verification_required", "sequence": action.get("sequence"), "message": "higher-risk action has no verification contract"})
             if contract["compensatable"] and not contract["compensating_action"]:
