@@ -40,10 +40,11 @@ class IncidentChangeService:
         result = serialize(row)
         result["hypotheses"] = self.list_hypotheses(owner, incident_id)
         result["changes"] = self.list_changes(owner, incident_id=incident_id)
+        run_ids = [change["run_id"] for change in result["changes"] if change.get("run_id")]
+        run_ids.extend(event.get("run_id") for event in (row.timeline or []) if isinstance(event, dict) and event.get("run_id"))
         result["runs"] = []
-        for change in result["changes"]:
-            if not change.get("run_id"): continue
-            run = self.db.query(WorkRun).filter_by(owner=owner, id=change["run_id"]).one_or_none()
+        for run_id in dict.fromkeys(run_ids):
+            run = self.db.query(WorkRun).filter_by(owner=owner, id=run_id).one_or_none()
             if run is not None:
                 result["runs"].append({"id": run.id, "status": run.status, "lifecycle_state": run.lifecycle_state, "result_summary": run.result_summary or {}, "verification": run.verification or {}})
         result["canonical_refs"] = {"incident": f"incident://{row.id}", "evidence": list(row.evidence_references or [])}
@@ -83,10 +84,13 @@ class IncidentChangeService:
         reference = str(data.get("reference") or "").strip()
         if not reference: raise WorkError("incident evidence reference is required")
         if len(reference) > 1000: raise WorkError("incident evidence reference is too long")
+        run_id = data.get("run_id")
+        if run_id and self.db.query(WorkRun).filter_by(owner=owner, id=run_id).one_or_none() is None:
+            raise WorkError("evidence Run not found")
         refs = list(incident.evidence_references or [])
         if reference not in refs: refs.append(reference)
         incident.evidence_references = refs[-200:]
-        event = {"kind": "evidence_added", "reference": reference, "source_kind": str(data.get("source_kind") or "observed")[:32], "run_id": data.get("run_id"), "at": now().isoformat()}
+        event = {"kind": "evidence_added", "reference": reference, "source_kind": str(data.get("source_kind") or "observed")[:32], "run_id": run_id, "at": now().isoformat()}
         incident.timeline = (list(incident.timeline or []) + [event])[-200:]
         self.db.commit(); self.db.refresh(incident)
         return {"incident_id": incident.id, "evidence_reference": reference, "timeline_event": event, "authority_unchanged": True}
