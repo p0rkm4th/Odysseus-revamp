@@ -74,6 +74,29 @@ def test_action_contract_fields_persist_with_owner_scoped_run(db):
     assert action["locks"] == ["network:private_scope"]
     assert WorkEngine(db).get_run("alice", run["id"])["actions"][0]["idempotency_key"] == "scan-1"
 
+def test_resource_locks_prevent_collisions_and_release_on_completion(db):
+    svc = WorkEngine(db)
+    first_run = svc.create_run("alice", {"domain": "homelab"})
+    first = svc.create_action("alice", first_run["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "locks": [{"resource": "service:nginx", "mode": "shared"}]})
+    svc.acquire_action_locks("alice", first["id"])
+    second_run = svc.create_run("alice", {"domain": "homelab"})
+    second = svc.create_action("alice", second_run["id"], {"capability_id": "homelab.manage", "action_id": "execute_service_restart", "locks": ["service:nginx"]})
+    with pytest.raises(WorkError, match="lock conflict"):
+        svc.acquire_action_locks("alice", second["id"])
+    assert svc.lock_conflicts("alice", second["id"])[0]["resource"] == "service:nginx"
+    svc.complete_action("alice", first["id"], {})
+    assert svc.acquire_action_locks("alice", second["id"])["status"] == "executing"
+
+def test_shared_resource_locks_can_coexist(db):
+    svc = WorkEngine(db)
+    actions = []
+    for _ in range(2):
+        run = svc.create_run("alice", {"domain": "homelab"})
+        action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "locks": [{"resource": "service:nginx", "mode": "shared"}]})
+        actions.append(action)
+    svc.acquire_action_locks("alice", actions[0]["id"])
+    assert svc.acquire_action_locks("alice", actions[1]["id"])["status"] == "executing"
+
 def test_owner_isolation_and_restart_state(db):
     svc = WorkEngine(db)
     goal = svc.create_goal("alice", {"title":"Private work"})

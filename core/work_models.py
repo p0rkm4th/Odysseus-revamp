@@ -56,6 +56,11 @@ class WorkArtifact(TimestampMixin, Base):
     __tablename__ = "work_artifacts"
     id = Column(String, primary_key=True); owner = Column(String, nullable=False, index=True); run_id = Column(String, ForeignKey("work_runs.id", ondelete="CASCADE"), nullable=False, index=True); action_id = Column(String, ForeignKey("work_actions.id", ondelete="CASCADE"), nullable=True); artifact_type = Column(String(64), nullable=False); reference = Column(String(1000), nullable=False); content_digest = Column(String(128), nullable=True); metadata_json = Column(JSON, nullable=False, default=dict); provenance = Column(JSON, nullable=False, default=dict)
 
+class WorkLock(Base):
+    __tablename__ = "work_locks"
+    id = Column(String, primary_key=True); owner = Column(String, nullable=False, index=True); resource = Column(String(500), nullable=False, index=True); mode = Column(String(16), nullable=False, default="exclusive"); run_id = Column(String, ForeignKey("work_runs.id", ondelete="CASCADE"), nullable=False, index=True); action_id = Column(String, ForeignKey("work_actions.id", ondelete="CASCADE"), nullable=False, index=True); acquired_at = Column(DateTime, nullable=False, default=utcnow_naive); released_at = Column(DateTime, nullable=True)
+    __table_args__ = (CheckConstraint("mode IN ('shared','exclusive')", name="ck_work_lock_mode"), Index("ix_work_locks_active_resource", "owner", "resource", "released_at"))
+
 class WorkEvent(Base):
     __tablename__ = "work_events"
     id = Column(String, primary_key=True); owner = Column(String, nullable=False, index=True); event_type = Column(String(100), nullable=False); goal_id = Column(String, nullable=True, index=True); project_id = Column(String, nullable=True, index=True); task_id = Column(String, nullable=True, index=True); run_id = Column(String, nullable=True, index=True); action_id = Column(String, nullable=True, index=True); payload = Column(JSON, nullable=False, default=dict); created_at = Column(DateTime, nullable=False, default=utcnow_naive); __table_args__ = (Index("ix_work_events_owner_created", "owner", "created_at"),)
@@ -65,4 +70,4 @@ class WorkCommitment(TimestampMixin, Base):
     id = Column(String, primary_key=True); owner = Column(String, nullable=False, index=True); goal_id = Column(String, nullable=True, index=True); project_id = Column(String, nullable=True, index=True); task_id = Column(String, nullable=True, index=True); run_id = Column(String, nullable=True, index=True); text = Column(Text, nullable=False); due_at = Column(DateTime, nullable=True); status = Column(String(32), nullable=False, default="open"); source = Column(String(64), nullable=False, default="operator"); completed_at = Column(DateTime, nullable=True)
     __table_args__ = (CheckConstraint("status IN ('open','satisfied','missed','cancelled')", name="ck_work_commitment_status"),)
 
-WORK_TABLES = tuple(x.__table__ for x in (WorkGoal, WorkProject, WorkTask, WorkTaskDependency, WorkRun, WorkAction, WorkResult, WorkArtifact, WorkEvent, WorkCommitment))
+WORK_TABLES = tuple(x.__table__ for x in (WorkGoal, WorkProject, WorkTask, WorkTaskDependency, WorkRun, WorkAction, WorkResult, WorkArtifact, WorkLock, WorkEvent, WorkCommitment))

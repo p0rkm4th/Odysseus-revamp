@@ -54,3 +54,16 @@ def apply_work_v2(connection: Connection) -> None:
                 connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"))
 
 register_schema_migration(SchemaMigration(WORK_V2_VERSION, WORK_V2_CHECKSUM, apply_work_v2))
+
+WORK_V3_VERSION = "20260824_002_work_resource_locks_v3"
+WORK_V3_DEFINITION = """work-engine-v3
+owner-scoped-shared-exclusive-resource-locks
+action-run-collision-prevention
+"""
+WORK_V3_CHECKSUM = migration_checksum(WORK_V3_DEFINITION)
+
+def apply_work_v3(connection: Connection) -> None:
+    from core.work_models import WorkLock
+    WorkLock.__table__.create(bind=connection, checkfirst=True)
+
+register_schema_migration(SchemaMigration(WORK_V3_VERSION, WORK_V3_CHECKSUM, apply_work_v3))
