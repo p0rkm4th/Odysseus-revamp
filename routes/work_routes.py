@@ -94,6 +94,27 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/evaluations/failures")
     async def evaluation_failures(request: Request, status: str | None = None, taxonomy: str | None = None):
         return await tx(request, lambda svc,o,u: __import__("src.evaluation_service", fromlist=["EvaluationService"]).EvaluationService(svc.db).list_failures(o, status=status, taxonomy=taxonomy))
+    @router.post("/incidents", status_code=201)
+    async def create_incident(request: Request, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).create_incident(o, payload))
+    @router.get("/incidents")
+    async def incidents(request: Request, status: str | None = None):
+        return {"incidents": await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).list_incidents(o, status=status))}
+    @router.patch("/incidents/{incident_id}")
+    async def update_incident(request: Request, incident_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).update_incident(o, incident_id, payload))
+    @router.post("/incidents/{incident_id}/hypotheses", status_code=201)
+    async def add_hypothesis(request: Request, incident_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).add_hypothesis(o, incident_id, payload))
+    @router.get("/incidents/{incident_id}/hypotheses")
+    async def hypotheses(request: Request, incident_id: str):
+        return {"hypotheses": await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).list_hypotheses(o, incident_id))}
+    @router.post("/changes", status_code=201)
+    async def create_change(request: Request, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).create_change(o, payload))
+    @router.get("/changes")
+    async def changes(request: Request, status: str | None = None, incident_id: str | None = None):
+        return {"changes": await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).list_changes(o, status=status, incident_id=incident_id))}
     @router.post("/world/relationships", status_code=201)
     async def create_world_relationship(request: Request, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).create_relationship(o, payload))

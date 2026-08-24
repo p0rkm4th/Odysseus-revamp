@@ -165,3 +165,10 @@ intent/plan state, preview and validation, knowledge gaps, locks, replay
 state, execution spans, and verification. Evaluations remain supervised and
 owner-scoped; the surface does not create a second benchmark or execution
 engine.
+
+Incident/Change foundations are now additive and owner-scoped. Incidents keep
+symptoms, affected references, timeline, hypotheses, evidence, root cause, and
+outcome; Changes reference existing Runs and deterministic Run previews for
+targets, actions, risk, resources, and verification. The Control Center shows
+their status projections. Neither object executes Actions directly; Work and
+the existing ActionSpec/ToolBinding/policy path remain authoritative.

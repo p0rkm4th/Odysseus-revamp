@@ -32,6 +32,7 @@ product workspace or dogfood gate is incomplete.
 | Models/routing | present | present | partial | green | partial | model lab and qualification evidence |
 | Improvements | present | partial | partial | green | not accepted | registry workspace and promotion evidence |
 | Developer/health/authority | present | partial | partial; Control Center with Runs/Evaluations/Inspector is visible | focused control-plane/UI tests | deterministic Run Inspector dogfood; live provider/model evaluation pending | permissions, trace, backup projections, Action Contract inspection, and richer health integrations remain |
+| Incidents / Changes | present (core/incident_models.py, src/incident_change.py) | Work/Run references; no second executor | Control Center tabs with incident/change status projections | focused owner-scope, hypothesis, preview, and migration tests | synthetic incident/change records dogfood complete | hypothesis/evidence history and Change preview reference canonical Runs; remediation execution, dedicated dossiers, and live safe-service dogfood remain |
 | Shell/window/design system | present | partial | partial | partial | browser review pending | shared tokens/primitives and OSINT module header/intake now exist; existing screens still need incremental migration |
 
 ## Tier 1 acceptance gates
