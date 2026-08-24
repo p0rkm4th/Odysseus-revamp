@@ -642,6 +642,12 @@ locks. During execution, cancellation is durable, blocks new Actions, and
 requires the bounded Action to reach verification before cancellation can be
 finalized, avoiding an unverified unknown state.
 
+Retry behavior now fails closed for unknown or non-idempotent contracts. Only
+an explicitly replay-safe/idempotent ActionSpec may create a bounded retry;
+the retry is a new persisted Action and exact approval references are never
+copied across attempts. Ambiguous or unsafe mutations therefore require fresh
+verification rather than blind repetition.
+
 ### Run Preview inspector checkpoint
 
 The existing Work and Control Center views now visibly consume the structured
