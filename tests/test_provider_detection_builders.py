@@ -80,3 +80,11 @@ class TestBuildersLocalAndDockerEndpoints:
 
     def test_docker_internal_ollama_api_path_is_native_models(self):
         assert build_models_url("http://host.docker.internal:11434/api") == "http://host.docker.internal:11434/api/tags"
+
+    @pytest.mark.parametrize("base", [
+        "http://host.docker.internal:11434/v1",
+        "http://host.docker.internal:11434/v1/",
+    ])
+    def test_docker_internal_openai_base_never_duplicates_v1(self, base):
+        """Ollama's OpenAI-compatible base must probe its installed catalog."""
+        assert build_models_url(base) == "http://host.docker.internal:11434/v1/models"
