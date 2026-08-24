@@ -44,6 +44,9 @@ window work; new tables are not justified until a focused gap is demonstrated.
   model claims, or action claims.
 - Added daily/weekly brief switching to the existing Hades window and focused
   tests for bounded horizon and grounding metadata.
+- Extended the existing Ctrl+K conversation search surface with canonical
+  module commands. Commands invoke existing module controls only; they do not
+  create a UI-only execution path or bypass policy.
 
 ## Completed batches in this continuation
 

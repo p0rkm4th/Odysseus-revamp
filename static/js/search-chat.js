@@ -8,6 +8,22 @@ let debounceTimer = null;
 let selectedIndex = -1;
 let results = [];
 
+// Navigation commands live in the existing Ctrl+K surface. They only invoke
+// already-wired module buttons; policy-sensitive work still goes through the
+// module's canonical route and ActionSpec path.
+const COMMANDS = [
+  ['Open Hades overview', 'tool-hades-btn'],
+  ['Open Attention', 'tool-hades-btn'],
+  ['Open Work / Life', 'tool-work-btn'],
+  ['Open Household', 'tool-household-btn'],
+  ['Open IT Assets', 'tool-it-assets-btn'],
+  ['Open Network', 'tool-network-btn'],
+  ['Open Security', 'tool-security-btn'],
+  ['Open Memory', 'tool-memory-btn'],
+  ['Open Calendar', 'tool-calendar-btn'],
+  ['Open Developer', 'tool-developer-btn'],
+].map(([label, target]) => ({ kind: 'command', label, target }));
+
 function el(id) { return document.getElementById(id); }
 
 function hideMobileSidebarForSearch() {
@@ -43,7 +59,7 @@ export function openSearch() {
   }
   selectedIndex = -1;
   results = [];
-  el('search-results').innerHTML = '';
+  renderResults([], '');
 }
 
 export function closeSearch() {
@@ -89,10 +105,15 @@ function renderResults(data, query) {
   const container = el('search-results');
   if (!container) return;
 
+  const commandMatches = COMMANDS.filter(command => !query || command.label.toLowerCase().includes(query.toLowerCase()));
+  let html = commandMatches.length ? '<div class="search-group-header">Commands</div>' : '';
+  commandMatches.forEach((command, index) => {
+    html += `<div class="search-result-item search-command-item" data-index="${index}" data-command-target="${escapeHtml(command.target)}"><div class="search-result-role">Command</div><div class="search-result-snippet">${highlightMatch(command.label, query)}</div><div class="search-result-time">Open</div></div>`;
+  });
+  const offset = commandMatches.length;
   if (!data || data.length === 0) {
-    container.innerHTML = query
-      ? '<div class="search-empty">No results found</div>'
-      : '';
+    container.innerHTML = html || (query ? '<div class="search-empty">No results found</div>' : '');
+    bindResults(container);
     return;
   }
 
@@ -105,13 +126,12 @@ function renderResults(data, query) {
     grouped[r.session_id].items.push(r);
   }
 
-  let html = '';
   let idx = 0;
   for (const [sessionId, group] of Object.entries(grouped)) {
     html += `<div class="search-group-header">${escapeHtml(group.name)}</div>`;
     for (const item of group.items) {
       const roleLabel = item.role === 'user' ? 'You' : 'AI';
-      html += `<div class="search-result-item" data-index="${idx}" data-session="${escapeHtml(sessionId)}">
+      html += `<div class="search-result-item" data-index="${offset + idx}" data-session="${escapeHtml(sessionId)}">
         <div class="search-result-role">${roleLabel}</div>
         <div class="search-result-snippet">${highlightMatch(item.content_snippet, query)}</div>
         <div class="search-result-time">${formatTimestamp(item.timestamp)}</div>
@@ -120,14 +140,22 @@ function renderResults(data, query) {
     }
   }
   container.innerHTML = html;
+  bindResults(container);
+}
 
-  // Click handlers
-  container.querySelectorAll('.search-result-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const sid = item.dataset.session;
-      navigateToSession(sid);
-    });
+function bindResults(container) {
+  container.querySelectorAll('.search-command-item').forEach(item => {
+    item.addEventListener('click', () => navigateCommand(item.dataset.commandTarget));
   });
+  container.querySelectorAll('.search-result-item:not(.search-command-item)').forEach(item => {
+    item.addEventListener('click', () => navigateToSession(item.dataset.session));
+  });
+}
+
+function navigateCommand(target) {
+  closeSearch();
+  const button = document.getElementById(target);
+  if (button) button.click();
 }
 
 function navigateToSession(sessionId) {
@@ -168,8 +196,9 @@ function handleKeydown(e) {
   } else if (e.key === 'Enter') {
     e.preventDefault();
     if (selectedIndex >= 0 && items[selectedIndex]) {
-      const sid = items[selectedIndex].dataset.session;
-      navigateToSession(sid);
+      const item = items[selectedIndex];
+      if (item.dataset.commandTarget) navigateCommand(item.dataset.commandTarget);
+      else navigateToSession(item.dataset.session);
     }
   }
 }
