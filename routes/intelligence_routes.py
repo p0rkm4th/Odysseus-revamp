@@ -118,6 +118,11 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
             if unread: query = query.filter(Notification.read_at == None)
             rows = query.order_by(Notification.created_at.desc()).limit(100).all()
             return {"notifications": [{c.name: (getattr(row,c.name).isoformat() if hasattr(getattr(row,c.name), 'isoformat') else getattr(row,c.name)) for c in row.__table__.columns} for row in rows]}
+    @router.get("/api/hades/attention")
+    async def hades_attention(request: Request):
+        value = owner(request)
+        with session_factory() as db:
+            return PersistentAgent(db).attention(value)
     @router.post("/api/hades/notifications/{notification_id}/read")
     async def hades_notification_read(request: Request, notification_id: str):
         value = owner(request)

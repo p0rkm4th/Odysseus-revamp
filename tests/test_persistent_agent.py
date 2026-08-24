@@ -2,6 +2,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.database import Base
+from datetime import datetime, timedelta
+from core.work_models import WorkCommitment
 from src.persistent_agent import PersistentAgent
 
 
@@ -47,3 +49,17 @@ def test_monitor_notification_deduplication_and_tier_guard(db_session):
     notes = agent.evaluate_monitors("scotty")
     assert notes == []
     assert monitor["consequence_tier"] == 1
+
+
+def test_overdue_commitment_notification_preserves_entity_reference_and_attention(db_session):
+    agent = PersistentAgent(db_session)
+    commitment = WorkCommitment(
+        id="commitment-1", owner="scotty", text="Renew the certificate",
+        status="open", due_at=datetime.utcnow() - timedelta(hours=1),
+    )
+    db_session.add(commitment); db_session.commit()
+    result = agent.evaluate_commitments("scotty")
+    assert result["notifications"][0]["source_entity_id"] == "commitment-1"
+    attention = agent.attention("scotty")
+    assert attention["count"] == 1
+    assert attention["items"][0]["source_entity_id"] == "commitment-1"

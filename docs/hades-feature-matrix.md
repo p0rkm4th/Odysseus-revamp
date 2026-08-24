@@ -9,7 +9,7 @@ product workspace or dogfood gate is incomplete.
 | Self/continuity | present | present | partial | green | partial | strengthen deterministic referent resolution; self dossier |
 | Work/Life | present | partial | partial | green | partial | Life overview, reviews, commitments |
 | Memory | present | present | partial | green | partial | layer and token inspector |
-| Notifications/monitors | partial | partial | partial | partial | not accepted | canonical attention queue |
+| Notifications/monitors | partial | partial | partial | green | not accepted | web Attention projection now canonical; delivery/monitor dogfood remains |
 | Household | present | partial | partial | green | not accepted | intake, dossier, history, provenance |
 | IT Assets/CMDB | present | present | partial | green | partial | reconciliation and detail workspace |
 | Network | present | green | partial | green | green | change detection, history, polished map |
