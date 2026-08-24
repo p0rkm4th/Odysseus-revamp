@@ -791,6 +791,14 @@ explicit secret-hidden messaging. Configuration remains in Setup Center or the
 canonical Settings integrations surface; the new view does not create a second
 integration store or mutate credentials.
 
+Setup Center safe health coverage now includes core model-routing metadata,
+canonical Memory service importability, OSINT public-source policy readiness,
+private-network host-broker declaration, and bounded Homelab binding
+declaration. These checks are deliberately non-mutating and report whether
+inference, retrieval, scans, provider requests, or host operations were
+performed; configured provider and hardware health remains a separate live
+acceptance concern.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
