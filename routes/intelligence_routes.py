@@ -265,6 +265,52 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
     async def home_assistant_overview(request: Request):
         owner(request)
         return await _home_assistant_overview()
+    @router.get("/api/communications/overview")
+    async def communications_overview(request: Request):
+        value = owner(request)
+        from core.database import CalendarCal, CalendarEvent, EmailAccount
+        from sqlalchemy import and_, or_
+
+        now = datetime.utcnow()
+        horizon = now + timedelta(days=14)
+        with session_factory() as db:
+            accounts = db.query(EmailAccount).filter(
+                or_(
+                    EmailAccount.owner == value,
+                    and_(or_(EmailAccount.owner.is_(None), EmailAccount.owner == ""), EmailAccount.from_address == value),
+                )
+            ).order_by(EmailAccount.is_default.desc(), EmailAccount.created_at.asc()).all()
+            calendars = db.query(CalendarCal).filter(CalendarCal.owner == value).all()
+            calendar_ids = [calendar.id for calendar in calendars]
+            events = []
+            if calendar_ids:
+                events = db.query(CalendarEvent).filter(
+                    CalendarEvent.calendar_id.in_(calendar_ids),
+                    CalendarEvent.status != "cancelled",
+                    CalendarEvent.dtstart < horizon,
+                    CalendarEvent.dtend >= now,
+                ).order_by(CalendarEvent.dtstart).limit(20).all()
+            return {
+                "source": "canonical_email_accounts_and_calendar",
+                "authority_unchanged": True,
+                "email": {
+                    "configured": len(accounts),
+                    "enabled": sum(1 for account in accounts if account.enabled),
+                    "accounts": [
+                        {"id": account.id, "name": account.name, "enabled": bool(account.enabled), "default": bool(account.is_default)}
+                        for account in accounts
+                    ],
+                },
+                "calendar": {
+                    "calendars": len(calendars),
+                    "upcoming_14_days": len(events),
+                    "events": [
+                        {"uid": event.uid, "summary": event.summary, "dtstart": event.dtstart.isoformat(), "calendar_id": event.calendar_id}
+                        for event in events
+                    ],
+                },
+                "contacts": {"canonical_store": "CardDAV/local contacts routes", "projection": "not loaded into this overview"},
+            }
     @router.post("/api/network/discovery/plan")
     async def discovery_plan(request: Request, payload: dict = Body(...)):
         value=owner(request)

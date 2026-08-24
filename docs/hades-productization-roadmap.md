@@ -41,6 +41,15 @@ Business/CRM remains a documented product gap because this audit found no
 canonical CRM store or service to extend safely; no parallel business database
 was introduced.
 
+### Communications projection slice
+
+Communications is now a visible owner-facing overview over the existing
+`EmailAccount`, `CalendarCal`/`CalendarEvent`, and Contacts boundaries. It
+reports masked account state and bounded upcoming events, while leaving detailed
+Email and Calendar windows authoritative and keeping Contacts separate. Legacy
+unowned email rows are included only when their mailbox matches the authenticated
+owner. No CRM tables or duplicated contact/event stores were added.
+
 ## V2 continuation checkpoint
 
 The first active batch is the census/grammar boundary. Existing canonical
