@@ -1,7 +1,7 @@
 """P0 regressions: provider context is reconstructed from durable recent chat."""
 
 from src.context_compactor import context_trace, trim_for_context
-from src.agent_loop import _classify_agent_request
+from src.agent_loop import _classify_agent_request, _recent_reference_resolution_hint
 from src.user_time import current_datetime_context_message
 
 
@@ -75,3 +75,23 @@ def test_answer_to_scan_range_question_keeps_network_route():
     intent = _classify_agent_request(messages, messages[-1]["content"])
     assert intent["continuation"] is True
     assert "network_ops" in set(intent["domains"])
+
+
+def test_all_of_the_above_gets_immediate_reference_hint():
+    assert "A, B, and C" in _recent_reference_resolution_hint(
+        _turns(), "yes, all of the above, thanks"
+    )
+
+
+def test_ordinal_and_do_that_get_immediate_reference_hints():
+    messages = [
+        {"role": "user", "content": "Should I use local or strong?"},
+        {"role": "assistant", "content": "The first option is local."},
+        {"role": "user", "content": "the first one"},
+        {"role": "assistant", "content": "The next step is checking port 443."},
+        {"role": "user", "content": "do that"},
+    ]
+    assert "immediately preceding" in _recent_reference_resolution_hint(
+        messages, "the first one"
+    )
+    assert "exact step" in _recent_reference_resolution_hint(messages, "do that")
