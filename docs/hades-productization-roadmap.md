@@ -594,6 +594,16 @@ does not create a second planner or grant execution authority. Focused planner,
 verified-execution, and Work tests pass. Full consequential execution,
 compensation orchestration, and owner-live dogfood remain pending.
 
+### Run Preview inspector checkpoint
+
+The existing Work and Control Center views now visibly consume the structured
+preview fields rather than only rendering action prose: canonical targets,
+effect classes, capability health, reversibility/compensation, approvals,
+knowledge gaps, and verification are available in the Run detail surface.
+This is page/window-compatible projection work over the existing Run and
+ActionSpec paths. Owner-authenticated live acceptance of consequential work
+remains pending.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
