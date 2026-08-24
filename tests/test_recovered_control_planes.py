@@ -91,3 +91,20 @@ def test_homelab_network_plan_is_private_and_nmap_candidates_are_review_only(tmp
     candidates = _parse_nmap_xml(xml, cidr="192.168.10.0/24")
     assert candidates[0]["ip_addresses"] == ["192.168.10.4"]
     assert candidates[0]["hostname"] == "switch"
+
+
+def test_privileged_broker_network_discovery_is_bounded(monkeypatch):
+    import src.privileged_broker as broker
+
+    monkeypatch.setattr(broker.shutil, "which", lambda name: "/usr/bin/nmap" if name == "nmap" else None)
+    monkeypatch.setattr(
+        broker, "run_root",
+        lambda argv, timeout=300: {"returncode": 0, "output": "<nmaprun/>"},
+    )
+    result = broker.handle({"action": "run_network_discovery", "cidr": "192.168.10.0/24"}, 1, 1000)
+    assert result["ok"] is True
+    assert result["cidr"] == "192.168.10.0/24"
+    assert result["action"] == "run_network_discovery"
+    for cidr in ("8.8.8.0/24", "192.168.10.0/23", "192.168.10.1"):
+        rejected = broker.handle({"action": "run_network_discovery", "cidr": cidr}, 1, 1000)
+        assert rejected["ok"] is False

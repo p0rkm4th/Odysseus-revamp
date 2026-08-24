@@ -8,6 +8,7 @@ The LLM decides when to use tools by writing fenced code blocks.
 
 import asyncio
 import collections
+import ipaddress
 import json
 import re
 import time
@@ -1011,7 +1012,7 @@ def _normalize_homelab_intent(intent, query: str):
     if not isinstance(intent, dict):
         return intent
     q = str(query or "").lower()
-    if re.search(r"\b(?:homelab|home lab|local service|systemd user service|network discovery|nmap discovery)\b", q) or re.search(
+    if re.search(r"\b(?:homelab|home lab|local service|systemd user service|network discovery|nmap discovery|scan my network|network scan)\b", q) or (re.search(r"\b(?:scan|discover|map)\b", q) and _network_discovery_cidr(q)) or re.search(
         r"\b(?:install|setup|set up|prepare|need)\b.{0,80}\b(?:tools?|utilities|packages?)\b.{0,80}\b(?:network|nmap|scan|discovery)\b",
         q,
     ):
@@ -1027,6 +1028,22 @@ def _network_prerequisite_request(text: str) -> bool:
         r"\b(?:install|setup|set up|prepare|need)\b.{0,100}\b(?:tools?|utilities|packages?)\b.{0,100}\b(?:network|nmap|scan|discovery)\b",
         str(text or "").lower(),
     ))
+
+
+def _network_discovery_cidr(text: str) -> str | None:
+    """Return an explicit, bounded private CIDR supplied by the user."""
+    for candidate in re.findall(
+        r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
+        r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
+        str(text or ""),
+    ):
+        try:
+            network = ipaddress.ip_network(candidate, strict=False)
+        except ValueError:
+            continue
+        if network.version == 4 and network.is_private and network.num_addresses <= 256:
+            return str(network)
+    return None
 
 
 def _hard_turn_capability_directive(route_tools, disabled_tools, intent_domains) -> str:
@@ -6209,18 +6226,26 @@ async def stream_agent_loop(
         # approval gate. Convert it into the bounded first-class prerequisite
         # plan so the existing resolver, broker policy, and verification path
         # remain authoritative.
+        _network_request_cidr = _network_discovery_cidr(_last_user)
         if (
-            _network_prerequisite_request(_last_user)
-            and tool_blocks
+            tool_blocks
             and all(block.tool_type in {"bash", "run_shell"} for block in tool_blocks)
+            and (
+                _network_prerequisite_request(_last_user)
+                or (
+                    _network_request_cidr
+                    and "network_ops" in set(_intent_domains or set())
+                )
+            )
         ):
             logger.warning(
-                "[agent] replaced weak-model raw network package command with capability plan"
+                "[agent] replaced weak-model raw network command with capability plan"
             )
-            tool_blocks = [ToolBlock(
-                "manage_homelab",
-                json.dumps({"action": "plan_diagnostic_install", "capability": "network_discovery"}),
-            )]
+            if _network_request_cidr and "network_ops" in set(_intent_domains or set()):
+                _network_plan = {"action": "plan_network_discovery", "cidr": _network_request_cidr}
+            else:
+                _network_plan = {"action": "plan_diagnostic_install", "capability": "network_discovery"}
+            tool_blocks = [ToolBlock("manage_homelab", json.dumps(_network_plan))]
             converted_calls = []
             used_native = False
         if _ody_doc_stream_create_mode and tool_blocks:
@@ -6473,6 +6498,32 @@ async def stream_agent_loop(
                 + chr(10)
             )
             continue
+
+        # A strict-text local model can ignore the repair instruction again.
+        # For an explicitly scoped network request, finish capability
+        # selection deterministically after that single repair attempt. CIDR
+        # validation and approval remain in HomelabOperations.
+        _network_cidr = _network_discovery_cidr(_ody_v38_user_text)
+        if (
+            not guide_only
+            and not _force_answer
+            and _first_class_action_repair_count >= 1
+            and _network_cidr
+            and set(_intent_domains or set()) & {"network_ops", "homelab"}
+            and not tool_blocks
+            and total_tool_calls == 0
+            and not tool_events
+        ):
+            logger.info(
+                "[agent] deterministic network capability plan after no-action repair cidr=%s",
+                _network_cidr,
+            )
+            if round_response and full_response.endswith(round_response):
+                full_response = full_response[:-len(round_response)]
+            tool_blocks.append(ToolBlock(
+                "manage_homelab",
+                json.dumps({"action": "plan_network_discovery", "cidr": _network_cidr}),
+            ))
 
         # Hard operational turns require an actual tool action before a final answer.
         # Give strict textual routes one bounded repair when the model
