@@ -1870,7 +1870,8 @@ _EXPLICIT_CONTINUATION_RE = re.compile(
 _EXPLICIT_CONTINUATION_PHRASE_RE = re.compile(
     r"^\s*(?:"
     r"(?:yes|yeah|yep|ok|okay|sure)\s*(?:,\s*)?(?:please\s+)?"
-    r"(?:continue|carry\s+on|proceed|resume|go\s+ahead(?:\s+and\s+continue)?)|"
+    r"(?:continue|carry\s+on|proceed|resume|go\s+ahead(?:\s+and\s+continue)?|"
+    r"(?:run|scan|start)\s+(?:it|the\s+scan|the\s+task|this))|"
     r"(?:please\s+)?(?:continue(?:\s+(?:with\s+that|the\s+task))?(?:\s+please)?|"
     r"carry\s+on|proceed|resume|keep\s+going|go\s+ahead(?:\s+and\s+continue)?)"
     r")\s*(?:[.!?]+\s*)?$",
