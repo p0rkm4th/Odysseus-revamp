@@ -5024,7 +5024,8 @@ async def stream_agent_loop(
         bool(_intent.get("continuation"))
         and "network_ops" in _intent_domains
         and bool(re.search(
-            r"\b(?:nmap|network[- ]discovery|bounded discovery|private subnet|"
+            r"\b(?:nmap|network[- ]discovery|network discovery|plan_network_discovery|"
+            r"bounded discovery|private subnet|192\.168\.10\.0/24|"
             r"discovery scan|scan the|scan my)\b",
             _recent_conversation_text,
         ))
