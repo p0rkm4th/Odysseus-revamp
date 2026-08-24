@@ -32,7 +32,7 @@ def test_sidebar_plain_text_exceptions_are_hydrated_by_canonical_map():
 
 def test_sidebar_destinations_are_grouped_without_replacing_existing_route_ids():
     app = (ROOT / "static/app.js").read_text()
-    for label in ("PERSONAL", "COMMUNICATIONS", "TECHNOLOGY", "INVESTIGATION", "WORK", "KNOWLEDGE", "AGENT", "SYSTEM"):
+    for label in ("HADES", "TODAY", "RESEARCH", "INFRASTRUCTURE", "HOME", "COMMUNICATIONS", "WORK", "KNOWLEDGE", "SYSTEM"):
         assert label in app
     assert "odysseus-sidebar-groups-v1" in app
     assert "section.dataset.grouped = '1'" in app

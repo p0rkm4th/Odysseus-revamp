@@ -65,6 +65,7 @@ import { getSettings } from './js/appConfig.js';
 import { initSidebarLayout, syncRailSide } from './js/sidebar-layout.js?v=20260715startupclean';
 import { initSectionCollapse, initSectionDrag } from './js/section-management.js';
 import { iconSvg } from './js/ui-components.js';
+import { WORKSPACE_DEFINITIONS, MODULE_BY_ID } from './js/workspaceRegistry.js';
 
 const API_BASE = window.location.origin;
 window.themeModule = themeModule;
@@ -99,14 +100,15 @@ function groupToolDestinations() {
   const section = document.getElementById('tools-section');
   if (!section || section.dataset.grouped === '1') return;
   const groups = [
-    ['PERSONAL', ['tool-calendar-btn', 'tool-household-btn']],
+    ['HADES', ['tool-hades-btn', 'tool-memory-btn']],
+    ['TODAY', ['tool-calendar-btn', 'tool-tasks-btn']],
+    ['RESEARCH', ['tool-osint-btn', 'tool-research-btn', 'tool-security-btn']],
+    ['INFRASTRUCTURE', ['tool-inventory-btn', 'tool-it-assets-btn', 'tool-network-btn', 'tool-homelab-btn', 'tool-world-model-btn']],
+    ['HOME', ['tool-household-btn', 'tool-smart-home-btn']],
     ['COMMUNICATIONS', ['tool-communications-btn', 'tool-telegram-btn']],
-    ['TECHNOLOGY', ['tool-inventory-btn', 'tool-it-assets-btn', 'tool-network-btn', 'tool-homelab-btn', 'tool-smart-home-btn']],
-    ['INVESTIGATION', ['tool-security-btn', 'tool-osint-btn', 'tool-research-btn']],
-    ['WORK', ['tool-work-btn', 'tool-tasks-btn']],
-    ['KNOWLEDGE', ['tool-library-btn', 'tool-gallery-btn', 'tool-notes-btn']],
-    ['AGENT', ['tool-memory-btn', 'tool-world-model-btn', 'tool-hades-btn']],
-    ['SYSTEM', ['tool-control-center-btn', 'tool-setup-center-btn', 'tool-integrations-center-btn', 'tool-developer-btn', 'tool-theme-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
+    ['WORK', ['tool-work-btn']],
+    ['KNOWLEDGE', ['tool-library-btn', 'tool-gallery-btn', 'tool-notes-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
+    ['SYSTEM', ['tool-control-center-btn', 'tool-setup-center-btn', 'tool-integrations-center-btn', 'tool-developer-btn', 'tool-theme-btn']],
   ];
   const header = section.querySelector('.section-header-flex');
   if (!header) return;
@@ -140,8 +142,47 @@ function groupToolDestinations() {
   }
   section.dataset.grouped = '1';
 }
+
+function renderWorkspaceRail() {
+  const rail = document.getElementById('icon-rail');
+  if (!rail || rail.dataset.workspaceRail === '1') return;
+  const legacyIds = ['rail-calendar', 'rail-compare', 'rail-cookbook', 'rail-research',
+    'rail-email', 'rail-gallery', 'rail-archive', 'rail-memory', 'rail-notes',
+    'rail-tasks', 'rail-theme'];
+  legacyIds.forEach(id => {
+    const button = document.getElementById(id);
+    if (button) { button.hidden = true; button.setAttribute('aria-hidden', 'true'); }
+  });
+  const anchor = rail.querySelector('[style*="flex:1"]');
+  const group = document.createElement('div');
+  group.className = 'workspace-icon-rail';
+  group.setAttribute('aria-label', 'Workspaces');
+  for (const workspace of WORKSPACE_DEFINITIONS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'icon-rail-btn workspace-icon-rail-btn';
+    button.dataset.workspace = workspace.id;
+    button.title = workspace.label;
+    button.setAttribute('aria-label', workspace.label);
+    button.innerHTML = iconSvg(workspace.icon, 'workspace-rail-icon');
+    button.addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar');
+      const section = [...document.querySelectorAll('.hades-nav-group')]
+        .find(node => node.dataset.group === workspace.id);
+      if (sidebar) sidebar.classList.remove('hidden');
+      if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (window.syncRailSide) window.syncRailSide();
+    });
+    group.appendChild(button);
+  }
+  if (anchor) rail.insertBefore(group, anchor);
+  else rail.appendChild(group);
+  rail.dataset.workspaceRail = '1';
+}
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hydrateSemanticNavIcons, { once: true });
 else hydrateSemanticNavIcons();
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderWorkspaceRail, { once: true });
+else renderWorkspaceRail();
 
 function _isMobileChatInput() {
   return window.innerWidth <= 768;

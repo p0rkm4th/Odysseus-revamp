@@ -1,0 +1,38 @@
+from pathlib import Path
+import subprocess
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _registry_dump():
+    script = """
+      import { WORKSPACE_DEFINITIONS, MODULE_DEFINITIONS } from './static/js/workspaceRegistry.js';
+      console.log(JSON.stringify({workspaces: WORKSPACE_DEFINITIONS, modules: MODULE_DEFINITIONS}));
+    """
+    result = subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    )
+    import json
+    return json.loads(result.stdout)
+
+
+def test_workspace_registry_has_unique_first_class_destinations_and_icons():
+    data = _registry_dump()
+    workspaces = data["workspaces"]
+    modules = data["modules"]
+    assert 8 <= len(workspaces) <= 10
+    assert len({entry["id"] for entry in workspaces}) == len(workspaces)
+    assert all(entry["label"] and entry["icon"] and entry["modules"] for entry in workspaces)
+    assert len({entry[0] for entry in modules}) == len(modules)
+    assert all(entry[0] and entry[1] and entry[2] and entry[3] for entry in modules)
+
+
+def test_workspace_registry_projects_the_observed_compact_navigation_defect():
+    data = _registry_dump()
+    workspace_ids = {entry["id"] for entry in data["workspaces"]}
+    assert {"hades", "today", "research", "infrastructure", "home", "communications", "work", "knowledge", "system"} <= workspace_ids
+    module_ids = {entry[0] for entry in data["modules"]}
+    assert {"hades", "household", "assets", "network", "developer", "homelab", "worldModel", "controlCenter", "osint"} <= module_ids
+

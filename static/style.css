@@ -855,6 +855,14 @@ body.bg-pattern-sparkles {
       opacity: 0.5;
       transition: opacity 0.08s, background 0.08s;
     }
+    /* Workspace rail is projected from the same registry as expanded
+       navigation. Keep the projection transparent to the rail's flex layout. */
+    .workspace-icon-rail {
+      display: contents;
+    }
+    .workspace-icon-rail-btn {
+      color: var(--accent, var(--red));
+    }
     .rail-notes-badge {
       position: absolute;
       top: 1px;
