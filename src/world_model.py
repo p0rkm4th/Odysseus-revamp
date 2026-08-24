@@ -1,7 +1,7 @@
 """Evidence-backed relationship projection over existing CMDB references."""
 from __future__ import annotations
 from datetime import datetime, timezone
-from core.work_models import WorldRelationship
+from core.work_models import WorldRelationship, WorkEvent
 from src.work_engine import WorkError, ident, now, parse_dt, serialize
 
 RELATIONSHIPS = {"RUNS_ON", "DEPENDS_ON", "USES", "POINTS_TO", "CONNECTED_TO", "BACKED_UP_BY", "OWNS"}
@@ -30,6 +30,23 @@ class WorldModelService:
         if relation: query = query.filter_by(relation=str(relation).upper())
         if status: query = query.filter_by(status=status)
         return [serialize(row) for row in query.order_by(WorldRelationship.updated_at.desc()).limit(max(1, min(int(limit), 500))).all()]
+
+    def update_relationship(self, owner, relationship_id, data):
+        row = self.db.query(WorldRelationship).filter_by(owner=owner, id=relationship_id).one_or_none()
+        if row is None: raise WorkError("relationship not found")
+        if "status" in data:
+            status = str(data.get("status") or "").strip().lower()
+            if status not in RELATIONSHIP_STATUSES: raise WorkError("invalid relationship status")
+            if status == "user_confirmed" and not str(data.get("source") or row.source).strip():
+                raise WorkError("confirmed relationships require provenance")
+            row.status = status
+        for field in ("source", "confidence_class", "observation_kind"):
+            if field in data: setattr(row, field, str(data.get(field) or "")[:500 if field == "source" else 32])
+        if "evidence_references" in data: row.evidence_references = list(data.get("evidence_references") or [])
+        if "valid_from" in data: row.valid_from = parse_dt(data.get("valid_from"))
+        if "valid_until" in data: row.valid_until = parse_dt(data.get("valid_until"))
+        self.db.add(WorkEvent(id=ident("event"), owner=owner, event_type="world.relationship.updated", payload={"relationship_id": row.id, "status": row.status, "source_ref": row.source_ref, "target_ref": row.target_ref}))
+        self.db.commit(); self.db.refresh(row); return serialize(row)
 
     def neighbors(self, owner, entity_ref, *, depth=1, limit=100):
         depth = max(1, min(int(depth), 3)); seen = {entity_ref}; frontier = {entity_ref}; edges = []

@@ -44,3 +44,5 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert '"/claims"' in (ROOT / "routes/work_routes.py").read_text()
     assert "/claims/{claim_id}/lineage" in (ROOT / "routes/work_routes.py").read_text()
     assert "Evidence Explorer" in module and "data-claim-id" in module
+    assert '"/world/relationships/{relationship_id}"' in (ROOT / "routes/work_routes.py").read_text()
+    assert "evidence_summary" in (ROOT / "src/model_competence.py").read_text()

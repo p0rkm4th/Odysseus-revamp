@@ -284,6 +284,17 @@ the claim, opaque evidence references, linked contradictions, derived claims,
 and resolution status. Expanded epistemic classes remain additive to the
 existing taxonomy and do not rewrite historical records.
 
+### World Model reconciliation and routing evidence slice
+
+World Model relationships now have an owner-scoped bounded update path for
+status/provenance/evidence/valid-time reconciliation. Updates emit a durable
+WorkEvent and never delete historical relationship records. The empirical
+competence recommendation projection now includes selected sample count,
+success and recent-success rates, failure classes, and evaluation references;
+these are explanatory evidence only and cannot grant capability or change
+policy. Focused owner-isolation, reconciliation, competence, and UI tests are
+green.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail
