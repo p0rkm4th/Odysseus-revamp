@@ -6402,6 +6402,16 @@ async def stream_agent_loop(
         # remain authoritative.
         _network_request_cidr = _network_discovery_cidr(_last_user)
         if (
+            not _network_request_cidr
+            and _explicit_network_discovery_request(_last_user)
+            and re.search(r"\b192(?:\.168)?\s+network\b", _last_user, re.IGNORECASE)
+        ):
+            # The authorized homelab 192 target is bounded by policy/context;
+            # weak models may mention only “the 192 network” and then emit
+            # raw shell. Resolve that phrase to the known private /24 before
+            # any fallback action is considered.
+            _network_request_cidr = "192.168.10.0/24"
+        if (
             tool_blocks
             and all(block.tool_type in {"bash", "run_shell"} for block in tool_blocks)
             and (
