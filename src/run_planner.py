@@ -122,6 +122,18 @@ class RunPlanner:
         if required:
             gap_result = self.work.knowledge_gaps(owner, required)
             gaps = gap_result.get("stale", []) + gap_result.get("unknown", [])
+        blast_radius = []
+        if resources:
+            from src.world_model import WorldModelService
+            world = WorldModelService(self.db)
+            seen_focus = set()
+            for resource in resources[:50]:
+                focus = str(resource)
+                if focus in seen_focus: continue
+                seen_focus.add(focus)
+                projection = world.blast_radius(owner, focus, limit=100)
+                if projection.get("confirmed") or projection.get("likely") or projection.get("unknown"):
+                    blast_radius.append(projection)
         lock_state = []
         for lock in self.db.query(WorkLock).filter_by(owner=owner, released_at=None).all():
             lock_state.append(serialize(lock))
@@ -132,7 +144,7 @@ class RunPlanner:
             "resources": resources, "assumptions": assumptions,
             "knowledge_gaps": gaps, "unknowns": gaps,
             "risk": risks, "blast_radius": [], "approvals": approvals,
-            "locks": lock_state, "verification": run.verification or {},
+            "locks": lock_state, "blast_radius": blast_radius, "verification": run.verification or {},
             "lifecycle_state": run.lifecycle_state, "plan_revision": run.revision,
         }
 

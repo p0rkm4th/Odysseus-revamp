@@ -32,3 +32,4 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "/api/work/missions" in module and "Missions" in module
     assert "/api/hades/monitors" in module and "Watches" in module and "consequence_tier" in module
     assert "/verification" in module or "result_summary" in module
+    assert "blast_radius" in (ROOT / "src/run_planner.py").read_text()

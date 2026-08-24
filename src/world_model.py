@@ -47,11 +47,27 @@ class WorldModelService:
         return {"focus": entity_ref, "depth": depth, "entities": sorted(seen), "relationships": edges[:limit]}
 
     def blast_radius(self, owner, entity_ref, *, limit=100):
-        graph = self.neighbors(owner, entity_ref, depth=3, limit=limit)
+        # Traverse from the focus while retaining the frontier endpoint.  A
+        # flat edge list is insufficient for multi-hop impact: for
+        # host -> service -> dependency, the affected entity at hop two must
+        # be the dependency, not the already-visited service.
+        focus = str(entity_ref); seen = {focus}; frontier = {focus}; traversed = []; impact = []
+        for _ in range(3):
+            rows = self.list_relationships(owner, limit=limit)
+            next_frontier = set()
+            for row in rows:
+                if row["source_ref"] not in frontier and row["target_ref"] not in frontier: continue
+                other = row["target_ref"] if row["source_ref"] in frontier else row["source_ref"]
+                if row not in traversed: traversed.append(row)
+                impact.append((row, other))
+                if other not in seen:
+                    seen.add(other); next_frontier.add(other)
+            frontier = next_frontier
+            if not frontier: break
         confirmed, likely, unknown = [], [], []
-        for row in graph["relationships"]:
-            item = {"entity": row["target_ref"] if row["source_ref"] == entity_ref else row["source_ref"], "relation": row["relation"], "confidence": row["confidence_class"], "source": row["source"]}
+        for row, other in impact:
+            item = {"entity": other, "relation": row["relation"], "confidence": row["confidence_class"], "source": row["source"]}
             if row["status"] in {"observed", "user_confirmed"} and row["confidence_class"] in {"high", "confirmed"}: confirmed.append(item)
             elif row["status"] == "proposed" or row["observation_kind"] == "inferred": likely.append(item)
-        if not graph["relationships"]: unknown.append({"reason": "no evidence-backed dependency edges", "entity": entity_ref})
+        if not traversed: unknown.append({"reason": "no evidence-backed dependency edges", "entity": entity_ref})
         return {"focus": entity_ref, "confirmed": confirmed, "likely": likely, "unknown": unknown}

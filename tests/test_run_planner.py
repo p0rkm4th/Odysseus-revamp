@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from core.database import Base
 from src.run_planner import RunPlanner
 from src.work_engine import WorkEngine
+from src.world_model import WorldModelService
 
 
 @pytest.fixture()
@@ -54,3 +55,14 @@ def test_validation_surfaces_stale_precondition_without_mutating_run(db):
     assert result["valid"] is False
     assert any(f["code"] == "knowledge_gap" for f in result["failures"])
     assert work.get_run("alice", run["id"])["lifecycle_state"] == "created"
+
+
+def test_preview_projects_evidence_backed_blast_radius(db):
+    work = WorkEngine(db)
+    WorldModelService(db).create_relationship("alice", {"source_ref":"host:cerberus", "relation":"RUNS_ON", "target_ref":"service:jellyfin", "status":"observed", "source":"cmdb-observation", "confidence_class":"high", "observation_kind":"observed", "evidence_references":["observation://1"]})
+    WorldModelService(db).create_relationship("alice", {"source_ref":"service:jellyfin", "relation":"DEPENDS_ON", "target_ref":"service:postgres", "status":"proposed", "source":"operator-review", "confidence_class":"medium", "observation_kind":"inferred"})
+    run = work.create_run("alice", {"domain":"homelab", "plan":[{"capability_id":"homelab.manage", "action_id":"service_status", "target_resources":["host:cerberus"]}]})
+    preview = RunPlanner(db).compile("alice", run["id"])
+    assert preview["blast_radius"][0]["focus"] == "host:cerberus"
+    assert preview["blast_radius"][0]["confirmed"][0]["entity"] == "service:jellyfin"
+    assert preview["blast_radius"][0]["likely"][0]["entity"] == "service:postgres"
