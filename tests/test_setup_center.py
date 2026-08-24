@@ -68,3 +68,19 @@ def test_communications_contracts_expose_read_write_authority_explicitly():
     assert "send requires approval" in contracts["communications.email"].permissions
     assert "calendar write" in contracts["communications.calendar"].permissions
     assert "contacts read/write" in contracts["communications.contacts"].permissions
+
+
+def test_projection_resolves_dependency_readiness_without_granting_authority(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "state.json")
+    service = setup_center.SetupCenterService()
+    projection = service.projection("alice")
+    modules = {item["id"]: item for item in projection["modules"]}
+    assert modules["core.identity"]["dependency_status"] == "READY"
+    assert modules["communications.telegram"]["dependency_status"] == "READY"
+    assert modules["technology.network"]["dependency_status"] == "READY"
+    service.update("alice", "core.identity", {"status": "NEEDS_ATTENTION"})
+    degraded = {item["id"]: item for item in service.projection("alice")["modules"]}
+    assert degraded["communications.telegram"]["dependency_status"] == "MISSING_DEPENDENCY"
+    assert degraded["communications.telegram"]["missing_dependencies"] == ["core.identity"]
+    assert degraded["communications.telegram"]["remediation_available"] is True
+    assert degraded["communications.telegram"]["status"] == "NOT_CONFIGURED"

@@ -118,6 +118,15 @@ class SetupCenterService:
             if status not in STATUSES:
                 status = detected
             modules.append({**_safe_contract(contract), "status": status, "status_reason": str(override.get("status_reason") or reason), "selected": bool(override.get("selected", status not in {"SKIPPED", "NOT_CONFIGURED"})), "last_updated": override.get("last_updated")})
+        status_by_id = {item["id"]: item["status"] for item in modules}
+        for module in modules:
+            dependencies = list(module.get("dependencies") or [])
+            missing = [dependency for dependency in dependencies if status_by_id.get(dependency) != "CONFIGURED"]
+            module["dependency_status"] = "READY" if not missing else "MISSING_DEPENDENCY"
+            module["missing_dependencies"] = missing
+            # This is advisory setup metadata only. It never changes module
+            # status and never grants a capability when a dependency is ready.
+            module["remediation_available"] = bool(missing and all(dependency in status_by_id for dependency in missing))
         categories: dict[str, list[dict[str, Any]]] = {}
         for module in modules:
             categories.setdefault(module["category"], []).append(module)
