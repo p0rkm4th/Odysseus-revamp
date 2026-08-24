@@ -104,3 +104,8 @@ Run linkage, parent/child spans, bounded attributes, automatic sensitive-value
 redaction, and low-cardinality metric dimensions. It intentionally does not
 archive prompts, raw documents, or secrets and still needs request/Run wiring
 and the Developer trace explorer.
+
+Deterministic safeguards now provide canonical action fingerprints, repeated
+no-information loop detection, and targeted knowledge-gap classification over
+the epistemic ledger. These are advisory projections until execution paths wire
+their STOP/replan behavior; they do not grant or change authority.

@@ -296,6 +296,17 @@ class WorkEngine:
                 action_events.append({"event": event.event_type, "action_id": event.action_id, "created_at": event.created_at.isoformat()})
         return {"run_id": row.id, "owner": owner, "lifecycle_state": lifecycle, "transitions": transitions, "action_events": action_events, "event_count": len(events), "current_projection": row.lifecycle_state or "created"}
 
+    def action_loop_check(self, owner, run_id, *, threshold=2):
+        from src.control_plane_safety import detect_action_loop
+        self._one(WorkRun, owner, run_id, "run")
+        actions = [serialize(row) for row in self.db.query(WorkAction).filter_by(run_id=run_id).order_by(WorkAction.sequence).all()]
+        return detect_action_loop(actions, threshold=threshold)
+
+    def knowledge_gaps(self, owner, required, *, at=None):
+        from src.control_plane_safety import classify_knowledge_gaps
+        claims = [serialize(row) for row in self.db.query(EpistemicClaim).filter_by(owner=owner).all()]
+        return classify_knowledge_gaps(required, claims, at=at)
+
     def create_commitment(self, owner, data):
         row = WorkCommitment(id=ident("commitment"), owner=owner, goal_id=data.get("goal_id"), project_id=data.get("project_id"), task_id=data.get("task_id"), run_id=data.get("run_id"), text=str(data.get("text") or "").strip()[:20000], due_at=parse_dt(data.get("due_at")), source=str(data.get("source") or "operator")[:64])
         if not row.text: raise WorkError("commitment text is required")
