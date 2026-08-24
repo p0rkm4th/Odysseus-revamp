@@ -37,6 +37,10 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
     async def state(request: Request):
         return await call(request, lambda value: SetupCenterService().projection(value))
 
+    @router.get("/integrations")
+    async def integrations(request: Request):
+        return await call(request, lambda value: SetupCenterService().integrations_projection(value))
+
     @router.patch("/modules/{module_id}")
     async def update_module(request: Request, module_id: str, payload: dict[str, Any] = Body(...)):
         return await call(request, lambda value: SetupCenterService().update(value, module_id, payload))

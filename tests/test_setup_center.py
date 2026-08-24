@@ -44,3 +44,12 @@ def test_unknown_module_and_status_fail_closed(tmp_path, monkeypatch):
         service.update("alice", "missing.module", {"status": "CONFIGURED"})
     with pytest.raises(ValueError, match="invalid setup status"):
         service.update("alice", "communications.email", {"status": "READY"})
+
+
+def test_integration_projection_is_secret_free_and_maps_setup_health(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "state.json")
+    projection = setup_center.SetupCenterService().integrations_projection("alice")
+    telegram = next(item for item in projection["integrations"] if item["id"] == "telegram")
+    assert telegram["connection"] == "NOT_CONFIGURED"
+    assert telegram["secret_values_exposed"] is False
+    assert projection["authority_unchanged"] is True
