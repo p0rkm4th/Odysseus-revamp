@@ -6414,6 +6414,41 @@ async def stream_agent_loop(
             # any fallback action is considered.
             _network_request_cidr = "192.168.10.0/24"
         if (
+            not tool_blocks
+            and bool(_intent.get("continuation"))
+            and "network_ops" in set(_intent_domains or set())
+        ):
+            _conversation_for_discovery = " ".join(
+                str(message.get("content") or "")
+                for message in messages[-12:]
+                if message.get("role") in {"user", "assistant"}
+            )
+            _planned_discovery_digest = re.search(
+                r"(?:operation_digest|plan_digest)\"?\s*[:=]\s*\"?([0-9a-f]{64})",
+                _conversation_for_discovery,
+                re.IGNORECASE,
+            )
+            if _planned_discovery_digest and re.search(
+                r"\b(?:network discovery|plan_network_discovery|private subnet|"
+                r"192\.168\.10\.0/24|bounded discovery)\b",
+                _conversation_for_discovery,
+                re.IGNORECASE,
+            ):
+                logger.info(
+                    "[agent] deterministic approved discovery continuation repair digest=%s",
+                    _planned_discovery_digest.group(1)[:16],
+                )
+                tool_blocks = [ToolBlock(
+                    "manage_homelab",
+                    json.dumps({
+                        "action": "execute_network_discovery",
+                        "cidr": _network_request_cidr or "192.168.10.0/24",
+                        "plan_digest": _planned_discovery_digest.group(1),
+                    }),
+                ]
+                converted_calls = []
+                used_native = False
+        if (
             tool_blocks
             and all(block.tool_type in {"bash", "run_shell"} for block in tool_blocks)
             and (
