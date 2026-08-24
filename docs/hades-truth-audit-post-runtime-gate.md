@@ -1,9 +1,9 @@
 # Hades truth audit — post-runtime-gate comparison
 
 Observed: 2026-08-24  
-Source candidate: `febbfdbeeb8944830eaad0f62ea8f429fd4457c9`  
-Candidate image: `odysseus:candidate-febbfdbe`  
-Candidate digest: `sha256:f8f04bc8e50c6e7cf2c6f2d60d00590e88c0e606c927624029fc57685b576a4c`
+Source candidate: `26444587f9efcf62c854faa7e6bdba0c3e831cef`  
+Candidate image: `odysseus:candidate-26444587`  
+Candidate digest: `sha256:9518d18e01b590a6346a6894817b9861def94d014fc17c13484a755edaf03167`
 
 This is a bounded rerun of the independent truth-audit methodology. It does
 not overwrite the historical `docs/hades-truth-audit.md`, and it does not
@@ -13,26 +13,27 @@ promote the currently running service to source-matched acceptance.
 
 | Area | Before | After | Evidence |
 |---|---|---|---|
-| Source/build identity | running `/app` differed from checkout; no identity API | candidate `sha256:f8f04bc8...` is running; `/api/version` source/build/frontend/migration IDs match | E4/E5; API image_id remains unknown but external digest is recorded |
+| Source/build identity | running `/app` differed from checkout; no identity API | candidate `sha256:9518d18e...` is running; `/api/version` source/build/frontend/migration IDs match | E4/E5; API image_id remains unknown but external digest is recorded |
 | Frontend identity | no build marker or canonical verification command | static marker plus `npm run test:frontend` | E2/E4 candidate |
-| Compact navigation | separate hard-coded legacy rail omitted newer modules | workspace registry projects the same nine workspaces into grouped sidebar and compact rail | source/focused E2; browser pending |
+| Compact navigation | separate hard-coded legacy rail omitted newer modules | workspace registry projects the same nine workspaces into grouped sidebar and compact rail | source/focused E2; synthetic browser E4 |
 | Architecture convergence | duplicate paths were documented informally | module parity, workspace IA, and convergence artifacts recorded | E1/E2 |
-| Full regression | historical counts varied 6063/6064 | current run: 6074 passed, 3 skipped, 186 warnings | E3; repeat run still desirable |
+| Full regression | historical counts varied 6063/6064 | current run: 6076 passed, 3 skipped, 186 warnings | E3; deterministic within this run |
 | Migrations | prior audit reported fresh/rerun/copied passes | fresh and rerun loaded 21 registered versions | E3 |
 | Broker | host namespace check falsely suggested missing socket | socket verified inside application container with owner/mode and SO_PEERCRED boundary preserved | E5 current deployment |
 | Ollama | prior loopback probe failed | bridge endpoint responds, lists `qwen3:8b`, and container reaches `/api/version` | E5 bridge; inference request pending |
 | Vector/memory | degraded/unverified | ChromaDB heartbeat succeeds; VectorRAG and MemoryVectorStore startup logs report healthy local FastEmbed fallback; HTTP embedding lane unavailable | partial/healthy-fallback |
-| Browser | Playwright unavailable | still unavailable in repo-scoped environment | blocked_external/tooling |
+| Browser | Playwright unavailable | repo-scoped Chromium and canonical window/realistic OSINT suites pass | E3/E4 synthetic |
+| Action execution parity | weak Qwen network request ended in prose and grounding safeguard | one bounded deterministic `manage_homelab` plan repair now precedes approval/execution; exact-scope/broker path unchanged | E2/E4 synthetic; owner retest pending |
 
 ## Remaining discrepancies
 
-1. VectorRAG, embedding provider, and MemoryVectorStore need a fresh health and
-   synthetic grounding probe.
-2. Playwright is not installed in the canonical environment; realistic OSINT,
-   workspace, compact/mobile, theme, and multi-window acceptance cannot yet be
-   claimed.
-3. Broker negative tests and authenticated runtime `/api/version` verification
+1. HTTP embedding remains unavailable; VectorRAG and MemoryVectorStore are
+   healthy through the explicit local FastEmbed fallback. Fresh owner-memory
+   dogfood remains auth-gated.
+2. Broker negative tests and authenticated runtime `/api/version` verification
    against the candidate remain deployment-gated.
+3. Owner-live network/action and visual acceptance remain distinct from the
+   synthetic suites.
 4. The 186-warning set remains classified but not broadly reduced; SQLAlchemy,
    UTC datetime, Pydantic, and third-party warnings should be handled in a
    separate debt batch.
