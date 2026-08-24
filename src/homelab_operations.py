@@ -257,7 +257,10 @@ class HomelabOperations:
             "target": cidr, "scanner": "nmap_ping_scan",
         }
         digest = _digest(operation)
-        scanner = shutil.which("nmap")
+        # LAN discovery is never executed in the Hades application runtime.
+        # The host broker is canonical even when an nmap binary happens to be
+        # present in the container image.
+        scanner = None
         broker_scanner = False
         if not scanner:
             try:
@@ -284,9 +287,13 @@ class HomelabOperations:
             self.receipts.valid_plan, owner=owner, digest=supplied,
         ):
             raise HomelabOperationError("a current owner-bound discovery plan is required")
-        if active_execution_profile().name != "privileged_host":
-            raise HomelabOperationError("network discovery requires privileged host operator mode and exact approval")
-        if not scanner and not broker_scanner:
+        # The broker is the execution boundary for discovery.  Do not require
+        # the Hades application request itself to be in a host-networked or
+        # privileged process profile: the persisted exact approval gates the
+        # ActionSpec, and the broker authenticates the caller and runs Nmap on
+        # the host.  This is what allows approval continuation to resume the
+        # same RunAction without falling back to container-local reasoning.
+        if not broker_scanner:
             # Never ask the model to guess a distro package name. Return a
             # deterministic remediation handoff to the existing exact-
             # approval diagnostic-install action; the caller can preserve the
@@ -309,18 +316,12 @@ class HomelabOperations:
                 "operation_digest": digest, "handoff": handoff,
                 "untrusted_content": False,
             }
-        if scanner:
-            code, output = await self.runner([
-                scanner, "-sn", "-n", "--max-retries", "1", "--host-timeout", "5s",
-                "-oX", "-", cidr,
-            ], 60)
-        else:
-            from src.privileged_broker import client_request
-            broker_result = await asyncio.to_thread(
-                client_request, {"action": "run_network_discovery", "cidr": cidr}, timeout=70,
-            )
-            code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
-            output = str(broker_result.get("output") or broker_result.get("error") or "")
+        from src.privileged_broker import client_request
+        broker_result = await asyncio.to_thread(
+            client_request, {"action": "run_network_discovery", "cidr": cidr}, timeout=70,
+        )
+        code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
+        output = str(broker_result.get("output") or broker_result.get("error") or "")
         candidates = _parse_nmap_xml(output, cidr=cidr) if code == 0 else []
         receipt = {
             "kind": "discovery", "owner": owner, "created_at": _now().isoformat(),

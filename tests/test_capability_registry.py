@@ -37,6 +37,17 @@ def test_unknown_privileged_action_fails_closed():
     assert classified.known is False
 
 
+def test_network_discovery_is_host_brokered_and_private_scope_bound():
+    capability = capability_for_tool("manage_homelab")
+    assert capability and capability.capability_id == "homelab.manage"
+    action = capability.actions["execute_network_discovery"]
+    assert action.executor_key == "manage_homelab"
+    assert action.approval is ApprovalMode.EXACT
+    assert action.execution_location == "host_broker"
+    assert action.target_scope == "private_network"
+    assert action.requires_direct_container_access is False
+
+
 def test_security_classifier_projects_status_and_install_effects():
     status = capabilities_for_action("privileged_action", {"action": "status"})
     install = capabilities_for_action("privileged_action", {"action": "install_packages"})
