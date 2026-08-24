@@ -112,12 +112,17 @@ class IncidentChangeService:
         if incident_id: self._incident(owner, incident_id)
         run_id = data.get("run_id")
         preview = data.get("preview") or {}
+        validation = None
         if run_id:
             if self.db.query(WorkRun).filter_by(owner=owner, id=run_id).one_or_none() is None: raise WorkError("run not found")
             planner = RunPlanner(self.db)
             preview = planner.compile(owner, run_id)
             validation = planner.validate(owner, run_id)
             preview = {**preview, "validation": {"valid": validation["valid"], "failures": validation["failures"], "warnings": validation["warnings"]}}
+            requested_status = str(data.get("status") or "draft")
+            if requested_status != "draft" and not validation["valid"]:
+                codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))
+                raise WorkError(f"change requires valid Run plan: {codes}")
         blast_radius = data.get("blast_radius") or preview.get("blast_radius") or {}
         row = Change(id=ident("change"), owner=owner, incident_id=incident_id, run_id=run_id, objective=objective[:20000], status=str(data.get("status") or "draft"), targets=data.get("targets") or [], desired_state=data.get("desired_state") or {}, preview=preview, prechecks=data.get("prechecks") or [], action_ids=data.get("action_ids") or [], resources=data.get("resources") or [], risk=str(data.get("risk") or "low")[:32], blast_radius=blast_radius, approval=data.get("approval") or {}, compensation=data.get("compensation") or {}, verification=data.get("verification") or {})
         if row.status not in CHANGE_STATUSES: raise WorkError("invalid change status")
@@ -145,6 +150,13 @@ class IncidentChangeService:
         if row is None: raise WorkError("change not found")
         status = str(status or "").lower()
         if status not in CHANGE_STATUSES or status not in CHANGE_TRANSITIONS.get(row.status, set()): raise WorkError("invalid change lifecycle transition")
+        if status in {"validated", "awaiting_approval", "scheduled", "executing", "verifying"} and row.run_id:
+            planner = RunPlanner(self.db)
+            validation = planner.validate(owner, row.run_id)
+            row.preview = {**planner.compile(owner, row.run_id), "validation": {"valid": validation["valid"], "failures": validation["failures"], "warnings": validation["warnings"]}}
+            if not validation["valid"]:
+                codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))
+                raise WorkError(f"change requires valid Run plan: {codes}")
         if status == "completed" and row.run_id:
             run = self.db.query(WorkRun).filter_by(owner=owner, id=row.run_id).one_or_none()
             if run is None or run.status != "completed" or not (run.verification or {}).get("success"):

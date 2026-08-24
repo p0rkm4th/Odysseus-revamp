@@ -420,6 +420,9 @@ green.
 
 The existing Change service now embeds deterministic RunPlanner validation and
 World Model blast-radius projections when a Change references a canonical Run.
+Change creation and transitions into validated/approval/scheduled/executing/
+verifying states now refresh that validation and fail closed on invalid linked
+Run plans; Change remains a projection and WorkEngine remains execution owner.
 Change dossiers expose current Run lifecycle, verification, result, and error
 state. Incident dossiers expose linked Run state through their existing Change
 references. No execution engine was added: WorkEngine remains responsible for
