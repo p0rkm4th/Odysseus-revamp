@@ -977,7 +977,13 @@ async def serve_login(request: Request):
 @app.get("/api/version")
 async def get_version():
     from core.constants import APP_VERSION
-    return {"version": APP_VERSION}
+    return {
+        "version": APP_VERSION,
+        "source_commit": os.getenv("ODYSSEUS_SOURCE_COMMIT") or "unknown",
+        "image_id": os.getenv("ODYSSEUS_IMAGE_ID") or "unknown",
+        "frontend_build_id": os.getenv("ODYSSEUS_FRONTEND_BUILD_ID") or "ui-20260824-theme-groups-v1",
+        "ui_state_schema_version": 1,
+    }
 
 @app.get("/api/health")
 async def health_check() -> Dict[str, str]:

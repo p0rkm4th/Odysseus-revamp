@@ -186,9 +186,11 @@ export async function openTelegram(){
 }
 export async function openDeveloper(){
   const el=panel('developer-panel','Developer','<p>Loading Developer Mode…</p>');
-  const d=await fetch('/api/developer/yolo/status').then(r=>r.json());
+  const [d, build] = await Promise.all([fetch('/api/developer/yolo/status').then(r=>r.json()), fetch('/api/version').then(r=>r.json()).catch(()=>({}))]);
   const lease=d.lease; const content=`<p><b>Workspace YOLO</b></p><p>Scope: <code>${esc(d.workspace)}</code><br>Root: NO · Docker: NO<br>Authority: arbitrary workspace Bash</p><p>${lease?`Active until ${esc(lease.expires_at)} <button id="revoke-yolo">Revoke</button>`:'Inactive — requires explicit owner activation.'}</p>${lease?'': '<button id="grant-yolo">Enable for 30 minutes</button>'}`;
-  el.querySelector('.hades-window-body').innerHTML=`<div><h2>Developer Mode</h2>${content}</div>`;
+  const theme = window.themeModule?.getSaved?.() || {};
+  const diagnostics = `<section class="hades-detail-section"><h3>Runtime diagnostics</h3><dl class="hades-diagnostic-list"><dt>Source commit</dt><dd>${esc(build.source_commit || 'unknown')}</dd><dt>Image</dt><dd>${esc(build.image_id || 'unknown')}</dd><dt>Frontend build</dt><dd>${esc(build.frontend_build_id || 'unknown')}</dd><dt>UI state schema</dt><dd>${esc(build.ui_state_schema_version || 'unknown')}</dd><dt>Active theme</dt><dd>${esc(theme.name || 'default')}</dd></dl></section>`;
+  el.querySelector('.hades-window-body').innerHTML=`<div><h2>Developer Mode</h2>${diagnostics}${content}</div>`;
   if (lease) el.querySelector('#revoke-yolo').onclick=async()=>{await fetch('/api/developer/yolo/revoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({lease_id:lease.id})});openDeveloper();};
   else el.querySelector('#grant-yolo').onclick=async()=>{await fetch('/api/developer/yolo/grant',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({duration_seconds:1800})});openDeveloper();};
   return el;

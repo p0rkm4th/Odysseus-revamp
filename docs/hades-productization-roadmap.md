@@ -575,6 +575,14 @@ route bindings remain intact, including legacy Compare, Cookbook, Theme,
 Gallery, Notes, and Tasks compatibility entries. This is a navigation
 projection; backend functionality was not removed or duplicated.
 
+### Frontend/runtime diagnostics checkpoint
+
+`GET /api/version` now exposes non-secret source commit, image identifier,
+frontend build identifier, and UI-state schema version fields with explicit
+`unknown` fallbacks. Developer Mode projects these alongside the active local
+theme. This supports diagnosing stale browser/container generations without
+exposing credentials or private content.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
