@@ -2021,6 +2021,15 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
     text = str(last_user or "").strip()
     retry_continuation = _is_contextual_retry_continuation(messages, text)
     continuation = _is_explicit_continuation(text) or _assistant_requested_followup(messages) or retry_continuation
+    if re.fullmatch(r"192\.168\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?", text):
+        recent_text = " ".join(
+            str(m.get("content") or "")
+            for m in messages[-10:]
+            if m.get("role") in {"user", "assistant"}
+        ).lower()
+        continuation = continuation or bool(
+            re.search(r"\b(scan|discover|network|subnet|range)\b", recent_text)
+        )
     retrieval_query = (
         _recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
         if continuation else text
