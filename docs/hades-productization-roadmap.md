@@ -1,5 +1,14 @@
 # Hades productization roadmap
 
+### Verified lifecycle compatibility checkpoint
+
+The legacy `WorkEngine.transition_run` path now shares the verified-execution
+state graph and execution validation gate. Invalid lifecycle jumps are rejected
+and failed plan validation rolls back tentative transition data, so older
+callers cannot bypass structured Run validation or leave a Run advertising a
+state it did not successfully enter. The canonical Run, ActionSpec, policy,
+approval, and journal architecture remains unchanged.
+
 ## Current checkpoint
 
 - V2 baseline source: `120e4afa9d0cd60fff3f6225c42d131837c6c260`.

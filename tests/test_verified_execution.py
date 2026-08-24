@@ -134,3 +134,19 @@ def test_compensation_failure_is_terminal_and_explicit(db):
     svc.complete_verification("alice", run["id"], success=False, compensation_reference="action://restore")
     final = svc.complete_compensation("alice", run["id"], success=False, details={"error":"restore unavailable"})
     assert final["status"] == "failed" and final["result_summary"]["outcome"] == "compensation_failed"
+
+
+def test_legacy_transition_path_enforces_lifecycle_graph_and_plan_validation(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "network", "plan": [{
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "target_resources": ["network:public"],
+    }]})
+    work.transition_run("alice", run["id"], "planning")
+    with pytest.raises(WorkError, match="plan validation failed before execution"):
+        work.transition_run("alice", run["id"], "executing")
+    assert work.get_run("alice", run["id"])["lifecycle_state"] == "planning"
+
+    projection = work.create_run("alice", {"domain": "general"})
+    with pytest.raises(WorkError, match="invalid execution transition"):
+        work.transition_run("alice", projection["id"], "succeeded")
