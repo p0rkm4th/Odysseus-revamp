@@ -271,6 +271,15 @@ scope and call/expiry state; sealed digests remain redacted. This is a
 projection over ActionSpec/Run state and adds no execution authority. Focused
 UI, grant-security, and JavaScript syntax checks are green.
 
+### Evidence Explorer projection slice
+
+The existing owner-scoped `EpistemicClaim` store is now available through a
+read-only Work API and Control Center Evidence tab. The projection surfaces
+claim class, subject/predicate, source, confidence, status, valid-time, and
+counts of supporting evidence and contradictions. It does not merge claims,
+resolve contradictions, expose private reasoning, or create a second evidence
+store; existing WorkEngine claim and contradiction methods remain canonical.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail
