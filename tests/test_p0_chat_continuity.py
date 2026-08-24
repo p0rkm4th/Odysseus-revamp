@@ -83,6 +83,23 @@ def test_all_of_the_above_gets_immediate_reference_hint():
     )
 
 
+def test_reference_hint_is_protected_from_local_model_context_trim():
+    hint = _recent_reference_resolution_hint(
+        _turns(), "yes, all of the above, thanks"
+    )
+    messages = [
+        {"role": "system", "content": "policy " * 1800},
+        {"role": "system", "content": hint, "_protected": True},
+        *_turns(),
+    ]
+    # Match the effective local-model route budget (context budget minus the
+    # response reserve), where an unprotected hint was previously discarded.
+    result = trim_for_context(messages, 6963, reserve_tokens=1024)
+    protected = [m for m in result if m.get("_protected")]
+    assert len(protected) == 1
+    assert "selects A, B, and C" in protected[0]["content"]
+
+
 def test_ordinal_and_do_that_get_immediate_reference_hints():
     messages = [
         {"role": "user", "content": "Should I use local or strong?"},

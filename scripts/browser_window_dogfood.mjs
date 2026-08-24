@@ -7,7 +7,11 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const sessions = JSON.parse(fs.readFileSync('data/sessions.json', 'utf8'));
 const token = Object.keys(sessions)[0];
 const baseURL = process.env.HADES_BROWSER_BASE_URL || 'http://127.0.0.1:7000';
-const browser = await chromium.launch({ headless: true, executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: process.env.HADES_BROWSER_EXECUTABLE || '/usr/bin/chromium',
+  args: ['--no-sandbox'],
+});
 
 async function desktop() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
