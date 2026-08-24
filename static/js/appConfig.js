@@ -29,6 +29,10 @@
 // load after a login can skip the request entirely. Consumed once per page
 // load, by whichever module asks for settings first.
 const PREFETCH_KEY = 'ody-prefetch-settings';
+// Bump when the login bootstrap shape or server-mode semantics change.  This
+// invalidates only the disposable bootstrap snapshot; durable window layout
+// and user-authored state are intentionally preserved.
+const PREFETCH_VERSION = 'hades-settings-v2';
 
 const _URLS = { settings: '/api/auth/settings', tools: '/api/tools' };
 const _cache = { settings: null, tools: null };
@@ -38,7 +42,9 @@ function _readPrefetchedSettings() {
     const raw = sessionStorage.getItem(PREFETCH_KEY);
     if (!raw) return null;
     sessionStorage.removeItem(PREFETCH_KEY);
-    return JSON.parse(raw);
+    const value = JSON.parse(raw);
+    if (!value || value.version !== PREFETCH_VERSION || !value.data) return null;
+    return value.data;
   } catch (_) {
     return null;
   }
