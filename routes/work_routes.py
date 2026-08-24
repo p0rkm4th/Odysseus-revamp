@@ -120,6 +120,9 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.post("/claims/{claim_id}/contradictions", status_code=201)
     async def contradiction(request: Request, claim_id: str, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: svc.record_contradiction(o, claim_id, str(payload.get("contradicting_claim_id") or ""), resolution=payload.get("resolution")))
+    @router.get("/claims")
+    async def claims(request: Request, subject_ref: str | None = None, claim_class: str | None = None, include_inactive: bool = False, limit: int = Query(100, ge=1, le=500)):
+        return {"claims": await tx(request, lambda svc,o,u: svc.list_claims(o, subject_ref=subject_ref, claim_class=claim_class, include_inactive=include_inactive, limit=limit))}
     @router.get("/runs/{run_id}/replay")
     async def replay_run(request: Request, run_id: str):
         return await tx(request, lambda svc,o,u: svc.reconstruct_run(o, run_id))
