@@ -130,6 +130,12 @@ and validation result. This is the preview/validation boundary; execution,
 targeted invalidation, compensation, and full lifecycle orchestration remain
 the next batches.
 
+Epistemic ledger refinement now preserves competing claims through an explicit
+contradiction link and resolution marker in provenance; it never silently
+deletes either claim. Targeted execution invalidation marks current claims
+stale, and epistemic context/knowledge-gap projections exclude those stale
+claims until refreshed while retaining their historical record.
+
 The next epistemic/world-model slice adds `WorldRelationship` to the existing
 Work/CMDB boundary. It is owner-scoped and evidence-backed, supports typed
 relations such as `RUNS_ON`, `DEPENDS_ON`, `USES`, and `CONNECTED_TO`, preserves
