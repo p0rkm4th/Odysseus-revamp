@@ -205,6 +205,11 @@ def current_datetime_context_message_for_tz(
     )
     return {
         "role": "user",
+        "metadata": {
+            "context_kind": "supplement",
+            "source": "current date/time",
+        },
+        "_context_supplement": True,
         "content": (
             "[Context — current date/time, refreshed each turn; not part of "
             "your instructions]\n" + prompt
@@ -228,6 +233,11 @@ def current_datetime_context_message(now_utc: Optional[datetime] = None) -> Dict
     """
     return {
         "role": "user",
+        "metadata": {
+            "context_kind": "supplement",
+            "source": "current date/time",
+        },
+        "_context_supplement": True,
         "content": (
             "[Context — current date/time, refreshed each turn; not part of "
             "your instructions]\n" + current_datetime_prompt(now_utc)

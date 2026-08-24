@@ -6,7 +6,6 @@ import logging
 import os
 import re
 import time
-import hashlib
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -15,7 +14,7 @@ from core.database import SessionLocal
 from core.database import Session as DBSession, ModelEndpoint
 from src.llm_core import normalize_model_id
 from src.endpoint_resolver import normalize_base
-from src.context_compactor import maybe_compact, trim_for_context
+from src.context_compactor import maybe_compact, trim_for_context, context_trace
 from src.model_context import estimate_tokens, get_context_length
 from src.auth_helpers import effective_user
 from src.prompt_security import untrusted_context_message
@@ -144,17 +143,10 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
 
 def _context_trace(messages: list[dict], context_length: int) -> dict[str, Any]:
     """Return non-secret evidence for comparing prompts across reconnects."""
-    normalized = json.dumps(messages, ensure_ascii=False, sort_keys=True, default=str)
-    return {
-        "digest": hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16],
-        "messages": len(messages),
-        "tokens": estimate_tokens(messages),
-        "context_length": context_length,
-        "roles": [str(m.get("role") or "") for m in messages],
-        "user_turns": sum(1 for m in messages if m.get("role") == "user"),
-        "durable_tool_context": any((m.get("metadata") or {}).get("source") == "durable recent tool results" for m in messages if isinstance(m, dict) and isinstance(m.get("metadata") or {}, dict)),
-        "durable_work_context": any((m.get("metadata") or {}).get("source") == "durable active Work state" for m in messages if isinstance(m, dict) and isinstance(m.get("metadata") or {}, dict)),
-    }
+    trace = context_trace(messages, context_length)
+    trace["durable_tool_context"] = any((m.get("metadata") or {}).get("source") == "durable recent tool results" for m in messages if isinstance(m, dict) and isinstance(m.get("metadata") or {}, dict))
+    trace["durable_work_context"] = any((m.get("metadata") or {}).get("source") == "durable active Work state" for m in messages if isinstance(m, dict) and isinstance(m.get("metadata") or {}, dict))
+    return trace
 
 
 # Strong references to in-flight fire-and-forget tasks scheduled from this
