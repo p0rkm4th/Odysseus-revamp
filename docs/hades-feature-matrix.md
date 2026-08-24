@@ -81,6 +81,12 @@ failure, Qwen compact-projection, and trim tests are green. Live authenticated
 dogfood remains credential-gated. A sanitized Memory Inspector now receives
 request diagnostics and saved turn metrics without memory content.
 
+Theme/icon checkpoint: the existing semantic token system and centralized
+icon registry now cover the previously plain-text legacy sidebar destinations
+Household, IT Assets, Network, Developer, and Hades. Their navigation SVGs
+inherit currentColor, so selected/hover/theme changes follow shared shell
+tokens. Owner-live browser acceptance remains separate from synthetic tests.
+
 OSINT claim projection checkpoint: owner/case-scoped claim reads now include a
 structured epistemic summary (claim classes, lifecycle statuses, and claims
 with contradiction references). The dossier displays this summary while
