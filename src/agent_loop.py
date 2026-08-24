@@ -7009,6 +7009,32 @@ async def stream_agent_loop(
                 budget_hit = True
                 break
 
+            # Some providers use a natural-language alias for the bounded
+            # discovery action. Translate only this exact shape into the
+            # canonical owner-bound plan; unknown Homelab actions must still
+            # fail closed through ActionSpec validation.
+            if block.tool_type == "manage_homelab":
+                try:
+                    _homelab_payload = json.loads(block.content or "{}")
+                except (TypeError, ValueError):
+                    _homelab_payload = None
+                if (
+                    isinstance(_homelab_payload, dict)
+                    and str(_homelab_payload.get("action") or "").strip().casefold() == "network_discovery"
+                    and set(_homelab_payload) <= {"action", "scope", "cidr", "mode"}
+                    and _homelab_payload.get("scope")
+                ):
+                    _alias_cidr = _network_discovery_cidr(str(_homelab_payload.get("scope")))
+                    if _alias_cidr:
+                        logger.info(
+                            "[agent] normalized provider network_discovery alias to canonical plan cidr=%s",
+                            _alias_cidr,
+                        )
+                        block = ToolBlock(
+                            "manage_homelab",
+                            json.dumps({"action": "plan_network_discovery", "cidr": _alias_cidr}),
+                        )
+
             total_tool_calls += 1
             # Build a short display string for the frontend tool bubble.
             # Document tools show a brief summary instead of dumping full content.
