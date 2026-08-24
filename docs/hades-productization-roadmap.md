@@ -91,3 +91,10 @@ CMDB, Security Evidence, or Network observations.
 The Work journal now also supports read-only Run lifecycle reconstruction plus
 bounded checkpoints and verification records. The ORM row remains the fast
 current projection; replay is diagnostic and does not silently mutate state.
+
+V3 Tier 1 has begun with durable owner-scoped evaluation scenarios, sanitized
+trajectory records, supervised failure candidates, review admission, and a
+15-case control-plane regression corpus covering grounding, routing, approval,
+continuity, scope, identity, and duplicate-read failures. The existing Jarvis
+fixture scorer remains the deterministic benchmark projection; no second
+benchmark engine was added.
