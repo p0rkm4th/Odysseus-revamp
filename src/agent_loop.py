@@ -4990,6 +4990,22 @@ async def stream_agent_loop(
             )
 
     _intent_domains = set(_intent.get("domains") or set())
+    # Re-apply the discovery-only clamp after the deterministic final tool
+    # projection above, which otherwise re-adds the generic network domain's
+    # shell tools.
+    if (
+        not guide_only
+        and _relevant_tools is not None
+        and "network_ops" in _intent_domains
+        and _explicit_network_discovery_request(_last_user)
+    ):
+        _relevant_tools.difference_update({"bash", "run_shell", "python"})
+        _relevant_tools.add("manage_homelab")
+        disabled_tools.update({"bash", "run_shell", "python"})
+        logger.info(
+            "[agent-intent] final bounded network discovery clamp tools=%s",
+            sorted(_relevant_tools),
+        )
     # Capability-first prerequisite requests must not expose generic Bash as a
     # competing action surface. The model selects network discovery; Hades
     # resolves nmap/iproute2 and routes installation through the broker.
