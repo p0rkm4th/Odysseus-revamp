@@ -242,7 +242,24 @@ call count. Grants can be revoked and consumed exactly within those bounds;
 wrong owner, action, digest, target, expiry, replay, and call-limit cases fail
 closed. They carry no secret or reusable credential and do not widen policy.
 Integration with trusted ToolBindings and a dedicated grant inspector remain
-future work.
+future work. The current checkpoint adds both: a trusted-caller-only binding
+boundary check that consumes an exact grant before the capability executor, and
+read-only Control Center projections for execution nodes and grant scope. The
+grant is optional and only narrows authority; existing policy, exact approval,
+disabled-tools, owner, and broker checks remain authoritative.
+
+### Verified execution continuation checkpoint
+
+The execution-fabric slice now has an owner-scoped node registry and exact
+delegated grants over existing approved WorkActions. The trusted binding
+wrapper accepts a grant only through an orchestrator-supplied keyword (never
+from model arguments), consumes it fail-closed against Run/action/capability/
+digest/target scope, and then invokes the existing binding. No policy or
+approval gate is bypassed and no secret is carried by the grant. Control Center
+now exposes read-only Execution Nodes and Delegated Grants tabs. Focused tests,
+including binding-boundary consumption and UI coverage, are green; live broker
+node heartbeats and consequential grant-backed execution remain pending safe
+owner-authenticated dogfood.
 
 ### Incident/Change dossier slice
 
