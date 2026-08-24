@@ -187,6 +187,9 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/competence")
     async def competence(request: Request, task_class: str | None = None, qualification: str | None = None):
         return {"competence": await tx(request, lambda svc,o,u: __import__("src.model_competence", fromlist=["ModelCompetenceService"]).ModelCompetenceService(svc.db).list(o, task_class=task_class, qualification=qualification))}
+    @router.get("/competence/matrix")
+    async def competence_matrix(request: Request):
+        return await tx(request, lambda svc,o,u: __import__("src.model_competence", fromlist=["ModelCompetenceService"]).ModelCompetenceService(svc.db).matrix(o))
     @router.post("/competence/recommend")
     async def recommend_competence(request: Request, payload: dict[str, Any] = Body(default={})):
         def operation(svc, o, u):
