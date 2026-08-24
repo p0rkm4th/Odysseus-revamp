@@ -7087,6 +7087,38 @@ async def stream_agent_loop(
                         )
                 elif (
                     isinstance(_homelab_payload, dict)
+                    and _homelab_action == "network_discovery"
+                    and set(_homelab_payload) <= {"action", "scope", "cidr", "mode", "authorization"}
+                    and _homelab_payload.get("scope")
+                    and _homelab_payload.get("authorization")
+                ):
+                    _alias_target = _network_discovery_cidr(str(_homelab_payload.get("scope")))
+                    if _alias_target:
+                        _alias_operation = {
+                            "action": "execute_network_discovery",
+                            "target_kind": "private_ipv4_network",
+                            "target": _alias_target,
+                            "scanner": "nmap_ping_scan",
+                        }
+                        _alias_digest = hashlib.sha256(json.dumps(
+                            _alias_operation,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode()).hexdigest()
+                        logger.info(
+                            "[agent] normalized authorized network_discovery alias to canonical execute cidr=%s",
+                            _alias_target,
+                        )
+                        block = ToolBlock(
+                            "manage_homelab",
+                            json.dumps({
+                                "action": "execute_network_discovery",
+                                "cidr": _alias_target,
+                                "plan_digest": _alias_digest,
+                            }),
+                        )
+                elif (
+                    isinstance(_homelab_payload, dict)
                     and _homelab_action == "discover_network"
                     and set(_homelab_payload) <= {"action", "target", "scope", "cidr", "scan_type"}
                 ):
