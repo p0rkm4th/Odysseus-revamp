@@ -62,17 +62,25 @@ def test_change_and_incident_project_verified_run_state_owner_scoped(db):
 
 
 def test_incident_evidence_loop_updates_hypothesis_without_erasing_history(db):
-    svc=IncidentChangeService(db)
+    svc=IncidentChangeService(db); work=WorkEngine(db); diagnostic_run=work.create_run("alice", {"domain":"homelab"})
     incident=svc.create_incident("alice", {"title":"Evidence loop"})
     hypothesis=svc.add_hypothesis("alice", incident["id"], {"statement":"Database dependency is unavailable"})
-    evidence=svc.add_evidence("alice", incident["id"], {"reference":"result://db-health-1", "source_kind":"observed", "run_id":"run-diagnostic-1"})
+    evidence=svc.add_evidence("alice", incident["id"], {"reference":"result://db-health-1", "source_kind":"observed", "run_id":diagnostic_run["id"]})
     updated=svc.update_hypothesis("alice", incident["id"], hypothesis["id"], {"status":"rejected", "confidence_class":"high", "supporting_evidence":[], "contradicting_evidence":[evidence["evidence_reference"]]})
     dossier=svc.get_incident("alice", incident["id"])
     assert updated["status"] == "rejected"
     assert dossier["evidence_references"] == ["result://db-health-1"]
+    assert dossier["runs"][0]["id"] == diagnostic_run["id"]
     assert [event["kind"] for event in dossier["timeline"]] == ["hypothesis_added", "evidence_added", "hypothesis_updated"]
     with pytest.raises(WorkError, match="incident not found"):
         svc.update_hypothesis("bob", incident["id"], hypothesis["id"], {})
+
+
+def test_incident_evidence_rejects_cross_owner_run(db):
+    work=WorkEngine(db); run=work.create_run("alice", {"domain":"homelab"})
+    svc=IncidentChangeService(db); incident=svc.create_incident("bob", {"title":"Isolated incident"})
+    with pytest.raises(WorkError, match="evidence Run not found"):
+        svc.add_evidence("bob", incident["id"], {"reference":"result://private", "run_id":run["id"]})
 
 
 def test_change_completion_requires_verified_canonical_run(db):

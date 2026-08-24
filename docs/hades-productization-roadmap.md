@@ -633,6 +633,14 @@ still requires the existing evidence threshold and remains advisory: it cannot
 grant capability or bypass policy. Shadow review and broader measured routing
 optimization remain future work.
 
+### Incident evidence/Run integration checkpoint
+
+Incident evidence may now reference only an owner-scoped existing Work Run.
+Incident dossiers aggregate Runs linked through Changes and evidence timeline
+events, preserving lifecycle, verification, and result state without creating a
+second executor. Cross-owner or nonexistent evidence Run references fail
+closed; diagnostic evidence history remains intact.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
