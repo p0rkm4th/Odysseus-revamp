@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.database import Base
 from core.work_models import WorkAction, WorkCommitment, WorkGoal, WorkProject, WorkRun, WorkTask
-from src.work_engine import WorkEngine, WorkError
+from src.work_engine import AmbiguousExecution, WorkEngine, WorkError
 
 @pytest.fixture()
 def db():
@@ -276,4 +276,19 @@ def test_bound_action_failure_is_durable_and_releases_locks(db):
     stored = svc.get_run("alice", run["id"])["actions"][0]
     assert stored["status"] == "failed"
     assert stored["error"] == "binding unavailable"
+    assert svc.lock_conflicts("alice", action["id"]) == []
+
+
+def test_ambiguous_binding_outcome_retains_locks_and_requires_resolution(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["host:lab-1"], "retry_policy": {"max_attempts": 2}})
+    ambiguous = svc.execute_bound_action("alice", action["id"], lambda _value: (_ for _ in ()).throw(AmbiguousExecution("transport timeout")))
+    assert ambiguous["run_lifecycle_state"] == "execution_ambiguous"
+    assert ambiguous["locks_retained"] is True
+    assert svc.get_run("alice", run["id"])["continuation_state"]["execution_ambiguous"] is True
+    with pytest.raises(WorkError, match="independently verified"):
+        svc.retry_action("alice", action["id"])
+    resolved = svc.resolve_ambiguous_action("alice", action["id"], occurred=False)
+    assert resolved["run_lifecycle_state"] == "failed"
     assert svc.lock_conflicts("alice", action["id"]) == []

@@ -129,6 +129,13 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.post("/runs/{run_id}/compensation")
     async def complete_compensation(request: Request, run_id: str, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: svc.complete_compensation(o, run_id, success=bool(payload.get("success")), details=payload.get("details") or {}))
+    @router.post("/runs/{run_id}/actions/{action_id}/resolve-ambiguous")
+    async def resolve_ambiguous(request: Request, run_id: str, action_id: str, payload: dict[str, Any] = Body(...)):
+        def operation(svc, o, u):
+            action = svc.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == o).one_or_none()
+            if action is None or action.run_id != run_id: raise WorkError("action not found")
+            return svc.resolve_ambiguous_action(o, action_id, occurred=bool(payload.get("occurred")), result=payload.get("result"))
+        return await tx(request, operation)
     @router.post("/claims/{claim_id}/contradictions", status_code=201)
     async def contradiction(request: Request, claim_id: str, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: svc.record_contradiction(o, claim_id, str(payload.get("contradicting_claim_id") or ""), resolution=payload.get("resolution")))
