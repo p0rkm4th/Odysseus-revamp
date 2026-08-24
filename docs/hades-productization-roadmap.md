@@ -101,6 +101,19 @@ approval/session binding, and runtime delivery remain owned by the existing
 Telegram store/runtime; voice, media, and live cross-channel dogfood remain
 future work.
 
+### P0 OSINT UI quality checkpoint
+
+Shared workspace/window and product-grammar primitives now enforce intrinsic
+min sizing, overflow wrapping, contained grid tracks, responsive summary grids,
+scrollable tab navigation, semantic theme tokens for primary actions, and
+accessible window-control tooltips. OSINT overview cards project compact case
+metadata rather than raw seed queries. Original known information is rendered
+only in a dedicated collapsible `USER PROVIDED` dossier section with safe
+escaping and readable prose styling. Realistic adversarial fixtures and
+framework-free overlap/containment assertions are included. Rendered browser
+acceptance and owner-live visual acceptance remain explicitly pending because
+no browser runner or owner session is available in this environment.
+
 ### CMDB-to-World-Model projection checkpoint
 
 The existing authenticated Work surface now provides a bounded CMDB sync
