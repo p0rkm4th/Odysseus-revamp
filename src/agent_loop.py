@@ -4928,6 +4928,7 @@ async def stream_agent_loop(
     if _network_prerequisite_request(_last_user) and _relevant_tools is not None:
         _relevant_tools.discard("bash")
         _relevant_tools.discard("run_shell")
+        disabled_tools.update({"bash", "run_shell"})
         _relevant_tools.update({"manage_homelab", "privileged_action"})
         logger.info(
             "[agent-intent] capability-first network prerequisite clamp tools=%s",
