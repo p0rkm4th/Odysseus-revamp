@@ -34,6 +34,10 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
     async def contracts(request: Request):
         return await call(request, lambda _owner: {"version": 1, "contracts": SetupCenterService().contracts(), "authority_unchanged": True})
 
+    @router.get("/profiles")
+    async def profiles(request: Request):
+        return await call(request, lambda _owner: {"version": 1, "profiles": SetupCenterService().profiles(), "authority_unchanged": True})
+
     @router.get("/state")
     async def state(request: Request):
         return await call(request, lambda value: SetupCenterService().projection(value))
@@ -86,5 +90,9 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
     @router.patch("/modules/{module_id}")
     async def update_module(request: Request, module_id: str, payload: dict[str, Any] = Body(...)):
         return await call(request, lambda value: SetupCenterService().update(value, module_id, payload))
+
+    @router.post("/profiles/{profile_id}")
+    async def apply_profile(request: Request, profile_id: str):
+        return await call(request, lambda value: SetupCenterService().apply_profile(value, profile_id))
 
     return router
