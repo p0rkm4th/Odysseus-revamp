@@ -16,6 +16,44 @@ let sortOrder = 'newest';
 let selectMode = false;
 let selectedIds = new Set();
 let memoriesLoading = false;
+let lastMemoryDiagnostics = null;
+
+function renderMemoryDiagnostics(diagnostics) {
+  lastMemoryDiagnostics = (diagnostics && typeof diagnostics === 'object') ? diagnostics : null;
+  const empty = document.getElementById('memory-inspector-empty');
+  const body = document.getElementById('memory-inspector-body');
+  if (!empty || !body) return;
+  if (!lastMemoryDiagnostics) {
+    empty.classList.remove('hidden');
+    body.classList.add('hidden');
+    body.innerHTML = '';
+    return;
+  }
+  empty.classList.add('hidden');
+  body.classList.remove('hidden');
+  const d = lastMemoryDiagnostics;
+  const rows = [
+    ['Query', d.explicit_query ? ('explicit / ' + (d.query_type || 'memory')) : 'passive'],
+    ['Result', d.result_status || 'not queried'],
+    ['Retrieved', String(d.retrieved_count ?? 0)],
+    ['Passive recalled', String(d.passive_retrieved_count ?? 0)],
+    ['Projected', String(d.projected_count ?? 0)],
+    ['Memory section', String(d.section_messages ?? 0) + ' messages / ' + String(d.section_tokens ?? 0) + ' tokens'],
+    ['Context trimmed', d.context_trimmed ? 'yes' : 'no'],
+    ['Explicit result present', d.explicit_result_present_after_trim ? 'yes' : 'no'],
+    ['Content logged', d.content_logged ? 'yes' : 'no'],
+    ['References', String(Array.isArray(d.memory_ids) ? d.memory_ids.length : 0) + ' owner-scoped IDs'],
+  ];
+  body.innerHTML = rows.map(([label, value]) => (
+    '<div class=\"admin-card\" style=\"margin:0;padding:8px 10px;\"><div style=\"font-size:11px;opacity:.65;\">' +
+    escapeHtml(label) + '</div><div style=\"margin-top:3px;font-weight:600;\">' +
+    escapeHtml(value) + '</div></div>'
+  )).join('');
+}
+
+window.addEventListener('hades-memory-diagnostics', (event) => {
+  renderMemoryDiagnostics(event.detail);
+});
 
 
 const MEMORY_CATEGORIES = ['fact', 'identity', 'preference', 'contact', 'project', 'goal', 'task'];

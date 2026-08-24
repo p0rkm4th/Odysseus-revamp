@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -93,6 +94,17 @@ def test_failure_result_does_not_claim_no_memories():
     rendered = render_explicit_memory_context({"status": "retrieval_failed", "query_type": "summary"})
     assert "retrieval failed" in rendered.lower()
     assert "zero" not in rendered.lower()
+
+
+def test_memory_inspector_ui_uses_sanitized_diagnostics_only():
+    html = Path("static/index.html").read_text()
+    js = Path("static/js/memory.js").read_text()
+    chat = Path("static/js/chat.js").read_text()
+    assert 'data-memory-tab="inspector"' in html
+    assert 'id="memory-inspector-body"' in html
+    assert "hades-memory-diagnostics" in js
+    assert "memory_diagnostics" in chat
+    assert "content_logged" in js
 
 
 def test_explicit_memory_result_is_protected_from_context_trim():

@@ -186,6 +186,7 @@ deterministic read projection rather than relying only on vector relevance or
 model-selected tools. The projection is protected through Qwen/local-model
 shaping and context trimming, returns retrieval-failure/zero-result status
 honestly, and keeps Skills separate from personal memory. Focused synthetic
-tests are green. The remaining acceptance work is live owner-authenticated
-dogfood, sanitized memory diagnostics/Inspector visibility, and the full
-regression checkpoint.
+tests are green. Live owner-authenticated dogfood and browser/restart
+verification remain. Sanitized memory diagnostics now travel with the stream
+and saved turn metrics, and Brain exposes an Inspector view without rendering
+memory content in telemetry.

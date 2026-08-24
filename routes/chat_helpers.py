@@ -255,6 +255,10 @@ class ChatContext:
     # retained only when explicit foreground fallbacks are enabled so each
     # concrete candidate can apply its own context budget independently.
     route_messages: list = field(default_factory=list)
+    # Sanitized owner-facing diagnostics: counts/references/status only, never
+    # memory text. Persisted with the turn so Brain/Developer inspection can
+    # explain passive versus explicit memory access.
+    memory_diagnostics: dict = field(default_factory=dict)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────── #
@@ -858,6 +862,10 @@ async def build_chat_context(
                     (explicit_memory_result.get("diagnostics") or {}).get("retrieved_count", 0)
                 ),
                 "memory_result_status": explicit_memory_result.get("status"),
+                "memory_ids": [
+                    str(row.get("id")) for row in (explicit_memory_result.get("memories") or [])
+                    if row.get("id")
+                ][:100],
                 # Never put memory content in diagnostics/traces.
                 "memory_content_logged": False,
             }
@@ -890,6 +898,7 @@ async def build_chat_context(
                 "memory_explicit_query": True,
                 "memory_retrieved_count": 0,
                 "memory_result_status": "retrieval_failed",
+                "memory_ids": [],
                 "memory_content_logged": False,
             }
             preface.append(_memory_context)
@@ -1002,11 +1011,37 @@ async def build_chat_context(
     _context_trimmed = _after_trim_messages < _before_trim_messages or _after_trim_tokens < _before_trim_tokens
     logger.info("[hades-context] session=%s trace=%s", session_id, _context_trace(messages, context_length))
 
+    _explicit_memory_messages = [
+        m for m in messages
+        if (m.get("metadata") or {}).get("context_kind") == "explicit_memory_result"
+    ]
+    _explicit_meta = (_explicit_memory_messages[0].get("metadata") or {}) if _explicit_memory_messages else {}
+    _memory_context_messages = [
+        m for m in messages
+        if str((m.get("metadata") or {}).get("source") or "").startswith("saved memory:")
+        or (m.get("metadata") or {}).get("context_kind") == "explicit_memory_result"
+    ]
+    memory_diagnostics = {
+        "explicit_query": bool(_explicit_memory_messages),
+        "query_type": _explicit_meta.get("memory_query_type"),
+        "result_status": _explicit_meta.get("memory_result_status"),
+        "retrieved_count": int(_explicit_meta.get("memory_retrieved_count") or 0),
+        "passive_retrieved_count": len(used_memories or []),
+        "projected_count": len(used_memories or []) + int(_explicit_meta.get("memory_retrieved_count") or 0),
+        "memory_ids": list(_explicit_meta.get("memory_ids") or [])[:100],
+        "section_messages": len(_memory_context_messages),
+        "section_tokens": estimate_tokens(_memory_context_messages),
+        "context_trimmed": bool(_context_trimmed),
+        "explicit_result_present_after_trim": bool(_explicit_memory_messages),
+        "content_logged": False,
+    }
+
     return ChatContext(
         preface=preface,
         rag_sources=rag_sources,
         web_sources=web_sources,
         used_memories=used_memories,
+        memory_diagnostics=memory_diagnostics,
         messages=messages,
         context_length=context_length,
         was_compacted=was_compacted,
