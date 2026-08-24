@@ -45,6 +45,12 @@ const DEFAULT_FONT = 'mono';
 const DEFAULT_DENSITY = 'comfortable';
 const MAX_CUSTOM_THEMES = 8;
 
+export const REQUIRED_THEME_COLORS = Object.freeze(['bg', 'fg', 'panel', 'border', 'red']);
+export function validateThemeColors(colors) {
+  const value = colors || {};
+  return REQUIRED_THEME_COLORS.filter(key => !String(value[key] || '').trim());
+}
+
 // Default background patterns for built-in themes
 const THEME_DEFAULT_PATTERN = {
   dark:       'none',
@@ -255,12 +261,36 @@ function generateHarmonyColors(accentHex, harmonyType, mode) {
 }
 
 export function applyColors(colors) {
+  const missing = validateThemeColors(colors);
+  if (missing.length) colors = { ...THEMES[DEFAULT_THEME], ...(colors || {}) };
   const s = document.documentElement.style;
+  const accent = colors.red || colors.fg || '#e06c75';
   s.setProperty('--bg', colors.bg);
   s.setProperty('--fg', colors.fg);
   s.setProperty('--panel', colors.panel);
   s.setProperty('--border', colors.border);
-  if (colors.red) s.setProperty('--red', colors.red);
+  s.setProperty('--red', accent);
+  // Semantic tokens are the contract consumed by shared shell/components.
+  // Keep ordinary icons on inherited currentColor; reserve fixed hues for
+  // meaning-bearing status states so a theme cannot erase distinctions.
+  const semantic = {
+    '--accent': accent, '--accent-primary': accent,
+    '--accent-secondary': colors.fg, '--accent-muted': `color-mix(in srgb, ${accent} 28%, transparent)`,
+    '--surface-app': colors.bg, '--surface-sidebar': colors.advanced?.sidebarBg || colors.panel,
+    '--surface-panel': colors.panel, '--surface-elevated': `color-mix(in srgb, ${colors.panel} 86%, ${colors.fg})`,
+    '--surface-input': colors.advanced?.inputBg || colors.panel,
+    '--text-primary': colors.fg, '--text-secondary': `color-mix(in srgb, ${colors.fg} 78%, ${colors.bg})`,
+    '--text-muted': `color-mix(in srgb, ${colors.fg} 58%, ${colors.bg})`, '--text-disabled': `color-mix(in srgb, ${colors.fg} 38%, ${colors.bg})`,
+    '--border-normal': colors.border, '--border-subtle': `color-mix(in srgb, ${colors.border} 55%, transparent)`,
+    '--border-focus': accent, '--border-selected': accent,
+    '--icon-primary': colors.fg, '--icon-secondary': `color-mix(in srgb, ${colors.fg} 72%, ${colors.bg})`,
+    '--icon-muted': `color-mix(in srgb, ${colors.fg} 48%, ${colors.bg})`, '--icon-selected': accent, '--icon-disabled': `color-mix(in srgb, ${colors.fg} 32%, ${colors.bg})`,
+    '--status-success': '#50fa7b', '--status-warning': '#f0ad4e', '--status-error': '#ff5c5c', '--status-info': '#64b5f6',
+    '--epistemic-observed': '#64b5f6', '--epistemic-user': '#c084fc', '--epistemic-retrieved': '#5eead4',
+    '--epistemic-inferred': '#f0abfc', '--epistemic-assumed': '#f0ad4e', '--epistemic-confirmed': '#50fa7b',
+    '--epistemic-stale': '#a1a1aa', '--epistemic-unknown': '#f87171',
+  };
+  for (const [key, value] of Object.entries(semantic)) s.setProperty(key, value);
 
   // Keep the mobile browser toolbar / status bar matched to the theme bg
   // (same as the early head-script does on first paint).

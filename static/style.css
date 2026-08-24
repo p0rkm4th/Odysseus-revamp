@@ -66,6 +66,44 @@
   /* Warm accent — used by the Goals/Today UI in Notes. Lives as a token so
      themes can override without touching the goal CSS. */
   --accent-warm: #d19a66;
+
+  /* Semantic theme contract. theme.js supplies live values for every
+     registered theme; these defaults keep first paint and reduced shells
+     coherent before the module applies a saved theme. */
+  --accent: var(--red);
+  --accent-primary: var(--red);
+  --accent-secondary: var(--fg);
+  --accent-muted: color-mix(in srgb, var(--red) 28%, transparent);
+  --surface-app: var(--bg);
+  --surface-sidebar: var(--panel);
+  --surface-panel: var(--panel);
+  --surface-elevated: var(--panel);
+  --surface-input: var(--panel);
+  --text-primary: var(--fg);
+  --text-secondary: color-mix(in srgb, var(--fg) 78%, var(--bg));
+  --text-muted: color-mix(in srgb, var(--fg) 58%, var(--bg));
+  --text-disabled: color-mix(in srgb, var(--fg) 38%, var(--bg));
+  --border-normal: var(--border);
+  --border-subtle: color-mix(in srgb, var(--border) 55%, transparent);
+  --border-focus: var(--red);
+  --border-selected: var(--red);
+  --icon-primary: var(--fg);
+  --icon-secondary: color-mix(in srgb, var(--fg) 72%, var(--bg));
+  --icon-muted: color-mix(in srgb, var(--fg) 48%, var(--bg));
+  --icon-selected: var(--red);
+  --icon-disabled: color-mix(in srgb, var(--fg) 32%, var(--bg));
+  --status-success: #50fa7b;
+  --status-warning: #f0ad4e;
+  --status-error: #ff5c5c;
+  --status-info: #64b5f6;
+  --epistemic-observed: #64b5f6;
+  --epistemic-user: #c084fc;
+  --epistemic-retrieved: #5eead4;
+  --epistemic-inferred: #f0abfc;
+  --epistemic-assumed: #f0ad4e;
+  --epistemic-confirmed: #50fa7b;
+  --epistemic-stale: #a1a1aa;
+  --epistemic-unknown: #f87171;
 }
 
 :root.light {
@@ -1449,11 +1487,23 @@ body.bg-pattern-sparkles {
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .row { display:flex; gap:6px; align-items:center; }
-    .list-item:hover,
+.list-item:hover,
     .models-row:hover {
       background: color-mix(in srgb, var(--red) 8%, transparent);
       border-color: var(--red);
     }
+    /* Semantic module icons inherit the row/header state. Individual SVGs
+       never own a theme color. */
+    .hades-nav-icon,
+    .hades-module-svg {
+      color: inherit;
+      stroke: currentColor;
+      flex: 0 0 auto;
+    }
+    .list-item .hades-nav-icon { opacity: .72; }
+    .list-item:hover .hades-nav-icon,
+    .list-item.active .hades-nav-icon,
+    .list-item:focus-visible .hades-nav-icon { opacity: 1; }
     #models.models-refreshing {
       opacity: 0.72;
       transition: opacity 0.16s ease;

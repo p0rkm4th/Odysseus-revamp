@@ -30,10 +30,21 @@ export const ICONS = Object.freeze({
   developer: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>',
   integrations: '<path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="8"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.2-1.6l2-1.2-2-3.4-2.1 1.2A7 7 0 0 0 15 6l-.2-2.4h-4.0L10.5 6a7 7 0 0 0-1.7 1L6.7 5.8l-2 3.4 2 1.2A7 7 0 0 0 6.5 12c0 .6.1 1.1.2 1.6l-2 1.2 2 3.4 2.1-1.2a7 7 0 0 0 1.7 1l.2 2.4h4l.2-2.4a7 7 0 0 0 1.7-1l2.1 1.2 2-3.4-2-1.2c.2-.5.3-1 .3-1.6Z"/>',
+  communications: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>',
+  deepResearch: '<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5M11 8v6M8 11h6"/>',
+  itAssets: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8v8H8zM12 2v2M12 20v2"/>',
+  worldModel: '<circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="m7 11 10-4M7 13l10 4"/>',
+  controlCenter: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5M8 17h8"/>',
 });
 
+export const ICON_ALIASES = Object.freeze({ assets: 'itAssets', it_assets: 'itAssets', smart_home: 'smartHome', deep_research: 'deepResearch', world_model: 'worldModel', control_center: 'controlCenter' });
+export function iconFor(name='hades') { return ICONS[ICON_ALIASES[name] || name] || ICONS.hades; }
+export function iconSvg(name='hades', className='hades-nav-icon') {
+  return `<svg class="${esc(className)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconFor(name)}</svg>`;
+}
+
 export function moduleHeader({icon='hades', title, description='', status='', primary='', primaryId='', onAsk=false}) {
-  return `<header class="hades-module-header"><div class="hades-module-heading"><span class="hades-module-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[icon] || ICONS.hades}</svg></span><div><h2>${esc(title)}</h2><p>${esc(description)}</p>${status ? `<span class="hades-status-line">${esc(status)}</span>` : ''}</div></div><div class="hades-module-actions">${onAsk ? '<button type="button" class="hades-btn-secondary">Ask Hades</button>' : ''}${primary ? `<button type="button" class="hades-btn-primary"${primaryId ? ` id="${esc(primaryId)}"` : ''}>${esc(primary)}</button>` : ''}</div></header>`;
+  return `<header class="hades-module-header"><div class="hades-module-heading"><span class="hades-module-icon" aria-hidden="true">${iconSvg(icon, 'hades-module-svg')}</span><div><h2>${esc(title)}</h2><p>${esc(description)}</p>${status ? `<span class="hades-status-line">${esc(status)}</span>` : ''}</div></div><div class="hades-module-actions">${onAsk ? '<button type="button" class="hades-btn-secondary">Ask Hades</button>' : ''}${primary ? `<button type="button" class="hades-btn-primary"${primaryId ? ` id="${esc(primaryId)}"` : ''}>${esc(primary)}</button>` : ''}</div></header>`;
 }
 
 export function statusBadge(value, kind='neutral') {
