@@ -5014,6 +5014,20 @@ async def stream_agent_loop(
             _last_user,
         )
     ) and bool(_intent.get("continuation"))
+    _recent_conversation_text = " ".join(
+        str(message.get("content") or "")
+        for message in messages[-10:]
+        if message.get("role") in {"user", "assistant"}
+    ).lower()
+    _network_discovery_followup = (
+        bool(_intent.get("continuation"))
+        and "network_ops" in _intent_domains
+        and bool(re.search(
+            r"\b(?:nmap|network[- ]discovery|bounded discovery|private subnet|"
+            r"discovery scan|scan the|scan my)\b",
+            _recent_conversation_text,
+        ))
+    )
     # Re-apply the discovery-only clamp after the deterministic final tool
     # projection above, which otherwise re-adds the generic network domain's
     # shell tools.
@@ -5021,7 +5035,11 @@ async def stream_agent_loop(
         not guide_only
         and _relevant_tools is not None
         and "network_ops" in _intent_domains
-        and (_explicit_network_discovery_request(_last_user) or _network_discovery_reply)
+        and (
+            _explicit_network_discovery_request(_last_user)
+            or _network_discovery_reply
+            or _network_discovery_followup
+        )
     ):
         _relevant_tools.difference_update({"bash", "run_shell", "python"})
         _relevant_tools.add("manage_homelab")
@@ -5050,7 +5068,11 @@ async def stream_agent_loop(
         not guide_only
         and _relevant_tools is not None
         and "network_ops" in _intent_domains
-        and (_explicit_network_discovery_request(_last_user) or _network_discovery_reply)
+        and (
+            _explicit_network_discovery_request(_last_user)
+            or _network_discovery_reply
+            or _network_discovery_followup
+        )
     ):
         _relevant_tools.difference_update({"bash", "run_shell", "python"})
         _relevant_tools.add("manage_homelab")
