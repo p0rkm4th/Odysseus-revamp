@@ -1976,6 +1976,66 @@ def _assistant_requested_followup(messages: List[Dict]) -> bool:
     return False
 
 
+def _recent_reference_resolution_hint(messages: List[Dict], text: str) -> str | None:
+    """Return a small server-owned hint for immediate conversational references.
+
+    Weak local models sometimes see the preceding assistant turn but still
+    answer a terse reference as a fresh, unrelated chat.  Keep the repair
+    deliberately narrow and derive it only from the immediately preceding
+    assistant message; it does not select or authorize tools.
+    """
+    latest = str(text or "").strip().lower()
+    if not latest:
+        return None
+    previous_assistant = ""
+    seen_latest_user = False
+    for msg in reversed(messages):
+        role = str(msg.get("role") or "")
+        if role == "user" and not seen_latest_user:
+            seen_latest_user = True
+            continue
+        if seen_latest_user and role == "assistant":
+            content = msg.get("content", "")
+            if isinstance(content, list):
+                content = " ".join(
+                    str(block.get("text") or "")
+                    for block in content
+                    if isinstance(block, dict)
+                )
+            previous_assistant = str(content or "")
+            break
+    if not previous_assistant:
+        return None
+    has_labeled_options = bool(
+        re.search(r"(?:^|\s)[ABC][.)]", previous_assistant, re.I)
+        or re.search(r"\b(?:available|following)\s+operations\b", previous_assistant, re.I)
+        or re.search(r"(?:^|\n)\s*[-*]\s+", previous_assistant)
+    )
+    if has_labeled_options and re.search(
+        r"\b(?:all\s+of\s+the\s+above|all\s+three|everything)\b", latest
+    ):
+        return (
+            "Immediate reference resolution: the user's latest phrase "
+            "'all of the above' refers to every option in the immediately "
+            "preceding assistant message (A, B, and C). Resolve all three "
+            "in that order; do not answer as if this were a new unrelated request."
+        )
+    if re.search(r"\b(?:the\s+)?(?:first|second|third)\s+one\b", latest):
+        ordinal = re.search(r"\b(first|second|third)\b", latest, re.I).group(1).lower()
+        return (
+            f"Immediate reference resolution: the user's latest phrase selects "
+            f"the {ordinal} option from the immediately preceding assistant "
+            "message. Resolve that option directly."
+        )
+    if re.fullmatch(r"(?:do|run|start)\s+(?:that|it)", latest):
+        return (
+            "Immediate reference resolution: the user's latest phrase refers "
+            "to the immediately preceding assistant-described next step. "
+            "Continue that exact step rather than inventing a new topic."
+        )
+    return None
+
+
 def _looks_like_explicit_skill_request(text: str) -> bool:
     q = str(text or "").strip().lower()
     if not q:
@@ -4383,6 +4443,17 @@ async def stream_agent_loop(
         temperature = _ody_qwen_temperature_cap(temperature)
     _ody_memory_identity_turn = _looks_like_memory_identity_turn(_last_user)
     _intent = _classify_agent_request(messages, _last_user)
+    _reference_hint = _recent_reference_resolution_hint(messages, _last_user)
+    if _reference_hint:
+        messages = _insert_before_latest_user(
+            messages,
+            {
+                "role": "system",
+                "content": _reference_hint,
+                "_agent_injected": "reference_resolution",
+            },
+        )
+        logger.info("[hades-continuity] immediate reference hint applied")
     _intent = _normalize_asset_inventory_intent(
         _intent,
         str(_intent.get("retrieval_query") or _last_user) if isinstance(_intent, dict) else _last_user,
