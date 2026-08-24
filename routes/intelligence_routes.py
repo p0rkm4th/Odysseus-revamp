@@ -103,13 +103,13 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         with session_factory() as db:
             from src.model_competence import ModelCompetenceService
             candidates=[{"model_key":"strong-default","profile":"strong-default"}, {"model_key":"hades-local-test","profile":"hades-local-test","model":"qwen3:8b"}]
-            recommendation=ModelCompetenceService(db).recommend(value, task_class=result.get("task_class"), candidates=candidates, preferred=payload.get("profile"), require_qualified=False)
+            recommendation=ModelCompetenceService(db).recommend(value, task_class=result.get("task_class"), candidates=candidates, preferred=payload.get("profile"), require_qualified=bool(payload.get("require_qualified", False)), risk_level=payload.get("risk_level", "low"), privacy_required=bool(payload.get("privacy_required", False)), latency_budget_ms=payload.get("latency_budget_ms"), cost_budget=payload.get("cost_budget"))
         selected_recommendation = recommendation.get("selected") or {}
         if result.get("local_recommended") and selected_recommendation.get("profile"):
             selected=selected_recommendation["profile"]
             if selected == "hades-local-test" or payload.get("profile"):
                 result["model_profile"]=selected
-        result["competence_recommendation"]={"selected":recommendation.get("selected"), "alternatives":recommendation.get("alternatives"), "reason_codes":recommendation.get("reason_codes"), "evidence_backed":recommendation.get("evidence_backed"), "authority_unchanged":True}
+        result["competence_recommendation"]={"selected":recommendation.get("selected"), "alternatives":recommendation.get("alternatives"), "reason_codes":recommendation.get("reason_codes"), "constraints":recommendation.get("constraints"), "constraint_rejections":recommendation.get("constraint_rejections"), "evidence_backed":recommendation.get("evidence_backed"), "authority_unchanged":True}
         result["owner"]=value
         return result
     @router.post("/api/intelligence/infer")

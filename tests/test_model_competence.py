@@ -85,3 +85,18 @@ def test_competence_matrix_is_owner_scoped_and_descriptive(db):
     assert matrix["task_classes"][0]["task_class"] == "business_extract"
     assert matrix["task_classes"][0]["models"][0]["qualification"] == "qualified"
     assert ModelCompetenceService(db).matrix("bob")["task_classes"] == []
+
+
+def test_routing_constraints_require_qualification_and_local_privacy(db):
+    evaluations = EvaluationService(db)
+    scenario = evaluations.create_scenario("alice", {"scenario_key":"routing-constraints", "title":"Routing constraints", "domain":"security", "task_class":"high_risk_plan"})
+    for passed in (True, True, True):
+        evaluations.record_run("alice", scenario["id"], {"model":{"name":"local-model"}, "passed":passed, "failure_category":"none", "metrics":{"latency_ms":50}})
+    ModelCompetenceService(db).recompute("alice")
+    service = ModelCompetenceService(db)
+    result = service.recommend("alice", task_class="high_risk_plan", risk_level="critical", privacy_required=True, latency_budget_ms=100, candidates=[{"model_key":"local-model", "profile":"local", "local":True}, {"model_key":"strong-model", "profile":"strong", "local":False}])
+    assert result["selected"]["model_key"] == "local-model"
+    assert "high_consequence_requires_qualification" in result["reason_codes"]
+    rejected = service.recommend("alice", task_class="high_risk_plan", risk_level="critical", privacy_required=True, candidates=[{"model_key":"strong-model", "profile":"strong", "local":False}])
+    assert rejected["selected"] is None
+    assert rejected["constraint_rejections"][0]["reason"] == "privacy_local_only"

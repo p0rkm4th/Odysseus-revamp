@@ -75,7 +75,7 @@ class ModelCompetenceService:
             })
         return {"task_classes": [{"task_class": task, "models": models} for task, models in grouped.items()], "authority_unchanged": True, "evidence_backed": True}
 
-    def recommend(self, owner, *, task_class, candidates, preferred=None, require_qualified=False):
+    def recommend(self, owner, *, task_class, candidates, preferred=None, require_qualified=False, risk_level="low", privacy_required=False, latency_budget_ms=None, cost_budget=None):
         """Return an empirical, owner-scoped recommendation projection.
 
         This is deliberately advisory: it selects among caller-supplied model
@@ -83,9 +83,13 @@ class ModelCompetenceService:
         A model with no evidence is never presented as qualified.
         """
         task = str(task_class or "general")[:160]
+        risk = str(risk_level or "low").lower()
+        if risk in {"high", "critical"}:
+            require_qualified = True
         rows = self.db.query(ModelCompetence).filter_by(owner=owner, task_class=task).all()
         by_key = {row.model_key: row for row in rows}
         normalized = []
+        constraint_rejections = []
         for candidate in candidates or []:
             if isinstance(candidate, str):
                 candidate = {"model_key": candidate, "profile": candidate}
@@ -98,9 +102,21 @@ class ModelCompetenceService:
                 "success_rate": 0, "recent_success_rate": 0, "qualification": "unknown",
                 "failure_classes": [], "evidence_refs": []
             }
+            if privacy_required and not bool(item.get("local", False)):
+                constraint_rejections.append({"model_key": item["model_key"], "reason": "privacy_local_only"})
+                continue
+            known_latency = item["competence"].get("latency_ms")
+            if latency_budget_ms is not None and known_latency is not None and float(known_latency) > float(latency_budget_ms):
+                constraint_rejections.append({"model_key": item["model_key"], "reason": "latency_budget", "latency_ms": known_latency})
+                continue
+            known_cost = item["competence"].get("estimated_cost") or {}
+            average_cost = known_cost.get("average") if isinstance(known_cost, dict) else None
+            if cost_budget is not None and average_cost is not None and float(average_cost) > float(cost_budget):
+                constraint_rejections.append({"model_key": item["model_key"], "reason": "cost_budget", "estimated_cost": average_cost})
+                continue
             normalized.append(item)
         if not normalized:
-            return {"task_class": task, "selected": None, "alternatives": [], "reason_codes": ["no_candidates"], "evidence_backed": False}
+            return {"task_class": task, "selected": None, "alternatives": [], "reason_codes": ["no_candidates"], "constraint_rejections": constraint_rejections, "evidence_backed": False, "authority_unchanged": True}
 
         def rank(item):
             comp = item["competence"]
@@ -108,7 +124,8 @@ class ModelCompetenceService:
             qrank = {"qualified": 4, "experimental": 2, "unknown": 1, "degraded": 0, "disqualified": -1}.get(qualification, -1)
             preferred_rank = 1 if preferred and item["model_key"] == preferred else 0
             latency = item.get("latency_ms") or comp.get("latency_ms") or 10**9
-            return (qrank, int(comp.get("success_rate") or 0), int(comp.get("sample_count") or 0), preferred_rank, -int(latency))
+            cost = (comp.get("estimated_cost") or {}).get("average", 10**9) if isinstance(comp.get("estimated_cost"), dict) else 10**9
+            return (qrank, int(comp.get("success_rate") or 0), int(comp.get("recent_success_rate") or 0), int(comp.get("sample_count") or 0), preferred_rank, -float(latency), -float(cost))
 
         eligible = [item for item in normalized if item["competence"].get("qualification") not in {"disqualified", "degraded"}]
         qualified = [item for item in eligible if item["competence"].get("qualification") == "qualified"]
@@ -122,6 +139,10 @@ class ModelCompetenceService:
             reason_codes = ["empirical_competence_selected" if comp.get("qualification") == "qualified" else "no_qualified_evidence_fallback"]
             if preferred and selected["model_key"] != preferred:
                 reason_codes.append("preferred_model_not_sufficiently_qualified")
+            if risk in {"high", "critical"}: reason_codes.append("high_consequence_requires_qualification")
+            if privacy_required: reason_codes.append("privacy_local_only")
+            if latency_budget_ms is not None: reason_codes.append("latency_budget_applied")
+            if cost_budget is not None: reason_codes.append("cost_budget_applied")
         alternatives = [{"model_key": item["model_key"], "profile": item.get("profile"), "qualification": item["competence"].get("qualification"), "sample_count": item["competence"].get("sample_count", 0), "success_rate": item["competence"].get("success_rate", 0)} for item in sorted(normalized, key=rank, reverse=True)]
         selected_competence = selected["competence"] if selected else None
         return {
@@ -129,6 +150,8 @@ class ModelCompetenceService:
             "selected": {"model_key": selected["model_key"], "profile": selected.get("profile"), "competence": selected["competence"]} if selected else None,
             "alternatives": alternatives,
             "reason_codes": reason_codes,
+            "constraints": {"risk_level": risk, "privacy_required": bool(privacy_required), "latency_budget_ms": latency_budget_ms, "cost_budget": cost_budget, "require_qualified": bool(require_qualified)},
+            "constraint_rejections": constraint_rejections,
             "evidence_summary": {
                 "selected_sample_count": int((selected_competence or {}).get("sample_count") or 0),
                 "selected_success_rate": int((selected_competence or {}).get("success_rate") or 0),
