@@ -6417,6 +6417,50 @@ async def stream_agent_loop(
         # explicit live request still deserves one bounded repair if a strict
         # textual model answers in prose without emitting any tool invocation.
         _ody_v38_user_text = str(_last_user or "")
+        # Weak local models sometimes emit the visible text
+        # ``[Assistant invoked tool: ...]`` instead of a parseable strict-text
+        # invocation.  When the user has supplied an explicit, bounded
+        # network execution request, recover the capability call
+        # deterministically.  This is deliberately narrow: the normal
+        # ActionSpec/approval/digest path still owns authorization and the
+        # operation must carry the current owner-bound plan digest.
+        _ody_network_execute_match = re.search(
+            r"\bexecute_network_discovery\b.*?\bcidr\s*[:=]\s*([0-9.]+/\d{1,2}).*?\bplan_digest\s*[:=]\s*([0-9a-f]{64})\b",
+            _ody_v38_user_text,
+            re.IGNORECASE,
+        )
+        if (
+            not guide_only
+            and not _force_answer
+            and not tool_blocks
+            and not tool_events
+            and _ody_network_execute_match
+        ):
+            _ody_execute_cidr, _ody_execute_digest = _ody_network_execute_match.groups()
+            try:
+                _ody_execute_network = ipaddress.ip_network(_ody_execute_cidr, strict=False)
+            except ValueError:
+                _ody_execute_network = None
+            if (
+                _ody_execute_network is not None
+                and _ody_execute_network.version == 4
+                and _ody_execute_network.is_private
+                and _ody_execute_network.num_addresses <= 256
+            ):
+                logger.info(
+                    "[agent] deterministic explicit network execution recovery cidr=%s",
+                    _ody_execute_network,
+                )
+                if round_response and full_response.endswith(round_response):
+                    full_response = full_response[:-len(round_response)]
+                tool_blocks.append(ToolBlock(
+                    "manage_homelab",
+                    json.dumps({
+                        "action": "execute_network_discovery",
+                        "cidr": str(_ody_execute_network),
+                        "plan_digest": _ody_execute_digest,
+                    }),
+                ))
         _ody_v38_selected_first_class = (
             {"manage_assets", "privileged_action", "manage_homelab"}
             & set(_relevant_tools or set())

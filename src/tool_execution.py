@@ -1370,7 +1370,15 @@ async def _execute_manage_homelab_binding(block, owner=None):
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
         from src.homelab_operations import HomelabOperations
-        result = await HomelabOperations().execute(payload, owner=str(owner or ""))
+        # The ActionSpec/exact-approval gate has already run in the dispatcher
+        # before this binding is reached.  Bind the narrowly scoped host
+        # operator profile for the structured Homelab capability so its
+        # approved scanner/broker operation is not accidentally downgraded to
+        # the ordinary chat profile.  The context-local binding is reset on
+        # every return path.
+        from src.execution_profiles import use_execution_profile
+        with use_execution_profile("privileged_host"):
+            result = await HomelabOperations().execute(payload, owner=str(owner or ""))
         return "manage_homelab", {"output": _ody_v34_json.dumps(result, indent=2, sort_keys=True), "exit_code": 0, "data": result}
     except Exception as exc:
         return "manage_homelab", {"error": str(exc), "output": str(exc), "exit_code": 1}
