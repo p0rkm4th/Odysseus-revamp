@@ -68,6 +68,11 @@ manager. API requests remain uncached, so authenticated canonical state is not
 persisted into the offline cache. Share-target, push notification, camera
 intake, and authenticated offline data workflows remain future work.
 
+The manifest now also declares a bounded GET Share-to-Hades target. Shared
+title/text/URL values are length-limited, staged in the existing Chat composer,
+and removed from the address bar after import; nothing is auto-sent or promoted
+into canonical state.
+
 ### Voice boundary hardening slice
 
 The existing Web STT/TTS routes now require an authenticated owner before
