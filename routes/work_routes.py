@@ -65,6 +65,18 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.post("/execution-nodes/select")
     async def select_execution_node(request: Request, payload: dict[str, Any] = Body(default={} )):
         return await tx(request, lambda svc,o,u: __import__("src.execution_nodes", fromlist=["ExecutionNodeService"]).ExecutionNodeService(svc.db).select(o, payload.get("requirements") or {}, limit=payload.get("limit", 1)))
+    @router.get("/grants")
+    async def delegated_grants(request: Request, active_only: bool = False):
+        return {"grants": await tx(request, lambda svc,o,u: __import__("src.delegated_grants", fromlist=["DelegatedGrantService"]).DelegatedGrantService(svc.db).list(o, active_only=active_only))}
+    @router.post("/actions/{action_id}/grant", status_code=201)
+    async def issue_delegated_grant(request: Request, action_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.delegated_grants", fromlist=["DelegatedGrantService"]).DelegatedGrantService(svc.db).issue(o, action_id, payload))
+    @router.post("/grants/{grant_id}/consume")
+    async def consume_delegated_grant(request: Request, grant_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.delegated_grants", fromlist=["DelegatedGrantService"]).DelegatedGrantService(svc.db).consume(o, grant_id, payload))
+    @router.post("/grants/{grant_id}/revoke")
+    async def revoke_delegated_grant(request: Request, grant_id: str):
+        return await tx(request, lambda svc,o,u: __import__("src.delegated_grants", fromlist=["DelegatedGrantService"]).DelegatedGrantService(svc.db).revoke(o, grant_id))
     @router.post("/projects", status_code=201)
     async def create_project(request: Request, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.create_project(o,payload))
     @router.get("/projects")
