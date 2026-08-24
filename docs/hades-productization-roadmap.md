@@ -47,6 +47,14 @@ window work; new tables are not justified until a focused gap is demonstrated.
 - Extended the existing Ctrl+K conversation search surface with canonical
   module commands. Commands invoke existing module controls only; they do not
   create a UI-only execution path or bypass policy.
+- Began the early UI standardization gate: added shared tokens and reusable
+  header/state/badge/intake/provenance primitives, made OSINT explicit in the
+  primary sidebar and command palette, and added an OSINT workspace with the
+  required investigation tabs and review-oriented intake over the existing
+  public-source research service.
+- Made research intake seeds durable at start in the existing owner-scoped
+  research store (`case_stage=intake`, `review_required=true`), so an OSINT
+  investigation is recoverable before asynchronous results complete.
 
 ## Completed batches in this continuation
 

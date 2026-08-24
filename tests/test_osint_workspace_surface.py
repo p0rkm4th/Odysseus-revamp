@@ -1,0 +1,33 @@
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_osint_is_primary_navigation_and_has_investigation_workspace():
+    index = (ROOT / "static/index.html").read_text()
+    app = (ROOT / "static/app.js").read_text()
+    osint = (ROOT / "static/js/osint.js").read_text()
+    assert 'id="tool-osint-btn"' in index
+    assert "openOsint" in app
+    for section in ("Overview", "New Investigation", "Cases", "Targets", "Research", "Sources", "Facts", "Inferences", "Relationships", "Timeline", "Evidence", "Reports"):
+        assert section in osint
+    assert "api('/api/research/start'" in osint
+    assert "category:'osint'" in osint
+
+
+def test_osint_intake_keeps_public_source_and_review_boundaries_visible():
+    osint = (ROOT / "static/js/osint.js").read_text()
+    assert "public-source" in osint
+    assert "MODEL PROPOSED" in osint
+    assert "requires review" in osint
+    assert "attachments" in osint
+
+
+def test_shared_ui_grammar_exposes_reusable_states_headers_and_provenance():
+    components = (ROOT / "static/js/ui-components.js").read_text()
+    stylesheet = (ROOT / "static/style.css").read_text()
+    for name in ("moduleHeader", "statusBadge", "emptyState", "loadingState", "errorState", "provenanceBadge", "intakeField"):
+        assert f"function {name}" in components
+    for class_name in ("hades-module-header", "hades-intake-panel", "hades-record-card", "hades-empty-state", "hades-provenance"):
+        assert f".{class_name}" in stylesheet

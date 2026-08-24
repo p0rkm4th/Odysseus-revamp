@@ -306,6 +306,11 @@ class ResearchHandler:
             "owner": owner or "",
         }
         self._active_tasks[session_id] = entry
+        # Persist the intake immediately. The existing research JSON is the
+        # durable case record; completion later replaces this seed with the
+        # sourced report. This keeps an OSINT investigation visible and
+        # recoverable even if the worker or browser disappears mid-run.
+        self._persist_seed(session_id, entry)
 
         def on_progress(event):
             entry["progress"] = event
@@ -637,6 +642,30 @@ class ResearchHandler:
                 logger.debug("research_completed event dispatch failed", exc_info=True)
         except Exception as e:
             logger.error(f"Failed to save research result: {e}")
+
+    def _persist_seed(self, session_id: str, entry: dict) -> None:
+        """Persist a reviewable running-case seed in the canonical research store."""
+        path = _research_json_path(session_id)
+        if path is None:
+            return
+        try:
+            path.write_text(json.dumps({
+                "query": entry.get("query", ""),
+                "status": entry.get("status", "running"),
+                "result": None,
+                "raw_report": "",
+                "sources": [],
+                "raw_findings": [],
+                "stats": {},
+                "category": entry.get("category"),
+                "started_at": entry.get("started_at", time.time()),
+                "completed_at": None,
+                "owner": entry.get("owner", ""),
+                "case_stage": "intake",
+                "provenance": {"source": "user_intake", "review_required": True},
+            }), encoding="utf-8")
+        except Exception as exc:
+            logger.warning("Failed to persist research intake seed for %s: %s", session_id, exc)
 
     def _get_session_json(self, session_id: str) -> Optional[dict]:
         """Load the saved research JSON for a session, if it exists."""
