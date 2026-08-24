@@ -27,6 +27,20 @@ invariants, and leave a deployable commit. Schema changes require fresh,
 rerun, and copied-database rehearsal before promotion. A partial backend or
 sidebar entry is not a productized domain.
 
+### Home Assistant visibility slice
+
+The first Home Assistant slice reuses the existing generic integration and
+`api_call` boundary. An owner-authenticated Smart Home workspace now projects
+configuration status, health, bounded entity-domain counts, and a small set of
+entity references without copying state into a second store or exposing
+credentials. No state-changing smart-home action is introduced by this slice;
+future mutations must continue through canonical ActionSpec, policy, approval,
+and integration authority.
+
+Business/CRM remains a documented product gap because this audit found no
+canonical CRM store or service to extend safely; no parallel business database
+was introduced.
+
 ## V2 continuation checkpoint
 
 The first active batch is the census/grammar boundary. Existing canonical

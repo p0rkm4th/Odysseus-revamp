@@ -1,7 +1,7 @@
 """Authenticated local-model, routing, developer lease, and Network APIs."""
 from __future__ import annotations
 import asyncio
-import hashlib, ipaddress
+import hashlib, ipaddress, json
 from fastapi import APIRouter, Body, HTTPException, Request
 from core.database import SessionLocal
 from src.auth_helpers import require_user
@@ -11,8 +11,78 @@ from src import developer_mode
 from src.network_projection import map_projection
 from src.capability_dependencies import capability_health, supported_capabilities
 from src.persistent_agent import PersistentAgent
+from src.integrations import execute_api_call, load_integrations
 from core.persistent_agent_models import Episode, Lesson, Monitor, Notification
 from datetime import datetime, timezone, timedelta
+
+
+def _integration_json(result):
+    """Parse the bounded generic integration response without exposing secrets."""
+    if not isinstance(result, dict) or result.get("exit_code") != 0:
+        return None
+    output = result.get("output")
+    if not isinstance(output, str):
+        return None
+    _, separator, payload = output.partition("\n")
+    if not separator:
+        return None
+    try:
+        return json.loads(payload)
+    except (TypeError, ValueError):
+        return None
+
+
+async def _home_assistant_overview():
+    """Project read-only Home Assistant health/state through the generic boundary."""
+    integrations = load_integrations()
+    integration = next(
+        (
+            item for item in integrations
+            if item.get("enabled", True)
+            and str(item.get("preset") or "").lower() == "homeassistant"
+        ),
+        None,
+    )
+    base = {
+        "configured": bool(integration),
+        "source": "generic_integration_api_call",
+        "authority_unchanged": True,
+        "mutation_available": False,
+        "entities": 0,
+        "domains": {},
+        "sample_entities": [],
+    }
+    if not integration:
+        return {**base, "status": "unconfigured"}
+
+    health = await execute_api_call(integration["id"], "GET", "/api/")
+    if health.get("exit_code") != 0:
+        return {**base, "status": "degraded", "error_class": "health_check_failed"}
+
+    states = await execute_api_call(integration["id"], "GET", "/api/states")
+    payload = _integration_json(states)
+    if not isinstance(payload, list):
+        return {**base, "status": "degraded", "error_class": "state_projection_failed"}
+
+    domains = {}
+    sample = []
+    for entity in payload:
+        if not isinstance(entity, dict):
+            continue
+        entity_id = entity.get("entity_id")
+        if not isinstance(entity_id, str) or "." not in entity_id:
+            continue
+        domain = entity_id.split(".", 1)[0]
+        domains[domain] = domains.get(domain, 0) + 1
+        if len(sample) < 12:
+            sample.append(entity_id)
+    return {
+        **base,
+        "status": "healthy",
+        "entities": sum(domains.values()),
+        "domains": dict(sorted(domains.items())),
+        "sample_entities": sample,
+    }
 
 def setup_intelligence_routes(*, session_factory=SessionLocal):
     router=APIRouter(tags=["local-intelligence"])
@@ -191,6 +261,10 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
             except ValueError as exc: raise HTTPException(403,str(exc)) from exc
     @router.get("/api/network/map")
     async def network_map(request: Request): owner(request); return await asyncio.to_thread(map_projection)
+    @router.get("/api/home-assistant/overview")
+    async def home_assistant_overview(request: Request):
+        owner(request)
+        return await _home_assistant_overview()
     @router.post("/api/network/discovery/plan")
     async def discovery_plan(request: Request, payload: dict = Body(...)):
         value=owner(request)
