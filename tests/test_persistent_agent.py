@@ -62,6 +62,7 @@ def test_tier_two_monitor_creates_reviewable_run_proposal_without_execution(db_s
     agent.create_monitor("scotty", {"name":"Review overdue work", "condition_type":"commitment_overdue", "source_domain":"work", "consequence_tier":2})
     notes = agent.evaluate_monitors("scotty")
     assert notes[0]["response_policy"] == "create_work"
+    assert notes[0]["dedupe_key"].startswith("monitor:")
     assert notes[0]["proposal_run_id"]
     proposal = db_session.query(WorkRun).filter_by(owner="scotty", id=notes[0]["proposal_run_id"]).one()
     assert proposal.status == "queued" and proposal.intent["kind"] == "monitor_work_proposal"

@@ -641,6 +641,14 @@ events, preserving lifecycle, verification, and result state without creating a
 second executor. Cross-owner or nonexistent evidence Run references fail
 closed; diagnostic evidence history remains intact.
 
+### Mission/Watch lifecycle checkpoint
+
+Mission projections now derive `WAITING` from durable approval/input Runs and
+`EXPIRED` from an active mission deadline without rewriting canonical Goal
+status. Watch notification dedupe keys now include the durable trigger event,
+so cooldown permits distinct later notifications while the same event remains
+deduplicated. Response tiers remain bounded and do not grant authority.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
