@@ -394,3 +394,16 @@ findings, status, timing, and metadata with explicit tainted-content
 provenance. It does not infer Facts or Inferences from external text and does
 not create a second OSINT store. Relationship graph, corrections, and bounded
 delta research remain future work.
+
+### Household canonical projection slice
+
+The existing owner-scoped InventoryService now exposes read-only Household
+overview and append-only history projections over canonical items, lots,
+movements, recipes, and intake drafts. The overview includes stock quantities,
+reorder-point warnings, expiring lots, pending review drafts, recent activity,
+freshness, and explicit canonical-store metadata. The Household workspace uses
+the projection for its module header, summary metrics, needs-attention state,
+reviewable intake state, and activity list while item dossiers continue to use
+the existing owner-scoped item route. No Household database or duplicate stock
+ledger was introduced; owner isolation and explicit review boundaries remain
+unchanged.
