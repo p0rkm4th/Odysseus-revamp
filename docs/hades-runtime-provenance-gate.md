@@ -1,6 +1,6 @@
 # Hades Runtime Truth / Deployment Provenance Gate
 
-Status: IN_PROGRESS — candidate source/build verified; deployment/browser gate pending  
+Status: IN_PROGRESS — source-matched candidate deployed; browser/vector/owner gates pending  
 Audited source: `23abf48e22cd2af574544df3324533d8ae73c3e1`  
 Branch: `recovery/live-candidate-20260823`  
 Observed: 2026-08-24
@@ -15,12 +15,13 @@ or synthetic feature rows to live acceptance.
 | Checkout identity | `git rev-parse HEAD` = `23abf48e...` | E1 | VERIFIED |
 | Git integrity | `git fsck --full` reports no integrity errors; dangling objects remain | E1 | VERIFIED |
 | Test residue | empty ignored `tmp_pytest_probe/` directory; no files found | E1 | SAFE_RESIDUE |
-| Running image | `sha256:c09af676...` | E4 | SOURCE_MISMATCH |
-| Running backend | `/app/app.py` hash differs from checkout; `/api/version` only returns `1.0.2` | E4 | SOURCE_MISMATCH |
-| Runtime build identity | no source/build environment values in running container | E4 | BROKEN |
+| Running image | `sha256:871bc362...` (`odysseus:candidate-9f5926c4`) | E4 | SOURCE_MATCHED |
+| Running backend | `/app/app.py` hash `d32c9178...`; `/api/version` source commit matches `9f5926c4...` | E4/E5 | VERIFIED |
+| Runtime build identity | source/build/frontend/migration values present; Docker digest recorded outside container; API `image_id` remains `unknown` | E4 | VERIFIED_WITH_DIGEST_NOTE |
 | Broker | `/run/odysseus-privd.sock` exists inside `odysseus-odysseus-1`, mode `srw-rw----`, owned by `odysseus:odysseus`; app is PID 1 under that identity | E5 | VERIFIED |
 | Ollama | host bridge `172.18.0.1:11434` returns version `0.31.1` and lists `qwen3:8b`; loopback refusal is expected from container namespace | E5 | VERIFIED_BRIDGE |
-| Hades → Ollama | container probe to `host.docker.internal:11434/api/version` succeeds | E5 | VERIFIED |
+| Hades → Ollama | source-matched container probe to `host.docker.internal:11434/api/version` succeeds | E5 | VERIFIED |
+| ChromaDB | source-matched container heartbeat succeeds | E5 | VERIFIED_ENDPOINT |
 | Vector/memory | not yet re-probed against a source-matched candidate | E0 | PENDING |
 | Frontend architecture | intentionally unbundled static assets; canonical `npm run test:frontend` now runs Node syntax/static checks | E2 | VERIFIED_SOURCE |
 | Playwright | not yet reproduced in repo-scoped environment | E0 | PENDING |
@@ -42,8 +43,10 @@ or synthetic feature rows to live acceptance.
 
 ## Acceptance still required
 
-The running service must be recreated from the candidate built from the audited
-source, then `/api/version`, container labels, backend hashes, and frontend
-marker must agree. A candidate build alone is not deployment acceptance.
+The running service has been recreated from the candidate built from the
+audited source. `/api/version`, container labels, backend hash, and recorded
+container digest agree on source/build identity. The image digest is recorded
+outside the container because Docker does not inject it into image environment
+automatically.
 Broker negative tests, vector/memory health, browser acceptance, and the
 post-gate independent audit remain pending.
