@@ -235,3 +235,15 @@ def test_complete_action_persists_structured_result_record(db):
     assert completed["result"]["action_id"] == action["id"]
     assert completed["result"]["metadata_json"] == {"state": "active"}
     assert svc.get_run("alice", run["id"])["results"][0]["reference"] == "service://nginx/status"
+
+
+def test_add_result_rejects_cross_owner_or_cross_run_action_reference(db):
+    svc = WorkEngine(db)
+    alice_run = svc.create_run("alice", {"domain": "homelab"})
+    bob_run = svc.create_run("bob", {"domain": "homelab"})
+    other_alice_run = svc.create_run("alice", {"domain": "homelab"})
+    alice_action = svc.create_action("alice", alice_run["id"], {"capability_id": "homelab.manage", "action_id": "service_status"})
+    with pytest.raises(WorkError, match="owner-scoped run"):
+        svc.add_result("bob", bob_run["id"], {"action_id": alice_action["id"], "reference": "result://cross-owner"})
+    with pytest.raises(WorkError, match="owner-scoped run"):
+        svc.add_result("alice", other_alice_run["id"], {"action_id": alice_action["id"], "reference": "result://cross-run"})

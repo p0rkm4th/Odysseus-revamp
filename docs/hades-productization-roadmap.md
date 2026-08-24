@@ -71,6 +71,13 @@ Malformed or unsupported edges are skipped with structured reasons. CMDB
 identity remains authoritative; no IP-only merge or alternate graph store was
 introduced.
 
+### Action-result ownership checkpoint
+
+Structured WorkResults now require any supplied Action reference to resolve
+through the same authenticated owner and Run. Cross-owner and cross-Run
+references fail closed, preventing evidence/result provenance from being
+attached to unrelated execution history.
+
 The World Model workspace now exposes the authenticated Sync CMDB action
 alongside focus and relationship filters. The action calls the canonical
 projection endpoint and refreshes the same relationship view; it does not

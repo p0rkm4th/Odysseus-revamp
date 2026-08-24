@@ -679,7 +679,14 @@ class WorkEngine:
 
     def add_result(self, owner, run_id, data):
         run = self._one(WorkRun, owner, run_id, "run")
-        row = WorkResult(id=ident("result"), owner=owner, run_id=run.id, action_id=data.get("action_id"), result_type=str(data.get("result_type") or "reference")[:64], reference=str(data.get("reference") or "").strip()[:1000], domain_reference=data.get("domain_reference"), content_digest=data.get("content_digest"), metadata_json=data.get("metadata") or {}, provenance=data.get("provenance") or {})
+        action_id = data.get("action_id")
+        if action_id:
+            action = self.db.query(WorkAction).join(WorkRun, WorkRun.id == WorkAction.run_id).filter(
+                WorkAction.id == str(action_id), WorkRun.owner == owner,
+            ).one_or_none()
+            if action is None or action.run_id != run.id:
+                raise WorkError("result action is not part of this owner-scoped run")
+        row = WorkResult(id=ident("result"), owner=owner, run_id=run.id, action_id=action_id, result_type=str(data.get("result_type") or "reference")[:64], reference=str(data.get("reference") or "").strip()[:1000], domain_reference=data.get("domain_reference"), content_digest=data.get("content_digest"), metadata_json=data.get("metadata") or {}, provenance=data.get("provenance") or {})
         if not row.reference: raise WorkError("result reference is required")
         self.db.add(row); self.db.commit(); self.db.refresh(row); return serialize(row)
 
