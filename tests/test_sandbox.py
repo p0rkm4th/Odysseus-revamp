@@ -52,6 +52,18 @@ def test_sandbox_rejects_privileged_or_unadvertised_nodes_and_bad_policy(db):
         SandboxService(db).create("alice", {"run_id": run["id"], "node_key": "safe", "network_policy": {"mode": "public"}})
 
 
+def test_sandbox_requires_verified_healthy_execution_node(db):
+    run = WorkEngine(db).create_run("alice", {"domain": "developer"})
+    ExecutionNodeService(db).register("alice", {
+        "node_key": "unknown-node",
+        "health": "unknown",
+        "trust_class": "standard",
+        "capabilities": ["sandbox"],
+    })
+    with pytest.raises(WorkError, match="not healthy"):
+        SandboxService(db).create("alice", {"run_id": run["id"], "node_key": "unknown-node"})
+
+
 def test_sandbox_lifecycle_and_artifact_exports_fail_closed(db):
     run, svc = _sandbox(db)
     row = svc.create("alice", {"run_id": run["id"], "node_key": "safe-node"})

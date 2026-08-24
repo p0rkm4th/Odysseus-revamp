@@ -71,7 +71,7 @@ class SandboxService:
         node = self.db.query(ExecutionNode).filter_by(owner=owner, node_key=node_key).one_or_none()
         if node is None:
             raise WorkError("sandbox execution node not found")
-        if node.health not in {"unknown", "healthy"}:
+        if node.health != "healthy":
             raise WorkError("sandbox execution node is not healthy")
         if node.trust_class == "privileged":
             raise WorkError("privileged execution nodes cannot host sandboxes")
