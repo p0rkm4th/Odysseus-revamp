@@ -507,6 +507,17 @@ the existing bounded research path, while canonical facts/inferences still
 require the existing review and provenance boundaries. Live provider research
 and richer correction/delta workflows remain pending.
 
+### OSINT canonical claim ledger slice
+
+The OSINT dossier now projects owner-scoped, case-bound claims from the
+existing Work `EpistemicClaim` ledger using the subject reference
+`osint:case:<session_id>`. Claims retain class, source, confidence, evidence,
+status, and contradiction references, and a lineage endpoint is available for
+Evidence Explorer integration. An explicit owner action is required to record
+a claim; crawler report text and tainted findings are never auto-promoted.
+Case-specific delta research, richer correction controls, and live provider
+dogfood remain pending.
+
 ### Documents shell visibility slice
 
 The existing canonical Document module and Library modal are now reachable from

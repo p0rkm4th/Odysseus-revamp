@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Body, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from core.middleware import INTERNAL_TOOL_USER
@@ -18,6 +18,8 @@ from src.endpoint_resolver import resolve_endpoint
 from src.auth_helpers import _auth_disabled, get_current_user
 from src.owner_identity import REQUEST_SENTINEL_OWNERS
 from src.constants import DEEP_RESEARCH_DIR
+from core.database import SessionLocal
+from src.work_engine import WorkEngine, WorkError
 
 _SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9-]{1,128}$")
 
@@ -487,6 +489,65 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
         if data.get("owner") != user:
             raise HTTPException(404, "Research not found")
         return data
+
+    def _case_claim_subject(session_id: str) -> str:
+        return f"osint:case:{_validate_session_id(session_id)}"
+
+    def _case_claims(session_id: str, user: str, *, include_inactive: bool = True, limit: int = 200):
+        """Project the canonical Work epistemic ledger into one OSINT case.
+
+        OSINT report text and crawler findings are deliberately not promoted
+        here. Claims appear only when an owner or a governed workflow records
+        them through WorkEngine, preserving the existing canonical store.
+        """
+        _assert_owns_research(session_id, user)
+        with SessionLocal() as db:
+            return {
+                "subject_ref": _case_claim_subject(session_id),
+                "claims": WorkEngine(db).list_claims(
+                    user, subject_ref=_case_claim_subject(session_id),
+                    include_inactive=include_inactive, limit=limit,
+                ),
+            }
+
+    @router.get("/api/research/{session_id}/claims")
+    async def research_claims(session_id: str, request: Request, include_inactive: bool = True, limit: int = Query(200, ge=1, le=500)):
+        user = _require_user(request)
+        return await asyncio.to_thread(_case_claims, session_id, user, include_inactive=include_inactive, limit=limit)
+
+    @router.post("/api/research/{session_id}/claims", status_code=201)
+    async def record_research_claim(session_id: str, request: Request, payload: dict = Body(...)):
+        """Record an explicitly reviewed case claim in the canonical ledger."""
+        user = _require_user(request)
+        _assert_owns_research(session_id, user)
+        data = dict(payload or {})
+        data["subject_ref"] = _case_claim_subject(session_id)
+        data["source"] = str(data.get("source") or f"owner://osint-case/{session_id}")[:500]
+        if not isinstance(data.get("evidence_references", []), list):
+            raise HTTPException(400, "evidence_references must be a list")
+        try:
+            def operation():
+                with SessionLocal() as db:
+                    return WorkEngine(db).record_claim(user, data)
+            return await asyncio.to_thread(operation)
+        except WorkError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @router.get("/api/research/{session_id}/claims/{claim_id}/lineage")
+    async def research_claim_lineage(session_id: str, claim_id: str, request: Request):
+        user = _require_user(request)
+        _assert_owns_research(session_id, user)
+        try:
+            def operation():
+                with SessionLocal() as db:
+                    service = WorkEngine(db)
+                    lineage = service.claim_lineage(user, claim_id)
+                    if lineage["claim"].get("subject_ref") != _case_claim_subject(session_id):
+                        raise WorkError("claim not found")
+                    return lineage
+            return await asyncio.to_thread(operation)
+        except WorkError as exc:
+            raise HTTPException(404, str(exc)) from exc
 
     @router.post("/api/research/{session_id}/archive")
     async def research_archive(session_id: str, request: Request, archived: bool = Query(True)):
