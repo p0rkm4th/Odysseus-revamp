@@ -1039,7 +1039,9 @@ function initializeEventListeners() {
   }
 
   // Document library tool button
-  const toolDoclibBtn = el('tool-doclib-btn');
+  // The canonical sidebar ID is tool-library-btn; retain the older
+  // tool-doclib-btn alias for restored/custom shells.
+  const toolDoclibBtn = el('tool-library-btn') || el('tool-doclib-btn');
   if (toolDoclibBtn) {
     toolDoclibBtn.addEventListener('click', () => {
       if (_closeCompareIfActive()) return;
