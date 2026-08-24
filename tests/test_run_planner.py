@@ -29,6 +29,11 @@ def test_preview_is_structured_and_owner_scoped(db):
     assert preview["objective"] == {"goal": "discover private network"}
     assert preview["actions"][0]["known"] is True
     assert preview["actions"][0]["contract"]["approval"] == "exact"
+    assert preview["targets"] == ["network:private_scope"]
+    assert preview["target_entities"] == preview["targets"]
+    assert preview["effect_classes"] == ["admin_change"]
+    assert preview["capability_health"] == [{"capability_id": "homelab.manage", "status": "available", "actions": ["execute_network_discovery"]}]
+    assert preview["reversibility"][0]["irreversible"] is False
     with pytest.raises(Exception):
         RunPlanner(db).compile("bob", run["id"])
 
@@ -42,6 +47,7 @@ def test_validation_rejects_unknown_action_and_scope(db):
     result = RunPlanner(db).validate("alice", run["id"])
     assert result["valid"] is False
     assert {failure["code"] for failure in result["failures"]} >= {"scope_invalid", "unknown_action_spec", "approval_required"}
+    assert result["preview"]["capability_health"][-1]["status"] == "unavailable"
 
 
 def test_validation_surfaces_stale_precondition_without_mutating_run(db):
