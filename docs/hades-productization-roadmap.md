@@ -113,3 +113,19 @@ their STOP/replan behavior; they do not grant or change authority.
 Resource locking hardening now releases locks on terminal Run states and offers
 owner-scoped abandoned/expired lock recovery. Multi-resource requests already
 use sorted acquisition order; arbitrary lock deletion remains unavailable.
+
+## Verified execution continuation
+
+The first verified-execution slice is now implemented as an additive
+projection over Work: `src/run_planner.py` compiles owner-scoped structured
+Run previews from persisted plans/actions and the canonical ActionSpec
+registry. It exposes targets/resources, reads/writes, risk, approvals,
+verification, compensation metadata, and stale/unknown epistemic gaps without
+executing or mutating a Run. Deterministic validation rejects unknown action
+contracts, private-network scope violations, missing approval, missing
+high-risk verification, invalid compensation claims, and unresolved required
+state. `/api/work/runs/{id}/preview`, `/validate`, and `/replay` expose the
+projection to the existing Work UI, whose Run dossier now presents the preview
+and validation result. This is the preview/validation boundary; execution,
+targeted invalidation, compensation, and full lifecycle orchestration remain
+the next batches.
