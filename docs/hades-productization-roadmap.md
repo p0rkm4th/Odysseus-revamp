@@ -785,6 +785,12 @@ owner's delegated grants. It shows effects, approval modes, execution
 locations, grant bounds, and policy provenance without becoming a second policy
 or authorization engine.
 
+A distinct Integration Center workspace now projects the existing integration
+readiness API with connection state, capabilities, last-success metadata, and
+explicit secret-hidden messaging. Configuration remains in Setup Center or the
+canonical Settings integrations surface; the new view does not create a second
+integration store or mutate credentials.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
