@@ -109,8 +109,9 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
     async def hades_monitors(request: Request):
         value = owner(request)
         with session_factory() as db:
+            from src.persistent_agent import monitor_response_policy
             rows = db.query(Monitor).filter_by(owner=value).order_by(Monitor.updated_at.desc()).all()
-            return {"monitors": [{c.name: (getattr(row,c.name).isoformat() if hasattr(getattr(row,c.name), 'isoformat') else getattr(row,c.name)) for c in row.__table__.columns} for row in rows]}
+            return {"monitors": [{**{c.name: (getattr(row,c.name).isoformat() if hasattr(getattr(row,c.name), 'isoformat') else getattr(row,c.name)) for c in row.__table__.columns}, "response_policy": monitor_response_policy(row.consequence_tier), "authority_unchanged": True} for row in rows]}
     @router.post("/api/hades/monitors", status_code=201)
     async def hades_monitor_create(request: Request, payload: dict = Body(...)):
         value = owner(request)

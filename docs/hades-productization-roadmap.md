@@ -206,15 +206,20 @@ shadow plan review remain future work.
 
 Missions now reuse canonical WorkGoals marked with an explicit operating-mode
 constraint and project linked WorkRuns, success criteria, deadlines, lifecycle,
-and stable goal references. Control Center exposes Mission inspection. This is
+and stable goal references. The projection now also exposes mission budget,
+allowed capabilities, linked checkpoints, blockers, and an explicit
+authority-unchanged marker. Control Center exposes Mission inspection. This is
 not a second scheduler or task engine; Watch behavior remains owned by the
-existing bounded Monitor engine. Restart-persistent mission orchestration,
-watch response tiers, and live dedupe dogfood remain future work.
+existing bounded Monitor engine. Restart-persistent mission orchestration and
+live dedupe dogfood remain future work.
 
 The existing Watch/Monitor state is now also visible in Control Center with
 condition, source domain, enabled state, consequence tier, and last-trigger
-metadata. The surface is read-only; it does not grant authority or execute a
-response.
+metadata, plus a deterministic response-policy label (`observe`, `notify`,
+`create_work`, or `execute_pre_authorized_action`). The surface is read-only;
+it does not grant authority or execute a response. Current evaluation remains
+conservative and emits notifications only; higher response tiers require a
+future explicit policy/delegation integration.
 
 ### World Model blast-radius integration
 

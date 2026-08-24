@@ -15,11 +15,14 @@ def db():
 
 def test_mission_reuses_goal_and_projects_linked_runs(db):
     svc=MissionService(db)
-    mission=svc.create("alice", {"title":"Keep test service healthy", "desired_outcome":"Healthy endpoint", "success_criteria":{"checks":2}, "deadline":"2030-01-01T00:00:00"})
+    mission=svc.create("alice", {"title":"Keep test service healthy", "desired_outcome":"Healthy endpoint", "success_criteria":{"checks":2}, "constraints":{"budget":{"runs":2},"allowed_capabilities":["homelab.manage"]}, "deadline":"2030-01-01T00:00:00"})
     run=WorkEngine(db).create_run("alice", {"goal_id":mission["id"], "domain":"homelab"})
     current=svc.get("alice", mission["id"])
     assert current["lifecycle"] == "DRAFT" and current["objective"] == "Healthy endpoint"
     assert current["runs"][0]["id"] == run["id"] and current["canonical_ref"] == f"goal://{mission['id']}"
+    assert current["mission_projection"]["budget"] == {"runs": 2}
+    assert current["mission_projection"]["allowed_capabilities"] == ["homelab.manage"]
+    assert current["mission_projection"]["authority_unchanged"] is True
     assert svc.list("bob") == []
 
 

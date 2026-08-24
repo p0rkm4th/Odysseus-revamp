@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from core.database import Base
 from datetime import datetime, timedelta
 from core.work_models import WorkCommitment
-from src.persistent_agent import PersistentAgent
+from src.persistent_agent import PersistentAgent, monitor_response_policy
 
 
 @pytest.fixture()
@@ -49,6 +49,10 @@ def test_monitor_notification_deduplication_and_tier_guard(db_session):
     notes = agent.evaluate_monitors("scotty")
     assert notes == []
     assert monitor["consequence_tier"] == 1
+
+
+def test_monitor_response_policy_is_bounded_and_authority_preserving():
+    assert [monitor_response_policy(tier) for tier in range(4)] == ["observe", "notify", "create_work", "execute_pre_authorized_action"]
 
 
 def test_overdue_commitment_notification_preserves_entity_reference_and_attention(db_session):
