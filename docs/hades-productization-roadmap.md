@@ -279,6 +279,10 @@ claim class, subject/predicate, source, confidence, status, valid-time, and
 counts of supporting evidence and contradictions. It does not merge claims,
 resolve contradictions, expose private reasoning, or create a second evidence
 store; existing WorkEngine claim and contradiction methods remain canonical.
+Selecting a claim opens an owner-scoped Evidence Explorer lineage view showing
+the claim, opaque evidence references, linked contradictions, derived claims,
+and resolution status. Expanded epistemic classes remain additive to the
+existing taxonomy and do not rewrite historical records.
 
 ### Incident/Change dossier slice
 
