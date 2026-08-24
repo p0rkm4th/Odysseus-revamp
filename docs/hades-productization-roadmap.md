@@ -66,3 +66,16 @@ window work; new tables are not justified until a focused gap is demonstrated.
 - Added a Hades workspace Attention Queue section.
 - Added a deterministic Work Life Review projection for focus goals, due-soon
   and overdue commitments, due tasks, blocked tasks, and waiting runs.
+- Extended the canonical Work Engine additively with durable Run intent/plan/
+  assumption/cost/checkpoint/verification fields, explicit lifecycle phases,
+  non-mutating Action contract previews, and persisted Action target/lock/risk/
+  retry/rollback/postcondition/verification metadata. Existing owner isolation,
+  approval sealing, and legacy statuses remain compatible.
+
+## Phase 12+ control-plane sequence
+
+The existing Work Engine remains canonical; no second Run/task engine is being
+introduced. Next bounded batches are resource-lock enforcement, epistemic and
+temporal evidence, event reconstruction/compensation, evaluation and
+OpenTelemetry traces, empirical routing/budgets, then incidents/changes and
+the eventual control-center projection.

@@ -1,4 +1,5 @@
 """Versioned migration for the domain-neutral Work Engine."""
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Connection
 from core.schema_migrations import SchemaMigration, migration_checksum, register_schema_migration
 from core.work_models import WORK_TABLES
@@ -16,3 +17,40 @@ def apply_work_v1(connection: Connection) -> None:
         table.create(bind=connection, checkfirst=True)
 
 register_schema_migration(SchemaMigration(WORK_V1_VERSION, WORK_V1_CHECKSUM, apply_work_v1))
+
+WORK_V2_VERSION = "20260824_001_work_run_action_contract_v2"
+WORK_V2_DEFINITION = """work-engine-v2
+durable-run-lifecycle-intent-plan-assumptions-costs-checkpoints-verification
+action-contract-targets-preconditions-locks-retry-rollback-postconditions
+backward-compatible-additive-columns
+"""
+WORK_V2_CHECKSUM = migration_checksum(WORK_V2_DEFINITION)
+
+def apply_work_v2(connection: Connection) -> None:
+    """Add contract/lifecycle columns to existing Work tables.
+
+    The columns are intentionally additive and nullable for upgraded databases;
+    ORM defaults supply the canonical shape for newly-created records.
+    """
+    additions = {
+        "work_runs": {
+            "lifecycle_state": "VARCHAR(32)", "intent": "JSON", "plan": "JSON",
+            "assumptions": "JSON", "costs": "JSON", "checkpoints": "JSON",
+            "verification": "JSON",
+        },
+        "work_actions": {
+            "target_resources": "JSON", "preconditions": "JSON", "locks": "JSON",
+            "risk_level": "VARCHAR(32)", "idempotency_key": "VARCHAR(300)",
+            "retry_policy": "JSON", "timeout_seconds": "INTEGER",
+            "rollback_capability": "VARCHAR(300)", "compensating_action": "JSON",
+            "postconditions": "JSON", "verification": "JSON",
+        },
+    }
+    inspector = inspect(connection)
+    for table_name, columns in additions.items():
+        existing = {column["name"] for column in inspector.get_columns(table_name)}
+        for column_name, column_type in columns.items():
+            if column_name not in existing:
+                connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"))
+
+register_schema_migration(SchemaMigration(WORK_V2_VERSION, WORK_V2_CHECKSUM, apply_work_v2))

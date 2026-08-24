@@ -32,6 +32,11 @@ ALLOWED_SCHEMES = ("http", "https")
 # mode to ``is_global``'s broader definition, which has shifted across CPython
 # versions for other special ranges.
 _SHARED_ADDRESS_SPACE_V4 = ipaddress.ip_network("100.64.0.0/10")
+# DNS64/NAT64 networks synthesize IPv6 answers from public IPv4 destinations.
+# Python classifies the well-known 64:ff9b::/96 prefix as reserved even though
+# the embedded IPv4 destination may be globally routable. Normalize only this
+# exact standards-defined prefix, then apply the ordinary IPv4 checks.
+_NAT64_WELL_KNOWN_PREFIX = ipaddress.ip_network("64:ff9b::/96")
 
 
 def _default_resolver(host: str) -> List[str]:
@@ -44,6 +49,8 @@ def _classify(ip: ipaddress._BaseAddress, *, block_private: bool) -> Optional[st
     # IPv4-mapped IPv6 (e.g. ::ffff:169.254.169.254) — judge the embedded v4.
     if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
         ip = ip.ipv4_mapped
+    elif isinstance(ip, ipaddress.IPv6Address) and ip in _NAT64_WELL_KNOWN_PREFIX:
+        ip = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
     if ip.is_link_local:
         return f"link-local address blocked (SSRF metadata risk): {ip}"
     if ip.is_multicast or ip.is_reserved or ip.is_unspecified:

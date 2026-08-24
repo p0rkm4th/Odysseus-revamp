@@ -12,6 +12,8 @@ PROJECT_STATUSES = {"planned", "active", "blocked", "paused", "completed", "canc
 TASK_STATUSES = {"pending", "ready", "running", "awaiting_approval", "awaiting_input", "blocked", "completed", "failed", "cancelled"}
 RUN_STATUSES = {"queued", "running", "awaiting_approval", "awaiting_input", "suspended", "completed", "failed", "cancelled"}
 ACTION_STATUSES = {"proposed", "awaiting_approval", "approved", "executing", "completed", "failed", "rejected", "cancelled", "expired"}
+RUN_LIFECYCLE_STATES = {"created", "planning", "ready", "executing", "verifying", "succeeded", "waiting_approval", "waiting_input", "paused", "failed", "cancelled", "compensating"}
+_STATUS_TO_LIFECYCLE = {"queued": "ready", "running": "executing", "awaiting_approval": "waiting_approval", "awaiting_input": "waiting_input", "suspended": "paused", "completed": "succeeded", "failed": "failed", "cancelled": "cancelled"}
 
 class WorkError(ValueError): pass
 
@@ -91,7 +93,8 @@ class WorkEngine:
     def create_run(self, owner, data):
         for model, key, label in ((WorkGoal, "goal_id", "goal"), (WorkProject, "project_id", "project"), (WorkTask, "task_id", "task")):
             if data.get(key): self._one(model, owner, data[key], label)
-        row = WorkRun(id=ident("run"), owner=owner, goal_id=data.get("goal_id"), project_id=data.get("project_id"), task_id=data.get("task_id"), session_id=data.get("session_id"), domain=str(data.get("domain") or "general")[:64], requested_by=str(data.get("requested_by") or owner)[:200], model_endpoint=data.get("model_endpoint"), model_name=data.get("model_name"), continuation_state=data.get("continuation_state") or {})
+        row = WorkRun(id=ident("run"), owner=owner, goal_id=data.get("goal_id"), project_id=data.get("project_id"), task_id=data.get("task_id"), session_id=data.get("session_id"), domain=str(data.get("domain") or "general")[:64], requested_by=str(data.get("requested_by") or owner)[:200], model_endpoint=data.get("model_endpoint"), model_name=data.get("model_name"), lifecycle_state=str(data.get("lifecycle_state") or "created"), intent=data.get("intent") or {}, plan=data.get("plan") or [], assumptions=data.get("assumptions") or [], costs=data.get("costs") or {}, checkpoints=data.get("checkpoints") or [], verification=data.get("verification") or {}, continuation_state=data.get("continuation_state") or {})
+        if row.lifecycle_state not in RUN_LIFECYCLE_STATES: raise WorkError("invalid run lifecycle state")
         self.db.add(row); self.event(owner, "run.started", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload={"domain": row.domain}); self.db.commit(); self.db.refresh(row); return serialize(row)
 
     def create_action(self, owner, run_id, data):
@@ -99,13 +102,35 @@ class WorkEngine:
         sequence = int(data.get("sequence") or (self.db.query(WorkAction).filter_by(run_id=run.id).count() + 1))
         digest = data.get("sealed_input_digest")
         if not digest and data.get("normalized_input") is not None: digest = sha256(str(data["normalized_input"]).encode()).hexdigest()
-        row = WorkAction(id=ident("action"), run_id=run.id, sequence=sequence, capability_id=str(data.get("capability_id") or "").strip(), action_id=str(data.get("action_id") or "").strip(), tool_binding_name=data.get("tool_binding_name"), effect_class=str(data.get("effect_class") or "internal"), sealed_input_digest=digest, normalized_input=data.get("normalized_input") or {}, status=str(data.get("status") or "proposed"), approval_reference=data.get("approval_reference"))
+        row = WorkAction(id=ident("action"), run_id=run.id, sequence=sequence, capability_id=str(data.get("capability_id") or "").strip(), action_id=str(data.get("action_id") or "").strip(), tool_binding_name=data.get("tool_binding_name"), effect_class=str(data.get("effect_class") or "internal"), sealed_input_digest=digest, normalized_input=data.get("normalized_input") or {}, target_resources=data.get("target_resources") or [], preconditions=data.get("preconditions") or [], locks=data.get("locks") or [], risk_level=str(data.get("risk_level") or "low")[:32], idempotency_key=data.get("idempotency_key"), retry_policy=data.get("retry_policy") or {}, timeout_seconds=data.get("timeout_seconds"), rollback_capability=data.get("rollback_capability"), compensating_action=data.get("compensating_action"), postconditions=data.get("postconditions") or [], verification=data.get("verification") or [], status=str(data.get("status") or "proposed"), approval_reference=data.get("approval_reference"))
         if not row.capability_id or not row.action_id: raise WorkError("capability_id and action_id are required")
         if row.status not in ACTION_STATUSES: raise WorkError("invalid action status")
         self.db.add(row)
         if row.status == "awaiting_approval":
             run.status = "awaiting_approval"; run.current_step = f"approval required: {row.action_id}"; run.revision += 1
         self.event(owner, "approval.requested" if row.status == "awaiting_approval" else "action.proposed", run_id=run.id, action_id=row.id, payload={"capability_id": row.capability_id, "action_id": row.action_id}); self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    def preview_action(self, owner, run_id, data):
+        """Compile an action contract without persisting or executing it."""
+        self._one(WorkRun, owner, run_id, "run")
+        required = ("capability_id", "action_id")
+        if any(not str(data.get(key) or "").strip() for key in required):
+            raise WorkError("capability_id and action_id are required")
+        return {
+            "run_id": run_id,
+            "capability_id": str(data["capability_id"]).strip(),
+            "action_id": str(data["action_id"]).strip(),
+            "target_resources": list(data.get("target_resources") or []),
+            "preconditions": list(data.get("preconditions") or []),
+            "locks": list(data.get("locks") or []),
+            "risk_level": str(data.get("risk_level") or "low"),
+            "approval_required": bool(data.get("approval_required", False)),
+            "expected_cost": data.get("expected_cost") or {},
+            "rollback_capability": str(data.get("rollback_capability") or "none"),
+            "postconditions": list(data.get("postconditions") or []),
+            "verification": list(data.get("verification") or []),
+            "execution": "preview_only",
+        }
 
     def bind_approval(self, owner, action_id, approval_reference, *, digest=None):
         row = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
@@ -144,8 +169,27 @@ class WorkEngine:
         if data and "model_name" in data: row.model_name = str(data["model_name"] or "")[:200] or None
         if data and "model_endpoint" in data: row.model_endpoint = str(data["model_endpoint"] or "")[:500] or None
         if data and "session_id" in data: row.session_id = str(data["session_id"] or "")[:200] or None
-        row.status = status; row.current_step = (data or {}).get("current_step", row.current_step); row.error_summary = (data or {}).get("error_summary", row.error_summary); row.result_summary = (data or {}).get("result_summary", row.result_summary); row.continuation_state = (data or {}).get("continuation_state", row.continuation_state); row.ended_at = now() if status in {"completed", "failed", "cancelled"} else None; row.revision += 1
+        row.status = status; row.lifecycle_state = (data or {}).get("lifecycle_state", _STATUS_TO_LIFECYCLE.get(status, row.lifecycle_state or "created")); row.current_step = (data or {}).get("current_step", row.current_step); row.error_summary = (data or {}).get("error_summary", row.error_summary); row.result_summary = (data or {}).get("result_summary", row.result_summary); row.continuation_state = (data or {}).get("continuation_state", row.continuation_state); row.verification = (data or {}).get("verification", row.verification); row.ended_at = now() if status in {"completed", "failed", "cancelled"} else None; row.revision += 1
+        if row.lifecycle_state not in RUN_LIFECYCLE_STATES: raise WorkError("invalid run lifecycle state")
         self.event(owner, f"run.{status}", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload={"current_step": row.current_step}); self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    def transition_run(self, owner, run_id, lifecycle_state, data=None):
+        """Advance the durable lifecycle while retaining legacy status values."""
+        if lifecycle_state not in RUN_LIFECYCLE_STATES:
+            raise WorkError("invalid run lifecycle state")
+        row = self._one(WorkRun, owner, run_id, "run")
+        payload = data or {}
+        row.lifecycle_state = lifecycle_state
+        if "plan" in payload: row.plan = payload["plan"]
+        if "assumptions" in payload: row.assumptions = payload["assumptions"]
+        if "checkpoints" in payload: row.checkpoints = payload["checkpoints"]
+        if "costs" in payload: row.costs = payload["costs"]
+        if "verification" in payload: row.verification = payload["verification"]
+        if "current_step" in payload: row.current_step = str(payload["current_step"] or "")[:300] or None
+        row.revision += 1
+        self.event(owner, f"Run{''.join(part.title() for part in lifecycle_state.split('_'))}", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload={"lifecycle_state": lifecycle_state, "current_step": row.current_step})
+        self.db.commit(); self.db.refresh(row)
+        return serialize(row)
 
     def create_commitment(self, owner, data):
         row = WorkCommitment(id=ident("commitment"), owner=owner, goal_id=data.get("goal_id"), project_id=data.get("project_id"), task_id=data.get("task_id"), run_id=data.get("run_id"), text=str(data.get("text") or "").strip()[:20000], due_at=parse_dt(data.get("due_at")), source=str(data.get("source") or "operator")[:64])

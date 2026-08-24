@@ -46,6 +46,11 @@ def test_network_discovery_is_host_brokered_and_private_scope_bound():
     assert action.execution_location == "host_broker"
     assert action.target_scope == "private_network"
     assert action.requires_direct_container_access is False
+    assert action.target_resources == ("network:private_scope",)
+    assert action.locks == ("network:private_scope",)
+    assert action.risk_level == "high"
+    assert action.idempotency == "replay_safe"
+    assert action.verification == ("observations_persisted", "network_map_reconciled")
 
 
 def test_security_classifier_projects_status_and_install_effects():
