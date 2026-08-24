@@ -26,3 +26,6 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "Run Inspector" in module
     assert "/api/work/competence" in module
     assert "Competence" in module
+    assert "'incidents'" in module and "'changes'" in module
+    assert "controlEntityDossier" in module
+    assert "Hypotheses" in module and "Preview" in module
