@@ -1022,6 +1022,13 @@ def _normalize_homelab_intent(intent, query: str):
     return intent
 
 
+def _network_prerequisite_request(text: str) -> bool:
+    return bool(re.search(
+        r"\b(?:install|setup|set up|prepare|need)\b.{0,100}\b(?:tools?|utilities|packages?)\b.{0,100}\b(?:network|nmap|scan|discovery)\b",
+        str(text or "").lower(),
+    ))
+
+
 def _hard_turn_capability_directive(route_tools, disabled_tools, intent_domains) -> str:
     domains = set(intent_domains or set())
     # _ODY_V37_ASSET_CAPABILITY_ASSERTION
@@ -2731,8 +2738,19 @@ def _looks_like_success_claim(text: str) -> bool:
 
 def ground_action_completion(text: str, *, intent_domains, tool_events) -> str:
     """Allow completion language only when an actual tool event exists."""
+    successful_result = any(
+        isinstance(event, dict)
+        and (
+            event.get("verified") is True
+            or event.get("success") is True
+            or event.get("exit_code") == 0
+        )
+        and not event.get("ask_user")
+        and "waiting for" not in str(event.get("output") or "").lower()
+        for event in (tool_events or [])
+    )
     if (
-        not tool_events
+        not successful_result
         and _intent_requires_action(intent_domains)
         and _looks_like_success_claim(text)
     ):
@@ -4899,6 +4917,17 @@ async def stream_agent_loop(
             )
 
     _intent_domains = set(_intent.get("domains") or set())
+    # Capability-first prerequisite requests must not expose generic Bash as a
+    # competing action surface. The model selects network discovery; Hades
+    # resolves nmap/iproute2 and routes installation through the broker.
+    if _network_prerequisite_request(_last_user) and _relevant_tools is not None:
+        _relevant_tools.discard("bash")
+        _relevant_tools.discard("run_shell")
+        _relevant_tools.update({"manage_homelab", "privileged_action"})
+        logger.info(
+            "[agent-intent] capability-first network prerequisite clamp tools=%s",
+            sorted(_relevant_tools),
+        )
     _base_relevant_tools = None if _relevant_tools is None else set(_relevant_tools)
     _runtime_skill_tools: Set[str] = set()
 

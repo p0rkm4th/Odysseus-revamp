@@ -92,10 +92,14 @@ def test_network_install_intent_selects_homelab_capability_and_environment():
 
 
 def test_false_completion_is_replaced_without_action_result():
-    from src.agent_loop import ground_action_completion
+    from src.agent_loop import ground_action_completion, _network_prerequisite_request
+    assert _network_prerequisite_request("install the tools necessary for a deep dive network scan")
     response = ground_action_completion(
         "Installed iproute2 and nmap successfully.",
-        intent_domains={"homelab"}, tool_events=[],
+        intent_domains={"homelab"}, tool_events=[
+            {"tool": "bash", "output": "Waiting for an exact user approval.",
+             "ask_user": {"kind": "tool_approval"}}
+        ],
     )
     assert response.startswith("No action completed:")
     assert "installed" not in response.lower().split("i have not", 1)[0]
