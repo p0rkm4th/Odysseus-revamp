@@ -756,6 +756,14 @@ legacy compatibility navigation. This closes the concrete missing-icon slice
 without creating a second navigation implementation. Synthetic theme/browser
 coverage is distinct from owner-authenticated live acceptance.
 
+### Canonical ActionResult checkpoint
+
+The existing WorkEngine completion path now persists an optional structured
+Action result as a durable WorkResult tied to the owner-scoped Run and
+RunAction. References, metadata, provenance, and content digests remain
+structured and inspectable; action completion still does not imply desired
+state verification. No second executor or result store was introduced.
+
 ### OSINT epistemic projection checkpoint
 
 OSINT case claim reads continue to use the existing owner-scoped Work
