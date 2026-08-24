@@ -511,6 +511,59 @@ class WorkEngine:
         self.event(owner, "claim.superseded", run_id=row.run_id, payload={"claim_id": row.id, "replacement_id": replacement_id})
         self.db.commit(); self.db.refresh(row); return serialize(row)
 
+    def review_claim(self, owner, claim_id, *, decision, note="", replacement_claim_id=None):
+        """Persist an explicit owner review without deleting epistemic history.
+
+        This is intentionally a small canonical review primitive used by
+        domain projections such as OSINT.  It never turns tainted report text
+        into a claim and it cannot alter another owner's claim.  A correction
+        is recorded in provenance/history; supersession or retraction changes
+        only the current projection status while the original evidence stays
+        queryable with ``include_inactive``.
+        """
+        decision = str(decision or "").strip().lower()
+        allowed = {"confirmed", "stale", "retracted", "superseded", "unresolved"}
+        if decision not in allowed:
+            raise WorkError("invalid claim review decision")
+        row = self._one(EpistemicClaim, owner, claim_id, "claim")
+        replacement = None
+        if replacement_claim_id:
+            replacement = self._one(EpistemicClaim, owner, str(replacement_claim_id), "replacement claim")
+            if replacement.id == row.id or replacement.subject_ref != row.subject_ref:
+                raise WorkError("replacement claim must be a different claim in the same scope")
+        if decision == "superseded" and replacement is None:
+            raise WorkError("superseded review requires a replacement claim")
+        if decision == "superseded":
+            row.status = "superseded"
+        elif decision == "retracted":
+            row.status = "retracted"
+        elif row.status in {"superseded", "retracted"} and decision in {"confirmed", "unresolved"}:
+            row.status = "active"
+        provenance = dict(row.provenance or {})
+        history = list(provenance.get("review_history") or [])
+        entry = {
+            "decision": decision,
+            "actor_class": "USER_CONFIRMATION" if decision == "confirmed" else "USER_CORRECTION",
+            "recorded_at": now().isoformat(),
+            "note": str(note or "")[:1000],
+        }
+        if replacement is not None:
+            entry["replacement_claim_id"] = replacement.id
+        history.append(entry)
+        provenance["review_history"] = history[-25:]
+        provenance["resolution_status"] = {"confirmed": "OWNER_CONFIRMED", "stale": "STALE", "retracted": "OWNER_CORRECTED", "superseded": "SUPERSEDED", "unresolved": "UNRESOLVED"}[decision]
+        if decision == "stale":
+            provenance["state"] = "stale"
+        elif decision == "confirmed":
+            provenance["state"] = "confirmed"
+        elif decision in {"retracted", "superseded"}:
+            provenance["state"] = "superseded" if decision == "superseded" else "retracted"
+        row.provenance = provenance
+        row.updated_at = now()
+        self.event(owner, "claim.reviewed", run_id=row.run_id, payload={"claim_id": row.id, "decision": decision, "replacement_claim_id": replacement.id if replacement else None})
+        self.db.commit(); self.db.refresh(row)
+        return serialize(row)
+
     def epistemic_context(self, owner, *, subject_ref=None, at=None, limit=100):
         moment = parse_dt(at) if at else now()
         claims = self.list_claims(owner, subject_ref=subject_ref, include_inactive=False, limit=limit)

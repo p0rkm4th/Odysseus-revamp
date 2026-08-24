@@ -559,9 +559,11 @@ The existing Work epistemic ledger is now projected into OSINT cases through
 owner- and case-scoped `osint:case:<session_id>` references. Reviewed claims
 retain provenance, evidence, confidence, time, status, and contradiction
 links. A case-scoped contradiction endpoint rejects claims from another case
-or owner, while preserving competing history. Report prose and tainted
-research findings are not auto-promoted. Full correction UI, open questions,
-delta research, and owner-live provider dogfood remain future work.
+or owner, while preserving competing history. The owner can now explicitly
+confirm, mark stale, retract, or supersede a claim through a canonical review
+endpoint; prior evidence remains available through inactive-claim inspection.
+Report prose and tainted research findings are not auto-promoted. Open
+questions, delta research, and owner-live provider dogfood remain future work.
 
 ### Theme-aware icon and semantic token checkpoint
 
