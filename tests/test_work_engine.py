@@ -74,6 +74,19 @@ def test_action_contract_fields_persist_with_owner_scoped_run(db):
     assert action["locks"] == ["network:private_scope"]
     assert WorkEngine(db).get_run("alice", run["id"])["actions"][0]["idempotency_key"] == "scan-1"
 
+
+def test_retry_requires_replay_safe_contract_and_does_not_copy_approval(db):
+    svc = WorkEngine(db)
+    unsafe_run = svc.create_run("alice", {"domain": "homelab"})
+    unsafe = svc.create_action("alice", unsafe_run["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "status": "failed"})
+    with pytest.raises(WorkError, match="not safely retryable"):
+        svc.retry_action("alice", unsafe["id"])
+    run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "execute_network_discovery", "status": "failed", "approval_reference": "old-approval", "locks": ["network:private_scope"], "retry_policy": {"max_attempts": 2}})
+    retry = svc.retry_action("alice", action["id"])
+    assert retry["retry_of_action_id"] == action["id"] and retry["approval_reference"] is None
+    assert retry["status"] == "proposed"
+
 def test_resource_locks_prevent_collisions_and_release_on_completion(db):
     svc = WorkEngine(db)
     first_run = svc.create_run("alice", {"domain": "homelab"})

@@ -106,13 +106,50 @@ class WorkEngine:
         sequence = int(data.get("sequence") or (self.db.query(WorkAction).filter_by(run_id=run.id).count() + 1))
         digest = data.get("sealed_input_digest")
         if not digest and data.get("normalized_input") is not None: digest = sha256(str(data["normalized_input"]).encode()).hexdigest()
-        row = WorkAction(id=ident("action"), run_id=run.id, sequence=sequence, capability_id=str(data.get("capability_id") or "").strip(), action_id=str(data.get("action_id") or "").strip(), tool_binding_name=data.get("tool_binding_name"), effect_class=str(data.get("effect_class") or "internal"), sealed_input_digest=digest, normalized_input=data.get("normalized_input") or {}, target_resources=data.get("target_resources") or [], preconditions=data.get("preconditions") or [], locks=data.get("locks") or [], risk_level=str(data.get("risk_level") or "low")[:32], idempotency_key=data.get("idempotency_key"), retry_policy=data.get("retry_policy") or {}, timeout_seconds=data.get("timeout_seconds"), rollback_capability=data.get("rollback_capability"), compensating_action=data.get("compensating_action"), postconditions=data.get("postconditions") or [], verification=data.get("verification") or [], status=str(data.get("status") or "proposed"), approval_reference=data.get("approval_reference"))
+        row = WorkAction(id=ident("action"), run_id=run.id, sequence=sequence, capability_id=str(data.get("capability_id") or "").strip(), action_id=str(data.get("action_id") or "").strip(), tool_binding_name=data.get("tool_binding_name"), effect_class=str(data.get("effect_class") or "internal"), sealed_input_digest=digest, normalized_input=data.get("normalized_input") or {}, target_resources=data.get("target_resources") or [], preconditions=data.get("preconditions") or [], locks=data.get("locks") or [], risk_level=str(data.get("risk_level") or "low")[:32], idempotency_key=data.get("idempotency_key"), retry_policy=data.get("retry_policy") or {}, timeout_seconds=data.get("timeout_seconds"), rollback_capability=data.get("rollback_capability"), compensating_action=data.get("compensating_action"), postconditions=data.get("postconditions") or [], verification=data.get("verification") or [], status=str(data.get("status") or "proposed"), approval_reference=data.get("approval_reference"), replay_of_action_id=data.get("replay_of_action_id"))
         if not row.capability_id or not row.action_id: raise WorkError("capability_id and action_id are required")
         if row.status not in ACTION_STATUSES: raise WorkError("invalid action status")
         self.db.add(row)
         if row.status == "awaiting_approval":
             run.status = "awaiting_approval"; run.current_step = f"approval required: {row.action_id}"; run.revision += 1
         self.event(owner, "approval.requested" if row.status == "awaiting_approval" else "action.proposed", run_id=run.id, action_id=row.id, payload={"capability_id": row.capability_id, "action_id": row.action_id}); self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    def retry_action(self, owner, action_id, *, reason="operator requested retry"):
+        """Create a new bounded Action only for an explicitly replay-safe contract.
+
+        The failed/ambiguous Action remains immutable. Approval references are
+        deliberately not copied, so an exact approval cannot be replayed onto
+        a new attempt.
+        """
+        row = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if row is None: raise WorkError("action not found")
+        if row.status not in {"failed", "expired"}:
+            raise WorkError("only failed or expired actions can be retried")
+        from src.capability_registry import capability_for_id
+        capability = capability_for_id(row.capability_id)
+        spec = capability.actions.get(row.action_id) if capability else None
+        if spec is None or spec.idempotency not in {"replay_safe", "idempotent"}:
+            raise WorkError("action is not safely retryable; verify before retry")
+        policy = dict(row.retry_policy or {})
+        max_attempts = max(1, min(int(policy.get("max_attempts", 1)), 10))
+        attempts = self.db.query(WorkAction).filter(WorkAction.run_id == row.run_id, WorkAction.action_id == row.action_id).count()
+        if attempts >= max_attempts:
+            raise WorkError("retry limit exceeded")
+        retry = self.create_action(owner, row.run_id, {
+            "sequence": self.db.query(WorkAction).filter_by(run_id=row.run_id).count() + 1,
+            "capability_id": row.capability_id, "action_id": row.action_id,
+            "tool_binding_name": row.tool_binding_name, "effect_class": row.effect_class,
+            "normalized_input": row.normalized_input, "target_resources": row.target_resources,
+            "preconditions": row.preconditions, "locks": row.locks, "risk_level": row.risk_level,
+            "idempotency_key": row.idempotency_key, "retry_policy": policy,
+            "timeout_seconds": row.timeout_seconds, "rollback_capability": row.rollback_capability,
+            "compensating_action": row.compensating_action, "postconditions": row.postconditions,
+            "verification": row.verification, "replay_of_action_id": row.id,
+        })
+        self.event(owner, "action.retry_requested", run_id=row.run_id, action_id=retry["id"], payload={"replay_of_action_id": row.id, "reason": str(reason or "")[:500]})
+        self.db.commit()
+        retry_row = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == retry["id"], WorkRun.owner == owner).one()
+        return serialize(retry_row) | {"retry_of_action_id": row.id, "authority_unchanged": True}
 
     def preview_action(self, owner, run_id, data):
         """Compile an action contract without persisting or executing it."""

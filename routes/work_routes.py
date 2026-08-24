@@ -4,7 +4,7 @@ import asyncio
 from typing import Any
 from fastapi import APIRouter, Body, HTTPException, Query, Request
 from core.database import SessionLocal
-from core.work_models import WorkCommitment, WorkEvent, WorkGoal, WorkProject, WorkRun, WorkTask
+from core.work_models import WorkAction, WorkCommitment, WorkEvent, WorkGoal, WorkProject, WorkRun, WorkTask
 from src.auth_helpers import require_user
 from src.owner_identity import effective_storage_owner
 from src.work_engine import WorkEngine, WorkError, serialize
@@ -226,6 +226,15 @@ def setup_work_routes(*, session_factory=SessionLocal):
     async def update_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.set_run_status(o,run_id,str(payload.get("status") or ""),payload))
     @router.post("/runs/{run_id}/actions", status_code=201)
     async def create_action(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.create_action(o,run_id,payload))
+    @router.post("/runs/{run_id}/actions/{action_id}/retry")
+    async def retry_action(request: Request, run_id: str, action_id: str, payload: dict[str, Any] = Body(default={} )):
+        def operation(svc, o, u):
+            action = svc.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == o).one_or_none()
+            if action is None: raise WorkError("action not found")
+            action = serialize(action)
+            if action["run_id"] != run_id: raise WorkError("action not found")
+            return svc.retry_action(o, action_id, reason=str((payload or {}).get("reason") or "operator requested retry"))
+        return await tx(request, operation)
     @router.post("/actions/{action_id}/complete")
     async def complete_action(request: Request, action_id: str, payload: dict[str, Any] = Body(default={})): return await tx(request, lambda svc,o,u: svc.complete_action(o,action_id,payload))
     @router.post("/actions/{action_id}/approval")
