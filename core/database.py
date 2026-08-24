@@ -2079,6 +2079,8 @@ from core import persistent_agent_models as persistent_agent_models  # noqa: E40
 from core import persistent_agent_migrations as persistent_agent_migrations  # noqa: E402,F401
 from core import incident_models as incident_models  # noqa: E402,F401
 from core import incident_migrations as incident_migrations  # noqa: E402,F401
+from core import model_competence_models as model_competence_models  # noqa: E402,F401
+from core import model_competence_migrations as model_competence_migrations  # noqa: E402,F401
 from core.schema_migrations import run_schema_migrations  # noqa: E402
 
 
