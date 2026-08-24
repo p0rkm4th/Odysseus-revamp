@@ -29,6 +29,8 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "/api/work/runs/" in module
     assert "/preview" in module and "/validate" in module and "/traces" in module
     assert "Run Inspector" in module
+    assert "preview.prechecks" in module
+    assert "<h3>Prechecks</h3>" in module
     assert "preview.targets" in module
     assert "preview.reversibility" in module
     assert "preview.capability_health" in module
