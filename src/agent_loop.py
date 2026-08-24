@@ -8,6 +8,7 @@ The LLM decides when to use tools by writing fenced code blocks.
 
 import asyncio
 import collections
+import hashlib
 import ipaddress
 import json
 import re
@@ -7064,9 +7065,13 @@ async def stream_agent_loop(
                     _homelab_payload = json.loads(block.content or "{}")
                 except (TypeError, ValueError):
                     _homelab_payload = None
+                _homelab_action = (
+                    str(_homelab_payload.get("action") or "").strip().casefold()
+                    if isinstance(_homelab_payload, dict) else ""
+                )
                 if (
                     isinstance(_homelab_payload, dict)
-                    and str(_homelab_payload.get("action") or "").strip().casefold() == "network_discovery"
+                    and _homelab_action == "network_discovery"
                     and set(_homelab_payload) <= {"action", "scope", "cidr", "mode"}
                     and _homelab_payload.get("scope")
                 ):
@@ -7079,6 +7084,41 @@ async def stream_agent_loop(
                         block = ToolBlock(
                             "manage_homelab",
                             json.dumps({"action": "plan_network_discovery", "cidr": _alias_cidr}),
+                        )
+                elif (
+                    isinstance(_homelab_payload, dict)
+                    and _homelab_action == "discover_network"
+                    and set(_homelab_payload) <= {"action", "target", "scope", "cidr", "scan_type"}
+                ):
+                    _alias_target = _network_discovery_cidr(str(
+                        _homelab_payload.get("target")
+                        or _homelab_payload.get("scope")
+                        or _homelab_payload.get("cidr")
+                        or ""
+                    ))
+                    if _alias_target:
+                        _alias_operation = {
+                            "action": "execute_network_discovery",
+                            "target_kind": "private_ipv4_network",
+                            "target": _alias_target,
+                            "scanner": "nmap_ping_scan",
+                        }
+                        _alias_digest = hashlib.sha256(json.dumps(
+                            _alias_operation,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode()).hexdigest()
+                        logger.info(
+                            "[agent] normalized provider discover_network alias to canonical execute cidr=%s",
+                            _alias_target,
+                        )
+                        block = ToolBlock(
+                            "manage_homelab",
+                            json.dumps({
+                                "action": "execute_network_discovery",
+                                "cidr": _alias_target,
+                                "plan_digest": _alias_digest,
+                            }),
                         )
 
             total_tool_calls += 1
