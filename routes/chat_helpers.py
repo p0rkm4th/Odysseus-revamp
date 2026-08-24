@@ -842,6 +842,34 @@ async def build_chat_context(
         _preface_kwargs["use_rag"] = use_rag_val
     preface, rag_sources, web_sources = chat_processor.build_context_preface(**_preface_kwargs)
 
+    # Self/status questions receive a compact canonical projection.  This is
+    # generated from durable Work, capability, runtime, episode, and
+    # notification records; it is not reconstructed from provider memory.
+    if not incognito and re.search(
+        r"\b(?:what are you|what were we|what happened|what are you waiting|"
+        r"what can you|what do you|capabilit(?:y|ies)|degraded|while i was away|"
+        r"did you (?:scan|do|complete))\b",
+        context_message.lower(),
+    ):
+        try:
+            from core.database import SessionLocal
+            from src.persistent_agent import PersistentAgent
+            import json as _json
+            with SessionLocal() as _self_db:
+                _self_projection = PersistentAgent(_self_db).compact_self_context(user)
+            preface.append({
+                "role": "system",
+                "content": (
+                    "CANONICAL HADES SELF CONTEXT (authoritative observable state). "
+                    "Use only these facts for self/status claims. Do not invent "
+                    "feelings, thoughts, actions, capabilities, or continuity. "
+                    "If a requested fact is absent, say it is unavailable.\n" +
+                    _json.dumps(_self_projection, sort_keys=True, default=str)[:30000]
+                ),
+            })
+        except Exception:
+            logger.exception("failed to build canonical Hades self context")
+
     # Capture used memories immediately
     used_memories = getattr(chat_processor, '_last_used_memories', [])
 

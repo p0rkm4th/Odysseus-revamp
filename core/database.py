@@ -2073,6 +2073,8 @@ from core import security_assessment_migrations as security_assessment_migration
 from core import work_models as work_models  # noqa: E402,F401
 from core import work_migrations as work_migrations  # noqa: E402,F401
 from core import local_intelligence_migrations as local_intelligence_migrations  # noqa: E402,F401
+from core import persistent_agent_models as persistent_agent_models  # noqa: E402,F401
+from core import persistent_agent_migrations as persistent_agent_migrations  # noqa: E402,F401
 from core.schema_migrations import run_schema_migrations  # noqa: E402
 
 
