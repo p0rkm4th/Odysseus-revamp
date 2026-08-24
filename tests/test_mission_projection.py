@@ -31,3 +31,16 @@ def test_non_mission_goal_is_not_reachable_as_mission(db):
     assert MissionService(db).list("alice") == []
     with pytest.raises(WorkError, match="mission not found"):
         MissionService(db).get("alice", goal["id"])
+
+
+def test_mission_derives_waiting_and_expired_without_mutating_goal_state(db):
+    svc=MissionService(db)
+    waiting=svc.create("alice", {"title":"Waiting mission", "constraints":{"deadline":"2099-01-01T00:00:00Z"}})
+    WorkEngine(db).update_goal("alice", waiting["id"], {"status":"active"})
+    run=WorkEngine(db).create_run("alice", {"goal_id":waiting["id"], "lifecycle_state":"waiting_approval"})
+    current=svc.get("alice", waiting["id"])
+    assert current["lifecycle"] == "WAITING"
+    expired=svc.create("alice", {"title":"Expired mission", "constraints":{"deadline":"2020-01-01T00:00:00Z"}})
+    assert svc.get("alice", expired["id"])["lifecycle"] == "DRAFT"
+    WorkEngine(db).update_goal("alice", expired["id"], {"status":"active"})
+    assert svc.get("alice", expired["id"])["lifecycle"] == "EXPIRED"

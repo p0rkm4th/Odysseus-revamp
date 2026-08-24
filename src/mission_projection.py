@@ -1,4 +1,5 @@
 """Mission projection over the canonical Work Goal/Run system."""
+from datetime import datetime, timezone
 from core.work_models import WorkGoal, WorkRun
 from src.work_engine import WorkEngine, WorkError, serialize
 
@@ -11,7 +12,17 @@ class MissionService:
         return str((row.constraints or {}).get("operating_mode") or "").lower() == "mission"
 
     @staticmethod
-    def lifecycle(row):
+    def lifecycle(row, runs=None):
+        runs = runs or []
+        deadline = (row.constraints or {}).get("deadline") or getattr(row, "deadline", None)
+        if row.status == "active" and deadline:
+            try:
+                expires = datetime.fromisoformat(str(deadline).replace("Z", "+00:00"))
+                if expires.tzinfo is None: expires = expires.replace(tzinfo=timezone.utc)
+                if expires <= datetime.now(timezone.utc): return "EXPIRED"
+            except (TypeError, ValueError):
+                pass
+        if row.status == "active" and any(run.get("status") in {"awaiting_approval", "awaiting_input"} or run.get("lifecycle_state") in {"waiting_approval", "waiting_input"} for run in runs): return "WAITING"
         return {"draft":"DRAFT", "active":"ACTIVE", "paused":"PAUSED", "blocked":"BLOCKED", "completed":"COMPLETED", "failed":"FAILED", "cancelled":"CANCELLED"}.get(row.status, row.status.upper())
 
     def _one(self, owner, mission_id):
@@ -28,13 +39,14 @@ class MissionService:
         for run in runs:
             checkpoints.extend(list(run.get("checkpoints") or []))
         result["runs"] = runs
+        result["lifecycle"] = self.lifecycle(row, runs)
         result["mission_projection"] = {
             "success_criteria": row.success_criteria or {},
             "constraints": constraints,
             "budget": constraints.get("budget") or {},
             "allowed_capabilities": list(constraints.get("allowed_capabilities") or []),
             "checkpoints": checkpoints[-100:],
-            "blockers": [run.get("current_step") or run.get("error_summary") for run in runs if run.get("status") in {"failed", "awaiting_input", "suspended"}],
+            "blockers": [run.get("current_step") or run.get("error_summary") for run in runs if run.get("status") in {"failed", "awaiting_approval", "awaiting_input", "suspended"}],
             "authority_unchanged": True,
         }
         result["canonical_ref"] = f"goal://{row.id}"

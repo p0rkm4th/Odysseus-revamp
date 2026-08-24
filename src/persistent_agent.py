@@ -192,7 +192,7 @@ class PersistentAgent:
                     self.db.add(proposal_run); self.db.commit()
                     event.payload = {**(event.payload or {}), "proposal_run_id": proposal_run.id}
                     self.db.commit()
-                note=self.notify(owner, title=monitor.name, body=detail, notification_type="monitor_trigger", dedupe_key=f"monitor:{monitor.id}:{current.date()}", severity="warning", requires_action=monitor.consequence_tier >= 2, monitor_id=monitor.id, source_domain=monitor.source_domain, source_event_id=event.id, source_run_id=proposal_run.id if proposal_run else None)
+                note=self.notify(owner, title=monitor.name, body=detail, notification_type="monitor_trigger", dedupe_key=f"monitor:{monitor.id}:{event.id}", severity="warning", requires_action=monitor.consequence_tier >= 2, monitor_id=monitor.id, source_domain=monitor.source_domain, source_event_id=event.id, source_run_id=proposal_run.id if proposal_run else None)
                 note["response_policy"] = monitor_response_policy(monitor.consequence_tier)
                 note["authority_unchanged"] = True
                 if proposal_run: note["proposal_run_id"] = proposal_run.id
