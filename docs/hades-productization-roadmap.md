@@ -261,9 +261,11 @@ owner-scoped, candidate-limited recommendation endpoint and the deterministic
 local route exposes task class plus sanitized recommendation reasons. A model
 is never called qualified without sufficient evaluation evidence; degraded or
 disqualified candidates are excluded, and no recommendation changes policy,
-capability exposure, approval, or execution authority. Provider-level live
-qualification, richer cost/latency telemetry, routing explanation UI, and
-shadow plan review remain future work.
+capability exposure, approval, or execution authority. High/critical risk
+requests require qualified evidence, while privacy-local, latency, and cost
+constraints filter candidates with explicit rejection reasons. Provider-level
+live qualification, richer telemetry, routing explanation UI, and shadow plan
+review remain future work.
 
 The evidence matrix projection now groups measured competence by task class and
 model, exposing sample counts, recent success, qualification, failure classes,

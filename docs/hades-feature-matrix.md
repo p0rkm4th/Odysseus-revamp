@@ -63,8 +63,10 @@ marking unknown/experimental fallback evidence. The local-intelligence route
 also reports task class and a sanitized competence recommendation. This is
 advisory routing evidence only: explicit model preferences, capabilities,
 approval policy, and execution authority remain authoritative and are not
-granted or widened by competence data. Synthetic owner-scope and qualification
-tests are green; live multi-model qualification remains pending.
+granted or widened by competence data. High/critical risk requests require
+qualification; privacy-local, latency, and cost constraints are represented as
+bounded candidate filters with rejection reasons. Synthetic owner-scope and
+qualification tests are green; live multi-model qualification remains pending.
 
 ## P0 memory grounding gate
 
