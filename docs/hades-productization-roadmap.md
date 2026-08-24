@@ -31,3 +31,5 @@ rerun, and copied-database rehearsal before promotion.
   awaiting Work runs, and open commitments without duplicating canonical state.
 - Preserved notification source entity/run references for overdue commitments.
 - Added a Hades workspace Attention Queue section.
+- Added a deterministic Work Life Review projection for focus goals, due-soon
+  and overdue commitments, due tasks, blocked tasks, and waiting runs.

@@ -3,7 +3,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.database import Base
-from core.work_models import WorkAction, WorkGoal, WorkProject, WorkRun, WorkTask
+from core.work_models import WorkAction, WorkCommitment, WorkGoal, WorkProject, WorkRun, WorkTask
 from src.work_engine import WorkEngine, WorkError
 
 @pytest.fixture()
@@ -68,3 +68,14 @@ def test_exact_work_approval_binding_and_resume(db):
     assert resumed["status"] == "approved"
     assert svc.complete_action("alice", action["id"], {})["status"] == "completed"
     assert svc.resume_approved_action("alice", action["id"], "approval-1")["replayed"] is True
+
+
+def test_life_review_is_deterministic_and_owner_scoped(db):
+    svc = WorkEngine(db)
+    goal = svc.create_goal("alice", {"title": "Prepare launch", "priority": 5, "status": "active"})
+    goal = svc.update_goal("alice", goal["id"], {"status": "active"})
+    svc.create_commitment("alice", {"goal_id": goal["id"], "text": "Review checklist", "due_at": (datetime.utcnow() + timedelta(hours=4)).isoformat()})
+    review = svc.life_review("alice", horizon_hours=48)
+    assert review["focus_goals"][0]["id"] == goal["id"]
+    assert len(review["due_soon_commitments"]) == 1
+    assert svc.life_review("bob")["focus_goals"] == []

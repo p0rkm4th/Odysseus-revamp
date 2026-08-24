@@ -7,7 +7,7 @@ product workspace or dogfood gate is incomplete.
 | Domain | Backend | Capabilities/routing | UI/windows/search | Tests | Live dogfood | Status / next gap |
 |---|---|---|---|---|---|---|
 | Self/continuity | present | present | partial | green | partial | self dossier is live; weak-model referent language remains bounded |
-| Work/Life | present | partial | partial | green | partial | Life overview, reviews, commitments |
+| Work/Life | present | partial | partial | green | partial | deterministic `/api/work/review` now provides focus/due/blocked/waiting projection; richer Life UX remains |
 | Memory | present | present | partial | green | partial | layer and token inspector |
 | Notifications/monitors | partial | partial | green | green | not accepted | web Attention projection is live; delivery/monitor dogfood remains |
 | Household | present | partial | partial | green | not accepted | intake, dossier, history, provenance |
