@@ -439,3 +439,13 @@ observation counts. The surface explicitly states that ActionSpec, policy,
 approval, and the existing privileged host broker remain authoritative; it
 does not add a shell, Docker socket, or alternate executor. Service/storage/
 container health detail and live safe-operation dogfood remain future work.
+
+### Security assessment dossier slice
+
+The existing Security panel now exposes the canonical assessment lifecycle in
+the shared product grammar: authorization, scope, targets, runs/activity,
+evidence, finding candidates, confirmed findings, and a grounded report
+projection. Report output is generated through the existing owner-scoped
+SecurityAssessmentService and rendered as escaped canonical data; the UI does
+not create findings, widen scope, or execute assessment actions. Timeline,
+remediation/verification UX, and live authorized dogfood remain future work.
