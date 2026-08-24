@@ -190,3 +190,14 @@ tests are green. Live owner-authenticated dogfood and browser/restart
 verification remain. Sanitized memory diagnostics now travel with the stream
 and saved turn metrics, and Brain exposes an Inspector view without rendering
 memory content in telemetry.
+
+### Empirical model routing slice
+
+The existing evaluation-derived competence projection now provides an
+owner-scoped, candidate-limited recommendation endpoint and the deterministic
+local route exposes task class plus sanitized recommendation reasons. A model
+is never called qualified without sufficient evaluation evidence; degraded or
+disqualified candidates are excluded, and no recommendation changes policy,
+capability exposure, approval, or execution authority. Provider-level live
+qualification, richer cost/latency telemetry, routing explanation UI, and
+shadow plan review remain future work.

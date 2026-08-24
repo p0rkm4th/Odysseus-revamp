@@ -121,6 +121,14 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/competence")
     async def competence(request: Request, task_class: str | None = None, qualification: str | None = None):
         return {"competence": await tx(request, lambda svc,o,u: __import__("src.model_competence", fromlist=["ModelCompetenceService"]).ModelCompetenceService(svc.db).list(o, task_class=task_class, qualification=qualification))}
+    @router.post("/competence/recommend")
+    async def recommend_competence(request: Request, payload: dict[str, Any] = Body(default={})):
+        def operation(svc, o, u):
+            task_class = str(payload.get("task_class") or "general_chat")
+            candidates = payload.get("candidates") or []
+            if not isinstance(candidates, list): raise WorkError("candidates must be a list")
+            return __import__("src.model_competence", fromlist=["ModelCompetenceService"]).ModelCompetenceService(svc.db).recommend(o, task_class=task_class, candidates=candidates, preferred=payload.get("preferred"), require_qualified=bool(payload.get("require_qualified", False)))
+        return await tx(request, operation)
     @router.post("/world/relationships", status_code=201)
     async def create_world_relationship(request: Request, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).create_relationship(o, payload))

@@ -26,7 +26,22 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         return {"profiles":local_intelligence.profiles(),"default":"strong-default","owner":value}
     @router.post("/api/intelligence/route")
     async def route(request: Request,payload:dict=Body(...)):
-        value=owner(request); result=local_intelligence.route_request(payload.get("text",""),requested_profile=payload.get("profile"),execution_profile=payload.get("execution_profile","host")); result["owner"]=value; return result
+        value=owner(request)
+        result=local_intelligence.route_request(payload.get("text",""),requested_profile=payload.get("profile"),execution_profile=payload.get("execution_profile","host"))
+        # Competence is advisory routing evidence only.  The caller still
+        # supplies the candidate set and policy remains authoritative.
+        with session_factory() as db:
+            from src.model_competence import ModelCompetenceService
+            candidates=[{"model_key":"strong-default","profile":"strong-default"}, {"model_key":"hades-local-test","profile":"hades-local-test","model":"qwen3:8b"}]
+            recommendation=ModelCompetenceService(db).recommend(value, task_class=result.get("task_class"), candidates=candidates, preferred=payload.get("profile"), require_qualified=False)
+        selected_recommendation = recommendation.get("selected") or {}
+        if result.get("local_recommended") and selected_recommendation.get("profile"):
+            selected=selected_recommendation["profile"]
+            if selected == "hades-local-test" or payload.get("profile"):
+                result["model_profile"]=selected
+        result["competence_recommendation"]={"selected":recommendation.get("selected"), "alternatives":recommendation.get("alternatives"), "reason_codes":recommendation.get("reason_codes"), "evidence_backed":recommendation.get("evidence_backed"), "authority_unchanged":True}
+        result["owner"]=value
+        return result
     @router.post("/api/intelligence/infer")
     async def infer(request: Request,payload:dict=Body(...)):
         owner(request); profile=str(payload.get("profile") or "hades-local-test")

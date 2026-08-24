@@ -22,7 +22,8 @@ def route_request(text: str, *, requested_profile: str | None = None, execution_
         domain, reason, local_ok = "work", "durable_work_status_read", True
     else: domain, reason, local_ok = "general", "default_strong_route", False
     profile = requested_profile if requested_profile in PROFILES and local_ok else "strong-default"
-    return {"domains":[domain], "model_profile":profile, "capabilities":["read_only"] if local_ok else [], "context_projection":"work_compact" if domain == "work" else domain, "execution_profile":execution_profile, "confidence":0.86 if local_ok else 0.94, "reason_codes":[reason], "fallbacks":["strong-default"], "local_recommended":local_ok, "consequential_execution":not local_ok}
+    task_class = {"network": "network_read", "household_inventory": "household_read", "it_assets": "canonical_it_read", "work": "work_read", "general": "general_chat", "security": "security_action"}[domain]
+    return {"domains":[domain], "task_class":task_class, "model_profile":profile, "capabilities":["read_only"] if local_ok else [], "context_projection":"work_compact" if domain == "work" else domain, "execution_profile":execution_profile, "confidence":0.86 if local_ok else 0.94, "reason_codes":[reason], "fallbacks":["strong-default"], "local_recommended":local_ok, "consequential_execution":not local_ok}
 def infer(profile_name: str, messages: list[dict], *, timeout: int = 90):
     profile = PROFILES.get(profile_name)
     if not profile: raise ValueError("unknown local model profile")
