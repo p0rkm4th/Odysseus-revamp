@@ -1957,6 +1957,9 @@ def _assistant_requested_followup(messages: List[Dict]) -> bool:
         if isinstance(content, list):
             content = " ".join(b.get("text", "") for b in content if isinstance(b, dict))
         text = str(content or "").lower()
+        if re.fullmatch(r"\s*192\.168\.(?:\d{1,3})\.(?:\d{1,3})(?:/\d{1,2})?\s*", str(messages[-1].get("content", ""))):
+            if re.search(r"\b(scan|discover|network|subnet|range)\b", text):
+                return True
         if "?" not in text:
             return False
         return bool(re.search(
