@@ -7197,6 +7197,27 @@ async def stream_agent_loop(
                 )
                 if (
                     isinstance(_homelab_payload, dict)
+                    and _homelab_action == "discovery_plan"
+                    and set(_homelab_payload) <= {"action", "scope", "target", "cidr", "mode"}
+                    and (_homelab_payload.get("scope") or _homelab_payload.get("target") or _homelab_payload.get("cidr"))
+                ):
+                    _alias_cidr = _network_discovery_cidr(str(
+                        _homelab_payload.get("scope")
+                        or _homelab_payload.get("target")
+                        or _homelab_payload.get("cidr")
+                        or ""
+                    ))
+                    if _alias_cidr:
+                        logger.info(
+                            "[agent] normalized discovery_plan alias to canonical plan cidr=%s",
+                            _alias_cidr,
+                        )
+                        block = ToolBlock(
+                            "manage_homelab",
+                            json.dumps({"action": "plan_network_discovery", "cidr": _alias_cidr}),
+                        )
+                elif (
+                    isinstance(_homelab_payload, dict)
                     and _homelab_action == "network_discovery"
                     and set(_homelab_payload) <= {"action", "scope", "cidr", "mode"}
                     and _homelab_payload.get("scope")
