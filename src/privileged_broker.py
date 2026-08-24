@@ -17,10 +17,11 @@ MAX_REQUEST = 16384
 MAX_RESPONSE = 65536
 
 ALLOWED_PACKAGES = frozenset({
-    "nmap", "iproute2", "iputils-ping", "dnsutils", "ethtool",
-    "pciutils", "usbutils", "smartmontools", "nvme-cli", "dmidecode",
+    "nmap", "iproute2", "iputils-ping", "dnsutils", "bind", "bind9", "ethtool",
+    "pciutils", "usbutils", "smartmontools", "nvme-cli", "dmidecode", "traceroute",
     "lsof", "procps", "util-linux", "jq",
 })
+ALLOWED_EXECUTABLES = frozenset({"ip", "ss", "nmap", "dig", "host", "nslookup", "traceroute"})
 PKG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9+._:-]{0,79}$")
 
 
@@ -50,8 +51,12 @@ def peer_is_allowed(pid, uid, gid, allowed_pid, allowed_uid, allowed_gid):
 
 
 def package_manager():
-    path = shutil.which("apt-get")
-    return ("apt-get", path) if path else (None, None)
+    """Return the host package manager from a bounded supported set."""
+    for name in ("pacman", "apt-get"):
+        path = shutil.which(name)
+        if path:
+            return name, path
+    return None, None
 
 
 def validate_packages(value):
@@ -111,30 +116,39 @@ def handle(req, allowed_pid, allowed_uid):
     if action == "install_packages":
         packages = validate_packages(req.get("packages"))
         manager, path = package_manager()
-        if manager != "apt-get":
+        if manager not in {"apt-get", "pacman"}:
             return {
                 "ok": False,
                 "error": "supported package manager not available",
             }
-
-        update = run_root([path, "update", "-qq"])
-        if update["returncode"] != 0:
-            return {"ok": False, "stage": "update", **update}
-
-        install = run_root([
-            path,
-            "install",
-            "-y",
-            "--no-install-recommends",
-            *packages,
-        ])
+        if manager == "pacman":
+            # Do not refresh repositories implicitly. Package installation is
+            # still exact-approval gated and limited to ALLOWED_PACKAGES.
+            install = run_root([path, "-S", "--needed", "--noconfirm", *packages])
+        else:
+            update = run_root([path, "update", "-qq"])
+            if update["returncode"] != 0:
+                return {"ok": False, "stage": "update", **update}
+            install = run_root([
+                path, "install", "-y", "--no-install-recommends", *packages,
+            ])
         return {
             "ok": install["returncode"] == 0,
             "action": action,
+            "package_manager": manager,
             "packages": packages,
             "stage": "install",
             **install,
         }
+
+    if action == "verify_executables":
+        executables = req.get("executables")
+        if not isinstance(executables, list) or not 1 <= len(executables) <= 16:
+            return {"ok": False, "error": "executables must be a list of 1..16 names"}
+        if any(not isinstance(name, str) or name not in ALLOWED_EXECUTABLES for name in executables):
+            return {"ok": False, "error": "executable is not in the prerequisite allowlist"}
+        paths = {name: shutil.which(name) for name in executables}
+        return {"ok": all(paths.values()), "action": action, "executables": paths}
 
     return {
         "ok": False,

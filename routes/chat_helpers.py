@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import time
+import hashlib
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -49,6 +50,111 @@ def _is_casual_low_signal(text: str) -> bool:
         return False
     tail_words = re.findall(r"[A-Za-z0-9_'-]+", tail)
     return len(tail_words) <= 2
+
+
+def _durable_tool_result_context(sess, *, limit: int = 3) -> dict[str, Any] | None:
+    """Rehydrate recent tool results independently of provider/runtime state.
+
+    Tool-call protocol messages are intentionally not persisted as raw provider
+    messages. Completed turns do persist bounded ``tool_events`` metadata,
+    however, and that metadata must be projected back into the next prompt so a
+    model unload, provider reconnect, or model switch cannot erase the latest
+    observed facts.
+    """
+    rows: list[str] = []
+    for message in reversed(getattr(sess, "history", []) or []):
+        metadata = getattr(message, "metadata", None)
+        events = metadata.get("tool_events") if isinstance(metadata, dict) else None
+        if not isinstance(events, list):
+            continue
+        for event in reversed(events):
+            if not isinstance(event, dict):
+                continue
+            tool = str(event.get("tool") or event.get("tool_name") or "tool")[:120]
+            command = str(event.get("command") or "")[:300]
+            output = str(event.get("output") or event.get("content") or "")[:650]
+            exit_code = event.get("exit_code")
+            rows.append(f"[{tool}] command={command} exit_code={exit_code}\n{output}")
+            if len(rows) >= limit:
+                break
+        if len(rows) >= limit:
+            break
+    if not rows:
+        return None
+    body = "\n\n".join(reversed(rows))[:2400]
+    message = untrusted_context_message(
+        "durable recent tool results",
+        body,
+        assistant_tool_result=True,
+        arm_tool_gate=False,
+    )
+    message["_protected"] = True
+    return message
+
+
+def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
+    """Project the owner-scoped active Work Run into the chat prompt.
+
+    Work state is canonical in the Work Engine database, never in an Ollama
+    conversation cache. Only a Run explicitly linked to this chat session is
+    projected, preventing unrelated owner state from entering the prompt.
+    """
+    if not owner or not getattr(sess, "id", None):
+        return None
+    try:
+        from core.work_models import WorkRun
+        from src.work_engine import WorkEngine
+        with SessionLocal() as db:
+            run = (
+                db.query(WorkRun)
+                .filter(
+                    WorkRun.owner == owner,
+                    WorkRun.session_id == str(sess.id),
+                    WorkRun.status.in_(("queued", "running", "awaiting_approval", "awaiting_input", "suspended")),
+                )
+                .order_by(WorkRun.updated_at.desc())
+                .first()
+            )
+            if run is None:
+                return None
+            context = WorkEngine(db).context(owner, run_id=run.id)
+        # Keep the durable projection compact; the full records remain available
+        # through authenticated Work APIs/tools.
+        compact = {
+            "run": context.get("run"),
+            "goal": context.get("goal"),
+            "project": context.get("project"),
+            "task": context.get("task"),
+            "actions": context.get("actions", [])[-8:],
+            "pending_approval": bool(context.get("pending_approval")),
+            "pending_input": bool(context.get("pending_input")),
+            "recent_events": context.get("recent_events", [])[:8],
+        }
+        message = untrusted_context_message(
+            "durable active Work state",
+            json.dumps(compact, ensure_ascii=False, default=str),
+            arm_tool_gate=False,
+        )
+        message["_protected"] = True
+        return message
+    except Exception:
+        logger.debug("Durable Work context unavailable", exc_info=True)
+        return None
+
+
+def _context_trace(messages: list[dict], context_length: int) -> dict[str, Any]:
+    """Return non-secret evidence for comparing prompts across reconnects."""
+    normalized = json.dumps(messages, ensure_ascii=False, sort_keys=True, default=str)
+    return {
+        "digest": hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16],
+        "messages": len(messages),
+        "tokens": estimate_tokens(messages),
+        "context_length": context_length,
+        "roles": [str(m.get("role") or "") for m in messages],
+        "user_turns": sum(1 for m in messages if m.get("role") == "user"),
+        "durable_tool_context": any((m.get("metadata") or {}).get("source") == "durable recent tool results" for m in messages if isinstance(m, dict) and isinstance(m.get("metadata") or {}, dict)),
+        "durable_work_context": any((m.get("metadata") or {}).get("source") == "durable active Work state" for m in messages if isinstance(m, dict) and isinstance(m.get("metadata") or {}, dict)),
+    }
 
 
 # Strong references to in-flight fire-and-forget tasks scheduled from this
@@ -762,6 +868,19 @@ async def build_chat_context(
     # stale normal session id. Only the ephemeral incognito transcript is safe.
     messages = preface + (_incognito_messages(session_id) if incognito else sess.get_context_messages())
 
+    # These projections are canonical server state, not provider conversation
+    # state. They survive model unload/reload, provider reconnect, and model
+    # profile switching. Incognito chats intentionally receive neither.
+    if not incognito:
+        durable_work = _durable_work_context(sess, user)
+        durable_tools = _durable_tool_result_context(sess)
+        if durable_work:
+            preface.append(durable_work)
+        if durable_tools:
+            preface.append(durable_tools)
+        if durable_work or durable_tools:
+            messages = preface + sess.get_context_messages()
+
     # Current date/time — injected as a standalone *user*-role context message
     # placed immediately before the latest user turn, NOT folded into the
     # system prompt. Its text changes every minute, and local OpenAI-compatible
@@ -801,6 +920,7 @@ async def build_chat_context(
     _after_trim_messages = len(messages)
     _after_trim_tokens = estimate_tokens(messages)
     _context_trimmed = _after_trim_messages < _before_trim_messages or _after_trim_tokens < _before_trim_tokens
+    logger.info("[hades-context] session=%s trace=%s", session_id, _context_trace(messages, context_length))
 
     return ChatContext(
         preface=preface,
