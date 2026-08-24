@@ -31,7 +31,7 @@ product workspace or dogfood gate is incomplete.
 | Documents | present | partial | partial | green | not accepted | reusable attachments/dossiers |
 | Models/routing | present | present | partial | green | partial | model lab and qualification evidence |
 | Improvements | present | partial | partial | green | not accepted | registry workspace and promotion evidence |
-| Developer/health/authority | present | partial | partial | green | partial | permissions, trace, backup projections |
+| Developer/health/authority | present | partial | partial; Control Center with Runs/Evaluations/Inspector is visible | focused control-plane/UI tests | deterministic Run Inspector dogfood; live provider/model evaluation pending | permissions, trace, backup projections, Action Contract inspection, and richer health integrations remain |
 | Shell/window/design system | present | partial | partial | partial | browser review pending | shared tokens/primitives and OSINT module header/intake now exist; existing screens still need incremental migration |
 
 ## Tier 1 acceptance gates

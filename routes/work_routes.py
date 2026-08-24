@@ -81,6 +81,19 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/runs/{run_id}/replay")
     async def replay_run(request: Request, run_id: str):
         return await tx(request, lambda svc,o,u: svc.reconstruct_run(o, run_id))
+    @router.get("/runs/{run_id}/traces")
+    async def run_traces(request: Request, run_id: str):
+        def operation(svc, o, u):
+            svc._one(WorkRun, o, run_id, "run")
+            from src.observability import ObservabilityService
+            return {"spans": ObservabilityService(svc.db).list_spans(o, run_id=run_id)}
+        return await tx(request, operation)
+    @router.get("/evaluations/scenarios")
+    async def evaluation_scenarios(request: Request, domain: str | None = None):
+        return await tx(request, lambda svc,o,u: __import__("src.evaluation_service", fromlist=["EvaluationService"]).EvaluationService(svc.db).list_scenarios(o, domain=domain))
+    @router.get("/evaluations/failures")
+    async def evaluation_failures(request: Request, status: str | None = None, taxonomy: str | None = None):
+        return await tx(request, lambda svc,o,u: __import__("src.evaluation_service", fromlist=["EvaluationService"]).EvaluationService(svc.db).list_failures(o, status=status, taxonomy=taxonomy))
     @router.post("/world/relationships", status_code=201)
     async def create_world_relationship(request: Request, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).create_relationship(o, payload))
