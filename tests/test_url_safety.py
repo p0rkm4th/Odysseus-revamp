@@ -38,6 +38,21 @@ def test_public_url_allowed():
     assert ok is True, reason
 
 
+def test_dns64_nat64_public_destination_is_allowed():
+    # 64:ff9b::/96 is a DNS64 synthesis of an IPv4 destination, not an
+    # application-local reserved target. The embedded public IPv4 is checked.
+    NAT64 = _resolver({"example.com": ["64:ff9b::5db8:d822"]})  # 93.184.216.34
+    ok, reason = check_outbound_url("https://example.com", resolver=NAT64)
+    assert ok is True, reason
+
+
+def test_dns64_nat64_metadata_destination_remains_blocked():
+    NAT64_METADATA = _resolver({"evil.example": ["64:ff9b::a9fe:a9fe"]})
+    ok, reason = check_outbound_url("https://evil.example", resolver=NAT64_METADATA)
+    assert ok is False
+    assert "link-local" in reason
+
+
 def test_cloud_metadata_blocked_even_when_private_allowed():
     # The headline SSRF vector must be blocked regardless of block_private.
     ok, reason = check_outbound_url("http://evil.example/latest/meta-data/", resolver=METADATA)

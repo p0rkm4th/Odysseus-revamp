@@ -40,6 +40,40 @@ def test_run_action_completion_is_idempotent_and_context_is_bounded(db):
     assert context["actions"][0]["status"] == "completed"
     assert len(context["recent_events"]) <= 12
 
+def test_run_lifecycle_and_action_contract_preview_are_durable(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {
+        "domain": "homelab", "intent": {"kind": "network_discovery"},
+        "plan": [{"step": "discover"}], "assumptions": [{"claim": "private scope"}],
+    })
+    assert run["lifecycle_state"] == "created"
+    preview = svc.preview_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "target_resources": ["network:192.168.10.0/24"],
+        "locks": ["network:192.168.10.0/24"], "approval_required": True,
+        "rollback_capability": "none", "verification": ["map_updated"],
+    })
+    assert preview["execution"] == "preview_only"
+    assert svc.get_run("alice", run["id"])["actions"] == []
+    transitioned = svc.transition_run("alice", run["id"], "planning", {"current_step": "compile plan"})
+    assert transitioned["lifecycle_state"] == "planning"
+    persisted = WorkEngine(db).get_run("alice", run["id"])
+    assert persisted["plan"] == [{"step": "discover"}]
+    assert persisted["events"][-1]["event_type"] == "RunPlanning"
+
+def test_action_contract_fields_persist_with_owner_scoped_run(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "target_resources": ["network:192.168.10.0/24"], "locks": ["network:private_scope"],
+        "risk_level": "high", "idempotency_key": "scan-1",
+        "retry_policy": {"max_attempts": 1}, "timeout_seconds": 120,
+        "postconditions": ["observations_persisted"],
+    })
+    assert action["locks"] == ["network:private_scope"]
+    assert WorkEngine(db).get_run("alice", run["id"])["actions"][0]["idempotency_key"] == "scan-1"
+
 def test_owner_isolation_and_restart_state(db):
     svc = WorkEngine(db)
     goal = svc.create_goal("alice", {"title":"Private work"})

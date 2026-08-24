@@ -11,6 +11,7 @@ product workspace or dogfood gate is incomplete.
 |---|---|---|---|---|---|---|
 | Self/continuity | present | present | partial | green | stabilization accepted; product dogfood pending | status, while-away, Episodes, Notifications, Monitors, Attention; unified self dossier and health explainability remain |
 | Work/Life | present | partial | partial | green | partial | deterministic review provides focus/due/blocked/waiting projection; richer Life intake, reviews, habits, and timeline remain |
+| Durable Runs / Action Contracts | present (src/work_engine.py, core/work_models.py) | work.run.read, work.run.manage, existing domain actions | partial; lifecycle/contract projection pending | focused Work/registry tests | unit dogfood complete; migration/full-runtime pending | additive Run lifecycle, intent/plan/assumptions/checkpoints, non-mutating preview, and Action target/lock/risk/retry/rollback/verification contract; lock enforcement and Run UI remain |
 | Memory | present | present | partial | green | partial | retrieval/context diagnostics exist; explicit layer, TTL, supersession, and inspector UX remain |
 | Notifications/monitors | present | partial | partial | green | partial | Attention and monitor primitives exist; transport center and notification dogfood remain |
 | Household | present | partial | partial | green | not accepted | intake, dossier, history, provenance |

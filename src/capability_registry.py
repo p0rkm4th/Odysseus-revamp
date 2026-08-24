@@ -34,6 +34,19 @@ class ActionSpec:
     execution_location: str = "application"
     target_scope: str | None = None
     requires_direct_container_access: bool = True
+    required_capabilities: tuple[str, ...] = ()
+    target_resources: tuple[str, ...] = ()
+    preconditions: tuple[str, ...] = ()
+    locks: tuple[str, ...] = ()
+    risk_level: str = "low"
+    idempotency: str = "unknown"
+    retry_policy: Mapping[str, Any] | None = None
+    timeout_seconds: int | None = None
+    rollback_capability: str = "none"
+    compensating_action: str | None = None
+    postconditions: tuple[str, ...] = ()
+    verification: tuple[str, ...] = ()
+    expected_cost: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +117,12 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 execution_location=("host_broker" if action in {"plan_network_discovery", "execute_network_discovery"} else "application"),
                 target_scope=("private_network" if action in {"plan_network_discovery", "execute_network_discovery"} else None),
                 requires_direct_container_access=(action not in {"plan_network_discovery", "execute_network_discovery"}),
+                target_resources=("network:private_scope",) if action in {"plan_network_discovery", "execute_network_discovery"} else (),
+                locks=("network:private_scope",) if action == "execute_network_discovery" else (),
+                risk_level=("high" if action == "execute_network_discovery" else "low"),
+                idempotency=("replay_safe" if action == "execute_network_discovery" else "unknown"),
+                rollback_capability="none",
+                verification=("observations_persisted", "network_map_reconciled") if action == "execute_network_discovery" else (),
             ) for action in (
                 "inspect_host", "service_status", "discovery_status",
                 "plan_service_restart", "execute_service_restart",
