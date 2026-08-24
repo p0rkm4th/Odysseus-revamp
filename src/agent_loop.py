@@ -7137,6 +7137,38 @@ async def stream_agent_loop(
                         )
                 elif (
                     isinstance(_homelab_payload, dict)
+                    and _homelab_action == "discover"
+                    and set(_homelab_payload) <= {"action", "scope", "target", "cidr", "mode", "approval"}
+                    and (_homelab_payload.get("scope") or _homelab_payload.get("target") or _homelab_payload.get("cidr"))
+                ):
+                    _alias_target = _network_discovery_cidr(str(
+                        _homelab_payload.get("scope")
+                        or _homelab_payload.get("target")
+                        or _homelab_payload.get("cidr")
+                        or ""
+                    ))
+                    if _alias_target:
+                        _alias_operation = {
+                            "action": "execute_network_discovery",
+                            "target_kind": "private_ipv4_network",
+                            "target": _alias_target,
+                            "scanner": "nmap_ping_scan",
+                        }
+                        _alias_digest = hashlib.sha256(json.dumps(
+                            _alias_operation,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode()).hexdigest()
+                        block = ToolBlock(
+                            "manage_homelab",
+                            json.dumps({
+                                "action": "execute_network_discovery",
+                                "cidr": _alias_target,
+                                "plan_digest": _alias_digest,
+                            }),
+                        )
+                elif (
+                    isinstance(_homelab_payload, dict)
                     and _homelab_action == "network_discovery"
                     and set(_homelab_payload) <= {"action", "target", "cidr", "mode"}
                     and _homelab_payload.get("target")
