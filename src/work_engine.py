@@ -318,6 +318,19 @@ class WorkEngine:
         if lifecycle_state not in RUN_LIFECYCLE_STATES:
             raise WorkError("invalid run lifecycle state")
         row = self._one(WorkRun, owner, run_id, "run")
+        allowed = {
+            "created": {"planning", "cancelled"}, "planning": {"ready", "executing", "failed", "cancelled"},
+            "ready": {"executing", "waiting_approval", "failed", "cancelled"},
+            "waiting_approval": {"ready", "cancelled", "failed"},
+            "waiting_input": {"ready", "cancelled", "failed"},
+            "executing": {"verifying", "failed", "cancelled", "compensating"},
+            "verifying": {"succeeded", "failed", "compensating", "cancelled"},
+            "compensating": {"verifying", "failed", "cancelled"},
+            "paused": {"ready", "cancelled"}, "succeeded": set(), "failed": set(), "cancelled": set(),
+        }
+        current = row.lifecycle_state or "created"
+        if lifecycle_state != current and lifecycle_state not in allowed.get(current, set()):
+            raise WorkError(f"invalid execution transition: {current} -> {lifecycle_state}")
         payload = data or {}
         row.lifecycle_state = lifecycle_state
         if "plan" in payload: row.plan = payload["plan"]
@@ -326,6 +339,13 @@ class WorkEngine:
         if "costs" in payload: row.costs = payload["costs"]
         if "verification" in payload: row.verification = payload["verification"]
         if "current_step" in payload: row.current_step = str(payload["current_step"] or "")[:300] or None
+        if lifecycle_state == "executing" and (row.plan or self.db.query(WorkAction).filter_by(run_id=run_id).count()):
+            from src.run_planner import RunPlanner
+            validation = RunPlanner(self.db).validate(owner, run_id)
+            if not validation["valid"]:
+                codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))
+                self.db.rollback()
+                raise WorkError(f"plan validation failed before execution: {codes}")
         row.revision += 1
         self.event(owner, f"Run{''.join(part.title() for part in lifecycle_state.split('_'))}", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload={"lifecycle_state": lifecycle_state, "current_step": row.current_step})
         self.db.commit(); self.db.refresh(row)
