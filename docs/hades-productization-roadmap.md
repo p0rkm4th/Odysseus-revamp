@@ -647,6 +647,9 @@ an explicitly replay-safe/idempotent ActionSpec may create a bounded retry;
 the retry is a new persisted Action and exact approval references are never
 copied across attempts. Ambiguous or unsafe mutations therefore require fresh
 verification rather than blind repetition.
+The Run Inspector exposes this path only for failed/expired Actions; the UI is
+still a projection and the Work route enforces owner scope and replay-safe
+ActionSpec semantics.
 
 ### Run Preview inspector checkpoint
 
