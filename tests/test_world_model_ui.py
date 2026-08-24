@@ -37,6 +37,7 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert '"/grants"' in (ROOT / "routes/work_routes.py").read_text()
     assert "/api/work/execution-nodes" in module
     assert "Execution Nodes" in module and "Delegated Grants" in module
+    assert "broker authority unchanged" in module
     assert "Actions / Contracts" in module and "state_invalidations" in module
     assert "parameter_constraints" in module and "[redacted reference]" in module
     assert "/api/work/claims?include_inactive=true" in module

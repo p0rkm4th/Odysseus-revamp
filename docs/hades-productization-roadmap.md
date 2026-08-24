@@ -221,6 +221,18 @@ it does not grant authority or execute a response. Current evaluation remains
 conservative and emits notifications only; higher response tiers require a
 future explicit policy/delegation integration.
 
+### Execution-node eligibility slice
+
+The existing owner-scoped execution-node registry now projects deterministic
+eligibility explanations for platform, architecture, runtime, capability,
+privilege, trust, network, sandbox, memory, and GPU requirements. Selection
+returns eligible nodes plus bounded rejection reasons, and explicitly marks
+the result as a projection whose authority is unchanged. Control Center node
+cards expose health, trust, heartbeat, and the fact that the current broker
+remains authoritative. This does not migrate execution or grant a model node
+selection authority; broker adaptation, live heartbeat dogfood, and sandbox
+execution remain future work.
+
 ### World Model blast-radius integration
 
 RunPreview now consumes the existing evidence-backed World Model for declared

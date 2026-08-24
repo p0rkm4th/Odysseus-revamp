@@ -34,17 +34,25 @@ class ExecutionNodeService:
         return [serialize(row) for row in query.order_by(ExecutionNode.node_key).limit(max(1, min(int(limit), 500))).all()]
 
     def select(self, owner, requirements=None, *, limit=1):
-        requirements = requirements or {}; candidates = []
+        requirements = dict(requirements or {})
+        candidates = []; rejected = []
         for row in self.db.query(ExecutionNode).filter_by(owner=owner).all():
-            if row.health not in {"unknown", "healthy"}: continue
-            if requirements.get("platform") and row.platform != requirements["platform"]: continue
-            if requirements.get("architecture") and row.architecture != requirements["architecture"]: continue
-            if requirements.get("runtime") and requirements["runtime"] not in (row.runtimes or []): continue
-            if requirements.get("capability") and requirements["capability"] not in (row.capabilities or []): continue
-            if requirements.get("privilege_class") and requirements["privilege_class"] not in (row.privilege_classes or []): continue
-            if requirements.get("network_reachability") and requirements["network_reachability"] not in (row.network_reachability or []): continue
-            if requirements.get("sandbox") is True and "sandbox" not in (row.capabilities or []): continue
+            reasons = []
+            if row.health not in {"unknown", "healthy"}: reasons.append("health_not_eligible")
+            if requirements.get("platform") and row.platform != requirements["platform"]: reasons.append("platform_mismatch")
+            if requirements.get("architecture") and row.architecture != requirements["architecture"]: reasons.append("architecture_mismatch")
+            if requirements.get("runtime") and requirements["runtime"] not in (row.runtimes or []): reasons.append("runtime_missing")
+            if requirements.get("capability") and requirements["capability"] not in (row.capabilities or []): reasons.append("capability_missing")
+            if requirements.get("privilege_class") and requirements["privilege_class"] not in (row.privilege_classes or []): reasons.append("privilege_class_missing")
+            if requirements.get("trust_class") and row.trust_class != requirements["trust_class"]: reasons.append("trust_class_mismatch")
+            if requirements.get("network_reachability") and requirements["network_reachability"] not in (row.network_reachability or []): reasons.append("network_reachability_missing")
+            if requirements.get("sandbox") is True and "sandbox" not in (row.capabilities or []): reasons.append("sandbox_missing")
+            if requirements.get("min_memory_mb") is not None and (row.memory_mb or 0) < int(requirements["min_memory_mb"]): reasons.append("memory_insufficient")
+            if requirements.get("gpu_required") is True and not row.gpu: reasons.append("gpu_missing")
+            if reasons:
+                rejected.append({"node_key": row.node_key, "reasons": reasons})
+                continue
             utilization = (row.utilization or {}).get("cpu_percent", 100)
             candidates.append((float(utilization or 0), row.node_key, row))
         selected = [serialize(row) for _, _, row in sorted(candidates, key=lambda item: (item[0], item[1]))[:max(1, min(int(limit), 20))]]
-        return {"requirements": requirements, "nodes": selected, "eligible": bool(selected), "authority_unchanged": True}
+        return {"requirements": requirements, "nodes": selected, "rejected": rejected, "eligible": bool(selected), "authority_unchanged": True, "selection_is_projection": True}

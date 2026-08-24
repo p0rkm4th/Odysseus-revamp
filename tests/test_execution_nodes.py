@@ -20,6 +20,7 @@ def test_execution_nodes_are_owner_scoped_and_deterministically_selected(db):
     result=svc.select("alice", {"capability":"network_discovery"}, limit=2)
     assert [x["node_key"] for x in result["nodes"]] == ["gpu-node", "host-broker"]
     assert result["authority_unchanged"] is True
+    assert result["selection_is_projection"] is True
     assert svc.list("bob") == []
 
 
@@ -32,3 +33,14 @@ def test_execution_node_requirements_fail_closed_and_heartbeat_is_durable(db):
     assert svc.select("alice", {"sandbox":True})["nodes"][0]["node_key"] == "sandbox"
     with pytest.raises(WorkError, match="invalid execution node trust"):
         svc.register("alice", {"node_key":"bad", "trust_class":"root"})
+
+
+def test_execution_node_selection_explains_requirement_rejections_without_granting_authority(db):
+    svc=ExecutionNodeService(db)
+    svc.register("alice", {"node_key":"cpu", "memory_mb":4096, "capabilities":["diagnostics"], "health":"healthy"})
+    svc.register("alice", {"node_key":"gpu", "memory_mb":32768, "gpu":{"vendor":"test"}, "capabilities":["diagnostics"], "health":"healthy"})
+    result=svc.select("alice", {"capability":"diagnostics", "gpu_required":True, "min_memory_mb":16000})
+    assert [node["node_key"] for node in result["nodes"]] == ["gpu"]
+    rejected=next(item for item in result["rejected"] if item["node_key"] == "cpu")
+    assert set(rejected["reasons"]) == {"memory_insufficient", "gpu_missing"}
+    assert result["authority_unchanged"] is True
