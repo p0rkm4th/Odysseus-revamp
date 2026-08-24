@@ -2018,7 +2018,9 @@ def _recent_reference_resolution_hint(messages: List[Dict], text: str) -> str | 
             "Immediate reference resolution: the user's latest phrase "
             "'all of the above' refers to every option in the immediately "
             "preceding assistant message (A, B, and C). Resolve all three "
-            "in that order; do not answer as if this were a new unrelated request."
+            "in that order; do not repeat the option list or answer as if this "
+            "were a new unrelated request. Begin by explicitly acknowledging "
+            "that all three preceding options were selected."
         )
     if re.search(r"\b(?:the\s+)?(?:first|second|third)\s+one\b", latest):
         ordinal = re.search(r"\b(first|second|third)\b", latest, re.I).group(1).lower()
