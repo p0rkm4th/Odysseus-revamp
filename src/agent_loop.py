@@ -548,6 +548,7 @@ _DOMAIN_RULES["security_audit"] = '## Security audit rules\n- Default to read-on
 _DOMAIN_RULES["pentest_ops"] = '## Authorized security testing rules\n- Treat active security testing as scope-sensitive. Confirm or infer only the explicit target scope supplied by the user and keep activity inside it.\n- Start with discovery and service enumeration before more intrusive checks.\n- Do not broaden a private/lab target into unrelated public targets. Avoid destructive testing, persistence, or credential attacks unless separately and explicitly requested and permitted.\n- Prefer evidence-producing, bounded commands and summarize exactly what was tested.'
 _DOMAIN_RULES["osint"] = '## OSINT/research rules\n- Use public-information retrieval and corroboration rather than local shell inspection unless the user separately asks to analyze local artifacts.\n- Distinguish sourced facts, inference, and unresolved uncertainty.\n- Prefer multiple independent sources for identity, infrastructure, ownership, chronology, or attribution claims.'
 _DOMAIN_RULES["homelab"] = '## Homelab rules\n- Use manage_homelab for structured local operations. Start with status or a plan.\n- Network discovery is limited to explicit private scope and produces review-only inventory candidates.\n- Restarts and diagnostic installation require an owner-bound plan and exact approval.'
+_DOMAIN_RULES["homelab"] += '\n- Execution environment: HOST_OS is Garuda/Arch family; HOST_PACKAGE_MANAGER is pacman through the privileged broker; HADES_RUNTIME is a containerized application.\n- Use first-class capability actions and the bounded prerequisite registry for network tools. Never generate apt/pacman/sudo commands when manage_homelab or privileged_action applies.\n- Prohibited: generic sudo, arbitrary filesystem remount, Docker socket access, and privileged-container escape.\n- A package is installed, a scan ran, or a prerequisite was verified only after an actual tool result says so.'
 
 _DOMAIN_RULES["container_ops"] += '\\n- If a read-only diagnostic command fails because an option or utility is unsupported, retry with a simpler portable command instead of claiming the shell or container tooling is unavailable.'
 _DOMAIN_RULES["storage_ops"] += '\\n- If a health utility is unavailable or a flag is unsupported, continue with the remaining read-only inventory and report that specific limitation.'
@@ -1010,9 +1011,13 @@ def _normalize_homelab_intent(intent, query: str):
     if not isinstance(intent, dict):
         return intent
     q = str(query or "").lower()
-    if re.search(r"\b(?:homelab|home lab|local service|systemd user service|network discovery|nmap discovery)\b", q):
+    if re.search(r"\b(?:homelab|home lab|local service|systemd user service|network discovery|nmap discovery)\b", q) or re.search(
+        r"\b(?:install|setup|set up|prepare|need)\b.{0,80}\b(?:tools?|utilities|packages?)\b.{0,80}\b(?:network|nmap|scan|discovery)\b",
+        q,
+    ):
         domains = set(intent.get("domains") or set())
         domains.add("homelab")
+        domains.add("network_ops")
         intent["domains"] = domains
     return intent
 
@@ -2711,7 +2716,7 @@ _DESTRUCTIVE_REQUEST_RE = re.compile(
 )
 
 _FAKE_SUCCESS_RE = re.compile(
-    r"\b(done|removed|deleted|sent|archived|unsubscribed|marked)\b",
+    r"\b(done|removed|deleted|sent|archived|unsubscribed|marked|installed|executed|scanned|restarted|changed|created|verified|discovered|updated|completed|succeeded)\b",
     re.IGNORECASE,
 )
 
@@ -2722,6 +2727,20 @@ def _looks_like_destructive_request(text: str) -> bool:
 
 def _looks_like_success_claim(text: str) -> bool:
     return bool(_FAKE_SUCCESS_RE.search(text or ""))
+
+
+def ground_action_completion(text: str, *, intent_domains, tool_events) -> str:
+    """Allow completion language only when an actual tool event exists."""
+    if (
+        not tool_events
+        and _intent_requires_action(intent_domains)
+        and _looks_like_success_claim(text)
+    ):
+        return (
+            "No action completed: I did not receive a valid tool execution or "
+            "verified result. I have not installed, scanned, changed, or verified anything."
+        )
+    return text
 
 
 _DOC_TOOL_TRUNCATED_FENCE_RE = re.compile(
@@ -6309,7 +6328,7 @@ async def stream_agent_loop(
         # textual model answers in prose without emitting any tool invocation.
         _ody_v38_user_text = str(_last_user or "")
         _ody_v38_selected_first_class = (
-            {"manage_assets", "privileged_action"}
+            {"manage_assets", "privileged_action", "manage_homelab"}
             & set(_relevant_tools or set())
         )
         _ody_v38_explicit_first_class = bool(
@@ -6319,6 +6338,13 @@ async def stream_agent_loop(
                 re.IGNORECASE,
             )
             or (
+                (set(_intent_domains or set()) & {"asset_inventory", "homelab", "network_ops"})
+                and re.search(
+                    r"\b(?:check|show|list|get|find|search|add|update|record|link|unlink|retire|merge|inventory|summary|status|install|scan|discover|network)\b",
+                    _ody_v38_user_text,
+                    re.IGNORECASE,
+                )
+                or (
                 "asset_inventory" in set(_intent_domains or set())
                 and re.search(
                     r"\b(?:check|show|list|get|find|search|add|update|record|"
@@ -6326,12 +6352,13 @@ async def stream_agent_loop(
                     _ody_v38_user_text,
                     re.IGNORECASE,
                 )
+                )
             )
         )
         _ody_v38_first_class_no_action = (
             not guide_only
             and not _force_answer
-            and _strict_text_tools
+            and (_strict_text_tools or bool(_ody_v38_selected_first_class))
             and bool(_ody_v38_selected_first_class)
             and _ody_v38_explicit_first_class
             and not tool_blocks
@@ -7476,6 +7503,18 @@ async def stream_agent_loop(
     # prose. Local finetunes may emit those before the parser catches and
     # executes them; saved history should contain only the user-facing answer.
     full_response = strip_tool_blocks(full_response).strip()
+    # Action-grounding boundary: prose is never evidence of an external
+    # operation. Only persisted tool events/results authorize completion
+    # language. This applies to every model, including local Qwen routes.
+    _grounded_response = ground_action_completion(
+        full_response, intent_domains=_intent_domains, tool_events=tool_events,
+    )
+    if _grounded_response != full_response:
+        logger.warning(
+            "[agent-grounding] suppressed ungrounded completion claim domains=%s text=%r",
+            sorted(_intent_domains), full_response[:240],
+        )
+        full_response = _grounded_response
     if _ody_qwen_finetune_model:
         full_response = _normalize_ody_qwen_text_artifacts(full_response)
         if (

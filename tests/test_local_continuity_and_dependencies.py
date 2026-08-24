@@ -78,6 +78,29 @@ def test_prerequisite_handoff_preserves_same_work_identity():
     assert handoff["action_id"] == "action-9"
 
 
+def test_network_install_intent_selects_homelab_capability_and_environment():
+    from src.agent_loop import _assemble_prompt, _classify_agent_request, _normalize_homelab_intent
+    intent = _classify_agent_request([], "install the tools necessary for a deep dive network scan")
+    intent = _normalize_homelab_intent(intent, "install the tools necessary for a deep dive network scan")
+    assert {"homelab", "network_ops"}.issubset(intent["domains"])
+    prompt = _assemble_prompt(
+        {"manage_homelab"}, intent_domains={"homelab", "network_ops"}
+    )
+    assert "Garuda/Arch" in prompt
+    assert "pacman through the privileged broker" in prompt
+    assert "Never generate apt/pacman/sudo" in prompt
+
+
+def test_false_completion_is_replaced_without_action_result():
+    from src.agent_loop import ground_action_completion
+    response = ground_action_completion(
+        "Installed iproute2 and nmap successfully.",
+        intent_domains={"homelab"}, tool_events=[],
+    )
+    assert response.startswith("No action completed:")
+    assert "installed" not in response.lower().split("i have not", 1)[0]
+
+
 @pytest.mark.asyncio
 async def test_provider_reconnect_fallback_receives_same_durable_context(monkeypatch):
     from src import llm_core

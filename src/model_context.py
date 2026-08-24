@@ -274,7 +274,7 @@ def get_context_length(endpoint_url: str, model: str) -> int:
     # profiles deliberately cap it so tool schemas leave room for durable
     # conversation, active Work state, and recent tool results. The cap is
     # deployment configuration and is never applied to remote strong models.
-    if is_local_endpoint(endpoint_url):
+    if is_local_endpoint(endpoint_url) and str(model or "").lower().startswith("qwen3:8b"):
         try:
             local_cap = int(os.environ.get("HADES_LOCAL_CONTEXT_LENGTH", "0"))
         except ValueError:
