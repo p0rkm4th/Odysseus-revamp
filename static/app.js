@@ -37,7 +37,7 @@ import settingsModule from './js/settings.js?v=20260815approvalsave1';
 import inventoryModule from './js/inventory.js?v=20260823inventory1';
 import securityModule from './js/security.js?v=20260823security1';
 import workModule from './js/work.js?v=20260823work1';
-import { openHousehold, openItAssets, openNetwork, openHomelab, openSmartHome, openDeveloper } from './js/intelligence.js';
+import { openHousehold, openItAssets, openNetwork, openHomelab, openSmartHome, openCommunications, openDeveloper } from './js/intelligence.js';
 import { openWorldModel } from './js/worldModel.js';
 import { openControlCenter } from './js/controlCenter.js';
 import { openHades } from './js/persistentAgent.js';
@@ -1108,6 +1108,7 @@ function initializeEventListeners() {
   if (toolWorkBtn) toolWorkBtn.addEventListener('click', () => workModule.togglePanel());
   const householdBtn = el('tool-household-btn'); if (householdBtn) householdBtn.addEventListener('click', openHousehold);
   const smartHomeBtn = el('tool-smart-home-btn'); if (smartHomeBtn) smartHomeBtn.addEventListener('click', openSmartHome);
+  const communicationsBtn = el('tool-communications-btn'); if (communicationsBtn) communicationsBtn.addEventListener('click', openCommunications);
   const itAssetsBtn = el('tool-it-assets-btn'); if (itAssetsBtn) itAssetsBtn.addEventListener('click', openItAssets);
   const networkBtn = el('tool-network-btn'); if (networkBtn) networkBtn.addEventListener('click', openNetwork);
   const homelabBtn = el('tool-homelab-btn'); if (homelabBtn) homelabBtn.addEventListener('click', openHomelab);

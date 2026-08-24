@@ -141,6 +141,26 @@ export async function openSmartHome(){
   }
   return el;
 }
+export async function openCommunications(){
+  const el=panel('communications-panel','Communications','<p>Loading Email, Calendar, and Contacts projection…</p>');
+  try {
+    const d=await fetch('/api/communications/overview',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('Communications overview unavailable')));
+    const email=d.email||{}, calendar=d.calendar||{}, events=calendar.events||[];
+    const metric=(label,value)=>`<div class="hades-summary-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
+      <header class="hades-module-header"><div><h2>Communications</h2><p>Email, Calendar, Contacts, and owner-scoped follow-up context</p></div><span class="hades-status-badge">Canonical projections</span></header>
+      <div class="hades-summary-metrics">${metric('Email accounts',email.configured||0)}${metric('Enabled',email.enabled||0)}${metric('Calendars',calendar.calendars||0)}${metric('Next 14 days',calendar.upcoming_14_days||0)}</div>
+      <section class="hades-detail-section"><h3>Email</h3>${(email.accounts||[]).length?`<ul>${email.accounts.map(x=>`<li>${esc(x.name||x.id)} · ${x.enabled?'enabled':'disabled'}${x.default?' · default':''}</li>`).join('')}</ul>`:'<p class="hades-empty-state">No owner-scoped email accounts are configured.</p>'}</section>
+      <section class="hades-detail-section"><h3>Upcoming Calendar</h3>${events.length?`<ul>${events.map(x=>`<li>${esc(x.summary||'Untitled event')} · ${esc(x.dtstart)}</li>`).join('')}</ul>`:'<p class="hades-empty-state">No upcoming events are projected for the next 14 days.</p>'}</section>
+      <section class="hades-detail-section"><h3>Contacts</h3><p class="muted">${esc(d.contacts?.canonical_store||'Canonical Contacts store')} remains separate; this overview does not copy contact records.</p></section>
+      <p class="muted">Source: ${esc(d.source||'canonical integrations')} · Email and Calendar windows remain the authoritative detailed views.</p>
+    </div>`;
+  } catch (error) {
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-error-state">${esc(error.message)} <button class="list-item" data-retry-communications>Retry</button></div>`;
+    el.querySelector('[data-retry-communications]')?.addEventListener('click', () => openCommunications());
+  }
+  return el;
+}
 export async function openDeveloper(){
   const el=panel('developer-panel','Developer','<p>Loading Developer Mode…</p>');
   const d=await fetch('/api/developer/yolo/status').then(r=>r.json());
