@@ -304,8 +304,19 @@ def budget_context_for_model(endpoint_url: str, model: str, *, fallback: int = 0
     unproven number (review on #4122). On probe error, returns ``fallback`` (the
     caller's best-known value) to preserve prior behaviour."""
     try:
-        _, known = get_context_length_known(endpoint_url, model)
-        return get_context_length(endpoint_url, model) if known else 0
+        ctx, known = get_context_length_known(endpoint_url, model)
+        if not known:
+            return 0
+        # Keep this function bound to the value returned by discovery, then
+        # apply the explicit local qwen deployment cap as a policy limit.
+        if is_local_endpoint(endpoint_url) and str(model or "").lower().startswith("qwen3:8b"):
+            try:
+                local_cap = int(os.environ.get("HADES_LOCAL_CONTEXT_LENGTH", "0"))
+            except ValueError:
+                local_cap = 0
+            if local_cap > 0:
+                ctx = min(ctx, local_cap)
+        return ctx
     except Exception:
         return fallback
 
