@@ -65,6 +65,18 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.post("/execution-nodes/select")
     async def select_execution_node(request: Request, payload: dict[str, Any] = Body(default={} )):
         return await tx(request, lambda svc,o,u: __import__("src.execution_nodes", fromlist=["ExecutionNodeService"]).ExecutionNodeService(svc.db).select(o, payload.get("requirements") or {}, limit=payload.get("limit", 1)))
+    @router.get("/sandboxes")
+    async def sandboxes(request: Request, status: str | None = None):
+        return {"sandboxes": await tx(request, lambda svc,o,u: __import__("src.sandbox", fromlist=["SandboxService"]).SandboxService(svc.db).list(o, status=status))}
+    @router.post("/sandboxes", status_code=201)
+    async def create_sandbox(request: Request, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.sandbox", fromlist=["SandboxService"]).SandboxService(svc.db).create(o, payload))
+    @router.get("/sandboxes/{sandbox_id}")
+    async def get_sandbox(request: Request, sandbox_id: str):
+        return await tx(request, lambda svc,o,u: __import__("src.sandbox", fromlist=["SandboxService"]).SandboxService(svc.db).get(o, sandbox_id))
+    @router.post("/sandboxes/{sandbox_id}/transition")
+    async def transition_sandbox(request: Request, sandbox_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.sandbox", fromlist=["SandboxService"]).SandboxService(svc.db).transition(o, sandbox_id, payload.get("status"), artifacts=payload.get("artifacts"), error=payload.get("error")))
     @router.get("/grants")
     async def delegated_grants(request: Request, active_only: bool = False):
         return {"grants": await tx(request, lambda svc,o,u: __import__("src.delegated_grants", fromlist=["DelegatedGrantService"]).DelegatedGrantService(svc.db).list(o, active_only=active_only))}
