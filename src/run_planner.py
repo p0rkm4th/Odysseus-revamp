@@ -180,6 +180,10 @@ class RunPlanner:
                 failures.append({"code": "verification_required", "sequence": action.get("sequence"), "message": "higher-risk action has no verification contract"})
             if contract["compensatable"] and not contract["compensating_action"]:
                 failures.append({"code": "compensation_missing", "sequence": action.get("sequence"), "message": "action claims compensation without a compensation contract"})
+            if action.get("id"):
+                conflicts = self.work.lock_conflicts(owner, action["id"])
+                if conflicts:
+                    failures.append({"code": "lock_conflict", "sequence": action.get("sequence"), "message": "declared resources are currently locked", "locks": conflicts})
             for gap in preview["knowledge_gaps"]:
                 requirement = gap.get("requirement") or {}
                 if requirement in contract["preconditions"]:
