@@ -60,6 +60,17 @@ approval/session binding, and runtime delivery remain owned by the existing
 Telegram store/runtime; voice, media, and live cross-channel dogfood remain
 future work.
 
+### CMDB-to-World-Model projection checkpoint
+
+The existing authenticated Work surface now provides a bounded CMDB sync
+projection into the existing owner-scoped WorldRelationship ledger. Canonical
+CMDB asset IDs become explicit asset references, supported relationship types
+are evidence-tagged with deterministic CMDB references, repeated syncs are
+idempotent, and ended CMDB relationships remain stale historical edges.
+Malformed or unsupported edges are skipped with structured reasons. CMDB
+identity remains authoritative; no IP-only merge or alternate graph store was
+introduced.
+
 ### PWA shell continuity slice
 
 The existing service worker cache was updated and versioned to include the

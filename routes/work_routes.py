@@ -216,6 +216,13 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/world/relationships")
     async def world_relationships(request: Request, entity_ref: str | None = None, relation: str | None = None, status: str | None = None):
         return {"relationships": await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).list_relationships(o, entity_ref=entity_ref, relation=relation, status=status))}
+    @router.post("/world/relationships/sync-cmdb")
+    async def sync_cmdb_relationships(request: Request):
+        def operation(svc, o, _u):
+            from src.network_projection import map_projection
+            projection = map_projection()
+            return __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).sync_cmdb_edges(o, projection.get("edges") or [])
+        return await tx(request, operation)
     @router.get("/world/entities/{entity_ref:path}/neighbors")
     async def world_neighbors(request: Request, entity_ref: str, depth: int = Query(1, ge=1, le=3)):
         return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).neighbors(o, entity_ref, depth=depth))

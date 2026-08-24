@@ -1,10 +1,12 @@
 """Evidence-backed relationship projection over existing CMDB references."""
 from __future__ import annotations
 from datetime import datetime, timezone
+import hashlib
+import json
 from core.work_models import WorldRelationship, WorkEvent
 from src.work_engine import WorkError, ident, now, parse_dt, serialize
 
-RELATIONSHIPS = {"RUNS_ON", "DEPENDS_ON", "USES", "POINTS_TO", "CONNECTED_TO", "BACKED_UP_BY", "OWNS"}
+RELATIONSHIPS = {"RUNS_ON", "DEPENDS_ON", "USES", "POINTS_TO", "CONNECTED_TO", "BACKED_UP_BY", "OWNS", "CONTAINS"}
 RELATIONSHIP_STATUSES = {"proposed", "observed", "user_confirmed", "contradicted", "stale", "superseded"}
 INACTIVE_RELATIONSHIP_STATUSES = {"contradicted", "stale", "superseded"}
 
@@ -21,6 +23,45 @@ def _current_relationship(row, at=None):
 
 class WorldModelService:
     def __init__(self, db): self.db = db
+
+    def sync_cmdb_edges(self, owner, edges, *, limit=500):
+        """Project canonical CMDB edges into the existing World Model store."""
+        allowed = {"RUNS_ON", "DEPENDS_ON", "USES", "POINTS_TO", "CONNECTED_TO", "BACKED_UP_BY", "OWNS", "CONTAINS"}
+        rows, skipped = [], []
+        for edge in list(edges or [])[:max(1, min(int(limit), 500))]:
+            if not isinstance(edge, dict):
+                continue
+            relation = str(edge.get("relation") or "").strip().upper()
+            if relation not in allowed:
+                skipped.append({"relation": relation, "reason": "unsupported_cmdb_relation"})
+                continue
+            parent = str(edge.get("parent_asset_id") or "").strip()
+            child = str(edge.get("child_asset_id") or "").strip()
+            if not parent or not child:
+                skipped.append({"relation": relation, "reason": "missing_asset_identity"})
+                continue
+            source_ref, target_ref = f"asset:{parent}", f"asset:{child}"
+            evidence = {"parent": parent, "child": child, "relation": relation, "started_at": edge.get("started_at"), "ended_at": edge.get("ended_at")}
+            evidence_ref = "cmdb://relationship/" + hashlib.sha256(json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            status = "stale" if edge.get("ended_at") else "observed"
+            existing = self.db.query(WorldRelationship).filter_by(owner=owner, source_ref=source_ref, relation=relation, target_ref=target_ref, status=status).all()
+            if any(evidence_ref in (item.evidence_references or []) for item in existing):
+                rows.append(serialize(existing[0]))
+                continue
+            row = WorldRelationship(
+                id=ident("rel"), owner=owner, source_ref=source_ref, relation=relation,
+                target_ref=target_ref, status=status, evidence_references=[evidence_ref],
+                source="cmdb", confidence_class="high" if status == "observed" else "unknown",
+                observation_kind="observed", valid_from=parse_dt(edge.get("started_at")),
+                valid_until=parse_dt(edge.get("ended_at")), recorded_at=now(),
+            )
+            self.db.add(row)
+            rows.append(serialize(row))
+        if rows:
+            self.db.flush()
+            self.db.add(WorkEvent(id=ident("event"), owner=owner, event_type="world.cmdb_synced", payload={"relationship_count": len(rows), "skipped_count": len(skipped)}))
+        self.db.commit()
+        return {"relationships": rows, "relationship_count": len(rows), "skipped": skipped, "authority": "canonical_cmdb"}
 
     def create_relationship(self, owner, data):
         relation = str(data.get("relation") or "").strip().upper()
