@@ -747,6 +747,15 @@ SecurityAssessmentService and rendered as escaped canonical data; the UI does
 not create findings, widen scope, or execute assessment actions. Timeline,
 remediation/verification UX, and live authorized dogfood remain future work.
 
+### Theme-aware legacy navigation checkpoint
+
+The shared icon registry and semantic theme tokens were already present, but
+five legacy sidebar rows were still plain text. Household, IT Assets, Network,
+Developer, and Hades now use theme-inheriting currentColor SVG icons in the
+legacy compatibility navigation. This closes the concrete missing-icon slice
+without creating a second navigation implementation. Synthetic theme/browser
+coverage is distinct from owner-authenticated live acceptance.
+
 ### OSINT epistemic projection checkpoint
 
 OSINT case claim reads continue to use the existing owner-scoped Work
