@@ -1,7 +1,11 @@
 """P0 regressions: provider context is reconstructed from durable recent chat."""
 
 from src.context_compactor import context_trace, trim_for_context
-from src.agent_loop import _classify_agent_request, _recent_reference_resolution_hint
+from src.agent_loop import (
+    _classify_agent_request,
+    _deterministic_reference_acknowledgement,
+    _recent_reference_resolution_hint,
+)
 from src.user_time import current_datetime_context_message
 
 
@@ -78,9 +82,31 @@ def test_answer_to_scan_range_question_keeps_network_route():
 
 
 def test_all_of_the_above_gets_immediate_reference_hint():
-    assert "A, B, and C" in _recent_reference_resolution_hint(
+    hint = _recent_reference_resolution_hint(
         _turns(), "yes, all of the above, thanks"
     )
+    assert "A, B, and C" in hint
+    ack = _deterministic_reference_acknowledgement(hint)
+    assert "selected all three preceding options" in ack
+    assert "No action is claimed complete yet" in ack
+
+
+def test_reference_options_ignore_persisted_no_action_status():
+    messages = [
+        {"role": "user", "content": "Offer options."},
+        {
+            "role": "assistant",
+            "content": (
+                "I can: A. inspect the server B. scan the network "
+                "C. summarize the results.\n\n"
+                "No action completed: I did not receive a valid tool execution."
+            ),
+        },
+        {"role": "user", "content": "yes, all of the above"},
+    ]
+    hint = _recent_reference_resolution_hint(messages, messages[-1]["content"])
+    assert "C: summarize the results." in hint
+    assert "No action completed" not in hint
 
 
 def test_reference_hint_is_protected_from_local_model_context_trim():

@@ -2015,9 +2015,15 @@ def _recent_reference_resolution_hint(messages: List[Dict], text: str) -> str | 
         r"\b(?:all\s+of\s+the\s+above|all\s+three|everything)\b", latest
     ):
         option_text = ""
+        # The stream persistence layer may append an honest no-action status
+        # after a prose-only assistant turn. It is not part of option C.
+        option_source = re.split(
+            r"\bNo action completed:\s*", previous_assistant, maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
         option_matches = re.findall(
-            r"(?:^|\s)([ABC])[.)]\s*([^\n]+?)(?=\s+[ABC][.)]|$)",
-            previous_assistant,
+            r"(?:^|\s)([ABC])[.)]\s*([^\n]+?)(?=\s+[ABC][.)]|\s*$)",
+            option_source,
             re.IGNORECASE,
         )
         if option_matches:
@@ -2046,6 +2052,23 @@ def _recent_reference_resolution_hint(messages: List[Dict], text: str) -> str | 
             "Continue that exact step rather than inventing a new topic."
         )
     return None
+
+
+def _deterministic_reference_acknowledgement(reference_hint: str | None) -> str | None:
+    """Return a non-authorizing acknowledgement for an unresolved all-options turn.
+
+    This is deliberately presentation-only.  It makes the user's selection
+    explicit even when a weak model emits a generic social response; it never
+    claims that any selected action executed and never grants tool authority.
+    """
+    if not reference_hint or not reference_hint.startswith("REFERENCE:"):
+        return None
+    selected = re.search(r"The selected options are:\s*(.+)$", reference_hint)
+    options = selected.group(1).strip() if selected else "A, B, and C"
+    return (
+        "Understood — you selected all three preceding options: "
+        f"{options} I’ll address them in order. No action is claimed complete yet."
+    )
 
 
 def _looks_like_explicit_skill_request(text: str) -> bool:
@@ -4456,7 +4479,9 @@ async def stream_agent_loop(
     _ody_memory_identity_turn = _looks_like_memory_identity_turn(_last_user)
     _intent = _classify_agent_request(messages, _last_user)
     _reference_hint = _recent_reference_resolution_hint(messages, _last_user)
+    _reference_ack = None
     if _reference_hint:
+        _reference_ack = _deterministic_reference_acknowledgement(_reference_hint)
         messages = _insert_before_latest_user(
             messages,
             {
@@ -5532,6 +5557,13 @@ async def stream_agent_loop(
     yield f"data: {json.dumps({'type': 'agent_prep', 'data': {k: round(v, 3) for k, v in prep_timings.items()}})}\n\n"
 
     full_response = ""
+    if _reference_ack:
+        # This is a server-owned conversational acknowledgement only. It
+        # prevents weak-model prose from erasing the user's selection while
+        # the model still decides whether any executable action is appropriate
+        # through the normal capability/approval path.
+        full_response += _reference_ack + "\n\n"
+        yield "data: " + json.dumps({"delta": _reference_ack}) + "\n\n"
     _hard_action_repair_count = 0
     # _ODY_V38_FIRST_CLASS_NO_ACTION_REPAIR
     _first_class_action_repair_count = 0
