@@ -46,6 +46,18 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
     async def integrations(request: Request):
         return await call(request, lambda value: SetupCenterService().integrations_projection(value))
 
+    @router.get("/permissions")
+    async def permissions(request: Request):
+        def project(value):
+            from src.delegated_grants import DelegatedGrantService
+            db = session_factory()
+            try:
+                grants = DelegatedGrantService(db).list(value)
+                return SetupCenterService().permissions_projection(value, grants)
+            finally:
+                db.close()
+        return await call(request, project)
+
     @router.post("/modules/{module_id}/health")
     async def module_health(request: Request, module_id: str):
         """Run only bounded, non-mutating setup health checks."""
