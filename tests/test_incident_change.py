@@ -98,3 +98,14 @@ def test_change_completion_requires_verified_canonical_run(db):
     completed=svc.transition_change("alice", change["id"], "completed", outcome={"verified":True})
     assert executing["status"] == "executing" and completed["status"] == "completed"
     assert completed["run_state"]["verification"]["success"] is True
+
+
+def test_change_lifecycle_revalidates_linked_run_before_validation(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain":"network", "plan":[{"capability_id":"homelab.manage", "action_id":"execute_network_discovery", "target_resources":["network:public"]}]})
+    svc = IncidentChangeService(db)
+    draft = svc.create_change("alice", {"objective":"Unsafe scope test", "run_id":run["id"]})
+    with pytest.raises(WorkError, match="change requires valid Run plan.*scope_invalid"):
+        svc.transition_change("alice", draft["id"], "validated")
+    with pytest.raises(WorkError, match="change requires valid Run plan.*scope_invalid"):
+        svc.create_change("alice", {"objective":"Unsafe immediate change", "run_id":run["id"], "status":"validated"})
