@@ -2077,6 +2077,8 @@ from core import observability_migrations as observability_migrations  # noqa: E
 from core import local_intelligence_migrations as local_intelligence_migrations  # noqa: E402,F401
 from core import persistent_agent_models as persistent_agent_models  # noqa: E402,F401
 from core import persistent_agent_migrations as persistent_agent_migrations  # noqa: E402,F401
+from core import incident_models as incident_models  # noqa: E402,F401
+from core import incident_migrations as incident_migrations  # noqa: E402,F401
 from core.schema_migrations import run_schema_migrations  # noqa: E402
 
 
