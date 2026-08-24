@@ -3,6 +3,9 @@
     "type": "git",
     "url": "https://github.com/odysseus-dev/odysseus.git"
   },
+  "scripts": {
+    "test:frontend": "bash scripts/verify_frontend.sh"
+  },
   "devDependencies": {
     "@antithesishq/bombadil": "^0.6.1"
   }

@@ -46,6 +46,13 @@ def serve_html_with_nonce(request: Request, file_path: str) -> HTMLResponse:
         raise HTTPException(500, "Internal server error")
     nonce = getattr(request.state, "csp_nonce", "")
     html = html.replace("{{CSP_NONCE}}", nonce)
+    # Static frontend assets are intentionally unbundled, so the served HTML
+    # carries the same build identity as the backend candidate. This is a
+    # diagnostic marker only; it contains no credentials or owner data.
+    html = html.replace(
+        "{{ODYSSEUS_FRONTEND_BUILD_ID}}",
+        os.getenv("ODYSSEUS_FRONTEND_BUILD_ID") or "unbuilt-source",
+    )
     return HTMLResponse(html)
 
 
