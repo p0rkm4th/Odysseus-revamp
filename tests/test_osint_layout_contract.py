@@ -16,6 +16,8 @@ def test_realistic_osint_fixture_covers_empty_large_and_adversarial_content():
 def test_shared_layout_contract_contains_intrinsic_sizing_and_responsive_rules():
     css = (ROOT / "static/style.css").read_text()
     assert ".hades-window-body" in css and "min-width:0" in css and "min-height:0" in css
+    assert ".hades-window-body > *" in css and "flex:0 0 auto" in css
+    assert ".work-grid > section { overflow:hidden; }" in css
     assert "overflow-wrap:anywhere" in css
     assert "min(100%,260px)" in css
     assert "--action-primary-background" in css
@@ -36,3 +38,17 @@ def test_window_controls_have_tooltips_and_accessible_labels():
     for label in ("Minimize", "Maximize or restore", "Snap left", "Snap right", "Close"):
         assert f'title="{label}"' in js
         assert f'aria-label="{label}"' in js
+
+
+def test_osint_tab_contract_keeps_selected_tab_usable_in_constrained_windows():
+    js = (ROOT / "static/js/osint.js").read_text()
+    assert 'role="tablist"' in js
+    assert 'aria-selected="${tab === currentTab ? \'true\' : \'false\'}"' in js
+    assert "scrollIntoView({block:'nearest', inline:'nearest'})" in js
+
+
+def test_shared_content_contract_covers_torture_fixture_shapes():
+    fixture = json.loads((ROOT / "tests/fixtures/osint-realistic-content.json").read_text())
+    content = fixture["known_information"] + fixture["report_excerpt"]
+    for marker in ("LONG_WORD", "https://", "東京", "<script>", "**Markdown-looking content**"):
+        assert marker in content

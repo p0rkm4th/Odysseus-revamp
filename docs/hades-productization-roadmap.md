@@ -125,6 +125,11 @@ escaping and readable prose styling. Realistic adversarial fixtures and
 framework-free overlap/containment assertions are included. Rendered browser
 acceptance and owner-live visual acceptance remain explicitly pending because
 no browser runner or owner session is available in this environment.
+The latest correction makes the window body a single intrinsic vertical flow:
+direct module children cannot widen or compete for height, dossier grid tracks
+clip only inside their own panels, and the active OSINT tab is scrolled into
+view after navigation. Primary actions now resolve through the live theme
+accent token, including its hover/focus states.
 
 ### CMDB-to-World-Model projection checkpoint
 
