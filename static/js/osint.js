@@ -62,12 +62,28 @@ async function load(el) {
 async function startInvestigation(event, el) {
   event.preventDefault();
   const form = event.currentTarget; const data = Object.fromEntries(new FormData(form).entries());
+  const result = form.parentElement.querySelector('#osint-intake-result');
+  result.innerHTML = loadingState('Preparing bounded investigation…');
+  const attachmentInput = form.querySelector('input[name="attachments"]');
+  let attachmentIds = [];
+  try {
+    if (attachmentInput?.files?.length) {
+      const uploadBody = new FormData();
+      [...attachmentInput.files].slice(0, 5).forEach(file => uploadBody.append('files', file, file.name));
+      const uploadResponse = await fetch('/api/upload', {method:'POST', credentials:'same-origin', body:uploadBody});
+      const uploadResult = await uploadResponse.json().catch(() => ({}));
+      if (!uploadResponse.ok) throw Error(uploadResult.detail || 'Attachment upload failed');
+      attachmentIds = (uploadResult.files || []).map(file => file.id).filter(Boolean).slice(0, 5);
+    }
+  } catch (error) {
+    result.innerHTML = errorState(error.message);
+    return;
+  }
   const depth = data.depth || 'standard'; const rounds = depth === 'quick' ? 4 : depth === 'deep' ? 20 : 10;
   const structured = Object.entries(data).filter(([key, value]) => value && !['known_information','depth','source_url','attachments'].includes(key)).map(([key,value]) => `${key}: ${value}`).join('\n');
   const query = [`OSINT target type: ${data.target_type}`, 'Known information:', data.known_information, structured && `Structured details:\n${structured}`, data.source_url && `Public source URL: ${data.source_url}`].filter(Boolean).join('\n\n');
-  const result = form.parentElement.querySelector('#osint-intake-result');
   result.innerHTML = loadingState('Creating bounded investigation…');
-  try { const created = await api('/api/research/start', {method:'POST', body:JSON.stringify({query, max_rounds:rounds, max_time: depth === 'deep' ? 900 : 300, category:'osint'})}); result.innerHTML = `<div class="hades-success-state"><strong>Investigation started</strong><p>Case ${esc(created.session_id)} is now running. It will appear in Cases and retain source/result provenance.</p><button type="button" class="hades-btn-secondary" id="osint-open-cases">Open Cases</button></div>`; result.querySelector('#osint-open-cases').onclick=()=>{currentTab='Cases';load(el);}; } catch (error) { result.innerHTML = errorState(error.message); }
+  try { const created = await api('/api/research/start', {method:'POST', body:JSON.stringify({query, attachment_ids:attachmentIds, max_rounds:rounds, max_time: depth === 'deep' ? 900 : 300, category:'osint'})}); result.innerHTML = `<div class="hades-success-state"><strong>Investigation started</strong><p>Case ${esc(created.session_id)} is now running. Uploaded files were passed through bounded extraction as untrusted evidence.</p><button type="button" class="hades-btn-secondary" id="osint-open-cases">Open Cases</button></div>`; result.querySelector('#osint-open-cases').onclick=()=>{currentTab='Cases';load(el);}; } catch (error) { result.innerHTML = errorState(error.message); }
 }
 
 export function openOsint() { const el=openView('osint', null, 'OSINT', loadingState()); load(el); return el; }

@@ -495,6 +495,18 @@ facts or inferences. External content remains escaped, tainted, and
 provenance-labelled. Canonical graph, corrections, and delta research remain
 future work.
 
+### OSINT attachment evidence slice
+
+The existing OSINT intake now accepts up to five owner-uploaded attachment
+references through the canonical upload handler. Files remain owner-scoped and
+confined to the upload store; existing document and vision processors are
+reused to produce bounded evidence labelled as untrusted external content.
+Extraction is capped per attachment and in aggregate, and the start response
+does not echo extracted content. The research session retains the evidence for
+the existing bounded research path, while canonical facts/inferences still
+require the existing review and provenance boundaries. Live provider research
+and richer correction/delta workflows remain pending.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
