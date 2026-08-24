@@ -8,7 +8,8 @@ const api = async (path, options={}) => { const r=await fetch(path,{credentials:
 function edgeCard(edge) {
   const kind = edge.observation_kind === 'inferred' || edge.status === 'proposed' ? 'MODEL PROPOSED' : edge.observation_kind === 'observed' ? 'OBSERVED' : 'CONFIRMED';
   const validity = `${edge.valid_from || 'open'} → ${edge.valid_until || 'open'}`;
-  return `<article class="hades-record-card"><div><strong>${esc(edge.source_ref)}</strong><span class="world-edge-arrow"> ${esc(edge.relation)} → </span><strong>${esc(edge.target_ref)}</strong><p>${esc(edge.source || 'No provenance')} · confidence ${esc(edge.confidence_class || 'unknown')} · ${esc(edge.observation_kind || 'unknown')}</p><small>Validity: ${esc(validity)} · recorded ${esc(edge.recorded_at || 'unknown')} · evidence ${(edge.evidence_references || []).length}</small></div><div>${statusBadge(edge.status, edge.status === 'user_confirmed' ? 'success' : edge.status === 'contradicted' ? 'danger' : edge.status === 'stale' ? 'warning' : 'info')} ${provenanceBadge(kind)}</div></article>`;
+  const activity = edge.activity_state || (['stale','superseded','contradicted'].includes(edge.status) ? 'historical' : 'active');
+  return `<article class="hades-record-card"><div><strong>${esc(edge.source_ref)}</strong><span class="world-edge-arrow"> ${esc(edge.relation)} → </span><strong>${esc(edge.target_ref)}</strong><p>${esc(edge.source || 'No provenance')} · confidence ${esc(edge.confidence_class || 'unknown')} · ${esc(edge.observation_kind || 'unknown')}</p><small>Activity: ${esc(activity)} · validity: ${esc(validity)} · recorded ${esc(edge.recorded_at || 'unknown')} · evidence ${(edge.evidence_references || []).length}</small></div><div>${statusBadge(edge.status, edge.status === 'user_confirmed' ? 'success' : edge.status === 'contradicted' ? 'danger' : edge.status === 'stale' ? 'warning' : 'info')} ${provenanceBadge(kind)}</div></article>`;
 }
 
 function impactList(items, empty) {

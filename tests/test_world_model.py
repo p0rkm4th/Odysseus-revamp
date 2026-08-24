@@ -60,12 +60,46 @@ def test_blast_radius_excludes_stale_edges_and_reports_unknown_gap(db):
     assert any(item["entity"] == "service:old" and item["status"] == "observed" for item in radius["unknown"])
 
 
+def test_blast_radius_marks_current_and_historical_activity_without_promoting_inference(db):
+    svc = WorldModelService(db)
+    svc.create_relationship("alice", {"source_ref": "service:active", "relation": "RUNS_ON", "target_ref": "host:cerberus", "status": "observed", "confidence_class": "high", "observation_kind": "observed", "source": "probe", "evidence_references": ["obs://active"]})
+    current = datetime.now(timezone.utc).replace(tzinfo=None)
+    svc.create_relationship("alice", {"source_ref": "service:old", "relation": "RUNS_ON", "target_ref": "host:cerberus", "status": "observed", "confidence_class": "high", "observation_kind": "observed", "source": "archive", "valid_until": (current - timedelta(days=1)).isoformat()})
+    svc.create_relationship("alice", {"source_ref": "app:likely", "relation": "DEPENDS_ON", "target_ref": "service:active", "status": "proposed", "confidence_class": "medium", "observation_kind": "inferred", "source": "model", "evidence_references": ["run://research"]})
+    listed = svc.list_relationships("alice", entity_ref="host:cerberus")
+    assert {item["activity_state"] for item in listed} == {"active", "historical"}
+    radius = svc.blast_radius("alice", "host:cerberus")
+    active = next(item for item in radius["confirmed"] if item["entity"] == "service:active")
+    assert active["activity_state"] == "active"
+    assert active["evidence_references"] == ["obs://active"]
+    historical = next(item for item in radius["unknown"] if item["entity"] == "service:old")
+    assert historical["activity_state"] == "historical"
+    assert not any(item["entity"] == "service:old" for item in radius["confirmed"] + radius["likely"])
+
+
 def test_neighbors_do_not_traverse_future_relationship(db):
     svc = WorldModelService(db)
     current = datetime.now(timezone.utc).replace(tzinfo=None)
     svc.create_relationship("alice", {"source_ref": "service:future", "relation": "RUNS_ON", "target_ref": "host:cerberus", "status": "observed", "confidence_class": "high", "source": "scheduled", "valid_from": (current + timedelta(days=1)).isoformat()})
     graph = svc.neighbors("alice", "host:cerberus")
     assert "service:future" not in graph["entities"]
+
+
+def test_blast_radius_is_bounded_and_cycle_safe(db):
+    svc = WorldModelService(db)
+    edges = [
+        ("host:one", "service:one"),
+        ("service:one", "service:two"),
+        ("service:two", "service:one"),
+        ("service:two", "service:three"),
+        ("service:three", "service:four"),
+    ]
+    for source, target in edges:
+        svc.create_relationship("alice", {"source_ref": source, "relation": "DEPENDS_ON", "target_ref": target, "status": "observed", "confidence_class": "high", "observation_kind": "observed", "source": "topology"})
+    radius = svc.blast_radius("alice", "host:one")
+    entities = [item["entity"] for item in radius["confirmed"]]
+    assert len(entities) == len(set(entities))
+    assert "service:four" not in entities
 
 
 def test_cmdb_sync_projects_edges_idempotently_and_preserves_ended_state(db):

@@ -19,6 +19,7 @@ def test_world_model_is_visible_and_uses_canonical_projection():
     assert "All relations" in module and "All statuses" in module
     assert "CONTAINS" in module
     assert "Unknown dependency gaps" in module
+    assert "Activity:" in module
     assert '"/world/relationships/sync-cmdb"' in (ROOT / "routes/work_routes.py").read_text()
     assert "world-sync-cmdb" in module
     assert "Sync CMDB" in module

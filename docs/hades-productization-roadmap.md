@@ -83,6 +83,15 @@ alongside focus and relationship filters. The action calls the canonical
 projection endpoint and refreshes the same relationship view; it does not
 create a client-side graph or bypass owner/policy boundaries.
 
+### World Model activity-state checkpoint
+
+World relationships now expose a derived `activity_state` projection. Current
+valid edges may participate in bounded traversal, while stale, contradicted,
+superseded, and out-of-valid-time edges remain visible as historical/unknown
+evidence and cannot silently count as present dependencies. Blast-radius
+entries preserve confidence, observation kind, source, and evidence references;
+traversal remains depth-bounded and cycle-safe.
+
 ### PWA shell continuity slice
 
 The existing service worker cache was updated and versioned to include the

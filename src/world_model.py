@@ -13,12 +13,27 @@ INACTIVE_RELATIONSHIP_STATUSES = {"contradicted", "stale", "superseded"}
 
 def _current_relationship(row, at=None):
     """Whether an edge is usable for present-state traversal."""
+    return relationship_activity(row, at=at)["activity_state"] == "active"
+
+
+def relationship_activity(row, *, at=None):
+    """Project relationship lifecycle into a safe present/history distinction.
+
+    ``status`` retains the evidence/reconciliation vocabulary used by the
+    canonical relationship store.  Consumers that estimate current impact
+    must use this derived state: inactive statuses and out-of-valid-time edges
+    remain visible as history, but cannot silently become dependencies.
+    """
     if row.get("status") in INACTIVE_RELATIONSHIP_STATUSES:
-        return False
+        return {"activity_state": "historical", "reason": f"status:{row.get('status')}"}
     at = at or now()
     valid_from = parse_dt(row.get("valid_from"))
     valid_until = parse_dt(row.get("valid_until"))
-    return not ((valid_from and valid_from > at) or (valid_until and valid_until <= at))
+    if valid_from and valid_from > at:
+        return {"activity_state": "historical", "reason": "not_yet_valid"}
+    if valid_until and valid_until <= at:
+        return {"activity_state": "historical", "reason": "validity_ended"}
+    return {"activity_state": "active", "reason": "currently_valid"}
 
 
 class WorldModelService:
@@ -81,7 +96,12 @@ class WorldModelService:
         if entity_ref: query = query.filter((WorldRelationship.source_ref == entity_ref) | (WorldRelationship.target_ref == entity_ref))
         if relation: query = query.filter_by(relation=str(relation).upper())
         if status: query = query.filter_by(status=status)
-        return [serialize(row) for row in query.order_by(WorldRelationship.updated_at.desc()).limit(max(1, min(int(limit), 500))).all()]
+        result = []
+        for row in query.order_by(WorldRelationship.updated_at.desc()).limit(max(1, min(int(limit), 500))).all():
+            item = serialize(row)
+            item.update(relationship_activity(item))
+            result.append(item)
+        return result
 
     def update_relationship(self, owner, relationship_id, data):
         row = self.db.query(WorldRelationship).filter_by(owner=owner, id=relationship_id).one_or_none()
@@ -131,19 +151,26 @@ class WorldModelService:
                     inactive_edges.append(row)
                     continue
                 other = row["target_ref"] if row["source_ref"] in frontier else row["source_ref"]
+                # A relationship can be encountered again when the graph has
+                # a cycle or when traversal crosses an already visited node.
+                # It remains useful evidence in the World Model, but it must
+                # not inflate present blast-radius impact or re-add the focus.
+                if other in seen:
+                    continue
                 if row not in traversed: traversed.append(row)
                 impact.append((row, other))
-                if other not in seen:
-                    seen.add(other); next_frontier.add(other)
+                seen.add(other); next_frontier.add(other)
             frontier = next_frontier
             if not frontier: break
         confirmed, likely, unknown = [], [], []
         for row, other in impact:
-            item = {"entity": other, "relation": row["relation"], "confidence": row["confidence_class"], "source": row["source"]}
+            activity = relationship_activity(row)
+            item = {"entity": other, "relation": row["relation"], "confidence": row["confidence_class"], "source": row["source"], "activity_state": activity["activity_state"], "observation_kind": row.get("observation_kind", "unknown"), "evidence_references": list(row.get("evidence_references") or [])}
             if row["status"] in {"observed", "user_confirmed"} and row["confidence_class"] in {"high", "confirmed"}: confirmed.append(item)
             elif row["status"] == "proposed" or row["observation_kind"] == "inferred": likely.append(item)
         for row in inactive_edges[:limit]:
             other = row["target_ref"] if row["source_ref"] == focus else row["source_ref"]
-            unknown.append({"entity": other, "relation": row["relation"], "reason": "relationship is stale, contradicted, superseded, or outside its valid time", "source": row["source"], "status": row["status"]})
+            activity = relationship_activity(row)
+            unknown.append({"entity": other, "relation": row["relation"], "reason": activity["reason"], "source": row["source"], "status": row["status"], "activity_state": activity["activity_state"], "confidence": row.get("confidence_class", "unknown"), "observation_kind": row.get("observation_kind", "unknown"), "evidence_references": list(row.get("evidence_references") or [])})
         if not traversed and not unknown: unknown.append({"reason": "no evidence-backed dependency edges", "entity": entity_ref})
         return {"focus": entity_ref, "confirmed": confirmed, "likely": likely, "unknown": unknown}
