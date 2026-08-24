@@ -34,6 +34,12 @@ class IncidentChangeService:
         result = serialize(row)
         result["hypotheses"] = self.list_hypotheses(owner, incident_id)
         result["changes"] = self.list_changes(owner, incident_id=incident_id)
+        result["runs"] = []
+        for change in result["changes"]:
+            if not change.get("run_id"): continue
+            run = self.db.query(WorkRun).filter_by(owner=owner, id=change["run_id"]).one_or_none()
+            if run is not None:
+                result["runs"].append({"id": run.id, "status": run.status, "lifecycle_state": run.lifecycle_state, "result_summary": run.result_summary or {}, "verification": run.verification or {}})
         result["canonical_refs"] = {"incident": f"incident://{row.id}", "evidence": list(row.evidence_references or [])}
         return result
 
@@ -68,8 +74,12 @@ class IncidentChangeService:
         preview = data.get("preview") or {}
         if run_id:
             if self.db.query(WorkRun).filter_by(owner=owner, id=run_id).one_or_none() is None: raise WorkError("run not found")
-            preview = RunPlanner(self.db).compile(owner, run_id)
-        row = Change(id=ident("change"), owner=owner, incident_id=incident_id, run_id=run_id, objective=objective[:20000], status=str(data.get("status") or "draft"), targets=data.get("targets") or [], desired_state=data.get("desired_state") or {}, preview=preview, prechecks=data.get("prechecks") or [], action_ids=data.get("action_ids") or [], resources=data.get("resources") or [], risk=str(data.get("risk") or "low")[:32], blast_radius=data.get("blast_radius") or {}, approval=data.get("approval") or {}, compensation=data.get("compensation") or {}, verification=data.get("verification") or {})
+            planner = RunPlanner(self.db)
+            preview = planner.compile(owner, run_id)
+            validation = planner.validate(owner, run_id)
+            preview = {**preview, "validation": {"valid": validation["valid"], "failures": validation["failures"], "warnings": validation["warnings"]}}
+        blast_radius = data.get("blast_radius") or preview.get("blast_radius") or {}
+        row = Change(id=ident("change"), owner=owner, incident_id=incident_id, run_id=run_id, objective=objective[:20000], status=str(data.get("status") or "draft"), targets=data.get("targets") or [], desired_state=data.get("desired_state") or {}, preview=preview, prechecks=data.get("prechecks") or [], action_ids=data.get("action_ids") or [], resources=data.get("resources") or [], risk=str(data.get("risk") or "low")[:32], blast_radius=blast_radius, approval=data.get("approval") or {}, compensation=data.get("compensation") or {}, verification=data.get("verification") or {})
         if row.status not in CHANGE_STATUSES: raise WorkError("invalid change status")
         self.db.add(row); self.db.commit(); self.db.refresh(row); return serialize(row)
 
@@ -83,5 +93,9 @@ class IncidentChangeService:
         row = self.db.query(Change).filter_by(owner=owner, id=change_id).one_or_none()
         if row is None: raise WorkError("change not found")
         result = serialize(row)
+        if row.run_id:
+            run = self.db.query(WorkRun).filter_by(owner=owner, id=row.run_id).one_or_none()
+            if run is not None:
+                result["run_state"] = {"status": run.status, "lifecycle_state": run.lifecycle_state, "result_summary": run.result_summary or {}, "verification": run.verification or {}, "error_summary": run.error_summary}
         result["canonical_refs"] = {"change": f"change://{row.id}", "run": f"run://{row.run_id}" if row.run_id else None, "incident": f"incident://{row.incident_id}" if row.incident_id else None}
         return result
