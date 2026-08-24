@@ -2749,10 +2749,15 @@ def ground_action_completion(text: str, *, intent_domains, tool_events) -> str:
         and "waiting for" not in str(event.get("output") or "").lower()
         for event in (tool_events or [])
     )
+    action_prose = bool(re.search(
+        r"\b(?:i(?:'ll| will)|we(?:'ll| will)|proceed|execute|install|scan|"
+        r"discover|restart|change|create|delete|update|verify|remount)\b",
+        str(text or ""), re.IGNORECASE,
+    ))
     if (
         not successful_result
         and _intent_requires_action(intent_domains)
-        and _looks_like_success_claim(text)
+        and (action_prose or _looks_like_success_claim(text))
     ):
         return (
             "No action completed: I did not receive a valid tool execution or "
