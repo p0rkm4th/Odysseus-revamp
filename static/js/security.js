@@ -22,9 +22,11 @@ function render(data) {
       <small>${esc(item.assessment_type)} · revision ${esc(item.revision)}</small>
       <button class="security-open" data-id="${esc(item.id)}">Open assessment</button>
     </article>`).join('');
-  pane.innerHTML = `<div class="security-header"><div><h2>Security Assessments</h2><p>Authorized, bounded assessment records and evidence.</p></div><button id="security-close">Close</button></div>
+  const authorized = (data.engagements || []).filter(item => item.authorization_status === 'authorized').length;
+  pane.innerHTML = `<div class="hades-dossier"><header class="hades-module-header"><div><h2>Security Assessments</h2><p>Authorized, bounded assessment records and evidence.</p></div><button id="security-close">Close</button></header>
+    <div class="hades-summary-metrics"><div class="hades-summary-metric"><small>Engagements</small><strong>${esc((data.engagements || []).length)}</strong></div><div class="hades-summary-metric"><small>Authorized</small><strong>${esc(authorized)}</strong></div><div class="hades-summary-metric"><small>Boundary</small><strong>Scoped</strong></div></div>
     <div class="security-actions"><button id="security-new">New engagement</button><button id="security-refresh">Refresh</button></div>
-    <div id="security-message" role="status"></div><div class="security-list">${rows || '<p class="muted">No engagements yet.</p>'}</div>`;
+    <div id="security-message" role="status"></div><div class="security-list">${rows || '<p class="hades-empty-state">No engagements yet. Create a draft before adding authorization and scope.</p>'}</div></div>`;
   pane.querySelector('#security-close').onclick = () => { closeWindow('security-overview'); pane = null; windowEl = null; };
   pane.querySelector('#security-refresh').onclick = load;
   pane.querySelector('#security-new').onclick = create;
@@ -50,15 +52,24 @@ async function openDetail(id) {
     const evidence = (item.evidence || []).map(row => `<div class="security-row"><strong>${esc(row.evidence_kind)}</strong><span class="security-badge ${row.stale ? 'stale' : 'observed'}">${row.stale ? 'STALE' : 'OBSERVED'}</span><small>${esc(row.source_trust)} · ${esc(row.confidence)} · ${esc(row.observed_at)}</small><div>${esc(row.reference)}</div></div>`).join('') || '<p class="muted">No evidence.</p>';
     const findings = (item.findings || []).map(row => `<div class="security-row"><strong>${esc(row.title)}</strong><span class="security-badge confirmed">${esc(row.status)}</span><small>${esc(row.severity)} · evidence ${(row.evidence_refs_json || []).length}</small><div>${esc(row.remediation || 'No remediation recorded')}</div></div>`).join('') || '<p class="muted">No confirmed findings.</p>';
     const candidates = (item.finding_candidates || []).map(row => `<div class="security-row"><strong>${esc(row.proposed_title)}</strong><span class="security-badge inferred">${esc(row.status)}</span><small>${esc(row.source_kind)} · ${esc(row.confidence)}</small><div>${esc(row.rationale || row.proposed_description)}</div></div>`).join('') || '<p class="muted">No finding candidates.</p>';
-    pane.innerHTML = `<div class="security-header"><div><h2>${esc(item.name)}</h2><p>${esc(item.authorization_status)} · ${esc(item.status)} · revision ${esc(item.revision)}</p></div><button id="security-back">Back</button></div>
-      <div class="security-detail-grid"><section><h3>Authorization</h3><p>${esc(item.authorization_reference || 'Not authorized')}</p><button id="security-authorize">Authorize bounded test</button></section>
-      <section><h3>Scope</h3><pre>${esc(JSON.stringify(item.scopes || [], null, 2))}</pre></section><section><h3>Targets</h3>${targets}</section>
-      <section><h3>Runs / activity</h3><pre>${esc(JSON.stringify(item.runs || [], null, 2))}</pre></section><section><h3>Evidence</h3>${evidence}</section>
-      <section><h3>Finding candidates</h3>${candidates}</section><section><h3>Findings</h3>${findings}</section></div>`;
+    pane.innerHTML = `<div class="hades-dossier"><header class="hades-module-header"><div><h2>${esc(item.name)}</h2><p>Authorized security assessment · revision ${esc(item.revision)}</p></div><span class="hades-status-badge">${esc(item.authorization_status)} · ${esc(item.status)}</span><button id="security-back">Back</button></header>
+      <div class="security-detail-grid"><section class="hades-detail-section"><h3>Authorization</h3><p>${esc(item.authorization_reference || 'Not authorized')}</p><button id="security-authorize">Authorize bounded test</button></section>
+      <section class="hades-detail-section"><h3>Scope</h3><pre>${esc(JSON.stringify(item.scopes || [], null, 2))}</pre></section><section class="hades-detail-section"><h3>Targets</h3>${targets}</section>
+      <section class="hades-detail-section"><h3>Runs / activity</h3><pre>${esc(JSON.stringify(item.runs || [], null, 2))}</pre></section><section class="hades-detail-section"><h3>Evidence</h3>${evidence}</section>
+      <section class="hades-detail-section"><h3>Finding candidates</h3>${candidates}</section><section class="hades-detail-section"><h3>Findings</h3>${findings}</section>
+      <section class="hades-detail-section"><h3>Report</h3><p class="muted">Reports are generated from canonical scope, runs, evidence, and findings.</p><button id="security-report">Generate grounded report</button><div id="security-report-output"></div></section></div></div>`;
     pane.querySelector('#security-back').onclick = load;
     pane.querySelector('#security-authorize').onclick = async () => {
       try { await api(`/api/security/engagements/${encodeURIComponent(id)}/authorize`, {method:'POST', body: JSON.stringify({reference:'operator-confirmed dogfood scope', notes:'Bounded local test only', expires_at: new Date(Date.now()+3600000).toISOString()})}); await openDetail(id); }
       catch (error) { window.alert(error.message); }
+    };
+    pane.querySelector('#security-report').onclick = async () => {
+      const output = pane.querySelector('#security-report-output');
+      output.textContent = 'Generating…';
+      try {
+        const report = await api(`/api/security/engagements/${encodeURIComponent(id)}/reports`, {method:'POST'});
+        output.innerHTML = `<p class="hades-provenance">Canonical report revision ${esc(report.source_revision || item.revision)}</p><pre>${esc(JSON.stringify(report.projection || report, null, 2))}</pre>`;
+      } catch (error) { output.innerHTML = `<p class="security-error">${esc(error.message)}</p>`; }
     };
   } catch (error) { window.alert(error.message); }
 }
