@@ -7,6 +7,7 @@ Provides token estimation for context usage tracking.
 
 import ipaddress
 import logging
+import os
 import sys
 from typing import Dict, List, Optional, Tuple
 
@@ -268,7 +269,19 @@ def get_context_length(endpoint_url: str, model: str) -> int:
     or context_window fields. Caches result per (endpoint, model).
     Falls back to DEFAULT_CONTEXT if unavailable.
     """
-    return _get_context_length_cached(endpoint_url, model)[0]
+    context = _get_context_length_cached(endpoint_url, model)[0]
+    # The model's advertised window is not the deployment budget. Local Hades
+    # profiles deliberately cap it so tool schemas leave room for durable
+    # conversation, active Work state, and recent tool results. The cap is
+    # deployment configuration and is never applied to remote strong models.
+    if is_local_endpoint(endpoint_url):
+        try:
+            local_cap = int(os.environ.get("HADES_LOCAL_CONTEXT_LENGTH", "0"))
+        except ValueError:
+            local_cap = 0
+        if local_cap > 0:
+            context = min(context, local_cap)
+    return context
 
 
 def get_context_length_known(endpoint_url: str, model: str) -> Tuple[int, bool]:

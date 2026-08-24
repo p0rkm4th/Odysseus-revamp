@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 
 from src.constants import DATA_DIR
 from src.execution_profiles import active_execution_profile
+from src.capability_dependencies import capability_health, remediation_handoff
 
 
 class HomelabOperationError(ValueError):
@@ -171,10 +172,11 @@ class HomelabOperations:
         if action == "inspect_host":
             return await self._read(owner, action, ["uptime"])
         if action == "discovery_status":
-            path = shutil.which("nmap")
+            health = capability_health("network_discovery")
             return {
-                "kind": "capability", "action": action, "available": bool(path),
-                "scanner": "nmap", "install_required": not bool(path), "exit_code": 0,
+                "kind": "capability", "action": action, "available": health["status"] == "available",
+                "scanner": "nmap", "install_required": bool(health["missing_executables"]),
+                "capability_health": health, "exit_code": 0,
             }
         if action in {"plan_diagnostic_install", "execute_diagnostic_install"}:
             return await self._diagnostic_install(request, owner=owner, action=action)
@@ -248,11 +250,14 @@ class HomelabOperations:
         }
         digest = _digest(operation)
         scanner = shutil.which("nmap")
+        health = capability_health("network_discovery", available=([] if not scanner else ["nmap"]))
         if action == "plan_network_discovery":
             receipt = {
                 "kind": "plan", "owner": owner, "created_at": _now().isoformat(),
                 "operation_digest": digest, **operation,
                 "scanner_available": bool(scanner),
+                "capability_health": health,
+                "required_packages": health.get("packages", []),
                 "preflight": f"Probe only {cidr} for live hosts; open ports and services are not enumerated.",
                 "recovery": "Discovery is read-only; discard any unwanted draft candidates.",
             }
@@ -266,7 +271,28 @@ class HomelabOperations:
         if active_execution_profile().name != "privileged_host":
             raise HomelabOperationError("network discovery requires privileged host operator mode and exact approval")
         if not scanner:
-            raise HomelabOperationError("nmap is not installed; review and approve installation separately")
+            # Never ask the model to guess a distro package name. Return a
+            # deterministic remediation handoff to the existing exact-
+            # approval diagnostic-install action; the caller can preserve the
+            # same Work Run/RunAction while that prerequisite is installed.
+            handoff = None
+            if request.get("run_id") and request.get("action_id"):
+                try:
+                    handoff = remediation_handoff(
+                        "network_discovery", run_id=str(request["run_id"]),
+                        action_id=str(request["action_id"]),
+                        approval_reference=request.get("approval_reference"),
+                    )
+                except ValueError:
+                    handoff = None
+            return {
+                "kind": "prerequisite_missing", "action": action,
+                "capability": "network_discovery", "capability_health": health,
+                "required_packages": health.get("packages", []),
+                "remediation_action": "plan_diagnostic_install",
+                "operation_digest": digest, "handoff": handoff,
+                "untrusted_content": False,
+            }
         code, output = await self.runner([
             scanner, "-sn", "-n", "--max-retries", "1", "--host-timeout", "5s",
             "-oX", "-", cidr,
@@ -289,13 +315,32 @@ class HomelabOperations:
         from src.privileged_broker import ALLOWED_PACKAGES, client_request, validate_packages
 
         try:
-            packages = validate_packages(request.get("packages"))
+            capability = str(request.get("capability") or "").strip()
+            dependency = capability_health(capability, available=[]) if capability else None
+            if capability:
+                if not dependency.get("remediation_available"):
+                    raise ValueError("capability has no deterministic approved prerequisite remediation")
+                packages = validate_packages(dependency.get("packages"))
+                verify_executables = dependency.get("executables", [])
+            else:
+                packages = validate_packages(request.get("packages"))
+                verify_executables = [str(x) for x in request.get("verify_executables", []) if isinstance(x, str)]
         except ValueError as exc:
             raise HomelabOperationError(str(exc)) from exc
         operation = {
             "action": "execute_diagnostic_install", "target_kind": "local_diagnostic_packages",
-            "packages": packages,
+            "packages": packages, "capability": capability or None,
         }
+        handoff = None
+        if capability and request.get("run_id") and request.get("action_id"):
+            try:
+                handoff = remediation_handoff(
+                    capability, run_id=str(request["run_id"]),
+                    action_id=str(request["action_id"]),
+                    approval_reference=request.get("approval_reference"),
+                )
+            except ValueError:
+                handoff = None
         digest = _digest(operation)
         if action == "plan_diagnostic_install":
             try:
@@ -308,8 +353,11 @@ class HomelabOperations:
                 "operation_digest": digest, **operation,
                 "broker_available": broker_available,
                 "allowlisted_packages": sorted(ALLOWED_PACKAGES),
+                "capability_health": dependency,
+                "verify_executables": verify_executables,
                 "preflight": "Install only the exact allowlisted diagnostic packages through the separately deployed peer-checked broker.",
                 "recovery": "Remove packages using the host package manager if the operator chooses to roll back.",
+                "handoff": handoff,
             }
             await asyncio.to_thread(self.receipts.append, receipt)
             return {**_public(receipt), "exit_code": 0}
@@ -333,7 +381,28 @@ class HomelabOperations:
             "exit_code": 0 if result.get("ok") else 1,
         }
         await asyncio.to_thread(self.receipts.append, receipt)
-        return {**_public(receipt), "broker_result": result, "untrusted_content": True}
+        verification = None
+        if result.get("ok") and verify_executables:
+            try:
+                verification = await asyncio.to_thread(
+                    client_request,
+                    {"action": "verify_executables", "executables": verify_executables},
+                    timeout=30,
+                )
+            except Exception:
+                verification = {"ok": False, "error": "prerequisite verification unavailable"}
+            result = dict(result)
+            result["verification"] = verification
+            receipt["verified"] = bool(verification.get("ok"))
+            receipt["success"] = bool(result.get("ok")) and bool(verification.get("ok"))
+        verified = bool(receipt.get("success"))
+        return {
+            **_public(receipt), "broker_result": result,
+            "verified_prerequisites": verified,
+            "resume_same_run": bool(verified and handoff),
+            "resume_same_action": bool(verified and handoff),
+            "handoff": handoff, "untrusted_content": True,
+        }
 
     async def _read(
         self, owner: str, action: str, argv: list[str], *, target: str = "local_host",

@@ -9,6 +9,7 @@ from src.owner_identity import effective_storage_owner
 from src import local_intelligence
 from src import developer_mode
 from src.network_projection import map_projection
+from src.capability_dependencies import capability_health, supported_capabilities
 
 def setup_intelligence_routes(*, session_factory=SessionLocal):
     router=APIRouter(tags=["local-intelligence"])
@@ -28,6 +29,14 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         owner(request); profile=str(payload.get("profile") or "hades-local-test")
         try:return await asyncio.to_thread(local_intelligence.infer,profile,payload.get("messages") or [])
         except Exception as exc: raise HTTPException(502,"local model inference unavailable") from exc
+    @router.get("/api/intelligence/capabilities")
+    async def capabilities(request: Request):
+        value = owner(request)
+        return {
+            "owner": value,
+            "capabilities": [capability_health(name) for name in supported_capabilities()],
+            "registry": "bounded_first_class_only",
+        }
     @router.get("/api/developer/yolo/status")
     async def yolo_status(request: Request,lease_id: str|None=None):
         value=owner(request)

@@ -54,6 +54,7 @@ MANAGE_HOMELAB_SCHEMA = {
             "action": {"type": "string", "enum": ["inspect_host", "service_status", "discovery_status", "plan_service_restart", "execute_service_restart", "plan_network_discovery", "execute_network_discovery", "plan_diagnostic_install", "execute_diagnostic_install"]},
             "service": {"type": "string"}, "cidr": {"type": "string"}, "plan_digest": {"type": "string"},
             "packages": {"type": "array", "items": {"type": "string"}},
+            "capability": {"type": "string", "description": "Supported Hades capability whose declared prerequisites should be resolved deterministically; do not guess package names."},
         }, "required": ["action"]},
     }
 }
@@ -109,7 +110,13 @@ _HOMELAB_CONTRACT = '''### `manage_homelab`
 Structured local-only homelab operations. Plan before restart, discovery, or
 package installation. Network discovery is private-scope and produces
 review-only candidates; it never writes user inventory directly.
-`<invoke name="manage_homelab"><parameter name="action">discovery_status</parameter></invoke>`'''
+`<invoke name="manage_homelab"><parameter name="action">discovery_status</parameter></invoke>`
+
+If a supported operation reports `prerequisite_missing`, call
+`plan_diagnostic_install` with its returned `capability`. Hades resolves the
+platform package from its bounded registry; never invent a package name from
+the executable name. Installation remains allowlisted, exactly approved, and
+must be verified before the same Work Run/RunAction resumes.'''
 
 _OSINT_CONTRACT = '''### `manage_osint`
 Public-source-only research policy. Validate target and objective before search
