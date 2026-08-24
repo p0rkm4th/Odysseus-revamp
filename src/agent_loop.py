@@ -1967,6 +1967,7 @@ def _assistant_requested_followup(messages: List[Dict]) -> bool:
             r"which .{0,40}(scan|range|subnet|network)|"
             r"what.+(?:todo|to-do|list|document|email|model|server|item)|"
             r"any specific|give me|tell me|proceed|continue|carry on|go ahead|"
+            r"shall i (?:run|scan|start|proceed)|"
             r"run (?:the|it|this)|start (?:the|it|this)|approve|allow)\b",
             text,
         ))
