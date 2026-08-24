@@ -503,7 +503,10 @@
       ]).then(([sess, feat, sett]) => {
         sessionStorage.setItem('ody-prefetch-sessions', JSON.stringify(sess));
         sessionStorage.setItem('ody-prefetch-features', JSON.stringify(feat));
-        sessionStorage.setItem('ody-prefetch-settings', JSON.stringify(sett));
+        sessionStorage.setItem('ody-prefetch-settings', JSON.stringify({
+          version: 'hades-settings-v2',
+          data: sett,
+        }));
       }).catch(() => {}).finally(() => { window.location.replace(appUrl('/')); });
     }
     async function doLogin(totpCode) {
