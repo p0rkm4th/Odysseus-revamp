@@ -6,10 +6,10 @@ product workspace or dogfood gate is incomplete.
 
 | Domain | Backend | Capabilities/routing | UI/windows/search | Tests | Live dogfood | Status / next gap |
 |---|---|---|---|---|---|---|
-| Self/continuity | present | present | partial | green | partial | strengthen deterministic referent resolution; self dossier |
+| Self/continuity | present | present | partial | green | partial | self dossier is live; weak-model referent language remains bounded |
 | Work/Life | present | partial | partial | green | partial | Life overview, reviews, commitments |
 | Memory | present | present | partial | green | partial | layer and token inspector |
-| Notifications/monitors | partial | partial | partial | green | not accepted | web Attention projection now canonical; delivery/monitor dogfood remains |
+| Notifications/monitors | partial | partial | green | green | not accepted | web Attention projection is live; delivery/monitor dogfood remains |
 | Household | present | partial | partial | green | not accepted | intake, dossier, history, provenance |
 | IT Assets/CMDB | present | present | partial | green | partial | reconciliation and detail workspace |
 | Network | present | green | partial | green | green | change detection, history, polished map |
