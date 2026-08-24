@@ -81,6 +81,29 @@ def test_consequential_execution_requires_structured_plan_validation(db):
         svc.verified_execution_step("alice", run["id"], "executing")
 
 
+def test_cancellation_is_immediate_before_mutation_and_blocks_new_actions(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    cancelled = svc.request_cancel("alice", run["id"], reason="owner stopped plan")
+    assert cancelled["lifecycle_state"] == "cancelled"
+    with pytest.raises(WorkError, match="cancellation requested"):
+        svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "service_status"})
+
+
+def test_cancellation_during_execution_requires_verification(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    svc.verified_execution_step("alice", run["id"], "planning")
+    svc.verified_execution_step("alice", run["id"], "ready")
+    svc.verified_execution_step("alice", run["id"], "executing")
+    requested = svc.request_cancel("alice", run["id"], reason="stop after bounded action")
+    assert requested["continuation_state"]["cancellation_requested"] is True
+    with pytest.raises(WorkError, match="minimum verification"):
+        svc.verified_execution_step("alice", run["id"], "cancelled")
+    verifying = svc.verified_execution_step("alice", run["id"], "verifying")
+    assert verifying["lifecycle_state"] == "verifying"
+
+
 def _to_verifying(svc, owner, run_id):
     for state in ("planning", "ready", "executing", "verifying"):
         svc.verified_execution_step(owner, run_id, state)

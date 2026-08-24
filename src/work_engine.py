@@ -101,6 +101,8 @@ class WorkEngine:
 
     def create_action(self, owner, run_id, data):
         run = self._one(WorkRun, owner, run_id, "run")
+        if (run.continuation_state or {}).get("cancellation_requested"):
+            raise WorkError("run cancellation requested; no new actions may be added")
         sequence = int(data.get("sequence") or (self.db.query(WorkAction).filter_by(run_id=run.id).count() + 1))
         digest = data.get("sealed_input_digest")
         if not digest and data.get("normalized_input") is not None: digest = sha256(str(data["normalized_input"]).encode()).hexdigest()
@@ -197,6 +199,9 @@ class WorkEngine:
     def acquire_action_locks(self, owner, action_id):
         action = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
         if action is None: raise WorkError("action not found")
+        run = self.db.query(WorkRun).filter_by(owner=owner, id=action.run_id).one()
+        if (run.continuation_state or {}).get("cancellation_requested"):
+            raise WorkError("run cancellation requested; no new actions may execute")
         if action.status not in {"proposed", "approved", "executing"}: raise WorkError("action cannot acquire locks in its current state")
         conflicts = self.lock_conflicts(owner, action_id)
         if conflicts: raise WorkError(f"resource lock conflict: {conflicts[0]['resource']}")
@@ -339,6 +344,7 @@ class WorkEngine:
             "created": {"planning", "cancelled"}, "planning": {"ready", "failed", "cancelled"},
             "ready": {"executing", "waiting_approval", "failed", "cancelled"},
             "waiting_approval": {"ready", "cancelled", "failed"},
+            "waiting_input": {"ready", "cancelled", "failed"},
             "executing": {"verifying", "failed", "cancelled", "compensating"},
             "verifying": {"succeeded", "failed", "compensating", "cancelled"},
             "compensating": {"verifying", "failed", "cancelled"},
@@ -347,6 +353,8 @@ class WorkEngine:
         row = self._one(WorkRun, owner, run_id, "run")
         current = row.lifecycle_state or "created"
         if lifecycle_state not in RUN_LIFECYCLE_STATES: raise WorkError("invalid run lifecycle state")
+        if lifecycle_state == "cancelled" and current in {"executing", "verifying"}:
+            raise WorkError("minimum verification is required before cancellation")
         if lifecycle_state == "executing":
             # Consequential execution must pass the canonical structured plan
             # validator before the durable lifecycle can advance.  Empty
@@ -423,10 +431,14 @@ class WorkEngine:
     def request_cancel(self, owner, run_id, *, reason="operator requested cancellation"):
         row = self._one(WorkRun, owner, run_id, "run")
         if row.lifecycle_state in {"succeeded", "failed", "cancelled"}: return serialize(row)
+        pre_mutation = row.lifecycle_state in {"created", "planning", "ready", "waiting_approval", "waiting_input", "paused"}
         row.continuation_state = {**(row.continuation_state or {}), "cancellation_requested": True}
         row.current_step = "cancellation requested"; row.revision += 1
         self.event(owner, "execution.cancellation_requested", run_id=run_id, payload={"reason": reason})
-        self.db.commit(); self.db.refresh(row); return serialize(row)
+        self.db.commit(); self.db.refresh(row)
+        if pre_mutation:
+            return self.verified_execution_step(owner, run_id, "cancelled", reason=reason, failure_class="cancelled")
+        return serialize(row)
 
     def reconstruct_run(self, owner, run_id):
         """Replay the durable journal into an inspectable lifecycle projection.
