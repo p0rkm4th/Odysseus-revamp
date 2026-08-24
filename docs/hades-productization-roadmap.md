@@ -636,6 +636,12 @@ scope, approval, knowledge-gap, compensation, verification, or lock state
 therefore fails closed before the lifecycle advertises execution. Empty
 projection-only Runs remain available for non-consequential orchestration.
 
+Cancellation semantics now distinguish pre-mutation cancellation from an
+in-flight Action. Before mutation, the Run becomes terminal and releases its
+locks. During execution, cancellation is durable, blocks new Actions, and
+requires the bounded Action to reach verification before cancellation can be
+finalized, avoiding an unverified unknown state.
+
 ### Run Preview inspector checkpoint
 
 The existing Work and Control Center views now visibly consume the structured
