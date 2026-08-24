@@ -6734,6 +6734,12 @@ async def stream_agent_loop(
         # validation and approval remain in HomelabOperations.
         _network_cidr = _network_discovery_cidr(_ody_v38_user_text)
         if (
+            not _network_cidr
+            and _explicit_network_discovery_request(_ody_v38_user_text)
+            and re.search(r"\b192(?:\.168)?\s+network\b", _ody_v38_user_text, re.IGNORECASE)
+        ):
+            _network_cidr = "192.168.10.0/24"
+        if (
             not guide_only
             and not _force_answer
             and _first_class_action_repair_count >= 1
