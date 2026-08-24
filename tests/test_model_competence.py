@@ -54,3 +54,16 @@ def test_local_route_exposes_task_class_without_changing_authority():
     result=route_request("how is my homelab service doing?", requested_profile="hades-local-test")
     assert result["task_class"] == "network_read"
     assert result["consequential_execution"] is False
+
+
+def test_competence_matrix_is_owner_scoped_and_descriptive(db):
+    evaluations=EvaluationService(db)
+    scenario=evaluations.create_scenario("alice", {"scenario_key":"matrix-1","title":"Matrix","domain":"work","task_class":"business_extract"})
+    for passed in (True, True, True):
+        evaluations.record_run("alice", scenario["id"], {"model":{"name":"qwen"},"passed":passed,"failure_category":"none"})
+    ModelCompetenceService(db).recompute("alice")
+    matrix=ModelCompetenceService(db).matrix("alice")
+    assert matrix["authority_unchanged"] is True
+    assert matrix["task_classes"][0]["task_class"] == "business_extract"
+    assert matrix["task_classes"][0]["models"][0]["qualification"] == "qualified"
+    assert ModelCompetenceService(db).matrix("bob")["task_classes"] == []

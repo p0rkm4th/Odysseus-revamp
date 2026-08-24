@@ -43,6 +43,25 @@ class ModelCompetenceService:
         if qualification: query=query.filter_by(qualification=qualification)
         return [serialize(row) for row in query.order_by(ModelCompetence.task_class, ModelCompetence.model_key).limit(max(1,min(int(limit),500))).all()]
 
+    def matrix(self, owner, *, limit=200):
+        """Return an owner-scoped evidence matrix for routing inspection.
+
+        This is descriptive only. It does not select a model, alter routing,
+        expose capabilities, or grant execution authority.
+        """
+        rows = self.db.query(ModelCompetence).filter_by(owner=owner).order_by(ModelCompetence.task_class, ModelCompetence.model_key).limit(max(1, min(int(limit), 500))).all()
+        grouped = {}
+        for row in rows:
+            grouped.setdefault(row.task_class, []).append({
+                "model_key": row.model_key, "qualification": row.qualification,
+                "sample_count": row.sample_count, "success_rate": row.success_rate,
+                "recent_success_rate": row.recent_success_rate,
+                "failure_classes": list(row.failure_classes or []),
+                "evidence_refs": list(row.evidence_refs or []),
+                "last_evaluated_at": row.last_evaluated_at.isoformat() if row.last_evaluated_at else None,
+            })
+        return {"task_classes": [{"task_class": task, "models": models} for task, models in grouped.items()], "authority_unchanged": True, "evidence_backed": True}
+
     def recommend(self, owner, *, task_class, candidates, preferred=None, require_qualified=False):
         """Return an empirical, owner-scoped recommendation projection.
 

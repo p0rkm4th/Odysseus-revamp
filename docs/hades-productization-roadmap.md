@@ -202,6 +202,13 @@ capability exposure, approval, or execution authority. Provider-level live
 qualification, richer cost/latency telemetry, routing explanation UI, and
 shadow plan review remain future work.
 
+The evidence matrix projection now groups measured competence by task class and
+model, exposing sample counts, recent success, qualification, failure classes,
+and evidence references in Control Center's Routing view. It remains
+descriptive only: it does not select a model, alter policy, expose capabilities,
+or grant authority. Live provider qualification, cost/latency optimization,
+and shadow plan review remain future work.
+
 ### Mission projection slice
 
 Missions now reuse canonical WorkGoals marked with an explicit operating-mode
