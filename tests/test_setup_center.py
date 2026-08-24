@@ -99,3 +99,15 @@ def test_setup_profiles_only_change_selection_and_are_resumable(tmp_path, monkey
     assert projection["authority_unchanged"] is True
     with pytest.raises(ValueError, match="unknown setup profile"):
         service.apply_profile("alice", "ROOT_ACCESS")
+
+
+def test_permissions_projection_is_owner_facing_and_secret_free(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "state.json")
+    projection = setup_center.SetupCenterService().permissions_projection("alice", [{
+        "id": "grant-1", "capability_id": "homelab.manage", "sealed_input_digest": "secret-digest",
+        "run_id": "run-1", "action_id": "action-1", "max_calls": 1, "consumed_calls": 0,
+    }])
+    assert any(item["capability_id"] == "homelab.manage" for item in projection["capabilities"])
+    assert projection["grants"][0]["id"] == "grant-1"
+    assert "sealed_input_digest" not in json.dumps(projection)
+    assert projection["authority_unchanged"] is True

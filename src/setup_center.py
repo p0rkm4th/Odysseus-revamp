@@ -186,6 +186,21 @@ class SetupCenterService:
             integrations.append({**descriptor, "connection": connection, "setup_status": status, "capabilities": list(module["permissions"]), "last_success": module.get("last_updated") if status == "CONFIGURED" else None, "last_error": None, "secret_values_exposed": False, "authority_unchanged": True})
         return {"version": 1, "owner": owner, "integrations": integrations, "authority_unchanged": True, "secret_values_exposed": False}
 
+    def permissions_projection(self, owner: str, grants: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        """Project effective capability vocabulary without becoming policy."""
+        from src.capability_registry import CAPABILITY_REGISTRY
+        capabilities = []
+        for capability_id, capability in CAPABILITY_REGISTRY.items():
+            capabilities.append({"capability_id": capability_id, "description": capability.description, "actions": [{
+                "action_id": action.action_id, "effects": list(action.effects), "approval": action.approval.value,
+                "execution_location": action.execution_location, "target_scope": action.target_scope,
+            } for action in capability.actions.values()]})
+        safe_grants = []
+        for grant in grants or []:
+            if not isinstance(grant, dict): continue
+            safe_grants.append({key: grant.get(key) for key in ("id", "run_id", "action_id", "capability_id", "target_resources", "parameter_constraints", "max_calls", "consumed_calls", "expires_at", "revoked_at")})
+        return {"version": 1, "owner": owner, "capabilities": capabilities, "setup_permissions": [{"module_id": module["id"], "title": module["title"], "permissions": module["permissions"], "status": module["status"]} for module in self.projection(owner)["modules"]], "grants": safe_grants, "authority_unchanged": True, "secret_values_exposed": False, "policy_source": "canonical capability/policy/approval services"}
+
     def update(self, owner: str, module_id: str, data: dict[str, Any]) -> dict[str, Any]:
         contract = next((item for item in CONTRACTS if item.id == module_id), None)
         if contract is None:

@@ -779,6 +779,12 @@ cleanup, and Setup Center secret redaction. These scenarios remain synthetic;
 provider credentials, live broker operations, and owner-authenticated browser
 acceptance are not inferred from them.
 
+Setup Center now also exposes a secret-free Permissions / Authority projection
+over canonical capability ActionSpecs, SetupContract permissions, and the
+owner's delegated grants. It shows effects, approval modes, execution
+locations, grant bounds, and policy provenance without becoming a second policy
+or authorization engine.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
