@@ -136,6 +136,27 @@ def test_compensation_failure_is_terminal_and_explicit(db):
     assert final["status"] == "failed" and final["result_summary"]["outcome"] == "compensation_failed"
 
 
+def test_bound_compensation_uses_persisted_contract_and_requires_restoration_verification(db):
+    svc = WorkEngine(db); run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "execute_service_restart", "status": "approved", "approval_reference": "approval-restore", "compensating_action": {"capability_id": "homelab.manage", "action_id": "execute_service_restart", "input": {"service": "nginx", "mode": "restore"}}})
+    _to_verifying(svc, "alice", run["id"])
+    svc.complete_verification("alice", run["id"], success=False, compensation_reference=action["id"])
+    seen = {}
+    result = svc.execute_bound_compensation("alice", run["id"], action["id"], lambda payload: seen.update(payload) or {"success": True, "reference": "restore://nginx"})
+    assert result["lifecycle_state"] == "verifying"
+    assert seen["compensation"]["action_id"] == "execute_service_restart"
+    with pytest.raises(WorkError, match="not compensating"):
+        svc.execute_bound_compensation("alice", run["id"], action["id"], lambda _payload: {"success": True})
+
+
+def test_bound_compensation_failure_is_durable(db):
+    svc = WorkEngine(db); run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "execute_service_restart", "status": "approved", "approval_reference": "approval-restore", "compensating_action": {"capability_id": "homelab.manage", "action_id": "execute_service_restart"}})
+    _to_verifying(svc, "alice", run["id"]); svc.complete_verification("alice", run["id"], success=False, compensation_reference=action["id"])
+    final = svc.execute_bound_compensation("alice", run["id"], action["id"], lambda _payload: {"success": False, "error": "restore unavailable"})
+    assert final["status"] == "failed" and final["result_summary"]["outcome"] == "compensation_failed"
+
+
 def test_legacy_transition_path_enforces_lifecycle_graph_and_plan_validation(db):
     work = WorkEngine(db)
     run = work.create_run("alice", {"domain": "network", "plan": [{

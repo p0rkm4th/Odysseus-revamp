@@ -757,6 +757,11 @@ The originating Action is marked with an ambiguity error, resource locks are
 retained, blind retry is rejected, and an owner-scoped resolution endpoint
 requires independent evidence that the mutation occurred or did not occur.
 
+Persisted compensation contracts now have a matching trusted dispatch seam.
+Successful compensation returns the Run to `verifying`, while a failed or
+malformed compensation remains an explicit `compensation_failed` outcome; the
+restoration verifier is still required before the Run can succeed.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
