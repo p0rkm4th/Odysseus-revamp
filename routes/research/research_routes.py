@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import os
 import re
 import uuid
 from datetime import datetime
@@ -67,6 +68,59 @@ def _find_owned_research_path(session_id: str, user: str) -> Path | None:
     if owner != user:
         return None
     return path
+
+
+def _extract_research_attachment_evidence(*, upload_handler, owner: str, attachment_ids: list[str]) -> str:
+    """Resolve owner uploads and extract bounded, explicitly untrusted evidence."""
+    if not isinstance(attachment_ids, list) or len(attachment_ids) > 5:
+        raise HTTPException(400, "attachment_ids must contain at most five uploads")
+    if not attachment_ids:
+        return ""
+    from src.document_processor import (
+        _is_text_file, _process_office_document, _process_pdf,
+        _process_text_file, analyze_image_with_vl,
+    )
+    sections = []
+    total = 0
+    for attachment_id in attachment_ids:
+        if not isinstance(attachment_id, str) or not upload_handler.validate_upload_id(attachment_id):
+            raise HTTPException(400, "attachment IDs must be opaque upload IDs")
+        metadata = upload_handler.resolve_upload(
+            attachment_id, owner=owner, auth_manager=None, allow_admin=False,
+        )
+        if not metadata:
+            raise HTTPException(404, "research attachment not found")
+        path = metadata.get("path")
+        if not isinstance(path, str) or not os.path.isfile(path):
+            raise HTTPException(400, "research attachment is unavailable")
+        if hasattr(upload_handler, "_inside_upload_dir"):
+            inside = upload_handler._inside_upload_dir(path)
+        else:
+            inside = upload_handler.inside_base_dir(path)
+        if not inside:
+            raise HTTPException(400, "research attachment path is invalid")
+        name = str(metadata.get("name") or attachment_id)
+        mime = str(metadata.get("mime") or "")
+        try:
+            if upload_handler.is_image_file(name, mime):
+                extracted = analyze_image_with_vl(path, owner=owner)
+            elif mime == "application/pdf":
+                extracted = _process_pdf(path, owner=owner)
+            elif upload_handler.is_document_file(name, mime):
+                extracted = _process_text_file(path) if _is_text_file(path) else _process_office_document(path, name, owner=owner)
+            else:
+                extracted = "[Attachment type is not supported for text extraction]"
+        except Exception:
+            extracted = "[Attachment could not be analyzed]"
+        extracted = str(extracted or "").strip()
+        remaining = max(0, 20000 - total)
+        extracted = extracted[:min(8000, remaining)]
+        total += len(extracted)
+        sections.append(
+            f"[UNTRUSTED ATTACHMENT EVIDENCE: {name}; upload_ref={attachment_id}]\n"
+            f"{extracted or '[No extractable evidence returned]'}"
+        )
+    return "\n\n".join(sections)
 
 
 logger = logging.getLogger(__name__)
@@ -488,6 +542,7 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
         extraction_timeout: Optional[int] = Field(default=None, ge=15, le=3600)
         extraction_concurrency: Optional[int] = Field(default=None, ge=1, le=12)
         category: Optional[str] = None
+        attachment_ids: list[str] = Field(default_factory=list, max_length=5)
 
     @router.post("/api/research/start")
     async def research_start(body: ResearchStartRequest, request: Request):
@@ -558,11 +613,26 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
             if body.model:
                 ep_model = body.model
 
+        attachment_evidence = ""
+        if body.attachment_ids:
+            upload_handler = getattr(request.app.state, "upload_handler", None)
+            if upload_handler is None:
+                raise HTTPException(503, "research attachment processing is unavailable")
+            attachment_evidence = await asyncio.to_thread(
+                _extract_research_attachment_evidence,
+                upload_handler=upload_handler,
+                owner=user,
+                attachment_ids=body.attachment_ids,
+            )
+        research_query = body.query
+        if attachment_evidence:
+            research_query += "\n\n" + attachment_evidence
+
         # max_rounds=0 → "Auto", let AI decide; pass 20 as the safety cap.
         effective_max_rounds = body.max_rounds if body.max_rounds > 0 else 20
         research_handler.start_research(
             session_id=session_id,
-            query=body.query,
+            query=research_query,
             llm_endpoint=ep_url,
             llm_model=ep_model,
             max_time=body.max_time,
@@ -574,7 +644,15 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
             extraction_concurrency=body.extraction_concurrency,
             owner=user,
         )
-        return {"session_id": session_id, "status": "running", "query": body.query}
+        # Do not echo extracted attachment contents through the start response.
+        # The canonical research session retains the tainted evidence; the
+        # response exposes only the owner's original query and attachment count.
+        return {
+            "session_id": session_id,
+            "status": "running",
+            "query": body.query,
+            "attachment_count": len(body.attachment_ids),
+        }
 
     @router.get("/api/research/stream/{session_id}")
     async def research_stream(session_id: str, request: Request):
