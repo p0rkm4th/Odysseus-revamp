@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.database import Base
@@ -48,3 +49,20 @@ def test_relationship_reconciliation_is_owner_scoped_and_evented(db):
     with pytest.raises(WorkError, match="relationship not found"):
         svc.update_relationship("bob", row["id"], {"status": "stale"})
     assert db.query(__import__("core.work_models", fromlist=["WorkEvent"]).WorkEvent).filter_by(owner="alice", event_type="world.relationship.updated").count() == 1
+
+
+def test_blast_radius_excludes_stale_edges_and_reports_unknown_gap(db):
+    svc = WorldModelService(db)
+    current = datetime.now(timezone.utc).replace(tzinfo=None)
+    svc.create_relationship("alice", {"source_ref": "service:old", "relation": "RUNS_ON", "target_ref": "host:cerberus", "status": "observed", "confidence_class": "high", "source": "old-probe", "valid_until": (current - timedelta(days=1)).isoformat()})
+    radius = svc.blast_radius("alice", "host:cerberus")
+    assert not any(item["entity"] == "service:old" for item in radius["confirmed"] + radius["likely"])
+    assert any(item["entity"] == "service:old" and item["status"] == "observed" for item in radius["unknown"])
+
+
+def test_neighbors_do_not_traverse_future_relationship(db):
+    svc = WorldModelService(db)
+    current = datetime.now(timezone.utc).replace(tzinfo=None)
+    svc.create_relationship("alice", {"source_ref": "service:future", "relation": "RUNS_ON", "target_ref": "host:cerberus", "status": "observed", "confidence_class": "high", "source": "scheduled", "valid_from": (current + timedelta(days=1)).isoformat()})
+    graph = svc.neighbors("alice", "host:cerberus")
+    assert "service:future" not in graph["entities"]
