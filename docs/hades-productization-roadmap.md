@@ -583,6 +583,17 @@ frontend build identifier, and UI-state schema version fields with explicit
 theme. This supports diagnosing stale browser/container generations without
 exposing credentials or private content.
 
+### Structured RunPreview checkpoint
+
+The existing `RunPlanner` projection now exposes canonical target/entity
+resources, effect classes, capability availability, and per-action
+reversibility/compensation metadata alongside its existing reads, writes,
+locks, approvals, knowledge gaps, blast radius, and verification fields. This
+remains an additive projection over Work Runs and registered ActionSpecs; it
+does not create a second planner or grant execution authority. Focused planner,
+verified-execution, and Work tests pass. Full consequential execution,
+compensation orchestration, and owner-live dogfood remain pending.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its

@@ -97,11 +97,16 @@ class RunPlanner:
         assumptions = list(run.assumptions or []) if isinstance(run.assumptions, list) else []
         unknowns: list[dict[str, Any]] = []
         risks: list[str] = []
+        targets: list[str] = []
+        effect_classes: list[str] = []
+        capability_health: list[dict[str, Any]] = []
+        reversibility: list[dict[str, Any]] = []
         for action in actions:
             capability, spec = self._spec(action)
             if spec is None:
                 item = {"sequence": action.get("sequence"), "capability_id": action.get("capability_id"), "action_id": action.get("action_id"), "known": False, "validation_status": "unknown_action"}
                 compiled.append(item)
+                capability_health.append({"capability_id": action.get("capability_id"), "status": "unavailable", "reason": "action_spec_missing"})
                 continue
             contract = _contract(spec, action)
             item = {"sequence": action.get("sequence"), "action_id": action.get("id"), "operation": spec.action_id, "capability_id": capability.capability_id, "known": True, "status": action.get("status"), "input": action.get("normalized_input") or {}, "contract": contract}
@@ -112,6 +117,11 @@ class RunPlanner:
             reads.extend(x for x in contract["reads"] if x not in reads)
             writes.extend(x for x in contract["writes"] if x not in writes)
             resources.extend(x for x in contract["target_resources"] + contract["locks"] if x not in resources)
+            targets.extend(x for x in contract["target_resources"] if x not in targets)
+            if contract["effect_class"] not in effect_classes:
+                effect_classes.append(contract["effect_class"])
+            capability_health.append({"capability_id": capability.capability_id, "status": "available", "actions": [spec.action_id]})
+            reversibility.append({"sequence": action.get("sequence"), "action_id": spec.action_id, "reversible": contract["reversible"], "compensatable": contract["compensatable"], "irreversible": contract["irreversible"], "compensation": contract["compensating_action"] or contract["rollback_capability"] or None})
             if contract["risk_level"] not in risks:
                 risks.append(contract["risk_level"])
             compiled.append(item)
@@ -140,9 +150,10 @@ class RunPlanner:
         return {
             "preview_version": 1, "run_id": run.id, "owner": owner,
             "objective": run.intent or {}, "domain": run.domain,
-            "actions": compiled, "reads": reads, "writes": writes,
+            "actions": compiled, "targets": targets, "target_entities": targets, "reads": reads, "writes": writes,
             "resources": resources, "assumptions": assumptions,
-            "knowledge_gaps": gaps, "unknowns": gaps,
+            "knowledge_gaps": gaps, "unknowns": gaps, "effect_classes": effect_classes,
+            "capability_health": capability_health, "reversibility": reversibility,
             "risk": risks, "blast_radius": [], "approvals": approvals,
             "locks": lock_state, "blast_radius": blast_radius, "verification": run.verification or {},
             "lifecycle_state": run.lifecycle_state, "plan_revision": run.revision,
