@@ -25,6 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     curl \
     git \
+    iproute2 \
+    nmap \
     nodejs \
     npm \
     chromium \
