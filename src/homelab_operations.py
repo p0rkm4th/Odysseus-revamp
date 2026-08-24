@@ -137,6 +137,11 @@ class HomelabReceiptStore:
                 continue
             if receipt.get("kind") == "plan" and receipt.get("owner") == owner and receipt.get("operation_digest") == digest:
                 return current <= created + timedelta(minutes=10)
+            # A plan is single-use for discovery. Repeating the exact payload
+            # must require a fresh plan and fresh approval, even while the
+            # original plan's TTL has not elapsed.
+            if receipt.get("kind") == "discovery" and receipt.get("owner") == owner and receipt.get("operation_digest") == digest:
+                return False
         return False
 
 
