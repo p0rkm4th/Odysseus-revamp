@@ -6,6 +6,17 @@ from src.work_engine import WorkError, ident, now, parse_dt, serialize
 
 RELATIONSHIPS = {"RUNS_ON", "DEPENDS_ON", "USES", "POINTS_TO", "CONNECTED_TO", "BACKED_UP_BY", "OWNS"}
 RELATIONSHIP_STATUSES = {"proposed", "observed", "user_confirmed", "contradicted", "stale", "superseded"}
+INACTIVE_RELATIONSHIP_STATUSES = {"contradicted", "stale", "superseded"}
+
+
+def _current_relationship(row, at=None):
+    """Whether an edge is usable for present-state traversal."""
+    if row.get("status") in INACTIVE_RELATIONSHIP_STATUSES:
+        return False
+    at = at or now()
+    valid_from = parse_dt(row.get("valid_from"))
+    valid_until = parse_dt(row.get("valid_until"))
+    return not ((valid_from and valid_from > at) or (valid_until and valid_until <= at))
 
 
 class WorldModelService:
@@ -54,7 +65,7 @@ class WorldModelService:
             rows = self.list_relationships(owner, limit=limit)
             next_frontier = set()
             for row in rows:
-                if row["status"] in {"contradicted", "stale", "superseded"}: continue
+                if not _current_relationship(row): continue
                 if row["source_ref"] in frontier or row["target_ref"] in frontier:
                     if row not in edges: edges.append(row)
                     other = row["target_ref"] if row["source_ref"] in frontier else row["source_ref"]
@@ -69,11 +80,15 @@ class WorldModelService:
         # host -> service -> dependency, the affected entity at hop two must
         # be the dependency, not the already-visited service.
         focus = str(entity_ref); seen = {focus}; frontier = {focus}; traversed = []; impact = []
+        inactive_edges = []
         for _ in range(3):
             rows = self.list_relationships(owner, limit=limit)
             next_frontier = set()
             for row in rows:
                 if row["source_ref"] not in frontier and row["target_ref"] not in frontier: continue
+                if not _current_relationship(row):
+                    inactive_edges.append(row)
+                    continue
                 other = row["target_ref"] if row["source_ref"] in frontier else row["source_ref"]
                 if row not in traversed: traversed.append(row)
                 impact.append((row, other))
@@ -86,5 +101,8 @@ class WorldModelService:
             item = {"entity": other, "relation": row["relation"], "confidence": row["confidence_class"], "source": row["source"]}
             if row["status"] in {"observed", "user_confirmed"} and row["confidence_class"] in {"high", "confirmed"}: confirmed.append(item)
             elif row["status"] == "proposed" or row["observation_kind"] == "inferred": likely.append(item)
-        if not traversed: unknown.append({"reason": "no evidence-backed dependency edges", "entity": entity_ref})
+        for row in inactive_edges[:limit]:
+            other = row["target_ref"] if row["source_ref"] == focus else row["source_ref"]
+            unknown.append({"entity": other, "relation": row["relation"], "reason": "relationship is stale, contradicted, superseded, or outside its valid time", "source": row["source"], "status": row["status"]})
+        if not traversed and not unknown: unknown.append({"reason": "no evidence-backed dependency edges", "entity": entity_ref})
         return {"focus": entity_ref, "confirmed": confirmed, "likely": likely, "unknown": unknown}
