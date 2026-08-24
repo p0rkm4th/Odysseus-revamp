@@ -543,6 +543,28 @@ presence without recording memory content. Synthetic regression coverage is
 green; authenticated live owner-memory dogfood remains the next acceptance
 step.
 
+### OSINT claim correction checkpoint
+
+The existing Work epistemic ledger is now projected into OSINT cases through
+owner- and case-scoped `osint:case:<session_id>` references. Reviewed claims
+retain provenance, evidence, confidence, time, status, and contradiction
+links. A case-scoped contradiction endpoint rejects claims from another case
+or owner, while preserving competing history. Report prose and tainted
+research findings are not auto-promoted. Full correction UI, open questions,
+delta research, and owner-live provider dogfood remain future work.
+
+### Theme-aware icon and semantic token checkpoint
+
+The shared theme system now derives a complete semantic token layer for each
+registered palette, including surfaces, text, borders, accent, icon states,
+status, and epistemic states. Shared module headers use the centralized icon
+registry, and legacy sidebar destinations missing inline icons are hydrated
+from that same registry. Themeable icons inherit `currentColor`, so selected,
+hover, disabled, and normal states follow live theme changes without per-module
+color hacks. Base-theme validation falls back safely for incomplete custom
+palettes. Synthetic contract/syntax tests and the full regression are green;
+owner-authenticated browser theme acceptance remains pending.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its

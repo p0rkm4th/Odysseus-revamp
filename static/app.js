@@ -62,6 +62,7 @@ import { initKeyboardShortcuts } from './js/keyboard-shortcuts.js';
 import { getSettings } from './js/appConfig.js';
 import { initSidebarLayout, syncRailSide } from './js/sidebar-layout.js?v=20260715startupclean';
 import { initSectionCollapse, initSectionDrag } from './js/section-management.js';
+import { iconSvg } from './js/ui-components.js';
 
 const API_BASE = window.location.origin;
 window.themeModule = themeModule;
@@ -72,6 +73,26 @@ window.cookbookModule = cookbookModule;
 window.inventoryModule = inventoryModule;
 window.securityModule = securityModule;
 window.workModule = workModule;
+
+// Keep legacy sidebar markup compatible while ensuring every first-class
+// destination has the same semantic, theme-inheriting icon source.
+function hydrateSemanticNavIcons() {
+  const icons = {
+    'tool-hades-btn': 'hades', 'tool-household-btn': 'household',
+    'tool-it-assets-btn': 'itAssets', 'tool-network-btn': 'network',
+    'tool-developer-btn': 'developer', 'tool-world-model-btn': 'worldModel',
+    'tool-control-center-btn': 'controlCenter', 'tool-osint-btn': 'osint',
+    'tool-security-btn': 'security', 'tool-homelab-btn': 'homelab',
+    'tool-communications-btn': 'communications', 'tool-research-btn': 'deepResearch',
+  };
+  for (const [id, name] of Object.entries(icons)) {
+    const item = document.getElementById(id);
+    if (!item || item.querySelector('.hades-nav-icon')) continue;
+    item.insertAdjacentHTML('afterbegin', iconSvg(name));
+  }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hydrateSemanticNavIcons, { once: true });
+else hydrateSemanticNavIcons();
 
 function _isMobileChatInput() {
   return window.innerWidth <= 768;
