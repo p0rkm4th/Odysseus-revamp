@@ -166,6 +166,13 @@ state, execution spans, and verification. Evaluations remain supervised and
 owner-scoped; the surface does not create a second benchmark or execution
 engine.
 
+Model competence now has a durable owner-scoped projection derived from
+EvaluationRun records. Qualification requires sample evidence, exposes sample
+count/success rate/recent performance/failure classes, and distinguishes
+unknown, experimental, qualified, degraded, and disqualified states. The
+Control Center surfaces this evidence; it does not silently alter routing or
+promote a model from a single successful run.
+
 Incident/Change foundations are now additive and owner-scoped. Incidents keep
 symptoms, affected references, timeline, hypotheses, evidence, root cause, and
 outcome; Changes reference existing Runs and deterministic Run previews for

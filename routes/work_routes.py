@@ -115,6 +115,12 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/changes")
     async def changes(request: Request, status: str | None = None, incident_id: str | None = None):
         return {"changes": await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).list_changes(o, status=status, incident_id=incident_id))}
+    @router.post("/competence/recompute")
+    async def recompute_competence(request: Request, payload: dict[str, Any] = Body(default={})): 
+        return {"competence": await tx(request, lambda svc,o,u: __import__("src.model_competence", fromlist=["ModelCompetenceService"]).ModelCompetenceService(svc.db).recompute(o, model_key=payload.get("model_key"), task_class=payload.get("task_class")))}
+    @router.get("/competence")
+    async def competence(request: Request, task_class: str | None = None, qualification: str | None = None):
+        return {"competence": await tx(request, lambda svc,o,u: __import__("src.model_competence", fromlist=["ModelCompetenceService"]).ModelCompetenceService(svc.db).list(o, task_class=task_class, qualification=qualification))}
     @router.post("/world/relationships", status_code=201)
     async def create_world_relationship(request: Request, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).create_relationship(o, payload))

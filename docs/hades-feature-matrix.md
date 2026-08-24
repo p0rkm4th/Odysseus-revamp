@@ -29,7 +29,7 @@ product workspace or dogfood gate is incomplete.
 | Voice/multimodal | partial | partial | partial | partial | not accepted | reviewable intake and PTT flow |
 | Email/calendar/contacts | present | partial | present | green | credentials-dependent | shared entity links and integration center |
 | Documents | present | partial | partial | green | not accepted | reusable attachments/dossiers |
-| Models/routing | present | present | partial | green | partial | model lab and qualification evidence |
+| Models/routing | present (evaluation corpus + model competence projection) | present; empirical competence API | Control Center Competence view | focused competence/evaluation tests | synthetic qualification dogfood complete; live multi-model qualification pending | model lab, routing explanation, measured routing adoption, and shadow review remain |
 | Improvements | present | partial | partial | green | not accepted | registry workspace and promotion evidence |
 | Developer/health/authority | present | partial | partial; Control Center with Runs/Evaluations/Inspector is visible | focused control-plane/UI tests | deterministic Run Inspector dogfood; live provider/model evaluation pending | permissions, trace, backup projections, Action Contract inspection, and richer health integrations remain |
 | Incidents / Changes | present (core/incident_models.py, src/incident_change.py) | Work/Run references; no second executor | Control Center tabs with incident/change status projections | focused owner-scope, hypothesis, preview, and migration tests | synthetic incident/change records dogfood complete | hypothesis/evidence history and Change preview reference canonical Runs; remediation execution, dedicated dossiers, and live safe-service dogfood remain |
