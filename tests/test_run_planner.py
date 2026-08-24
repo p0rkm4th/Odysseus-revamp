@@ -99,3 +99,11 @@ def test_declared_precheck_requires_registered_evidence_and_projects_it(db):
     after = planner.validate("alice", run["id"])
     assert not any(failure["code"] == "precheck_required" for failure in after["failures"])
     assert after["preview"]["prechecks"][0]["required"][0]["satisfied"] is True
+
+
+def test_mission_allowed_capabilities_are_enforced_by_run_validation(db):
+    work = WorkEngine(db)
+    mission = work.create_goal("alice", {"title":"Scoped mission", "constraints":{"operating_mode":"mission", "allowed_capabilities":["homelab.manage"]}})
+    run = work.create_run("alice", {"goal_id":mission["id"], "domain":"homelab", "plan":[{"capability_id":"inventory.manage", "action_id":"get"}]})
+    result = RunPlanner(db).validate("alice", run["id"])
+    assert any(failure["code"] == "mission_capability_restricted" for failure in result["failures"])

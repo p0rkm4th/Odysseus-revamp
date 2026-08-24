@@ -11,7 +11,7 @@ import ipaddress
 from typing import Any
 
 from src.capability_registry import ActionSpec, ApprovalMode, capability_for_id
-from core.work_models import WorkAction, WorkLock, WorkRun
+from core.work_models import WorkAction, WorkGoal, WorkLock, WorkRun
 from src.work_engine import WorkEngine, WorkError, serialize
 
 
@@ -184,11 +184,20 @@ class RunPlanner:
         warnings: list[dict[str, Any]] = []
         run = self._run(owner, run_id)
         actions = self._actions(run)
+        mission_allowed = None
+        if run.goal_id:
+            goal = self.db.query(WorkGoal).filter_by(owner=owner, id=run.goal_id).one_or_none()
+            constraints = (goal.constraints or {}) if goal and isinstance(goal.constraints, dict) else {}
+            if str(constraints.get("operating_mode") or "").lower() == "mission":
+                configured = constraints.get("allowed_capabilities")
+                mission_allowed = {str(item) for item in configured if str(item).strip()} if isinstance(configured, list) else set()
         for item, action in zip(preview["actions"], actions):
             if not item.get("known"):
                 failures.append({"code": "unknown_action_spec", "sequence": action.get("sequence"), "message": "ActionSpec is not registered"})
                 continue
             contract = item["contract"]
+            if mission_allowed and str(action.get("capability_id") or "") not in mission_allowed:
+                failures.append({"code": "mission_capability_restricted", "sequence": action.get("sequence"), "capability_id": action.get("capability_id"), "message": "Run Action capability is not allowed by its Mission"})
             if contract["precheck_actions"]:
                 capability, _ = self._spec(action)
                 for requirement in item.get("prechecks", []):
