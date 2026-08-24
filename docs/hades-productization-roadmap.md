@@ -36,6 +36,11 @@ configuration and clearly report when provider connectivity was not probed.
 Actual Email/Calendar provider tests continue through their existing routes and
 credentials; Setup Center does not duplicate those operations.
 
+Home Assistant Setup Center validation now reuses the existing read-only Smart
+Home projection. An explicit owner-triggered check performs only the existing
+`GET /api/` and `GET /api/states` adapter calls, reports configured/healthy/
+degraded state, and never exposes credentials or invokes entity mutations.
+
 ## Current checkpoint
 
 - V2 baseline source: `120e4afa9d0cd60fff3f6225c42d131837c6c260`.
