@@ -10,6 +10,9 @@ from src import local_intelligence
 from src import developer_mode
 from src.network_projection import map_projection
 from src.capability_dependencies import capability_health, supported_capabilities
+from src.persistent_agent import PersistentAgent
+from core.persistent_agent_models import Episode, Lesson, Monitor, Notification
+from datetime import datetime, timezone
 
 def setup_intelligence_routes(*, session_factory=SessionLocal):
     router=APIRouter(tags=["local-intelligence"])
@@ -37,6 +40,98 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
             "capabilities": [capability_health(name) for name in supported_capabilities()],
             "registry": "bounded_first_class_only",
         }
+    @router.get("/api/hades/status")
+    async def hades_status(request: Request):
+        value = owner(request)
+        with session_factory() as db:
+            return PersistentAgent(db).self_context(value)
+    @router.get("/api/hades/self")
+    async def hades_self(request: Request):
+        value = owner(request)
+        with session_factory() as db:
+            return PersistentAgent(db).self_context(value)
+    @router.get("/api/hades/runtime")
+    async def hades_runtime(request: Request):
+        value = owner(request)
+        with session_factory() as db:
+            return PersistentAgent(db).runtime_snapshot(value)
+    @router.get("/api/hades/episodes")
+    async def hades_episodes(request: Request, limit: int = 50):
+        value = owner(request)
+        with session_factory() as db:
+            rows = db.query(Episode).filter_by(owner=value).order_by(Episode.ended_at.desc()).limit(min(max(limit, 1), 100)).all()
+            return {"episodes": [{c.name: (getattr(row,c.name).isoformat() if hasattr(getattr(row,c.name), 'isoformat') else getattr(row,c.name)) for c in row.__table__.columns} for row in rows]}
+    @router.post("/api/hades/episodes/from-event", status_code=201)
+    async def hades_episode_from_event(request: Request, payload: dict = Body(...)):
+        value = owner(request)
+        with session_factory() as db:
+            try: return PersistentAgent(db).episode_from_event(value, str(payload.get("event_id") or ""))
+            except ValueError as exc: raise HTTPException(400, str(exc)) from exc
+    @router.get("/api/hades/lessons")
+    async def hades_lessons(request: Request, status: str | None = None):
+        value = owner(request)
+        with session_factory() as db:
+            query = db.query(Lesson).filter_by(owner=value)
+            if status: query = query.filter_by(status=status)
+            rows = query.order_by(Lesson.updated_at.desc()).limit(100).all()
+            return {"lessons": [{c.name: (getattr(row,c.name).isoformat() if hasattr(getattr(row,c.name), 'isoformat') else getattr(row,c.name)) for c in row.__table__.columns} for row in rows]}
+    @router.post("/api/hades/lessons", status_code=201)
+    async def hades_lesson_create(request: Request, payload: dict = Body(...)):
+        value = owner(request)
+        with session_factory() as db:
+            return PersistentAgent(db).propose_lesson(value, str(payload.get("statement") or ""), domain=str(payload.get("domain") or "general"), evidence_episode_refs=payload.get("evidence_episode_refs"), confidence=payload.get("confidence", 50), scope_context=payload.get("scope_context"))
+    @router.post("/api/hades/lessons/{lesson_id}/decision")
+    async def hades_lesson_decision(request: Request, lesson_id: str, payload: dict = Body(...)):
+        value = owner(request); decision = str(payload.get("status") or "").lower()
+        if decision not in {"confirmed", "rejected", "superseded"}: raise HTTPException(400, "invalid lesson decision")
+        with session_factory() as db:
+            row = db.query(Lesson).filter_by(owner=value, id=lesson_id).one_or_none()
+            if row is None: raise HTTPException(404, "lesson not found")
+            if decision == "confirmed" and not row.evidence_episode_refs: raise HTTPException(400, "lesson confirmation requires evidence episode references")
+            row.status = decision; row.last_confirmed = datetime.now(timezone.utc).replace(tzinfo=None) if decision == "confirmed" else row.last_confirmed; db.commit()
+            return {c.name: (getattr(row,c.name).isoformat() if hasattr(getattr(row,c.name), 'isoformat') else getattr(row,c.name)) for c in row.__table__.columns}
+    @router.get("/api/hades/monitors")
+    async def hades_monitors(request: Request):
+        value = owner(request)
+        with session_factory() as db:
+            rows = db.query(Monitor).filter_by(owner=value).order_by(Monitor.updated_at.desc()).all()
+            return {"monitors": [{c.name: (getattr(row,c.name).isoformat() if hasattr(getattr(row,c.name), 'isoformat') else getattr(row,c.name)) for c in row.__table__.columns} for row in rows]}
+    @router.post("/api/hades/monitors", status_code=201)
+    async def hades_monitor_create(request: Request, payload: dict = Body(...)):
+        value = owner(request)
+        with session_factory() as db:
+            try: return PersistentAgent(db).create_monitor(value, payload)
+            except ValueError as exc: raise HTTPException(400, str(exc)) from exc
+    @router.post("/api/hades/monitors/evaluate")
+    async def hades_monitor_evaluate(request: Request):
+        value = owner(request)
+        with session_factory() as db: return {"notifications": PersistentAgent(db).evaluate_monitors(value)}
+    @router.post("/api/hades/commitments/evaluate")
+    async def hades_commitments_evaluate(request: Request):
+        value = owner(request)
+        with session_factory() as db: return PersistentAgent(db).evaluate_commitments(value)
+    @router.get("/api/hades/notifications")
+    async def hades_notifications(request: Request, unread: bool = False):
+        value = owner(request)
+        with session_factory() as db:
+            query = db.query(Notification).filter_by(owner=value)
+            if unread: query = query.filter(Notification.read_at == None)
+            rows = query.order_by(Notification.created_at.desc()).limit(100).all()
+            return {"notifications": [{c.name: (getattr(row,c.name).isoformat() if hasattr(getattr(row,c.name), 'isoformat') else getattr(row,c.name)) for c in row.__table__.columns} for row in rows]}
+    @router.post("/api/hades/notifications/{notification_id}/read")
+    async def hades_notification_read(request: Request, notification_id: str):
+        value = owner(request)
+        with session_factory() as db:
+            row = db.query(Notification).filter_by(owner=value, id=notification_id).one_or_none()
+            if row is None: raise HTTPException(404, "notification not found")
+            row.read_at = datetime.now(timezone.utc).replace(tzinfo=None); row.delivery_state = "read"; db.commit()
+            return {"ok": True, "id": row.id}
+    @router.get("/api/hades/while-away")
+    async def hades_while_away(request: Request, since: str):
+        value = owner(request)
+        try: marker = datetime.fromisoformat(since.replace("Z", "+00:00")); marker = marker.astimezone(timezone.utc).replace(tzinfo=None) if marker.tzinfo else marker
+        except ValueError as exc: raise HTTPException(400, "since must be ISO-8601") from exc
+        with session_factory() as db: return PersistentAgent(db).digest(value, marker)
     @router.get("/api/developer/yolo/status")
     async def yolo_status(request: Request,lease_id: str|None=None):
         value=owner(request)

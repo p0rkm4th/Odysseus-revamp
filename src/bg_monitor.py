@@ -144,6 +144,7 @@ async def _run_followup(rec: dict) -> bool:
 
 
 async def _loop():
+    persistent_tick = 0
     while True:
         try:
             for rec in bg_jobs.pending_followups():
@@ -155,6 +156,20 @@ async def _loop():
                     logger.warning("bg-followup failed for %s (will retry): %s", rec.get("id"), e)
         except Exception as e:
             logger.warning("bg-monitor tick error: %s", e)
+        persistent_tick += 1
+        if persistent_tick % 12 == 0:
+            try:
+                from core.database import SessionLocal
+                from core.persistent_agent_models import AssistantInstance
+                from src.persistent_agent import PersistentAgent
+                with SessionLocal() as db:
+                    for (owner,) in db.query(AssistantInstance.owner).distinct().all():
+                        agent = PersistentAgent(db)
+                        agent.generate_episodes(owner)
+                        agent.evaluate_commitments(owner)
+                        agent.evaluate_monitors(owner)
+            except Exception as e:
+                logger.warning("persistent-agent monitor tick error: %s", e)
         await asyncio.sleep(POLL_INTERVAL_S)
 
 
