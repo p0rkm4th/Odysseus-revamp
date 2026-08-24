@@ -49,6 +49,9 @@ _PROFILES = {
             "write_file",
         }),
     ),
+    "workspace_yolo": ExecutionProfile(
+        "workspace_yolo", frozenset({ToolEffect.READ_WORKSPACE, ToolEffect.WRITE_WORKSPACE, ToolEffect.EXECUTE_CODE, ToolEffect.USER_INTERACTION}), "host", requires_workspace=True,
+    ),
 }
 EXECUTION_PROFILES = MappingProxyType(_PROFILES)
 

@@ -42,6 +42,14 @@ def _actions(*specs: ActionSpec) -> Mapping[str, ActionSpec]:
 
 
 CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
+    "developer.workspace_shell": CapabilitySpec(
+        capability_id="developer.workspace_shell", description="Owner-granted workspace developer execution.",
+        actions=_actions(ActionSpec(action_id="execute", effects=("write_workspace", "execute_code"), approval=ApprovalMode.EXACT, executor_key="workspace_yolo")),
+    ),
+    "intelligence.route": CapabilitySpec(
+        capability_id="intelligence.route", description="Inspect deterministic domain/model routing.",
+        actions=_actions(ActionSpec(action_id="read", effects=("read_private",), executor_key="local_intelligence")),
+    ),
     "inventory.manage": CapabilitySpec(
         capability_id="inventory.manage",
         description="Persistent asset inventory, relationships, and observations.",

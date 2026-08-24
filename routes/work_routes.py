@@ -61,16 +61,10 @@ def setup_work_routes(*, session_factory=SessionLocal):
     async def complete_action(request: Request, action_id: str, payload: dict[str, Any] = Body(default={})): return await tx(request, lambda svc,o,u: svc.complete_action(o,action_id,payload))
     @router.post("/actions/{action_id}/approval")
     async def bind_approval(request: Request, action_id: str, payload: dict[str, Any] = Body(...)):
-        def operation(svc, o, u):
-            from core.work_models import WorkAction
-            row = svc.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == o).one_or_none()
-            if row is None: raise WorkError("action not found")
-            reference = str(payload.get("approval_reference") or payload.get("approval_id") or "").strip()
-            if not reference: raise WorkError("approval reference is required")
-            row.approval_reference = reference[:300]; row.status = "awaiting_approval"; row.revision += 1
-            svc.event(o, "approval.requested", run_id=row.run_id, action_id=row.id, payload={"approval_reference": reference[:300]})
-            svc.db.commit(); svc.db.refresh(row); return serialize(row)
-        return await tx(request, operation)
+        return await tx(request, lambda svc,o,u: svc.bind_approval(o, action_id, str(payload.get("approval_reference") or payload.get("approval_id") or ""), digest=payload.get("sealed_input_digest")))
+    @router.post("/actions/{action_id}/resume")
+    async def resume_action(request: Request, action_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: svc.resume_approved_action(o, action_id, str(payload.get("approval_reference") or payload.get("approval_id") or ""), digest=payload.get("sealed_input_digest")))
     @router.post("/runs/{run_id}/results", status_code=201)
     async def result(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.add_result(o,run_id,payload))
     @router.get("/commitments")
