@@ -105,6 +105,15 @@ def test_false_completion_is_replaced_without_action_result():
     assert "installed" not in response.lower().split("i have not", 1)[0]
 
 
+def test_asset_inventory_claim_requires_first_class_result():
+    from src.agent_loop import ground_action_completion
+    response = ground_action_completion(
+        "Asset Inventory Report: 12 servers and 42 VMs, last updated today.",
+        intent_domains={"asset_inventory"}, tool_events=[],
+    )
+    assert response.startswith("No action completed:")
+
+
 @pytest.mark.asyncio
 async def test_provider_reconnect_fallback_receives_same_durable_context(monkeypatch):
     from src import llm_core
