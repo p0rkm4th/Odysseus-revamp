@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -97,11 +98,25 @@ def run_root(argv, timeout=300):
     }
 
 
+def _private_discovery_cidr(value):
+    """Validate the broker's only network operation scope."""
+    if "/" not in str(value):
+        raise ValueError("discovery scope must be an explicit IPv4 CIDR")
+    try:
+        network = ipaddress.ip_network(str(value), strict=False)
+    except ValueError as exc:
+        raise ValueError("discovery scope must be a valid IPv4 CIDR") from exc
+    if network.version != 4 or not network.is_private or network.num_addresses > 256:
+        raise ValueError("discovery scope must be private IPv4 and contain at most 256 addresses")
+    return str(network)
+
+
 def handle(req, allowed_pid, allowed_uid):
     action = req.get("action")
 
     if action == "status":
         manager, path = package_manager()
+        nmap = shutil.which("nmap")
         return {
             "ok": True,
             "action": "status",
@@ -110,7 +125,28 @@ def handle(req, allowed_pid, allowed_uid):
             "allowed_uid": allowed_uid,
             "package_manager": manager,
             "package_manager_path": path,
+            "network_scanner_available": bool(nmap),
             "allowed_packages": sorted(ALLOWED_PACKAGES),
+        }
+
+    if action == "run_network_discovery":
+        try:
+            cidr = _private_discovery_cidr(req.get("cidr"))
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc)}
+        nmap = shutil.which("nmap")
+        if not nmap:
+            return {"ok": False, "error": "nmap is not available on the host"}
+        result = run_root([
+            nmap, "-sn", "-n", "--max-retries", "1", "--host-timeout", "5s",
+            "-oX", "-", cidr,
+        ], timeout=60)
+        return {
+            "ok": result["returncode"] == 0,
+            "action": action,
+            "cidr": cidr,
+            "scanner": "nmap_ping_scan",
+            **result,
         }
 
     if action == "install_packages":

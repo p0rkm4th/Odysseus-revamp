@@ -173,9 +173,17 @@ class HomelabOperations:
             return await self._read(owner, action, ["uptime"])
         if action == "discovery_status":
             health = capability_health("network_discovery")
+            broker_scanner = False
+            try:
+                from src.privileged_broker import client_request
+                broker_scanner = bool((await asyncio.to_thread(client_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
+            except Exception:
+                pass
             return {
-                "kind": "capability", "action": action, "available": health["status"] == "available",
+                "kind": "capability", "action": action,
+                "available": health["status"] == "available" or broker_scanner,
                 "scanner": "nmap", "install_required": bool(health["missing_executables"]),
+                "broker_scanner_available": broker_scanner,
                 "capability_health": health, "exit_code": 0,
             }
         if action in {"plan_diagnostic_install", "execute_diagnostic_install"}:
@@ -250,12 +258,20 @@ class HomelabOperations:
         }
         digest = _digest(operation)
         scanner = shutil.which("nmap")
-        health = capability_health("network_discovery", available=([] if not scanner else ["nmap"]))
+        broker_scanner = False
+        if not scanner:
+            try:
+                from src.privileged_broker import client_request
+                broker_scanner = bool((await asyncio.to_thread(client_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
+            except Exception:
+                pass
+        health = capability_health("network_discovery", available=(["nmap"] if scanner or broker_scanner else []))
         if action == "plan_network_discovery":
             receipt = {
                 "kind": "plan", "owner": owner, "created_at": _now().isoformat(),
                 "operation_digest": digest, **operation,
-                "scanner_available": bool(scanner),
+                "scanner_available": bool(scanner or broker_scanner),
+                "broker_scanner_available": broker_scanner,
                 "capability_health": health,
                 "required_packages": health.get("packages", []),
                 "preflight": f"Probe only {cidr} for live hosts; open ports and services are not enumerated.",
@@ -270,7 +286,7 @@ class HomelabOperations:
             raise HomelabOperationError("a current owner-bound discovery plan is required")
         if active_execution_profile().name != "privileged_host":
             raise HomelabOperationError("network discovery requires privileged host operator mode and exact approval")
-        if not scanner:
+        if not scanner and not broker_scanner:
             # Never ask the model to guess a distro package name. Return a
             # deterministic remediation handoff to the existing exact-
             # approval diagnostic-install action; the caller can preserve the
@@ -293,10 +309,18 @@ class HomelabOperations:
                 "operation_digest": digest, "handoff": handoff,
                 "untrusted_content": False,
             }
-        code, output = await self.runner([
-            scanner, "-sn", "-n", "--max-retries", "1", "--host-timeout", "5s",
-            "-oX", "-", cidr,
-        ], 60)
+        if scanner:
+            code, output = await self.runner([
+                scanner, "-sn", "-n", "--max-retries", "1", "--host-timeout", "5s",
+                "-oX", "-", cidr,
+            ], 60)
+        else:
+            from src.privileged_broker import client_request
+            broker_result = await asyncio.to_thread(
+                client_request, {"action": "run_network_discovery", "cidr": cidr}, timeout=70,
+            )
+            code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
+            output = str(broker_result.get("output") or broker_result.get("error") or "")
         candidates = _parse_nmap_xml(output, cidr=cidr) if code == 0 else []
         receipt = {
             "kind": "discovery", "owner": owner, "created_at": _now().isoformat(),
