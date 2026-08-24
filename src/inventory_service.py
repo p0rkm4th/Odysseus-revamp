@@ -8,7 +8,7 @@ accidentally commit half of a multi-lot consumption or recipe cook.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 import hashlib
 import ipaddress
@@ -29,6 +29,7 @@ from core.inventory_models import (
     InventoryRecipe,
     InventoryRecipeCook,
     InventoryRecipeIngredient,
+    InventoryDraft,
 )
 from src.inventory_planning import (
     RecipeRequirement,
@@ -145,12 +146,16 @@ def _lot_view(lot: InventoryLot) -> dict[str, Any]:
 def _movement_view(movement: InventoryMovement) -> dict[str, Any]:
     return {
         "id": movement.id,
+        "owner": movement.owner,
         "item_id": movement.item_id,
         "lot_id": movement.lot_id,
         "quantity_delta": movement.quantity_delta,
         "unit": movement.unit,
         "reason": movement.reason,
+        "source_kind": movement.source_kind,
+        "source_id": movement.source_id,
         "idempotency_key": movement.idempotency_key,
+        "occurred_at": movement.occurred_at.isoformat() if movement.occurred_at else None,
     }
 
 
@@ -611,6 +616,96 @@ class InventoryService:
                 InventoryLot.expiry_date.is_(None), InventoryLot.expiry_date, InventoryLot.id
             ).all()
             return [_lot_view(lot) for lot in lots]
+
+    def household_overview(self, owner: str, *, expiry_days: int = 30) -> dict[str, Any]:
+        """Return a read-only projection over canonical household inventory.
+
+        This deliberately does not create a Household store.  Items, lots,
+        immutable movements, recipes, and intake drafts remain authoritative;
+        this method only assembles the owner-scoped view needed by the
+        Household workspace.
+        """
+        owner = _required_text(owner, "owner", maximum=255)
+        horizon = max(0, min(int(expiry_days), 365))
+        today = date.today()
+        with self._read() as db:
+            items = db.query(InventoryItem).filter(
+                InventoryItem.owner == owner,
+                InventoryItem.domain.in_(("kitchen", "household")),
+                InventoryItem.archived.is_(False),
+            ).order_by(InventoryItem.normalized_name, InventoryItem.id).all()
+            item_by_id = {item.id: item for item in items}
+            lots = db.query(InventoryLot).filter(
+                InventoryLot.owner == owner,
+                InventoryLot.item_id.in_(list(item_by_id) or ["__none__"]),
+                InventoryLot.quantity > 0,
+            ).order_by(InventoryLot.expiry_date.is_(None), InventoryLot.expiry_date, InventoryLot.id).all()
+            totals: dict[str, Decimal] = {}
+            expiring = []
+            for lot in lots:
+                totals[lot.item_id] = totals.get(lot.item_id, Decimal("0")) + Decimal(str(lot.quantity))
+                if lot.expiry_date is not None and lot.expiry_date <= today + timedelta(days=horizon):
+                    expiring.append({
+                        "lot": _lot_view(lot),
+                        "item": _item_view(item_by_id[lot.item_id]),
+                        "status": "expired" if lot.expiry_date < today else "expiring",
+                    })
+            low_stock = []
+            for item in items:
+                total = totals.get(item.id, Decimal("0"))
+                if item.reorder_point is not None and total <= Decimal(str(item.reorder_point)):
+                    low_stock.append({
+                        "item": _item_view(item),
+                        "quantity": str(total),
+                        "reorder_point": str(item.reorder_point),
+                    })
+            pending_drafts = db.query(InventoryDraft).filter_by(
+                owner=owner, status="pending",
+            ).order_by(InventoryDraft.updated_at.desc()).limit(20).all()
+            recipe_count = db.query(InventoryRecipe).filter_by(
+                owner=owner, archived=False,
+            ).count()
+            recent = self._history_rows(db, owner, item_by_id=item_by_id, limit=10)
+            return {
+                "owner": owner,
+                "canonical_store": "inventory_service",
+                "scope": "kitchen_and_household",
+                "item_count": len(items),
+                "items": [_item_view(item) | {"stock_quantity": str(totals.get(item.id, Decimal("0")))} for item in items],
+                "low_stock": low_stock,
+                "expiring_lots": expiring,
+                "pending_intake": [{
+                    "id": draft.id, "source_type": draft.source_type,
+                    "status": draft.status, "updated_at": draft.updated_at.isoformat(),
+                } for draft in pending_drafts],
+                "recipe_count": recipe_count,
+                "recent_activity": recent,
+                "freshness": {"computed_at": datetime.now(timezone.utc).isoformat(), "expiry_horizon_days": horizon},
+                "authority_unchanged": True,
+            }
+
+    @staticmethod
+    def _history_rows(db: Session, owner: str, *, item_by_id: dict[str, InventoryItem] | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        limit = max(1, min(int(limit), 200))
+        rows = db.query(InventoryMovement).filter_by(owner=owner).order_by(
+            InventoryMovement.occurred_at.desc(), InventoryMovement.id.desc(),
+        ).limit(limit).all()
+        if item_by_id is None:
+            ids = {row.item_id for row in rows}
+            item_by_id = {item.id: item for item in db.query(InventoryItem).filter(
+                InventoryItem.owner == owner, InventoryItem.id.in_(list(ids) or ["__none__"]),
+            ).all()}
+        return [{
+            "movement": _movement_view(row),
+            "item": _item_view(item_by_id[row.item_id]) if row.item_id in item_by_id else None,
+            "provenance": {"source_kind": row.source_kind, "source_id": row.source_id},
+        } for row in rows]
+
+    def inventory_history(self, owner: str, *, limit: int = 50) -> list[dict[str, Any]]:
+        """Return the append-only, owner-scoped movement history."""
+        owner = _required_text(owner, "owner", maximum=255)
+        with self._read() as db:
+            return self._history_rows(db, owner, limit=limit)
 
 
 class RecipeService(InventoryService):

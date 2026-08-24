@@ -80,6 +80,15 @@ def setup_inventory_routes(
             include_archived=include_archived, limit=limit, offset=offset,
         )}
 
+    @router.get("/inventory/overview")
+    async def inventory_overview(request: Request, expiry_days: int = Query(30, ge=0, le=365)):
+        """Canonical Household/Inventory read projection for the workspace."""
+        return await call(inventory.household_overview, _owner(request), expiry_days=expiry_days)
+
+    @router.get("/inventory/history")
+    async def inventory_history(request: Request, limit: int = Query(50, ge=1, le=200)):
+        return {"history": await call(inventory.inventory_history, _owner(request), limit=limit)}
+
     @router.get("/inventory/items/search")
     async def search_items(
         request: Request, q: str = Query(..., min_length=1, max_length=200),
