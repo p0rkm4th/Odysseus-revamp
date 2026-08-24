@@ -123,6 +123,9 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/claims")
     async def claims(request: Request, subject_ref: str | None = None, claim_class: str | None = None, include_inactive: bool = False, limit: int = Query(100, ge=1, le=500)):
         return {"claims": await tx(request, lambda svc,o,u: svc.list_claims(o, subject_ref=subject_ref, claim_class=claim_class, include_inactive=include_inactive, limit=limit))}
+    @router.get("/claims/{claim_id}/lineage")
+    async def claim_lineage(request: Request, claim_id: str):
+        return await tx(request, lambda svc,o,u: svc.claim_lineage(o, claim_id))
     @router.get("/runs/{run_id}/replay")
     async def replay_run(request: Request, run_id: str):
         return await tx(request, lambda svc,o,u: svc.reconstruct_run(o, run_id))

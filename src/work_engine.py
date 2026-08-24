@@ -13,7 +13,7 @@ TASK_STATUSES = {"pending", "ready", "running", "awaiting_approval", "awaiting_i
 RUN_STATUSES = {"queued", "running", "awaiting_approval", "awaiting_input", "suspended", "completed", "failed", "cancelled"}
 ACTION_STATUSES = {"proposed", "awaiting_approval", "approved", "executing", "completed", "failed", "rejected", "cancelled", "expired"}
 LOCK_MODES = {"shared", "exclusive"}
-CLAIM_CLASSES = {"Fact", "Observation", "UserAssertion", "RetrievedClaim", "Inference", "Assumption", "Hypothesis", "HistoricalState", "CurrentState"}
+CLAIM_CLASSES = {"Fact", "Observation", "Observed", "UserAssertion", "RetrievedClaim", "Inference", "Assumption", "Hypothesis", "HistoricalState", "CurrentState", "Imported", "Assumed", "Hypothesized", "Confirmed", "Stale", "Unknown"}
 RUN_LIFECYCLE_STATES = {"created", "planning", "ready", "executing", "verifying", "succeeded", "waiting_approval", "waiting_input", "paused", "failed", "cancelled", "compensating"}
 _STATUS_TO_LIFECYCLE = {"queued": "ready", "running": "executing", "awaiting_approval": "waiting_approval", "awaiting_input": "waiting_input", "suspended": "paused", "completed": "succeeded", "failed": "failed", "cancelled": "cancelled"}
 
@@ -460,6 +460,30 @@ class WorkEngine:
         if claim_class: query = query.filter_by(claim_class=claim_class)
         if not include_inactive: query = query.filter(EpistemicClaim.status == "active")
         return [serialize(row) for row in query.order_by(EpistemicClaim.updated_at.desc()).limit(max(1, min(int(limit), 500))).all()]
+
+    def claim_lineage(self, owner, claim_id):
+        """Return an owner-scoped evidence/claim/conclusion projection.
+
+        References are intentionally opaque IDs or source references. This
+        exposes provenance and contradiction structure without exposing model
+        chain-of-thought or silently resolving competing claims.
+        """
+        claim = self._one(EpistemicClaim, owner, claim_id, "claim")
+        related_ids = set(claim.contradicting_references or [])
+        related_ids.update(x for x in (claim.derived_from or []) if isinstance(x, str))
+        related = []
+        if related_ids:
+            rows = self.db.query(EpistemicClaim).filter(EpistemicClaim.owner == owner, EpistemicClaim.id.in_(sorted(related_ids))).all()
+            related = [serialize(row) for row in rows]
+        provenance = dict(claim.provenance or {})
+        return {
+            "claim": serialize(claim),
+            "evidence": list(claim.evidence_references or []),
+            "contradictions": [row for row in related if row["id"] in set(claim.contradicting_references or [])],
+            "derived_claims": [row for row in related if row["id"] in set(claim.derived_from or [])],
+            "resolution_status": provenance.get("resolution_status", "unresolved"),
+            "authority_unchanged": True,
+        }
 
     def supersede_claim(self, owner, claim_id, replacement_id=None):
         row = self._one(EpistemicClaim, owner, claim_id, "claim")

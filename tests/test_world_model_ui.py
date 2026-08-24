@@ -42,3 +42,5 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "/api/work/claims?include_inactive=true" in module
     assert "Evidence" in module and "contradictions" in module
     assert '"/claims"' in (ROOT / "routes/work_routes.py").read_text()
+    assert "/claims/{claim_id}/lineage" in (ROOT / "routes/work_routes.py").read_text()
+    assert "Evidence Explorer" in module and "data-claim-id" in module
