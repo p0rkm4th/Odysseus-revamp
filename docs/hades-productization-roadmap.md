@@ -179,6 +179,14 @@ outcome; Changes reference existing Runs and deterministic Run previews for
 targets, actions, risk, resources, and verification. The Control Center shows
 their status projections. Neither object executes Actions directly; Work and
 the existing ActionSpec/ToolBinding/policy path remain authoritative.
+
+Incident hypotheses now support owner-scoped updates with preserved supporting
+and contradicting evidence, while evidence intake appends canonical references
+and timeline events instead of rewriting history. Change lifecycle transitions
+reuse the existing Run and verification projections; a Run-linked Change cannot
+be marked completed until that canonical Run is completed and verified. These
+are additive projections over Work/Run, not another incident executor or action
+engine. Live safe-service remediation dogfood remains pending.
 ## P0 memory grounding gate (current continuation)
 
 The existing Brain store remains canonical. Explicit owner questions now use a

@@ -172,6 +172,12 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/incidents/{incident_id}/hypotheses")
     async def hypotheses(request: Request, incident_id: str):
         return {"hypotheses": await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).list_hypotheses(o, incident_id))}
+    @router.patch("/incidents/{incident_id}/hypotheses/{hypothesis_id}")
+    async def update_hypothesis(request: Request, incident_id: str, hypothesis_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).update_hypothesis(o, incident_id, hypothesis_id, payload))
+    @router.post("/incidents/{incident_id}/evidence", status_code=201)
+    async def add_incident_evidence(request: Request, incident_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).add_evidence(o, incident_id, payload))
     @router.post("/changes", status_code=201)
     async def create_change(request: Request, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).create_change(o, payload))
@@ -181,6 +187,9 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/changes/{change_id}")
     async def get_change(request: Request, change_id: str):
         return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).get_change(o, change_id))
+    @router.post("/changes/{change_id}/transition")
+    async def transition_change(request: Request, change_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).transition_change(o, change_id, payload.get("status"), outcome=payload.get("outcome")))
     @router.post("/competence/recompute")
     async def recompute_competence(request: Request, payload: dict[str, Any] = Body(default={})): 
         return {"competence": await tx(request, lambda svc,o,u: __import__("src.model_competence", fromlist=["ModelCompetenceService"]).ModelCompetenceService(svc.db).recompute(o, model_key=payload.get("model_key"), task_class=payload.get("task_class")))}
