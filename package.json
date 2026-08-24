@@ -4,9 +4,12 @@
     "url": "https://github.com/odysseus-dev/odysseus.git"
   },
   "scripts": {
-    "test:frontend": "bash scripts/verify_frontend.sh"
+    "test:frontend": "bash scripts/verify_frontend.sh",
+    "test:browser": "node scripts/browser_window_dogfood.mjs",
+    "test:browser:realistic": "node scripts/browser_realistic_acceptance.mjs"
   },
   "devDependencies": {
-    "@antithesishq/bombadil": "^0.6.1"
+    "@antithesishq/bombadil": "^0.6.1",
+    "playwright": "^1.62.1"
   }
 }
