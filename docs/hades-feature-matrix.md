@@ -80,3 +80,8 @@ results survive local-model context trimming. Synthetic owner-isolation,
 failure, Qwen compact-projection, and trim tests are green. Live authenticated
 dogfood remains credential-gated. A sanitized Memory Inspector now receives
 request diagnostics and saved turn metrics without memory content.
+
+OSINT claim projection checkpoint: owner/case-scoped claim reads now include a
+structured epistemic summary (claim classes, lifecycle statuses, and claims
+with contradiction references). The dossier displays this summary while
+keeping external report/findings tainted and non-authoritative.

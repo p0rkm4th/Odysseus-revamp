@@ -746,3 +746,15 @@ projection. Report output is generated through the existing owner-scoped
 SecurityAssessmentService and rendered as escaped canonical data; the UI does
 not create findings, widen scope, or execute assessment actions. Timeline,
 remediation/verification UX, and live authorized dogfood remain future work.
+
+### OSINT epistemic projection checkpoint
+
+OSINT case claim reads continue to use the existing owner-scoped Work
+EpistemicClaim ledger. The case projection now returns structured counts by
+claim class and lifecycle status, including claims carrying contradiction
+references. The dossier surfaces this summary alongside the existing
+provenance/taint boundary, so Facts, Retrieved Claims, Inferences, stale
+records, and contradictions remain visibly grounded in canonical state. Report
+prose and external findings remain tainted artifacts and are not promoted into
+claims. Broader graph/timeline integration and live provider dogfood remain
+future work.
