@@ -141,6 +141,9 @@ class WorkEngine:
     def set_run_status(self, owner, run_id, status, data=None):
         row = self._one(WorkRun, owner, run_id, "run")
         if status not in RUN_STATUSES: raise WorkError("invalid run status")
+        if data and "model_name" in data: row.model_name = str(data["model_name"] or "")[:200] or None
+        if data and "model_endpoint" in data: row.model_endpoint = str(data["model_endpoint"] or "")[:500] or None
+        if data and "session_id" in data: row.session_id = str(data["session_id"] or "")[:200] or None
         row.status = status; row.current_step = (data or {}).get("current_step", row.current_step); row.error_summary = (data or {}).get("error_summary", row.error_summary); row.result_summary = (data or {}).get("result_summary", row.result_summary); row.continuation_state = (data or {}).get("continuation_state", row.continuation_state); row.ended_at = now() if status in {"completed", "failed", "cancelled"} else None; row.revision += 1
         self.event(owner, f"run.{status}", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload={"current_step": row.current_step}); self.db.commit(); self.db.refresh(row); return serialize(row)
 
