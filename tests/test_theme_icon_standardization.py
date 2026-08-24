@@ -28,3 +28,12 @@ def test_sidebar_plain_text_exceptions_are_hydrated_by_canonical_map():
     for element_id in ("tool-household-btn", "tool-it-assets-btn", "tool-network-btn", "tool-developer-btn", "tool-hades-btn"):
         assert element_id in app
     assert "item.insertAdjacentHTML('afterbegin', iconSvg(name))" in app
+
+
+def test_sidebar_destinations_are_grouped_without_replacing_existing_route_ids():
+    app = (ROOT / "static/app.js").read_text()
+    for label in ("PERSONAL", "COMMUNICATIONS", "TECHNOLOGY", "INVESTIGATION", "WORK", "KNOWLEDGE", "AGENT", "SYSTEM"):
+        assert label in app
+    assert "odysseus-sidebar-groups-v1" in app
+    assert "section.dataset.grouped = '1'" in app
+    assert "body.hidden = !next" in app

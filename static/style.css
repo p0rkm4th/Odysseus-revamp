@@ -693,6 +693,35 @@ body.bg-pattern-sparkles {
     #tools-section .list-item {
       padding: 8px 8px;
     }
+    .hades-nav-group {
+      margin: 3px 0 5px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .hades-nav-group-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 4px 8px;
+      border: 0;
+      background: color-mix(in srgb, var(--fg) 4%, transparent);
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 9px;
+      letter-spacing: .11em;
+      text-align: left;
+      cursor: pointer;
+    }
+    .hades-nav-group-toggle:hover,
+    .hades-nav-group-toggle:focus-visible {
+      color: var(--icon-selected);
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      outline: none;
+    }
+    .hades-nav-group-items[hidden] { display: none; }
+    .hades-nav-group-caret { font-size: 12px; line-height: 1; }
     .sidebar.right-side .sidebar-header {
       justify-content: flex-start;
       padding-left: 10px;

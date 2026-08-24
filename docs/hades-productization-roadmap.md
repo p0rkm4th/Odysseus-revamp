@@ -565,6 +565,16 @@ color hacks. Base-theme validation falls back safely for incomplete custom
 palettes. Synthetic contract/syntax tests and the full regression are green;
 owner-authenticated browser theme acceptance remains pending.
 
+### Sidebar grouping checkpoint
+
+The existing Tools destinations are now grouped in-place into Personal,
+Communications, Technology, Investigation, Work, Knowledge, Agent, and System
+sections. Groups are collapsible, keyboard-operable, and persist their open /
+closed state under a versioned frontend key. Existing destination IDs and
+route bindings remain intact, including legacy Compare, Cookbook, Theme,
+Gallery, Notes, and Tasks compatibility entries. This is a navigation
+projection; backend functionality was not removed or duplicated.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
