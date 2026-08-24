@@ -361,6 +361,17 @@ async def do_manage_memory(content: str, session_id: Optional[str] = None, owner
 
     action = lines[0].strip().lower()
 
+    if action in {"summarize_owner_memory", "search_memory", "inspect_memory"}:
+        # Explicit reads use the same canonical Brain store as list/search,
+        # but return a structured Result and distinguish retrieval failure
+        # from a genuine zero result. They never expose Skills or mutation
+        # authority.
+        from src.memory_grounding import build_explicit_memory_result, render_explicit_memory_context
+        query = "\n".join(lines[1:]).strip() or "what do you remember about me"
+        result = build_explicit_memory_result(_memory_manager, owner, query)
+        result["results"] = render_explicit_memory_context(result)
+        return result
+
     if action == "list":
         category_filter = lines[1].strip().lower() if len(lines) > 1 and lines[1].strip() else None
         memories = _memory_manager.load(owner=owner)

@@ -47,3 +47,15 @@ product workspace or dogfood gate is incomplete.
 
 This matrix is a continuation artifact, not a claim that partial domains are
 complete.
+
+## P0 memory grounding gate
+
+The existing Brain/memory store now has a deterministic explicit-read
+projection. Queries such as “what do you remember about me?” produce a
+protected, owner-scoped canonical Memory Result; the existing
+`manage_memory` capability is also exposed under a deterministic `memory`
+intent. Retrieval failure is distinct from a genuine zero result, procedural
+Skills are explicitly excluded from personal-memory answers, and explicit
+results survive local-model context trimming. Synthetic owner-isolation,
+failure, Qwen compact-projection, and trim tests are green. Live authenticated
+dogfood and a persisted Memory Inspector/trace projection remain pending.

@@ -33,6 +33,7 @@ from src.context_compactor import (
 )
 from src.settings import get_setting
 from src.prompt_security import untrusted_context_message
+from src.memory_grounding import is_explicit_memory_query
 from src.tool_security import (
     blocked_tools_for_owner,
     email_tool_policy_names,
@@ -497,6 +498,12 @@ _DOMAIN_RULES = {
 - Notes/todos/reminders use `manage_notes`, not memory.
 - Calendar create/update/delete should call `manage_calendar` with `action=list_calendars` first.
 - Recurring/automatic/scheduled requests create a `manage_tasks` task; do not just perform the action once.""",
+    "memory": """\
+## Memory/Brain rules
+- Explicit questions about what Hades remembers are canonical owner-scoped Brain reads.
+- Do not answer from Skills; Skills are procedural instructions, not personal memory.
+- Use only the canonical Memory Result projected for this turn. If its status is RETRIEVAL_FAILED, say retrieval failed; if ZERO_RESULT, say the owner-scoped query returned no applicable memories.
+- Never invent, infer, or broaden personal facts beyond the returned memory records.""",
     "ui": """\
 ## UI rules
 - "Open/show <panel>" uses `ui_control open_panel <name>`.
@@ -564,6 +571,7 @@ _DOMAIN_TOOL_MAP = {
     "email": {"list_email_accounts", "list_emails", "read_email", "scan_email_unsubscribes", "unsubscribe_email", "send_email", "reply_to_email", "bulk_email", "archive_email", "delete_email", "mark_email_read", "resolve_contact", "manage_contact"},
     "cookbook": {"download_model", "serve_model", "serve_preset", "list_serve_presets", "list_served_models", "stop_served_model", "tail_serve_output", "list_downloads", "cancel_download", "search_hf_models", "list_cached_models", "list_cookbook_servers", "adopt_served_model"},
     "notes_calendar_tasks": {"manage_notes", "manage_calendar", "manage_tasks"},
+    "memory": {"manage_memory"},
     "ui": {"ui_control"},
     "sessions": {"create_session", "list_sessions", "manage_session", "send_to_session", "search_chats"},
     "files": {"bash", "python", "read_file", "write_file", "edit_file", "apply_patch", "todowrite", "grep", "glob", "ls", "get_workspace", "manage_bg_jobs"},
@@ -2133,6 +2141,19 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
         if continuation else text
     )
     q = retrieval_query.lower()
+
+    # Explicit Brain questions are canonical reads. Keep the existing memory
+    # tool visible for compatibility, but do not depend on a model deciding
+    # whether to call it; chat context assembly projects the authoritative
+    # owner-scoped Result separately.
+    if is_explicit_memory_query(text):
+        return {
+            "low_signal": False,
+            "continuation": continuation,
+            "domains": {"memory"},
+            "retrieval_query": text,
+            "explicit_memory_query": True,
+        }
 
     if not text or bool(_LOW_SIGNAL_RE.match(text)) or _is_casual_low_signal(text):
         return {

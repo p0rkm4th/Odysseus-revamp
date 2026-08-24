@@ -179,3 +179,13 @@ outcome; Changes reference existing Runs and deterministic Run previews for
 targets, actions, risk, resources, and verification. The Control Center shows
 their status projections. Neither object executes Actions directly; Work and
 the existing ActionSpec/ToolBinding/policy path remain authoritative.
+## P0 memory grounding gate (current continuation)
+
+The existing Brain store remains canonical. Explicit owner questions now use a
+deterministic read projection rather than relying only on vector relevance or
+model-selected tools. The projection is protected through Qwen/local-model
+shaping and context trimming, returns retrieval-failure/zero-result status
+honestly, and keeps Skills separate from personal memory. Focused synthetic
+tests are green. The remaining acceptance work is live owner-authenticated
+dogfood, sanitized memory diagnostics/Inspector visibility, and the full
+regression checkpoint.
