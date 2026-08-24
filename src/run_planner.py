@@ -101,6 +101,7 @@ class RunPlanner:
         effect_classes: list[str] = []
         capability_health: list[dict[str, Any]] = []
         reversibility: list[dict[str, Any]] = []
+        prechecks: list[dict[str, Any]] = []
         for action in actions:
             capability, spec = self._spec(action)
             if spec is None:
@@ -109,7 +110,25 @@ class RunPlanner:
                 capability_health.append({"capability_id": action.get("capability_id"), "status": "unavailable", "reason": "action_spec_missing"})
                 continue
             contract = _contract(spec, action)
-            item = {"sequence": action.get("sequence"), "action_id": action.get("id"), "operation": spec.action_id, "capability_id": capability.capability_id, "known": True, "status": action.get("status"), "input": action.get("normalized_input") or {}, "contract": contract}
+            sequence = action.get("sequence")
+            recorded = [
+                checkpoint for checkpoint in (run.checkpoints or [])
+                if isinstance(checkpoint, dict)
+                and checkpoint.get("kind") == "precheck"
+                and (checkpoint.get("sequence") is None or checkpoint.get("sequence") == sequence)
+                and (checkpoint.get("action_id") in {None, *contract["precheck_actions"]})
+            ]
+            required_prechecks = []
+            for precheck_action in contract["precheck_actions"]:
+                matches = [entry for entry in recorded if entry.get("action_id") == precheck_action]
+                required_prechecks.append({
+                    "action_id": precheck_action,
+                    "recorded": matches,
+                    "satisfied": any(entry.get("status") in {"passed", "succeeded", "success", "verified"} or entry.get("success") is True for entry in matches),
+                })
+            if required_prechecks:
+                prechecks.append({"sequence": sequence, "action_id": spec.action_id, "required": required_prechecks})
+            item = {"sequence": sequence, "action_id": action.get("id"), "operation": spec.action_id, "capability_id": capability.capability_id, "known": True, "status": action.get("status"), "input": action.get("normalized_input") or {}, "contract": contract, "prechecks": required_prechecks}
             if action.get("approval_reference"):
                 item["approval_reference"] = action["approval_reference"]
             if spec.approval is not ApprovalMode.NONE:
@@ -155,7 +174,7 @@ class RunPlanner:
             "knowledge_gaps": gaps, "unknowns": gaps, "effect_classes": effect_classes,
             "capability_health": capability_health, "reversibility": reversibility,
             "risk": risks, "blast_radius": [], "approvals": approvals,
-            "locks": lock_state, "blast_radius": blast_radius, "verification": run.verification or {},
+            "locks": lock_state, "blast_radius": blast_radius, "verification": run.verification or {}, "prechecks": prechecks,
             "lifecycle_state": run.lifecycle_state, "plan_revision": run.revision,
         }
 
@@ -170,6 +189,14 @@ class RunPlanner:
                 failures.append({"code": "unknown_action_spec", "sequence": action.get("sequence"), "message": "ActionSpec is not registered"})
                 continue
             contract = item["contract"]
+            if contract["precheck_actions"]:
+                capability, _ = self._spec(action)
+                for requirement in item.get("prechecks", []):
+                    precheck_action = str(requirement.get("action_id") or "")
+                    if capability is None or precheck_action not in capability.actions:
+                        failures.append({"code": "precheck_action_missing", "sequence": action.get("sequence"), "action_id": precheck_action, "message": "declared precheck ActionSpec is not registered"})
+                    elif not requirement.get("satisfied"):
+                        failures.append({"code": "precheck_required", "sequence": action.get("sequence"), "action_id": precheck_action, "message": "declared precheck has not produced successful evidence"})
             if contract["target_scope"] == "private_network":
                 invalid = [r for r in contract["target_resources"] if not _private_network_resource(r)]
                 if invalid:
