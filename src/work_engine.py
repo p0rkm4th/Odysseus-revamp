@@ -14,10 +14,12 @@ RUN_STATUSES = {"queued", "running", "awaiting_approval", "awaiting_input", "sus
 ACTION_STATUSES = {"proposed", "awaiting_approval", "approved", "executing", "completed", "failed", "rejected", "cancelled", "expired"}
 LOCK_MODES = {"shared", "exclusive"}
 CLAIM_CLASSES = {"Fact", "Observation", "Observed", "UserAssertion", "RetrievedClaim", "Inference", "Assumption", "Hypothesis", "HistoricalState", "CurrentState", "Imported", "Assumed", "Hypothesized", "Confirmed", "Stale", "Unknown"}
-RUN_LIFECYCLE_STATES = {"created", "planning", "ready", "executing", "verifying", "succeeded", "waiting_approval", "waiting_input", "paused", "failed", "cancelled", "compensating"}
+RUN_LIFECYCLE_STATES = {"created", "planning", "ready", "executing", "verifying", "succeeded", "waiting_approval", "waiting_input", "paused", "failed", "cancelled", "compensating", "execution_ambiguous", "partial_unknown_state"}
 _STATUS_TO_LIFECYCLE = {"queued": "ready", "running": "executing", "awaiting_approval": "waiting_approval", "awaiting_input": "waiting_input", "suspended": "paused", "completed": "succeeded", "failed": "failed", "cancelled": "cancelled"}
 
 class WorkError(ValueError): pass
+class AmbiguousExecution(WorkError):
+    """Binding could not establish whether a consequential action occurred."""
 
 def now(): return datetime.now(timezone.utc).replace(tzinfo=None)
 def ident(prefix): return f"{prefix}_{uuid4().hex}"
@@ -123,6 +125,9 @@ class WorkEngine:
         """
         row = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
         if row is None: raise WorkError("action not found")
+        run = self.db.query(WorkRun).filter_by(id=row.run_id, owner=owner).one()
+        if run.lifecycle_state in {"execution_ambiguous", "partial_unknown_state"} or (run.continuation_state or {}).get("execution_ambiguous"):
+            raise WorkError("ambiguous execution must be independently verified before retry")
         if row.status not in {"failed", "expired"}:
             raise WorkError("only failed or expired actions can be retried")
         from src.capability_registry import capability_for_id
@@ -255,6 +260,8 @@ class WorkEngine:
             self.event(owner, "binding.execution_completed", run_id=run.id, action_id=action.id, payload={"result_id": completed.get("result", {}).get("id") if isinstance(completed.get("result"), dict) else None})
             self.db.commit()
             return completed
+        except AmbiguousExecution as exc:
+            return self.mark_action_ambiguous(owner, action_id, reason=str(exc)[:500])
         except Exception as exc:
             failed = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one()
             failed.status = "failed"; failed.error = str(exc)[:500]; failed.completed_at = now(); failed.revision += 1
@@ -262,6 +269,41 @@ class WorkEngine:
             self.event(owner, "binding.execution_failed", run_id=run.id, action_id=failed.id, payload={"error": failed.error})
             self.db.commit()
             raise
+
+    def mark_action_ambiguous(self, owner, action_id, *, reason="binding outcome is unknown"):
+        """Persist an unknown mutation outcome and retain its resource locks."""
+        action = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if action is None: raise WorkError("action not found")
+        run = self.db.query(WorkRun).filter_by(id=action.run_id, owner=owner).one()
+        action.status = "failed"; action.error = "execution_ambiguous: " + str(reason)[:450]; action.completed_at = None; action.revision += 1
+        run.status = "running"; run.lifecycle_state = "execution_ambiguous"; run.current_step = "execution outcome requires verification"
+        run.continuation_state = {**(run.continuation_state or {}), "execution_ambiguous": True, "ambiguous_action_id": action.id, "ambiguous_reason": str(reason)[:500]}
+        run.revision += 1
+        self.event(owner, "execution.ambiguous", run_id=run.id, action_id=action.id, payload={"reason": str(reason)[:500]})
+        self.db.commit(); self.db.refresh(run)
+        return serialize(action) | {"run_lifecycle_state": run.lifecycle_state, "locks_retained": True}
+
+    def resolve_ambiguous_action(self, owner, action_id, *, occurred, result=None):
+        """Resolve an ambiguous binding only after independent state evidence."""
+        action = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if action is None: raise WorkError("action not found")
+        run = self.db.query(WorkRun).filter_by(id=action.run_id, owner=owner).one()
+        if run.lifecycle_state not in {"execution_ambiguous", "partial_unknown_state"}:
+            raise WorkError("run has no ambiguous execution")
+        if occurred:
+            action.status = "executing"; action.revision += 1; self.db.commit()
+            completed = self.complete_action(owner, action.id, {"result": result or {"result_type": "verified_action", "reference": f"action-result://{action.id}", "provenance": {"resolution": "independent_verification"}}})
+            run = self.db.query(WorkRun).filter_by(id=action.run_id, owner=owner).one()
+            run.continuation_state = {**(run.continuation_state or {}), "execution_ambiguous": False, "ambiguous_action_id": None}
+            run.lifecycle_state = "verifying"; run.status = "running"; run.current_step = "ambiguous action verified as occurred"; run.revision += 1
+            self.db.commit()
+            return completed | {"run_lifecycle_state": run.lifecycle_state}
+        action.error = "execution_ambiguous: verified not occurred"; action.status = "failed"; action.completed_at = now(); action.revision += 1
+        self._release_action_locks(owner, action.id)
+        run.continuation_state = {**(run.continuation_state or {}), "execution_ambiguous": False, "ambiguous_action_id": None}
+        run.lifecycle_state = "failed"; run.status = "failed"; run.error_summary = "execution_ambiguous_resolved_not_occurred"; run.ended_at = now(); run.revision += 1
+        self.event(owner, "execution.ambiguous_resolved", run_id=run.id, action_id=action.id, payload={"occurred": False})
+        self.db.commit(); return serialize(action) | {"run_lifecycle_state": run.lifecycle_state}
 
     @staticmethod
     def _lock_requests(value):

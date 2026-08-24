@@ -752,6 +752,11 @@ validated Work actions. It normalizes the existing executor tuple into a
 structured result and rejects unknown bindings, while preserving the existing
 policy, approval, owner, disabled-tool, and broker checks in the executor path.
 
+Ambiguous binding outcomes now enter a durable `execution_ambiguous` Run state.
+The originating Action is marked with an ambiguity error, resource locks are
+retained, blind retry is rejected, and an owner-scoped resolution endpoint
+requires independent evidence that the mutation occurred or did not occur.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
