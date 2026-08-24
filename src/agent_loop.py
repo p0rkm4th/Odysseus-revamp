@@ -2014,13 +2014,23 @@ def _recent_reference_resolution_hint(messages: List[Dict], text: str) -> str | 
     if has_labeled_options and re.search(
         r"\b(?:all\s+of\s+the\s+above|all\s+three|everything)\b", latest
     ):
+        option_text = ""
+        option_matches = re.findall(
+            r"(?:^|\s)([ABC])[.)]\s*([^\n]+?)(?=\s+[ABC][.)]|$)",
+            previous_assistant,
+            re.IGNORECASE,
+        )
+        if option_matches:
+            option_text = " The selected options are: " + "; ".join(
+                f"{label.upper()}: {description.strip().rstrip('.')}."
+                for label, description in option_matches
+            )
         return (
-            "Immediate reference resolution: the user's latest phrase "
-            "'all of the above' refers to every option in the immediately "
-            "preceding assistant message (A, B, and C). Resolve all three "
-            "in that order; do not repeat the option list or answer as if this "
-            "were a new unrelated request. Begin by explicitly acknowledging "
-            "that all three preceding options were selected."
+            "REFERENCE: 'all of the above' selects A, B, and C from the "
+            "immediately preceding assistant message. Resolve all three in "
+            "order. Do not ask the user to choose again; acknowledge the "
+            "selection and proceed."
+            + option_text
         )
     if re.search(r"\b(?:the\s+)?(?:first|second|third)\s+one\b", latest):
         ordinal = re.search(r"\b(first|second|third)\b", latest, re.I).group(1).lower()
@@ -4453,6 +4463,10 @@ async def stream_agent_loop(
                 "role": "system",
                 "content": _reference_hint,
                 "_agent_injected": "reference_resolution",
+                # Immediate referents are part of the active turn contract,
+                # not optional memory/RAG context. Keep this small server-owned
+                # instruction through aggressive local-model trimming.
+                "_protected": True,
             },
         )
         logger.info("[hades-continuity] immediate reference hint applied")
