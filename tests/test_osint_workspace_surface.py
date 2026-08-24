@@ -17,6 +17,9 @@ def test_osint_is_primary_navigation_and_has_investigation_workspace():
     assert "caseDossier" in osint
     assert "/api/research/detail/" in osint
     assert "Sources" in osint and "Findings / Evidence" in osint
+    assert "Facts / Inferences" in osint
+    assert "sourceCount" in osint
+    assert "not promoted into claims" in osint
     assert "External research remains tainted content" in osint
 
 
