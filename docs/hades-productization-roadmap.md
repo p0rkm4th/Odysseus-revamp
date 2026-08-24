@@ -11,6 +11,13 @@ approval, and journal architecture remains unchanged.
 
 ### Setup Center foundation checkpoint
 
+Setup health now covers the canonical Work/Business, STT/TTS voice, and
+scheduler/monitor primitives with bounded metadata-only checks. These checks
+report capability availability and explicitly perform no provider request,
+microphone access, scheduling, mutation, or authority grant. Provider
+connectivity remains a separate health/test operation and is never inferred
+from importability.
+
 The first Setup Center slice now uses a declarative `SetupContract` registry
 and a resumable owner-scoped state projection. It covers module categories,
 dependencies, permissions, secret references, safe status values, existing
