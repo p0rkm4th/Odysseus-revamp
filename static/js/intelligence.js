@@ -57,10 +57,26 @@ export async function openHousehold(){
 }
 export async function openItAssets(){
   const el=panel('it-assets-panel','IT Assets','<p>Loading IT Assets…</p>');
-  const [items,net]=await Promise.all([fetch('/api/inventory/items?domain=it&include_archived=false').then(r=>r.json()),fetch('/api/network/map').then(r=>r.json())]);
-  el.querySelector('.hades-window-body').innerHTML=`<div><h2>IT Assets</h2><p>Computers · Components · Network Devices · Discovered / Unidentified</p><h3>Inventory</h3>${(items.items||[]).map(x=>`<button class="list-item hades-entity-link" data-id="${esc(x.id)}">${esc(x.name)} <small>${esc(x.model||x.category||'asset')}</small></button>`).join('')||'<p>No user-facing IT assets yet.</p>'}<h3>CMDB-backed devices</h3><p>${(net.nodes||[]).length} canonical nodes · ${esc(net.identity_rule||'')}</p>${(net.nodes||[]).map(x=>`<button class="list-item hades-cmdb-link" data-id="${esc(x.id)}">${esc(x.name||x.hostname||x.id)} <small>${esc(x.resolution_state||'unidentified')}</small></button>`).join('')}</div>`;
-  bindEntityLinks(el, '.hades-entity-link', openItAsset);
-  bindEntityLinks(el, '.hades-cmdb-link', id => (net.nodes||[]).find(x => x.id === id) && openCmdbAsset((net.nodes||[]).find(x => x.id === id)));
+  try {
+    const [items,net]=await Promise.all([
+      fetch('/api/inventory/items?domain=it&include_archived=false',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('IT inventory unavailable'))),
+      fetch('/api/network/map',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('CMDB projection unavailable'))),
+    ]);
+    const userItems=items.items||[], nodes=net.nodes||[], canonical=nodes.filter(x=>x.canonical!==false), unidentified=nodes.filter(x=>x.resolution_state==='unidentified');
+    const metric=(label,value)=>`<div class="hades-summary-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
+      <header class="hades-module-header"><div><h2>IT Assets</h2><p>Inventory assets, CMDB identities, observations, and reconciliation</p></div><span class="hades-status-badge">Two canonical sources</span></header>
+      <div class="hades-summary-metrics">${metric('Inventory assets',userItems.length)}${metric('CMDB assets',canonical.length)}${metric('Unidentified',unidentified.length)}${metric('Observed nodes',nodes.length)}</div>
+      <section class="hades-detail-section"><h3>Inventory assets</h3><p class="muted">User-entered assets remain in InventoryService; they are not silently merged with CMDB identities.</p><div>${userItems.map(x=>`<button class="list-item hades-entity-link" data-id="${esc(x.id)}"><span>${esc(x.name)}</span><small>${esc(x.model||x.category||'asset')} · ${esc(x.manufacturer||'')}</small></button>`).join('')||'<p class="hades-empty-state">No user-facing IT assets yet.</p>'}</div></section>
+      <section class="hades-detail-section"><h3>CMDB-backed devices</h3><p class="muted">${esc(net.identity_rule||'IP addresses remain observations; identity requires stronger evidence.')}</p><div>${nodes.map(x=>`<button class="list-item hades-cmdb-link" data-id="${esc(x.id)}"><span>${esc(x.name||x.hostname||x.id)}</span><small>${esc(x.resolution_state||'unidentified')} · confidence ${esc(x.confidence??'—')}</small></button>`).join('')||'<p class="hades-empty-state">No CMDB observations yet.</p>'}</div></section>
+      <p class="muted">CMDB source: ${esc(net.source||'canonical_cmdb')} · unidentified observations remain non-canonical until reconciled.</p>
+    </div>`;
+    bindEntityLinks(el, '.hades-entity-link', openItAsset);
+    bindEntityLinks(el, '.hades-cmdb-link', id => { const node=nodes.find(x => x.id === id); if (node) openCmdbAsset(node); });
+  } catch (error) {
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-error-state">${esc(error.message)} <button class="list-item" data-retry-assets>Retry</button></div>`;
+    el.querySelector('[data-retry-assets]')?.addEventListener('click', () => openItAssets());
+  }
   return el;
 }
 export async function openNetwork(){

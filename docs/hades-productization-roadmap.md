@@ -407,3 +407,14 @@ reviewable intake state, and activity list while item dossiers continue to use
 the existing owner-scoped item route. No Household database or duplicate stock
 ledger was introduced; owner isolation and explicit review boundaries remain
 unchanged.
+
+### IT Assets source-boundary workspace slice
+
+The IT Assets workspace now presents the existing InventoryService asset store
+and canonical CMDB map as two explicit sources, with metrics for user-entered
+assets, canonical CMDB assets, unidentified observations, and total observed
+nodes. Existing dossiers remain owner-authenticated and provenance-visible.
+The UI explains that IP-only observations are not canonical identities and
+does not silently merge Inventory assets with CMDB records. This is a product
+projection only; reconciliation, discovery, and broker authority remain in
+their existing canonical services.
