@@ -109,3 +109,7 @@ Deterministic safeguards now provide canonical action fingerprints, repeated
 no-information loop detection, and targeted knowledge-gap classification over
 the epistemic ledger. These are advisory projections until execution paths wire
 their STOP/replan behavior; they do not grant or change authority.
+
+Resource locking hardening now releases locks on terminal Run states and offers
+owner-scoped abandoned/expired lock recovery. Multi-resource requests already
+use sorted acquisition order; arbitrary lock deletion remains unavailable.

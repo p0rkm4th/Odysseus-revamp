@@ -1,6 +1,6 @@
 """Owner-scoped durable work engine and bounded domain adapters."""
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from hashlib import sha256
 from typing import Any
 from uuid import uuid4
@@ -221,6 +221,25 @@ class WorkEngine:
         self.db.commit()
         return {"action_id": action_id, "released": True}
 
+    def release_run_locks(self, owner, run_id):
+        self._one(WorkRun, owner, run_id, "run")
+        locks = self.db.query(WorkLock).filter_by(owner=owner, run_id=run_id, released_at=None).all()
+        for lock in locks: lock.released_at = now()
+        if locks: self.db.commit()
+        return {"run_id": run_id, "released": len(locks)}
+
+    def recover_locks(self, owner, *, max_age_seconds=3600):
+        """Release locks held by terminal/unknown Runs or beyond their lease."""
+        cutoff = now() - timedelta(seconds=max(0, int(max_age_seconds)))
+        active = self.db.query(WorkLock).filter_by(owner=owner, released_at=None).all()
+        released = []
+        for lock in active:
+            run = self.db.query(WorkRun).filter_by(id=lock.run_id, owner=owner).one_or_none()
+            if run is None or run.status in {"completed", "failed", "cancelled"} or (lock.acquired_at and lock.acquired_at < cutoff):
+                lock.released_at = now(); released.append(lock.id)
+        if released: self.db.commit()
+        return {"released": released, "count": len(released)}
+
     def set_run_status(self, owner, run_id, status, data=None):
         row = self._one(WorkRun, owner, run_id, "run")
         if status not in RUN_STATUSES: raise WorkError("invalid run status")
@@ -229,6 +248,8 @@ class WorkEngine:
         if data and "session_id" in data: row.session_id = str(data["session_id"] or "")[:200] or None
         row.status = status; row.lifecycle_state = (data or {}).get("lifecycle_state", _STATUS_TO_LIFECYCLE.get(status, row.lifecycle_state or "created")); row.current_step = (data or {}).get("current_step", row.current_step); row.error_summary = (data or {}).get("error_summary", row.error_summary); row.result_summary = (data or {}).get("result_summary", row.result_summary); row.continuation_state = (data or {}).get("continuation_state", row.continuation_state); row.verification = (data or {}).get("verification", row.verification); row.ended_at = now() if status in {"completed", "failed", "cancelled"} else None; row.revision += 1
         if row.lifecycle_state not in RUN_LIFECYCLE_STATES: raise WorkError("invalid run lifecycle state")
+        if status in {"completed", "failed", "cancelled"}:
+            for lock in self.db.query(WorkLock).filter_by(owner=owner, run_id=run_id, released_at=None).all(): lock.released_at = now()
         self.event(owner, f"run.{status}", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload={"current_step": row.current_step}); self.db.commit(); self.db.refresh(row); return serialize(row)
 
     def transition_run(self, owner, run_id, lifecycle_state, data=None):
