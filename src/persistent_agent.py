@@ -150,10 +150,10 @@ class PersistentAgent:
         row = Lesson(id=ident("lesson"), owner=owner, statement=statement[:20000], domain=domain[:64], confidence=max(0, min(100, int(confidence))), evidence_episode_refs=evidence_episode_refs or [], status="proposed", provenance={"created_by": "hades_persistent_agent", "requires_confirmation": True}, scope_context=scope_context or {})
         self.db.add(row); self.db.commit(); self.db.refresh(row); return row_dict(row)
 
-    def notify(self, owner: str, *, title: str, body: str, notification_type: str, dedupe_key: str, severity="info", requires_action=False, source_domain=None, source_event_id=None, monitor_id=None) -> dict:
+    def notify(self, owner: str, *, title: str, body: str, notification_type: str, dedupe_key: str, severity="info", requires_action=False, source_domain=None, source_entity_id=None, source_event_id=None, source_run_id=None, monitor_id=None) -> dict:
         existing = self.db.query(Notification).filter_by(owner=owner, dedupe_key=dedupe_key).one_or_none()
         if existing: return row_dict(existing)
-        row = Notification(id=ident("notification"), owner=owner, notification_type=notification_type, severity=severity, title=title[:300], body=body[:20000], dedupe_key=dedupe_key[:300], requires_action=requires_action, source_domain=source_domain, source_event_id=source_event_id, monitor_id=monitor_id, delivery_state="web_pending")
+        row = Notification(id=ident("notification"), owner=owner, notification_type=notification_type, severity=severity, title=title[:300], body=body[:20000], dedupe_key=dedupe_key[:300], requires_action=requires_action, source_domain=source_domain, source_entity_id=source_entity_id, source_event_id=source_event_id, source_run_id=source_run_id, monitor_id=monitor_id, delivery_state="web_pending")
         self.db.add(row); self.db.commit(); self.db.refresh(row); return row_dict(row)
 
     def create_monitor(self, owner: str, data: dict) -> dict:
@@ -199,3 +199,31 @@ class PersistentAgent:
     def digest(self, owner: str, since: datetime) -> dict:
         context=self.self_context(owner, since=since)
         return {"since": iso(since), "events": context["recent_activity"], "episodes": [x for x in context["episodes"] if x.get("created_at") and x["created_at"] >= iso(since)], "notifications": context["notifications"]}
+
+    def attention(self, owner: str) -> dict:
+        """Project actionable state without creating a second task system."""
+        context = self.self_context(owner)
+        items = []
+        for notification in context["notifications"]["items"]:
+            items.append({
+                "kind": "notification",
+                "priority": "high" if notification.get("requires_action") else notification.get("severity", "info"),
+                "status": "unread",
+                "id": notification.get("id"),
+                "title": notification.get("title"),
+                "body": notification.get("body"),
+                "source_domain": notification.get("source_domain"),
+                "source_entity_id": notification.get("source_entity_id"),
+                "source_event_id": notification.get("source_event_id"),
+                "source_run_id": notification.get("source_run_id"),
+            })
+        work = context["work"]
+        for run in work["runs"]:
+            state = run.get("status")
+            if state in {"awaiting_approval", "awaiting_input", "blocked"}:
+                items.append({"kind": "work", "priority": "high", "status": state, "id": run.get("id"), "title": run.get("current_step") or state.replace("_", " ").title()})
+        for commitment in context["commitments"]:
+            due = commitment.get("due_at")
+            if due:
+                items.append({"kind": "commitment", "priority": "high", "status": "due", "id": commitment.get("id"), "title": commitment.get("text"), "due_at": due})
+        return {"items": items, "count": len(items), "generated_at": datetime.utcnow().isoformat() + "Z"}
