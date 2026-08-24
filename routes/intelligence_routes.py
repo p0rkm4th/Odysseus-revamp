@@ -12,7 +12,7 @@ from src.network_projection import map_projection
 from src.capability_dependencies import capability_health, supported_capabilities
 from src.persistent_agent import PersistentAgent
 from core.persistent_agent_models import Episode, Lesson, Monitor, Notification
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 def setup_intelligence_routes(*, session_factory=SessionLocal):
     router=APIRouter(tags=["local-intelligence"])
@@ -127,11 +127,19 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
             row.read_at = datetime.now(timezone.utc).replace(tzinfo=None); row.delivery_state = "read"; db.commit()
             return {"ok": True, "id": row.id}
     @router.get("/api/hades/while-away")
-    async def hades_while_away(request: Request, since: str):
+    async def hades_while_away(request: Request, since: str | None = None):
         value = owner(request)
-        try: marker = datetime.fromisoformat(since.replace("Z", "+00:00")); marker = marker.astimezone(timezone.utc).replace(tzinfo=None) if marker.tzinfo else marker
-        except ValueError as exc: raise HTTPException(400, "since must be ISO-8601") from exc
-        with session_factory() as db: return PersistentAgent(db).digest(value, marker)
+        with session_factory() as db:
+            agent = PersistentAgent(db)
+            instance = agent.instance(value)
+            if since:
+                try: marker = datetime.fromisoformat(since.replace("Z", "+00:00")); marker = marker.astimezone(timezone.utc).replace(tzinfo=None) if marker.tzinfo else marker
+                except ValueError as exc: raise HTTPException(400, "since must be ISO-8601") from exc
+            else:
+                marker = instance.last_seen_at or (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1))
+            result = agent.digest(value, marker)
+            instance.last_seen_at = datetime.now(timezone.utc).replace(tzinfo=None); db.commit()
+            return result | {"marked_seen_at": instance.last_seen_at.isoformat()}
     @router.get("/api/developer/yolo/status")
     async def yolo_status(request: Request,lease_id: str|None=None):
         value=owner(request)

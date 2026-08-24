@@ -1,0 +1,37 @@
+# Hades existing capability inventory
+
+This is a bounded productization inventory of the recovered platform. “Present”
+means a canonical implementation exists; it does not imply that the workspace,
+intake, dossier, provenance, or live dogfood gates are complete.
+
+| Subsystem | Canonical owner/store | Capability/action surface | UI/integration surface | Tests/live state | Main gap |
+|---|---|---|---|---|---|
+| Chat/context | `core/session_manager.py`, `src/context_compactor.py`, `src/agent_loop.py` | routed agent loop, context diagnostics, approval continuation | Web chat, streaming | P0 tests; Luna/Qwen network dogfood | live weak-model referent handling still needs stronger deterministic resolution |
+| Work | `src/work_engine.py`, `core/persistent_agent_models.py` | Goals/Projects/Tasks/Runs and durable continuation | Work/task panels | broad regression | unified Life overview and review UX |
+| Persistent Hades | `core/persistent_agent_models.py`, `routes/intelligence_routes.py` | self/health/while-away projections | intelligence/self surfaces | persistent-agent tests | unified identity/runtime/work/attention dossier |
+| Memory/RAG | `routes/memory`, `src/memory*`, Chroma projection | memory retrieval and durable records | memory/settings views | memory and context tests | explicit layer/TTL/supersession inspector |
+| Skills | `routes/skills_routes.py`, skill stores | bounded skill lifecycle and execution | skills UI | skills route tests | capability/skill catalog unification |
+| Scheduler/jobs | scheduler, `src/bg_jobs.py`, task routes | scheduled tasks, background jobs, monitors | task/settings surfaces | scheduler regression | unified Automation projection |
+| Household inventory | `src/inventory*`, inventory routes/store | items, lots, recipes, stock movements | inventory UI | inventory tests | complete intake/dossier/history UX |
+| IT assets/CMDB | `src/asset_inventory.py`, `data/assets/assets.db` | assets, identifiers, observations, relationships | inventory/intelligence UI | CMDB tests | complete reconciliation and provenance UX |
+| Network | `src/network_projection.py`, asset observations | map projection and discovery | intelligence/network UI | network tests; live broker scans | change detection, history, filters |
+| Homelab operations | `src/homelab_operations.py`, capability registry | `homelab.manage / execute_network_discovery` and related actions | chat/tool surfaces | security + work tests; live host broker | broader first-class operation catalog |
+| System/network/storage/container/remote ops | `src/*operations.py`, brokers | bounded diagnostics and selected mutations | mostly chat/developer surfaces | focused policy tests | surface catalog and health in UI |
+| Security assessment | security services/routes | engagement, authorization, scope, evidence, findings | security workspace | security domain tests | polished dossier/report and live dogfood |
+| OSINT/research | research/OSINT routes and stores | bounded public-source research and provenance | research UI | research tests | case/fact/inference dossier |
+| Telegram | Telegram poller/store/routes | pairing, owner binding, callbacks, approvals | Telegram transport | Telegram tests | shared cross-channel context, voice/notifications |
+| Voice/multimodal | voice recorder/TTS/media routes | browser voice and media intake primitives | voice UI/components | focused media tests | reviewable extraction and transport parity |
+| Email/calendar/contacts | email, calendar, contacts routes | provider reads, drafts, events, contacts | existing specialized views | provider tests | unified integration/entity linking |
+| Documents/files | document/upload routes | upload, preview, extraction, attachments | document/gallery UI | upload/document tests | reusable entity dossier attachments |
+| Models/routing | provider/model routes, endpoint resolver | route selection, profiles, metrics | provider/developer UI | routing tests | model lab and qualification evidence |
+| Improvements | improvement registry routes/store | candidate/evaluation/promotion controls | limited developer surfaces | improvement tests | full registry workspace |
+| Developer/YOLO/health | developer routes, readiness, profiles | leases, health, diagnostics, audits | settings/developer surfaces | readiness/policy tests | unified authority, trace, backup projections |
+
+## Architectural invariants
+
+- Domain → Capability → ActionSpec → ToolBinding remains the execution path.
+- Work Engine remains durable orchestration truth; domain stores remain domain truth.
+- Network discovery uses the authenticated host broker, private bounded scope, and exact approval.
+- IP-only observations never become strong identity merges.
+- External content remains tainted and cannot grant authority.
+- No Docker socket, privileged Hades container, generic root shell, or unrestricted YOLO is introduced.
