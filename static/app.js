@@ -90,6 +90,53 @@ function hydrateSemanticNavIcons() {
     if (!item || item.querySelector('.hades-nav-icon')) continue;
     item.insertAdjacentHTML('afterbegin', iconSvg(name));
   }
+  groupToolDestinations();
+}
+
+function groupToolDestinations() {
+  const section = document.getElementById('tools-section');
+  if (!section || section.dataset.grouped === '1') return;
+  const groups = [
+    ['PERSONAL', ['tool-calendar-btn', 'tool-household-btn']],
+    ['COMMUNICATIONS', ['tool-communications-btn', 'tool-telegram-btn']],
+    ['TECHNOLOGY', ['tool-inventory-btn', 'tool-it-assets-btn', 'tool-network-btn', 'tool-homelab-btn', 'tool-smart-home-btn']],
+    ['INVESTIGATION', ['tool-security-btn', 'tool-osint-btn', 'tool-research-btn']],
+    ['WORK', ['tool-work-btn', 'tool-tasks-btn']],
+    ['KNOWLEDGE', ['tool-library-btn', 'tool-gallery-btn', 'tool-notes-btn']],
+    ['AGENT', ['tool-memory-btn', 'tool-world-model-btn', 'tool-hades-btn']],
+    ['SYSTEM', ['tool-control-center-btn', 'tool-developer-btn', 'tool-theme-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
+  ];
+  const header = section.querySelector('.section-header-flex');
+  if (!header) return;
+  const stateKey = 'odysseus-sidebar-groups-v1';
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(stateKey) || '{}') || {}; } catch (_) {}
+  for (const [label, ids] of groups) {
+    const members = ids.map(id => document.getElementById(id)).filter(Boolean);
+    if (!members.length) continue;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'hades-nav-group';
+    wrapper.dataset.group = label.toLowerCase();
+    const toggle = document.createElement('button');
+    toggle.type = 'button'; toggle.className = 'hades-nav-group-toggle';
+    toggle.setAttribute('aria-expanded', state[label] !== false ? 'true' : 'false');
+    toggle.innerHTML = `<span>${label}</span><span class="hades-nav-group-caret" aria-hidden="true">${state[label] !== false ? '−' : '+'}</span>`;
+    wrapper.appendChild(toggle);
+    const body = document.createElement('div'); body.className = 'hades-nav-group-items';
+    for (const member of members) body.appendChild(member);
+    wrapper.appendChild(body);
+    section.insertBefore(wrapper, header.nextSibling);
+    const expanded = state[label] !== false;
+    body.hidden = !expanded;
+    toggle.addEventListener('click', () => {
+      const next = body.hidden;
+      body.hidden = !next; toggle.setAttribute('aria-expanded', String(next));
+      toggle.querySelector('.hades-nav-group-caret').textContent = next ? '−' : '+';
+      state[label] = next;
+      try { localStorage.setItem(stateKey, JSON.stringify(state)); } catch (_) {}
+    });
+  }
+  section.dataset.grouped = '1';
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hydrateSemanticNavIcons, { once: true });
 else hydrateSemanticNavIcons();
