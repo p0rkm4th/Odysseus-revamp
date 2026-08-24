@@ -2754,10 +2754,17 @@ def ground_action_completion(text: str, *, intent_domains, tool_events) -> str:
         r"discover|restart|change|create|delete|update|verify|remount)\b",
         str(text or ""), re.IGNORECASE,
     ))
+    evidence_prose = bool(re.search(
+        r"\b(?:current|latest|inventory|asset|report|updated|physical|virtual|"
+        r"server|workstation|storage array|vulnerabilit)\w*\b",
+        str(text or ""), re.IGNORECASE,
+    ))
     if (
         not successful_result
-        and _intent_requires_action(intent_domains)
-        and (action_prose or _looks_like_success_claim(text))
+        and (
+            (_intent_requires_action(intent_domains) and (action_prose or _looks_like_success_claim(text)))
+            or ("asset_inventory" in set(intent_domains or set()) and evidence_prose)
+        )
     ):
         return (
             "No action completed: I did not receive a valid tool execution or "
@@ -6149,7 +6156,8 @@ async def stream_agent_loop(
                             round_response += _delta_text
                             data["delta"] = _delta_text
                             _buffer_this_delta = bool(
-                                (_strict_text_tools or _intent_requires_action(_intent_domains))
+                                (_strict_text_tools or _intent_requires_action(_intent_domains)
+                                 or "asset_inventory" in _intent_domains)
                                 and not guide_only
                             )
                             if _buffer_this_delta:
