@@ -535,12 +535,30 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
         """
         _assert_owns_research(session_id, user)
         with SessionLocal() as db:
+            claims = WorkEngine(db).list_claims(
+                user, subject_ref=_case_claim_subject(session_id),
+                include_inactive=include_inactive, limit=limit,
+            )
+            classes = {}
+            statuses = {}
+            contradiction_count = 0
+            for claim in claims:
+                claim_class = str(claim.get("claim_class") or "Unknown")
+                classes[claim_class] = classes.get(claim_class, 0) + 1
+                status = str(claim.get("status") or "unknown")
+                statuses[status] = statuses.get(status, 0) + 1
+                if claim.get("contradicting_references"):
+                    contradiction_count += 1
             return {
                 "subject_ref": _case_claim_subject(session_id),
-                "claims": WorkEngine(db).list_claims(
-                    user, subject_ref=_case_claim_subject(session_id),
-                    include_inactive=include_inactive, limit=limit,
-                ),
+                "claims": claims,
+                "epistemic_summary": {
+                    "claim_count": len(claims),
+                    "class_counts": classes,
+                    "status_counts": statuses,
+                    "claims_with_contradictions": contradiction_count,
+                    "authority_unchanged": True,
+                },
             }
 
     @router.get("/api/research/{session_id}/claims")

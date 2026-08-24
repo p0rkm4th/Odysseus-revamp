@@ -23,11 +23,13 @@ def test_osint_is_primary_navigation_and_has_investigation_workspace():
     assert "External research remains tainted content" in osint
     assert "/api/research/${encodeURIComponent(sessionId)}/claims" in osint
     assert "canonical_claim_count" in osint
+    assert "epistemicSummaryText" in osint
     assert "No reviewed canonical claims are attached" in osint
 
 
 def test_osint_claim_projection_reuses_owner_scoped_work_ledger():
     routes = (ROOT / "routes/research/research_routes.py").read_text()
+    assert "epistemic_summary" in routes
     assert "osint:case:" in routes
     assert "WorkEngine(db).list_claims" in routes
     assert "WorkEngine(db).record_claim" in routes
