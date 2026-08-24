@@ -14,6 +14,10 @@ def test_osint_is_primary_navigation_and_has_investigation_workspace():
         assert section in osint
     assert "api('/api/research/start'" in osint
     assert "category:'osint'" in osint
+    assert "caseDossier" in osint
+    assert "/api/research/detail/" in osint
+    assert "Sources" in osint and "Findings / Evidence" in osint
+    assert "External research remains tainted content" in osint
 
 
 def test_osint_intake_keeps_public_source_and_review_boundaries_visible():
