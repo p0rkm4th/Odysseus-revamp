@@ -95,7 +95,7 @@ def test_false_completion_is_replaced_without_action_result():
     from src.agent_loop import ground_action_completion, _network_prerequisite_request
     assert _network_prerequisite_request("install the tools necessary for a deep dive network scan")
     response = ground_action_completion(
-        "Installed iproute2 and nmap successfully.",
+        "I'll install iproute2 and nmap, then verify the installation.",
         intent_domains={"homelab"}, tool_events=[
             {"tool": "bash", "output": "Waiting for an exact user approval.",
              "ask_user": {"kind": "tool_approval"}}

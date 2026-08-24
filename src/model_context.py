@@ -304,8 +304,8 @@ def budget_context_for_model(endpoint_url: str, model: str, *, fallback: int = 0
     unproven number (review on #4122). On probe error, returns ``fallback`` (the
     caller's best-known value) to preserve prior behaviour."""
     try:
-        ctx, known = get_context_length_known(endpoint_url, model)
-        return ctx if known else 0
+        _, known = get_context_length_known(endpoint_url, model)
+        return get_context_length(endpoint_url, model) if known else 0
     except Exception:
         return fallback
 
