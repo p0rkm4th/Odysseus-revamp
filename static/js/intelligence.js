@@ -81,9 +81,22 @@ export async function openItAssets(){
 }
 export async function openNetwork(){
   const el=panel('network-panel','Network','<p>Loading Network Map…</p>');
-  const d=await fetch('/api/network/map').then(r=>r.json());
-  el.querySelector('.hades-window-body').innerHTML=`<div><h2>Network</h2><p>Logical topology · Devices · Subnets · Services · Discovery</p><p class="muted">${esc(d.source||'CMDB')} · ${esc(d.identity_rule||'')}</p><div>${(d.nodes||[]).map(x=>`<button class="list-item hades-cmdb-link" data-id="${esc(x.id)}"><span>${esc(x.name||x.hostname||x.id)}</span><small>${esc(x.resolution_state||'unidentified')}</small></button>`).join('')||'<p>No CMDB nodes observed.</p>'}</div></div>`;
-  bindEntityLinks(el, '.hades-cmdb-link', id => (d.nodes||[]).find(x => x.id === id) && openCmdbAsset((d.nodes||[]).find(x => x.id === id)));
+  try {
+    const d=await fetch('/api/network/map',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('Network map unavailable')));
+    const nodes=d.nodes||[], edges=d.edges||[], canonical=nodes.filter(x=>x.canonical!==false), unidentified=nodes.filter(x=>x.resolution_state==='unidentified');
+    const metric=(label,value)=>`<div class="hades-summary-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
+      <header class="hades-module-header"><div><h2>Network</h2><p>Devices, observations, topology, and bounded discovery</p></div><span class="hades-status-badge">${esc(d.source||'CMDB')}</span></header>
+      <div class="hades-summary-metrics">${metric('Nodes',nodes.length)}${metric('Canonical',canonical.length)}${metric('Unidentified',unidentified.length)}${metric('Relationships',edges.length)}</div>
+      <section class="hades-detail-section"><h3>Identity and provenance</h3><p class="muted">${esc(d.identity_rule||'IP addresses remain observations; no IP-only merge.')}</p></section>
+      <section class="hades-detail-section"><h3>Devices</h3><div>${nodes.map(x=>`<button class="list-item hades-cmdb-link" data-id="${esc(x.id)}"><span>${esc(x.name||x.hostname||x.id)}</span><small>${esc(x.resolution_state||'unidentified')} · ${esc(x.status||'observed')} · confidence ${esc(x.confidence??'—')}</small></button>`).join('')||'<p class="hades-empty-state">No CMDB nodes observed yet.</p>'}</div></section>
+      <section class="hades-detail-section"><h3>Relationships</h3>${edges.length?`<p>${esc(edges.length)} active evidence-backed relationship${edges.length===1?'':'s'} projected from CMDB.</p>`:'<p class="hades-empty-state">No active relationships are projected.</p>'}</section>
+    </div>`;
+    bindEntityLinks(el, '.hades-cmdb-link', id => { const node=nodes.find(x => x.id === id); if (node) openCmdbAsset(node); });
+  } catch (error) {
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-error-state">${esc(error.message)} <button class="list-item" data-retry-network>Retry</button></div>`;
+    el.querySelector('[data-retry-network]')?.addEventListener('click', () => openNetwork());
+  }
   return el;
 }
 export async function openDeveloper(){

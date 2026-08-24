@@ -418,3 +418,14 @@ The UI explains that IP-only observations are not canonical identities and
 does not silently merge Inventory assets with CMDB records. This is a product
 projection only; reconciliation, discovery, and broker authority remain in
 their existing canonical services.
+
+### Network canonical map workspace slice
+
+The existing owner-authenticated Network window now consumes the canonical CMDB
+map projection with visible counts for nodes, canonical identities,
+unidentified observations, and active relationships. It presents the existing
+IP-only identity rule and provenance boundary directly, keeps unidentified
+observations non-canonical, and reuses CMDB dossiers for node inspection.
+No alternate topology store or identity merge path was introduced; discovery,
+observation persistence, and reconciliation remain owned by the existing CMDB
+and Network services.
