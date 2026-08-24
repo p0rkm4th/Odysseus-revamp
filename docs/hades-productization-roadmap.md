@@ -649,6 +649,15 @@ status. Watch notification dedupe keys now include the durable trigger event,
 so cooldown permits distinct later notifications while the same event remains
 deduplicated. Response tiers remain bounded and do not grant authority.
 
+### Execution-fabric safety checkpoint
+
+Delegated capability consumption now uses an atomic persisted call-limit guard,
+so concurrent trusted callers cannot both consume the final call of a scoped
+grant. Disposable sandbox metadata creation requires a verified healthy,
+non-privileged execution node rather than treating an unknown-health node as
+ready. No runtime sandbox adapter, Docker socket, or new execution authority
+was introduced; the current broker remains the canonical executor.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its

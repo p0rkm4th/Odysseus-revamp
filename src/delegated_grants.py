@@ -51,7 +51,22 @@ class DelegatedGrantService:
         target = data.get("target_resource")
         if row.target_resources and (not target or target not in row.target_resources): raise WorkError("grant target scope mismatch")
         if row.parameter_constraints and not self._constraint_matches(data.get("parameters"), row.parameter_constraints): raise WorkError("grant parameter scope mismatch")
-        row.consumed_calls += 1; row.consumed_at = now(); self.db.commit(); self.db.refresh(row)
+        consumed_at = now()
+        updated = self.db.query(DelegatedCapabilityGrant).filter(
+            DelegatedCapabilityGrant.owner == owner,
+            DelegatedCapabilityGrant.id == grant_id,
+            DelegatedCapabilityGrant.revoked_at == None,
+            DelegatedCapabilityGrant.expires_at > consumed_at,
+            DelegatedCapabilityGrant.consumed_calls < DelegatedCapabilityGrant.max_calls,
+        ).update({"consumed_calls": DelegatedCapabilityGrant.consumed_calls + 1, "consumed_at": consumed_at}, synchronize_session=False)
+        if updated != 1:
+            self.db.rollback()
+            current = self.db.query(DelegatedCapabilityGrant).filter_by(owner=owner, id=grant_id).one_or_none()
+            if current is None: raise WorkError("grant not found")
+            if current.revoked_at is not None: raise WorkError("grant is revoked")
+            if current.expires_at <= consumed_at: raise WorkError("grant is expired")
+            raise WorkError("grant call limit exceeded")
+        self.db.commit(); self.db.refresh(row)
         return {"grant": serialize(row), "authorized": True, "authority_unchanged": True}
 
     def revoke(self, owner, grant_id):
