@@ -1439,6 +1439,31 @@ _CAPABILITY_V1_EXECUTORS = {
 }
 
 
+async def execute_registered_binding(*, tool_name, payload, owner=None, **security_context):
+    """Bridge a validated Work Action to the existing ToolBinding registry.
+
+    WorkEngine owns validation, approval, locks, and result persistence. This
+    helper only invokes the registered binding and rejects unknown executors;
+    it never accepts a model-supplied command or alternate executor.
+    """
+    from types import SimpleNamespace
+    from src.tool_bindings import binding_for_tool
+    binding = binding_for_tool(str(tool_name or ""))
+    if binding is None or binding.executor_key not in _CAPABILITY_V1_EXECUTORS:
+        raise ValueError("registered action binding is unavailable")
+    if not isinstance(payload, dict):
+        raise ValueError("registered binding payload must be an object")
+    block = SimpleNamespace(tool_type=binding.transport_name, content=_ody_v34_json.dumps(payload, sort_keys=True))
+    result = await execute_tool_block(block, owner=owner, **security_context)
+    if not isinstance(result, tuple) or len(result) != 2 or not isinstance(result[1], dict):
+        raise ValueError("registered binding returned an invalid result")
+    name, data = result
+    normalized = dict(data)
+    normalized.setdefault("binding", name)
+    normalized.setdefault("success", normalized.get("exit_code", 1) == 0 and not normalized.get("error"))
+    return normalized
+
+
 @_ody_v34_functools.wraps(_ody_v34_original_execute_tool_block)
 async def execute_tool_block(block, *args, **kwargs):
     from src.tool_bindings import binding_for_tool

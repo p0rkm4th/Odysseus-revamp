@@ -747,6 +747,11 @@ release. It does not accept model-supplied commands or tool names. Concrete
 binding adapters, ambiguity handling, compensation dispatch, and live
 consequential dogfood remain pending.
 
+The adapter boundary now reuses the registered ToolBinding executor map for
+validated Work actions. It normalizes the existing executor tuple into a
+structured result and rejects unknown bindings, while preserving the existing
+policy, approval, owner, disabled-tool, and broker checks in the executor path.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
