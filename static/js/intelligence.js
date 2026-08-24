@@ -121,6 +121,26 @@ export async function openHomelab(){
   }
   return el;
 }
+export async function openSmartHome(){
+  const el=panel('smart-home-panel','Smart Home','<p>Loading Home Assistant projection…</p>');
+  try {
+    const d=await fetch('/api/home-assistant/overview',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('Smart Home overview unavailable')));
+    const metric=(label,value)=>`<div class="hades-summary-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
+    const domains=Object.entries(d.domains||{});
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
+      <header class="hades-module-header"><div><h2>Smart Home</h2><p>Home Assistant rooms, devices, entities, and read-only state</p></div><span class="hades-status-badge">${esc(d.status||'unknown')}</span></header>
+      <div class="hades-summary-metrics">${metric('Configured',d.configured?'Yes':'No')}${metric('Entities',d.entities||0)}${metric('Domains',domains.length)}${metric('Authority',d.authority_unchanged?'Existing':'Unknown')}</div>
+      <section class="hades-detail-section"><h3>Home Assistant</h3>${d.configured?`<p>Health is projected through the existing generic integration API boundary.</p><p class="muted">${esc(d.source||'generic integration')} · read-only projection · entity state is not copied into a second canonical store.</p>`:'<p class="hades-empty-state">Home Assistant is not configured. Configure it from Integrations when credentials and owner authorization are available.</p>'}</section>
+      <section class="hades-detail-section"><h3>Entities by domain</h3>${domains.length?`<ul>${domains.map(([domain,count])=>`<li><strong>${esc(domain)}</strong> · ${esc(count)} entities</li>`).join('')}</ul>`:'<p class="hades-empty-state">No Home Assistant entities are projected.</p>'}</section>
+      <section class="hades-detail-section"><h3>Sample entity references</h3>${(d.sample_entities||[]).length?`<ul>${d.sample_entities.map(x=>`<li><code>${esc(x)}</code></li>`).join('')}</ul>`:'<p class="hades-empty-state">No entity references available.</p>'}</section>
+      <p class="muted">State-changing smart-home actions are not exposed by this projection; they remain subject to existing ActionSpec, policy, approval, and integration authority.</p>
+    </div>`;
+  } catch (error) {
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-error-state">${esc(error.message)} <button class="list-item" data-retry-smart-home>Retry</button></div>`;
+    el.querySelector('[data-retry-smart-home]')?.addEventListener('click', () => openSmartHome());
+  }
+  return el;
+}
 export async function openDeveloper(){
   const el=panel('developer-panel','Developer','<p>Loading Developer Mode…</p>');
   const d=await fetch('/api/developer/yolo/status').then(r=>r.json());
