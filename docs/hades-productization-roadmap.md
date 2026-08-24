@@ -630,6 +630,12 @@ be treated as ready. Lock acquisition and authority remain owned by
 WorkEngine; this is an additive validation guard rather than a second locking
 system.
 
+The durable Run transition to `executing` now invokes the same canonical
+validation projection for Runs that carry a plan or persisted Action. Invalid
+scope, approval, knowledge-gap, compensation, verification, or lock state
+therefore fails closed before the lifecycle advertises execution. Empty
+projection-only Runs remain available for non-consequential orchestration.
+
 ### Run Preview inspector checkpoint
 
 The existing Work and Control Center views now visibly consume the structured

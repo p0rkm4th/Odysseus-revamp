@@ -347,6 +347,19 @@ class WorkEngine:
         row = self._one(WorkRun, owner, run_id, "run")
         current = row.lifecycle_state or "created"
         if lifecycle_state not in RUN_LIFECYCLE_STATES: raise WorkError("invalid run lifecycle state")
+        if lifecycle_state == "executing":
+            # Consequential execution must pass the canonical structured plan
+            # validator before the durable lifecycle can advance.  Empty
+            # diagnostic/projection Runs remain usable for lifecycle tests and
+            # non-mutating orchestration; any Run carrying Actions/Plan is
+            # fail-closed here, before a binding can execute it.
+            actions = self.db.query(WorkAction).filter_by(run_id=run_id).count()
+            if actions or (row.plan and isinstance(row.plan, list)):
+                from src.run_planner import RunPlanner
+                validation = RunPlanner(self.db).validate(owner, run_id)
+                if not validation["valid"]:
+                    codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))
+                    raise WorkError(f"plan validation failed before execution: {codes}")
         if lifecycle_state != current and lifecycle_state not in allowed.get(current, set()):
             raise WorkError(f"invalid execution transition: {current} -> {lifecycle_state}")
         row.lifecycle_state = lifecycle_state

@@ -21,7 +21,7 @@ def db():
 def test_execution_lifecycle_replays_and_releases_locks(db):
     svc = WorkEngine(db)
     run = svc.create_run("alice", {"domain": "homelab"})
-    action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "execute_network_discovery", "locks": ["network:private_scope"]})
+    action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "execute_network_discovery", "approval_reference": "approval-1", "locks": ["network:private_scope"]})
     svc.acquire_action_locks("alice", action["id"])
     svc.verified_execution_step("alice", run["id"], "planning")
     svc.verified_execution_step("alice", run["id"], "ready")
@@ -70,6 +70,15 @@ def test_invalid_transition_fails_closed(db):
     run = svc.create_run("alice", {})
     with pytest.raises(WorkError, match="invalid execution transition"):
         svc.verified_execution_step("alice", run["id"], "succeeded")
+
+
+def test_consequential_execution_requires_structured_plan_validation(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab", "plan": [{"capability_id": "homelab.manage", "action_id": "execute_network_discovery", "target_resources": ["network:public"]}]})
+    svc.verified_execution_step("alice", run["id"], "planning")
+    svc.verified_execution_step("alice", run["id"], "ready")
+    with pytest.raises(WorkError, match="plan validation failed.*scope_invalid"):
+        svc.verified_execution_step("alice", run["id"], "executing")
 
 
 def _to_verifying(svc, owner, run_id):
