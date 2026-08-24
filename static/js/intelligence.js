@@ -1,5 +1,6 @@
 const esc = (v) => String(v ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-import { openView } from './workspaceWindowManager.js';
+import { openView, setOwner } from './workspaceWindowManager.js';
+fetch('/api/intelligence/profiles', {credentials:'same-origin'}).then(r=>r.json()).then(d=>setOwner(d.owner)).catch(()=>{});
 function panel(id, title, html) {
   return openView(id, null, title, `<div><h2>${title}</h2>${html}</div>`);
 }
