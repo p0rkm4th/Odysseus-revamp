@@ -226,3 +226,15 @@ Runs and ActionSpecs remain the only execution authority; this slice adds
 inspection and cross-link visibility, not a second executor. Synthetic dossier
 and owner-isolation tests are green; live safe-service remediation dogfood
 remains pending.
+
+### Verified outcome slice
+
+WorkEngine now provides deterministic verification and compensation outcome
+transitions over the existing Run lifecycle. A failed postcondition ends in a
+distinct verification-failed outcome unless an explicit compensation
+reference is supplied; successful compensation returns the Run to restoration
+verification; final outcomes distinguish verified execution, compensated
+restoration, verification failure, and compensation failure. These methods do
+not execute bindings themselves, and exact approval/policy/broker authority is
+unchanged. Focused lifecycle/replay tests are green; live safe-service
+dogfood remains pending.

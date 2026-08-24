@@ -291,6 +291,48 @@ class WorkEngine:
         self.db.commit(); self.db.refresh(row)
         return serialize(row)
 
+    def complete_verification(self, owner, run_id, *, success, details=None, compensation_reference=None):
+        """Commit a verification decision without allowing prose to waive it.
+
+        A failed postcondition either enters explicit compensation or ends in a
+        distinct verification-failed outcome.  The external binding remains
+        responsible for performing the verifier/compensator itself.
+        """
+        row = self._one(WorkRun, owner, run_id, "run")
+        if row.lifecycle_state != "verifying": raise WorkError("run is not awaiting verification")
+        verification = dict(details or {}); verification.update({"success": bool(success), "recorded_at": now().isoformat()})
+        row.verification = verification
+        state = dict(row.continuation_state or {})
+        if success:
+            outcome = "compensated_restored" if state.get("compensation_attempted") else "execution_succeeded_verified"
+            row.result_summary = {**(row.result_summary or {}), "outcome": outcome, "verification": verification}
+            self.db.commit()
+            return self.verified_execution_step(owner, run_id, "succeeded", reason=outcome)
+        if compensation_reference:
+            state.update({"compensation_attempted": True, "compensation_reference": str(compensation_reference)[:500]})
+            row.continuation_state = state
+            row.result_summary = {**(row.result_summary or {}), "outcome": "execution_succeeded_verification_failed", "verification": verification}
+            self.db.commit()
+            return self.verified_execution_step(owner, run_id, "compensating", reason="verification failed; compensation required", failure_class="verification_failed")
+        row.result_summary = {**(row.result_summary or {}), "outcome": "execution_succeeded_verification_failed", "verification": verification}
+        self.db.commit()
+        return self.verified_execution_step(owner, run_id, "failed", reason="verification failed", failure_class="verification_failed")
+
+    def complete_compensation(self, owner, run_id, *, success, details=None):
+        """Record compensation and require restoration verification when it succeeds."""
+        row = self._one(WorkRun, owner, run_id, "run")
+        if row.lifecycle_state != "compensating": raise WorkError("run is not compensating")
+        compensation = dict(details or {}); compensation.update({"success": bool(success), "recorded_at": now().isoformat()})
+        state = {**(row.continuation_state or {}), "compensation_result": compensation}
+        row.continuation_state = state
+        if success:
+            row.result_summary = {**(row.result_summary or {}), "outcome": "compensation_completed", "compensation": compensation}
+            self.db.commit()
+            return self.verified_execution_step(owner, run_id, "verifying", reason="compensation completed; restoration verification required")
+        row.result_summary = {**(row.result_summary or {}), "outcome": "compensation_failed", "compensation": compensation}
+        self.db.commit()
+        return self.verified_execution_step(owner, run_id, "failed", reason="compensation failed", failure_class="compensation_failed")
+
     def verified_execution_step(self, owner, run_id, lifecycle_state, *, reason=None, failure_class=None):
         """Persist a named verified-execution phase using the Work Run."""
         allowed = {
