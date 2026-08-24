@@ -10,6 +10,7 @@ def test_existing_search_surface_exposes_canonical_navigation_commands():
         ("Open Hades overview", "tool-hades-btn"),
         ("Open Work / Life", "tool-work-btn"),
         ("Open Network", "tool-network-btn"),
+        ("Open OSINT", "tool-osint-btn"),
         ("Open Developer", "tool-developer-btn"),
     ):
         assert label in source

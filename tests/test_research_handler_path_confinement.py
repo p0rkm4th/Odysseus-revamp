@@ -81,3 +81,20 @@ def test_start_research_rejects_invalid_session_id():
 
     with pytest.raises(ValueError):
         handler.start_research("../escape", "q", "http://localhost", "model")
+
+
+def test_research_start_persists_owner_scoped_reviewable_case_seed(tmp_path, monkeypatch):
+    from src import research_handler as module
+
+    monkeypatch.setattr(module, "RESEARCH_DATA_DIR", tmp_path)
+    handler = module.ResearchHandler()
+    handler._persist_seed("rp-seed123", {
+        "query": "OSINT target type: Company\nKnown information: Acme",
+        "status": "running", "category": "osint", "owner": "alice",
+        "started_at": 123.0,
+    })
+    record = (tmp_path / "rp-seed123.json").read_text()
+    assert '"status": "running"' in record
+    assert '"case_stage": "intake"' in record
+    assert '"review_required": true' in record
+    assert '"owner": "alice"' in record

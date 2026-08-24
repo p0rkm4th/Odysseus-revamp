@@ -18,7 +18,7 @@ product workspace or dogfood gate is incomplete.
 | Network | present | green | partial | green | green | change detection, history, polished map |
 | Homelab | present | green for discovery | partial | green | green discovery | operation catalog and health surface |
 | Security | present | partial | partial | green | not accepted | end-to-end authorized assessment dogfood |
-| OSINT | present | partial | partial | green | not accepted | case dossier, graph/timeline |
+| OSINT | present policy/research store | `research.public_sources` / `manage_osint`; visible intake uses existing `/api/research/start` | first-class OSINT window, tabs, intake, cases list, command/sidebar navigation; dossier/graph/timeline remain partial | focused surface + research/security regression | browser gate passed for navigation/intake/mobile; live provider run pending | intake seed is persisted immediately in the canonical research JSON and replaced by sourced result; evidence dossier, corrections, and deep-dive projections remain |
 | Business/CRM | partial | partial | partial | partial | not accepted | canonical Work-linked CRM workspace |
 | Telegram | present | present | transport | green | partial | cross-channel continuity and voice |
 | Voice/multimodal | partial | partial | partial | partial | not accepted | reviewable intake and PTT flow |
@@ -27,7 +27,7 @@ product workspace or dogfood gate is incomplete.
 | Models/routing | present | present | partial | green | partial | model lab and qualification evidence |
 | Improvements | present | partial | partial | green | not accepted | registry workspace and promotion evidence |
 | Developer/health/authority | present | partial | partial | green | partial | permissions, trace, backup projections |
-| Shell/window/design system | present | partial | partial | partial | browser review pending | existing Ctrl+K search now also exposes canonical module commands; global entity search, icon language, and reusable states remain |
+| Shell/window/design system | present | partial | partial | partial | browser review pending | shared tokens/primitives and OSINT module header/intake now exist; existing screens still need incremental migration |
 
 ## Tier 1 acceptance gates
 

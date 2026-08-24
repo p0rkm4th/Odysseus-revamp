@@ -39,6 +39,7 @@ import securityModule from './js/security.js?v=20260823security1';
 import workModule from './js/work.js?v=20260823work1';
 import { openHousehold, openItAssets, openNetwork, openDeveloper } from './js/intelligence.js';
 import { openHades } from './js/persistentAgent.js';
+import { openOsint } from './js/osint.js';
 import './js/workspaceWindowManager.js';
 // Eagerly bind unified minimize/restore behavior across all tool modals.
 import './js/modalManager.js?v=20260723compareicon2';
@@ -1108,6 +1109,7 @@ function initializeEventListeners() {
   const networkBtn = el('tool-network-btn'); if (networkBtn) networkBtn.addEventListener('click', openNetwork);
   const developerBtn = el('tool-developer-btn'); if (developerBtn) developerBtn.addEventListener('click', openDeveloper);
   const hadesBtn = el('tool-hades-btn'); if (hadesBtn) hadesBtn.addEventListener('click', openHades);
+  const osintBtn = el('tool-osint-btn'); if (osintBtn) osintBtn.addEventListener('click', openOsint);
 
   // Notes tool button
   const toolNotesBtn = el('tool-notes-btn');

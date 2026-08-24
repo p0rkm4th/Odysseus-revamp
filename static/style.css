@@ -41435,3 +41435,77 @@ body.settings-sidebar-resize-active {
 .hades-window-body { flex:1; overflow:auto; padding:18px; } #hades-window-dock { position:fixed; left:50%; bottom:12px; transform:translateX(-50%); z-index:10000; display:flex; gap:6px; padding:6px; border:1px solid var(--border); border-radius:10px; background:color-mix(in srgb,var(--panel) 92%,transparent); box-shadow:0 8px 30px #0007; }
 #hades-window-dock button { border:1px solid var(--border); border-radius:7px; padding:7px 11px; background:var(--bg); color:var(--fg); cursor:pointer; }
 @media(max-width:768px){.hades-workspace-window{inset:0!important;width:100vw!important;height:100dvh!important;min-width:0;min-height:0;border:0;border-radius:0}.hades-window-titlebar{min-height:44px}.hades-window-titlebar button[data-win^="snap-"]{display:none}.hades-window-body{padding:14px}#hades-window-dock{bottom:max(8px,env(safe-area-inset-bottom));max-width:calc(100vw - 16px);overflow:auto;transform:translateX(-50%)}}
+/* Hades shared product grammar — modules should use these tokens/classes
+   instead of inventing one-off spacing, status, or intake treatments. */
+:root {
+  --hades-space-1: 4px;
+  --hades-space-2: 8px;
+  --hades-space-3: 12px;
+  --hades-space-4: 16px;
+  --hades-space-5: 24px;
+  --hades-radius-sm: 6px;
+  --hades-radius-md: 10px;
+  --hades-radius-lg: 14px;
+  --hades-surface-raised: color-mix(in srgb, var(--bg-secondary, #20242b) 88%, white 12%);
+  --hades-border-subtle: color-mix(in srgb, var(--border, #46505c) 62%, transparent);
+  --hades-text-muted: var(--text-secondary, #9aa6b2);
+  --hades-success: #4fc38a;
+  --hades-info: #67a9ff;
+  --hades-warning: #e7b65d;
+  --hades-danger: #ef7777;
+}
+.hades-module-header { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--hades-space-4); padding-bottom:var(--hades-space-4); border-bottom:1px solid var(--hades-border-subtle); }
+.hades-module-heading { display:flex; gap:var(--hades-space-3); align-items:flex-start; }
+.hades-module-heading h2 { margin:0; font-size:1.35rem; letter-spacing:-.01em; }
+.hades-module-heading p { margin:3px 0 0; color:var(--hades-text-muted); font-size:.86rem; }
+.hades-module-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:var(--hades-radius-md); background:color-mix(in srgb, var(--accent-primary, #6aa7ff) 18%, transparent); color:var(--accent-primary, #6aa7ff); font-weight:700; }
+.hades-module-actions { display:flex; gap:var(--hades-space-2); flex-wrap:wrap; justify-content:flex-end; }
+.hades-btn-primary, .hades-btn-secondary { border:1px solid var(--hades-border-subtle); border-radius:var(--hades-radius-sm); padding:8px 12px; cursor:pointer; font:inherit; white-space:nowrap; }
+.hades-btn-primary { background:var(--accent-primary, #6aa7ff); color:#0b1118; border-color:transparent; font-weight:650; }
+.hades-btn-secondary { background:transparent; color:inherit; }
+.hades-module-tabs { display:flex; gap:3px; overflow-x:auto; padding:var(--hades-space-3) 0; border-bottom:1px solid var(--hades-border-subtle); }
+.hades-module-tab { flex:0 0 auto; border:0; background:transparent; color:var(--hades-text-muted); padding:7px 10px; border-radius:var(--hades-radius-sm); cursor:pointer; font:inherit; }
+.hades-module-tab:hover, .hades-module-tab.active { background:color-mix(in srgb, var(--accent-primary, #6aa7ff) 15%, transparent); color:inherit; }
+.hades-overview-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--hades-space-3); margin:var(--hades-space-4) 0; }
+.hades-summary-card, .hades-record-card, .hades-callout, .hades-intake-panel, .hades-attachment-box { background:var(--hades-surface-raised); border:1px solid var(--hades-border-subtle); border-radius:var(--hades-radius-md); padding:var(--hades-space-4); }
+.hades-summary-card { display:grid; gap:4px; }
+.hades-summary-card span, .hades-summary-card small, .hades-record-card small { color:var(--hades-text-muted); }
+.hades-summary-card strong { font-size:1.35rem; }
+.hades-callout { display:flex; align-items:center; justify-content:space-between; gap:var(--hades-space-4); margin:var(--hades-space-4) 0; }
+.hades-callout h3, .hades-callout p { margin:0; }
+.hades-callout p { color:var(--hades-text-muted); margin-top:4px; }
+.hades-record-list { display:grid; gap:var(--hades-space-2); }
+.hades-record-card { display:flex; align-items:center; justify-content:space-between; gap:var(--hades-space-3); }
+.hades-record-card p { margin:4px 0; color:var(--hades-text-muted); font-size:.86rem; }
+.hades-badge, .hades-provenance { display:inline-flex; align-items:center; border-radius:999px; padding:2px 7px; font-size:.7rem; line-height:1.4; white-space:nowrap; }
+.hades-badge-neutral { background:color-mix(in srgb, var(--hades-text-muted) 18%, transparent); }
+.hades-badge-success { background:color-mix(in srgb, var(--hades-success) 20%, transparent); color:var(--hades-success); }
+.hades-badge-info { background:color-mix(in srgb, var(--hades-info) 20%, transparent); color:var(--hades-info); }
+.hades-badge-danger { background:color-mix(in srgb, var(--hades-danger) 20%, transparent); color:var(--hades-danger); }
+.hades-provenance { border:1px solid var(--hades-border-subtle); color:var(--hades-text-muted); }
+.hades-provenance-user-provided { color:var(--hades-info); }
+.hades-provenance-observed, .hades-provenance-confirmed { color:var(--hades-success); }
+.hades-provenance-model-proposed, .hades-provenance-inferred { color:var(--hades-warning); }
+.hades-intake-panel { margin-top:var(--hades-space-4); }
+.hades-intake-intro h3 { margin:0; }
+.hades-intake-intro p { color:var(--hades-text-muted); max-width:70ch; }
+.hades-intake-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--hades-space-3); }
+.hades-intake-field { display:grid; gap:5px; margin-top:var(--hades-space-3); }
+.hades-intake-field > span { font-size:.78rem; color:var(--hades-text-muted); }
+.hades-intake-field input, .hades-intake-field select, .hades-intake-field textarea, .hades-attachment-box input { width:100%; box-sizing:border-box; border:1px solid var(--hades-border-subtle); border-radius:var(--hades-radius-sm); padding:9px 10px; background:var(--input-bg, transparent); color:inherit; font:inherit; }
+.hades-intake-field textarea { resize:vertical; min-height:70px; }
+.hades-attachment-box { margin-top:var(--hades-space-3); display:grid; gap:var(--hades-space-2); }
+.hades-attachment-box p { margin:0; color:var(--hades-text-muted); font-size:.8rem; }
+.hades-intake-footer { display:flex; justify-content:space-between; align-items:center; gap:var(--hades-space-3); flex-wrap:wrap; margin-top:var(--hades-space-4); }
+.hades-intake-footer > span { display:flex; gap:5px; flex-wrap:wrap; align-items:center; color:var(--hades-text-muted); font-size:.75rem; }
+.hades-list-toolbar { display:flex; align-items:center; gap:var(--hades-space-3); margin:var(--hades-space-4) 0 var(--hades-space-3); color:var(--hades-text-muted); }
+.hades-list-toolbar input { flex:1; border:1px solid var(--hades-border-subtle); border-radius:var(--hades-radius-sm); padding:9px 10px; background:transparent; color:inherit; font:inherit; }
+.hades-empty-state, .hades-loading-state, .hades-error-state, .hades-success-state { padding:32px 16px; text-align:center; color:var(--hades-text-muted); }
+.hades-empty-state h3, .hades-error-state strong, .hades-success-state strong { display:block; color:inherit; margin:8px 0; }
+.hades-empty-icon { font-size:2rem; opacity:.45; }
+.hades-loading-dot { display:inline-block; width:8px; height:8px; margin-right:8px; border-radius:50%; background:var(--accent-primary, #6aa7ff); animation:hades-pulse 1s ease-in-out infinite; }
+.hades-error-state { color:var(--hades-danger); }
+.hades-success-state { color:var(--hades-success); }
+.hades-nav-icon { display:inline-grid; place-items:center; width:14px; color:var(--accent-primary, #6aa7ff); font-weight:700; }
+@keyframes hades-pulse { 50% { opacity:.3; transform:scale(.75); } }
+@media (max-width: 700px) { .hades-module-header, .hades-callout { align-items:stretch; flex-direction:column; } .hades-module-actions { justify-content:flex-start; } .hades-overview-grid, .hades-intake-grid { grid-template-columns:1fr; } .hades-record-card { align-items:flex-start; flex-direction:column; } }
