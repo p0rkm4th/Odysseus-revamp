@@ -27,6 +27,7 @@ def test_change_reuses_run_preview_and_rejects_cross_owner_run(db):
     svc=IncidentChangeService(db)
     change=svc.create_change("alice", {"objective":"Inspect test service", "run_id":run["id"], "risk":"low"})
     assert change["preview"]["run_id"] == run["id"]
+    assert change["preview"]["validation"]["valid"] is True
     with pytest.raises(WorkError, match="run not found"):
         svc.create_change("bob", {"objective":"No access", "run_id":run["id"]})
 
@@ -44,3 +45,17 @@ def test_dossiers_join_canonical_hypotheses_changes_and_refs(db):
     assert change_dossier["canonical_refs"]["incident"] == f"incident://{incident['id']}"
     with pytest.raises(WorkError, match="incident not found"):
         svc.get_incident("bob", incident["id"])
+
+
+def test_change_and_incident_project_verified_run_state_owner_scoped(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "homelab", "plan": [{"capability_id": "homelab.manage", "action_id": "service_status"}]})
+    svc = IncidentChangeService(db)
+    incident = svc.create_incident("alice", {"title": "Synthetic service issue"})
+    change = svc.create_change("alice", {"objective": "Inspect via durable Run", "incident_id": incident["id"], "run_id": run["id"]})
+    dossier = svc.get_change("alice", change["id"])
+    assert dossier["run_state"]["lifecycle_state"] == "created"
+    incident_dossier = svc.get_incident("alice", incident["id"])
+    assert incident_dossier["runs"][0]["id"] == run["id"]
+    with pytest.raises(WorkError, match="change not found"):
+        svc.get_change("bob", change["id"])

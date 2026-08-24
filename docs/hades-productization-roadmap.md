@@ -295,6 +295,15 @@ these are explanatory evidence only and cannot grant capability or change
 policy. Focused owner-isolation, reconciliation, competence, and UI tests are
 green.
 
+### Incident/Change control-plane integration slice
+
+The existing Change service now embeds deterministic RunPlanner validation and
+World Model blast-radius projections when a Change references a canonical Run.
+Change dossiers expose current Run lifecycle, verification, result, and error
+state. Incident dossiers expose linked Run state through their existing Change
+references. No execution engine was added: WorkEngine remains responsible for
+execution, approval, locking, invalidation, and verification.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail
