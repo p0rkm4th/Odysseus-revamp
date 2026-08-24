@@ -29,7 +29,7 @@ product workspace or dogfood gate is incomplete.
 | Voice/multimodal | partial | partial | partial | partial | not accepted | reviewable intake and PTT flow |
 | Email/calendar/contacts | present | partial | present | green | credentials-dependent | shared entity links and integration center |
 | Documents | present | partial | partial | green | not accepted | reusable attachments/dossiers |
-| Models/routing | present (evaluation corpus + model competence projection) | present; empirical competence API | Control Center Competence view | focused competence/evaluation tests | synthetic qualification dogfood complete; live multi-model qualification pending | model lab, routing explanation, measured routing adoption, and shadow review remain |
+| Models/routing | present (evaluation corpus + model competence projection) | present; owner-scoped empirical recommendation API and route explanation | Control Center Competence view | focused competence/evaluation/routing tests | synthetic qualification dogfood complete; live multi-model qualification pending | recommendation is advisory and candidate-limited; richer provider telemetry, routing UI, and shadow review remain |
 | Improvements | present | partial | partial | green | not accepted | registry workspace and promotion evidence |
 | Developer/health/authority | present | partial | partial; Control Center with Runs/Evaluations/Inspector is visible | focused control-plane/UI tests | deterministic Run Inspector dogfood; live provider/model evaluation pending | permissions, trace, backup projections, Action Contract inspection, and richer health integrations remain |
 | Incidents / Changes | present (core/incident_models.py, src/incident_change.py) | Work/Run references; no second executor | Control Center tabs with incident/change status projections | focused owner-scope, hypothesis, preview, and migration tests | synthetic incident/change records dogfood complete | hypothesis/evidence history and Change preview reference canonical Runs; remediation execution, dedicated dossiers, and live safe-service dogfood remain |
@@ -47,6 +47,18 @@ product workspace or dogfood gate is incomplete.
 
 This matrix is a continuation artifact, not a claim that partial domains are
 complete.
+
+## Empirical routing continuation
+
+Model competence is now consumable by a bounded recommendation projection. The
+authenticated Work API can recommend among caller-supplied candidates for a
+task class, requiring qualification when requested and otherwise clearly
+marking unknown/experimental fallback evidence. The local-intelligence route
+also reports task class and a sanitized competence recommendation. This is
+advisory routing evidence only: explicit model preferences, capabilities,
+approval policy, and execution authority remain authoritative and are not
+granted or widened by competence data. Synthetic owner-scope and qualification
+tests are green; live multi-model qualification remains pending.
 
 ## P0 memory grounding gate
 

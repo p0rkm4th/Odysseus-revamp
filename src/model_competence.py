@@ -42,3 +42,60 @@ class ModelCompetenceService:
         if task_class: query=query.filter_by(task_class=task_class)
         if qualification: query=query.filter_by(qualification=qualification)
         return [serialize(row) for row in query.order_by(ModelCompetence.task_class, ModelCompetence.model_key).limit(max(1,min(int(limit),500))).all()]
+
+    def recommend(self, owner, *, task_class, candidates, preferred=None, require_qualified=False):
+        """Return an empirical, owner-scoped recommendation projection.
+
+        This is deliberately advisory: it selects among caller-supplied model
+        candidates and never changes capability, approval, or execution policy.
+        A model with no evidence is never presented as qualified.
+        """
+        task = str(task_class or "general")[:160]
+        rows = self.db.query(ModelCompetence).filter_by(owner=owner, task_class=task).all()
+        by_key = {row.model_key: row for row in rows}
+        normalized = []
+        for candidate in candidates or []:
+            if isinstance(candidate, str):
+                candidate = {"model_key": candidate, "profile": candidate}
+            item = dict(candidate)
+            keys = [str(item.get(key) or "") for key in ("model_key", "model", "profile", "name")]
+            evidence = next((by_key[key] for key in keys if key in by_key), None)
+            item["model_key"] = str(item.get("model_key") or item.get("profile") or item.get("model") or item.get("name") or "unknown")[:300]
+            item["competence"] = serialize(evidence) if evidence is not None else {
+                "model_key": item["model_key"], "task_class": task, "sample_count": 0,
+                "success_rate": 0, "recent_success_rate": 0, "qualification": "unknown",
+                "failure_classes": [], "evidence_refs": []
+            }
+            normalized.append(item)
+        if not normalized:
+            return {"task_class": task, "selected": None, "alternatives": [], "reason_codes": ["no_candidates"], "evidence_backed": False}
+
+        def rank(item):
+            comp = item["competence"]
+            qualification = comp.get("qualification")
+            qrank = {"qualified": 4, "experimental": 2, "unknown": 1, "degraded": 0, "disqualified": -1}.get(qualification, -1)
+            preferred_rank = 1 if preferred and item["model_key"] == preferred else 0
+            latency = item.get("latency_ms") or comp.get("latency_ms") or 10**9
+            return (qrank, int(comp.get("success_rate") or 0), int(comp.get("sample_count") or 0), preferred_rank, -int(latency))
+
+        eligible = [item for item in normalized if item["competence"].get("qualification") not in {"disqualified", "degraded"}]
+        qualified = [item for item in eligible if item["competence"].get("qualification") == "qualified"]
+        pool = qualified if qualified else ([] if require_qualified else eligible)
+        if not pool:
+            selected = None
+            reason_codes = ["no_qualified_candidate"]
+        else:
+            selected = sorted(pool, key=rank, reverse=True)[0]
+            comp = selected["competence"]
+            reason_codes = ["empirical_competence_selected" if comp.get("qualification") == "qualified" else "no_qualified_evidence_fallback"]
+            if preferred and selected["model_key"] != preferred:
+                reason_codes.append("preferred_model_not_sufficiently_qualified")
+        alternatives = [{"model_key": item["model_key"], "profile": item.get("profile"), "qualification": item["competence"].get("qualification"), "sample_count": item["competence"].get("sample_count", 0), "success_rate": item["competence"].get("success_rate", 0)} for item in sorted(normalized, key=rank, reverse=True)]
+        return {
+            "task_class": task,
+            "selected": {"model_key": selected["model_key"], "profile": selected.get("profile"), "competence": selected["competence"]} if selected else None,
+            "alternatives": alternatives,
+            "reason_codes": reason_codes,
+            "evidence_backed": bool(selected and selected["competence"].get("qualification") == "qualified"),
+            "authority_unchanged": True,
+        }
