@@ -61,3 +61,6 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "Routing" in module and "authority unchanged" in module
     assert "supporting" in module and "contradicting" in module
     assert '"/changes/{change_id}/transition"' in (ROOT / "routes/work_routes.py").read_text()
+    assert "/actions/${encodeURIComponent(button.dataset.actionId)}/retry" in module
+    assert "Retry safely" in module
+    assert "control-retry-action" in module
