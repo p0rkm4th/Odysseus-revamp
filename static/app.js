@@ -3728,6 +3728,28 @@ function startOdysseusApp() {
 
   // Initialize all event listeners
   try { initializeEventListeners(); } catch(e) { console.error('Event init error:', e); }
+  // PWA Share Target: stage shared content in the existing composer. Shared
+  // content is untrusted input and is never sent or persisted automatically.
+  try {
+    const shared = new URLSearchParams(window.location.search);
+    const title = (shared.get('title') || '').trim().slice(0, 500);
+    const text = (shared.get('text') || '').trim().slice(0, 8000);
+    const url = (shared.get('url') || '').trim().slice(0, 2048);
+    if (title || text || url) {
+      const input = document.getElementById('message');
+      if (input) {
+        const parts = [];
+        if (title) parts.push(`Shared title: ${title}`);
+        if (text) parts.push(text);
+        if (url) parts.push(`Shared URL: ${url}`);
+        input.value = parts.join('\n\n');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+        uiModule.showToast('Shared content staged for review');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  } catch (_) {}
 
   // Reveal the toolbar now that all toggle/overflow state is resolved
   // (hidden via inline style="visibility:hidden" in HTML to prevent FOUC)
