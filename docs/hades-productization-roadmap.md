@@ -261,6 +261,16 @@ including binding-boundary consumption and UI coverage, are green; live broker
 node heartbeats and consequential grant-backed execution remain pending safe
 owner-authenticated dogfood.
 
+### Action Contract inspector slice
+
+The existing Run Inspector now expands each canonical planner contract into
+owner-visible reads, writes, target resources, preconditions, locks,
+idempotency/retry semantics, state invalidations, verification, and honest
+compensation/rollback metadata. Run-scoped delegated grants are shown with
+scope and call/expiry state; sealed digests remain redacted. This is a
+projection over ActionSpec/Run state and adds no execution authority. Focused
+UI, grant-security, and JavaScript syntax checks are green.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail
