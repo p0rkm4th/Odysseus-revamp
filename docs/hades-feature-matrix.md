@@ -22,7 +22,7 @@ product workspace or dogfood gate is incomplete.
 | Memory | present | present | partial | green | partial | retrieval/context diagnostics exist; explicit layer, TTL, supersession, and inspector UX remain |
 | Notifications/monitors | present | partial | partial | green | partial | Attention and monitor primitives exist; transport center and notification dogfood remain |
 | Household | present via canonical InventoryService | inventory list/search, reviewable intake, recipes, stock projections | Household window now shows canonical overview, risk, intake, and activity; item dossier reused | green | projection dogfood pending | locations, recipe/shopping UX, and live intake dogfood remain |
-| IT Assets/CMDB | present | present | partial | green | partial | reconciliation and detail workspace |
+| IT Assets/CMDB | present; InventoryService + canonical CMDB projection | inventory asset reads, CMDB map/observations, reconciliation boundary | IT Assets window now shows distinct Inventory/CMDB sources, canonical/unidentified metrics, dossiers, provenance, and empty/error states | green | projection dogfood pending | stronger reconciliation workflow, lifecycle/history, and live discovery dogfood remain |
 | Network | present | green | partial | green | green | change detection, history, polished map |
 | Homelab | present | green for discovery | partial | green | green discovery | operation catalog and health surface |
 | Security | present | partial | partial | green | not accepted | end-to-end authorized assessment dogfood |
