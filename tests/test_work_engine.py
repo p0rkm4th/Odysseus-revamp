@@ -97,6 +97,27 @@ def test_shared_resource_locks_can_coexist(db):
     svc.acquire_action_locks("alice", actions[0]["id"])
     assert svc.acquire_action_locks("alice", actions[1]["id"])["status"] == "executing"
 
+def test_epistemic_claims_preserve_provenance_and_valid_record_time(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "network"})
+    claim = svc.record_claim("alice", {
+        "claim_class": "Observation", "subject_ref": "asset:web-01", "predicate": "ip_address",
+        "value": {"address": "192.168.10.20"}, "source": "nmap-result-1", "confidence": 92,
+        "observed_at": "2026-08-20T12:00:00", "valid_from": "2026-08-20T12:00:00",
+        "valid_until": "2026-08-21T12:00:00", "run_id": run["id"],
+        "evidence_references": ["result://nmap-result-1"], "provenance": {"kind": "host_broker"},
+    })
+    assert claim["claim_class"] == "Observation"
+    assert claim["run_id"] == run["id"]
+    context = svc.epistemic_context("alice", subject_ref="asset:web-01", at="2026-08-20T18:00:00")
+    assert context["claim_count"] == 1
+    assert context["current"][0]["evidence_references"] == ["result://nmap-result-1"]
+    later = svc.epistemic_context("alice", subject_ref="asset:web-01", at="2026-08-22T00:00:00")
+    assert later["claim_count"] == 0
+    assert len(later["stale"]) == 1
+    with pytest.raises(WorkError, match="claim class"):
+        svc.record_claim("alice", {"claim_class": "Guess", "predicate": "x", "source": "user"})
+
 def test_owner_isolation_and_restart_state(db):
     svc = WorkEngine(db)
     goal = svc.create_goal("alice", {"title":"Private work"})

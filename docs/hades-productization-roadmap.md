@@ -83,5 +83,7 @@ the eventual control-center projection.
 Resource-lock enforcement is now additive in Work migration v3: Action
 contracts can declare shared/exclusive resources, owner-scoped conflicts are
 inspectable before execution, and held locks are released on completion. The
-next batch should add epistemic/temporal evidence rather than introducing a
-parallel world-state store.
+epistemic batch is now additive in Work migration v4: typed owner-scoped claims
+retain evidence, contradiction references, confidence, Run provenance, valid
+time, recorded time, expiry, and stale/current projections. It does not replace
+CMDB, Security Evidence, or Network observations.

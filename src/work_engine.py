@@ -5,7 +5,7 @@ from hashlib import sha256
 from typing import Any
 from uuid import uuid4
 from sqlalchemy.orm import Session
-from core.work_models import (WorkAction, WorkArtifact, WorkCommitment, WorkEvent, WorkGoal, WorkLock, WorkProject, WorkResult, WorkRun, WorkTask, WorkTaskDependency)
+from core.work_models import (EpistemicClaim, WorkAction, WorkArtifact, WorkCommitment, WorkEvent, WorkGoal, WorkLock, WorkProject, WorkResult, WorkRun, WorkTask, WorkTaskDependency)
 
 GOAL_STATUSES = {"draft", "active", "blocked", "paused", "completed", "cancelled", "failed"}
 PROJECT_STATUSES = {"planned", "active", "blocked", "paused", "completed", "cancelled"}
@@ -13,6 +13,7 @@ TASK_STATUSES = {"pending", "ready", "running", "awaiting_approval", "awaiting_i
 RUN_STATUSES = {"queued", "running", "awaiting_approval", "awaiting_input", "suspended", "completed", "failed", "cancelled"}
 ACTION_STATUSES = {"proposed", "awaiting_approval", "approved", "executing", "completed", "failed", "rejected", "cancelled", "expired"}
 LOCK_MODES = {"shared", "exclusive"}
+CLAIM_CLASSES = {"Fact", "Observation", "UserAssertion", "RetrievedClaim", "Inference", "Assumption", "Hypothesis", "HistoricalState", "CurrentState"}
 RUN_LIFECYCLE_STATES = {"created", "planning", "ready", "executing", "verifying", "succeeded", "waiting_approval", "waiting_input", "paused", "failed", "cancelled", "compensating"}
 _STATUS_TO_LIFECYCLE = {"queued": "ready", "running": "executing", "awaiting_approval": "waiting_approval", "awaiting_input": "waiting_input", "suspended": "paused", "completed": "succeeded", "failed": "failed", "cancelled": "cancelled"}
 
@@ -252,6 +253,46 @@ class WorkEngine:
         row = WorkCommitment(id=ident("commitment"), owner=owner, goal_id=data.get("goal_id"), project_id=data.get("project_id"), task_id=data.get("task_id"), run_id=data.get("run_id"), text=str(data.get("text") or "").strip()[:20000], due_at=parse_dt(data.get("due_at")), source=str(data.get("source") or "operator")[:64])
         if not row.text: raise WorkError("commitment text is required")
         self.db.add(row); self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    def record_claim(self, owner, data):
+        claim_class = str(data.get("claim_class") or "").strip()
+        if claim_class not in CLAIM_CLASSES: raise WorkError("invalid epistemic claim class")
+        predicate = str(data.get("predicate") or "").strip()
+        source = str(data.get("source") or "").strip()
+        if not predicate or not source: raise WorkError("claim predicate and source are required")
+        confidence = max(0, min(100, int(data.get("confidence", 50))))
+        run_id = data.get("run_id")
+        if run_id: self._one(WorkRun, owner, run_id, "run")
+        row = EpistemicClaim(id=ident("claim"), owner=owner, claim_class=claim_class, subject_ref=str(data.get("subject_ref") or "")[:500] or None, predicate=predicate[:300], value=data.get("value") if data.get("value") is not None else {}, source=source[:500], confidence=confidence, observed_at=parse_dt(data.get("observed_at")), valid_from=parse_dt(data.get("valid_from")), valid_until=parse_dt(data.get("valid_until")), expires_at=parse_dt(data.get("expires_at")), evidence_references=data.get("evidence_references") or [], contradicting_references=data.get("contradicting_references") or [], derived_from=data.get("derived_from") or [], run_id=run_id, provenance=data.get("provenance") or {})
+        self.db.add(row)
+        self.event(owner, "claim.recorded", run_id=run_id, payload={"claim_id": row.id, "claim_class": claim_class, "subject_ref": row.subject_ref, "predicate": row.predicate})
+        self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    def list_claims(self, owner, *, subject_ref=None, claim_class=None, include_inactive=False, limit=100):
+        query = self.db.query(EpistemicClaim).filter_by(owner=owner)
+        if subject_ref: query = query.filter_by(subject_ref=subject_ref)
+        if claim_class: query = query.filter_by(claim_class=claim_class)
+        if not include_inactive: query = query.filter(EpistemicClaim.status == "active")
+        return [serialize(row) for row in query.order_by(EpistemicClaim.updated_at.desc()).limit(max(1, min(int(limit), 500))).all()]
+
+    def supersede_claim(self, owner, claim_id, replacement_id=None):
+        row = self._one(EpistemicClaim, owner, claim_id, "claim")
+        row.status = "superseded"
+        row.updated_at = now()
+        self.event(owner, "claim.superseded", run_id=row.run_id, payload={"claim_id": row.id, "replacement_id": replacement_id})
+        self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    def epistemic_context(self, owner, *, subject_ref=None, at=None, limit=100):
+        moment = parse_dt(at) if at else now()
+        claims = self.list_claims(owner, subject_ref=subject_ref, include_inactive=False, limit=limit)
+        current = []
+        stale = []
+        for claim in claims:
+            until = parse_dt(claim.get("valid_until")) or parse_dt(claim.get("expires_at"))
+            if until and until < moment: stale.append(claim)
+            elif claim.get("valid_from") and parse_dt(claim["valid_from"]) > moment: continue
+            else: current.append(claim)
+        return {"at": moment.isoformat(), "current": current, "stale": stale, "claim_count": len(current)}
 
     def add_result(self, owner, run_id, data):
         run = self._one(WorkRun, owner, run_id, "run")
