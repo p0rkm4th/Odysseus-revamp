@@ -437,11 +437,11 @@ FUNCTION_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "manage_memory",
-            "description": "Manage the user's memory system: list, add, edit, delete, or search memories. Memories persist across sessions.",
+            "description": "Manage the user's memory system: list, add, edit, delete, or search memories. For explicit owner questions use summarize_owner_memory, search_memory, or inspect_memory; these are canonical Brain reads and never Skills. Memories persist across sessions.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "action": {"type": "string", "enum": ["list", "add", "edit", "delete", "search"],
+                    "action": {"type": "string", "enum": ["list", "add", "edit", "delete", "search", "summarize_owner_memory", "search_memory", "inspect_memory"],
                                "description": "The action to perform"},
                     "text": {"type": "string", "description": "Memory text (for add/edit) or search query (for search)"},
                     "memory_id": {"type": "string", "description": "Memory ID (for edit/delete)"},

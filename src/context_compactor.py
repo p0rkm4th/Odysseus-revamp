@@ -349,6 +349,16 @@ def trim_for_context(messages: List[Dict], context_length: int, reserve_tokens: 
 
     # Protected messages count toward budget but are never dropped
     protected_tokens = estimate_tokens(protected_msgs)
+    # An explicit Brain read is a canonical answer source, not optional
+    # supplemental context. Passive documents/work projections may be omitted
+    # under pressure, but dropping this result would let the model falsely say
+    # that no personal memories exist. Keep it separate so the final fallback
+    # can preserve it even when ordinary protected projections do not fit.
+    critical_protected_msgs = [
+        m for m in protected_msgs
+        if (m.get("metadata") or {}).get("context_kind") == "explicit_memory_result"
+    ]
+    ordinary_protected_msgs = [m for m in protected_msgs if m not in critical_protected_msgs]
 
     # Priority: keep first system msg (preset prompt), drop others (memory, RAG, memo).
     # Exception: a research-spinoff primer (the seeded report that grounds a
@@ -427,6 +437,17 @@ def trim_for_context(messages: List[Dict], context_length: int, reserve_tokens: 
     result = essential_system + convo_msgs
     if estimate_tokens(result + protected_msgs) <= budget:
         result += protected_msgs
+    elif critical_protected_msgs:
+        # Preserve the canonical Result even when a tiny local context budget
+        # cannot fit every protected projection. This is intentionally a
+        # bounded exception to the soft budget: a truthful retrieval-failure
+        # or partial canonical result is safer than silently turning it into a
+        # fabricated zero-result answer.
+        result += critical_protected_msgs
+        logger.info(
+            "Preserved explicit canonical memory result beyond soft context budget; omitted ordinary protected projections=%d",
+            len(ordinary_protected_msgs),
+        )
     # Keep the date/time supplement adjacent to the current user turn where
     # possible, but never count it as a conversational turn.
     result = _sanitize_tool_messages(_place_supplements(result))

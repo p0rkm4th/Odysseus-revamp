@@ -19,6 +19,7 @@ from src.model_context import estimate_tokens, get_context_length
 from src.auth_helpers import effective_user
 from src.prompt_security import untrusted_context_message
 from src.attachment_refs import attachment_ref
+from src.memory_grounding import is_explicit_memory_query, build_explicit_memory_result, render_explicit_memory_context
 from routes.prefs_routes import _load_for_user as load_prefs_for_user
 
 from fastapi import HTTPException
@@ -833,6 +834,65 @@ async def build_chat_context(
     if use_rag is not None or is_research_spinoff or casual_low_signal:
         _preface_kwargs["use_rag"] = use_rag_val
     preface, rag_sources, web_sources = chat_processor.build_context_preface(**_preface_kwargs)
+
+    # Explicit questions about stored personal memory are canonical reads, not
+    # opportunistic vector recall.  Keep this result protected through local
+    # model shaping/trimming; passive memory may be dropped, but an explicit
+    # Brain result must not disappear and turn into a false zero claim.
+    explicit_memory_result = None
+    if mem_enabled and is_explicit_memory_query(context_message):
+        try:
+            explicit_memory_result = build_explicit_memory_result(
+                memory_manager, user, context_message,
+            )
+            _memory_context = untrusted_context_message(
+                "saved memory: explicit canonical result",
+                render_explicit_memory_context(explicit_memory_result),
+            )
+            _memory_context["_protected"] = True
+            _memory_context["metadata"] = {
+                "context_kind": "explicit_memory_result",
+                "memory_query_type": explicit_memory_result.get("query_type"),
+                "memory_explicit_query": True,
+                "memory_retrieved_count": int(
+                    (explicit_memory_result.get("diagnostics") or {}).get("retrieved_count", 0)
+                ),
+                "memory_result_status": explicit_memory_result.get("status"),
+                # Never put memory content in diagnostics/traces.
+                "memory_content_logged": False,
+            }
+            preface.append(_memory_context)
+            logger.info(
+                "[memory-grounding] explicit query owner=%s type=%s status=%s retrieved=%s",
+                user,
+                explicit_memory_result.get("query_type"),
+                explicit_memory_result.get("status"),
+                (explicit_memory_result.get("diagnostics") or {}).get("retrieved_count", 0),
+            )
+        except Exception:
+            # A failed canonical read is represented explicitly when the
+            # helper can classify it. Unexpected projection errors must still
+            # fail closed rather than becoming a false zero-result answer.
+            logger.exception("[memory-grounding] explicit memory projection failed")
+            explicit_memory_result = {
+                "status": "retrieval_failed",
+                "query_type": "summary",
+                "memories": [],
+                "diagnostics": {"result_status": "retrieval_failed", "retrieved_count": 0},
+            }
+            _memory_context = untrusted_context_message(
+                "saved memory: explicit canonical result",
+                render_explicit_memory_context(explicit_memory_result),
+            )
+            _memory_context["_protected"] = True
+            _memory_context["metadata"] = {
+                "context_kind": "explicit_memory_result",
+                "memory_explicit_query": True,
+                "memory_retrieved_count": 0,
+                "memory_result_status": "retrieval_failed",
+                "memory_content_logged": False,
+            }
+            preface.append(_memory_context)
 
     # Self/status questions receive a compact canonical projection.  This is
     # generated from durable Work, capability, runtime, episode, and
