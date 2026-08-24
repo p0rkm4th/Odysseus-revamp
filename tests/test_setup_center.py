@@ -117,8 +117,9 @@ def test_safe_health_checks_cover_non_mutating_core_and_domain_readiness():
     from pathlib import Path
     routes = (Path(__file__).resolve().parents[1] / "routes/setup_center_routes.py").read_text()
     frontend = (Path(__file__).resolve().parents[1] / "static/js/setupCenter.js").read_text()
-    for module_id in ("core.models", "core.memory", "investigation.osint", "technology.network", "technology.homelab"):
+    for module_id in ("core.models", "core.memory", "investigation.osint", "technology.network", "technology.homelab", "business.crm", "interaction.voice", "advanced.automations"):
         assert module_id in routes
         assert module_id in frontend
     assert "scan_performed" in routes
     assert "mutations_performed" in routes
+    assert "canonical_primitives" in routes
