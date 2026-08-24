@@ -214,3 +214,24 @@ def test_life_review_is_deterministic_and_owner_scoped(db):
     assert review["focus_goals"][0]["id"] == goal["id"]
     assert len(review["due_soon_commitments"]) == 1
     assert svc.life_review("bob")["focus_goals"] == []
+
+
+def test_complete_action_persists_structured_result_record(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "service_status",
+        "normalized_input": {"service": "nginx"},
+    })
+    completed = svc.complete_action("alice", action["id"], {
+        "result_reference": "service://nginx/status",
+        "result": {
+            "result_type": "observation",
+            "reference": "service://nginx/status",
+            "metadata": {"state": "active"},
+            "provenance": {"source": "broker", "tainted": True},
+        },
+    })
+    assert completed["result"]["action_id"] == action["id"]
+    assert completed["result"]["metadata_json"] == {"state": "active"}
+    assert svc.get_run("alice", run["id"])["results"][0]["reference"] == "service://nginx/status"

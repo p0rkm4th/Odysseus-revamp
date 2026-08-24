@@ -201,9 +201,28 @@ class WorkEngine:
         if row is None: raise WorkError("action not found")
         if row.status == "completed": return serialize(row) | {"replayed": True}
         if row.status not in {"proposed", "approved", "executing"}: raise WorkError("action is not completable")
+        result_data = data.get("result") if isinstance(data, dict) else None
+        result_row = None
         row.status = "completed"; row.completed_at = now(); row.result_reference = str(data.get("result_reference") or "")[:1000] or None; row.revision += 1
+        if isinstance(result_data, dict):
+            result_row = WorkResult(
+                id=ident("result"), owner=owner, run_id=row.run_id, action_id=row.id,
+                result_type=str(result_data.get("result_type") or "action_result")[:64],
+                reference=str(result_data.get("reference") or row.result_reference or f"action-result://{row.id}")[:1000],
+                domain_reference=result_data.get("domain_reference"),
+                content_digest=result_data.get("content_digest"),
+                metadata_json=result_data.get("metadata") or {},
+                provenance=result_data.get("provenance") or {},
+            )
+            self.db.add(result_row)
         self._release_action_locks(owner, row.id)
-        self.event(owner, "action.completed", run_id=row.run_id, action_id=row.id, payload={"result_reference": row.result_reference}); self.db.commit(); self.db.refresh(row); return serialize(row)
+        self.event(owner, "action.completed", run_id=row.run_id, action_id=row.id, payload={"result_reference": row.result_reference, "result_id": result_row.id if result_row else None})
+        self.db.commit(); self.db.refresh(row)
+        completed = serialize(row)
+        if result_row is not None:
+            self.db.refresh(result_row)
+            completed["result"] = serialize(result_row)
+        return completed
 
     @staticmethod
     def _lock_requests(value):
