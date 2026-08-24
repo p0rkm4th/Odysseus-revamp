@@ -6445,7 +6445,7 @@ async def stream_agent_loop(
                         "cidr": _network_request_cidr or "192.168.10.0/24",
                         "plan_digest": _planned_discovery_digest.group(1),
                     }),
-                ]
+                )]
                 converted_calls = []
                 used_native = False
         if (
