@@ -380,3 +380,8 @@ restoration, verification failure, and compensation failure. These methods do
 not execute bindings themselves, and exact approval/policy/broker authority is
 unchanged. Focused lifecycle/replay tests are green; live safe-service
 dogfood remains pending.
+Watch evaluation now honors the existing bounded response tiers for the
+reviewable middle tier: a tier-2 trigger creates a queued, owner-scoped Work
+Run proposal with `review_required` and never executes an Action. Tier 0/1
+remain observation/notification projections, and tier 3 remains explicitly
+non-executing until a separate delegated-authority policy is implemented.

@@ -186,9 +186,16 @@ class PersistentAgent:
                 monitor.last_triggered=current
                 event = WorkEvent(id=ident("event"), owner=owner, event_type="monitor.triggered", payload={"monitor_id": monitor.id, "condition_type": monitor.condition_type, "detail": detail})
                 self.db.add(event); self.db.commit()
-                note=self.notify(owner, title=monitor.name, body=detail, notification_type="monitor_trigger", dedupe_key=f"monitor:{monitor.id}:{current.date()}", severity="warning", monitor_id=monitor.id, source_domain=monitor.source_domain, source_event_id=event.id)
+                proposal_run = None
+                if monitor.consequence_tier == 2:
+                    proposal_run = WorkRun(id=ident("run"), owner=owner, domain=monitor.source_domain or "system", status="queued", lifecycle_state="created", requested_by=f"monitor:{monitor.id}", intent={"kind":"monitor_work_proposal", "monitor_id":monitor.id, "condition_type":monitor.condition_type, "detail":detail}, plan={"review_required":True, "authority_unchanged":True})
+                    self.db.add(proposal_run); self.db.commit()
+                    event.payload = {**(event.payload or {}), "proposal_run_id": proposal_run.id}
+                    self.db.commit()
+                note=self.notify(owner, title=monitor.name, body=detail, notification_type="monitor_trigger", dedupe_key=f"monitor:{monitor.id}:{current.date()}", severity="warning", requires_action=monitor.consequence_tier >= 2, monitor_id=monitor.id, source_domain=monitor.source_domain, source_event_id=event.id, source_run_id=proposal_run.id if proposal_run else None)
                 note["response_policy"] = monitor_response_policy(monitor.consequence_tier)
                 note["authority_unchanged"] = True
+                if proposal_run: note["proposal_run_id"] = proposal_run.id
                 result.append(note)
             self.db.commit()
         return result
