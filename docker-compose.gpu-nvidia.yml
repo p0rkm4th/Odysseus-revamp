@@ -31,13 +31,13 @@ services:
     extra_hosts:
       # Lets the container reach local services on the Docker host, including
       # Ollama at http://host.docker.internal:11434.
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:${HADES_HOST_GATEWAY:-172.18.0.1}"
     environment:
       - LLM_HOST=${LLM_HOST:-localhost}
       - LLM_HOSTS=${LLM_HOSTS:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
-      - HADES_OLLAMA_ENDPOINT=${HADES_OLLAMA_ENDPOINT:-http://172.18.0.1:11434}
+      - HADES_OLLAMA_ENDPOINT=${HADES_OLLAMA_ENDPOINT:-http://host.docker.internal:11434}
       - HADES_WORKSPACE_UID=${HADES_WORKSPACE_UID:-1000}
       - HADES_WORKSPACE_GID=${HADES_WORKSPACE_GID:-1000}
       - RESEARCH_LLM_ENDPOINT=${RESEARCH_LLM_ENDPOINT:-}
@@ -188,6 +188,14 @@ services:
     environment:
       - NTFY_BASE_URL=${NTFY_BASE_URL:-http://localhost:8091}
     restart: unless-stopped
+
+networks:
+  default:
+    name: odysseus_default
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${ODYSSEUS_NETWORK_SUBNET:-172.18.0.0/16}
 
 volumes:
   searxng-data:

@@ -26,7 +26,7 @@ def route_request(text: str, *, requested_profile: str | None = None, execution_
 def infer(profile_name: str, messages: list[dict], *, timeout: int = 90):
     profile = PROFILES.get(profile_name)
     if not profile: raise ValueError("unknown local model profile")
-    if not (profile.endpoint.startswith("http://127.0.0.1:") or profile.endpoint.startswith("http://host.docker.internal:") or profile.endpoint.startswith("http://172.18.0.1:")):
+    if not (profile.endpoint.startswith("http://127.0.0.1:") or profile.endpoint.startswith("http://host.docker.internal:")):
         raise ValueError("local endpoint must be loopback or the container's host-only bridge")
     body = json.dumps({"model": profile.model, "messages": messages, "stream": False, "think": False, "format": "json", "options": {"num_ctx": profile.context, "temperature": 0}}).encode()
     started = time.monotonic(); req = urllib.request.Request(profile.endpoint + "/api/chat", data=body, headers={"Content-Type":"application/json"})
