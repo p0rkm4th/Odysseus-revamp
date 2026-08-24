@@ -58,4 +58,5 @@ intent. Retrieval failure is distinct from a genuine zero result, procedural
 Skills are explicitly excluded from personal-memory answers, and explicit
 results survive local-model context trimming. Synthetic owner-isolation,
 failure, Qwen compact-projection, and trim tests are green. Live authenticated
-dogfood and a persisted Memory Inspector/trace projection remain pending.
+dogfood remains credential-gated. A sanitized Memory Inspector now receives
+request diagnostics and saved turn metrics without memory content.

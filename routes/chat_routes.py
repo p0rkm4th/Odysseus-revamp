@@ -1643,6 +1643,10 @@ def setup_chat_routes(
             # Emit which memories were injected into context (captured before stream)
             if ctx.used_memories:
                 yield f"data: {json.dumps({'type': 'memories_used', 'data': ctx.used_memories})}\n\n"
+            if getattr(ctx, "memory_diagnostics", None):
+                # Counts/status/references only; canonical memory text never
+                # enters diagnostics or browser telemetry.
+                yield f"data: {json.dumps({'type': 'memory_diagnostics', 'data': ctx.memory_diagnostics})}\n\n"
 
             # Run research as a background task (survives page refresh)
             if effective_do_research:
@@ -2159,6 +2163,8 @@ def setup_chat_routes(
                                     )
                                 if thinking_response.strip():
                                     _terminal_metrics["thinking"] = thinking_response.strip()
+                                if getattr(ctx, "memory_diagnostics", None):
+                                    _terminal_metrics["memory_diagnostics"] = ctx.memory_diagnostics
                                 _commit_chat_compaction(_actual_candidate_index)
                                 _saved_id = save_assistant_response(
                                     sess,
@@ -2229,6 +2235,8 @@ def setup_chat_routes(
                                 _metrics_to_save = dict(last_metrics or {})
                                 if thinking_response.strip() and not _metrics_to_save.get("thinking"):
                                     _metrics_to_save["thinking"] = thinking_response.strip()
+                                if getattr(ctx, "memory_diagnostics", None):
+                                    _metrics_to_save["memory_diagnostics"] = ctx.memory_diagnostics
                                 _saved_id = save_assistant_response(
                                     sess, session_manager, session, full_response, _metrics_to_save,
                                     character_name=ctx.preset.character_name,
@@ -2441,6 +2449,8 @@ def setup_chat_routes(
                                         "status": failure_status,
                                         "message": failure_message,
                                     }
+                                    if getattr(ctx, "memory_diagnostics", None):
+                                        terminal_metadata["memory_diagnostics"] = ctx.memory_diagnostics
                                     terminal_content = full_response.strip()
                                     failure_note = f"[Agent stopped: {failure_message}]"
                                     if terminal_content:
@@ -2498,6 +2508,8 @@ def setup_chat_routes(
                                 _metrics_to_save = dict(last_metrics or {})
                                 if thinking_response.strip() and not _metrics_to_save.get("thinking"):
                                     _metrics_to_save["thinking"] = thinking_response.strip()
+                                if getattr(ctx, "memory_diagnostics", None):
+                                    _metrics_to_save["memory_diagnostics"] = ctx.memory_diagnostics
                                 _saved_id = save_assistant_response(
                                     sess, session_manager, session, _response_to_save, _metrics_to_save,
                                     character_name=ctx.preset.character_name,

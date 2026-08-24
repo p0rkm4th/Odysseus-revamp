@@ -3417,6 +3417,10 @@ import { loadPanel } from './panels.js';
               } else if (json.type === 'memories_used') {
                 if (_isBg) continue;
                 holder._memoriesUsed = json.data;
+              } else if (json.type === 'memory_diagnostics') {
+                if (_isBg) continue;
+                holder._memoryDiagnostics = json.data;
+                window.dispatchEvent(new CustomEvent('hades-memory-diagnostics', { detail: json.data || {} }));
               } else if (json.type === 'compacted') {
                 if (!_isBg) {
                   uiModule.showToast('Context compacted — older messages summarized');
