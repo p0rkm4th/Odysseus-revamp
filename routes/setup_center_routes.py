@@ -46,9 +46,15 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
     async def module_health(request: Request, module_id: str):
         """Run only bounded, non-mutating setup health checks."""
         value = owner(request)
-        supported = {"communications.telegram", "communications.email", "communications.calendar", "communications.contacts"}
+        supported = {"communications.telegram", "communications.email", "communications.calendar", "communications.contacts", "home.smart-home"}
         if module_id not in supported:
             raise HTTPException(409, "safe health check is not implemented for this module")
+
+        if module_id == "home.smart-home":
+            from routes.intelligence_routes import _home_assistant_overview
+            overview = await _home_assistant_overview()
+            healthy = overview.get("status") == "healthy"
+            return {"module_id": module_id, "status": "CONFIGURED" if healthy else "DEGRADED" if overview.get("configured") else "NOT_CONFIGURED", "checks": {"owner_scoped": True, "safe_read_only": True, "api_status_read": healthy, "entity_state_read": healthy, "mutations_performed": False}, "detail": "Home Assistant read-only health and entity projection succeeded" if healthy else "Home Assistant safe read did not succeed; no mutation was attempted", "authority_unchanged": True, "secret_values_exposed": False}
 
         def check(current_owner):
             db = session_factory()
