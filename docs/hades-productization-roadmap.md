@@ -50,6 +50,16 @@ Email and Calendar windows authoritative and keeping Contacts separate. Legacy
 unowned email rows are included only when their mailbox matches the authenticated
 owner. No CRM tables or duplicated contact/event stores were added.
 
+### Telegram workspace slice
+
+Telegram is now directly discoverable and exposes the existing owner-scoped
+lifecycle boundary: connection status, short-lived pairing-code issuance,
+disconnect, and bound Odysseus sessions. The UI does not store bot tokens or
+implement a second transport. Private-chat pairing, replay protection,
+approval/session binding, and runtime delivery remain owned by the existing
+Telegram store/runtime; voice, media, and live cross-channel dogfood remain
+future work.
+
 ## V2 continuation checkpoint
 
 The first active batch is the census/grammar boundary. Existing canonical

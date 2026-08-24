@@ -161,6 +161,29 @@ export async function openCommunications(){
   }
   return el;
 }
+export async function openTelegram(){
+  const el=panel('telegram-panel','Telegram','<p>Loading Telegram transport status…</p>');
+  const load=async()=>{
+    const d=await fetch('/api/telegram/status',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('Telegram status unavailable')));
+    const connected=!!d.connected;
+    const metric=(label,value)=>`<div class="hades-summary-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
+      <header class="hades-module-header"><div><h2>Telegram</h2><p>Owner-paired transport, continuity, approvals, and delivery health</p></div><span class="hades-status-badge">${connected?'connected':'not paired'}</span></header>
+      <div class="hades-summary-metrics">${metric('Connection',connected?'Active':'Inactive')}${metric('Pending pairing',d.pending_pairing?'Yes':'No')}${metric('Bound sessions',(d.sessions||[]).length)}${metric('Owner',d.display_username||'—')}</div>
+      <section class="hades-detail-section"><h3>Pairing</h3><p>${connected?'Telegram is paired to this owner through the existing private-chat boundary.':'Generate a short-lived pairing code, then complete pairing from the Telegram private chat.'}</p><div class="hades-inline-actions">${connected?'<button class="list-item" data-telegram-disconnect>Disconnect</button>':'<button class="list-item" data-telegram-pair>Generate pairing code</button>'}</div><p class="muted" data-telegram-message></p></section>
+      <section class="hades-detail-section"><h3>Continuity sessions</h3>${(d.sessions||[]).length?`<ul>${d.sessions.map(x=>`<li><code>${esc(x.odysseus_session_id)}</code> · revision ${esc(x.revision)} · updated ${esc(x.updated_at||'')}</li>`).join('')}</ul>`:'<p class="hades-empty-state">No Telegram conversation is currently bound to an Odysseus session.</p>'}</section>
+      <p class="muted">Owner scope, private-chat restriction, replay protection, approvals, and transport authority remain in the existing Telegram store/runtime.</p>
+    </div>`;
+    el.querySelector('[data-telegram-pair]')?.addEventListener('click',async()=>{
+      const response=await fetch('/api/telegram/pairing-codes',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({lifetime_seconds:600})});
+      const result=await response.json(); const message=el.querySelector('[data-telegram-message]');
+      message.textContent=response.ok?`Pairing code: ${result.pairing_code} · expires ${result.expires_at}`:(result.detail||'Pairing code unavailable');
+    });
+    el.querySelector('[data-telegram-disconnect]')?.addEventListener('click',async()=>{await fetch('/api/telegram/connection',{method:'DELETE',credentials:'same-origin'});await load();});
+  };
+  try { await load(); } catch (error) { el.querySelector('.hades-window-body').innerHTML=`<div class="hades-error-state">${esc(error.message)} <button class="list-item" data-retry-telegram>Retry</button></div>`; el.querySelector('[data-retry-telegram]')?.addEventListener('click',()=>openTelegram()); }
+  return el;
+}
 export async function openDeveloper(){
   const el=panel('developer-panel','Developer','<p>Loading Developer Mode…</p>');
   const d=await fetch('/api/developer/yolo/status').then(r=>r.json());
