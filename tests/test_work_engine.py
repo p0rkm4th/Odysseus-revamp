@@ -133,6 +133,22 @@ def test_epistemic_claims_preserve_provenance_and_valid_record_time(db):
     with pytest.raises(WorkError, match="claim class"):
         svc.record_claim("alice", {"claim_class": "Guess", "predicate": "x", "source": "user"})
 
+
+def test_owner_claim_review_preserves_history_and_requires_scoped_replacement(db):
+    svc = WorkEngine(db)
+    original = svc.record_claim("alice", {"claim_class": "RetrievedClaim", "subject_ref": "osint:case:one", "predicate": "role", "value": "CEO", "source": "source-a"})
+    replacement = svc.record_claim("alice", {"claim_class": "UserAssertion", "subject_ref": "osint:case:one", "predicate": "role", "value": "Former CEO", "source": "owner://correction"})
+    confirmed = svc.review_claim("alice", original["id"], decision="confirmed", note="Owner reviewed source")
+    assert confirmed["status"] == "active"
+    assert confirmed["provenance"]["resolution_status"] == "OWNER_CONFIRMED"
+    superseded = svc.review_claim("alice", original["id"], decision="superseded", replacement_claim_id=replacement["id"])
+    assert superseded["status"] == "superseded"
+    assert superseded["provenance"]["review_history"][-1]["replacement_claim_id"] == replacement["id"]
+    assert len(svc.list_claims("alice", subject_ref="osint:case:one", include_inactive=True)) == 2
+    with pytest.raises(WorkError, match="same scope"):
+        other = svc.record_claim("alice", {"claim_class": "Fact", "subject_ref": "osint:case:two", "predicate": "role", "value": "CEO", "source": "source-b"})
+        svc.review_claim("alice", replacement["id"], decision="superseded", replacement_claim_id=other["id"])
+
 def test_run_journal_reconstructs_lifecycle_and_checkpoints(db):
     svc = WorkEngine(db)
     run = svc.create_run("alice", {"domain": "network"})

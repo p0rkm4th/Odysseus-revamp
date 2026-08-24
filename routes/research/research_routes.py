@@ -572,6 +572,31 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
         except WorkError as exc:
             raise HTTPException(404, str(exc)) from exc
 
+    @router.patch("/api/research/{session_id}/claims/{claim_id}/review")
+    async def review_research_claim(session_id: str, claim_id: str, request: Request, payload: dict = Body(...)):
+        """Apply an explicit owner correction/confirmation to a case claim.
+
+        The existing Work epistemic ledger remains authoritative.  Report
+        prose and crawler findings cannot call this endpoint implicitly.
+        """
+        user = _require_user(request)
+        _assert_owns_research(session_id, user)
+        data = dict(payload or {})
+        decision = str(data.get("decision") or "").strip().lower()
+        if decision not in {"confirmed", "stale", "retracted", "superseded", "unresolved"}:
+            raise HTTPException(400, "invalid claim review decision")
+        try:
+            def operation():
+                with SessionLocal() as db:
+                    service = WorkEngine(db)
+                    claim = service._one(EpistemicClaim, user, claim_id, "claim")
+                    if claim.subject_ref != _case_claim_subject(session_id):
+                        raise WorkError("claim not found")
+                    return service.review_claim(user, claim_id, decision=decision, note=data.get("note"), replacement_claim_id=data.get("replacement_claim_id"))
+            return await asyncio.to_thread(operation)
+        except WorkError as exc:
+            raise HTTPException(400 if "invalid" in str(exc) or "requires" in str(exc) or "replacement" in str(exc) else 404, str(exc)) from exc
+
     @router.post("/api/research/{session_id}/archive")
     async def research_archive(session_id: str, request: Request, archived: bool = Query(True)):
         """Soft-archive / restore a research report (sets `archived` in its JSON)."""
