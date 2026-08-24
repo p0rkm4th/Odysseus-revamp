@@ -430,6 +430,16 @@ No alternate topology store or identity merge path was introduced; discovery,
 observation persistence, and reconciliation remain owned by the existing CMDB
 and Network services.
 
+### OSINT evidence presentation slice
+
+The visible OSINT dossier now reports recorded source counts from the canonical
+research library and separates Summary/Report, Sources, Findings/Evidence, and
+Facts/Inferences sections. The latter explicitly states when no separate
+canonical claim ledger is attached; report text is never silently promoted into
+facts or inferences. External content remains escaped, tainted, and
+provenance-labelled. Canonical graph, corrections, and delta research remain
+future work.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
