@@ -211,6 +211,11 @@ not a second scheduler or task engine; Watch behavior remains owned by the
 existing bounded Monitor engine. Restart-persistent mission orchestration,
 watch response tiers, and live dedupe dogfood remain future work.
 
+The existing Watch/Monitor state is now also visible in Control Center with
+condition, source domain, enabled state, consequence tier, and last-trigger
+metadata. The surface is read-only; it does not grant authority or execute a
+response.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail
