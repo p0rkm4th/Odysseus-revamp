@@ -30,6 +30,12 @@ owner-scoped `TelegramStore.lifecycle_status` projection to validate pairing,
 private-chat, replay-protection, and callback-approval prerequisites without
 network calls, bot-token handling, re-pairing, or authority changes.
 
+Email, Calendar, and Contacts now have the same Setup Center readiness boundary.
+Checks are owner-scoped and non-mutating: they confirm canonical local
+configuration and clearly report when provider connectivity was not probed.
+Actual Email/Calendar provider tests continue through their existing routes and
+credentials; Setup Center does not duplicate those operations.
+
 ## Current checkpoint
 
 - V2 baseline source: `120e4afa9d0cd60fff3f6225c42d131837c6c260`.
