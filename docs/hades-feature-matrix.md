@@ -1,15 +1,18 @@
 # Hades feature matrix
 
+Checkpoint: V2 starts from accepted stabilization source
+`120e4afa9d0cd60fff3f6225c42d131837c6c260`.
+
 Status is intentionally conservative: `green` means the current acceptance
 evidence is real, `partial` means useful backend capability exists but the
 product workspace or dogfood gate is incomplete.
 
 | Domain | Backend | Capabilities/routing | UI/windows/search | Tests | Live dogfood | Status / next gap |
 |---|---|---|---|---|---|---|
-| Self/continuity | present | present | partial | green | partial | self dossier is live; weak-model referent language remains bounded |
-| Work/Life | present | partial | partial | green | partial | deterministic `/api/work/review` now provides focus/due/blocked/waiting projection; richer Life UX remains |
-| Memory | present | present | partial | green | partial | layer and token inspector |
-| Notifications/monitors | partial | partial | green | green | not accepted | web Attention projection is live; delivery/monitor dogfood remains |
+| Self/continuity | present | present | partial | green | stabilization accepted; product dogfood pending | status, while-away, Episodes, Notifications, Monitors, Attention; unified self dossier and health explainability remain |
+| Work/Life | present | partial | partial | green | partial | deterministic review provides focus/due/blocked/waiting projection; richer Life intake, reviews, habits, and timeline remain |
+| Memory | present | present | partial | green | partial | retrieval/context diagnostics exist; explicit layer, TTL, supersession, and inspector UX remain |
+| Notifications/monitors | present | partial | partial | green | partial | Attention and monitor primitives exist; transport center and notification dogfood remain |
 | Household | present | partial | partial | green | not accepted | intake, dossier, history, provenance |
 | IT Assets/CMDB | present | present | partial | green | partial | reconciliation and detail workspace |
 | Network | present | green | partial | green | green | change detection, history, polished map |
@@ -24,7 +27,17 @@ product workspace or dogfood gate is incomplete.
 | Models/routing | present | present | partial | green | partial | model lab and qualification evidence |
 | Improvements | present | partial | partial | green | not accepted | registry workspace and promotion evidence |
 | Developer/health/authority | present | partial | partial | green | partial | permissions, trace, backup projections |
-| Shell/window/design system | present | partial | partial | partial | browser review pending | app-wide uniformity pass |
+| Shell/window/design system | present | partial | partial | partial | browser review pending | app-wide uniformity, icon language, command palette, global search, and reusable states |
+
+## Tier 1 acceptance gates
+
+- Self/runtime/Work/commitment/Attention state is sourced from canonical APIs,
+  not model narration.
+- Recent conversation and active Work state outrank supplemental memory.
+- Module windows reuse the existing manager and owner persistence.
+- UI actions remain projections of canonical routes and ActionSpecs.
+- A domain is not complete until intake/detail/activity/provenance and
+  restart/local-model evidence are recorded.
 
 This matrix is a continuation artifact, not a claim that partial domains are
 complete.

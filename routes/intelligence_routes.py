@@ -123,6 +123,13 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         value = owner(request)
         with session_factory() as db:
             return PersistentAgent(db).attention(value)
+    @router.get("/api/hades/brief")
+    async def hades_brief(request: Request, period: str = "day", horizon_hours: int = 48):
+        value = owner(request)
+        if period not in {"day", "week"}: raise HTTPException(400, "period must be day or week")
+        with session_factory() as db:
+            try: return PersistentAgent(db).operating_brief(value, period=period, horizon_hours=horizon_hours)
+            except ValueError as exc: raise HTTPException(400, str(exc)) from exc
     @router.post("/api/hades/notifications/{notification_id}/read")
     async def hades_notification_read(request: Request, notification_id: str):
         value = owner(request)

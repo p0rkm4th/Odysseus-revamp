@@ -2,18 +2,21 @@
 
 ## Current checkpoint
 
-- Stabilization source: `6f36a0bb12d6bb35d40555b5e842bc95fb1c1df7`.
+- V2 baseline source: `120e4afa9d0cd60fff3f6225c42d131837c6c260`.
+- Accepted baseline image: `sha256:b3f65991b7c59ed77118e15ed3e3faae2eea1d02d01169aa20b566ca19f06e97`.
+- Accepted regression: `5890 passed, 3 skipped, 174 warnings, 0 failed`.
 - Canonical network discovery: `homelab.manage` → `execute_network_discovery` → `manage_homelab` → `host_broker`.
-- Full regression after the preceding continuity checkpoint: `5885 passed, 3 skipped`.
-- Three unrelated pre-existing files remain modified and are intentionally not included in the stabilization commits.
-- Fresh Luna and Qwen broker executions each returned 9 bounded candidates; 9 `homelab_nmap` observations are visible in CMDB and Network Map.
+- Fresh Luna and Qwen broker executions, exact approval continuation, CMDB
+  observations, Network Map update, reconnect/model-switch/browser/container
+  continuity, and immediate referent coverage are accepted stabilization
+  evidence. Do not repeat that archaeology unless a regression appears.
 
 ## Dependency-ordered batches
 
-1. **P0 stabilization:** preserve the network evidence, finish explicit model-switch/browser/reconnect evidence, and keep weak-model referents bounded and diagnosable.
-2. **P1 continuity/self:** unify identity, runtime health, Work state, capabilities, commitments, attention, working-memory diagnostics, and durable Episodes/Lessons.
-3. **P1 Life/attention:** productize Goals/Projects/Tasks/Commitments, reviews, deterministic monitors, notifications, and daily briefs on existing Work primitives.
-4. **P2 shared shell:** audit and consolidate icons, module navigation, window behavior, global search, command palette, entity headers, timelines, provenance, and responsive states.
+1. **P0 baseline freeze:** preserve the accepted stabilization as rollback state and keep network/continuity invariants in regression.
+2. **Tier 1 census and grammar:** make capability ownership, module states, authority, intake, dossiers, timelines, provenance, search, and window behavior inspectable and uniform.
+3. **Tier 1 self/memory/Life:** unify identity, runtime health, Work state, capabilities, commitments, Attention, memory diagnostics, Episodes/Lessons, reviews, habits, and deterministic briefs on existing stores.
+4. **Tier 2 communications:** productize Telegram continuity/voice and Email/Calendar/Contacts/Documents bridges.
 5. **P2 local operations:** expand the existing bounded Homelab operation catalog and capability dependency health; then productize Household, IT/CMDB, Network history/change detection.
 6. **P3 security/OSINT:** complete authorized assessment and public-source case workflows with evidence-linked reports.
 7. **P4 communications/business:** expose Telegram cross-channel continuity, voice, Email/Calendar/Contacts links, and Work-based CRM.
@@ -21,7 +24,26 @@
 
 Every batch must update the feature matrix, run focused tests, preserve policy
 invariants, and leave a deployable commit. Schema changes require fresh,
-rerun, and copied-database rehearsal before promotion.
+rerun, and copied-database rehearsal before promotion. A partial backend or
+sidebar entry is not a productized domain.
+
+## V2 continuation checkpoint
+
+The first active batch is the census/grammar boundary. Existing canonical
+owners are sufficient for the initial Self, Attention, Work/Life, memory, and
+window work; new tables are not justified until a focused gap is demonstrated.
+
+## Completed V2 batches
+
+- Updated the bounded existing-capability census and cross-cutting ownership map.
+- Corrected the matrix/roadmap to the accepted `120e4afa…` baseline and made
+  Tier 1 acceptance gates explicit.
+- Added `PersistentAgent.operating_brief()` and `/api/hades/brief`, a
+  deterministic daily/weekly projection over Self, Work review, Attention,
+  capabilities, activity, and Episodes. It creates no new canonical state,
+  model claims, or action claims.
+- Added daily/weekly brief switching to the existing Hades window and focused
+  tests for bounded horizon and grounding metadata.
 
 ## Completed batches in this continuation
 
