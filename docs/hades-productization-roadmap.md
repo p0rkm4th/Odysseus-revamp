@@ -614,6 +614,15 @@ honestly stale without invalidating unrelated claims or inventing topology.
 Focused verified-execution coverage is green; broader executor integration and
 live safe-operation dogfood remain pending.
 
+### Competence measurement checkpoint
+
+Empirical model competence recomputation now orders evaluation runs
+deterministically and aggregates available latency, token, and numeric cost
+measurements into the existing owner-scoped competence projection. Qualification
+still requires the existing evidence threshold and remains advisory: it cannot
+grant capability or bypass policy. Shadow review and broader measured routing
+optimization remain future work.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its

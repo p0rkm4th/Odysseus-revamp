@@ -21,6 +21,15 @@ def test_competence_requires_evidence_before_qualification(db):
     assert ModelCompetenceService(db).list("bob") == []
 
 
+def test_competence_aggregates_measurements_and_recent_runs_deterministically(db):
+    evaluations=EvaluationService(db); scenario=evaluations.create_scenario("alice", {"scenario_key":"metrics-1","title":"Metrics","domain":"homelab","task_class":"measured_read"})
+    for latency, tokens, cost in ((100, 1000, 0.10), (200, 1200, 0.20), (300, 1400, 0.30)):
+        evaluations.record_run("alice", scenario["id"], {"model":{"name":"qwen"},"passed":True,"failure_category":"none","metrics":{"latency_ms":latency,"token_count":tokens,"estimated_cost":cost}})
+    row=ModelCompetenceService(db).recompute("alice")[0]
+    assert row["latency_ms"] == 200 and row["token_count"] == 1200
+    assert row["estimated_cost"] == {"average": 0.2, "sample_count": 3}
+
+
 def test_competence_exposes_failure_classes_and_degraded_state(db):
     evaluations=EvaluationService(db); scenario=evaluations.create_scenario("alice", {"scenario_key":"safe-1","title":"Safe","domain":"network","task_class":"network_read"})
     for passed in (False, False, True): evaluations.record_run("alice", scenario["id"], {"model":{"name":"weak"},"passed":passed,"failure_category":"tool_exposure_failure" if not passed else "none"})

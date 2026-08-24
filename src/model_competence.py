@@ -21,7 +21,7 @@ class ModelCompetenceService:
         return "experimental"
 
     def recompute(self, owner, *, model_key=None, task_class=None):
-        query=self.db.query(EvaluationRun, EvaluationScenario).join(EvaluationScenario, EvaluationScenario.id==EvaluationRun.scenario_id).filter(EvaluationRun.owner==owner, EvaluationScenario.owner==owner)
+        query=self.db.query(EvaluationRun, EvaluationScenario).join(EvaluationScenario, EvaluationScenario.id==EvaluationRun.scenario_id).filter(EvaluationRun.owner==owner, EvaluationScenario.owner==owner).order_by(EvaluationRun.created_at.asc(), EvaluationRun.id.asc())
         aggregates={}
         for run, scenario in query.all():
             key=(self._model_key(run.model), scenario.task_class)
@@ -32,9 +32,13 @@ class ModelCompetenceService:
         for (key, task), bucket in aggregates.items():
             samples=len(bucket["runs"]); successes=sum(1 for run in bucket["runs"] if run.passed == 1); rate=round(successes*100/samples) if samples else 0
             recent=bucket["runs"][-5:]; recent_success=sum(1 for run in recent if run.passed==1); recent_rate=round(recent_success*100/len(recent)) if recent else 0
+            measurements=[run.metrics or {} for run in bucket["runs"]]
+            latency_values=[float(m.get("latency_ms", m.get("latency"))) for m in measurements if m.get("latency_ms", m.get("latency")) is not None]
+            token_values=[float(m.get("token_count", (m.get("input_tokens") or 0)+(m.get("output_tokens") or 0))) for m in measurements if m.get("token_count") is not None or m.get("input_tokens") is not None or m.get("output_tokens") is not None]
+            cost_values=[float(m.get("estimated_cost")) for m in measurements if isinstance(m.get("estimated_cost"), (int, float))]
             row=self.db.query(ModelCompetence).filter_by(owner=owner, model_key=key, task_class=task).one_or_none()
             if row is None: row=ModelCompetence(id=ident("competence"), owner=owner, model_key=key, task_class=task); self.db.add(row)
-            row.sample_count=samples; row.success_count=successes; row.success_rate=rate; row.recent_success_rate=recent_rate; row.failure_classes=sorted({x for x in bucket["failures"] if x and x!="none"}); row.qualification=self._qualification(samples,rate); row.evidence_refs=[run.id for run in bucket["runs"]][-100:]; row.last_evaluated_at=now(); self.db.flush(); result.append(serialize(row))
+            row.sample_count=samples; row.success_count=successes; row.success_rate=rate; row.recent_success_rate=recent_rate; row.latency_ms=round(sum(latency_values)/len(latency_values)) if latency_values else None; row.token_count=round(sum(token_values)/len(token_values)) if token_values else None; row.estimated_cost={"average": round(sum(cost_values)/len(cost_values), 6), "sample_count": len(cost_values)} if cost_values else {}; row.failure_classes=sorted({x for x in bucket["failures"] if x and x!="none"}); row.qualification=self._qualification(samples,rate); row.evidence_refs=[run.id for run in bucket["runs"]][-100:]; row.last_evaluated_at=now(); self.db.flush(); result.append(serialize(row))
         self.db.commit(); return result
 
     def list(self, owner, *, task_class=None, qualification=None, limit=200):
