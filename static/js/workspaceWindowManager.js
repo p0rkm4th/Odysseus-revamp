@@ -3,8 +3,10 @@
  * geometry, focus, snapping, minimization, and owner-scoped layout state.
  */
 const windows = new Map();
+const restorers = new Map();
 let topZ = 5000;
 let owner = 'local';
+let ownerReady = false;
 let dock;
 const mobile = () => window.matchMedia('(max-width: 768px)').matches;
 const key = () => `hades-workspace-layout:${owner}`;
@@ -14,7 +16,7 @@ function ensureDock() {
   dock = document.createElement('div'); dock.id='hades-window-dock'; dock.setAttribute('aria-label','Minimized Hades windows'); document.body.appendChild(dock); return dock;
 }
 function save() {
-  const layout={}; for (const [id,w] of windows) { const r=w.el.getBoundingClientRect(); layout[id]={left:r.left,top:r.top,width:r.width,height:r.height,minimized:w.minimized,maximized:w.maximized,snap:w.snap,z:w.el.style.zIndex,view:w.view}; }
+  const layout={}; for (const [id,w] of windows) { const r=w.el.getBoundingClientRect(); layout[id]={left:r.left,top:r.top,width:r.width,height:r.height,minimized:w.minimized,maximized:w.maximized,snap:w.snap,z:w.el.style.zIndex,view:w.view,title:w.title,entity:w.entity}; }
   try { localStorage.setItem(key(), JSON.stringify(layout)); } catch (_) {}
 }
 function focus(id) { const w=windows.get(id); if (!w) return; w.el.style.zIndex=String(++topZ); w.el.focus({preventScroll:true}); save(); }
@@ -32,16 +34,39 @@ function renderDock() { const d=ensureDock(); d.innerHTML=''; for(const [id,w] o
 function drag(w, ev) { if(mobile()||ev.target.closest('button'))return; ev.preventDefault(); focus(w.id); const r=w.el.getBoundingClientRect(), sx=ev.clientX, sy=ev.clientY; const move=e=>{w.el.style.left=`${clamp(r.left+e.clientX-sx,0,Math.max(0,innerWidth-80))}px`;w.el.style.top=`${clamp(r.top+e.clientY-sy,0,Math.max(0,innerHeight-50))}px`;w.snap=null;}; const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);save();}; window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true}); }
 export function openWindow({id,title,view='generic',content,entity=null}) {
   if(windows.has(id)){restore(id);return windows.get(id).el;}
-  const el=document.createElement('section'); el.className='hades-workspace-window'; el.tabIndex=0; el.dataset.view=view; el.dataset.entity=entity||''; el.innerHTML=`<header class="hades-window-titlebar"><strong>${title}</strong><span class="hades-window-spacer"></span><button data-win="min" aria-label="Minimize">−</button><button data-win="max" aria-label="Maximize">□</button><button data-win="snap-left" aria-label="Snap left">◀</button><button data-win="snap-right" aria-label="Snap right">▶</button><button data-win="close" aria-label="Close">×</button></header><main class="hades-window-body"></main>`; document.body.appendChild(el);
+  const el=document.createElement('section'); el.id=id; el.className='hades-workspace-window'; el.tabIndex=0; el.dataset.view=view; el.dataset.entity=entity||''; el.innerHTML=`<header class="hades-window-titlebar"><strong>${title}</strong><span class="hades-window-spacer"></span><button data-win="min" aria-label="Minimize">−</button><button data-win="max" aria-label="Maximize">□</button><button data-win="snap-left" aria-label="Snap left">◀</button><button data-win="snap-right" aria-label="Snap right">▶</button><button data-win="snap-top-left" aria-label="Snap top left">↖</button><button data-win="snap-top-right" aria-label="Snap top right">↗</button><button data-win="snap-bottom-left" aria-label="Snap bottom left">↙</button><button data-win="snap-bottom-right" aria-label="Snap bottom right">↘</button><button data-win="close" aria-label="Close">×</button></header><main class="hades-window-body"></main>`; document.body.appendChild(el);
   const w={id,title,view,entity,el,minimized:false,maximized:false,snap:null}; windows.set(id,w); const body=el.querySelector('.hades-window-body'); if(typeof content==='string')body.innerHTML=content; else if(content)body.append(content);
   el.querySelector('.hades-window-titlebar').addEventListener('pointerdown',e=>drag(w,e)); el.addEventListener('pointerdown',()=>focus(id));
-  el.querySelectorAll('[data-win]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.win;if(a==='min')minimize(id);else if(a==='max')snap(id,'maximize');else if(a==='close')close(id);else if(a==='snap-left')snap(id,'left');else if(a==='snap-right')snap(id,'right');}));
+  el.querySelectorAll('[data-win]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.win;if(a==='min')minimize(id);else if(a==='max')snap(id,'maximize');else if(a==='close')close(id);else if(a.startsWith('snap-'))snap(id,a.slice(5));}));
   el.addEventListener('keyup',e=>{if(e.key==='Escape')close(id);});
   const r={left:Math.max(20,(innerWidth-720)/2),top:Math.max(20,(innerHeight-460)/2),width:720,height:460}; setRect(w,r); focus(id); restoreLayout(w); renderDock(); return el;
 }
+function savedLayout(){ let saved={}; try { saved=JSON.parse(localStorage.getItem(key())||'{}'); } catch (_) {} return saved; }
+function savedFor(view, saved=savedLayout()){ return Object.entries(saved).filter(([,descriptor])=>!view || descriptor.view===view); }
+function restoreRegistered(view, saved=savedLayout()){
+  for (const [id, descriptor] of savedFor(view, saved)) {
+    if (!restorers.has(descriptor.view)) continue;
+    if (!windows.has(id)) openWindow({id, view:descriptor.view, entity:descriptor.entity||null, title:descriptor.title||descriptor.view, content:'<p>Restoring workspace…</p>'});
+    restorers.get(descriptor.view)({id, entity:descriptor.entity||null, title:descriptor.title||descriptor.view});
+  }
+}
 function restoreLayout(w){ try{const l=JSON.parse(localStorage.getItem(key())||'{}')[w.id];if(!l)return;if(!mobile())setRect(w,{left:clamp(l.left,0,innerWidth-120),top:clamp(l.top,0,innerHeight-80),width:l.width,height:l.height});if(l.snap)w.snap=l.snap;if(l.maximized)w.maximized=true;if(l.minimized)minimize(w.id);}catch(_){} }
-export function setOwner(value){owner=String(value||'local');}
+export function setOwner(value){
+  const next=String(value||'local');
+  if (ownerReady && next===owner) return;
+  for (const w of windows.values()) w.el.remove(); windows.clear(); renderDock();
+  owner=next;
+  ownerReady=true;
+  const saved=savedLayout();
+  for (const view of restorers.keys()) restoreRegistered(view, saved);
+}
 export function openView(view, entity, title, content){return openWindow({id:`${view}:${entity||'main'}`,view,entity,title,content});}
+export function registerView(view, restore){
+  if (typeof restore !== 'function') return;
+  restorers.set(view, restore);
+  if (ownerReady) restoreRegistered(view);
+}
+export { focus, minimize, restore, close, snap };
 export function api(){return {openWindow,openView,focus,minimize,restore,close,snap,setOwner};}
 window.hadesWindowManager=api();
 window.addEventListener('resize',()=>{for(const w of windows.values())if(mobile()){w.el.style.left='0';w.el.style.top='0';w.el.style.width='100vw';w.el.style.height='100dvh';}renderDock();});

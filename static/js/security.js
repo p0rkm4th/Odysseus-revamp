@@ -2,7 +2,7 @@
 
 let pane = null;
 let windowEl = null;
-import { openWindow, close as closeWindow } from './workspaceWindowManager.js';
+import { openWindow, close as closeWindow, registerView } from './workspaceWindowManager.js';
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -68,5 +68,7 @@ export function togglePanel() {
   windowEl = openWindow({id:'security-overview',view:'security',title:'Security Assessments',content:''});
   pane = windowEl.querySelector('.hades-window-body'); load();
 }
+
+registerView('security', () => { if (!pane) togglePanel(); });
 
 export default {togglePanel};

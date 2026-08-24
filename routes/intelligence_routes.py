@@ -17,7 +17,9 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         if not value: raise HTTPException(401,"authenticated owner required")
         return value
     @router.get("/api/intelligence/profiles")
-    async def profiles(request: Request): owner(request); return {"profiles":local_intelligence.profiles(),"default":"strong-default"}
+    async def profiles(request: Request):
+        value = owner(request)
+        return {"profiles":local_intelligence.profiles(),"default":"strong-default","owner":value}
     @router.post("/api/intelligence/route")
     async def route(request: Request,payload:dict=Body(...)):
         value=owner(request); result=local_intelligence.route_request(payload.get("text",""),requested_profile=payload.get("profile"),execution_profile=payload.get("execution_profile","host")); result["owner"]=value; return result
