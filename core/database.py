@@ -2085,6 +2085,7 @@ from core import execution_node_models as execution_node_models  # noqa: E402,F4
 from core import execution_node_migrations as execution_node_migrations  # noqa: E402,F401
 from core import delegated_grant_models as delegated_grant_models  # noqa: E402,F401
 from core import delegated_grant_migrations as delegated_grant_migrations  # noqa: E402,F401
+from core import sandbox_migrations as sandbox_migrations  # noqa: E402,F401
 from core.schema_migrations import run_schema_migrations  # noqa: E402
 
 

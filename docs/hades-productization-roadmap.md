@@ -262,6 +262,17 @@ narrowing layer over existing approvals and the trusted binding boundary, not
 a replacement authorization engine; grant issuance orchestration and live
 worker delegation remain future work.
 
+### Disposable-sandbox metadata foundation
+
+The existing execution-node boundary now has an owner-scoped durable
+`SandboxSession` projection linked to a canonical Work Run and eligible
+non-privileged node. It validates bounded workload types, resource limits,
+network-none/allowlist policy, lifecycle transitions, artifact references, and
+cleanup timestamps. Control Center exposes the lifecycle and explicitly shows
+that the runtime adapter is not configured. No commands, containers, host
+secrets, Docker socket, host-root mount, or privileged execution are enabled;
+the trusted runtime adapter remains a separately reviewed future phase.
+
 ### Delegated capability grant foundation
 
 Short-lived owner-scoped grants now bind an existing approved WorkAction to its
