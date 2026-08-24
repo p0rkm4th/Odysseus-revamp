@@ -799,6 +799,15 @@ def _network_substantive_fallback_command(intent_domains, query: str) -> str:
     install_flag = "--install-authorized" if _explicitly_allows_diagnostic_install(query) else ""
     return ("python -m src.asset_inventory network-discover " + install_flag + " --record-observations").strip()
 
+
+def _explicit_network_discovery_request(query: str) -> bool:
+    """Recognize bounded LAN discovery requests that have a first-class path."""
+    q = str(query or "").lower()
+    return bool(
+        re.search(r"\b(?:scan|discover|map|enumerate|identify|find)\b", q)
+        and re.search(r"\b(?:network|lan|subnet|devices?|hosts?|192(?:\.168)?|rfc1918)\b", q)
+    )
+
 def _normalize_operational_intent_evidence(intent, query: str):
     # Fuse operational intent from action + object + scope evidence.
     # Existing classifier domains remain evidence, but do not erase adjacent
@@ -4991,6 +5000,23 @@ async def stream_agent_loop(
         _relevant_tools.update({"manage_homelab", "privileged_action"})
         logger.info(
             "[agent-intent] capability-first network prerequisite clamp tools=%s",
+            sorted(_relevant_tools),
+        )
+    # Explicit LAN discovery has a canonical bounded ActionSpec. Do not offer
+    # generic shell as a competing execution surface: weak and strong models
+    # must select manage_homelab, whose exact-approval path reaches the host
+    # broker. General network diagnostics still retain bash/read-only tools.
+    if (
+        not guide_only
+        and _relevant_tools is not None
+        and "network_ops" in _intent_domains
+        and _explicit_network_discovery_request(_last_user)
+    ):
+        _relevant_tools.difference_update({"bash", "run_shell", "python"})
+        _relevant_tools.add("manage_homelab")
+        disabled_tools.update({"bash", "run_shell", "python"})
+        logger.info(
+            "[agent-intent] bounded network discovery clamp tools=%s",
             sorted(_relevant_tools),
         )
     _base_relevant_tools = None if _relevant_tools is None else set(_relevant_tools)
