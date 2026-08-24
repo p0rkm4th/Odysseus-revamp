@@ -2081,6 +2081,8 @@ from core import incident_models as incident_models  # noqa: E402,F401
 from core import incident_migrations as incident_migrations  # noqa: E402,F401
 from core import model_competence_models as model_competence_models  # noqa: E402,F401
 from core import model_competence_migrations as model_competence_migrations  # noqa: E402,F401
+from core import execution_node_models as execution_node_models  # noqa: E402,F401
+from core import execution_node_migrations as execution_node_migrations  # noqa: E402,F401
 from core.schema_migrations import run_schema_migrations  # noqa: E402
 
 

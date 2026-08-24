@@ -53,6 +53,18 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.patch("/missions/{mission_id}")
     async def update_mission(request: Request, mission_id: str, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: __import__("src.mission_projection", fromlist=["MissionService"]).MissionService(svc.db).update(o, mission_id, payload))
+    @router.get("/execution-nodes")
+    async def execution_nodes(request: Request, health: str | None = None):
+        return {"nodes": await tx(request, lambda svc,o,u: __import__("src.execution_nodes", fromlist=["ExecutionNodeService"]).ExecutionNodeService(svc.db).list(o, health=health))}
+    @router.post("/execution-nodes", status_code=201)
+    async def register_execution_node(request: Request, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.execution_nodes", fromlist=["ExecutionNodeService"]).ExecutionNodeService(svc.db).register(o, payload))
+    @router.post("/execution-nodes/{node_key}/heartbeat")
+    async def execution_node_heartbeat(request: Request, node_key: str, payload: dict[str, Any] = Body(default={} )):
+        return await tx(request, lambda svc,o,u: __import__("src.execution_nodes", fromlist=["ExecutionNodeService"]).ExecutionNodeService(svc.db).heartbeat(o, node_key, health=str(payload.get("health") or "healthy"), utilization=payload.get("utilization") or {}))
+    @router.post("/execution-nodes/select")
+    async def select_execution_node(request: Request, payload: dict[str, Any] = Body(default={} )):
+        return await tx(request, lambda svc,o,u: __import__("src.execution_nodes", fromlist=["ExecutionNodeService"]).ExecutionNodeService(svc.db).select(o, payload.get("requirements") or {}, limit=payload.get("limit", 1)))
     @router.post("/projects", status_code=201)
     async def create_project(request: Request, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.create_project(o,payload))
     @router.get("/projects")

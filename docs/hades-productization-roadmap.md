@@ -225,6 +225,15 @@ downstream service dependencies without manufacturing topology. This remains a
 projection; CMDB identity, ActionSpec scope, and execution policy remain
 authoritative.
 
+### Execution-node registry foundation
+
+An additive owner-scoped execution-node registry now records platform,
+architecture, runtimes, capabilities, privilege classes, network reachability,
+health, utilization, and heartbeat metadata. Deterministic selection can filter
+eligible nodes for requirements, but node metadata does not grant authority or
+replace the host broker. Existing execution remains unchanged; sandboxing,
+delegated grants, and migration of scheduling are future phases.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail
