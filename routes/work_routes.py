@@ -8,6 +8,7 @@ from core.work_models import WorkCommitment, WorkEvent, WorkGoal, WorkProject, W
 from src.auth_helpers import require_user
 from src.owner_identity import effective_storage_owner
 from src.work_engine import WorkEngine, WorkError, serialize
+from src.run_planner import RunPlanner
 
 def setup_work_routes(*, session_factory=SessionLocal):
     router = APIRouter(prefix="/api/work", tags=["work-engine"])
@@ -56,6 +57,15 @@ def setup_work_routes(*, session_factory=SessionLocal):
     async def runs(request: Request, status: str | None = None, domain: str | None = None): return {"runs": await tx(request, lambda svc,o,u: svc.list_records(o, WorkRun, status=status, domain=domain))}
     @router.get("/runs/{run_id}")
     async def get_run(request: Request, run_id: str): return await tx(request, lambda svc,o,u: svc.get_run(o,run_id))
+    @router.get("/runs/{run_id}/preview")
+    async def run_preview(request: Request, run_id: str):
+        return await tx(request, lambda svc,o,u: RunPlanner(svc.db).compile(o, run_id))
+    @router.post("/runs/{run_id}/validate")
+    async def validate_run(request: Request, run_id: str):
+        return await tx(request, lambda svc,o,u: RunPlanner(svc.db).validate(o, run_id))
+    @router.get("/runs/{run_id}/replay")
+    async def replay_run(request: Request, run_id: str):
+        return await tx(request, lambda svc,o,u: svc.reconstruct_run(o, run_id))
     @router.patch("/runs/{run_id}")
     async def update_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.set_run_status(o,run_id,str(payload.get("status") or ""),payload))
     @router.post("/runs/{run_id}/actions", status_code=201)

@@ -47,6 +47,18 @@ class ActionSpec:
     postconditions: tuple[str, ...] = ()
     verification: tuple[str, ...] = ()
     expected_cost: Mapping[str, Any] | None = None
+    # These fields are descriptive contract metadata.  They are intentionally
+    # additive: existing bindings can continue to declare only the semantics
+    # they actually know.
+    reads: tuple[str, ...] = ()
+    writes: tuple[str, ...] = ()
+    blast_radius: tuple[str, ...] = ()
+    reversible: bool = False
+    compensatable: bool = False
+    irreversible: bool = False
+    state_invalidations: tuple[str, ...] = ()
+    precheck_actions: tuple[str, ...] = ()
+    expected_downtime: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
