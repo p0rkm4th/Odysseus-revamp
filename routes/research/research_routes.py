@@ -19,6 +19,7 @@ from src.auth_helpers import _auth_disabled, get_current_user
 from src.owner_identity import REQUEST_SENTINEL_OWNERS
 from src.constants import DEEP_RESEARCH_DIR
 from core.database import SessionLocal
+from core.work_models import EpistemicClaim
 from src.work_engine import WorkEngine, WorkError
 
 _SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9-]{1,128}$")
@@ -545,6 +546,28 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
                     if lineage["claim"].get("subject_ref") != _case_claim_subject(session_id):
                         raise WorkError("claim not found")
                     return lineage
+            return await asyncio.to_thread(operation)
+        except WorkError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @router.post("/api/research/{session_id}/claims/{claim_id}/contradictions", status_code=201)
+    async def record_research_claim_contradiction(session_id: str, claim_id: str, request: Request, payload: dict = Body(...)):
+        """Link two reviewed claims in the same case without resolving history."""
+        user = _require_user(request)
+        _assert_owns_research(session_id, user)
+        contradicting_id = str((payload or {}).get("contradicting_claim_id") or "").strip()
+        if not contradicting_id:
+            raise HTTPException(400, "contradicting_claim_id is required")
+        try:
+            def operation():
+                with SessionLocal() as db:
+                    service = WorkEngine(db)
+                    primary = service._one(EpistemicClaim, user, claim_id, "claim")
+                    other = service._one(EpistemicClaim, user, contradicting_id, "contradicting claim")
+                    subject = _case_claim_subject(session_id)
+                    if primary.subject_ref != subject or other.subject_ref != subject:
+                        raise WorkError("claim not found")
+                    return service.record_contradiction(user, claim_id, contradicting_id, resolution=(payload or {}).get("resolution"))
             return await asyncio.to_thread(operation)
         except WorkError as exc:
             raise HTTPException(404, str(exc)) from exc
