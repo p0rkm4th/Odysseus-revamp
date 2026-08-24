@@ -85,8 +85,14 @@ def setup_work_routes(*, session_factory=SessionLocal):
     async def precheck_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): 
         return await tx(request, lambda svc,o,u: svc.record_precheck(o, run_id, payload))
     @router.post("/runs/{run_id}/invalidate")
-    async def invalidate_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): 
+    async def invalidate_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: svc.invalidate_state(o, run_id, payload.get("invalidations") or [], reason=str(payload.get("reason") or "mutation completed")))
+    @router.post("/runs/{run_id}/verification")
+    async def complete_verification(request: Request, run_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: svc.complete_verification(o, run_id, success=bool(payload.get("success")), details=payload.get("details") or {}, compensation_reference=payload.get("compensation_reference")))
+    @router.post("/runs/{run_id}/compensation")
+    async def complete_compensation(request: Request, run_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: svc.complete_compensation(o, run_id, success=bool(payload.get("success")), details=payload.get("details") or {}))
     @router.post("/claims/{claim_id}/contradictions", status_code=201)
     async def contradiction(request: Request, claim_id: str, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: svc.record_contradiction(o, claim_id, str(payload.get("contradicting_claim_id") or ""), resolution=payload.get("resolution")))
