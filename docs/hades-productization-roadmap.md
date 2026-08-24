@@ -429,3 +429,13 @@ observations non-canonical, and reuses CMDB dossiers for node inspection.
 No alternate topology store or identity merge path was introduced; discovery,
 observation persistence, and reconciliation remain owned by the existing CMDB
 and Network services.
+
+### Homelab visible authority slice
+
+Homelab is now directly discoverable in the primary application navigation. Its
+workspace projects the existing `homelab.manage` capability health, broker
+health, execution environment, bounded operation areas, and current CMDB
+observation counts. The surface explicitly states that ActionSpec, policy,
+approval, and the existing privileged host broker remain authoritative; it
+does not add a shell, Docker socket, or alternate executor. Service/storage/
+container health detail and live safe-operation dogfood remain future work.

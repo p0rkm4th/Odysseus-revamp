@@ -99,6 +99,28 @@ export async function openNetwork(){
   }
   return el;
 }
+export async function openHomelab(){
+  const el=panel('homelab-panel','Homelab','<p>Loading Homelab status…</p>');
+  try {
+    const [self,map]=await Promise.all([
+      fetch('/api/hades/self',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('Homelab status unavailable'))),
+      fetch('/api/network/map',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('Network projection unavailable'))),
+    ]);
+    const runtime=self.runtime||{}, capabilities=self.capabilities||[], homelab=capabilities.find(x=>x.capability==='homelab.manage')||{status:'available_if_authorized',authority:'existing privileged broker'};
+    const broker=runtime.broker_health||{};
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
+      <header class="hades-module-header"><div><h2>Homelab</h2><p>Bounded host operations, services, storage, containers, and network discovery</p></div><span class="hades-status-badge">${esc(homelab.status||'unknown')}</span></header>
+      <div class="hades-summary-metrics"><div class="hades-summary-metric"><small>Capability</small><strong>${esc(homelab.capability||'homelab.manage')}</strong></div><div class="hades-summary-metric"><small>Broker</small><strong>${esc(broker.status||'unknown')}</strong></div><div class="hades-summary-metric"><small>CMDB nodes</small><strong>${esc((map.nodes||[]).length)}</strong></div><div class="hades-summary-metric"><small>Execution</small><strong>${esc(runtime.execution_environment?.runtime||'projected')}</strong></div></div>
+      <section class="hades-detail-section"><h3>Authority and health</h3><p>${esc(homelab.description||'Bounded local Homelab capability')}</p><p class="muted">${esc(homelab.authority||broker.authority||'Existing policy and privileged broker remain authoritative.')}. Actions require their existing ActionSpec, policy, and approval paths.</p></section>
+      <section class="hades-detail-section"><h3>Available first-class areas</h3><ul><li>Host and service inspection</li><li>Bounded private-network discovery through the host broker</li><li>Scoped diagnostic planning and approved operations</li><li>CMDB-backed observations and Network Map</li></ul></section>
+      <section class="hades-detail-section"><h3>Network observation</h3><p>${esc((map.nodes||[]).length)} nodes and ${esc((map.edges||[]).length)} relationships are currently projected from ${esc(map.source||'canonical CMDB')}.</p><p class="muted">${esc(map.identity_rule||'IP addresses remain observations; no IP-only merge.')}</p></section>
+    </div>`;
+  } catch (error) {
+    el.querySelector('.hades-window-body').innerHTML=`<div class="hades-error-state">${esc(error.message)} <button class="list-item" data-retry-homelab>Retry</button></div>`;
+    el.querySelector('[data-retry-homelab]')?.addEventListener('click', () => openHomelab());
+  }
+  return el;
+}
 export async function openDeveloper(){
   const el=panel('developer-panel','Developer','<p>Loading Developer Mode…</p>');
   const d=await fetch('/api/developer/yolo/status').then(r=>r.json());
