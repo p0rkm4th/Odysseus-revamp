@@ -9,6 +9,17 @@ callers cannot bypass structured Run validation or leave a Run advertising a
 state it did not successfully enter. The canonical Run, ActionSpec, policy,
 approval, and journal architecture remains unchanged.
 
+### Setup Center foundation checkpoint
+
+The first Setup Center slice now uses a declarative `SetupContract` registry
+and a resumable owner-scoped state projection. It covers module categories,
+dependencies, permissions, secret references, safe status values, existing
+integration detection, explicit skip/resume, and reconfiguration state. The
+new workspace and API are projections only: setup does not resolve or expose
+secret values and cannot grant runtime authority. Module-specific credential
+flows, safe health operations, Integration Center projection, and owner-live
+browser acceptance remain subsequent work.
+
 ## Current checkpoint
 
 - V2 baseline source: `120e4afa9d0cd60fff3f6225c42d131837c6c260`.

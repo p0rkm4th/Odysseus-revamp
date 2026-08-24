@@ -40,6 +40,7 @@ import workModule from './js/work.js?v=20260823work1';
 import { openHousehold, openItAssets, openNetwork, openHomelab, openSmartHome, openCommunications, openTelegram, openDeveloper } from './js/intelligence.js';
 import { openWorldModel } from './js/worldModel.js';
 import { openControlCenter } from './js/controlCenter.js';
+import { openSetupCenter } from './js/setupCenter.js';
 import { openHades } from './js/persistentAgent.js';
 import { openOsint } from './js/osint.js';
 import './js/workspaceWindowManager.js';
@@ -104,7 +105,7 @@ function groupToolDestinations() {
     ['WORK', ['tool-work-btn', 'tool-tasks-btn']],
     ['KNOWLEDGE', ['tool-library-btn', 'tool-gallery-btn', 'tool-notes-btn']],
     ['AGENT', ['tool-memory-btn', 'tool-world-model-btn', 'tool-hades-btn']],
-    ['SYSTEM', ['tool-control-center-btn', 'tool-developer-btn', 'tool-theme-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
+    ['SYSTEM', ['tool-control-center-btn', 'tool-setup-center-btn', 'tool-developer-btn', 'tool-theme-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
   ];
   const header = section.querySelector('.section-header-flex');
   if (!header) return;
@@ -1186,6 +1187,7 @@ function initializeEventListeners() {
   const worldModelBtn = el('tool-world-model-btn'); if (worldModelBtn) worldModelBtn.addEventListener('click', openWorldModel);
   const developerBtn = el('tool-developer-btn'); if (developerBtn) developerBtn.addEventListener('click', openDeveloper);
   const controlCenterBtn = el('tool-control-center-btn'); if (controlCenterBtn) controlCenterBtn.addEventListener('click', openControlCenter);
+  const setupCenterBtn = el('tool-setup-center-btn'); if (setupCenterBtn) setupCenterBtn.addEventListener('click', openSetupCenter);
   const hadesBtn = el('tool-hades-btn'); if (hadesBtn) hadesBtn.addEventListener('click', openHades);
   const osintBtn = el('tool-osint-btn'); if (osintBtn) osintBtn.addEventListener('click', openOsint);
 

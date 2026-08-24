@@ -695,6 +695,8 @@ from routes.security_assessment_routes import setup_security_assessment_routes
 app.include_router(setup_security_assessment_routes())
 from routes.work_routes import setup_work_routes
 app.include_router(setup_work_routes())
+from routes.setup_center_routes import setup_setup_center_routes
+app.include_router(setup_setup_center_routes())
 from routes.intelligence_routes import setup_intelligence_routes
 app.include_router(setup_intelligence_routes())
 
