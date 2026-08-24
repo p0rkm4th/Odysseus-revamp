@@ -739,6 +739,14 @@ does not create a second planner or grant execution authority. Focused planner,
 verified-execution, and Work tests pass. Full consequential execution,
 compensation orchestration, and owner-live dogfood remain pending.
 
+The canonical WorkEngine now provides a narrow trusted-binding orchestration
+seam. It revalidates the persisted Run before dispatch, honors cancellation and
+resource locks, accepts only a structured result from runtime binding code,
+persists provenance-bearing output, and records binding failure with lock
+release. It does not accept model-supplied commands or tool names. Concrete
+binding adapters, ambiguity handling, compensation dispatch, and live
+consequential dogfood remain pending.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
