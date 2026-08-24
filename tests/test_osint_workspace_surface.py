@@ -21,6 +21,19 @@ def test_osint_is_primary_navigation_and_has_investigation_workspace():
     assert "sourceCount" in osint
     assert "not promoted into claims" in osint
     assert "External research remains tainted content" in osint
+    assert "/api/research/${encodeURIComponent(sessionId)}/claims" in osint
+    assert "canonical_claim_count" in osint
+    assert "No reviewed canonical claims are attached" in osint
+
+
+def test_osint_claim_projection_reuses_owner_scoped_work_ledger():
+    routes = (ROOT / "routes/research/research_routes.py").read_text()
+    assert "osint:case:" in routes
+    assert "WorkEngine(db).list_claims" in routes
+    assert "WorkEngine(db).record_claim" in routes
+    assert "claim_lineage" in routes
+    assert "_assert_owns_research(session_id, user)" in routes
+    assert "deliberately not promoted" in routes
 
 
 def test_osint_intake_keeps_public_source_and_review_boundaries_visible():
