@@ -177,6 +177,15 @@ def context_trace(
         "recent_conversation": _section(recent),
         "supplement": _section([m for m in messages if _is_context_supplement(m)]),
     }
+    memory_messages = [
+        m for m in messages
+        if str((m.get("metadata") or {}).get("source") or "").startswith("saved memory:")
+        or (m.get("metadata") or {}).get("context_kind") == "explicit_memory_result"
+    ]
+    explicit_memory_messages = [
+        m for m in memory_messages
+        if (m.get("metadata") or {}).get("context_kind") == "explicit_memory_result"
+    ]
     trace = {
         "digest": hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16],
         "messages": len(messages),
@@ -195,6 +204,18 @@ def context_trace(
             for m in recent
         ],
         "sections": sections,
+        "memory": {
+            "explicit_query": bool(explicit_memory_messages),
+            "retrieved_count": sum(
+                int((m.get("metadata") or {}).get("memory_retrieved_count") or 0)
+                for m in explicit_memory_messages
+            ),
+            "projected_count": len(memory_messages),
+            "provider_payload_present": bool(memory_messages),
+            "roles": [str(m.get("role") or "") for m in memory_messages],
+            "tokens": estimate_tokens(memory_messages),
+            "content_logged": False,
+        },
         "tool_schema_tokens": estimate_tokens(tool_schemas or []),
         "tool_schema_count": len(tool_schemas or []),
         "user_turns": sum(1 for m in messages if m.get("role") == "user" and not _is_context_supplement(m)),

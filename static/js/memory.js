@@ -41,6 +41,9 @@ function renderMemoryDiagnostics(diagnostics) {
     ['Memory section', String(d.section_messages ?? 0) + ' messages / ' + String(d.section_tokens ?? 0) + ' tokens'],
     ['Context trimmed', d.context_trimmed ? 'yes' : 'no'],
     ['Explicit result present', d.explicit_result_present_after_trim ? 'yes' : 'no'],
+    ['Provider payload memory', d.provider_payload_memory_present ? 'present' : 'absent'],
+    ['Memory location', d.memory_section_location || 'not projected'],
+    ['Memory roles', Array.isArray(d.memory_section_roles) ? d.memory_section_roles.join(', ') : 'n/a'],
     ['Content logged', d.content_logged ? 'yes' : 'no'],
     ['References', String(Array.isArray(d.memory_ids) ? d.memory_ids.length : 0) + ' owner-scoped IDs'],
   ];

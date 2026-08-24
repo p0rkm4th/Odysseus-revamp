@@ -517,6 +517,21 @@ palette also exposes Open Documents. A second document store or editor was not
 introduced; entity dossier linking and broader document provenance remain
 future product work.
 
+### P0 memory grounding gate
+
+The existing Brain store is canonical; no second memory engine was introduced.
+The repaired path recognizes explicit owner-memory wording including “all the
+information you have about me,” classifies it into the existing memory domain,
+and projects the existing structured owner-scoped Memory Result. Qwen/compact
+routes now preserve explicit `OK`, `ZERO_RESULT`, and `RETRIEVAL_FAILED` status
+instead of reducing the result to optional bullet facts. Automatic procedural
+Skills are suppressed for explicit Brain reads, so a Skill such as
+`obsidian-rag-maintenance` cannot substitute for personal memory. Sanitized
+context/provider traces record counts, roles, section location, token size, and
+presence without recording memory content. Synthetic regression coverage is
+green; authenticated live owner-memory dogfood remains the next acceptance
+step.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
