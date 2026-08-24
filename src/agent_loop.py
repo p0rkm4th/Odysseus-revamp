@@ -4998,6 +4998,12 @@ async def stream_agent_loop(
             )
 
     _intent_domains = set(_intent.get("domains") or set())
+    _network_discovery_reply = bool(
+        re.fullmatch(
+            r"\s*192\.168\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?\s*",
+            _last_user,
+        )
+    ) and bool(_intent.get("continuation"))
     # Re-apply the discovery-only clamp after the deterministic final tool
     # projection above, which otherwise re-adds the generic network domain's
     # shell tools.
@@ -5005,7 +5011,7 @@ async def stream_agent_loop(
         not guide_only
         and _relevant_tools is not None
         and "network_ops" in _intent_domains
-        and _explicit_network_discovery_request(_last_user)
+        and (_explicit_network_discovery_request(_last_user) or _network_discovery_reply)
     ):
         _relevant_tools.difference_update({"bash", "run_shell", "python"})
         _relevant_tools.add("manage_homelab")
@@ -5034,7 +5040,7 @@ async def stream_agent_loop(
         not guide_only
         and _relevant_tools is not None
         and "network_ops" in _intent_domains
-        and _explicit_network_discovery_request(_last_user)
+        and (_explicit_network_discovery_request(_last_user) or _network_discovery_reply)
     ):
         _relevant_tools.difference_update({"bash", "run_shell", "python"})
         _relevant_tools.add("manage_homelab")
