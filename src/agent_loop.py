@@ -6501,12 +6501,23 @@ async def stream_agent_loop(
                 _conversation_for_discovery,
                 re.IGNORECASE,
             )
+            _discovery_result_present = bool(
+                _planned_discovery_digest
+                and re.search(
+                    r'(?:\"kind\"\s*:\s*\"discovery\".*?\"success\"\s*:\s*true|'
+                    r'\"candidate_count\"\s*:\s*\d+.*?\"nmap_ping_scan\")',
+                    _conversation_for_discovery,
+                    re.IGNORECASE | re.DOTALL,
+                )
+                and _planned_discovery_digest.group(1).lower()
+                in _conversation_for_discovery.lower()
+            )
             if _planned_discovery_digest and re.search(
                 r"\b(?:network discovery|plan_network_discovery|private subnet|"
                 r"192\.168\.10\.0/24|bounded discovery)\b",
                 _conversation_for_discovery,
                 re.IGNORECASE,
-            ):
+            ) and not _discovery_result_present:
                 logger.info(
                     "[agent] deterministic approved discovery continuation repair digest=%s",
                     _planned_discovery_digest.group(1)[:16],
@@ -7197,7 +7208,7 @@ async def stream_agent_loop(
                 )
                 if (
                     isinstance(_homelab_payload, dict)
-                    and _homelab_action == "discovery_plan"
+                    and _homelab_action in {"discovery_plan", "create_discovery_plan"}
                     and set(_homelab_payload) <= {"action", "scope", "target", "cidr", "mode"}
                     and (_homelab_payload.get("scope") or _homelab_payload.get("target") or _homelab_payload.get("cidr"))
                 ):
@@ -7209,7 +7220,8 @@ async def stream_agent_loop(
                     ))
                     if _alias_cidr:
                         logger.info(
-                            "[agent] normalized discovery_plan alias to canonical plan cidr=%s",
+                            "[agent] normalized %s alias to canonical plan cidr=%s",
+                            _homelab_action,
                             _alias_cidr,
                         )
                         block = ToolBlock(
