@@ -74,3 +74,10 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "execution_ambiguous" in module
     assert "compensation_result" in module
     assert "ambiguous_reason" in module
+    app = (ROOT / "static/app.js").read_text()
+    index = (ROOT / "static/index.html").read_text()
+    integrations = (ROOT / "static/js/integrationCenter.js").read_text()
+    assert 'id="tool-integrations-center-btn"' in index
+    assert "openIntegrationCenter" in app
+    assert "/api/setup-center/integrations" in integrations
+    assert "secrets hidden" in integrations

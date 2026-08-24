@@ -41,6 +41,7 @@ import { openHousehold, openItAssets, openNetwork, openHomelab, openSmartHome, o
 import { openWorldModel } from './js/worldModel.js';
 import { openControlCenter } from './js/controlCenter.js';
 import { openSetupCenter } from './js/setupCenter.js';
+import { openIntegrationCenter } from './js/integrationCenter.js';
 import { openHades } from './js/persistentAgent.js';
 import { openOsint } from './js/osint.js';
 import './js/workspaceWindowManager.js';
@@ -82,7 +83,7 @@ function hydrateSemanticNavIcons() {
     'tool-hades-btn': 'hades', 'tool-household-btn': 'household',
     'tool-it-assets-btn': 'itAssets', 'tool-network-btn': 'network',
     'tool-developer-btn': 'developer', 'tool-world-model-btn': 'worldModel',
-    'tool-control-center-btn': 'controlCenter', 'tool-osint-btn': 'osint',
+    'tool-control-center-btn': 'controlCenter', 'tool-osint-btn': 'osint', 'tool-integrations-center-btn': 'integrations',
     'tool-security-btn': 'security', 'tool-homelab-btn': 'homelab',
     'tool-communications-btn': 'communications', 'tool-research-btn': 'deepResearch',
   };
@@ -105,7 +106,7 @@ function groupToolDestinations() {
     ['WORK', ['tool-work-btn', 'tool-tasks-btn']],
     ['KNOWLEDGE', ['tool-library-btn', 'tool-gallery-btn', 'tool-notes-btn']],
     ['AGENT', ['tool-memory-btn', 'tool-world-model-btn', 'tool-hades-btn']],
-    ['SYSTEM', ['tool-control-center-btn', 'tool-setup-center-btn', 'tool-developer-btn', 'tool-theme-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
+    ['SYSTEM', ['tool-control-center-btn', 'tool-setup-center-btn', 'tool-integrations-center-btn', 'tool-developer-btn', 'tool-theme-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
   ];
   const header = section.querySelector('.section-header-flex');
   if (!header) return;
@@ -1188,6 +1189,7 @@ function initializeEventListeners() {
   const developerBtn = el('tool-developer-btn'); if (developerBtn) developerBtn.addEventListener('click', openDeveloper);
   const controlCenterBtn = el('tool-control-center-btn'); if (controlCenterBtn) controlCenterBtn.addEventListener('click', openControlCenter);
   const setupCenterBtn = el('tool-setup-center-btn'); if (setupCenterBtn) setupCenterBtn.addEventListener('click', openSetupCenter);
+  const integrationsCenterBtn = el('tool-integrations-center-btn'); if (integrationsCenterBtn) integrationsCenterBtn.addEventListener('click', openIntegrationCenter);
   const hadesBtn = el('tool-hades-btn'); if (hadesBtn) hadesBtn.addEventListener('click', openHades);
   const osintBtn = el('tool-osint-btn'); if (osintBtn) osintBtn.addEventListener('click', openOsint);
 
