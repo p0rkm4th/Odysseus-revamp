@@ -773,6 +773,12 @@ creates a separate reviewable proposal without executing that Run; and Setup
 Center profile selection remains resumable, secret-free, and authority
 preserving.
 
+The failure-injection regression slice now covers malformed binding output,
+ambiguous owner isolation, unavailable registered bindings, retained-lock
+cleanup, and Setup Center secret redaction. These scenarios remain synthetic;
+provider credentials, live broker operations, and owner-authenticated browser
+acceptance are not inferred from them.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
