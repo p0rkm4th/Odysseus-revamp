@@ -1961,6 +1961,7 @@ def _assistant_requested_followup(messages: List[Dict]) -> bool:
             return False
         return bool(re.search(
             r"\b(what would you like|what should|what do you want|which one|which model|"
+            r"which .{0,40}(scan|range|subnet|network)|"
             r"what.+(?:todo|to-do|list|document|email|model|server|item)|"
             r"any specific|give me|tell me|proceed|continue|carry on|go ahead|"
             r"run (?:the|it|this)|start (?:the|it|this)|approve|allow)\b",

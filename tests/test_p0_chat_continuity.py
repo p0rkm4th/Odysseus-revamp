@@ -64,3 +64,14 @@ def test_confirmation_after_assistant_scan_prompt_keeps_network_route():
     intent = _classify_agent_request(messages, messages[-1]["content"])
     assert intent["continuation"] is True
     assert "network_ops" in set(intent["domains"])
+
+
+def test_answer_to_scan_range_question_keeps_network_route():
+    messages = [
+        {"role": "user", "content": "scan my network and tell me what you find on the 192 network"},
+        {"role": "assistant", "content": "Which private range should I scan?"},
+        {"role": "user", "content": "192.168.10.0/24"},
+    ]
+    intent = _classify_agent_request(messages, messages[-1]["content"])
+    assert intent["continuation"] is True
+    assert "network_ops" in set(intent["domains"])
