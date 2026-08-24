@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.database import Base
 from src.work_engine import WorkEngine, WorkError
+from src.world_model import WorldModelService
 
 
 @pytest.fixture()
@@ -39,6 +40,29 @@ def test_invalidation_preserves_claim_and_makes_gap_stale(db):
     result = svc.invalidate_state("alice", run["id"], [{"subject_ref": "service:nginx", "predicate": "status"}])
     assert claim["id"] in result["stale_claims"]
     assert svc.knowledge_gaps("alice", [{"subject_ref": "service:nginx", "predicate": "status"}])["stale"]
+
+
+def test_invalidation_propagates_only_through_strong_declared_dependency(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    database = svc.record_claim("alice", {"claim_class": "Observation", "subject_ref": "service:postgres", "predicate": "health", "value": "healthy", "source": "probe"})
+    app = svc.record_claim("alice", {"claim_class": "Observation", "subject_ref": "service:acme", "predicate": "health", "value": "healthy", "source": "probe"})
+    unrelated = svc.record_claim("alice", {"claim_class": "Observation", "subject_ref": "service:nginx", "predicate": "health", "value": "healthy", "source": "probe"})
+    WorldModelService(db).create_relationship("alice", {"source_ref": "service:acme", "relation": "DEPENDS_ON", "target_ref": "service:postgres", "status": "observed", "confidence_class": "high", "observation_kind": "observed", "source": "cmdb"})
+    result = svc.invalidate_state("alice", run["id"], [{"subject_ref": "service:postgres", "predicate": "health", "propagate": {"relation": "DEPENDS_ON", "predicate": "health"}}])
+    assert set(result["stale_claims"]) == {database["id"], app["id"]}
+    assert unrelated["id"] not in result["stale_claims"]
+
+
+def test_invalidation_does_not_propagate_proposed_dependency(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    database = svc.record_claim("alice", {"claim_class": "Observation", "subject_ref": "service:postgres", "predicate": "health", "value": "healthy", "source": "probe"})
+    app = svc.record_claim("alice", {"claim_class": "Observation", "subject_ref": "service:acme", "predicate": "health", "value": "healthy", "source": "probe"})
+    WorldModelService(db).create_relationship("alice", {"source_ref": "service:acme", "relation": "DEPENDS_ON", "target_ref": "service:postgres", "status": "proposed", "confidence_class": "high", "observation_kind": "inferred", "source": "model"})
+    result = svc.invalidate_state("alice", run["id"], [{"subject_ref": "service:postgres", "predicate": "health", "propagate": {"relation": "DEPENDS_ON", "predicate": "health"}}])
+    assert result["stale_claims"] == [database["id"]]
+    assert app["id"] not in result["stale_claims"]
 
 
 def test_invalid_transition_fails_closed(db):

@@ -604,6 +604,16 @@ This is page/window-compatible projection work over the existing Run and
 ActionSpec paths. Owner-authenticated live acceptance of consequential work
 remains pending.
 
+### Bounded invalidation propagation checkpoint
+
+State invalidation remains history-preserving and owner-scoped. An explicit
+invalidation rule may now propagate one hop through an observed or
+owner-confirmed, high-confidence World Model dependency; proposed or inferred
+edges do not propagate stale state. This keeps dependent service observations
+honestly stale without invalidating unrelated claims or inventing topology.
+Focused verified-execution coverage is green; broader executor integration and
+live safe-operation dogfood remain pending.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its

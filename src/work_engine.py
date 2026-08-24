@@ -5,7 +5,7 @@ from hashlib import sha256
 from typing import Any
 from uuid import uuid4
 from sqlalchemy.orm import Session
-from core.work_models import (EpistemicClaim, WorkAction, WorkArtifact, WorkCommitment, WorkEvent, WorkGoal, WorkLock, WorkProject, WorkResult, WorkRun, WorkTask, WorkTaskDependency)
+from core.work_models import (EpistemicClaim, WorldRelationship, WorkAction, WorkArtifact, WorkCommitment, WorkEvent, WorkGoal, WorkLock, WorkProject, WorkResult, WorkRun, WorkTask, WorkTaskDependency)
 
 GOAL_STATUSES = {"draft", "active", "blocked", "paused", "completed", "cancelled", "failed"}
 PROJECT_STATUSES = {"planned", "active", "blocked", "paused", "completed", "cancelled"}
@@ -378,15 +378,34 @@ class WorkEngine:
         self.db.commit(); return entry
 
     def invalidate_state(self, owner, run_id, invalidations, *, reason="mutation completed"):
-        """Mark matching current claims stale while retaining historical evidence."""
+        """Mark targeted current claims stale while retaining historical evidence.
+
+        Optional propagation is deliberately explicit in the invalidation
+        entry. Only observed or owner-confirmed World Model edges with strong
+        confidence propagate, and propagation is one hop per declared rule;
+        proposed/inferred topology never silently invalidates unrelated state.
+        """
         self._one(WorkRun, owner, run_id, "run")
         entries = [item for item in (invalidations or []) if isinstance(item, dict)]
+        expanded = list(entries)
+        for item in entries:
+            propagation = item.get("propagate") or []
+            if isinstance(propagation, dict): propagation = [propagation]
+            for rule in propagation:
+                if not isinstance(rule, dict): continue
+                relation = str(rule.get("relation") or "").strip().upper()
+                predicate = rule.get("predicate") or item.get("predicate")
+                if not relation or not predicate: continue
+                rows = self.db.query(WorldRelationship).filter_by(owner=owner, relation=relation, target_ref=item.get("subject_ref")).all()
+                for row in rows:
+                    if row.status not in {"observed", "user_confirmed"} or row.confidence_class not in {"high", "confirmed"}: continue
+                    expanded.append({"subject_ref": row.source_ref, "predicate": predicate, "propagated_from": item.get("subject_ref"), "propagation_relation": relation})
         changed = []
         for claim in self.db.query(EpistemicClaim).filter_by(owner=owner, status="active").all():
-            if any((item.get("subject_ref") in {None, claim.subject_ref} and item.get("predicate") in {None, claim.predicate}) for item in entries):
+            if any((item.get("subject_ref") in {None, claim.subject_ref} and item.get("predicate") in {None, claim.predicate}) for item in expanded):
                 provenance = dict(claim.provenance or {}); provenance.update({"state": "stale", "invalidated_at": now().isoformat(), "invalidated_by_run": run_id, "invalidated_reason": reason}); claim.provenance = provenance; changed.append(claim.id)
-        self.event(owner, "execution.state_invalidated", run_id=run_id, payload={"claims": changed, "invalidations": entries, "reason": reason})
-        self.db.commit(); return {"run_id": run_id, "stale_claims": changed, "invalidations": entries}
+        self.event(owner, "execution.state_invalidated", run_id=run_id, payload={"claims": changed, "invalidations": expanded, "reason": reason})
+        self.db.commit(); return {"run_id": run_id, "stale_claims": changed, "invalidations": expanded}
 
     def request_cancel(self, owner, run_id, *, reason="operator requested cancellation"):
         row = self._one(WorkRun, owner, run_id, "run")
