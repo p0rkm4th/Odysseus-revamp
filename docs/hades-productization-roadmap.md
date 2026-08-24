@@ -565,6 +565,15 @@ endpoint; prior evidence remains available through inactive-claim inspection.
 Report prose and tainted research findings are not auto-promoted. Open
 questions, delta research, and owner-live provider dogfood remain future work.
 
+### OSINT open-question checkpoint
+
+Research cases now persist owner-scoped open questions in the existing case
+projection with status, reason, relevant entity, required/current evidence,
+resolution, and status history. The dossier can add questions and mark them
+answered; unanswered and blocked questions remain visible rather than being
+closed by generated report prose. Updates use atomic replacement of the
+existing owner-checked case JSON and do not create a second research store.
+
 ### Theme-aware icon and semantic token checkpoint
 
 The shared theme system now derives a complete semantic token layer for each
