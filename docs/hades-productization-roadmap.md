@@ -762,6 +762,11 @@ Successful compensation returns the Run to `verifying`, while a failed or
 malformed compensation remains an explicit `compensation_failed` outcome; the
 restoration verifier is still required before the Run can succeed.
 
+Control Center Run Inspector now distinguishes ambiguous execution from an
+ordinary failure, suppresses unsafe retry controls while ambiguity is active,
+and shows compensation contract/result, retained-lock, and restoration-
+verification trajectory metadata as escaped structured projections.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by

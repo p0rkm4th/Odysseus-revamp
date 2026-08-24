@@ -71,3 +71,6 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "/actions/${encodeURIComponent(button.dataset.actionId)}/retry" in module
     assert "Retry safely" in module
     assert "control-retry-action" in module
+    assert "execution_ambiguous" in module
+    assert "compensation_result" in module
+    assert "ambiguous_reason" in module
