@@ -9,13 +9,14 @@ export async function openHades() {
   const el=openView('hades-self', null, 'Hades', '<p>Loading Hades status…</p>');
   const body=el.querySelector('.hades-window-body');
   try {
-    const [status, episodes, notifications, monitors] = await Promise.all([
-      api('/api/hades/status'), api('/api/hades/episodes'), api('/api/hades/notifications?unread=true'), api('/api/hades/monitors')
+    const [status, episodes, notifications, monitors, attention] = await Promise.all([
+      api('/api/hades/status'), api('/api/hades/episodes'), api('/api/hades/notifications?unread=true'), api('/api/hades/monitors'), api('/api/hades/attention')
     ]);
     const identity=status.identity||{}, runtime=status.runtime||{}, work=status.work||{};
     body.innerHTML=`<div class="hades-status-panel"><div class="work-header"><div><h2>Hades</h2><p>Grounded persistent-agent status</p></div><button id="hades-refresh">Refresh</button></div>
       <section><h3>Identity / runtime</h3>${card(identity.canonical_name||'Hades','installation '+(identity.installation_id||'—'),`model ${runtime.model_profile||'—'} · runtime ${runtime.runtime_version||'—'}`)}</section>
       <section><h3>Current work</h3>${card('Active goals',(work.goals||[]).length,`${(work.runs||[]).length} active runs · ${work.pending_approval?'approval pending':'no approval pending'}`)}${card('Commitments',(status.commitments||[]).length,`${status.notifications?.unread||0} unread notifications`)}</section>
+      <section><h3>Attention queue</h3>${(attention.items||[]).map(x=>card(x.title||x.kind,x.status,x.priority||'')).join('')||'<p class="muted">Nothing currently needs attention.</p>'}</section>
       <section><h3>Capabilities</h3>${(status.capabilities||[]).slice(0,12).map(x=>card(x.capability,x.status,x.missing_executables?.join(', ')||x.execution_profile||'')).join('')}</section>
       <section><h3>Recent Episodes</h3>${(episodes.episodes||[]).slice(0,8).map(x=>card(x.title,x.outcome,`${x.episode_type} · evidence ${(x.evidence_references||[]).length}`)).join('')||'<p class="muted">No meaningful episodes recorded.</p>'}</section>
       <section><h3>Unread Notifications</h3>${(notifications.notifications||[]).map(x=>`<button class="work-card hades-notification" data-id="${esc(x.id)}"><strong>${esc(x.title)}</strong><span>${esc(x.severity)}</span><small>${esc(x.body)}</small></button>`).join('')||'<p class="muted">No unread notifications.</p>'}</section>
