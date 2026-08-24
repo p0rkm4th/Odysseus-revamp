@@ -2,6 +2,8 @@ from src.agent_tools import FUNCTION_TOOL_SCHEMAS, TOOL_TAGS
 from src.agent_loop import TOOL_SECTIONS, _DOMAIN_TOOL_MAP
 from src.capability_registry import capability_for_tool
 from src.tool_bindings import TOOL_BINDINGS, binding_for_tool
+import asyncio
+import src.tool_execution as tool_execution
 
 
 def _schema(name):
@@ -45,3 +47,25 @@ def test_network_binding_preserves_host_broker_boundary():
     assert binding.target_scope == "private_network"
     assert binding.requires_direct_container_access is False
     assert "manage_homelab" in _DOMAIN_TOOL_MAP["network_ops"]
+
+
+def test_trusted_work_adapter_reuses_registered_binding(monkeypatch):
+    async def fake_executor(block, owner=None):
+        assert block.tool_type == "manage_assets"
+        assert owner == "alice"
+        return "manage_assets", {"exit_code": 0, "data": {"count": 1}}
+
+    monkeypatch.setitem(tool_execution._CAPABILITY_V1_EXECUTORS, "manage_assets", fake_executor)
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="manage_assets", payload={"action": "summary"}, owner="alice"))
+    assert result["binding"] == "manage_assets"
+    assert result["success"] is True
+
+
+def test_trusted_work_adapter_rejects_unknown_binding():
+    try:
+        asyncio.run(tool_execution.execute_registered_binding(tool_name="unknown", payload={}, owner="alice"))
+    except ValueError as exc:
+        assert "unavailable" in str(exc)
+    else:
+        raise AssertionError("unknown binding was accepted")
