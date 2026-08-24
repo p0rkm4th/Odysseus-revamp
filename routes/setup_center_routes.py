@@ -62,7 +62,7 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
     async def module_health(request: Request, module_id: str):
         """Run only bounded, non-mutating setup health checks."""
         value = owner(request)
-        supported = {"communications.telegram", "communications.email", "communications.calendar", "communications.contacts", "home.smart-home"}
+        supported = {"core.models", "core.memory", "investigation.osint", "technology.network", "technology.homelab", "communications.telegram", "communications.email", "communications.calendar", "communications.contacts", "home.smart-home"}
         if module_id not in supported:
             raise HTTPException(409, "safe health check is not implemented for this module")
 
@@ -71,6 +71,37 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
             overview = await _home_assistant_overview()
             healthy = overview.get("status") == "healthy"
             return {"module_id": module_id, "status": "CONFIGURED" if healthy else "DEGRADED" if overview.get("configured") else "NOT_CONFIGURED", "checks": {"owner_scoped": True, "safe_read_only": True, "api_status_read": healthy, "entity_state_read": healthy, "mutations_performed": False}, "detail": "Home Assistant read-only health and entity projection succeeded" if healthy else "Home Assistant safe read did not succeed; no mutation was attempted", "authority_unchanged": True, "secret_values_exposed": False}
+
+        if module_id in {"core.models", "core.memory", "investigation.osint", "technology.network", "technology.homelab"}:
+            def capability_check(_current_owner):
+                from src.capability_registry import capability_for_id
+                from src.tool_bindings import binding_for_tool
+                if module_id == "core.models":
+                    available = capability_for_id("intelligence.route") is not None
+                    detail = "model routing capability metadata is available; no inference was requested"
+                    checks = {"owner_scoped": True, "capability_registry": available, "inference_performed": False}
+                elif module_id == "core.memory":
+                    from src.memory_grounding import summarize_owner_memory
+                    available = callable(summarize_owner_memory)
+                    detail = "canonical owner-scoped memory service is importable; no retrieval was performed"
+                    checks = {"owner_scoped": True, "canonical_memory_service": available, "retrieval_performed": False}
+                elif module_id == "investigation.osint":
+                    from src.osint_policy import validate_request
+                    available = callable(validate_request)
+                    detail = "public-source OSINT policy boundary is available; no public request was sent"
+                    checks = {"owner_scoped": True, "public_source_policy": available, "network_request_performed": False}
+                elif module_id == "technology.network":
+                    binding = binding_for_tool("manage_homelab")
+                    available = bool(binding and binding.execution_location == "host_broker" and binding.target_scope == "private_network")
+                    detail = "private-network broker binding is declared; no scan or broker request was performed"
+                    checks = {"owner_scoped": True, "host_broker_boundary": available, "private_scope_declared": available, "scan_performed": False}
+                else:
+                    binding = binding_for_tool("manage_homelab")
+                    available = binding is not None
+                    detail = "bounded Homelab binding is declared; no host operation was performed"
+                    checks = {"owner_scoped": True, "bounded_binding": available, "host_operation_performed": False}
+                return {"module_id": module_id, "status": "CONFIGURED" if available else "DEGRADED", "checks": {**checks, "safe_read_only": True, "mutations_performed": False}, "detail": detail, "authority_unchanged": True, "secret_values_exposed": False}
+            return await asyncio.to_thread(capability_check, value)
 
         def check(current_owner):
             db = session_factory()
