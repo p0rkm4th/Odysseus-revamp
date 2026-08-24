@@ -41,6 +41,18 @@ def setup_work_routes(*, session_factory=SessionLocal):
     async def create_goal(request: Request, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.create_goal(o,payload))
     @router.patch("/goals/{goal_id}")
     async def update_goal(request: Request, goal_id: str, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.update_goal(o,goal_id,payload))
+    @router.get("/missions")
+    async def missions(request: Request, lifecycle: str | None = None):
+        return {"missions": await tx(request, lambda svc,o,u: __import__("src.mission_projection", fromlist=["MissionService"]).MissionService(svc.db).list(o, lifecycle=lifecycle))}
+    @router.post("/missions", status_code=201)
+    async def create_mission(request: Request, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.mission_projection", fromlist=["MissionService"]).MissionService(svc.db).create(o, payload))
+    @router.get("/missions/{mission_id}")
+    async def get_mission(request: Request, mission_id: str):
+        return await tx(request, lambda svc,o,u: __import__("src.mission_projection", fromlist=["MissionService"]).MissionService(svc.db).get(o, mission_id))
+    @router.patch("/missions/{mission_id}")
+    async def update_mission(request: Request, mission_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.mission_projection", fromlist=["MissionService"]).MissionService(svc.db).update(o, mission_id, payload))
     @router.post("/projects", status_code=201)
     async def create_project(request: Request, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.create_project(o,payload))
     @router.get("/projects")

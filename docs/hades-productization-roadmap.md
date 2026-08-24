@@ -202,6 +202,15 @@ capability exposure, approval, or execution authority. Provider-level live
 qualification, richer cost/latency telemetry, routing explanation UI, and
 shadow plan review remain future work.
 
+### Mission projection slice
+
+Missions now reuse canonical WorkGoals marked with an explicit operating-mode
+constraint and project linked WorkRuns, success criteria, deadlines, lifecycle,
+and stable goal references. Control Center exposes Mission inspection. This is
+not a second scheduler or task engine; Watch behavior remains owned by the
+existing bounded Monitor engine. Restart-persistent mission orchestration,
+watch response tiers, and live dedupe dogfood remain future work.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail

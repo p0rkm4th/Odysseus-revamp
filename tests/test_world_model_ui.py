@@ -29,3 +29,4 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "'incidents'" in module and "'changes'" in module
     assert "controlEntityDossier" in module
     assert "Hypotheses" in module and "Preview" in module
+    assert "/api/work/missions" in module and "Missions" in module
