@@ -13,6 +13,7 @@ class AssistantInstance(TimestampMixin, Base):
     revision = Column(Integer, nullable=False, default=1)
     accepted_source = Column(String(128), nullable=True)
     accepted_runtime = Column(String(300), nullable=True)
+    last_seen_at = Column(DateTime, nullable=True)
     __table_args__ = (UniqueConstraint("owner", "canonical_name", name="uq_assistant_instance_owner_name"),)
 
 
