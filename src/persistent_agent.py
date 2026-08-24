@@ -30,6 +30,11 @@ def row_dict(row):
     return {c.name: iso(getattr(row, c.name)) for c in row.__table__.columns}
 
 
+def monitor_response_policy(consequence_tier: int) -> str:
+    """Project bounded Monitor consequence semantics without granting authority."""
+    return {0: "observe", 1: "notify", 2: "create_work", 3: "execute_pre_authorized_action"}.get(int(consequence_tier), "notify")
+
+
 class PersistentAgent:
     def __init__(self, db: Session):
         self.db = db
@@ -182,6 +187,8 @@ class PersistentAgent:
                 event = WorkEvent(id=ident("event"), owner=owner, event_type="monitor.triggered", payload={"monitor_id": monitor.id, "condition_type": monitor.condition_type, "detail": detail})
                 self.db.add(event); self.db.commit()
                 note=self.notify(owner, title=monitor.name, body=detail, notification_type="monitor_trigger", dedupe_key=f"monitor:{monitor.id}:{current.date()}", severity="warning", monitor_id=monitor.id, source_domain=monitor.source_domain, source_event_id=event.id)
+                note["response_policy"] = monitor_response_policy(monitor.consequence_tier)
+                note["authority_unchanged"] = True
                 result.append(note)
             self.db.commit()
         return result

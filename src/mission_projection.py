@@ -22,7 +22,21 @@ class MissionService:
     def project(self, owner, row):
         result = serialize(row)
         result["lifecycle"] = self.lifecycle(row); result["objective"] = row.desired_outcome or row.title
-        result["runs"] = [serialize(run) for run in self.db.query(WorkRun).filter_by(owner=owner, goal_id=row.id).order_by(WorkRun.updated_at.desc()).limit(50).all()]
+        runs = [serialize(run) for run in self.db.query(WorkRun).filter_by(owner=owner, goal_id=row.id).order_by(WorkRun.updated_at.desc()).limit(50).all()]
+        constraints = dict(row.constraints or {})
+        checkpoints = []
+        for run in runs:
+            checkpoints.extend(list(run.get("checkpoints") or []))
+        result["runs"] = runs
+        result["mission_projection"] = {
+            "success_criteria": row.success_criteria or {},
+            "constraints": constraints,
+            "budget": constraints.get("budget") or {},
+            "allowed_capabilities": list(constraints.get("allowed_capabilities") or []),
+            "checkpoints": checkpoints[-100:],
+            "blockers": [run.get("current_step") or run.get("error_summary") for run in runs if run.get("status") in {"failed", "awaiting_input", "suspended"}],
+            "authority_unchanged": True,
+        }
         result["canonical_ref"] = f"goal://{row.id}"
         return result
 
