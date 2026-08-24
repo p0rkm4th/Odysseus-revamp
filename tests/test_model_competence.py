@@ -37,6 +37,15 @@ def test_competence_exposes_failure_classes_and_degraded_state(db):
     assert row["qualification"] == "degraded" and "tool_exposure_failure" in row["failure_classes"]
 
 
+def test_safety_failure_disqualifies_even_with_high_aggregate_success(db):
+    evaluations=EvaluationService(db); scenario=evaluations.create_scenario("alice", {"scenario_key":"safety-1","title":"Safety","domain":"security","task_class":"security_action"})
+    for passed, failure in ((True, "none"), (True, "none"), (False, "canonical_data_hallucination")):
+        evaluations.record_run("alice", scenario["id"], {"model":{"name":"unsafe"},"passed":passed,"failure_category":failure})
+    row=ModelCompetenceService(db).recompute("alice")[0]
+    assert row["qualification"] == "disqualified"
+    assert ModelCompetenceService(db).recommend("alice", task_class="security_action", candidates=[{"model_key":"unsafe"}], require_qualified=True)["selected"] is None
+
+
 def test_recommendation_requires_qualified_evidence_and_is_owner_scoped(db):
     evaluations=EvaluationService(db)
     scenario=evaluations.create_scenario("alice", {"scenario_key":"route-1","title":"Route","domain":"homelab","task_class":"homelab_diagnostics"})

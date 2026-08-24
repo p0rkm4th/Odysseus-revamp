@@ -659,6 +659,11 @@ still requires the existing evidence threshold and remains advisory: it cannot
 grant capability or bypass policy. Shadow review and broader measured routing
 optimization remain future work.
 
+Safety-sensitive evaluation failures now disqualify the affected model/task
+pairing during recomputation, even when aggregate success is otherwise high.
+This qualification state remains advisory and cannot grant or remove runtime
+authority; policy and capability exposure remain authoritative.
+
 ### Incident evidence/Run integration checkpoint
 
 Incident evidence may now reference only an owner-scoped existing Work Run.
