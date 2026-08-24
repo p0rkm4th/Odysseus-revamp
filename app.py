@@ -979,11 +979,20 @@ async def serve_login(request: Request):
 @app.get("/api/version")
 async def get_version():
     from core.constants import APP_VERSION
+    try:
+        from core.schema_migrations import schema_migration_registry
+        migrations = schema_migration_registry.ordered()
+        migration_head = migrations[-1].version if migrations else "none"
+    except Exception:
+        migration_head = os.getenv("ODYSSEUS_MIGRATION_HEAD") or "unknown"
     return {
         "version": APP_VERSION,
         "source_commit": os.getenv("ODYSSEUS_SOURCE_COMMIT") or "unknown",
         "image_id": os.getenv("ODYSSEUS_IMAGE_ID") or "unknown",
-        "frontend_build_id": os.getenv("ODYSSEUS_FRONTEND_BUILD_ID") or "ui-20260824-theme-groups-v1",
+        "build_id": os.getenv("ODYSSEUS_BUILD_ID") or "unbuilt-source",
+        "build_time": os.getenv("ODYSSEUS_BUILD_TIME") or "unknown",
+        "frontend_build_id": os.getenv("ODYSSEUS_FRONTEND_BUILD_ID") or "unbuilt-source",
+        "migration_head": migration_head,
         "ui_state_schema_version": 1,
     }
 
