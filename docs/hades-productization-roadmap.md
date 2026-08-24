@@ -744,6 +744,18 @@ does not create a second planner or grant execution authority. Focused planner,
 verified-execution, and Work tests pass. Full consequential execution,
 compensation orchestration, and owner-live dogfood remain pending.
 
+### Plan validation hardening checkpoint
+
+The canonical validator now exposes the registered execution path for each
+ActionSpec and fails closed when a declared ToolBinding is missing or does not
+match the ActionSpec executor. It also rejects malformed normalized inputs,
+scoped actions without target resources, and exact approvals without a sealed
+input digest. Work Actions receive a stable canonical digest even when their
+normalized input is empty. These checks remain projections over Work Runs,
+ActionSpecs, and ToolBindings; they add no alternate executor or authority
+path. Focused planner, Work Engine, verified execution, and ToolBinding tests
+are green; consequential live execution remains owner/provider dependent.
+
 The canonical WorkEngine now provides a narrow trusted-binding orchestration
 seam. It revalidates the persisted Run before dispatch, honors cancellation and
 resource locks, accepts only a structured result from runtime binding code,

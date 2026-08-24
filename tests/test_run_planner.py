@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.database import Base
+from core.work_models import WorkAction
 from src.run_planner import RunPlanner
 from src.work_engine import WorkEngine
 from src.world_model import WorldModelService
@@ -122,3 +123,27 @@ def test_action_execution_requirements_are_projected_and_gate_node_validation(db
     ExecutionNodeService(db).register("alice", {"node_key":"diagnostic-node", "platform":"linux", "capabilities":["diagnostics"], "health":"healthy"})
     after = planner.validate("alice", run["id"])
     assert not any(failure["code"] == "execution_node_unavailable" for failure in after["failures"])
+
+
+def test_validation_rejects_malformed_input_and_binding_mismatch(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "homelab", "plan": [{"capability_id": "test.capability", "action_id": "mutate", "tool_binding_name": "manage_homelab", "normalized_input": ["not", "an", "object"]}]})
+    planner = RunPlanner(db)
+    capability = CapabilitySpec("test.capability", {"mutate": ActionSpec(action_id="mutate", executor_key="manage_assets")})
+    planner._spec = lambda action: (capability, capability.actions.get(str(action.get("action_id") or "")))
+    result = planner.validate("alice", run["id"])
+    codes = {failure["code"] for failure in result["failures"]}
+    assert {"invalid_action_input", "execution_path_unavailable"} <= codes
+    assert result["preview"]["actions"][0]["contract"]["execution_path"]["reason"] == "executor_binding_mismatch"
+
+
+def test_exact_approval_requires_sealed_input_digest(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "homelab"})
+    action = work.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "execute_network_discovery", "approval_reference": "approval-1", "target_resources": ["network:private_scope"]})
+    row = db.query(WorkAction).filter_by(id=action["id"]).one()
+    row.sealed_input_digest = None
+    db.commit()
+    result = RunPlanner(db).validate("alice", run["id"])
+    assert any(failure["code"] == "approval_digest_missing" for failure in result["failures"])
+    assert action["sealed_input_digest"]

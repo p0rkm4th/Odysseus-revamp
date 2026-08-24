@@ -2,6 +2,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone, timedelta
 from hashlib import sha256
+import json
 from typing import Any
 from uuid import uuid4
 from sqlalchemy.orm import Session
@@ -107,7 +108,12 @@ class WorkEngine:
             raise WorkError("run cancellation requested; no new actions may be added")
         sequence = int(data.get("sequence") or (self.db.query(WorkAction).filter_by(run_id=run.id).count() + 1))
         digest = data.get("sealed_input_digest")
-        if not digest and data.get("normalized_input") is not None: digest = sha256(str(data["normalized_input"]).encode()).hexdigest()
+        if not digest:
+            # Every persisted Action has a stable input commitment, including
+            # empty input. Exact approvals must never be attachable to an
+            # action whose normalized input has no digest.
+            normalized = data.get("normalized_input") or {}
+            digest = sha256(json.dumps(normalized, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
         row = WorkAction(id=ident("action"), run_id=run.id, sequence=sequence, capability_id=str(data.get("capability_id") or "").strip(), action_id=str(data.get("action_id") or "").strip(), tool_binding_name=data.get("tool_binding_name"), effect_class=str(data.get("effect_class") or "internal"), sealed_input_digest=digest, normalized_input=data.get("normalized_input") or {}, target_resources=data.get("target_resources") or [], preconditions=data.get("preconditions") or [], locks=data.get("locks") or [], risk_level=str(data.get("risk_level") or "low")[:32], idempotency_key=data.get("idempotency_key"), retry_policy=data.get("retry_policy") or {}, timeout_seconds=data.get("timeout_seconds"), rollback_capability=data.get("rollback_capability"), compensating_action=data.get("compensating_action"), postconditions=data.get("postconditions") or [], verification=data.get("verification") or [], status=str(data.get("status") or "proposed"), approval_reference=data.get("approval_reference"), replay_of_action_id=data.get("replay_of_action_id"))
         if not row.capability_id or not row.action_id: raise WorkError("capability_id and action_id are required")
         if row.status not in ACTION_STATUSES: raise WorkError("invalid action status")
