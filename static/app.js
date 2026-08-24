@@ -39,6 +39,7 @@ import securityModule from './js/security.js?v=20260823security1';
 import workModule from './js/work.js?v=20260823work1';
 import { openHousehold, openItAssets, openNetwork, openDeveloper } from './js/intelligence.js';
 import { openWorldModel } from './js/worldModel.js';
+import { openControlCenter } from './js/controlCenter.js';
 import { openHades } from './js/persistentAgent.js';
 import { openOsint } from './js/osint.js';
 import './js/workspaceWindowManager.js';
@@ -1110,6 +1111,7 @@ function initializeEventListeners() {
   const networkBtn = el('tool-network-btn'); if (networkBtn) networkBtn.addEventListener('click', openNetwork);
   const worldModelBtn = el('tool-world-model-btn'); if (worldModelBtn) worldModelBtn.addEventListener('click', openWorldModel);
   const developerBtn = el('tool-developer-btn'); if (developerBtn) developerBtn.addEventListener('click', openDeveloper);
+  const controlCenterBtn = el('tool-control-center-btn'); if (controlCenterBtn) controlCenterBtn.addEventListener('click', openControlCenter);
   const hadesBtn = el('tool-hades-btn'); if (hadesBtn) hadesBtn.addEventListener('click', openHades);
   const osintBtn = el('tool-osint-btn'); if (osintBtn) osintBtn.addEventListener('click', openOsint);
 

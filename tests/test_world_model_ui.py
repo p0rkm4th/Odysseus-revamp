@@ -13,3 +13,14 @@ def test_world_model_is_visible_and_uses_canonical_projection():
     assert "/api/work/world/relationships" in module
     assert "blast-radius" in module
     assert "MODEL PROPOSED" in module
+
+
+def test_control_center_is_visible_and_inspects_durable_run_state():
+    index = (ROOT / "static/index.html").read_text()
+    app = (ROOT / "static/app.js").read_text()
+    module = (ROOT / "static/js/controlCenter.js").read_text()
+    assert 'id="tool-control-center-btn"' in index
+    assert "el('tool-control-center-btn')" in app
+    assert "/api/work/runs/" in module
+    assert "/preview" in module and "/validate" in module and "/traces" in module
+    assert "Run Inspector" in module

@@ -158,3 +158,10 @@ module grammar. It is discoverable from application navigation and the command
 palette, supports entity focus, displays provenance/status distinctions, and
 shows bounded blast-radius projections. It remains a read/projection surface;
 relationship mutation continues through the authenticated canonical Work API.
+
+The Control Center now exposes the existing durable Run, evaluation, and trace
+projections through a focused workspace. Its Run Inspector presents canonical
+intent/plan state, preview and validation, knowledge gaps, locks, replay
+state, execution spans, and verification. Evaluations remain supervised and
+owner-scoped; the surface does not create a second benchmark or execution
+engine.
