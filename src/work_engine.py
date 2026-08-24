@@ -5,13 +5,14 @@ from hashlib import sha256
 from typing import Any
 from uuid import uuid4
 from sqlalchemy.orm import Session
-from core.work_models import (WorkAction, WorkArtifact, WorkCommitment, WorkEvent, WorkGoal, WorkProject, WorkResult, WorkRun, WorkTask, WorkTaskDependency)
+from core.work_models import (WorkAction, WorkArtifact, WorkCommitment, WorkEvent, WorkGoal, WorkLock, WorkProject, WorkResult, WorkRun, WorkTask, WorkTaskDependency)
 
 GOAL_STATUSES = {"draft", "active", "blocked", "paused", "completed", "cancelled", "failed"}
 PROJECT_STATUSES = {"planned", "active", "blocked", "paused", "completed", "cancelled"}
 TASK_STATUSES = {"pending", "ready", "running", "awaiting_approval", "awaiting_input", "blocked", "completed", "failed", "cancelled"}
 RUN_STATUSES = {"queued", "running", "awaiting_approval", "awaiting_input", "suspended", "completed", "failed", "cancelled"}
 ACTION_STATUSES = {"proposed", "awaiting_approval", "approved", "executing", "completed", "failed", "rejected", "cancelled", "expired"}
+LOCK_MODES = {"shared", "exclusive"}
 RUN_LIFECYCLE_STATES = {"created", "planning", "ready", "executing", "verifying", "succeeded", "waiting_approval", "waiting_input", "paused", "failed", "cancelled", "compensating"}
 _STATUS_TO_LIFECYCLE = {"queued": "ready", "running": "executing", "awaiting_approval": "waiting_approval", "awaiting_input": "waiting_input", "suspended": "paused", "completed": "succeeded", "failed": "failed", "cancelled": "cancelled"}
 
@@ -161,7 +162,63 @@ class WorkEngine:
         if row.status == "completed": return serialize(row) | {"replayed": True}
         if row.status not in {"proposed", "approved", "executing"}: raise WorkError("action is not completable")
         row.status = "completed"; row.completed_at = now(); row.result_reference = str(data.get("result_reference") or "")[:1000] or None; row.revision += 1
+        self._release_action_locks(owner, row.id)
         self.event(owner, "action.completed", run_id=row.run_id, action_id=row.id, payload={"result_reference": row.result_reference}); self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    @staticmethod
+    def _lock_requests(value):
+        requests = []
+        for item in value or []:
+            if isinstance(item, str):
+                resource, mode = item.strip(), "exclusive"
+            elif isinstance(item, dict):
+                resource, mode = str(item.get("resource") or "").strip(), str(item.get("mode") or "exclusive").strip().lower()
+            else:
+                raise WorkError("lock entries must be strings or objects")
+            if not resource: raise WorkError("lock resource is required")
+            if mode not in LOCK_MODES: raise WorkError("invalid lock mode")
+            requests.append((resource[:500], mode))
+        if len({resource for resource, _ in requests}) != len(requests):
+            raise WorkError("duplicate lock resource")
+        return sorted(requests)
+
+    def lock_conflicts(self, owner, action_id):
+        action = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if action is None: raise WorkError("action not found")
+        conflicts = []
+        for resource, mode in self._lock_requests(action.locks):
+            active = self.db.query(WorkLock).filter_by(owner=owner, resource=resource, released_at=None).all()
+            for lock in active:
+                if lock.action_id == action.id: continue
+                if mode == "exclusive" or lock.mode == "exclusive": conflicts.append(serialize(lock))
+        return conflicts
+
+    def acquire_action_locks(self, owner, action_id):
+        action = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if action is None: raise WorkError("action not found")
+        if action.status not in {"proposed", "approved", "executing"}: raise WorkError("action cannot acquire locks in its current state")
+        conflicts = self.lock_conflicts(owner, action_id)
+        if conflicts: raise WorkError(f"resource lock conflict: {conflicts[0]['resource']}")
+        existing = {lock.resource for lock in self.db.query(WorkLock).filter_by(owner=owner, action_id=action.id, released_at=None).all()}
+        requests = self._lock_requests(action.locks)
+        for resource, mode in requests:
+            if resource not in existing:
+                self.db.add(WorkLock(id=ident("lock"), owner=owner, resource=resource, mode=mode, run_id=action.run_id, action_id=action.id))
+        action.status = "executing"; action.started_at = action.started_at or now(); action.revision += 1
+        self.event(owner, "action.locks_acquired", run_id=action.run_id, action_id=action.id, payload={"locks": [resource for resource, _ in requests]})
+        self.db.commit(); self.db.refresh(action); return serialize(action)
+
+    def _release_action_locks(self, owner, action_id):
+        locks = self.db.query(WorkLock).filter_by(owner=owner, action_id=action_id, released_at=None).all()
+        for lock in locks: lock.released_at = now()
+
+    def release_action_locks(self, owner, action_id):
+        action = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if action is None: raise WorkError("action not found")
+        self._release_action_locks(owner, action_id)
+        self.event(owner, "action.locks_released", run_id=action.run_id, action_id=action.id, payload={})
+        self.db.commit()
+        return {"action_id": action_id, "released": True}
 
     def set_run_status(self, owner, run_id, status, data=None):
         row = self._one(WorkRun, owner, run_id, "run")
@@ -235,7 +292,7 @@ class WorkEngine:
 
     def get_run(self, owner, run_id):
         run = self._one(WorkRun, owner, run_id, "run")
-        return serialize(run) | {"actions": [serialize(x) for x in self.db.query(WorkAction).filter_by(run_id=run.id).order_by(WorkAction.sequence).all()], "results": [serialize(x) for x in self.db.query(WorkResult).filter_by(run_id=run.id).all()], "artifacts": [serialize(x) for x in self.db.query(WorkArtifact).filter_by(run_id=run.id).all()], "events": [serialize(x) for x in self.db.query(WorkEvent).filter_by(owner=owner, run_id=run.id).order_by(WorkEvent.created_at).all()]}
+        return serialize(run) | {"actions": [serialize(x) for x in self.db.query(WorkAction).filter_by(run_id=run.id).order_by(WorkAction.sequence).all()], "results": [serialize(x) for x in self.db.query(WorkResult).filter_by(run_id=run.id).all()], "artifacts": [serialize(x) for x in self.db.query(WorkArtifact).filter_by(run_id=run.id).all()], "locks": [serialize(x) for x in self.db.query(WorkLock).filter_by(owner=owner, run_id=run.id).order_by(WorkLock.acquired_at).all()], "events": [serialize(x) for x in self.db.query(WorkEvent).filter_by(owner=owner, run_id=run.id).order_by(WorkEvent.created_at).all()]}
 
     def list_records(self, owner, model, status=None, domain=None):
         query = self.db.query(model).filter_by(owner=owner)
