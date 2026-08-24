@@ -18,6 +18,16 @@ microphone access, scheduling, mutation, or authority grant. Provider
 connectivity remains a separate health/test operation and is never inferred
 from importability.
 
+### Network action-execution parity checkpoint
+
+The bounded network-discovery intent path now repairs a prose-only weak-model
+response exactly once into the existing `manage_homelab` plan ActionSpec. An
+omitted CIDR selects only the existing owner-approved private `/24` for
+planning; it does not broaden authority or execute a scan. Execution remains
+host-brokered, exact-approval gated, prerequisite-aware, and grounded only by
+real tool results. Device-role descriptions remain inferred evidence rather
+than canonical asset identity. Owner-live network retest is still separate.
+
 The first Setup Center slice now uses a declarative `SetupContract` registry
 and a resumable owner-scoped state projection. It covers module categories,
 dependencies, permissions, secret references, safe status values, existing

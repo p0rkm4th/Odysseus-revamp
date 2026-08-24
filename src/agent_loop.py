@@ -1073,6 +1073,23 @@ def _network_discovery_cidr(text: str) -> str | None:
     return None
 
 
+def _network_discovery_request_cidr(text: str) -> str | None:
+    """Resolve a recognized discovery request to its bounded plan scope.
+
+    An omitted CIDR is not permission to broaden discovery. It selects the
+    existing owner-approved private /24 only for the plan step; the canonical
+    homelab ActionSpec, exact approval, and host broker remain authoritative
+    for any execution.
+    """
+    explicit = _network_discovery_cidr(text)
+    if explicit:
+        return explicit
+    if _explicit_network_discovery_request(text):
+        from src.homelab_operations import DEFAULT_PRIVATE_DISCOVERY_CIDR
+        return DEFAULT_PRIVATE_DISCOVERY_CIDR
+    return None
+
+
 def _hard_turn_capability_directive(route_tools, disabled_tools, intent_domains) -> str:
     domains = set(intent_domains or set())
     # _ODY_V37_ASSET_CAPABILITY_ASSERTION
@@ -6564,7 +6581,7 @@ async def stream_agent_loop(
         # approval gate. Convert it into the bounded first-class prerequisite
         # plan so the existing resolver, broker policy, and verification path
         # remain authoritative.
-        _network_request_cidr = _network_discovery_cidr(_last_user)
+        _network_request_cidr = _network_discovery_request_cidr(_last_user)
         if (
             not _network_request_cidr
             and _explicit_network_discovery_request(_last_user)
@@ -6941,7 +6958,7 @@ async def stream_agent_loop(
         # For an explicitly scoped network request, finish capability
         # selection deterministically after that single repair attempt. CIDR
         # validation and approval remain in HomelabOperations.
-        _network_cidr = _network_discovery_cidr(_ody_v38_user_text)
+        _network_cidr = _network_discovery_request_cidr(_ody_v38_user_text)
         if (
             not _network_cidr
             and _explicit_network_discovery_request(_ody_v38_user_text)
