@@ -624,6 +624,12 @@ does not create a second planner or grant execution authority. Focused planner,
 verified-execution, and Work tests pass. Full consequential execution,
 compensation orchestration, and owner-live dogfood remain pending.
 
+Plan validation now also checks the existing owner-scoped active lock
+projection and returns a structured `lock_conflict` failure before a plan can
+be treated as ready. Lock acquisition and authority remain owned by
+WorkEngine; this is an additive validation guard rather than a second locking
+system.
+
 ### Run Preview inspector checkpoint
 
 The existing Work and Control Center views now visibly consume the structured

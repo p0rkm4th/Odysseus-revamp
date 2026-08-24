@@ -72,3 +72,14 @@ def test_preview_projects_evidence_backed_blast_radius(db):
     assert preview["blast_radius"][0]["focus"] == "host:cerberus"
     assert preview["blast_radius"][0]["confirmed"][0]["entity"] == "service:jellyfin"
     assert preview["blast_radius"][0]["likely"][0]["entity"] == "service:postgres"
+
+
+def test_validation_reports_current_resource_lock_conflict(db):
+    work = WorkEngine(db)
+    first_run = work.create_run("alice", {"domain": "homelab"})
+    first = work.create_action("alice", first_run["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["service:nginx"]})
+    work.acquire_action_locks("alice", first["id"])
+    second_run = work.create_run("alice", {"domain": "homelab", "plan": [{"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["service:nginx"]}]})
+    second = work.create_action("alice", second_run["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["service:nginx"]})
+    result = RunPlanner(db).validate("alice", second_run["id"])
+    assert any(failure["code"] == "lock_conflict" for failure in result["failures"])
