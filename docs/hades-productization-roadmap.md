@@ -22,6 +22,13 @@ subsequent work.
 
 The additive `/api/setup-center/integrations` projection gives the owner a safe
 connection, permission, and capability summary derived from Setup Center state.
+
+Setup dependency resolution now projects deterministic `READY` or
+`MISSING_DEPENDENCY` metadata for every module, including the exact missing
+contracts and whether an in-registry remediation path exists. This is
+owner-facing setup guidance only: it does not change module status, resolve
+secrets, or grant capability authority. Existing-install detection and live
+integration health remain separate checks.
 It reports no secret values and does not create a parallel integration store or
 authority path.
 
