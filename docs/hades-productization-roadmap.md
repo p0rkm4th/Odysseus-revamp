@@ -60,6 +60,14 @@ approval/session binding, and runtime delivery remain owned by the existing
 Telegram store/runtime; voice, media, and live cross-channel dogfood remain
 future work.
 
+### PWA shell continuity slice
+
+The existing service worker cache was updated and versioned to include the
+current standardized workspace modules, shared UI components, and window
+manager. API requests remain uncached, so authenticated canonical state is not
+persisted into the offline cache. Share-target, push notification, camera
+intake, and authenticated offline data workflows remain future work.
+
 ### Voice boundary hardening slice
 
 The existing Web STT/TTS routes now require an authenticated owner before
