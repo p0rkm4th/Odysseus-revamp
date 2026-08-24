@@ -1,4 +1,6 @@
 import pytest
+import asyncio
+import json
 from datetime import timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -38,3 +40,49 @@ def test_grant_security_scope_checks_fail_closed(db):
         svc.consume("bob", grant["id"], {"run_id":run["id"], "action_id":action["id"], "capability_id":"homelab.manage", "sealed_input_digest":action["sealed_input_digest"]})
     with pytest.raises(WorkError, match="scope mismatch"):
         svc.consume("alice", grant["id"], {"run_id":run["id"], "action_id":action["id"], "capability_id":"homelab.manage", "sealed_input_digest":"changed"})
+
+
+def test_binding_boundary_consumes_only_exact_trusted_grant(db, monkeypatch):
+    """A grant narrows a binding call; model payload cannot supply authority."""
+    run, action = _action(db)
+    svc = DelegatedGrantService(db)
+    grant = svc.issue("alice", action["id"], {
+        "approval_reference": "approval-1",
+        "sealed_input_digest": action["sealed_input_digest"],
+        "expires_at": (now() + timedelta(minutes=5)).isoformat(),
+    })
+
+    import src.tool_execution as execution
+    import core.database as database
+    monkeypatch.setattr(database, "SessionLocal", lambda: db)
+
+    called = []
+
+    async def fake_executor(block, owner=None):
+        called.append(owner)
+        return "manage_homelab", {"ok": True, "exit_code": 0}
+
+    monkeypatch.setitem(execution._CAPABILITY_V1_EXECUTORS, "manage_homelab", fake_executor)
+    block = type("Block", (), {"tool_type": "manage_homelab", "content": json.dumps({"action": "inspect_host"})})()
+    result = asyncio.run(execution.execute_tool_block(
+        block,
+        owner="alice",
+        delegated_grant_id=grant["id"],
+        delegated_grant_run_id=run["id"],
+        delegated_grant_action_id=action["id"],
+        delegated_grant_digest=action["sealed_input_digest"],
+        delegated_grant_target_resource="service:test",
+    ))
+    assert result[1].get("ok") is True, result
+    assert called == ["alice"]
+
+    blocked = asyncio.run(execution.execute_tool_block(
+        block,
+        owner="alice",
+        delegated_grant_id=grant["id"],
+        delegated_grant_run_id=run["id"],
+        delegated_grant_action_id=action["id"],
+        delegated_grant_digest=action["sealed_input_digest"],
+    ))
+    assert blocked[1]["blocked"] is True
+    assert "call limit" in blocked[1]["error"]

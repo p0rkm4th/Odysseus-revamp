@@ -1445,6 +1445,27 @@ async def execute_tool_block(block, *args, **kwargs):
     binding = binding_for_tool(block.tool_type)
     executor = _CAPABILITY_V1_EXECUTORS.get(binding.executor_key) if binding else None
     if executor is not None:
+        # This is a trusted-caller-only narrowing credential. It is never
+        # read from model tool arguments and cannot replace policy, approval,
+        # owner isolation, disabled-tools, or broker authorization.
+        grant_id = kwargs.get("delegated_grant_id")
+        if grant_id:
+            owner = kwargs.get("owner")
+            if not owner:
+                return (f"{block.tool_type}: BLOCKED", {"error": "delegated grant requires an authenticated owner", "exit_code": 1, "blocked": True, "policy": "delegated_capability_grant"})
+            try:
+                from core.database import SessionLocal
+                from src.delegated_grants import DelegatedGrantService
+                with SessionLocal() as db:
+                    DelegatedGrantService(db).consume(str(owner), str(grant_id), {
+                        "run_id": kwargs.get("delegated_grant_run_id"),
+                        "action_id": kwargs.get("delegated_grant_action_id"),
+                        "capability_id": kwargs.get("delegated_grant_capability_id") or binding.capability_id,
+                        "sealed_input_digest": kwargs.get("delegated_grant_digest"),
+                        "target_resource": kwargs.get("delegated_grant_target_resource"),
+                    })
+            except Exception as exc:
+                return (f"{block.tool_type}: BLOCKED", {"error": str(exc), "exit_code": 1, "blocked": True, "policy": "delegated_capability_grant"})
         return await executor(block, owner=kwargs.get("owner"))
 
     return await _ody_v34_original_execute_tool_block(
