@@ -20,6 +20,8 @@ def test_world_model_is_visible_and_uses_canonical_projection():
     assert "CONTAINS" in module
     assert "Unknown dependency gaps" in module
     assert '"/world/relationships/sync-cmdb"' in (ROOT / "routes/work_routes.py").read_text()
+    assert "world-sync-cmdb" in module
+    assert "Sync CMDB" in module
 
 
 def test_control_center_is_visible_and_inspects_durable_run_state():
