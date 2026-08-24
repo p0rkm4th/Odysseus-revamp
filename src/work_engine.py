@@ -224,6 +224,45 @@ class WorkEngine:
             completed["result"] = serialize(result_row)
         return completed
 
+    def execute_bound_action(self, owner, action_id, executor):
+        """Execute one persisted Action through trusted binding code.
+
+        The caller supplies a registered runtime binding, never a model
+        supplied tool name or shell command. WorkEngine retains ownership of
+        validation, approval state, cancellation, locks, results, and audit.
+        """
+        if not callable(executor):
+            raise WorkError("trusted action binding is required")
+        action = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if action is None: raise WorkError("action not found")
+        run = self.db.query(WorkRun).filter_by(id=action.run_id, owner=owner).one()
+        if (run.continuation_state or {}).get("cancellation_requested"):
+            raise WorkError("run cancellation requested; no new actions may execute")
+        if action.status == "completed": return serialize(action) | {"replayed": True}
+        if action.status not in {"proposed", "approved"}: raise WorkError("action is not ready for binding execution")
+        from src.run_planner import RunPlanner
+        validation = RunPlanner(self.db).validate(owner, run.id)
+        if not validation["valid"]:
+            codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))
+            raise WorkError(f"plan validation failed before binding execution: {codes}")
+        self.acquire_action_locks(owner, action.id)
+        action = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one()
+        try:
+            result = executor(serialize(action))
+            if not isinstance(result, dict): raise WorkError("binding must return a structured result")
+            if result.get("success") is False: raise WorkError(str(result.get("error") or "binding execution failed")[:500])
+            completed = self.complete_action(owner, action.id, {"result": result, "result_reference": result.get("reference")})
+            self.event(owner, "binding.execution_completed", run_id=run.id, action_id=action.id, payload={"result_id": completed.get("result", {}).get("id") if isinstance(completed.get("result"), dict) else None})
+            self.db.commit()
+            return completed
+        except Exception as exc:
+            failed = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one()
+            failed.status = "failed"; failed.error = str(exc)[:500]; failed.completed_at = now(); failed.revision += 1
+            self._release_action_locks(owner, failed.id)
+            self.event(owner, "binding.execution_failed", run_id=run.id, action_id=failed.id, payload={"error": failed.error})
+            self.db.commit()
+            raise
+
     @staticmethod
     def _lock_requests(value):
         requests = []

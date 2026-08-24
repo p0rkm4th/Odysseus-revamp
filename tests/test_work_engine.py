@@ -247,3 +247,33 @@ def test_add_result_rejects_cross_owner_or_cross_run_action_reference(db):
         svc.add_result("bob", bob_run["id"], {"action_id": alice_action["id"], "reference": "result://cross-owner"})
     with pytest.raises(WorkError, match="owner-scoped run"):
         svc.add_result("alice", other_alice_run["id"], {"action_id": alice_action["id"], "reference": "result://cross-run"})
+
+
+def test_bound_action_orchestration_uses_structured_result_and_releases_locks(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "service_status",
+        "normalized_input": {"service": "nginx"}, "locks": ["host:lab-1"],
+    })
+    seen = {}
+    completed = svc.execute_bound_action("alice", action["id"], lambda value: seen.update(value) or {
+        "result_type": "observation", "reference": "service://nginx/status",
+        "metadata": {"state": "active"}, "provenance": {"source": "test-binding"},
+    })
+    assert seen["id"] == action["id"]
+    assert completed["status"] == "completed"
+    assert svc.get_run("alice", run["id"])["results"][0]["reference"] == "service://nginx/status"
+    assert svc.lock_conflicts("alice", action["id"]) == []
+
+
+def test_bound_action_failure_is_durable_and_releases_locks(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["host:lab-1"]})
+    with pytest.raises(WorkError, match="binding unavailable"):
+        svc.execute_bound_action("alice", action["id"], lambda _value: (_ for _ in ()).throw(WorkError("binding unavailable")))
+    stored = svc.get_run("alice", run["id"])["actions"][0]
+    assert stored["status"] == "failed"
+    assert stored["error"] == "binding unavailable"
+    assert svc.lock_conflicts("alice", action["id"]) == []
