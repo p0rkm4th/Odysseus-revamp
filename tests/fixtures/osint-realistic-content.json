@@ -1,0 +1,9 @@
+{
+  "cases": [
+    {"id": "one-line", "target_name": "Ada Lovelace", "target_type": "Person", "depth": "quick", "status": "completed", "source_count": 0, "claim_count": 0, "open_question_count": 0},
+    {"id": "realistic", "target_name": "Northstar Research Cooperative", "target_type": "Organization", "depth": "standard", "status": "running", "source_count": 17, "claim_count": 23, "open_question_count": 4},
+    {"id": "large", "target_name": "A very long target name with aliases and international punctuation — 東京研究所 / Northstar-Labs.example", "target_type": "Domain", "depth": "deep", "status": "completed", "source_count": 50, "claim_count": 143, "open_question_count": 12}
+  ],
+  "known_information": "USER PROVIDED\nSeveral paragraphs of context with Unicode — café, 東京, and an em dash.\n\nAliases: Northstar Cooperative; Northstar-Labs.example; https://example.org/a/very/long/path/with?many=query&parameters=true\n\nLONG_WORD: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "report_excerpt": "A long-form report excerpt with readable paragraphs, evidence references, contradictions, and open questions. <script>alert('must remain text')</script> **Markdown-looking content** must not become executable markup."
+}
