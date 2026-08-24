@@ -767,6 +767,12 @@ ordinary failure, suppresses unsafe retry controls while ambiguity is active,
 and shows compensation contract/result, retained-lock, and restoration-
 verification trajectory metadata as escaped structured projections.
 
+The synthetic cross-domain dogfood fixture now confirms that Mission,
+Incident, and Change project one canonical owner-scoped Run; a tier-2 Watch
+creates a separate reviewable proposal without executing that Run; and Setup
+Center profile selection remains resumable, secret-free, and authority
+preserving.
+
 Plan validation now also checks the existing owner-scoped active lock
 projection and returns a structured `lock_conflict` failure before a plan can
 be treated as ready. Lock acquisition and authority remain owned by
