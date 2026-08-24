@@ -1,5 +1,8 @@
 # Hades existing capability inventory
 
+Inventory checkpoint: V2 start, accepted stabilization source
+`120e4afa9d0cd60fff3f6225c42d131837c6c260`.
+
 This is a bounded productization inventory of the recovered platform. “Present”
 means a canonical implementation exists; it does not imply that the workspace,
 intake, dossier, provenance, or live dogfood gates are complete.
@@ -26,6 +29,24 @@ intake, dossier, provenance, or live dogfood gates are complete.
 | Models/routing | provider/model routes, endpoint resolver | route selection, profiles, metrics | provider/developer UI | routing tests | model lab and qualification evidence |
 | Improvements | improvement registry routes/store | candidate/evaluation/promotion controls | limited developer surfaces | improvement tests | full registry workspace |
 | Developer/YOLO/health | developer routes, readiness, profiles | leases, health, diagnostics, audits | settings/developer surfaces | readiness/policy tests | unified authority, trace, backup projections |
+
+## Cross-cutting ownership map
+
+| Concern | Canonical owner | Current projection | Productization gap |
+|---|---|---|---|
+| Durable orchestration | Work Engine and persistent Work models | Goals, Projects, Tasks, Runs, Commitments, WorkEvents | Life/review/navigation should remain projections over these records |
+| Authority | capability registry, ActionSpecs, ToolBindings, approvals, execution profiles | chat/tool routing and broker validation | unified owner-facing Authority Center |
+| Canonical evidence | domain stores plus Results, observations, and WorkEvents | domain routes and selected dossiers | reusable activity/provenance components |
+| Conversation continuity | session manager, context compaction, agent loop | Web chat/provider reconstruction | context inspector and transport parity |
+| Memory indexes | semantic memory services and vector projection | memory UI and retrieval | explicit layer/TTL/supersession diagnostics |
+| UI shell | workspace window manager, app shell, module JS | routed panels and floating windows | uniform module grammar, search, palette, responsive states |
+| Integrations | provider-specific stores/routes | Telegram/email/calendar/document views | common health and permission projection |
+
+For each row, implementation batches must verify canonical store/model, service/API,
+Capability → ActionSpec → ToolBinding, policy/approval, execution profile, Work
+linkage, UI/window, search, activity/history, provenance, correction/review,
+restart persistence, focused tests, and strong/local dogfood. Missing fields
+remain gaps even when the backend is substantial.
 
 ## Architectural invariants
 

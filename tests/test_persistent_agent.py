@@ -63,3 +63,19 @@ def test_overdue_commitment_notification_preserves_entity_reference_and_attentio
     attention = agent.attention("scotty")
     assert attention["count"] == 1
     assert attention["items"][0]["source_entity_id"] == "commitment-1"
+
+
+def test_operating_brief_is_deterministic_and_grounded_in_existing_records(db_session):
+    brief = PersistentAgent(db_session).operating_brief("scotty")
+    assert brief["period"] == "day"
+    assert brief["horizon_hours"] == 48
+    assert brief["grounding"]["model_generated"] is False
+    assert brief["grounding"]["action_claims"] is False
+    assert "work_engine" in brief["grounding"]["canonical_sources"]
+    assert "counts_by_status" in brief["capabilities"]
+
+
+def test_operating_brief_weekly_projection_has_bounded_horizon(db_session):
+    brief = PersistentAgent(db_session).operating_brief("scotty", period="week")
+    assert brief["period"] == "week"
+    assert brief["horizon_hours"] == 168

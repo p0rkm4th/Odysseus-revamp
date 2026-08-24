@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from core.persistent_agent_models import AssistantInstance, AssistantRuntimeSnapshot, Episode, Lesson, Monitor, Notification
 from core.work_models import WorkCommitment, WorkEvent, WorkGoal, WorkProject, WorkRun, WorkTask
 from src.capability_dependencies import capability_health, supported_capabilities
+from src.work_engine import WorkEngine
 
 
 def now() -> datetime:
@@ -227,3 +228,50 @@ class PersistentAgent:
             if due:
                 items.append({"kind": "commitment", "priority": "high", "status": "due", "id": commitment.get("id"), "title": commitment.get("text"), "due_at": due})
         return {"items": items, "count": len(items), "generated_at": datetime.utcnow().isoformat() + "Z"}
+
+    def operating_brief(self, owner: str, *, horizon_hours: int = 48, period: str = "day") -> dict:
+        """Return a deterministic, source-grounded operating brief.
+
+        This is a projection of existing Self and Work records.  It deliberately
+        does not create tasks, notifications, memories, or model-generated
+        claims while assembling the brief.
+        """
+        period = str(period or "day").lower()
+        if period not in {"day", "week"}:
+            raise ValueError("period must be day or week")
+        horizon = 168 if period == "week" else max(1, min(int(horizon_hours), 336))
+        context = self.self_context(owner)
+        attention = self.attention(owner)
+        review = WorkEngine(self.db).life_review(owner, horizon_hours=horizon)
+        capabilities = context["capabilities"]
+        capability_counts = {}
+        for item in capabilities:
+            state = str(item.get("status") or "unknown")
+            capability_counts[state] = capability_counts.get(state, 0) + 1
+        return {
+            "period": period,
+            "horizon_hours": horizon,
+            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "identity": context["identity"],
+            "runtime": context["runtime"],
+            "work": {
+                "active_goals": context["work"]["goals"][:8],
+                "active_projects": context["work"]["projects"][:8],
+                "active_tasks": context["work"]["tasks"][:12],
+                "active_runs": context["work"]["runs"][:8],
+                "review": review,
+            },
+            "attention": attention,
+            "commitments": context["commitments"][:12],
+            "recent_activity": context["recent_activity"][:12],
+            "episodes": context["episodes"][:8],
+            "capabilities": {
+                "counts_by_status": capability_counts,
+                "items": capabilities,
+            },
+            "grounding": {
+                "canonical_sources": ["assistant_instance", "runtime_snapshot", "work_engine", "notifications", "work_events", "episodes"],
+                "model_generated": False,
+                "action_claims": False,
+            },
+        }

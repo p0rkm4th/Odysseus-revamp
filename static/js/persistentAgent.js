@@ -9,11 +9,14 @@ export async function openHades() {
   const el=openView('hades-self', null, 'Hades', '<p>Loading Hades status…</p>');
   const body=el.querySelector('.hades-window-body');
   try {
-    const [status, episodes, notifications, monitors, attention] = await Promise.all([
-      api('/api/hades/status'), api('/api/hades/episodes'), api('/api/hades/notifications?unread=true'), api('/api/hades/monitors'), api('/api/hades/attention')
+    const [status, episodes, notifications, monitors, attention, brief] = await Promise.all([
+      api('/api/hades/status'), api('/api/hades/episodes'), api('/api/hades/notifications?unread=true'), api('/api/hades/monitors'), api('/api/hades/attention'), api('/api/hades/brief')
     ]);
     const identity=status.identity||{}, runtime=status.runtime||{}, work=status.work||{};
-    body.innerHTML=`<div class="hades-status-panel"><div class="work-header"><div><h2>Hades</h2><p>Grounded persistent-agent status</p></div><button id="hades-refresh">Refresh</button></div>
+    const review=brief.work?.review||{};
+    const reviewSummary=`${(review.focus_goals||[]).length} focus goals · ${(review.due_soon_commitments||[]).length} due soon · ${(review.overdue_commitments||[]).length} overdue`;
+    body.innerHTML=`<div class="hades-status-panel"><div class="work-header"><div><h2>Hades</h2><p>Grounded persistent-agent status</p></div><div><button id="hades-brief-period" type="button">Daily brief</button><button id="hades-refresh" type="button">Refresh</button></div></div>
+      <section><h3>Operating brief</h3>${card(brief.period==='week'?'Weekly brief':'Daily brief',reviewSummary,`${brief.generated_at||''} · source-grounded projection`)}</section>
       <section><h3>Identity / runtime</h3>${card(identity.canonical_name||'Hades','installation '+(identity.installation_id||'—'),`model ${runtime.model_profile||'—'} · runtime ${runtime.runtime_version||'—'}`)}</section>
       <section><h3>Current work</h3>${card('Active goals',(work.goals||[]).length,`${(work.runs||[]).length} active runs · ${work.pending_approval?'approval pending':'no approval pending'}`)}${card('Commitments',(status.commitments||[]).length,`${status.notifications?.unread||0} unread notifications`)}</section>
       <section><h3>Attention queue</h3>${(attention.items||[]).map(x=>card(x.title||x.kind,x.status,x.priority||'')).join('')||'<p class="muted">Nothing currently needs attention.</p>'}</section>
@@ -22,6 +25,7 @@ export async function openHades() {
       <section><h3>Unread Notifications</h3>${(notifications.notifications||[]).map(x=>`<button class="work-card hades-notification" data-id="${esc(x.id)}"><strong>${esc(x.title)}</strong><span>${esc(x.severity)}</span><small>${esc(x.body)}</small></button>`).join('')||'<p class="muted">No unread notifications.</p>'}</section>
       <section><h3>Monitors</h3>${(monitors.monitors||[]).map(x=>card(x.name,x.enabled?'enabled':'disabled',`${x.condition_type} · tier ${x.consequence_tier}`)).join('')||'<p class="muted">No monitors configured.</p>'}</section></div>`;
     body.querySelector('#hades-refresh').onclick=()=>openHades();
+    body.querySelector('#hades-brief-period').onclick=async()=>{const next=brief.period==='week'?'day':'week'; const b=await api(`/api/hades/brief?period=${next}`); body.querySelector('#hades-brief-period').textContent=next==='week'?'Weekly brief':'Daily brief'; const summary=body.querySelector('.hades-status-panel section:first-of-type .work-card'); if(summary){const r=b.work?.review||{}; summary.querySelector('strong').textContent=next==='week'?'Weekly brief':'Daily brief'; summary.querySelector('span').textContent=`${(r.focus_goals||[]).length} focus goals · ${(r.due_soon_commitments||[]).length} due soon · ${(r.overdue_commitments||[]).length} overdue`; summary.querySelector('small').textContent=`${b.generated_at||''} · source-grounded projection`;}};
     body.querySelectorAll('.hades-notification').forEach(b=>b.onclick=async()=>{await api(`/api/hades/notifications/${encodeURIComponent(b.dataset.id)}/read`,{method:'POST'});openHades();});
   } catch (e) { body.innerHTML=`<p class="security-error">${esc(e.message)}</p>`; }
   return el;
