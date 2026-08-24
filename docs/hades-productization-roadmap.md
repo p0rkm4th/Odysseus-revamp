@@ -17,8 +17,13 @@ dependencies, permissions, secret references, safe status values, existing
 integration detection, explicit skip/resume, and reconfiguration state. The
 new workspace and API are projections only: setup does not resolve or expose
 secret values and cannot grant runtime authority. Module-specific credential
-flows, safe health operations, Integration Center projection, and owner-live
-browser acceptance remain subsequent work.
+flows, safe health operations, and owner-live browser acceptance remain
+subsequent work.
+
+The additive `/api/setup-center/integrations` projection gives the owner a safe
+connection, permission, and capability summary derived from Setup Center state.
+It reports no secret values and does not create a parallel integration store or
+authority path.
 
 ## Current checkpoint
 

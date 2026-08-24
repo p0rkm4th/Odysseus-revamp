@@ -123,6 +123,28 @@ class SetupCenterService:
             categories.setdefault(module["category"], []).append(module)
         return {"version": 1, "owner": owner, "categories": categories, "modules": modules, "authority_unchanged": True, "secrets_exposed": False}
 
+    def integrations_projection(self, owner: str) -> dict[str, Any]:
+        """Project integration readiness without exposing integration records."""
+        projection = self.projection(owner)
+        linked = {
+            "communications.telegram": {"id": "telegram", "title": "Telegram"},
+            "communications.email": {"id": "email", "title": "Email"},
+            "communications.calendar": {"id": "calendar", "title": "Calendar"},
+            "communications.contacts": {"id": "contacts", "title": "Contacts"},
+            "home.smart-home": {"id": "home-assistant", "title": "Home Assistant"},
+            "technology.network": {"id": "network", "title": "Network broker"},
+            "technology.homelab": {"id": "homelab", "title": "Homelab broker"},
+        }
+        integrations = []
+        for module in projection["modules"]:
+            descriptor = linked.get(module["id"])
+            if not descriptor:
+                continue
+            status = module["status"]
+            connection = "CONNECTED" if status == "CONFIGURED" else "DEGRADED" if status in {"PARTIAL", "DEGRADED", "NEEDS_ATTENTION"} else "NOT_CONFIGURED" if status in {"NOT_CONFIGURED", "SKIPPED"} else "DISCONNECTED"
+            integrations.append({**descriptor, "connection": connection, "setup_status": status, "capabilities": list(module["permissions"]), "last_success": module.get("last_updated") if status == "CONFIGURED" else None, "last_error": None, "secret_values_exposed": False, "authority_unchanged": True})
+        return {"version": 1, "owner": owner, "integrations": integrations, "authority_unchanged": True, "secret_values_exposed": False}
+
     def update(self, owner: str, module_id: str, data: dict[str, Any]) -> dict[str, Any]:
         contract = next((item for item in CONTRACTS if item.id == module_id), None)
         if contract is None:
