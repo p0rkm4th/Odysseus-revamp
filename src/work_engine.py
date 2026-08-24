@@ -249,6 +249,53 @@ class WorkEngine:
         self.db.commit(); self.db.refresh(row)
         return serialize(row)
 
+    def checkpoint_run(self, owner, run_id, checkpoint):
+        row = self._one(WorkRun, owner, run_id, "run")
+        entries = list(row.checkpoints or [])
+        entry = dict(checkpoint or {})
+        entry.setdefault("created_at", now().isoformat())
+        entry.setdefault("lifecycle_state", row.lifecycle_state)
+        entries.append(entry)
+        row.checkpoints = entries[-100:]
+        row.revision += 1
+        self.event(owner, "CheckpointCreated", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload=entry)
+        self.db.commit(); self.db.refresh(row)
+        return entry
+
+    def record_verification(self, owner, run_id, verification):
+        row = self._one(WorkRun, owner, run_id, "run")
+        row.verification = dict(verification or {})
+        row.revision += 1
+        self.event(owner, "VerificationRecorded", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload=row.verification)
+        self.db.commit(); self.db.refresh(row)
+        return serialize(row)
+
+    def reconstruct_run(self, owner, run_id):
+        """Replay the durable journal into an inspectable lifecycle projection.
+
+        This is deliberately read-only. The ORM row remains the fast current
+        projection; WorkEvents are the audit/journal source for reconstruction.
+        """
+        row = self._one(WorkRun, owner, run_id, "run")
+        events = self.db.query(WorkEvent).filter_by(owner=owner, run_id=run_id).order_by(WorkEvent.created_at, WorkEvent.id).all()
+        transitions = []
+        action_events = []
+        lifecycle = "created"
+        for event in events:
+            payload = event.payload or {}
+            state = payload.get("lifecycle_state") if isinstance(payload, dict) and (event.event_type.startswith("Run") or event.event_type.startswith("run.")) else None
+            if not state and event.event_type.startswith("run."):
+                state = _STATUS_TO_LIFECYCLE.get(event.event_type[4:])
+            if not state and event.event_type.startswith("Run"):
+                candidate = event.event_type[3:]
+                state = {"Planning": "planning", "Ready": "ready", "Executing": "executing", "Verifying": "verifying", "Succeeded": "succeeded", "WaitingApproval": "waiting_approval", "WaitingInput": "waiting_input", "Paused": "paused", "Failed": "failed", "Cancelled": "cancelled", "Compensating": "compensating"}.get(candidate)
+            if state in RUN_LIFECYCLE_STATES:
+                lifecycle = state
+                transitions.append({"event": event.event_type, "state": state, "created_at": event.created_at.isoformat()})
+            if event.action_id:
+                action_events.append({"event": event.event_type, "action_id": event.action_id, "created_at": event.created_at.isoformat()})
+        return {"run_id": row.id, "owner": owner, "lifecycle_state": lifecycle, "transitions": transitions, "action_events": action_events, "event_count": len(events), "current_projection": row.lifecycle_state or "created"}
+
     def create_commitment(self, owner, data):
         row = WorkCommitment(id=ident("commitment"), owner=owner, goal_id=data.get("goal_id"), project_id=data.get("project_id"), task_id=data.get("task_id"), run_id=data.get("run_id"), text=str(data.get("text") or "").strip()[:20000], due_at=parse_dt(data.get("due_at")), source=str(data.get("source") or "operator")[:64])
         if not row.text: raise WorkError("commitment text is required")
