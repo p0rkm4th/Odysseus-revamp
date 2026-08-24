@@ -97,6 +97,21 @@ def test_shared_resource_locks_can_coexist(db):
     svc.acquire_action_locks("alice", actions[0]["id"])
     assert svc.acquire_action_locks("alice", actions[1]["id"])["status"] == "executing"
 
+def test_terminal_runs_release_locks_and_recovery_expires_abandoned_locks(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["host:cerberus", "service:nginx"]})
+    svc.acquire_action_locks("alice", action["id"])
+    assert len(svc.get_run("alice", run["id"])["locks"]) == 2
+    svc.set_run_status("alice", run["id"], "cancelled")
+    assert all(lock["released_at"] for lock in svc.get_run("alice", run["id"])["locks"])
+
+    abandoned = svc.create_run("alice", {"domain": "homelab"})
+    second = svc.create_action("alice", abandoned["id"], {"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["service:postgres"]})
+    svc.acquire_action_locks("alice", second["id"])
+    result = svc.recover_locks("alice", max_age_seconds=0)
+    assert result["count"] >= 1
+
 def test_epistemic_claims_preserve_provenance_and_valid_record_time(db):
     svc = WorkEngine(db)
     run = svc.create_run("alice", {"domain": "network"})
