@@ -66,3 +66,19 @@ def test_neighbors_do_not_traverse_future_relationship(db):
     svc.create_relationship("alice", {"source_ref": "service:future", "relation": "RUNS_ON", "target_ref": "host:cerberus", "status": "observed", "confidence_class": "high", "source": "scheduled", "valid_from": (current + timedelta(days=1)).isoformat()})
     graph = svc.neighbors("alice", "host:cerberus")
     assert "service:future" not in graph["entities"]
+
+
+def test_cmdb_sync_projects_edges_idempotently_and_preserves_ended_state(db):
+    svc = WorldModelService(db)
+    edges = [
+        {"parent_asset_id": "host-1", "child_asset_id": "service-1", "relation": "runs_on", "started_at": "2025-01-01T00:00:00"},
+        {"parent_asset_id": "host-1", "child_asset_id": "old-service", "relation": "contains", "ended_at": "2025-02-01T00:00:00"},
+        {"parent_asset_id": "", "child_asset_id": "missing", "relation": "runs_on"},
+    ]
+    first = svc.sync_cmdb_edges("alice", edges)
+    second = svc.sync_cmdb_edges("alice", edges)
+    assert first["relationship_count"] == 2
+    assert second["relationship_count"] == 2
+    assert len(svc.list_relationships("alice")) == 2
+    assert {row["status"] for row in svc.list_relationships("alice")} == {"observed", "stale"}
+    assert svc.list_relationships("bob") == []
