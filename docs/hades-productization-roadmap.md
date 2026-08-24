@@ -201,3 +201,14 @@ disqualified candidates are excluded, and no recommendation changes policy,
 capability exposure, approval, or execution authority. Provider-level live
 qualification, richer cost/latency telemetry, routing explanation UI, and
 shadow plan review remain future work.
+
+### Incident/Change dossier slice
+
+The existing Incident and Change projections now have owner-scoped detail
+reads. Control Center cards open dossiers showing symptoms, affected systems,
+hypotheses, evidence/timeline, linked Changes, deterministic previews,
+approval/compensation metadata, verification, and canonical references. Work
+Runs and ActionSpecs remain the only execution authority; this slice adds
+inspection and cross-link visibility, not a second executor. Synthetic dossier
+and owner-isolation tests are green; live safe-service remediation dogfood
+remains pending.

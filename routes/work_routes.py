@@ -100,6 +100,9 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/incidents")
     async def incidents(request: Request, status: str | None = None):
         return {"incidents": await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).list_incidents(o, status=status))}
+    @router.get("/incidents/{incident_id}")
+    async def get_incident(request: Request, incident_id: str):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).get_incident(o, incident_id))
     @router.patch("/incidents/{incident_id}")
     async def update_incident(request: Request, incident_id: str, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).update_incident(o, incident_id, payload))
@@ -115,6 +118,9 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/changes")
     async def changes(request: Request, status: str | None = None, incident_id: str | None = None):
         return {"changes": await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).list_changes(o, status=status, incident_id=incident_id))}
+    @router.get("/changes/{change_id}")
+    async def get_change(request: Request, change_id: str):
+        return await tx(request, lambda svc,o,u: __import__("src.incident_change", fromlist=["IncidentChangeService"]).IncidentChangeService(svc.db).get_change(o, change_id))
     @router.post("/competence/recompute")
     async def recompute_competence(request: Request, payload: dict[str, Any] = Body(default={})): 
         return {"competence": await tx(request, lambda svc,o,u: __import__("src.model_competence", fromlist=["ModelCompetenceService"]).ModelCompetenceService(svc.db).recompute(o, model_key=payload.get("model_key"), task_class=payload.get("task_class")))}

@@ -29,3 +29,18 @@ def test_change_reuses_run_preview_and_rejects_cross_owner_run(db):
     assert change["preview"]["run_id"] == run["id"]
     with pytest.raises(WorkError, match="run not found"):
         svc.create_change("bob", {"objective":"No access", "run_id":run["id"]})
+
+
+def test_dossiers_join_canonical_hypotheses_changes_and_refs(db):
+    svc=IncidentChangeService(db)
+    incident=svc.create_incident("alice", {"title":"Synthetic outage", "evidence_references":["result://test-1"]})
+    hypothesis=svc.add_hypothesis("alice", incident["id"], {"statement":"Dependency unavailable", "status":"rejected"})
+    change=svc.create_change("alice", {"objective":"Verify dependency recovery", "incident_id":incident["id"], "preview":{"actions":["service_status"]}, "verification":{"required":True}})
+    dossier=svc.get_incident("alice", incident["id"])
+    assert dossier["hypotheses"][0]["id"] == hypothesis["id"]
+    assert dossier["changes"][0]["id"] == change["id"]
+    assert dossier["canonical_refs"]["evidence"] == ["result://test-1"]
+    change_dossier=svc.get_change("alice", change["id"])
+    assert change_dossier["canonical_refs"]["incident"] == f"incident://{incident['id']}"
+    with pytest.raises(WorkError, match="incident not found"):
+        svc.get_incident("bob", incident["id"])

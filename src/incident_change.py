@@ -29,6 +29,14 @@ class IncidentChangeService:
         if status: query = query.filter_by(status=status)
         return [serialize(row) for row in query.order_by(Incident.updated_at.desc()).limit(max(1, min(int(limit), 500))).all()]
 
+    def get_incident(self, owner, incident_id):
+        row = self._incident(owner, incident_id)
+        result = serialize(row)
+        result["hypotheses"] = self.list_hypotheses(owner, incident_id)
+        result["changes"] = self.list_changes(owner, incident_id=incident_id)
+        result["canonical_refs"] = {"incident": f"incident://{row.id}", "evidence": list(row.evidence_references or [])}
+        return result
+
     def add_hypothesis(self, owner, incident_id, data):
         incident = self._incident(owner, incident_id); statement = str(data.get("statement") or "").strip()
         if not statement: raise WorkError("hypothesis statement is required")
@@ -70,3 +78,10 @@ class IncidentChangeService:
         if status: query=query.filter_by(status=status)
         if incident_id: query=query.filter_by(incident_id=incident_id)
         return [serialize(row) for row in query.order_by(Change.updated_at.desc()).limit(max(1,min(int(limit),500))).all()]
+
+    def get_change(self, owner, change_id):
+        row = self.db.query(Change).filter_by(owner=owner, id=change_id).one_or_none()
+        if row is None: raise WorkError("change not found")
+        result = serialize(row)
+        result["canonical_refs"] = {"change": f"change://{row.id}", "run": f"run://{row.run_id}" if row.run_id else None, "incident": f"incident://{row.incident_id}" if row.incident_id else None}
+        return result
