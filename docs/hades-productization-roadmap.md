@@ -71,6 +71,11 @@ Malformed or unsupported edges are skipped with structured reasons. CMDB
 identity remains authoritative; no IP-only merge or alternate graph store was
 introduced.
 
+The World Model workspace now exposes the authenticated Sync CMDB action
+alongside focus and relationship filters. The action calls the canonical
+projection endpoint and refreshes the same relationship view; it does not
+create a client-side graph or bypass owner/policy boundaries.
+
 ### PWA shell continuity slice
 
 The existing service worker cache was updated and versioned to include the
