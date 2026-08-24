@@ -423,6 +423,11 @@ World Model blast-radius projections when a Change references a canonical Run.
 Change creation and transitions into validated/approval/scheduled/executing/
 verifying states now refresh that validation and fail closed on invalid linked
 Run plans; Change remains a projection and WorkEngine remains execution owner.
+
+Mission-linked Run validation now also enforces the Mission's explicit
+`allowed_capabilities` list. A Mission projection cannot widen capability
+authority, and an omitted list remains an unrestricted-but-policy-bound Mission
+for compatibility with existing Goals.
 Change dossiers expose current Run lifecycle, verification, result, and error
 state. Incident dossiers expose linked Run state through their existing Change
 references. No execution engine was added: WorkEngine remains responsible for
