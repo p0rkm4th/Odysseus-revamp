@@ -81,3 +81,16 @@ def apply_work_v4(connection: Connection) -> None:
     EpistemicClaim.__table__.create(bind=connection, checkfirst=True)
 
 register_schema_migration(SchemaMigration(WORK_V4_VERSION, WORK_V4_CHECKSUM, apply_work_v4))
+
+WORK_V5_VERSION = "20260824_006_world_relationships_v5"
+WORK_V5_DEFINITION = """work-engine-v5
+owner-scoped-evidence-backed-world-relationships
+typed-status-valid-time-and-bounded-traversal-foundation
+"""
+WORK_V5_CHECKSUM = migration_checksum(WORK_V5_DEFINITION)
+
+def apply_work_v5(connection: Connection) -> None:
+    from core.work_models import WorldRelationship
+    WorldRelationship.__table__.create(bind=connection, checkfirst=True)
+
+register_schema_migration(SchemaMigration(WORK_V5_VERSION, WORK_V5_CHECKSUM, apply_work_v5))

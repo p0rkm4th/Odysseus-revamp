@@ -130,6 +130,14 @@ and validation result. This is the preview/validation boundary; execution,
 targeted invalidation, compensation, and full lifecycle orchestration remain
 the next batches.
 
+The next epistemic/world-model slice adds `WorldRelationship` to the existing
+Work/CMDB boundary. It is owner-scoped and evidence-backed, supports typed
+relations such as `RUNS_ON`, `DEPENDS_ON`, `USES`, and `CONNECTED_TO`, preserves
+proposed/inferred edges separately from observed or user-confirmed edges, and
+provides bounded neighbor and blast-radius projections. It does not replace
+the asset inventory database or manufacture topology; existing CMDB adapters
+remain the canonical source for technical assets and observations.
+
 The next execution slice adds explicit Work lifecycle transitions for planning,
 ready, executing, verifying, compensating, succeeded, failed, and cancelled.
 Transitions are fail-closed, journaled, replayable, and emit redacted local

@@ -78,6 +78,18 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/runs/{run_id}/replay")
     async def replay_run(request: Request, run_id: str):
         return await tx(request, lambda svc,o,u: svc.reconstruct_run(o, run_id))
+    @router.post("/world/relationships", status_code=201)
+    async def create_world_relationship(request: Request, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).create_relationship(o, payload))
+    @router.get("/world/relationships")
+    async def world_relationships(request: Request, entity_ref: str | None = None, relation: str | None = None, status: str | None = None):
+        return {"relationships": await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).list_relationships(o, entity_ref=entity_ref, relation=relation, status=status))}
+    @router.get("/world/entities/{entity_ref:path}/neighbors")
+    async def world_neighbors(request: Request, entity_ref: str, depth: int = Query(1, ge=1, le=3)):
+        return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).neighbors(o, entity_ref, depth=depth))
+    @router.get("/world/entities/{entity_ref:path}/blast-radius")
+    async def world_blast_radius(request: Request, entity_ref: str):
+        return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).blast_radius(o, entity_ref))
     @router.patch("/runs/{run_id}")
     async def update_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): return await tx(request, lambda svc,o,u: svc.set_run_status(o,run_id,str(payload.get("status") or ""),payload))
     @router.post("/runs/{run_id}/actions", status_code=201)
