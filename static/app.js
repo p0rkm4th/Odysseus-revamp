@@ -65,7 +65,7 @@ import { getSettings } from './js/appConfig.js';
 import { initSidebarLayout, syncRailSide } from './js/sidebar-layout.js?v=20260715startupclean';
 import { initSectionCollapse, initSectionDrag } from './js/section-management.js';
 import { iconSvg } from './js/ui-components.js';
-import { WORKSPACE_DEFINITIONS, MODULE_BY_ID } from './js/workspaceRegistry.js';
+import { WORKSPACE_DEFINITIONS } from './js/workspaceRegistry.js';
 
 const API_BASE = window.location.origin;
 window.themeModule = themeModule;

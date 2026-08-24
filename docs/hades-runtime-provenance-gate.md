@@ -1,7 +1,7 @@
 # Hades Runtime Truth / Deployment Provenance Gate
 
-Status: IN_PROGRESS  
-Audited source: `655a8b60dc6716051177b31f89316293a9e7d794`  
+Status: IN_PROGRESS — candidate source/build verified; deployment/browser gate pending  
+Audited source: `23abf48e22cd2af574544df3324533d8ae73c3e1`  
 Branch: `recovery/live-candidate-20260823`  
 Observed: 2026-08-24
 
@@ -12,7 +12,7 @@ or synthetic feature rows to live acceptance.
 
 | Area | Evidence | Level | Status |
 |---|---|---:|---|
-| Checkout identity | `git rev-parse HEAD` = `655a8b60...` | E1 | VERIFIED |
+| Checkout identity | `git rev-parse HEAD` = `23abf48e...` | E1 | VERIFIED |
 | Git integrity | `git fsck --full` reports no integrity errors; dangling objects remain | E1 | VERIFIED |
 | Test residue | empty ignored `tmp_pytest_probe/` directory; no files found | E1 | SAFE_RESIDUE |
 | Running image | `sha256:c09af676...` | E4 | SOURCE_MISMATCH |
@@ -24,6 +24,9 @@ or synthetic feature rows to live acceptance.
 | Vector/memory | not yet re-probed against a source-matched candidate | E0 | PENDING |
 | Frontend architecture | intentionally unbundled static assets; canonical `npm run test:frontend` now runs Node syntax/static checks | E2 | VERIFIED_SOURCE |
 | Playwright | not yet reproduced in repo-scoped environment | E0 | PENDING |
+| Candidate image | `odysseus:candidate-23abf48`, digest `sha256:2655cb3e...` | E4 | VERIFIED_SOURCE_MATCHED_CANDIDATE |
+| Candidate frontend | `frontend-23abf48e...-f58ebd...` | E4 | VERIFIED_SOURCE_MATCHED_CANDIDATE |
+| Candidate migration head | `20260824_011_sandbox_v1`; fresh and rerun rehearsal each loaded 21 versions | E3 | VERIFIED |
 
 ## Remediation in this gate
 
@@ -39,8 +42,8 @@ or synthetic feature rows to live acceptance.
 
 ## Acceptance still required
 
-The running service must be recreated from a candidate built from the audited
+The running service must be recreated from the candidate built from the audited
 source, then `/api/version`, container labels, backend hashes, and frontend
 marker must agree. A candidate build alone is not deployment acceptance.
-Broker negative tests, vector/memory health, migration rehearsal, browser
-acceptance, and the post-gate independent audit remain pending.
+Broker negative tests, vector/memory health, browser acceptance, and the
+post-gate independent audit remain pending.
