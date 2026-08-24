@@ -431,6 +431,10 @@ for compatibility with existing Goals.
 Tier-3 Watch response policy now requires a persisted owner-scoped delegated
 grant reference. Evaluation rechecks that grant and falls back to notification
 when it is unavailable; the Watch never executes the grant implicitly.
+ActionSpecs can declare bounded execution requirements; RunPreview exposes them
+and RunPlanner rejects the plan when no owner-scoped healthy node satisfies
+them. Node selection remains a scheduling projection and does not alter
+ToolBinding or broker authority.
 Change dossiers expose current Run lifecycle, verification, result, and error
 state. Incident dossiers expose linked Run state through their existing Change
 references. No execution engine was added: WorkEngine remains responsible for

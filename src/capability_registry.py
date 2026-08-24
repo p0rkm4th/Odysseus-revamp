@@ -59,6 +59,7 @@ class ActionSpec:
     state_invalidations: tuple[str, ...] = ()
     precheck_actions: tuple[str, ...] = ()
     expected_downtime: Mapping[str, Any] | None = None
+    execution_requirements: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)

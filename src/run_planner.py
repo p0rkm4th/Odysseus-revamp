@@ -62,6 +62,7 @@ def _contract(spec: ActionSpec, action: dict[str, Any] | None = None) -> dict[st
         "postconditions": list(action.get("postconditions") or spec.postconditions),
         "verification": list(action.get("verification") or spec.verification),
         "precheck_actions": list(spec.precheck_actions),
+        "execution_requirements": dict(spec.execution_requirements or {}),
         "execution_location": spec.execution_location,
         "executor_key": spec.executor_key,
     }
@@ -206,6 +207,12 @@ class RunPlanner:
                         failures.append({"code": "precheck_action_missing", "sequence": action.get("sequence"), "action_id": precheck_action, "message": "declared precheck ActionSpec is not registered"})
                     elif not requirement.get("satisfied"):
                         failures.append({"code": "precheck_required", "sequence": action.get("sequence"), "action_id": precheck_action, "message": "declared precheck has not produced successful evidence"})
+            requirements = contract.get("execution_requirements") or {}
+            if requirements:
+                from src.execution_nodes import ExecutionNodeService
+                selection = ExecutionNodeService(self.db).select(owner, requirements)
+                if not selection.get("eligible"):
+                    failures.append({"code": "execution_node_unavailable", "sequence": action.get("sequence"), "message": "no eligible execution node satisfies the ActionSpec requirements", "requirements": requirements, "rejected": selection.get("rejected", [])})
             if contract["target_scope"] == "private_network":
                 invalid = [r for r in contract["target_resources"] if not _private_network_resource(r)]
                 if invalid:

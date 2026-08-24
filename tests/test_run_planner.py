@@ -6,6 +6,7 @@ from src.run_planner import RunPlanner
 from src.work_engine import WorkEngine
 from src.world_model import WorldModelService
 from src.capability_registry import ActionSpec, CapabilitySpec
+from src.execution_nodes import ExecutionNodeService
 
 
 @pytest.fixture()
@@ -107,3 +108,17 @@ def test_mission_allowed_capabilities_are_enforced_by_run_validation(db):
     run = work.create_run("alice", {"goal_id":mission["id"], "domain":"homelab", "plan":[{"capability_id":"inventory.manage", "action_id":"get"}]})
     result = RunPlanner(db).validate("alice", run["id"])
     assert any(failure["code"] == "mission_capability_restricted" for failure in result["failures"])
+
+
+def test_action_execution_requirements_are_projected_and_gate_node_validation(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain":"homelab", "plan":[{"capability_id":"test.capability", "action_id":"diagnose"}]})
+    planner = RunPlanner(db)
+    capability = CapabilitySpec("test.capability", {"diagnose": ActionSpec(action_id="diagnose", execution_requirements={"platform":"linux", "capability":"diagnostics"})})
+    planner._spec = lambda action: (capability, capability.actions.get(str(action.get("action_id") or "")))
+    before = planner.validate("alice", run["id"])
+    assert any(failure["code"] == "execution_node_unavailable" for failure in before["failures"])
+    assert before["preview"]["actions"][0]["contract"]["execution_requirements"]["platform"] == "linux"
+    ExecutionNodeService(db).register("alice", {"node_key":"diagnostic-node", "platform":"linux", "capabilities":["diagnostics"], "health":"healthy"})
+    after = planner.validate("alice", run["id"])
+    assert not any(failure["code"] == "execution_node_unavailable" for failure in after["failures"])
