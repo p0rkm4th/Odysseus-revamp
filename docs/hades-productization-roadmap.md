@@ -428,6 +428,9 @@ Mission-linked Run validation now also enforces the Mission's explicit
 `allowed_capabilities` list. A Mission projection cannot widen capability
 authority, and an omitted list remains an unrestricted-but-policy-bound Mission
 for compatibility with existing Goals.
+Tier-3 Watch response policy now requires a persisted owner-scoped delegated
+grant reference. Evaluation rechecks that grant and falls back to notification
+when it is unavailable; the Watch never executes the grant implicitly.
 Change dossiers expose current Run lifecycle, verification, result, and error
 state. Incident dossiers expose linked Run state through their existing Change
 references. No execution engine was added: WorkEngine remains responsible for

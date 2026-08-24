@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 from core.persistent_agent_models import AssistantInstance, AssistantRuntimeSnapshot, Episode, Lesson, Monitor, Notification
+from core.delegated_grant_models import DelegatedCapabilityGrant
 from core.work_models import WorkCommitment, WorkEvent, WorkGoal, WorkProject, WorkRun, WorkTask
 from src.capability_dependencies import capability_health, supported_capabilities
 from src.work_engine import WorkEngine
@@ -165,8 +166,14 @@ class PersistentAgent:
     def create_monitor(self, owner: str, data: dict) -> dict:
         tier = int(data.get("consequence_tier", 1))
         if tier not in {0, 1, 2, 3}: raise ValueError("consequence_tier must be 0..3")
-        if tier >= 3 and not data.get("explicitly_allowed"): raise ValueError("tier 3 requires explicit allowance")
-        row = Monitor(id=ident("monitor"), owner=owner, name=str(data.get("name") or "Monitor")[:200], condition_type=str(data.get("condition_type") or "").strip()[:64], source_domain=str(data.get("source_domain") or "system")[:64], query=data.get("query") or {}, condition=data.get("condition") or {}, consequence_tier=tier, notification_policy=data.get("notification_policy") or {}, cooldown_seconds=max(60, int(data.get("cooldown_seconds", 3600))))
+        notification_policy = dict(data.get("notification_policy") or {})
+        if tier >= 3:
+            grant_id = str(data.get("delegated_grant_id") or notification_policy.get("delegated_grant_id") or "")
+            grant = self.db.query(DelegatedCapabilityGrant).filter_by(owner=owner, id=grant_id, revoked_at=None).one_or_none() if grant_id else None
+            if grant is None or grant.expires_at <= now() or grant.consumed_calls >= grant.max_calls:
+                raise ValueError("tier 3 requires an active delegated grant")
+            notification_policy["delegated_grant_id"] = grant.id
+        row = Monitor(id=ident("monitor"), owner=owner, name=str(data.get("name") or "Monitor")[:200], condition_type=str(data.get("condition_type") or "").strip()[:64], source_domain=str(data.get("source_domain") or "system")[:64], query=data.get("query") or {}, condition=data.get("condition") or {}, consequence_tier=tier, notification_policy=notification_policy, cooldown_seconds=max(60, int(data.get("cooldown_seconds", 3600))))
         if not row.condition_type: raise ValueError("condition_type is required")
         self.db.add(row); self.db.commit(); self.db.refresh(row); return row_dict(row)
 
@@ -193,7 +200,17 @@ class PersistentAgent:
                     event.payload = {**(event.payload or {}), "proposal_run_id": proposal_run.id}
                     self.db.commit()
                 note=self.notify(owner, title=monitor.name, body=detail, notification_type="monitor_trigger", dedupe_key=f"monitor:{monitor.id}:{event.id}", severity="warning", requires_action=monitor.consequence_tier >= 2, monitor_id=monitor.id, source_domain=monitor.source_domain, source_event_id=event.id, source_run_id=proposal_run.id if proposal_run else None)
-                note["response_policy"] = monitor_response_policy(monitor.consequence_tier)
+                response_policy = monitor_response_policy(monitor.consequence_tier)
+                if monitor.consequence_tier >= 3:
+                    grant_id = str((monitor.notification_policy or {}).get("delegated_grant_id") or "")
+                    grant = self.db.query(DelegatedCapabilityGrant).filter_by(owner=owner, id=grant_id, revoked_at=None).one_or_none()
+                    if grant is None or grant.expires_at <= current or grant.consumed_calls >= grant.max_calls:
+                        response_policy = "notify"
+                        note["preauthorized_grant_status"] = "unavailable"
+                    else:
+                        note["preauthorized_grant_id"] = grant.id
+                        note["preauthorized_grant_status"] = "available_for_separately_bound_execution"
+                note["response_policy"] = response_policy
                 note["authority_unchanged"] = True
                 if proposal_run: note["proposal_run_id"] = proposal_run.id
                 result.append(note)

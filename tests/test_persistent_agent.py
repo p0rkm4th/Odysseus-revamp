@@ -5,6 +5,7 @@ from core.database import Base
 from datetime import datetime, timedelta
 from core.work_models import WorkCommitment, WorkRun
 from src.persistent_agent import PersistentAgent, monitor_response_policy
+from src.delegated_grants import DelegatedGrantService
 
 
 @pytest.fixture()
@@ -66,6 +67,18 @@ def test_tier_two_monitor_creates_reviewable_run_proposal_without_execution(db_s
     assert notes[0]["proposal_run_id"]
     proposal = db_session.query(WorkRun).filter_by(owner="scotty", id=notes[0]["proposal_run_id"]).one()
     assert proposal.status == "queued" and proposal.intent["kind"] == "monitor_work_proposal"
+
+
+def test_tier_three_monitor_requires_active_delegated_grant(db_session):
+    agent = PersistentAgent(db_session)
+    with pytest.raises(ValueError, match="active delegated grant"):
+        agent.create_monitor("scotty", {"name":"unsafe", "condition_type":"commitment_overdue", "consequence_tier":3, "explicitly_allowed":True})
+    work = __import__("src.work_engine", fromlist=["WorkEngine"]).WorkEngine(db_session)
+    run = work.create_run("scotty", {"domain":"homelab"})
+    action = work.create_action("scotty", run["id"], {"capability_id":"homelab.manage", "action_id":"execute_network_discovery", "approval_reference":"approval-watch", "normalized_input":{"scope":"private"}})
+    grant = DelegatedGrantService(db_session).issue("scotty", action["id"], {"approval_reference":"approval-watch", "sealed_input_digest":action["sealed_input_digest"], "parameter_constraints":{"scope":"private"}, "expires_at":(datetime.utcnow()+timedelta(hours=1)).isoformat()})
+    monitor = agent.create_monitor("scotty", {"name":"bounded watch", "condition_type":"commitment_overdue", "consequence_tier":3, "delegated_grant_id":grant["id"]})
+    assert monitor["notification_policy"]["delegated_grant_id"] == grant["id"]
 
 
 def test_overdue_commitment_notification_preserves_entity_reference_and_attention(db_session):
