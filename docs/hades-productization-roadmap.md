@@ -22,3 +22,12 @@
 Every batch must update the feature matrix, run focused tests, preserve policy
 invariants, and leave a deployable commit. Schema changes require fresh,
 rerun, and copied-database rehearsal before promotion.
+
+## Completed batches in this continuation
+
+- Persisted `AssistantInstance.last_seen_at` and made `/api/hades/while-away`
+  default to the persisted marker.
+- Added `/api/hades/attention`, projecting unread notifications, blocked or
+  awaiting Work runs, and open commitments without duplicating canonical state.
+- Preserved notification source entity/run references for overdue commitments.
+- Added a Hades workspace Attention Queue section.
