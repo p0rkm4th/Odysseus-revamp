@@ -1,6 +1,7 @@
 """P0 regressions: provider context is reconstructed from durable recent chat."""
 
 from src.context_compactor import context_trace, trim_for_context
+from src.agent_loop import _classify_agent_request
 from src.user_time import current_datetime_context_message
 
 
@@ -52,3 +53,14 @@ def test_reference_resolution_turns_are_sent_with_roles_and_order():
     assert [m["role"] for m in result[-5:]] == ["user", "assistant", "user", "assistant", "user"]
     assert "local model" in result[-4]["content"]
     assert "checking port 443" in result[-2]["content"]
+
+
+def test_confirmation_after_assistant_scan_prompt_keeps_network_route():
+    messages = [
+        {"role": "user", "content": "scan my network and tell me what you find on the 192 network"},
+        {"role": "assistant", "content": "I found the private subnet. Proceed with the bounded scan?"},
+        {"role": "user", "content": "yes, proceed with the scan"},
+    ]
+    intent = _classify_agent_request(messages, messages[-1]["content"])
+    assert intent["continuation"] is True
+    assert "network_ops" in set(intent["domains"])

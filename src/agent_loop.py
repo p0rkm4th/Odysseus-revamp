@@ -1962,7 +1962,8 @@ def _assistant_requested_followup(messages: List[Dict]) -> bool:
         return bool(re.search(
             r"\b(what would you like|what should|what do you want|which one|which model|"
             r"what.+(?:todo|to-do|list|document|email|model|server|item)|"
-            r"any specific|give me|tell me)\b",
+            r"any specific|give me|tell me|proceed|continue|carry on|go ahead|"
+            r"run (?:the|it|this)|start (?:the|it|this)|approve|allow)\b",
             text,
         ))
     return False
@@ -2016,7 +2017,10 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
     text = str(last_user or "").strip()
     retry_continuation = _is_contextual_retry_continuation(messages, text)
     continuation = _is_explicit_continuation(text) or _assistant_requested_followup(messages) or retry_continuation
-    retrieval_query = _recent_context_for_retrieval(messages) if continuation else text
+    retrieval_query = (
+        _recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+        if continuation else text
+    )
     q = retrieval_query.lower()
 
     if not text or bool(_LOW_SIGNAL_RE.match(text)) or _is_casual_low_signal(text):
