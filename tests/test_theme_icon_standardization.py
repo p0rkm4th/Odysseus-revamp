@@ -37,3 +37,13 @@ def test_sidebar_destinations_are_grouped_without_replacing_existing_route_ids()
     assert "odysseus-sidebar-groups-v1" in app
     assert "section.dataset.grouped = '1'" in app
     assert "body.hidden = !next" in app
+
+
+def test_runtime_build_projection_and_developer_diagnostics_are_non_secret():
+    server = (ROOT / "app.py").read_text()
+    intelligence = (ROOT / "static/js/intelligence.js").read_text()
+    for field in ("source_commit", "image_id", "frontend_build_id", "ui_state_schema_version"):
+        assert field in server and field in intelligence
+    assert "ODYSSEUS_SOURCE_COMMIT" in server
+    assert "ODYSSEUS_IMAGE_ID" in server
+    assert "ODYSSEUS_FRONTEND_BUILD_ID" in server
