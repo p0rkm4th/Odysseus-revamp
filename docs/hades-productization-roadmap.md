@@ -385,3 +385,12 @@ reviewable middle tier: a tier-2 trigger creates a queued, owner-scoped Work
 Run proposal with `review_required` and never executes an Action. Tier 0/1
 remain observation/notification projections, and tier 3 remains explicitly
 non-executing until a separate delegated-authority policy is implemented.
+### OSINT dossier visibility slice
+
+The existing owner-scoped research detail route is now used by the visible
+OSINT workspace. Cases are actionable records rather than inert cards, and the
+dossier renders escaped report/summary text, source references, per-source
+findings, status, timing, and metadata with explicit tainted-content
+provenance. It does not infer Facts or Inferences from external text and does
+not create a second OSINT store. Relationship graph, corrections, and bounded
+delta research remain future work.

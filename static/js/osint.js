@@ -14,7 +14,16 @@ let currentTab = 'Overview';
 function tabBar() { return `<nav class="hades-module-tabs" aria-label="OSINT sections">${TABS.map(tab => `<button type="button" class="hades-module-tab${tab === currentTab ? ' active' : ''}" data-osint-tab="${esc(tab)}">${esc(tab)}</button>`).join('')}</nav>`; }
 function caseCard(item) {
   const status = item.status || item.state || 'completed';
-  return `<article class="hades-record-card"><div><strong>${esc(item.title || item.query || 'Untitled investigation')}</strong><p>${esc(item.query || item.summary || 'Public-source investigation')}</p></div><div>${statusBadge(status, status === 'completed' ? 'success' : status === 'error' ? 'danger' : 'info')} ${provenanceBadge('IMPORTED')}</div><small>${esc(item.created_at || item.updated_at || item.session_id || '')}</small></article>`;
+  const id = item.id || item.session_id;
+  return `<button type="button" class="hades-record-card control-entity-card osint-case-card" data-osint-case="${esc(id)}"><div><strong>${esc(item.title || item.query || 'Untitled investigation')}</strong><p>${esc(item.query || item.summary || 'Public-source investigation')}</p></div><div>${statusBadge(status, status === 'completed' ? 'success' : status === 'error' ? 'danger' : 'info')} ${provenanceBadge('IMPORTED')}</div><small>${esc(item.created_at || item.updated_at || item.session_id || '')} · ${esc(item.source_count ?? '—')} source(s)</small></button>`;
+}
+
+async function caseDossier(sessionId) {
+  const item = await api(`/api/research/detail/${encodeURIComponent(sessionId)}`);
+  const result = item.result || {};
+  const sources = item.sources || [];
+  const findings = item.raw_findings || item.findings || [];
+  return `<section class="control-inspector osint-dossier"><div class="work-header"><div><h2>OSINT Dossier</h2><p>${esc(item.query || sessionId)}</p></div>${statusBadge(item.status || 'completed', item.status === 'error' ? 'danger' : 'info')}</div><div class="hades-callout"><span>${provenanceBadge('IMPORTED')} External research remains tainted content; this dossier does not grant authority.</span></div><div class="work-grid"><section><h3>Summary / Report</h3><pre>${esc(result.report || result.summary || item.report || 'No report text recorded.')}</pre></section><section><h3>Sources</h3>${sources.map(source => `<article class="work-card"><strong>${esc(source.title || source.name || source.url || 'Source')}</strong><p>${esc(source.url || '')}</p><small>${provenanceBadge('OBSERVED')}</small></article>`).join('') || '<p class="muted">No sources recorded.</p>'}</section><section><h3>Findings / Evidence</h3>${findings.map(finding => `<article class="work-card"><strong>${esc(finding.title || finding.claim || finding.url || 'Finding')}</strong><p>${esc(finding.summary || finding.text || finding.content || '')}</p><small>${provenanceBadge('IMPORTED')} ${esc(finding.url || '')}</small></article>`).join('') || '<p class="muted">No per-source findings recorded.</p>'}</section><section><h3>Research metadata</h3><pre>${esc(JSON.stringify({session_id:sessionId, status:item.status, category:item.category, stats:item.stats, started_at:item.started_at, completed_at:item.completed_at, source_count:sources.length, finding_count:findings.length},null,2))}</pre></section></div></section>`;
 }
 
 function renderIntake() {
@@ -46,6 +55,7 @@ async function load(el) {
   body.querySelector('#osint-start-investigation-empty')?.addEventListener('click', () => { currentTab='New Investigation'; load(el); });
   body.querySelector('#osint-investigation-form')?.addEventListener('submit', event => startInvestigation(event, el));
   body.querySelector('#osint-case-filter')?.addEventListener('input', event => { const q=event.target.value.toLowerCase(); body.querySelectorAll('#osint-case-list .hades-record-card').forEach(card => { card.hidden=!card.textContent.toLowerCase().includes(q); }); });
+  body.querySelectorAll('[data-osint-case]').forEach(button => button.addEventListener('click', async () => { const content=body.querySelector('#osint-tab-content'); content.innerHTML=loadingState('Loading OSINT dossier…'); try { content.innerHTML=await caseDossier(button.dataset.osintCase); } catch (error) { content.innerHTML=errorState(error.message); } }));
 }
 
 async function startInvestigation(event, el) {
