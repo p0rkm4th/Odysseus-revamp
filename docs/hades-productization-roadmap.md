@@ -25,6 +25,11 @@ connection, permission, and capability summary derived from Setup Center state.
 It reports no secret values and does not create a parallel integration store or
 authority path.
 
+Telegram now has a module-specific Setup Center health operation. It reuses the
+owner-scoped `TelegramStore.lifecycle_status` projection to validate pairing,
+private-chat, replay-protection, and callback-approval prerequisites without
+network calls, bot-token handling, re-pairing, or authority changes.
+
 ## Current checkpoint
 
 - V2 baseline source: `120e4afa9d0cd60fff3f6225c42d131837c6c260`.
