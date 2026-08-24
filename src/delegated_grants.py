@@ -8,6 +8,12 @@ from src.work_engine import WorkError, ident, now, parse_dt, serialize
 class DelegatedGrantService:
     def __init__(self, db): self.db = db
 
+    @staticmethod
+    def _constraint_matches(parameters, constraints):
+        if not isinstance(parameters, dict) or not isinstance(constraints, dict):
+            return False
+        return all(parameters.get(key) == value for key, value in constraints.items())
+
     def _action(self, owner, action_id):
         row = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
         if row is None: raise WorkError("action not found")
@@ -23,7 +29,10 @@ class DelegatedGrantService:
         if expires is None or expires <= now(): raise WorkError("grant expiry must be in the future")
         max_calls = int(data.get("max_calls", 1))
         if max_calls < 1 or max_calls > 10: raise WorkError("grant max_calls must be between 1 and 10")
-        row = DelegatedCapabilityGrant(id=ident("grant"), owner=owner, run_id=run.id, action_id=action.id, capability_id=action.capability_id, target_resources=list(action.target_resources or []), parameter_constraints=data.get("parameter_constraints") or {}, sealed_input_digest=digest, approval_reference=approval, max_calls=max_calls, expires_at=expires)
+        constraints = data.get("parameter_constraints") or {}
+        if not isinstance(constraints, dict): raise WorkError("grant parameter constraints must be an object")
+        if not self._constraint_matches(action.normalized_input or {}, constraints): raise WorkError("grant parameters exceed the sealed action input")
+        row = DelegatedCapabilityGrant(id=ident("grant"), owner=owner, run_id=run.id, action_id=action.id, capability_id=action.capability_id, target_resources=list(action.target_resources or []), parameter_constraints=constraints, sealed_input_digest=digest, approval_reference=approval, max_calls=max_calls, expires_at=expires)
         self.db.add(row); self.db.commit(); self.db.refresh(row); return serialize(row)
 
     def list(self, owner, *, active_only=False, limit=200):
@@ -40,7 +49,8 @@ class DelegatedGrantService:
         for key in ("run_id", "action_id", "capability_id", "sealed_input_digest"):
             if str(data.get(key) or "") != str(getattr(row, key)): raise WorkError("grant scope mismatch")
         target = data.get("target_resource")
-        if target and target not in (row.target_resources or []): raise WorkError("grant target scope mismatch")
+        if row.target_resources and (not target or target not in row.target_resources): raise WorkError("grant target scope mismatch")
+        if row.parameter_constraints and not self._constraint_matches(data.get("parameters"), row.parameter_constraints): raise WorkError("grant parameter scope mismatch")
         row.consumed_calls += 1; row.consumed_at = now(); self.db.commit(); self.db.refresh(row)
         return {"grant": serialize(row), "authorized": True, "authority_unchanged": True}
 
