@@ -107,6 +107,29 @@ class WorkEngine:
             run.status = "awaiting_approval"; run.current_step = f"approval required: {row.action_id}"; run.revision += 1
         self.event(owner, "approval.requested" if row.status == "awaiting_approval" else "action.proposed", run_id=run.id, action_id=row.id, payload={"capability_id": row.capability_id, "action_id": row.action_id}); self.db.commit(); self.db.refresh(row); return serialize(row)
 
+    def bind_approval(self, owner, action_id, approval_reference, *, digest=None):
+        row = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if row is None: raise WorkError("action not found")
+        reference = str(approval_reference or "").strip()
+        if not reference: raise WorkError("approval reference is required")
+        if digest and row.sealed_input_digest and str(digest) != row.sealed_input_digest: raise WorkError("approval digest does not match the persisted action")
+        if row.status == "completed": raise WorkError("completed action cannot await approval")
+        row.approval_reference = reference[:300]; row.status = "awaiting_approval"; row.revision += 1
+        run = self.db.query(WorkRun).filter_by(id=row.run_id, owner=owner).one()
+        run.status = "awaiting_approval"; run.current_step = f"approval required: {row.action_id}"; run.revision += 1
+        self.event(owner, "approval.requested", run_id=run.id, action_id=row.id, payload={"approval_reference": row.approval_reference})
+        self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    def resume_approved_action(self, owner, action_id, approval_reference, *, digest=None):
+        row = self.db.query(WorkAction).join(WorkRun).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
+        if row is None: raise WorkError("action not found")
+        if row.status == "completed": return serialize(row) | {"replayed": True}
+        if row.status != "awaiting_approval" or row.approval_reference != str(approval_reference or ""): raise WorkError("approval is not bound to this awaiting action")
+        if digest and row.sealed_input_digest and str(digest) != row.sealed_input_digest: raise WorkError("approval digest does not match the persisted action")
+        row.status = "approved"; row.revision += 1
+        self.event(owner, "approval.resumed", run_id=row.run_id, action_id=row.id, payload={"approval_reference": row.approval_reference})
+        self.db.commit(); self.db.refresh(row); return serialize(row)
+
     def complete_action(self, owner, action_id, data):
         row = self.db.query(WorkAction).join(WorkRun, WorkRun.id == WorkAction.run_id).filter(WorkAction.id == action_id, WorkRun.owner == owner).one_or_none()
         if row is None: raise WorkError("action not found")

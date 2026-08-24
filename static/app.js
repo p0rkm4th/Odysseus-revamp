@@ -37,6 +37,8 @@ import settingsModule from './js/settings.js?v=20260815approvalsave1';
 import inventoryModule from './js/inventory.js?v=20260823inventory1';
 import securityModule from './js/security.js?v=20260823security1';
 import workModule from './js/work.js?v=20260823work1';
+import { openHousehold, openItAssets, openNetwork, openDeveloper } from './js/intelligence.js';
+import './js/workspaceWindowManager.js';
 // Eagerly bind unified minimize/restore behavior across all tool modals.
 import './js/modalManager.js?v=20260723compareicon2';
 // Desktop window tiling — drag a modal near an edge/corner to snap.
@@ -1100,6 +1102,10 @@ function initializeEventListeners() {
   if (toolSecurityBtn) toolSecurityBtn.addEventListener('click', () => securityModule.togglePanel());
   const toolWorkBtn = el('tool-work-btn');
   if (toolWorkBtn) toolWorkBtn.addEventListener('click', () => workModule.togglePanel());
+  const householdBtn = el('tool-household-btn'); if (householdBtn) householdBtn.addEventListener('click', openHousehold);
+  const itAssetsBtn = el('tool-it-assets-btn'); if (itAssetsBtn) itAssetsBtn.addEventListener('click', openItAssets);
+  const networkBtn = el('tool-network-btn'); if (networkBtn) networkBtn.addEventListener('click', openNetwork);
+  const developerBtn = el('tool-developer-btn'); if (developerBtn) developerBtn.addEventListener('click', openDeveloper);
 
   // Notes tool button
   const toolNotesBtn = el('tool-notes-btn');

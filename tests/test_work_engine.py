@@ -56,3 +56,15 @@ def test_awaiting_approval_action_promotes_parent_run(db):
     run = svc.create_run("alice", {"domain":"inventory"})
     svc.create_action("alice", run["id"], {"capability_id":"inventory.manage", "action_id":"update", "status":"awaiting_approval"})
     assert svc.get_run("alice", run["id"])["status"] == "awaiting_approval"
+
+def test_exact_work_approval_binding_and_resume(db):
+    svc=WorkEngine(db)
+    run=svc.create_run("alice", {"domain":"security"})
+    action=svc.create_action("alice", run["id"], {"capability_id":"security.run.plan", "action_id":"plan", "status":"proposed", "normalized_input":{"target":"asset-1"}})
+    svc.bind_approval("alice", action["id"], "approval-1", digest=action["sealed_input_digest"])
+    with pytest.raises(WorkError, match="bound"):
+        svc.resume_approved_action("alice", action["id"], "approval-2")
+    resumed=svc.resume_approved_action("alice", action["id"], "approval-1", digest=action["sealed_input_digest"])
+    assert resumed["status"] == "approved"
+    assert svc.complete_action("alice", action["id"], {})["status"] == "completed"
+    assert svc.resume_approved_action("alice", action["id"], "approval-1")["replayed"] is True

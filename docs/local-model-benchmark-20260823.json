@@ -1,0 +1,10 @@
+{
+  "profile": "hades-local-test",
+  "model": "qwen3:8b",
+  "endpoint": "http://127.0.0.1:11434",
+  "context": 8192,
+  "hardware": {"ram_gib": 62, "gpu": "RTX 3080 Ti Mobile 16 GiB", "gpu_runtime": "unavailable: NVML driver/library mismatch", "processor": "Intel i9-12900H"},
+  "measured": {"cold_or_first_call_ms": 5596, "prompt_tokens": 29, "generated_tokens": 10, "processor": "CPU-only", "loaded_size_gib": 14},
+  "scenarios": {"structured_output": "pass", "simple_read_routing": "pass", "native_consequential_tools": "not_enabled", "approval_resumption": "requires strong supervised bridge", "failed_tool_recovery": "not yet benchmarked", "network_mutation": "blocked by policy"},
+  "decision": "local-first only for explicit simple read/status domains; strong model remains default"
+}
