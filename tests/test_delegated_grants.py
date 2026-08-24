@@ -42,6 +42,24 @@ def test_grant_security_scope_checks_fail_closed(db):
         svc.consume("alice", grant["id"], {"run_id":run["id"], "action_id":action["id"], "capability_id":"homelab.manage", "sealed_input_digest":"changed"})
 
 
+def test_grant_parameter_and_target_scope_cannot_be_widened(db):
+    run, action = _action(db); svc=DelegatedGrantService(db)
+    grant=svc.issue("alice", action["id"], {"approval_reference":"approval-1", "sealed_input_digest":action["sealed_input_digest"], "expires_at":(now()+timedelta(minutes=5)).isoformat(), "parameter_constraints":{"service":"test"}})
+    base={"run_id":run["id"], "action_id":action["id"], "capability_id":"homelab.manage", "sealed_input_digest":action["sealed_input_digest"], "target_resource":"service:test"}
+    with pytest.raises(WorkError, match="parameter scope"):
+        svc.consume("alice", grant["id"], base | {"parameters":{"service":"other"}})
+    with pytest.raises(WorkError, match="target scope"):
+        svc.consume("alice", grant["id"], base | {"target_resource":"service:other", "parameters":{"service":"test"}})
+    authorized=svc.consume("alice", grant["id"], base | {"parameters":{"service":"test"}})
+    assert authorized["authorized"] is True
+
+
+def test_grant_constraints_cannot_disagree_with_sealed_action(db):
+    _run, action = _action(db); svc=DelegatedGrantService(db)
+    with pytest.raises(WorkError, match="sealed action input"):
+        svc.issue("alice", action["id"], {"approval_reference":"approval-1", "sealed_input_digest":action["sealed_input_digest"], "expires_at":(now()+timedelta(minutes=5)).isoformat(), "parameter_constraints":{"service":"other"}})
+
+
 def test_binding_boundary_consumes_only_exact_trusted_grant(db, monkeypatch):
     """A grant narrows a binding call; model payload cannot supply authority."""
     run, action = _action(db)

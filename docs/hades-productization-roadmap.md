@@ -251,6 +251,17 @@ eligible nodes for requirements, but node metadata does not grant authority or
 replace the host broker. Existing execution remains unchanged; sandboxing,
 delegated grants, and migration of scheduling are future phases.
 
+### Delegated-grant scope hardening slice
+
+The existing exact delegated-capability grant path now enforces persisted
+parameter constraints at consumption, requires a target whenever the grant
+declares target resources, and rejects constraints that disagree with the
+sealed approved Action input. Owner, Run, Action, capability, digest,
+expiration, revocation, and call-limit checks remain fail-closed. This is a
+narrowing layer over existing approvals and the trusted binding boundary, not
+a replacement authorization engine; grant issuance orchestration and live
+worker delegation remain future work.
+
 ### Delegated capability grant foundation
 
 Short-lived owner-scoped grants now bind an existing approved WorkAction to its
