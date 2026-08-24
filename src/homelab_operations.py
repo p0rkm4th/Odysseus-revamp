@@ -32,6 +32,11 @@ _ACTIONS = frozenset({
     "plan_diagnostic_install", "execute_diagnostic_install",
 })
 _PROTECTED_RESTART_UNITS = frozenset({"odysseus.service"})
+# The existing owner-approved homelab discovery scope.  This is used only to
+# form a non-mutating plan when a user clearly requests local network
+# discovery without spelling out a CIDR.  The broker and ActionSpec still
+# enforce private IPv4 and the <=256-address boundary before execution.
+DEFAULT_PRIVATE_DISCOVERY_CIDR = "192.168.10.0/24"
 _receipt_lock = threading.Lock()
 logger = logging.getLogger(__name__)
 
