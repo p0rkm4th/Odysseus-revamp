@@ -66,6 +66,17 @@ class EpistemicClaim(TimestampMixin, Base):
     id = Column(String, primary_key=True); owner = Column(String, nullable=False, index=True); claim_class = Column(String(32), nullable=False); subject_ref = Column(String(500), nullable=True, index=True); predicate = Column(String(300), nullable=False); value = Column(JSON, nullable=False, default=dict); source = Column(String(500), nullable=False); confidence = Column(Integer, nullable=False, default=50); observed_at = Column(DateTime, nullable=True); valid_from = Column(DateTime, nullable=True); valid_until = Column(DateTime, nullable=True); expires_at = Column(DateTime, nullable=True); evidence_references = Column(JSON, nullable=False, default=list); contradicting_references = Column(JSON, nullable=False, default=list); derived_from = Column(JSON, nullable=False, default=list); run_id = Column(String, ForeignKey("work_runs.id", ondelete="SET NULL"), nullable=True, index=True); status = Column(String(32), nullable=False, default="active"); provenance = Column(JSON, nullable=False, default=dict)
     __table_args__ = (CheckConstraint("confidence >= 0 AND confidence <= 100", name="ck_epistemic_claim_confidence"), CheckConstraint("status IN ('active','superseded','retracted','expired')", name="ck_epistemic_claim_status"), Index("ix_epistemic_claims_owner_subject", "owner", "subject_ref", "status"))
 
+class WorldRelationship(TimestampMixin, Base):
+    """Owner-scoped, evidence-backed relationship projection over CMDB/domain refs."""
+    __tablename__ = "world_relationships"
+    id = Column(String, primary_key=True); owner = Column(String, nullable=False, index=True)
+    source_ref = Column(String(500), nullable=False, index=True); relation = Column(String(100), nullable=False)
+    target_ref = Column(String(500), nullable=False, index=True); status = Column(String(32), nullable=False, default="proposed")
+    evidence_references = Column(JSON, nullable=False, default=list); source = Column(String(500), nullable=False)
+    confidence_class = Column(String(32), nullable=False, default="unknown"); observation_kind = Column(String(32), nullable=False, default="inferred")
+    valid_from = Column(DateTime, nullable=True); valid_until = Column(DateTime, nullable=True); recorded_at = Column(DateTime, nullable=False, default=utcnow_naive)
+    __table_args__ = (CheckConstraint("status IN ('proposed','observed','user_confirmed','contradicted','stale','superseded')", name="ck_world_relationship_status"), Index("ix_world_relationships_owner_source", "owner", "source_ref", "status"), Index("ix_world_relationships_owner_target", "owner", "target_ref", "status"))
+
 class WorkEvent(Base):
     __tablename__ = "work_events"
     id = Column(String, primary_key=True); owner = Column(String, nullable=False, index=True); event_type = Column(String(100), nullable=False); goal_id = Column(String, nullable=True, index=True); project_id = Column(String, nullable=True, index=True); task_id = Column(String, nullable=True, index=True); run_id = Column(String, nullable=True, index=True); action_id = Column(String, nullable=True, index=True); payload = Column(JSON, nullable=False, default=dict); created_at = Column(DateTime, nullable=False, default=utcnow_naive); __table_args__ = (Index("ix_work_events_owner_created", "owner", "created_at"),)
@@ -75,4 +86,4 @@ class WorkCommitment(TimestampMixin, Base):
     id = Column(String, primary_key=True); owner = Column(String, nullable=False, index=True); goal_id = Column(String, nullable=True, index=True); project_id = Column(String, nullable=True, index=True); task_id = Column(String, nullable=True, index=True); run_id = Column(String, nullable=True, index=True); text = Column(Text, nullable=False); due_at = Column(DateTime, nullable=True); status = Column(String(32), nullable=False, default="open"); source = Column(String(64), nullable=False, default="operator"); completed_at = Column(DateTime, nullable=True)
     __table_args__ = (CheckConstraint("status IN ('open','satisfied','missed','cancelled')", name="ck_work_commitment_status"),)
 
-WORK_TABLES = tuple(x.__table__ for x in (WorkGoal, WorkProject, WorkTask, WorkTaskDependency, WorkRun, WorkAction, WorkResult, WorkArtifact, WorkLock, EpistemicClaim, WorkEvent, WorkCommitment))
+WORK_TABLES = tuple(x.__table__ for x in (WorkGoal, WorkProject, WorkTask, WorkTaskDependency, WorkRun, WorkAction, WorkResult, WorkArtifact, WorkLock, EpistemicClaim, WorldRelationship, WorkEvent, WorkCommitment))
