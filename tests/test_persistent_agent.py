@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.database import Base
 from datetime import datetime, timedelta
-from core.work_models import WorkCommitment
+from core.work_models import WorkCommitment, WorkRun
 from src.persistent_agent import PersistentAgent, monitor_response_policy
 
 
@@ -53,6 +53,18 @@ def test_monitor_notification_deduplication_and_tier_guard(db_session):
 
 def test_monitor_response_policy_is_bounded_and_authority_preserving():
     assert [monitor_response_policy(tier) for tier in range(4)] == ["observe", "notify", "create_work", "execute_pre_authorized_action"]
+
+
+def test_tier_two_monitor_creates_reviewable_run_proposal_without_execution(db_session):
+    agent = PersistentAgent(db_session)
+    db_session.add(WorkCommitment(id="commitment-monitor", owner="scotty", text="Review monitor", status="open", due_at=datetime.utcnow() - timedelta(hours=1)))
+    db_session.commit()
+    agent.create_monitor("scotty", {"name":"Review overdue work", "condition_type":"commitment_overdue", "source_domain":"work", "consequence_tier":2})
+    notes = agent.evaluate_monitors("scotty")
+    assert notes[0]["response_policy"] == "create_work"
+    assert notes[0]["proposal_run_id"]
+    proposal = db_session.query(WorkRun).filter_by(owner="scotty", id=notes[0]["proposal_run_id"]).one()
+    assert proposal.status == "queued" and proposal.intent["kind"] == "monitor_work_proposal"
 
 
 def test_overdue_commitment_notification_preserves_entity_reference_and_attention(db_session):
