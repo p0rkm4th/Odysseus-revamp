@@ -63,6 +63,18 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.post("/runs/{run_id}/validate")
     async def validate_run(request: Request, run_id: str):
         return await tx(request, lambda svc,o,u: RunPlanner(svc.db).validate(o, run_id))
+    @router.post("/runs/{run_id}/execution/{lifecycle_state}")
+    async def execution_step(request: Request, run_id: str, lifecycle_state: str, payload: dict[str, Any] = Body(default={})): 
+        return await tx(request, lambda svc,o,u: svc.verified_execution_step(o, run_id, lifecycle_state, reason=payload.get("reason"), failure_class=payload.get("failure_class")))
+    @router.post("/runs/{run_id}/cancel")
+    async def cancel_run(request: Request, run_id: str, payload: dict[str, Any] = Body(default={})): 
+        return await tx(request, lambda svc,o,u: svc.request_cancel(o, run_id, reason=str(payload.get("reason") or "operator requested cancellation")))
+    @router.post("/runs/{run_id}/precheck")
+    async def precheck_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): 
+        return await tx(request, lambda svc,o,u: svc.record_precheck(o, run_id, payload))
+    @router.post("/runs/{run_id}/invalidate")
+    async def invalidate_run(request: Request, run_id: str, payload: dict[str, Any] = Body(...)): 
+        return await tx(request, lambda svc,o,u: svc.invalidate_state(o, run_id, payload.get("invalidations") or [], reason=str(payload.get("reason") or "mutation completed")))
     @router.get("/runs/{run_id}/replay")
     async def replay_run(request: Request, run_id: str):
         return await tx(request, lambda svc,o,u: svc.reconstruct_run(o, run_id))

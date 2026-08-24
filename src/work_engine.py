@@ -291,6 +291,69 @@ class WorkEngine:
         self.db.commit(); self.db.refresh(row)
         return serialize(row)
 
+    def verified_execution_step(self, owner, run_id, lifecycle_state, *, reason=None, failure_class=None):
+        """Persist a named verified-execution phase using the Work Run."""
+        allowed = {
+            "created": {"planning", "cancelled"}, "planning": {"ready", "failed", "cancelled"},
+            "ready": {"executing", "waiting_approval", "failed", "cancelled"},
+            "waiting_approval": {"ready", "cancelled", "failed"},
+            "executing": {"verifying", "failed", "cancelled", "compensating"},
+            "verifying": {"succeeded", "failed", "compensating", "cancelled"},
+            "compensating": {"verifying", "failed", "cancelled"},
+            "paused": {"ready", "cancelled"}, "succeeded": set(), "failed": set(), "cancelled": set(),
+        }
+        row = self._one(WorkRun, owner, run_id, "run")
+        current = row.lifecycle_state or "created"
+        if lifecycle_state not in RUN_LIFECYCLE_STATES: raise WorkError("invalid run lifecycle state")
+        if lifecycle_state != current and lifecycle_state not in allowed.get(current, set()):
+            raise WorkError(f"invalid execution transition: {current} -> {lifecycle_state}")
+        row.lifecycle_state = lifecycle_state
+        if lifecycle_state in {"failed", "cancelled"}: row.status = lifecycle_state
+        elif lifecycle_state == "waiting_approval": row.status = "awaiting_approval"
+        elif lifecycle_state == "paused": row.status = "suspended"
+        elif lifecycle_state == "succeeded": row.status = "completed"
+        elif lifecycle_state in {"executing", "verifying", "compensating"}: row.status = "running"
+        elif lifecycle_state in {"planning", "ready"}: row.status = "queued"
+        row.current_step = str(reason or lifecycle_state)[:300]
+        if failure_class: row.error_summary = str(failure_class)[:500]
+        row.ended_at = now() if lifecycle_state in {"succeeded", "failed", "cancelled"} else None
+        row.revision += 1
+        self.event(owner, "execution." + lifecycle_state, run_id=run_id, payload={"lifecycle_state": lifecycle_state, "reason": reason, "failure_class": failure_class})
+        try:
+            from src.observability import ObservabilityService
+            ObservabilityService(self.db).record_span(owner, "execution." + lifecycle_state, run_id=run_id, attributes={"status": "error" if lifecycle_state == "failed" else "ok", "reason": reason or lifecycle_state, "failure_class": failure_class})
+        except Exception:
+            # Observability is diagnostic and must not block a valid Work step.
+            pass
+        if lifecycle_state in {"succeeded", "failed", "cancelled"}: self.release_run_locks(owner, run_id)
+        self.db.commit(); self.db.refresh(row); return serialize(row)
+
+    def record_precheck(self, owner, run_id, precheck):
+        row = self._one(WorkRun, owner, run_id, "run")
+        entry = dict(precheck or {}); entry.setdefault("recorded_at", now().isoformat())
+        checkpoints = list(row.checkpoints or []); checkpoints.append({"kind": "precheck", **entry}); row.checkpoints = checkpoints[-100:]
+        self.event(owner, "execution.precheck", run_id=run_id, payload=entry)
+        self.db.commit(); return entry
+
+    def invalidate_state(self, owner, run_id, invalidations, *, reason="mutation completed"):
+        """Mark matching current claims stale while retaining historical evidence."""
+        self._one(WorkRun, owner, run_id, "run")
+        entries = [item for item in (invalidations or []) if isinstance(item, dict)]
+        changed = []
+        for claim in self.db.query(EpistemicClaim).filter_by(owner=owner, status="active").all():
+            if any((item.get("subject_ref") in {None, claim.subject_ref} and item.get("predicate") in {None, claim.predicate}) for item in entries):
+                provenance = dict(claim.provenance or {}); provenance.update({"state": "stale", "invalidated_at": now().isoformat(), "invalidated_by_run": run_id, "invalidated_reason": reason}); claim.provenance = provenance; changed.append(claim.id)
+        self.event(owner, "execution.state_invalidated", run_id=run_id, payload={"claims": changed, "invalidations": entries, "reason": reason})
+        self.db.commit(); return {"run_id": run_id, "stale_claims": changed, "invalidations": entries}
+
+    def request_cancel(self, owner, run_id, *, reason="operator requested cancellation"):
+        row = self._one(WorkRun, owner, run_id, "run")
+        if row.lifecycle_state in {"succeeded", "failed", "cancelled"}: return serialize(row)
+        row.continuation_state = {**(row.continuation_state or {}), "cancellation_requested": True}
+        row.current_step = "cancellation requested"; row.revision += 1
+        self.event(owner, "execution.cancellation_requested", run_id=run_id, payload={"reason": reason})
+        self.db.commit(); self.db.refresh(row); return serialize(row)
+
     def reconstruct_run(self, owner, run_id):
         """Replay the durable journal into an inspectable lifecycle projection.
 
@@ -305,6 +368,8 @@ class WorkEngine:
         for event in events:
             payload = event.payload or {}
             state = payload.get("lifecycle_state") if isinstance(payload, dict) and (event.event_type.startswith("Run") or event.event_type.startswith("run.")) else None
+            if not state and event.event_type.startswith("execution."):
+                state = event.event_type.split(".", 1)[1]
             if not state and event.event_type.startswith("run."):
                 state = _STATUS_TO_LIFECYCLE.get(event.event_type[4:])
             if not state and event.event_type.startswith("Run"):
