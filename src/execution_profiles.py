@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextvars
+from contextlib import contextmanager
 import os
 import shutil
 from dataclasses import dataclass
@@ -71,6 +72,22 @@ def resolve_execution_profile(requested: str | None) -> ExecutionProfile:
 
 def active_execution_profile() -> ExecutionProfile:
     return _active_profile.get()
+
+
+@contextmanager
+def use_execution_profile(requested: str | ExecutionProfile):
+    """Temporarily bind an explicitly selected profile to one tool action.
+
+    Capability bindings use this only after the outer ActionSpec approval gate
+    has admitted the action.  The binding is task-local and is always reset,
+    so a privileged host operation cannot leak into a later turn.
+    """
+    profile = requested if isinstance(requested, ExecutionProfile) else resolve_execution_profile(requested)
+    token = _active_profile.set(profile)
+    try:
+        yield profile
+    finally:
+        _active_profile.reset(token)
 
 
 def profile_block_reason(
