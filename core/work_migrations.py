@@ -67,3 +67,17 @@ def apply_work_v3(connection: Connection) -> None:
     WorkLock.__table__.create(bind=connection, checkfirst=True)
 
 register_schema_migration(SchemaMigration(WORK_V3_VERSION, WORK_V3_CHECKSUM, apply_work_v3))
+
+WORK_V4_VERSION = "20260824_003_epistemic_claims_v4"
+WORK_V4_DEFINITION = """work-engine-v4
+owner-scoped-epistemic-claims
+claim-class-confidence-evidence-contradiction
+valid-time-and-record-time-projections
+"""
+WORK_V4_CHECKSUM = migration_checksum(WORK_V4_DEFINITION)
+
+def apply_work_v4(connection: Connection) -> None:
+    from core.work_models import EpistemicClaim
+    EpistemicClaim.__table__.create(bind=connection, checkfirst=True)
+
+register_schema_migration(SchemaMigration(WORK_V4_VERSION, WORK_V4_CHECKSUM, apply_work_v4))
