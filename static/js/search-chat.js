@@ -22,6 +22,7 @@ const COMMANDS = [
   ['Open Control Center', 'tool-control-center-btn'],
   ['Open Security', 'tool-security-btn'],
   ['Open OSINT', 'tool-osint-btn'],
+  ['Open Documents', 'tool-library-btn'],
   ['Open Memory', 'tool-memory-btn'],
   ['Open Calendar', 'tool-calendar-btn'],
   ['Open Developer', 'tool-developer-btn'],

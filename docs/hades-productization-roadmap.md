@@ -507,6 +507,16 @@ the existing bounded research path, while canonical facts/inferences still
 require the existing review and provenance boundaries. Live provider research
 and richer correction/delta workflows remain pending.
 
+### Documents shell visibility slice
+
+The existing canonical Document module and Library modal are now reachable from
+the rendered primary sidebar through the actual `tool-library-btn` binding. The
+visible label is Documents, while the existing library/research/archive tabs,
+editor, upload, and preview paths remain the implementation owner. The command
+palette also exposes Open Documents. A second document store or editor was not
+introduced; entity dossier linking and broader document provenance remain
+future product work.
+
 ### Homelab visible authority slice
 
 Homelab is now directly discoverable in the primary application navigation. Its
