@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException, Request
 
-from core.database import SessionLocal
+from core.database import CalendarCal, EmailAccount, SessionLocal
 from src.telegram_store import TelegramStore
 from src.auth_helpers import require_user
 from src.owner_identity import effective_storage_owner
@@ -46,15 +46,33 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
     async def module_health(request: Request, module_id: str):
         """Run only bounded, non-mutating setup health checks."""
         value = owner(request)
-        if module_id != "communications.telegram":
+        supported = {"communications.telegram", "communications.email", "communications.calendar", "communications.contacts"}
+        if module_id not in supported:
             raise HTTPException(409, "safe health check is not implemented for this module")
 
         def check(current_owner):
             db = session_factory()
             try:
-                status = TelegramStore(db).lifecycle_status(owner=current_owner)
-                connected = bool(status.get("connected"))
-                return {"module_id": module_id, "status": "CONFIGURED" if connected else "NOT_CONFIGURED", "checks": {"owner_scoped": True, "private_chat_boundary": connected, "replay_protection": connected, "callback_approval_sealing": connected}, "detail": "existing owner-paired Telegram lifecycle is healthy" if connected else "Telegram is not paired; no network or credential operation was attempted", "authority_unchanged": True, "secret_values_exposed": False}
+                if module_id == "communications.telegram":
+                    status = TelegramStore(db).lifecycle_status(owner=current_owner)
+                    connected = bool(status.get("connected"))
+                    checks = {"owner_scoped": True, "private_chat_boundary": connected, "replay_protection": connected, "callback_approval_sealing": connected}
+                    detail = "existing owner-paired Telegram lifecycle is healthy" if connected else "Telegram is not paired; no network or credential operation was attempted"
+                elif module_id == "communications.email":
+                    rows = db.query(EmailAccount).filter(EmailAccount.owner == current_owner, EmailAccount.enabled == True).all()  # noqa: E712
+                    connected = bool(rows)
+                    checks = {"owner_scoped": True, "account_configured": connected, "network_probe_performed": False}
+                    detail = "email account configuration exists; use the existing Email test operation for provider connectivity" if connected else "no owner-scoped email account is configured"
+                elif module_id == "communications.calendar":
+                    rows = db.query(CalendarCal).filter(CalendarCal.owner == current_owner).all()
+                    connected = bool(rows)
+                    checks = {"owner_scoped": True, "calendar_configured": connected, "network_probe_performed": False}
+                    detail = "owner-scoped calendar exists; provider connectivity is not probed by Setup Center" if connected else "no owner-scoped calendar is configured"
+                else:
+                    checks = {"owner_scoped": True, "canonical_contact_store": True, "network_probe_performed": False}
+                    connected = True
+                    detail = "Contacts canonical store is available; provider connectivity is not probed by Setup Center"
+                return {"module_id": module_id, "status": "CONFIGURED" if connected else "NOT_CONFIGURED", "checks": checks, "detail": detail, "authority_unchanged": True, "secret_values_exposed": False}
             finally:
                 db.close()
         return await asyncio.to_thread(check, value)

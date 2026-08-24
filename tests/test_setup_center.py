@@ -60,3 +60,11 @@ def test_contract_declares_telegram_setup_requirements():
     assert telegram.dependencies == ("core.identity",)
     assert "private chat" in telegram.permissions
     assert telegram.supports_reconfigure is True
+
+
+def test_communications_contracts_expose_read_write_authority_explicitly():
+    contracts = {item.id: item for item in setup_center.CONTRACTS}
+    assert "mailbox read" in contracts["communications.email"].permissions
+    assert "send requires approval" in contracts["communications.email"].permissions
+    assert "calendar write" in contracts["communications.calendar"].permissions
+    assert "contacts read/write" in contracts["communications.contacts"].permissions
