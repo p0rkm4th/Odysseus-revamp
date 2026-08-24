@@ -6147,7 +6147,10 @@ async def stream_agent_loop(
                                 _delta_text = _normalize_ody_qwen_text_artifacts(_delta_text)
                             round_response += _delta_text
                             data["delta"] = _delta_text
-                            _buffer_this_delta = bool(_strict_text_tools and not guide_only)
+                            _buffer_this_delta = bool(
+                                (_strict_text_tools or _intent_requires_action(_intent_domains))
+                                and not guide_only
+                            )
                             if _buffer_this_delta:
                                 _round_text_buffered = True
                             else:
@@ -7549,6 +7552,7 @@ async def stream_agent_loop(
             sorted(_intent_domains), full_response[:240],
         )
         full_response = _grounded_response
+        yield "data: " + json.dumps({"delta": full_response}) + "\n\n"
     if _ody_qwen_finetune_model:
         full_response = _normalize_ody_qwen_text_artifacts(full_response)
         if (
