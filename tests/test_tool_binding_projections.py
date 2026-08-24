@@ -37,3 +37,11 @@ def test_projection_has_no_duplicate_conflicting_bindings():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
         assert binding.executor_key
+
+
+def test_network_binding_preserves_host_broker_boundary():
+    binding = TOOL_BINDINGS["manage_homelab"]
+    assert binding.execution_location == "host_broker"
+    assert binding.target_scope == "private_network"
+    assert binding.requires_direct_container_access is False
+    assert "manage_homelab" in _DOMAIN_TOOL_MAP["network_ops"]

@@ -17,6 +17,9 @@ class ToolBinding:
     textual_contract: str
     domains: frozenset[str]
     executor_key: str
+    execution_location: str = "application"
+    target_scope: str | None = None
+    requires_direct_container_access: bool = True
 
 
 MANAGE_ASSETS_SCHEMA = {
@@ -134,7 +137,7 @@ merges CMDB assets. V1 records bounded plans and evidence only; it has no
 TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_assets": ToolBinding("manage_assets", TOOL_CAPABILITY_IDS["manage_assets"], MANAGE_ASSETS_SCHEMA, _MANAGE_CONTRACT, frozenset({"asset_inventory"}), "manage_assets"),
     "privileged_action": ToolBinding("privileged_action", TOOL_CAPABILITY_IDS["privileged_action"], PRIVILEGED_ACTION_SCHEMA, _PRIV_CONTRACT, frozenset({"asset_inventory", "network_ops", "container_ops", "system_ops", "storage_ops", "operations", "security_audit"}), "privileged_action"),
-    "manage_homelab": ToolBinding("manage_homelab", TOOL_CAPABILITY_IDS["manage_homelab"], MANAGE_HOMELAB_SCHEMA, _HOMELAB_CONTRACT, frozenset({"homelab", "network_ops"}), "manage_homelab"),
+    "manage_homelab": ToolBinding("manage_homelab", TOOL_CAPABILITY_IDS["manage_homelab"], MANAGE_HOMELAB_SCHEMA, _HOMELAB_CONTRACT, frozenset({"homelab", "network_ops"}), "manage_homelab", "host_broker", "private_network", False),
     "manage_osint": ToolBinding("manage_osint", TOOL_CAPABILITY_IDS["manage_osint"], MANAGE_OSINT_SCHEMA, _OSINT_CONTRACT, frozenset({"osint"}), "manage_osint"),
     "manage_security_assessment": ToolBinding("manage_security_assessment", TOOL_CAPABILITY_IDS["manage_security_assessment"], MANAGE_SECURITY_ASSESSMENT_SCHEMA, _SECURITY_CONTRACT, frozenset({"security_audit", "pentest_ops", "network_ops"}), "manage_security_assessment"),
 })

@@ -28,6 +28,12 @@ class ActionSpec:
     approval: ApprovalMode = ApprovalMode.NONE
     executor_key: str | None = None
     known: bool = True
+    # Execution is intentionally part of the capability contract.  In
+    # particular, LAN discovery is brokered by the host and must not be
+    # inferred from the Hades application container namespace.
+    execution_location: str = "application"
+    target_scope: str | None = None
+    requires_direct_container_access: bool = True
 
 
 @dataclass(frozen=True)
@@ -95,6 +101,9 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 effects=("read_private",) if not action.startswith("execute_") else ("admin_change",),
                 approval=ApprovalMode.EXACT if action.startswith("execute_") else ApprovalMode.NONE,
                 executor_key="manage_homelab",
+                execution_location=("host_broker" if action in {"plan_network_discovery", "execute_network_discovery"} else "application"),
+                target_scope=("private_network" if action in {"plan_network_discovery", "execute_network_discovery"} else None),
+                requires_direct_container_access=(action not in {"plan_network_discovery", "execute_network_discovery"}),
             ) for action in (
                 "inspect_host", "service_status", "discovery_status",
                 "plan_service_restart", "execute_service_restart",

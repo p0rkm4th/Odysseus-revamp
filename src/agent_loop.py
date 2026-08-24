@@ -550,6 +550,7 @@ _DOMAIN_RULES["pentest_ops"] = '## Authorized security testing rules\n- Treat ac
 _DOMAIN_RULES["osint"] = '## OSINT/research rules\n- Use public-information retrieval and corroboration rather than local shell inspection unless the user separately asks to analyze local artifacts.\n- Distinguish sourced facts, inference, and unresolved uncertainty.\n- Prefer multiple independent sources for identity, infrastructure, ownership, chronology, or attribution claims.'
 _DOMAIN_RULES["homelab"] = '## Homelab rules\n- Use manage_homelab for structured local operations. Start with status or a plan.\n- Network discovery is limited to explicit private scope and produces review-only inventory candidates.\n- Restarts and diagnostic installation require an owner-bound plan and exact approval.'
 _DOMAIN_RULES["homelab"] += '\n- Execution environment: HOST_OS is Garuda/Arch family; HOST_PACKAGE_MANAGER is pacman through the privileged broker; HADES_RUNTIME is a containerized application.\n- Use first-class capability actions and the bounded prerequisite registry for network tools. Never generate apt/pacman/sudo commands when manage_homelab or privileged_action applies.\n- Prohibited: generic sudo, arbitrary filesystem remount, Docker socket access, and privileged-container escape.\n- A package is installed, a scan ran, or a prerequisite was verified only after an actual tool result says so.'
+_DOMAIN_RULES["homelab"] += '\n- Execution boundary: HADES_APP_RUNTIME=container; NETWORK_DISCOVERY_RUNTIME=host_broker. The host broker performs bounded Nmap discovery; direct container LAN access is not required.\n- Use first-class capability actions and the bounded prerequisite registry for network tools. Never generate apt/pacman/sudo commands when manage_homelab or privileged_action applies.\n- Prohibited: generic sudo, arbitrary filesystem remount, Docker socket access, and privileged-container escape.\n- A package is installed, a scan ran, or a prerequisite was verified only after an actual tool result says so.'
 
 _DOMAIN_RULES["container_ops"] += '\\n- If a read-only diagnostic command fails because an option or utility is unsupported, retry with a simpler portable command instead of claiming the shell or container tooling is unavailable.'
 _DOMAIN_RULES["storage_ops"] += '\\n- If a health utility is unavailable or a flag is unsupported, continue with the remaining read-only inventory and report that specific limitation.'
@@ -5029,6 +5030,9 @@ async def stream_agent_loop(
             and not doc_mode
             and not notes_mode
             and not guide_only
+            # Operational intent must retain its first-class capability tools;
+            # the generic local-model no-tool route is for ordinary prose.
+            and not (_intent_domains & {"homelab", "network_ops"})
         )
         return (
             is_ody,
@@ -5072,6 +5076,21 @@ async def stream_agent_loop(
         _ody_general_no_tool_mode,
     ) = _route_finetune_modes(model)
     _relevant_tools = _route_relevant_tools(model)
+    # A caller/RAG route may have selected an observation reader while omitting
+    # the executable discovery action. Repair that omission before schemas are
+    # projected to the model. This is bounded to explicit network intent and
+    # never creates a new scanner or bypasses approval.
+    if (
+        not guide_only
+        and _relevant_tools is not None
+        and (_intent_domains & {"homelab", "network_ops"})
+        and "manage_homelab" not in disabled_tools
+    ):
+        _relevant_tools.add("manage_homelab")
+        logger.info(
+            "[agent-intent] network capability repair exposed manage_homelab domains=%s",
+            sorted(_intent_domains & {"homelab", "network_ops"}),
+        )
     if _ody_doc_finetune_mode and _relevant_tools is not None:
         logger.info("[agent-intent] odysseus doc finetune tool clamp=%s", sorted(_relevant_tools))
     elif _ody_notes_finetune_mode and _relevant_tools is not None:
