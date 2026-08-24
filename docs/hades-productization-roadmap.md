@@ -98,3 +98,9 @@ trajectory records, supervised failure candidates, review admission, and a
 continuity, scope, identity, and duplicate-read failures. The existing Jarvis
 fixture scorer remains the deterministic benchmark projection; no second
 benchmark engine was added.
+
+The next observability slice adds an OTel-shaped durable trace projection with
+Run linkage, parent/child spans, bounded attributes, automatic sensitive-value
+redaction, and low-cardinality metric dimensions. It intentionally does not
+archive prompts, raw documents, or secrets and still needs request/Run wiring
+and the Developer trace explorer.
