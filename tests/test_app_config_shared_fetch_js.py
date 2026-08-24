@@ -55,7 +55,7 @@ globalThis.sessionStorage = {
   removeItem: (k) => { store.delete(k); },
 };
 globalThis.__seedPrefetch = (value) => {
-  store.set('ody-prefetch-settings', JSON.stringify(value));
+  store.set('ody-prefetch-settings', JSON.stringify({ version: 'hades-settings-v2', data: value }));
 };
 globalThis.__prefetchLeft = () => store.has('ody-prefetch-settings');
 """
@@ -191,6 +191,17 @@ def test_login_prefetch_is_used_once_and_then_consumed():
         "consumed": True,
         "second": "network",
     }
+
+
+@pytest.mark.skipif(not _HAS_NODE, reason="node binary not on PATH")
+def test_legacy_unversioned_prefetch_is_discarded_and_refetched():
+    body = """
+    sessionStorage.setItem('ody-prefetch-settings', JSON.stringify({ tts_enabled: false, from: 'legacy' }));
+    __queue(__json({ tts_enabled: true, from: 'network' }));
+    const result = await getSettings();
+    console.log(JSON.stringify({ requests: __calls().length, source: result.from, left: __prefetchLeft() }));
+    """
+    assert json.loads(_run(body)) == {"requests": 1, "source": "network", "left": False}
 
 
 # ── Writers must invalidate ─────────────────────────────────────────────────
