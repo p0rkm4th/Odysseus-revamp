@@ -87,3 +87,7 @@ epistemic batch is now additive in Work migration v4: typed owner-scoped claims
 retain evidence, contradiction references, confidence, Run provenance, valid
 time, recorded time, expiry, and stale/current projections. It does not replace
 CMDB, Security Evidence, or Network observations.
+
+The Work journal now also supports read-only Run lifecycle reconstruction plus
+bounded checkpoints and verification records. The ORM row remains the fast
+current projection; replay is diagnostic and does not silently mutate state.

@@ -118,6 +118,19 @@ def test_epistemic_claims_preserve_provenance_and_valid_record_time(db):
     with pytest.raises(WorkError, match="claim class"):
         svc.record_claim("alice", {"claim_class": "Guess", "predicate": "x", "source": "user"})
 
+def test_run_journal_reconstructs_lifecycle_and_checkpoints(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "network"})
+    svc.transition_run("alice", run["id"], "planning", {"current_step": "compile"})
+    checkpoint = svc.checkpoint_run("alice", run["id"], {"cursor": 2, "note": "plan sealed"})
+    svc.transition_run("alice", run["id"], "executing", {"current_step": "scan"})
+    svc.record_verification("alice", run["id"], {"passed": True, "evidence": ["result://1"]})
+    replay = WorkEngine(db).reconstruct_run("alice", run["id"])
+    assert replay["lifecycle_state"] == "executing"
+    assert [item["state"] for item in replay["transitions"]] == ["planning", "executing"]
+    assert checkpoint["cursor"] == 2
+    assert WorkEngine(db).get_run("alice", run["id"])["verification"]["passed"] is True
+
 def test_owner_isolation_and_restart_state(db):
     svc = WorkEngine(db)
     goal = svc.create_goal("alice", {"title":"Private work"})
