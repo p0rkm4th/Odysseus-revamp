@@ -495,6 +495,25 @@ class WorkEngine:
         self.db.commit()
         return self.verified_execution_step(owner, run_id, "failed", reason="compensation failed", failure_class="compensation_failed")
 
+    def execute_bound_compensation(self, owner, run_id, action_id, executor):
+        """Dispatch the persisted compensation contract through trusted code."""
+        if not callable(executor): raise WorkError("trusted compensation binding is required")
+        run = self._one(WorkRun, owner, run_id, "run")
+        if run.lifecycle_state != "compensating": raise WorkError("run is not compensating")
+        action = self.db.query(WorkAction).filter_by(id=action_id, run_id=run_id).one_or_none()
+        if action is None: raise WorkError("compensation source action not found")
+        contract = action.compensating_action
+        if not isinstance(contract, dict) or not str(contract.get("capability_id") or "").strip() or not str(contract.get("action_id") or "").strip():
+            raise WorkError("persisted compensation contract is unavailable")
+        payload = {"source_action_id": action.id, "run_id": run.id, "compensation": contract}
+        try:
+            result = executor(payload)
+            if not isinstance(result, dict): raise WorkError("compensation binding must return a structured result")
+            success = result.get("success") is not False
+            return self.complete_compensation(owner, run_id, success=success, details={"contract": contract, "result": result})
+        except Exception as exc:
+            return self.complete_compensation(owner, run_id, success=False, details={"contract": contract, "error": str(exc)[:500]})
+
     def verified_execution_step(self, owner, run_id, lifecycle_state, *, reason=None, failure_class=None):
         """Persist a named verified-execution phase using the Work Run."""
         allowed = {
