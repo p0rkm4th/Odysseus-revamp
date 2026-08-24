@@ -91,11 +91,19 @@ class ModelCompetenceService:
             if preferred and selected["model_key"] != preferred:
                 reason_codes.append("preferred_model_not_sufficiently_qualified")
         alternatives = [{"model_key": item["model_key"], "profile": item.get("profile"), "qualification": item["competence"].get("qualification"), "sample_count": item["competence"].get("sample_count", 0), "success_rate": item["competence"].get("success_rate", 0)} for item in sorted(normalized, key=rank, reverse=True)]
+        selected_competence = selected["competence"] if selected else None
         return {
             "task_class": task,
             "selected": {"model_key": selected["model_key"], "profile": selected.get("profile"), "competence": selected["competence"]} if selected else None,
             "alternatives": alternatives,
             "reason_codes": reason_codes,
+            "evidence_summary": {
+                "selected_sample_count": int((selected_competence or {}).get("sample_count") or 0),
+                "selected_success_rate": int((selected_competence or {}).get("success_rate") or 0),
+                "selected_recent_success_rate": int((selected_competence or {}).get("recent_success_rate") or 0),
+                "selected_failure_classes": list((selected_competence or {}).get("failure_classes") or []),
+                "selected_evidence_refs": list((selected_competence or {}).get("evidence_refs") or []),
+            },
             "evidence_backed": bool(selected and selected["competence"].get("qualification") == "qualified"),
             "authority_unchanged": True,
         }

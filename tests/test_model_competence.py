@@ -38,6 +38,8 @@ def test_recommendation_requires_qualified_evidence_and_is_owner_scoped(db):
     assert result["selected"]["profile"] == "hades-local-test"
     assert result["evidence_backed"] is True
     assert result["authority_unchanged"] is True
+    assert result["evidence_summary"]["selected_sample_count"] == 3
+    assert result["evidence_summary"]["selected_evidence_refs"]
     assert ModelCompetenceService(db).recommend("bob", task_class="homelab_diagnostics", candidates=[{"model_key":"hades-local-test"}])["selected"]["competence"]["qualification"] == "unknown"
 
 

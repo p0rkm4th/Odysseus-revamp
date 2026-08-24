@@ -186,6 +186,9 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.post("/world/relationships", status_code=201)
     async def create_world_relationship(request: Request, payload: dict[str, Any] = Body(...)):
         return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).create_relationship(o, payload))
+    @router.patch("/world/relationships/{relationship_id}")
+    async def update_world_relationship(request: Request, relationship_id: str, payload: dict[str, Any] = Body(...)):
+        return await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).update_relationship(o, relationship_id, payload))
     @router.get("/world/relationships")
     async def world_relationships(request: Request, entity_ref: str | None = None, relation: str | None = None, status: str | None = None):
         return {"relationships": await tx(request, lambda svc,o,u: __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).list_relationships(o, entity_ref=entity_ref, relation=relation, status=status))}
