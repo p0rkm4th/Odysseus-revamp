@@ -234,6 +234,16 @@ eligible nodes for requirements, but node metadata does not grant authority or
 replace the host broker. Existing execution remains unchanged; sandboxing,
 delegated grants, and migration of scheduling are future phases.
 
+### Delegated capability grant foundation
+
+Short-lived owner-scoped grants now bind an existing approved WorkAction to its
+Run, capability, target resources, sealed input digest, expiry, and bounded
+call count. Grants can be revoked and consumed exactly within those bounds;
+wrong owner, action, digest, target, expiry, replay, and call-limit cases fail
+closed. They carry no secret or reusable credential and do not widen policy.
+Integration with trusted ToolBindings and a dedicated grant inspector remain
+future work.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail

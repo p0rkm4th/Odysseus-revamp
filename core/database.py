@@ -2083,6 +2083,8 @@ from core import model_competence_models as model_competence_models  # noqa: E40
 from core import model_competence_migrations as model_competence_migrations  # noqa: E402,F401
 from core import execution_node_models as execution_node_models  # noqa: E402,F401
 from core import execution_node_migrations as execution_node_migrations  # noqa: E402,F401
+from core import delegated_grant_models as delegated_grant_models  # noqa: E402,F401
+from core import delegated_grant_migrations as delegated_grant_migrations  # noqa: E402,F401
 from core.schema_migrations import run_schema_migrations  # noqa: E402
 
 

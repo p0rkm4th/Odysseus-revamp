@@ -34,3 +34,4 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "/verification" in module or "result_summary" in module
     assert "blast_radius" in (ROOT / "src/run_planner.py").read_text()
     assert '"/execution-nodes"' in (ROOT / "routes/work_routes.py").read_text()
+    assert '"/grants"' in (ROOT / "routes/work_routes.py").read_text()
