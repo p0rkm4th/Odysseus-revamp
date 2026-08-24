@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -58,6 +59,32 @@ def _require_research_path(session_id: str) -> Path:
     if path is None:
         raise HTTPException(404, "Research not found")
     return path
+
+
+def _owned_research_json(session_id: str, user: str) -> tuple[Path, dict]:
+    """Load one owner-scoped research case for small durable projections."""
+    path = _require_research_path(session_id)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(500, f"Failed to read research: {exc}") from exc
+    if data.get("owner") != user:
+        raise HTTPException(404, "Research not found")
+    return path, data
+
+
+def _write_research_json(path: Path, data: dict) -> None:
+    """Replace a research projection atomically within its trusted directory."""
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.stem}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def _find_owned_research_path(session_id: str, user: str) -> Path | None:
@@ -596,6 +623,67 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
             return await asyncio.to_thread(operation)
         except WorkError as exc:
             raise HTTPException(400 if "invalid" in str(exc) or "requires" in str(exc) or "replacement" in str(exc) else 404, str(exc)) from exc
+
+    @router.get("/api/research/{session_id}/questions")
+    async def research_questions(session_id: str, request: Request):
+        user = _require_user(request)
+        _path, data = _owned_research_json(session_id, user)
+        return {"session_id": session_id, "questions": list(data.get("open_questions") or data.get("questions") or [])}
+
+    @router.post("/api/research/{session_id}/questions", status_code=201)
+    async def add_research_question(session_id: str, request: Request, payload: dict = Body(...)):
+        user = _require_user(request)
+        path, data = _owned_research_json(session_id, user)
+        question = str((payload or {}).get("question") or "").strip()
+        if not question or len(question) > 2000:
+            raise HTTPException(400, "question is required and must be at most 2000 characters")
+        status = str((payload or {}).get("status") or "OPEN").strip().upper()
+        if status not in {"OPEN", "RESEARCHING", "ANSWERED", "UNRESOLVED", "BLOCKED"}:
+            raise HTTPException(400, "invalid question status")
+        question_row = {
+            "id": f"oq-{uuid.uuid4().hex[:16]}",
+            "question": question,
+            "status": status,
+            "reason": str((payload or {}).get("reason") or "")[:2000],
+            "relevant_entity": str((payload or {}).get("relevant_entity") or "")[:500],
+            "required_evidence": list((payload or {}).get("required_evidence") or [])[:50],
+            "current_evidence": list((payload or {}).get("current_evidence") or [])[:50],
+            "resolution": str((payload or {}).get("resolution") or "")[:4000],
+            "history": [{"status": status, "recorded_at": datetime.utcnow().isoformat()}],
+        }
+        questions = list(data.get("open_questions") or data.get("questions") or [])
+        questions.append(question_row)
+        data["open_questions"] = questions[-200:]
+        _write_research_json(path, data)
+        return question_row
+
+    @router.patch("/api/research/{session_id}/questions/{question_id}")
+    async def update_research_question(session_id: str, question_id: str, request: Request, payload: dict = Body(...)):
+        user = _require_user(request)
+        path, data = _owned_research_json(session_id, user)
+        questions = list(data.get("open_questions") or data.get("questions") or [])
+        row = next((item for item in questions if str(item.get("id")) == question_id), None)
+        if row is None:
+            raise HTTPException(404, "research question not found")
+        incoming = dict(payload or {})
+        if "status" in incoming:
+            status = str(incoming.get("status") or "").strip().upper()
+            if status not in {"OPEN", "RESEARCHING", "ANSWERED", "UNRESOLVED", "BLOCKED"}:
+                raise HTTPException(400, "invalid question status")
+            if status != row.get("status"):
+                row.setdefault("history", []).append({"status": status, "recorded_at": datetime.utcnow().isoformat()})
+                row["status"] = status
+        for key, limit in (("reason", 2000), ("relevant_entity", 500), ("resolution", 4000)):
+            if key in incoming:
+                row[key] = str(incoming.get(key) or "")[:limit]
+        for key in ("required_evidence", "current_evidence"):
+            if key in incoming:
+                if not isinstance(incoming[key], list):
+                    raise HTTPException(400, f"{key} must be a list")
+                row[key] = incoming[key][:50]
+        data["open_questions"] = questions
+        _write_research_json(path, data)
+        return row
 
     @router.post("/api/research/{session_id}/archive")
     async def research_archive(session_id: str, request: Request, archived: bool = Query(True)):
