@@ -312,6 +312,16 @@ downstream service dependencies without manufacturing topology. This remains a
 projection; CMDB identity, ActionSpec scope, and execution policy remain
 authoritative.
 
+### World Model inspection checkpoint
+
+The shared World Model window now exposes relationship validity and recorded
+time, evidence-reference counts, confidence and observation class, relation and
+status filters, bounded two-hop neighbors, and blast-radius impact entries with
+provenance. Unknown dependency gaps remain visible instead of being converted
+into asserted topology. The surface remains a read projection over canonical
+CMDB/Work relationships; relationship mutation and authority stay owner-scoped
+on the existing API.
+
 ### Execution-node registry foundation
 
 An additive owner-scoped execution-node registry now records platform,

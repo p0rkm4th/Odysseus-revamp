@@ -13,6 +13,11 @@ def test_world_model_is_visible_and_uses_canonical_projection():
     assert "/api/work/world/relationships" in module
     assert "blast-radius" in module
     assert "MODEL PROPOSED" in module
+    assert "validity" in module
+    assert "evidence_references" in module
+    assert "Bounded neighbors" in module
+    assert "All relations" in module and "All statuses" in module
+    assert "Unknown dependency gaps" in module
 
 
 def test_control_center_is_visible_and_inspects_durable_run_state():
