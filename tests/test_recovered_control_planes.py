@@ -108,3 +108,34 @@ def test_privileged_broker_network_discovery_is_bounded(monkeypatch):
     for cidr in ("8.8.8.0/24", "192.168.10.0/23", "192.168.10.1"):
         rejected = broker.handle({"action": "run_network_discovery", "cidr": cidr}, 1, 1000)
         assert rejected["ok"] is False
+
+
+def test_discovery_plan_is_single_use_and_unrelated_homelab_actions_fail(tmp_path, monkeypatch):
+    import src.privileged_broker as broker
+
+    def request(payload, timeout=5):
+        if payload.get("action") == "status":
+            return {"ok": True, "network_scanner_available": True}
+        return {"ok": True, "returncode": 0, "output": "<nmaprun/>"}
+
+    monkeypatch.setattr(broker, "client_request", request)
+
+    async def run():
+        ops = HomelabOperations(receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"))
+        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24"}, owner="alice")
+        result = await ops.execute({"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]}, owner="alice")
+        assert result["success"] is True
+        try:
+            await ops.execute({"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]}, owner="alice")
+        except HomelabOperationError:
+            pass
+        else:
+            raise AssertionError("completed discovery plan was replayable")
+        try:
+            await ops.execute({"action": "execute_diagnostic_install", "packages": ["nmap"], "plan_digest": plan["operation_digest"]}, owner="alice")
+        except HomelabOperationError:
+            pass
+        else:
+            raise AssertionError("discovery approval digest authorized an unrelated action")
+
+    asyncio.run(run())
