@@ -168,6 +168,27 @@ class WorkEngine:
         actions = self.db.query(WorkAction).join(WorkRun).filter(WorkRun.owner == owner, WorkAction.run_id == run.id).order_by(WorkAction.sequence.asc()).all() if run else []
         return {"goal": serialize(goal) if goal else None, "project": serialize(project) if project else None, "task": serialize(task) if task else None, "run": serialize(run) if run else None, "actions": [serialize(x) for x in actions], "pending_approval": any(x.status == "awaiting_approval" for x in actions), "pending_input": bool(run and run.status == "awaiting_input"), "commitments": [serialize(x) for x in commitments], "recent_events": [serialize(x) for x in events]}
 
+    def life_review(self, owner, *, horizon_hours=48):
+        """Deterministic daily-review projection over canonical Work records."""
+        current = now()
+        horizon = current + __import__("datetime").timedelta(hours=max(1, min(int(horizon_hours), 336)))
+        goals = self.db.query(WorkGoal).filter_by(owner=owner).filter(WorkGoal.status.in_(["active", "blocked", "paused"])).order_by(WorkGoal.priority.desc(), WorkGoal.updated_at.desc()).limit(50).all()
+        tasks = self.db.query(WorkTask).filter_by(owner=owner).filter(WorkTask.status.in_(["pending", "ready", "running", "awaiting_input", "blocked"])).all()
+        commitments = self.db.query(WorkCommitment).filter_by(owner=owner, status="open").all()
+        runs = self.db.query(WorkRun).filter_by(owner=owner).filter(WorkRun.status.in_(["awaiting_approval", "awaiting_input", "blocked", "suspended", "running"])).all()
+        due = [serialize(x) for x in commitments if x.due_at and x.due_at <= horizon]
+        overdue = [serialize(x) for x in commitments if x.due_at and x.due_at < current]
+        return {
+            "generated_at": current.isoformat(),
+            "horizon_hours": max(1, min(int(horizon_hours), 336)),
+            "focus_goals": [serialize(x) for x in goals[:8]],
+            "blocked_tasks": [serialize(x) for x in tasks if x.status == "blocked"],
+            "due_soon_tasks": [serialize(x) for x in tasks if x.due_at and current <= x.due_at <= horizon],
+            "due_soon_commitments": due,
+            "overdue_commitments": overdue,
+            "waiting_runs": [serialize(x) for x in runs],
+        }
+
     def get_run(self, owner, run_id):
         run = self._one(WorkRun, owner, run_id, "run")
         return serialize(run) | {"actions": [serialize(x) for x in self.db.query(WorkAction).filter_by(run_id=run.id).order_by(WorkAction.sequence).all()], "results": [serialize(x) for x in self.db.query(WorkResult).filter_by(run_id=run.id).all()], "artifacts": [serialize(x) for x in self.db.query(WorkArtifact).filter_by(run_id=run.id).all()], "events": [serialize(x) for x in self.db.query(WorkEvent).filter_by(owner=owner, run_id=run.id).order_by(WorkEvent.created_at).all()]}

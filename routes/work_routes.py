@@ -28,6 +28,9 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.get("/overview")
     async def overview(request: Request):
         return await tx(request, lambda svc, o, u: {"goals": svc.list_records(o, WorkGoal, status="active"), "projects": svc.list_records(o, WorkProject, status="active"), "tasks": svc.list_records(o, WorkTask), "runs": svc.list_records(o, WorkRun), "commitments": svc.list_records(o, WorkCommitment, status="open")})
+    @router.get("/review")
+    async def review(request: Request, horizon_hours: int = Query(48, ge=1, le=336)):
+        return await tx(request, lambda svc, o, u: svc.life_review(o, horizon_hours=horizon_hours))
     @router.get("/context")
     async def context(request: Request, goal_id: str | None = None, project_id: str | None = None, task_id: str | None = None, run_id: str | None = None):
         return await tx(request, lambda svc, o, u: svc.context(o, goal_id=goal_id, project_id=project_id, task_id=task_id, run_id=run_id))
