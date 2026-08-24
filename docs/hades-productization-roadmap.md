@@ -216,6 +216,15 @@ condition, source domain, enabled state, consequence tier, and last-trigger
 metadata. The surface is read-only; it does not grant authority or execute a
 response.
 
+### World Model blast-radius integration
+
+RunPreview now consumes the existing evidence-backed World Model for declared
+Action resources. It preserves confirmed, likely/inferred, and unknown impact
+classes and follows bounded multi-hop relationships, so a host plan can expose
+downstream service dependencies without manufacturing topology. This remains a
+projection; CMDB identity, ActionSpec scope, and execution policy remain
+authoritative.
+
 ### Incident/Change dossier slice
 
 The existing Incident and Change projections now have owner-scoped detail
