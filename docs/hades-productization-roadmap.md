@@ -129,3 +129,12 @@ projection to the existing Work UI, whose Run dossier now presents the preview
 and validation result. This is the preview/validation boundary; execution,
 targeted invalidation, compensation, and full lifecycle orchestration remain
 the next batches.
+
+The next execution slice adds explicit Work lifecycle transitions for planning,
+ready, executing, verifying, compensating, succeeded, failed, and cancelled.
+Transitions are fail-closed, journaled, replayable, and emit redacted local
+OTel-shaped execution spans. Prechecks are persisted as bounded checkpoints;
+operator cancellation is durable; targeted invalidation marks matching current
+epistemic claims stale while retaining their historical evidence. This is a
+control-plane lifecycle foundation, not an executor: broker/tool bindings and
+approval policy remain the authority for real-world mutation.

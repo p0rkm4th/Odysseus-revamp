@@ -135,6 +135,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 idempotency=("replay_safe" if action == "execute_network_discovery" else "unknown"),
                 rollback_capability="none",
                 verification=("observations_persisted", "network_map_reconciled") if action == "execute_network_discovery" else (),
+                state_invalidations=("network.observations", "network.map") if action == "execute_network_discovery" else (),
             ) for action in (
                 "inspect_host", "service_status", "discovery_status",
                 "plan_service_restart", "execute_service_restart",

@@ -48,6 +48,8 @@ def classify_knowledge_gaps(required: list[dict[str, Any]], claims: list[dict[st
             continue
         fresh = []
         for claim in matches:
+            if (claim.get("provenance") or {}).get("state") in {"stale", "unknown"}:
+                continue
             expiry = _parse(claim.get("valid_until")) or _parse(claim.get("expires_at"))
             if expiry is None or expiry >= moment: fresh.append(claim)
         (known if fresh else stale).append({"requirement": requirement, "claims": fresh or matches})
