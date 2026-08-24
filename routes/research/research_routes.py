@@ -7,6 +7,7 @@ import os
 import re
 import tempfile
 import uuid
+from hashlib import sha256
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -85,6 +86,10 @@ def _write_research_json(path: Path, data: dict) -> None:
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
+
+
+def _delta_fingerprint(value: object) -> str:
+    return sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
 
 
 def _find_owned_research_path(session_id: str, user: str) -> Path | None:
@@ -684,6 +689,45 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
         data["open_questions"] = questions
         _write_research_json(path, data)
         return row
+
+    @router.post("/api/research/{session_id}/delta/checkpoint", status_code=201)
+    async def create_research_delta_checkpoint(session_id: str, request: Request):
+        """Record a bounded comparison point without starting new research."""
+        user = _require_user(request)
+        path, data = _owned_research_json(session_id, user)
+        sources = list(data.get("sources") or [])
+        source_keys = sorted({str(source.get("url") or source.get("title") or _delta_fingerprint(source)) for source in sources if isinstance(source, dict)})
+        with SessionLocal() as db:
+            claims = WorkEngine(db).list_claims(user, subject_ref=_case_claim_subject(session_id), include_inactive=True, limit=500)
+        claim_snapshots = {
+            claim["id"]: _delta_fingerprint({key: claim.get(key) for key in ("predicate", "value", "source", "status", "valid_from", "valid_until", "contradicting_references")})
+            for claim in claims
+        }
+        checkpoint = {"id": f"delta-{uuid.uuid4().hex[:16]}", "recorded_at": datetime.utcnow().isoformat(), "source_keys": source_keys, "claim_snapshots": claim_snapshots, "source_count": len(source_keys), "claim_count": len(claim_snapshots)}
+        checkpoints = list(data.get("delta_checkpoints") or [])
+        checkpoints.append(checkpoint)
+        data["delta_checkpoints"] = checkpoints[-20:]
+        _write_research_json(path, data)
+        return checkpoint
+
+    @router.get("/api/research/{session_id}/delta")
+    async def research_delta(session_id: str, request: Request, checkpoint_id: str | None = None):
+        """Compare current evidence/claims with a stored case checkpoint."""
+        user = _require_user(request)
+        _path, data = _owned_research_json(session_id, user)
+        checkpoints = list(data.get("delta_checkpoints") or [])
+        checkpoint = next((item for item in checkpoints if checkpoint_id and item.get("id") == checkpoint_id), None) if checkpoint_id else (checkpoints[-1] if checkpoints else None)
+        if checkpoint is None:
+            raise HTTPException(404, "delta checkpoint not found")
+        current_sources = list(data.get("sources") or [])
+        current_source_map = {str(source.get("url") or source.get("title") or _delta_fingerprint(source)): source for source in current_sources if isinstance(source, dict)}
+        with SessionLocal() as db:
+            current_claims = WorkEngine(db).list_claims(user, subject_ref=_case_claim_subject(session_id), include_inactive=True, limit=500)
+        current_claim_map = {claim["id"]: claim for claim in current_claims}
+        old_sources = set(checkpoint.get("source_keys") or [])
+        old_claims = checkpoint.get("claim_snapshots") or {}
+        changed_claims = [claim for claim_id, claim in current_claim_map.items() if claim_id in old_claims and _delta_fingerprint({key: claim.get(key) for key in ("predicate", "value", "source", "status", "valid_from", "valid_until", "contradicting_references")}) != old_claims[claim_id]]
+        return {"checkpoint": checkpoint, "new_sources": [current_source_map[key] for key in sorted(set(current_source_map) - old_sources)], "removed_sources": sorted(old_sources - set(current_source_map)), "new_claims": [claim for claim_id, claim in current_claim_map.items() if claim_id not in old_claims], "changed_claims": changed_claims, "stale_claims": [claim for claim in current_claims if claim.get("status") in {"superseded", "retracted"} or (claim.get("provenance") or {}).get("state") in {"stale", "unknown"}], "new_contradictions": [claim["id"] for claim in changed_claims if claim.get("contradicting_references")], "authority_unchanged": True}
 
     @router.post("/api/research/{session_id}/archive")
     async def research_archive(session_id: str, request: Request, archived: bool = Query(True)):

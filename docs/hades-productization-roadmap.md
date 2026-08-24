@@ -574,6 +574,15 @@ answered; unanswered and blocked questions remain visible rather than being
 closed by generated report prose. Updates use atomic replacement of the
 existing owner-checked case JSON and do not create a second research store.
 
+### OSINT delta checkpoint
+
+Cases can now record a bounded delta checkpoint containing source references
+and fingerprints of the case-scoped canonical claims. A deterministic compare
+projection reports new/removed sources, new or changed claims, stale or
+retracted claims, and contradiction changes. It does not launch external
+research or assert an external change without current evidence; full bounded
+delta retrieval remains future work.
+
 ### Theme-aware icon and semantic token checkpoint
 
 The shared theme system now derives a complete semantic token layer for each
