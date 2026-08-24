@@ -6204,6 +6204,25 @@ async def stream_agent_loop(
             allow_fenced_for_api=_ody_doc_finetune_mode,
             skip_fenced_tools=_strict_text_tools,
         )
+        # Weak local models may still emit a fenced Bash install after the
+        # capability-first clamp. Never route that raw package command to the
+        # approval gate. Convert it into the bounded first-class prerequisite
+        # plan so the existing resolver, broker policy, and verification path
+        # remain authoritative.
+        if (
+            _network_prerequisite_request(_last_user)
+            and tool_blocks
+            and all(block.tool_type in {"bash", "run_shell"} for block in tool_blocks)
+        ):
+            logger.warning(
+                "[agent] replaced weak-model raw network package command with capability plan"
+            )
+            tool_blocks = [ToolBlock(
+                "manage_homelab",
+                json.dumps({"action": "plan_diagnostic_install", "capability": "network_discovery"}),
+            )]
+            converted_calls = []
+            used_native = False
         if _ody_doc_stream_create_mode and tool_blocks:
             create_idx = next(
                 (idx for idx, block in enumerate(tool_blocks) if block.tool_type == "create_document"),
