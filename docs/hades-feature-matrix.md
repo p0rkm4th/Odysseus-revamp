@@ -27,7 +27,7 @@ product workspace or dogfood gate is incomplete.
 | Models/routing | present | present | partial | green | partial | model lab and qualification evidence |
 | Improvements | present | partial | partial | green | not accepted | registry workspace and promotion evidence |
 | Developer/health/authority | present | partial | partial | green | partial | permissions, trace, backup projections |
-| Shell/window/design system | present | partial | partial | partial | browser review pending | app-wide uniformity, icon language, command palette, global search, and reusable states |
+| Shell/window/design system | present | partial | partial | partial | browser review pending | existing Ctrl+K search now also exposes canonical module commands; global entity search, icon language, and reusable states remain |
 
 ## Tier 1 acceptance gates
 
