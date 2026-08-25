@@ -395,3 +395,11 @@ realistic browser gates pass. Rollback is retained as
 - Status: `VERIFIED_TESTED`; external job-provider configuration and owner-live
   dogfood remain pending. No fake listings or autonomous applications were
   introduced.
+
+## Career cross-model parity checkpoint
+
+- The deterministic Qwen/Luna/Sol synthetic matrix now includes saved
+  opportunities, applications, and interviews in addition to the Hades,
+  Infrastructure, Research, and Integration requests.
+- Evidence: model parity plus Career foundation coverage `19 passed, 1
+  warning`; provider calls and owner-live model swapping remain pending.
