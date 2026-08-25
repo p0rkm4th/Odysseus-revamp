@@ -58,6 +58,8 @@ from routes.chat_helpers import (
     clean_thinking_for_save,
     _allowed_models_for_request,
     _enforce_chat_privileges,
+    _durable_work_context,
+    ensure_chat_agent_work_run,
 )
 from src.action_intents import ToolIntent, classify_tool_intent as _classify_tool_intent
 from src.image_model_ids import looks_like_image_generation_model
@@ -1363,6 +1365,28 @@ def setup_chat_routes(
             persist_user_message=not tool_approval_continuation,
         )
 
+        # First-class actionable agent turns are projected into the canonical
+        # Work ledger before model routing. This makes the same owner/session
+        # run available on approval and "Continue" turns; the legacy agent
+        # stream remains the executor until each binding is migrated.
+        _work_run_id = ensure_chat_agent_work_run(
+            owner,
+            session,
+            message,
+            model_endpoint=getattr(sess, "endpoint_url", None),
+            model_name=getattr(sess, "model", None),
+            enabled=(chat_mode == "agent" and not incognito),
+        )
+        if _work_run_id:
+            _work_context = _durable_work_context(sess, owner)
+            if _work_context:
+                _context_targets = [ctx.messages]
+                if getattr(ctx, "route_messages", None) is not ctx.messages:
+                    _context_targets.append(getattr(ctx, "route_messages", None))
+                for _target in _context_targets:
+                    if isinstance(_target, list):
+                        _target.insert(0, dict(_work_context))
+
         _research_flags = {"do": do_research}  # Mutable container for generator scope
 
         # Query active document — prefer explicit ID from frontend, fall back to session lookup
@@ -2359,6 +2383,7 @@ def setup_chat_routes(
                         defer_context_shaping=_foreground_policy.enabled,
                         external_untrusted_context_seen=external_untrusted_context_seen,
                         exact_approval=exact_tool_approval,
+                        work_run_id=_work_run_id,
                     ):
                         if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
                             try:

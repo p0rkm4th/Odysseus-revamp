@@ -142,6 +142,61 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
         return None
 
 
+def ensure_chat_agent_work_run(
+    owner: str | None,
+    session_id: str | None,
+    message: str,
+    *,
+    model_endpoint: str | None = None,
+    model_name: str | None = None,
+    enabled: bool = False,
+) -> str | None:
+    """Attach actionable first-class agent turns to the canonical Work ledger.
+
+    This is intentionally limited to the currently bridged homelab/network
+    domain. Other agent tools retain their existing transport until their
+    ActionSpec adapters are migrated; no second run engine is created.
+    """
+    if not enabled or not owner or not session_id:
+        return None
+    try:
+        from src.agent_loop import (
+            _classify_agent_request,
+            _normalize_homelab_intent,
+            _normalize_operational_intent_evidence,
+        )
+        from src.agent_work_bridge import ensure_agent_run
+        query = str(message or "")
+        intent = _classify_agent_request([], query)
+        intent = _normalize_homelab_intent(intent, query)
+        intent = _normalize_operational_intent_evidence(intent, query)
+        domains = set(intent.get("domains") or ())
+        continuation = bool(re.fullmatch(
+            r"\s*(?:continue|proceed|go\s+ahead|do\s+it|begin|resume|carry\s+on|keep\s+going)\s*[.!]?\s*",
+            query,
+            re.IGNORECASE,
+        ))
+        if not domains.intersection({"homelab", "network_ops"}) and not continuation:
+            return None
+        if not continuation and not re.search(
+            r"\b(?:scan|discover|discovery|map|enumerate|identify|install|restart|"
+            r"execute|inspect|check|diagnose|list|show|find|begin|start)\b",
+            query,
+            re.IGNORECASE,
+        ):
+            return None
+        return ensure_agent_run(
+            str(owner), str(session_id), query,
+            model_endpoint=model_endpoint,
+            model_name=model_name,
+            intent={"domains": sorted(domains)},
+            continuation=continuation,
+        )
+    except Exception:
+        logger.warning("Failed to attach actionable chat turn to Work ledger", exc_info=True)
+        return None
+
+
 def _context_trace(messages: list[dict], context_length: int) -> dict[str, Any]:
     """Return non-secret evidence for comparing prompts across reconnects."""
     trace = context_trace(messages, context_length)
