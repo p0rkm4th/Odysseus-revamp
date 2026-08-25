@@ -125,6 +125,24 @@ class SyntheticRunCollector:
                 value = event["data"].get(source)
                 if isinstance(value, (int, float)) and not isinstance(value, bool):
                     self._metrics[target] = value
+            # Responsibility accounting is a bounded, server-generated
+            # projection. Preserve only its numeric totals and label maps so
+            # benchmark artifacts can compare framework/model burden without
+            # retaining prompts, raw results, or private state.
+            burden = event["data"].get("model_burden")
+            if isinstance(burden, Mapping):
+                labels = burden.get("labels")
+                self._metrics["model_burden"] = {
+                    "framework": int(burden.get("framework") or 0),
+                    "model": int(burden.get("model") or 0),
+                    "total": int(burden.get("total") or 0),
+                    "model_ratio": float(burden.get("model_ratio") or 0.0),
+                    "labels": {
+                        key: dict(value)
+                        for key, value in (labels.items() if isinstance(labels, Mapping) else ())
+                        if key in {"framework", "model"} and isinstance(value, Mapping)
+                    },
+                }
         elif "error" in event:
             self._provider_error = True
 
