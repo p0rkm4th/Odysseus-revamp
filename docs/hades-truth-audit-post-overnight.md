@@ -221,3 +221,17 @@ Registered binding preparation persists phases such as `PROPOSED` and
 blocked until independent verification. Focused coverage: 42 passed. Full
 regression: 6138 passed, 3 skipped, 186 warnings. Owner-live cross-model
 continuation remains pending.
+
+## Source-matched durable continuation deployment
+
+Commit `fab7c885407e7d7fc23de1166413271fe077cd4b` is deployed as candidate
+`odysseus:candidate-fab7c885407e` with image
+`sha256:444126dbf42b41afffb2e1a184737b93bc1b4d4932e9d60262c740292f05763e`.
+Runtime health is healthy and `/api/version` reports the same source, build
+ID `fab7c885407e7d7fc23de1166413271fe077cd4b-2026-08-25T07:40:00Z`, frontend
+build ID, and migration head. The broker socket remains
+`odysseus:odysseus`/`660`; Qwen `qwen3:8b` inference through
+`172.18.0.1:11434` returned `OK`. Frontend static, browser-window, and
+realistic browser acceptance all pass. Rollback is retained as
+`odysseus:rollback-fab7c885-prev`. Owner-live cross-model continuation
+remains pending.
