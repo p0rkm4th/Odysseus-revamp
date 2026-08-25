@@ -4666,6 +4666,15 @@ async def stream_agent_loop(
             "NETWORK": "network_ops",
             "SECURITY_FINDING": "security_audit",
             "OSINT_CASE": "osint",
+            "MEMORY": "memory",
+            "WORK": "work",
+            "HOUSEHOLD_ITEM": "household",
+            "INTEGRATION": "setup",
+            "CAREER_PROFILE": "career",
+            "JOB_SEARCH": "career",
+            "JOB_OPPORTUNITY": "career",
+            "APPLICATION": "career",
+            "INTERVIEW": "career",
         }
         if _intent_frame.domain_concept in _concept_domains:
             _intent.setdefault("domains", set()).add(_concept_domains[_intent_frame.domain_concept])
@@ -7732,6 +7741,9 @@ async def stream_agent_loop(
             if work_run_id and block.tool_type in {
                 "manage_assets", "manage_homelab", "manage_osint",
                 "manage_security_assessment",
+                "read_memory", "read_work", "read_household", "read_setup",
+                "read_career", "read_network_observations", "list_findings",
+                "list_cases",
             }:
                 try:
                     from src.agent_work_bridge import prepare_action

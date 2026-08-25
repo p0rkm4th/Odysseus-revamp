@@ -153,9 +153,9 @@ def ensure_chat_agent_work_run(
 ) -> str | None:
     """Attach actionable first-class agent turns to the canonical Work ledger.
 
-    This is intentionally limited to the currently bridged homelab/network
-    domain. Other agent tools retain their existing transport until their
-    ActionSpec adapters are migrated; no second run engine is created.
+    Canonical reads and bridged operational Actions share this durable seam;
+    the registry/binding remains authoritative and no second run engine is
+    created.
     """
     if not enabled or not owner or not session_id:
         return None
@@ -174,7 +174,20 @@ def ensure_chat_agent_work_run(
         domains = set(intent.get("domains") or ())
         frame = compile_intent(query)
         continuation = frame.operation_class == "CONTINUE"
-        if not domains.intersection({"homelab", "network_ops"}) and not continuation:
+        canonical_domains = {
+            "TECHNICAL_ASSET": "asset_inventory", "NETWORK": "network_ops",
+            "SECURITY_FINDING": "security_audit", "OSINT_CASE": "osint",
+            "MEMORY": "memory", "WORK": "work", "HOUSEHOLD_ITEM": "household",
+            "INTEGRATION": "setup", "CAREER_PROFILE": "career",
+            "JOB_SEARCH": "career", "JOB_OPPORTUNITY": "career",
+            "APPLICATION": "career", "INTERVIEW": "career",
+        }
+        if frame.domain_concept in canonical_domains:
+            domains.add(canonical_domains[frame.domain_concept])
+        if not domains.intersection({
+            "homelab", "network_ops", "asset_inventory", "security_audit", "osint",
+            "memory", "work", "household", "setup", "career",
+        }) and not continuation:
             return None
         if not continuation and not re.search(
             r"\b(?:scan|discover|discovery|map|enumerate|identify|install|restart|"
@@ -187,7 +200,11 @@ def ensure_chat_agent_work_run(
             str(owner), str(session_id), query,
             model_endpoint=model_endpoint,
             model_name=model_name,
-            intent={"domains": sorted(domains)},
+            intent={
+                "domains": sorted(domains),
+                "domain_concept": frame.domain_concept,
+                "operation_class": frame.operation_class,
+            },
             continuation=continuation,
             completion_criteria={
                 "objective": query[:4000],
