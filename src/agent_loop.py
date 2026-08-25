@@ -7888,13 +7888,12 @@ async def stream_agent_loop(
                 cmd_display = full_command
 
             _work_action_id = None
-            if work_run_id and block.tool_type in {
-                "manage_assets", "manage_homelab", "manage_osint",
-                "manage_security_assessment",
-                "read_memory", "read_work", "read_household", "read_setup",
-                "read_career", "read_communications", "read_network_observations", "list_findings",
-                "list_cases",
-            }:
+            # Every registered ToolBinding is eligible for the durable Work
+            # projection.  The bridge still resolves the exact ActionSpec
+            # from the payload and returns None for unknown actions, so this
+            # registry-derived gate adds no authority and cannot turn legacy
+            # or unsupported tools into durable Actions.
+            if work_run_id and block.tool_type in _capability_v1_bindings:
                 try:
                     from src.agent_work_bridge import prepare_action
                     _work_action_id = await asyncio.to_thread(
