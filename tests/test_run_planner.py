@@ -147,3 +147,60 @@ def test_exact_approval_requires_sealed_input_digest(db):
     result = RunPlanner(db).validate("alice", run["id"])
     assert any(failure["code"] == "approval_digest_missing" for failure in result["failures"])
     assert action["sealed_input_digest"]
+
+
+def test_next_step_projects_safe_read_continuation_without_execution(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "homelab", "plan": [{
+        "capability_id": "homelab.manage", "action_id": "service_status", "target_resources": ["service:nginx"],
+    }]})
+    result = RunPlanner(db).next_step("alice", run["id"])
+    assert result["status"] == "READY"
+    assert result["action"]["action_id"] == "service_status"
+    assert result["safe_auto_continue"] is True
+    assert result["authority_required"] is False
+    assert db.query(WorkAction).count() == 0
+
+
+def test_next_step_requires_authority_for_consequential_action(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "network", "plan": [{
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "target_resources": ["network:private_scope"],
+    }]})
+    result = RunPlanner(db).next_step("alice", run["id"])
+    assert result["status"] == "WAITING_APPROVAL"
+    assert result["authority_required"] is True
+    assert result["safe_auto_continue"] is False
+
+
+def test_next_step_skips_completed_action_and_selects_next_sequence(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "homelab", "plan": []})
+    first = work.create_action("alice", run["id"], {"sequence": 1, "capability_id": "homelab.manage", "action_id": "service_status", "target_resources": ["service:nginx"]})
+    work.complete_action("alice", first["id"], {"result": {"service": "nginx", "status": "active"}})
+    second = work.create_action("alice", run["id"], {"sequence": 2, "capability_id": "homelab.manage", "action_id": "service_status", "target_resources": ["service:postgres"]})
+    result = RunPlanner(db).next_step("alice", run["id"])
+    assert result["status"] == "READY"
+    assert result["action"]["id"] == second["id"]
+    assert result["action"]["sequence"] == 2
+
+
+def test_next_step_fails_closed_for_ambiguous_run(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "network", "lifecycle_state": "execution_ambiguous", "plan": [{
+        "capability_id": "homelab.manage", "action_id": "service_status",
+    }]})
+    result = RunPlanner(db).next_step("alice", run["id"])
+    assert result["status"] == "BLOCKED"
+    assert result["action"] is None
+    assert result["safe_auto_continue"] is False
+
+
+def test_next_step_is_owner_scoped(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "homelab", "plan": [{
+        "capability_id": "homelab.manage", "action_id": "service_status",
+    }]})
+    with pytest.raises(Exception):
+        RunPlanner(db).next_step("bob", run["id"])
