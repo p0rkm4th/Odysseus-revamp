@@ -205,6 +205,23 @@ def test_exact_work_approval_binding_and_resume(db):
     assert svc.resume_approved_action("alice", action["id"], "approval-1")["replayed"] is True
 
 
+def test_approval_resume_restores_parent_run_ready_state(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "network"})
+    action = svc.create_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "normalized_input": {"cidr": "192.168.10.0/24"},
+        "target_resources": ["network:private_scope"], "status": "awaiting_approval",
+        "approval_reference": "approval-ready-1",
+    })
+    resumed = svc.resume_approved_action("alice", action["id"], "approval-ready-1", digest=action["sealed_input_digest"])
+    assert resumed["status"] == "approved"
+    current = svc.get_run("alice", run["id"])
+    assert current["status"] == "queued"
+    assert current["lifecycle_state"] == "ready"
+    assert current["continuation_state"]["pending_action_id"] == action["id"]
+
+
 def test_life_review_is_deterministic_and_owner_scoped(db):
     svc = WorkEngine(db)
     goal = svc.create_goal("alice", {"title": "Prepare launch", "priority": 5, "status": "active"})

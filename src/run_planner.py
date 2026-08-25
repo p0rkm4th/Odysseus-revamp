@@ -331,14 +331,32 @@ class RunPlanner:
 
         action = sorted(pending, key=lambda item: (int(item.get("sequence") or 0), str(item.get("id") or "")))[0]
         action_status = str(action.get("status") or "proposed")
+        sequence = action.get("sequence")
         projected = {"id": action.get("id"), "sequence": action.get("sequence"), "capability_id": action.get("capability_id"), "action_id": action.get("action_id"), "status": action_status, "target_resources": list(action.get("target_resources") or []), "normalized_input": action.get("normalized_input") or {}}
         if action_status == "awaiting_approval" or run.status == "awaiting_approval" or run.lifecycle_state == "waiting_approval":
             return base | {"status": "WAITING_APPROVAL", "action": projected, "reason": "exact action authority is required", "safe_auto_continue": False, "authority_required": True}
-        if action_status in {"executing", "approved"}:
-            return base | {"status": "IN_PROGRESS" if action_status == "executing" else "READY", "action": projected, "reason": "action is approved and ready for the trusted executor" if action_status == "approved" else "action is already executing", "safe_auto_continue": False, "authority_required": False}
+        if action_status == "executing":
+            return base | {"status": "IN_PROGRESS", "action": projected, "reason": "action is already executing", "safe_auto_continue": False, "authority_required": False}
+        if action_status == "approved":
+            # An approved Action has already crossed its authority boundary.
+            # Revalidate the exact persisted contract before allowing the
+            # shared loop to advance it automatically; this never grants or
+            # reuses approval and still fails closed on stale prerequisites.
+            validation = self.validate(owner, run_id, focus_sequence=sequence)
+            failures = [failure for failure in validation["failures"] if failure.get("sequence") == sequence]
+            if failures:
+                return base | {"status": "BLOCKED", "action": projected, "reason": "approved Action cannot pass current Run validation", "safe_auto_continue": False, "authority_required": False, "validation": {"failures": failures, "warnings": validation["warnings"]}}
+            capability = capability_for_id(str(action.get("capability_id") or ""))
+            spec = capability.actions.get(str(action.get("action_id") or "")) if capability else None
+            authority_bound = bool(
+                spec and (
+                    spec.approval.value == "none"
+                    or (action.get("approval_reference") and action.get("sealed_input_digest"))
+                )
+            )
+            return base | {"status": "READY", "action": projected, "reason": "exactly approved Action is ready for the trusted executor", "safe_auto_continue": authority_bound, "authority_required": False, "validation": {"failures": [], "warnings": validation["warnings"]}}
 
         validation = self.validate(owner, run_id)
-        sequence = action.get("sequence")
         failures = [failure for failure in validation["failures"] if failure.get("sequence") == sequence]
         if failures:
             approval_only = all(failure.get("code") == "approval_required" for failure in failures)
