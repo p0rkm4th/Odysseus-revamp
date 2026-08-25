@@ -2,7 +2,7 @@
 
 Date: 2026-08-25  
 Branch: `recovery/live-candidate-20260823`  
-Final source under audit: `38e3f984`
+Final source under audit: `b4e362c1bd18`
 
 ## What changed
 
@@ -465,6 +465,9 @@ realistic browser gates pass. Rollback is retained as
   same IntentFrame and canonical `work.read` ActionSpec projection; provider
   choice cannot add or remove authority.
 - Evidence: model parity, contract, and binding coverage `79 passed, 1
-  warning`; this documentation/test checkpoint is not yet deployed. Live
-  provider competence and owner-authenticated model swapping remain pending.
-- Status: `VERIFIED_TESTED`; owner-live parity remains `OWNER_DOGFOOD_PENDING`.
+  warning`; full regression `6195 passed, 3 skipped, 186 warnings`; frontend
+  static, browser-window, and realistic-browser gates passed on the exact
+  candidate. Runtime source is `b4e362c1bd18e5e1a1a26c0a35ba4e00feeb0580`
+  with image `sha256:945da2e8fddf...`; live provider competence and
+  owner-authenticated model swapping remain pending.
+- Status: `VERIFIED_LIVE`; owner-live parity remains `OWNER_DOGFOOD_PENDING`.
