@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
+import httpx
+
 from core.atomic_io import atomic_write_json
 from src.constants import DATA_DIR
 
@@ -210,3 +212,83 @@ class RuntimeProfileCache:
             data = {}
         data[profile.key] = profile.to_dict()
         atomic_write_json(self.path, data, indent=2)
+
+
+def characterize_ollama(base_url: str, model_id: str, *, endpoint_id: str = "",
+                         cache: RuntimeProfileCache | None = None,
+                         force: bool = False, timeout: float = 3.0) -> RuntimeCapabilityProfile:
+    """Read explicit Ollama metadata for one configured endpoint/model.
+
+    This is intentionally metadata-only: it calls ``/api/show`` for the
+    requested model and performs no discovery, generation, or tool execution.
+    The caller must supply a configured endpoint; URL safety still rejects
+    non-HTTP(S), link-local, multicast, and metadata targets.
+    """
+    from src.url_safety import check_outbound_url
+
+    base = _clean(base_url).rstrip("/")
+    ok, reason = check_outbound_url(base, block_private=False)
+    if not ok:
+        raise ValueError(f"unsafe Ollama endpoint: {reason}")
+    # A cache lookup requires a digest, so metadata is fetched only when the
+    # caller has no already-characterized identity. This endpoint has no
+    # model listing/discovery side effect.
+    response = httpx.post(
+        f"{base}/api/show",
+        json={"name": _clean(model_id)},
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, Mapping):
+        raise ValueError("Ollama metadata response is not an object")
+    details = payload.get("details") if isinstance(payload.get("details"), Mapping) else {}
+    info = payload.get("model_info") if isinstance(payload.get("model_info"), Mapping) else {}
+    digest = _clean(payload.get("digest"))
+    context = details.get("context_length") or info.get("general.context_length") or 0
+    if not context:
+        context = next((value for key, value in info.items() if str(key).endswith(".context_length")), 0)
+    # Ollama versions differ: some expose digest/context only in /api/tags.
+    # This remains a single configured endpoint/model inventory read, not
+    # network discovery. Do not fail characterization merely because /show is
+    # an older response shape.
+    if not digest or not context:
+        tags_response = httpx.get(f"{base}/api/tags", timeout=timeout)
+        tags_response.raise_for_status()
+        tags_payload = tags_response.json()
+        models = tags_payload.get("models") if isinstance(tags_payload, Mapping) else ()
+        match = next((item for item in models if isinstance(item, Mapping) and _clean(item.get("name")) == _clean(model_id)), None)
+        if isinstance(match, Mapping):
+            digest = digest or _clean(match.get("digest"))
+            tag_details = match.get("details") if isinstance(match.get("details"), Mapping) else {}
+            context = context or tag_details.get("context_length") or 0
+    try:
+        context = max(0, int(context or 0))
+    except (TypeError, ValueError):
+        context = 0
+    observed = time.time()
+    capabilities = {
+        name: CapabilityEvidence("pass", "provider_reported", observed, {"source": "ollama_api_show"})
+        for name in (payload.get("capabilities") or ())
+        if _clean(name)
+    }
+    profile = RuntimeCapabilityProfile(
+        endpoint_id=_clean(endpoint_id) or base,
+        protocol="ollama-chat",
+        runtime="ollama",
+        model_id=_clean(model_id),
+        model_digest=digest,
+        server_fingerprint=_clean(response.headers.get("x-ollama-version")) or "unknown",
+        architecture_max_context=context,
+        provider_configured_max_context=context,
+        capabilities=capabilities,
+        created_at=observed,
+        refreshed_at=observed,
+    )
+    if cache is not None:
+        if not force:
+            cached = cache.load(profile.key)
+            if cached is not None and cached.is_fresh():
+                return cached
+        cache.save(profile)
+    return profile

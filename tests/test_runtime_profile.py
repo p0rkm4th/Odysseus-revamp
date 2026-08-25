@@ -7,6 +7,7 @@ from src.runtime_profile import (
     RuntimeProfileCache,
     runtime_profile_key,
     select_evidence,
+    characterize_ollama,
 )
 
 
@@ -50,3 +51,38 @@ def test_context_envelope_uses_runtime_allocation_not_architecture_maximum():
     )
     envelope = ContextEnvelope.from_runtime_profile(profile, aci_profile_target=6000, reserved_output_budget=512)
     assert envelope.effective_context == 6512
+
+
+def test_ollama_characterization_is_metadata_only_and_cacheable(monkeypatch, tmp_path):
+    class Response:
+        headers = {"x-ollama-version": "0.11-test"}
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {
+                "digest": "digest-1",
+                "capabilities": ["completion", "tools", "thinking"],
+                "details": {"context_length": 40960},
+            }
+
+    calls = []
+    def fake_post(url, **kwargs):
+        calls.append((url, kwargs["json"]))
+        return Response()
+
+    class TagsResponse:
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {"models": [{"name": "qwen3:8b", "digest": "digest-1", "details": {"context_length": 40960}}]}
+
+    monkeypatch.setattr("src.runtime_profile.httpx.post", fake_post)
+    monkeypatch.setattr("src.runtime_profile.httpx.get", lambda *args, **kwargs: TagsResponse())
+    cache = RuntimeProfileCache(tmp_path / "profiles.json")
+    first = characterize_ollama("http://127.0.0.1:11434", "qwen3:8b", endpoint_id="test", cache=cache)
+    second = characterize_ollama("http://127.0.0.1:11434", "qwen3:8b", endpoint_id="test", cache=cache)
+    assert first.runtime == "ollama"
+    assert first.protocol == "ollama-chat"
+    assert first.architecture_max_context == 40960
+    assert second.key == first.key
+    assert calls == [("http://127.0.0.1:11434/api/show", {"name": "qwen3:8b"})] * 2
