@@ -1128,3 +1128,14 @@ rows remain hidden from the owner-aware Network projection; no automatic
 reclassification or data reset was introduced. Focused inventory/network and
 security coverage is 60 passed / 185 passed respectively. Full regression and
 source-matched deployment remain the next gate.
+
+### Registered Result-contract enforcement checkpoint — 2026-08-25
+
+First-class registered bindings now validate success-shaped adapter payloads
+against the existing DomainContract/ActionSpec result projection at the shared
+dispatcher boundary. Malformed canonical reads fail as `RESULT_INVALID` rather
+than reaching the model as successful data; executor, owner, policy, approval,
+and verification authority remain unchanged. Unregistered and mutating
+payloads retain their existing trusted-executor/Run verification path. Focused
+coverage is 139 passed and the broader Run/security slice is 271 passed; full
+regression and source-matched deployment are pending this checkpoint.
