@@ -28,6 +28,19 @@ host-brokered, exact-approval gated, prerequisite-aware, and grounded only by
 real tool results. Device-role descriptions remain inferred evidence rather
 than canonical asset identity. Owner-live network retest is still separate.
 
+### Durable agent execution lifecycle checkpoint
+
+Actionable owner/session chat turns now create or resume one canonical Work
+Run, and registered ToolBinding calls project their ActionSpec, exact approval
+reference, and structured WorkResult into that Run. Consequential bound
+results advance through `planning → ready → executing → verifying`; a binding
+failure becomes an explicit Run failure. A returned tool result is not treated
+as desired-state verification, so the Run remains pending until a canonical
+verifier records success, compensation, or failure. This is an adapter over
+the existing agent executor and policy path, not a second executor. Synthetic
+same-Run continuation and lifecycle tests are green; owner-live retest and
+provider-backed verification remain pending.
+
 The first Setup Center slice now uses a declarative `SetupContract` registry
 and a resumable owner-scoped state projection. It covers module categories,
 dependencies, permissions, secret references, safe status values, existing

@@ -73,10 +73,13 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
             {"data": {"hosts": [{"ip": "192.168.10.1", "inference": {"label": "router", "confidence": 0.8}}]}},
         )
         assert completed["status"] == "completed"
+        assert completed["run_lifecycle_state"] == "verifying"
         with session_factory() as db:
             result = db.query(WorkResult).filter_by(action_id=action_id).one()
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
             assert result.owner == "alice"
             assert result.run_id == run_id
+            assert run.lifecycle_state == "verifying"
             assert result.provenance["source"] == "canonical ToolBinding"
             assert result.domain_reference["hosts"][0]["inference"]["label"] == "router"
     finally:
