@@ -165,17 +165,15 @@ def ensure_chat_agent_work_run(
             _normalize_homelab_intent,
             _normalize_operational_intent_evidence,
         )
+        from src.intent_contracts import compile_intent
         from src.agent_work_bridge import ensure_agent_run
         query = str(message or "")
         intent = _classify_agent_request([], query)
         intent = _normalize_homelab_intent(intent, query)
         intent = _normalize_operational_intent_evidence(intent, query)
         domains = set(intent.get("domains") or ())
-        continuation = bool(re.fullmatch(
-            r"\s*(?:continue|proceed|go\s+ahead|do\s+it|begin|resume|carry\s+on|keep\s+going)\s*[.!]?\s*",
-            query,
-            re.IGNORECASE,
-        ))
+        frame = compile_intent(query)
+        continuation = frame.operation_class == "CONTINUE"
         if not domains.intersection({"homelab", "network_ops"}) and not continuation:
             return None
         if not continuation and not re.search(
@@ -191,6 +189,15 @@ def ensure_chat_agent_work_run(
             model_name=model_name,
             intent={"domains": sorted(domains)},
             continuation=continuation,
+            completion_criteria={
+                "objective": query[:4000],
+                "deliverable": (
+                    "verified network discovery and grounded report"
+                    if "network_ops" in domains else "verified homelab result"
+                ),
+                "completion_mode": "verified_run_terminal_state",
+                "intent_frame": frame.as_dict(),
+            } if not continuation else None,
         )
     except Exception:
         logger.warning("Failed to attach actionable chat turn to Work ledger", exc_info=True)
