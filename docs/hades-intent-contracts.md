@@ -27,13 +27,14 @@ Current registered semantic contracts:
 | `MEMORY` | `memory.read/summarize_owner_memory` via `read_memory` | explicit memory read | implemented/source-tested |
 | `WORK` | `work.read/overview` via `read_work` | Work overview | implemented/source-tested |
 | `HOUSEHOLD_ITEM` | `household.read/overview` via `read_household` | Household overview | implemented/source-tested |
+| `INTEGRATION` | `setup.read/state` via `read_setup` | Setup/configuration state | implemented/source-tested |
 
-Setup/Integration and richer Network reads remain explicit
-gaps until an existing owner-scoped service/action can be referenced without
-inventing a side registry. Their absence is surfaced as an unresolved contract,
-never repaired with filesystem or shell access. Memory’s `read_memory`, Work’s
-`read_work`, and Household’s `read_household` bindings are deliberately
-read-only; legacy mutation actions
+Richer Network reads remain an explicit gap until additional owner-scoped
+service/actions can be referenced without inventing a side registry. Setup’s
+`read_setup` adapter reuses the existing secret-free SetupCenterService and
+never grants authority. Memory’s `read_memory`, Work’s `read_work`, Household’s
+`read_household`, and Setup’s `read_setup` bindings are deliberately read-only;
+legacy mutation actions
 remain on their compatibility path until they can be migrated without
 broadening this contract.
 

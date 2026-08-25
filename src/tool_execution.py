@@ -1562,6 +1562,25 @@ async def _execute_read_household_binding(block, owner=None):
         return "read_household", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_read_setup_binding(block, owner=None):
+    """Adapt Setup Center's secret-free owner projection to a read binding."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        action = str(payload.get("action") or "").strip().casefold()
+        if action not in {"state", "integrations", "permissions"}:
+            raise ValueError("unsupported read-only Setup action")
+        if not owner:
+            raise PermissionError("authenticated Setup owner is required")
+        from src.setup_center import SetupCenterService
+        service = SetupCenterService()
+        result = {"state": service.projection, "integrations": service.integrations_projection, "permissions": service.permissions_projection}[action](str(owner))
+        if result.get("secrets_exposed") or result.get("secret_values_exposed"):
+            raise ValueError("Setup projection violated secret-free contract")
+        return "read_setup", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+    except Exception as exc:
+        return "read_setup", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
@@ -1571,6 +1590,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_memory": _execute_read_memory_binding,
     "read_work": _execute_read_work_binding,
     "read_household": _execute_read_household_binding,
+    "read_setup": _execute_read_setup_binding,
 }
 
 

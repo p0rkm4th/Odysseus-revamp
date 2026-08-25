@@ -617,6 +617,14 @@ _DOMAIN_RULES["household"] = (
     "- Distinguish empty household inventory from unavailable or failed retrieval."
 )
 _DOMAIN_RULES["home"] = _DOMAIN_RULES["household"]
+_DOMAIN_RULES["setup"] = (
+    "## Canonical Setup/Integration rules\n"
+    "- Explicit questions about configuration, connected integrations, or authority use the owner-scoped read_setup projection.\n"
+    "- Never expose secret values or treat setup metadata as granted authority.\n"
+    "- Distinguish configured, degraded, unavailable, skipped, and not configured states."
+)
+_DOMAIN_RULES["integrations"] = _DOMAIN_RULES["setup"]
+_DOMAIN_RULES["system"] = _DOMAIN_RULES["setup"]
 
 # Capability V1 domain projection. These hints affect discovery/visibility;
 # policy, security gates, and execution remain owned by their existing layers.

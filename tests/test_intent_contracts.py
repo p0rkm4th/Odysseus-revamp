@@ -100,6 +100,15 @@ def test_household_reads_compile_to_the_canonical_read_binding():
     assert resolved.action.approval.value == "none"
 
 
+def test_setup_reads_compile_to_the_canonical_read_binding():
+    resolved = resolve_intent(compile_intent("What is configured and connected?"))
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "setup.read"
+    assert resolved.action_id == "state"
+    assert resolved.binding_name == "read_setup"
+    assert resolved.action.approval.value == "none"
+
+
 def test_generated_parity_rows_have_explicit_transport_applicability():
     rows = generated_parity_matrix()
     assert rows

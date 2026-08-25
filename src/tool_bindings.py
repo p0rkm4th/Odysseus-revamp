@@ -122,6 +122,16 @@ READ_HOUSEHOLD_SCHEMA = {
     }
 }
 
+READ_SETUP_SCHEMA = {
+    "type": "function", "function": {
+        "name": "read_setup",
+        "description": "Read authenticated owner-scoped Setup Center and Integration Center state. Read-only; never exposes secret values or grants authority.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["state", "integrations", "permissions"]},
+        }, "required": ["action"]},
+    }
+}
+
 _MANAGE_CONTRACT = '''### `manage_assets`
 First-class persistent asset/CMDB tool. Use this instead of Bash for canonical
 asset records, relationships, observations, retirement, and merges.
@@ -210,6 +220,12 @@ Canonical read-only Household Inventory projection. Use `overview`, `list_items`
 items. Technical asset identity remains owned by CMDB/IT Assets.
 `<invoke name="read_household"><parameter name="action">overview</parameter></invoke>`.'''
 
+_SETUP_READ_CONTRACT = '''### `read_setup`
+Canonical read-only Setup Center and Integration Center projection. It reports
+configuration and health state without exposing secret values or changing
+authority. Use `state`, `integrations`, or `permissions`.
+`<invoke name="read_setup"><parameter name="action">state</parameter></invoke>`.'''
+
 
 TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_assets": ToolBinding("manage_assets", TOOL_CAPABILITY_IDS["manage_assets"], MANAGE_ASSETS_SCHEMA, _MANAGE_CONTRACT, frozenset({"asset_inventory"}), "manage_assets"),
@@ -220,6 +236,7 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "read_memory": ToolBinding("read_memory", TOOL_CAPABILITY_IDS["read_memory"], READ_MEMORY_SCHEMA, _MEMORY_READ_CONTRACT, frozenset({"memory"}), "read_memory"),
     "read_work": ToolBinding("read_work", TOOL_CAPABILITY_IDS["read_work"], READ_WORK_SCHEMA, _WORK_READ_CONTRACT, frozenset({"work"}), "read_work"),
     "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
+    "read_setup": ToolBinding("read_setup", TOOL_CAPABILITY_IDS["read_setup"], READ_SETUP_SCHEMA, _SETUP_READ_CONTRACT, frozenset({"setup", "integrations", "system"}), "read_setup"),
 })
 
 
