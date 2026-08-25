@@ -117,3 +117,12 @@ Household, Setup, Career, IT Asset, Network, Security, and OSINT read bindings;
 the model is not required to name those bindings. The projection is focused
 tested and committed in `723ca846`; it is pending rebuild/deployment
 verification.
+
+Final deployment verification supersedes that pending note: candidate
+`odysseus:candidate-7d8b10dea3d1` is deployed with image
+`sha256:42a4b85f9e98a657d327fb34994dc9b47719d889626cd4a5a6a98d3c9efc7772`,
+source `7d8b10dea3d1e975ee62fba89f54f46f39ac5474`, build ID
+`7d8b10dea3d1e975ee62fba89f54f46f39ac5474-2026-08-25T04:10:37Z`, and
+migration head `20260825_002_work_run_completion_v6`. Health, broker, Qwen,
+frontend static, browser-window, and realistic browser checks passed. Rollback
+`odysseus:rollback-7d8b10de-prev` is retained.
