@@ -637,6 +637,17 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 "provenance": {"source": "canonical ToolBinding", "run_id": action.run_id},
             },
         })
+        canonical_status = str((safe_data or {}).get("status") or "").upper() if isinstance(safe_data, dict) else ""
+        if single_read and canonical_status in {"DEGRADED", "UNAVAILABLE", "FAILED", "INVALID_RESULT"}:
+            # The binding returned a durable Result, but the canonical read
+            # did not produce usable truth. Preserve that Result for evidence
+            # while keeping the Run out of the succeeded state; a provider
+            # outage must never become an empty or successful read.
+            completed["read_completion"] = work.fail_read_deliverable(
+                owner, action.run_id,
+                reason=(safe_data or {}).get("reason") or (safe_data or {}).get("error") or f"canonical read returned {canonical_status}",
+            )
+            return completed
         # Keep the durable continuation pointer honest. A completed read is
         # terminal for its Run; a consequential result moves the Run into
         # verification and must remain resumable by the shared lifecycle.
