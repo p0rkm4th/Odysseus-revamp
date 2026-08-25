@@ -549,6 +549,20 @@ realistic browser gates pass. Rollback is retained as
 - Status: `VERIFIED_LIVE`; owner-live cross-model reference dogfood remains
   `OWNER_DOGFOOD_PENDING`.
 
+## Canonical read failure grounding checkpoint
+
+- Source change: durable single-read Runs now preserve explicit
+  `DEGRADED`, `UNAVAILABLE`, `FAILED`, and `INVALID_RESULT` statuses in the
+  persisted Result while transitioning the Run to failed/blocked. Only
+  successful data or successful-empty canonical Results may complete the
+  read deliverable.
+- This closes the distinction between “the binding returned” and “canonical
+  truth was retrieved.” No provider failure is converted to an empty list or
+  a succeeded Run.
+- Evidence: focused bridge/contract/planner coverage `125 passed, 1 warning`;
+  full regression `6271 passed, 3 skipped, 186 warnings in 127.86s`. Status:
+  `VERIFIED_TESTED`; source-matched deployment follows this checkpoint.
+
 ## Communications canonical-read checkpoint
 
 - The existing owner-scoped EmailAccount and Calendar projection is now

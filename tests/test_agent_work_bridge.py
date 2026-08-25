@@ -306,6 +306,30 @@ def test_canonical_read_is_a_terminal_durable_run_result(monkeypatch):
         engine.dispose()
 
 
+def test_canonical_read_unavailable_is_not_recorded_as_success(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-memory-unavailable", "What do you remember about me?",
+            intent={"domains": ["memory"], "domain_concept": "MEMORY", "operation_class": "READ"},
+        )
+        action_id = bridge.prepare_action("alice", run_id, "read_memory", {"action": "summarize_owner_memory"})
+        completed = bridge.record_result(
+            "alice", action_id,
+            {"success": True, "data": {"status": "UNAVAILABLE", "reason": "memory provider offline", "records": []}},
+        )
+        assert completed["read_completion"]["status"] == "failed"
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            result = db.query(WorkResult).filter_by(run_id=run_id, owner="alice").one()
+            assert run.lifecycle_state == "failed"
+            assert run.result_summary is None or run.result_summary.get("result_status") != "SUCCESS_WITH_DATA"
+            assert result.domain_reference["status"] == "UNAVAILABLE"
+    finally:
+        engine.dispose()
+
+
 def test_communications_canonical_read_is_persisted_in_the_shared_work_run(monkeypatch):
     """Every first-class canonical read must remain inspectable and resumable."""
     engine, session_factory = _session_factory()
