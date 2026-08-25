@@ -286,6 +286,28 @@ def test_attention_reads_use_the_canonical_owner_scoped_projection(query):
     assert resolved.frame.workspace_hint == "work"
 
 
+@pytest.mark.parametrize(
+    ("binding", "action", "payload"),
+    [
+        ("read_work", "list_tasks", {"status": "SUCCESS"}),
+        ("manage_osint", "list_cases", {"status": "SUCCESS", "cases": "not-a-list"}),
+        ("read_communications", "overview", {"status": "SUCCESS", "calendar": {}}),
+    ],
+)
+def test_registered_collection_reads_reject_missing_or_malformed_shapes(binding, action, payload):
+    valid, reason = validate_bound_result(binding, action, payload)
+    assert valid is False
+    assert reason == "INVALID_RESULT"
+
+
+def test_registered_collection_read_accepts_empty_typed_collection():
+    valid, reason = validate_bound_result(
+        "read_work", "list_tasks", {"status": "SUCCESS_EMPTY", "tasks": []},
+    )
+    assert valid is True
+    assert reason == "SUCCESS_EMPTY"
+
+
 @pytest.mark.parametrize(("query", "concept", "action_id", "binding"), [
     ("What is the status of my homelab services?", "SERVICE", "service_status", "manage_homelab"),
     ("Inspect my homelab host", "HOMELAB_HOST", "inspect_host", "manage_homelab"),

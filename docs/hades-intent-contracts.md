@@ -68,10 +68,14 @@ remain on their compatibility path until they can be migrated without
 broadening this contract.
 
 Result classification distinguishes success, empty, invalid, unavailable, and
-failed shapes. Explicit technical-asset and network reads use canonical
-bindings, return structured data, require no approval for read actions, and
-prohibit filesystem fallback. Contract validation also checks the read effect,
-executor, binding, and explicit transport applicability. The legacy technical
-asset CLI remains deployment-scoped storage; the Hades binding is owner-aware,
-but multi-owner row-level CMDB isolation remains an explicit migration gap
-rather than an invented claim of completion.
+failed shapes. Explicit technical-asset, network, Work, Household, OSINT, and
+Communications reads use canonical bindings, return structured data, require no
+approval for read actions, and prohibit filesystem fallback. Contract
+validation checks the read effect, executor, binding, explicit transport
+applicability, and the declared top-level collection shape where one exists.
+The legacy technical-asset CLI remains deployment-scoped storage, but the
+registered Hades binding now requires an authenticated owner and passes that
+owner through every registered CMDB operation; legacy ownerless CLI access is
+compatibility-only and is not an owner-scoped Hades path. Legacy rows without a
+provable owner remain hidden from owner-scoped reads until an explicit,
+reviewable migration assigns ownership.
