@@ -7,6 +7,7 @@ from typing import Any
 from uuid import uuid4
 from sqlalchemy.orm import Session
 from core.work_models import (EpistemicClaim, WorldRelationship, WorkAction, WorkArtifact, WorkCommitment, WorkEvent, WorkGoal, WorkLock, WorkProject, WorkResult, WorkRun, WorkTask, WorkTaskDependency)
+from src.capability_registry import capability_for_id
 
 GOAL_STATUSES = {"draft", "active", "blocked", "paused", "completed", "cancelled", "failed"}
 PROJECT_STATUSES = {"planned", "active", "blocked", "paused", "completed", "cancelled"}
@@ -267,6 +268,11 @@ class WorkEngine:
             raise WorkError("run cancellation requested; no new actions may execute")
         if action.status == "completed": return serialize(action) | {"replayed": True}
         if action.status not in {"proposed", "approved"}: raise WorkError("action is not ready for binding execution")
+        capability = capability_for_id(str(action.capability_id or ""))
+        spec = capability.actions.get(str(action.action_id or "")) if capability else None
+        if spec is not None and spec.approval.value == "exact":
+            if action.status != "approved" or not action.approval_reference or not action.sealed_input_digest:
+                raise WorkError("exact approval must be resumed and sealed before binding execution")
         from src.run_planner import RunPlanner
         validation = RunPlanner(self.db).validate(owner, run.id, focus_sequence=action.sequence)
         if not validation["valid"]:
@@ -683,6 +689,7 @@ class WorkEngine:
                 validation = RunPlanner(self.db).validate(
                     owner, run_id,
                     focus_sequence=current_action.sequence if current_action is not None else None,
+                    enforce_exact_authority=False,
                 )
                 if not validation["valid"]:
                     codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))

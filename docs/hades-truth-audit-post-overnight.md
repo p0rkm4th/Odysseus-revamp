@@ -766,6 +766,28 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   regression `6262 passed, 3 skipped, 186 warnings in 126.75s`. Status:
   `VERIFIED_TESTED`; source-matched deployment follows this checkpoint.
 
+## Exact approval preview/execution convergence checkpoint
+
+- Source change: Run validation now reports an exact approval reference that
+  has not resumed the Action, while approved Actions lacking the required
+  reference or sealed input remain non-continuable. The trusted binding
+  executor independently enforces `approved + approval_reference +
+  sealed_input_digest` immediately before effects, so lifecycle staging cannot
+  become authority.
+- The existing planner, Run lifecycle, and WorkEngine remain the sole stores;
+  the compatibility lifecycle projection is retained for pre-execution
+  staging and does not invoke a binding. No approval digest, replay, owner, or
+  policy invariant was weakened.
+- Evidence: focused planner/verified-execution/approval coverage `39 passed,
+  1 warning`; broader control-plane coverage `188 passed, 2 warnings`; full
+  regression `6270 passed, 3 skipped, 186 warnings in 126.89s`. Candidate
+  `odysseus:candidate-21644edc` is deployed as image
+  `sha256:ac1cfc5442b3d87ae46e065eba244e649a79d591c77b6e9e8a579a32ef3b8c03`;
+  `/api/health`, `/api/version`, broker-socket, Ollama-bridge, frontend
+  static, browser-window, and realistic browser acceptance passed. Status:
+  `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`; owner-live model swapping and
+  consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
+
 ## Owner-bounded Contacts canonical read checkpoint
 
 - `CONTACT` is now a semantic IntentFrame concept mapped onto the existing
