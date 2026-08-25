@@ -273,3 +273,25 @@ build ID, and migration head. The broker socket remains
 realistic browser acceptance all pass. Rollback is retained as
 `odysseus:rollback-fab7c885-prev`. Owner-live cross-model continuation
 remains pending.
+
+## Synthetic cross-model contract parity checkpoint
+
+Commit `8c1c6e58ac2d850640c74e93bcf9fab3b1c2d59f` adds a deterministic Qwen,
+Luna, and Sol parity matrix over canonical IT asset, Memory, Work, Network,
+Security, OSINT, Integration, and continuation requests. The matrix compares
+IntentFrame, DomainContract, ActionSpec, binding, and durable Run phase—not
+model prose—and passes for all three model identities. It also repaired plural
+integration-health phrasing so “What integrations are degraded?” resolves to
+the existing owner-scoped `read_setup`/`integrations` ActionSpec. Focused
+matrix/contract coverage passes; full regression is 6159 passed, 3 skipped,
+186 warnings. Owner-live provider swapping and E6 dogfood remain pending.
+
+## Source-matched synthetic parity deployment
+
+Commit `8c1c6e58ac2d850640c74e93bcf9fab3b1c2d59f` is deployed as candidate
+`odysseus:candidate-8c1c6e58` with image
+`sha256:ed1c6b3eeefd85af7bb710b9181cbbdbf3160c0aed2ace8cef8891d0112d444f`.
+Runtime `/api/version` reports the same source/build/frontend provenance;
+health, broker socket, Qwen inference, frontend static, browser-window, and
+realistic browser gates pass. Rollback is retained as
+`odysseus:rollback-8c1c6e58-prev`.
