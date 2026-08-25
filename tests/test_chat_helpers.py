@@ -36,6 +36,7 @@ def test_communications_chat_turn_attaches_to_shared_work_run(monkeypatch):
         model_name="qwen3:8b", enabled=True,
     )
     assert run_id == "run-communications"
+    assert captured["model_name"] == "qwen3:8b"
     assert "communications" in captured["intent"]["domains"]
     assert captured["intent"]["domain_concept"] == "COMMUNICATIONS"
     assert captured["intent"]["operation_class"] == "READ"
