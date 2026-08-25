@@ -10,9 +10,10 @@
 | FROZEN_CORPUS | working tree | 120 synthetic owner-free cases: 96 development, 24 held-out, 12 canary | not rebuilt | SOURCE |
 | FULL_REGRESSION | `a1abb6e1` + README checkpoint | `6292 passed, 3 skipped` | not rebuilt | FULL_REGRESSION |
 | FINAL_DEPLOYED_CHECKPOINT | `1ce7ec34` image | health/version, broker, Ollama, Chroma/SearXNG verified | `odysseus:candidate-1ce7ec34b9f7` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
-| RUNTIME_PROFILE_CONTEXT | working tree after `8c988446` | 65 focused tests; runtime-keyed evidence cache, TTL, protocol/runtime separation, ACI context-envelope metrics | not rebuilt | FOCUSED_TESTED |
-| RUNTIME_PROFILE_DIAGNOSTICS | current working tree | owner-scoped `/api/hades/runtime-profile`; sanitized runtime evidence projection | not rebuilt | FOCUSED_TESTED |
-| TOKEN_ACCOUNTING | current working tree | nested native tool-schema serialization included in shared estimator; 52 focused tests | not rebuilt | FOCUSED_TESTED |
+| RUNTIME_PROFILE_CONTEXT | `3d106a6a` | runtime-keyed evidence cache, TTL, protocol/runtime separation, ACI context-envelope metrics; focused-tested | superseded by final candidate | FOCUSED_TESTED |
+| RUNTIME_PROFILE_DIAGNOSTICS | `85cb0ee4` | owner-scoped `/api/hades/runtime-profile`; sanitized runtime evidence projection; focused-tested | superseded by final candidate | FOCUSED_TESTED |
+| TOKEN_ACCOUNTING | `ce626774` | nested native tool-schema serialization included in shared estimator; 52 focused tests | `odysseus:candidate-ce626774f5ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| FINAL_RUNTIME_CHECKPOINT | `ce626774` | `6298 passed, 3 skipped`; health/version, broker, Ollama verified; unauthenticated profile route returns 401 | `odysseus:candidate-ce626774f5ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -80,6 +81,12 @@ build ID `1ce7ec34b9f70d846e6b41d3f7632a16a2c0bb8b-2026-08-25T22:08:46Z`,
 frontend ID `frontend-1ce7ec34b9f70d846e6b41d3f7632a16a2c0bb8b-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`, and
 migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
+
+The final implementation candidate is source commit
+`ce626774f5ac2aaa1ff8a93c19e18352335f6ff7`, image ID
+`sha256:bbd49d105cc8e18931e4bf4c7a0a141d3273bbfe4a604e68903d6ea29a87f141`,
+and frontend ID
+`frontend-ce626774f5ac2aaa1ff8a93c19e18352335f6ff7-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
