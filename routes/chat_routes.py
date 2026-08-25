@@ -2337,6 +2337,9 @@ def setup_chat_routes(
                     except (TypeError, ValueError):
                         _max_rounds = _DEFAULT_ROUNDS
                     _max_rounds = max(1, min(_max_rounds, 200))
+                    _hades_aci_mode = str(get_setting("hades_aci_mode", "aci") or "aci").strip().lower()
+                    if _hades_aci_mode not in {"legacy", "shadow", "aci"}:
+                        _hades_aci_mode = "aci"
 
                     _forced_tools = None
                     if _search_enabled:
@@ -2384,6 +2387,7 @@ def setup_chat_routes(
                         external_untrusted_context_seen=external_untrusted_context_seen,
                         exact_approval=exact_tool_approval,
                         work_run_id=_work_run_id,
+                        aci_mode=_hades_aci_mode,
                     ):
                         if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
                             try:
