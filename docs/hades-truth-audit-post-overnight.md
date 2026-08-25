@@ -171,19 +171,19 @@ as `DEGRADED`/`UNKNOWN` rather than `CONNECTED`; absent, skipped, degraded,
 and unavailable states remain distinct and secret-free.
 
 Focused control-plane tests: 17 passed. Full regression after this change:
-6134 passed, 3 skipped, 186 warnings in 128.00 seconds. The new source is
-committed but requires the final candidate rebuild and runtime/browser gates
-before E4/E5 promotion. Owner-live E6 remains pending.
+6134 passed, 3 skipped, 186 warnings in 128.00 seconds. Source-matched
+deployment and runtime/browser gates are recorded below. Owner-live E6 remains
+pending.
 
 ## Source-matched deployment verification
 
-Commit `34821684ece935faa367aa491de64e16bed5e958` is deployed as candidate
-`odysseus:candidate-34821684ece9` with image
-`sha256:bd417be508f282df888e4c08a982a0f308335ea15f3799ede34ce89cf12b8b8a`.
+Commit `a423e87a24a04fe7d67b2be8b255b00b601a4ed3` is deployed as candidate
+`odysseus:candidate-a423e87a24a0` with image
+`sha256:c7e68dee91e3c5965d6eab3ab39fe25fa649431730fa2d7c2b6bca0d224e2219`.
 Runtime `/api/health` is healthy and `/api/version` reports the same source,
-build ID `34821684ece935faa367aa491de64e16bed5e958-2026-08-25T06:20:00Z`,
+build ID `a423e87a24a04fe7d67b2be8b255b00b601a4ed3-2026-08-25T06:25:00Z`,
 frontend build ID, and migration head. Broker socket ownership/mode remain
 `odysseus:odysseus`/`660`; Qwen `qwen3:8b` inference through the intended
 `172.18.0.1:11434` bridge returned `OK`. Frontend static, browser-window, and
 realistic browser acceptance all pass. Rollback is retained as
-`odysseus:rollback-34821684-prev`.
+`odysseus:rollback-a423e87a-prev`.
