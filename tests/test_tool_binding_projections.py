@@ -296,6 +296,25 @@ def test_statusless_canonical_read_payload_distinguishes_empty_from_data():
     assert _with_canonical_read_status({"error": "provider unavailable"})["status"] == "FAILED"
 
 
+def test_nested_unprojected_read_cannot_be_reported_as_empty_success():
+    from src.tool_execution import _with_canonical_read_status
+
+    result = _with_canonical_read_status({
+        "email": {"accounts": []},
+        "contacts": {"status": "NOT_PROJECTED", "reason": "owner boundary unavailable"},
+    })
+    assert result["status"] == "DEGRADED"
+    assert result["degraded_reason"] == "NOT_PROJECTED"
+    assert result["contacts"]["status"] == "NOT_PROJECTED"
+
+    explicit = _with_canonical_read_status({
+        "status": "SUCCESS_EMPTY",
+        "email": {"accounts": []},
+        "contacts": {"status": "NOT_PROJECTED"},
+    })
+    assert explicit["status"] == "DEGRADED"
+
+
 def test_communications_read_binding_requires_authenticated_owner():
     result = asyncio.run(tool_execution.execute_registered_binding(
         tool_name="read_communications", payload={"action": "overview"}, owner=None))

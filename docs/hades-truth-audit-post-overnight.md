@@ -752,3 +752,16 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   and realistic browser acceptance passed. Status: `VERIFIED_DEPLOYED` /
   `VERIFIED_LIVE`; owner-live Qwen-to-Luna-to-Sol dogfood remains
   `OWNER_DOGFOOD_PENDING`.
+
+## Nested canonical read degradation checkpoint
+
+- The shared read-status normalizer now detects explicit `NOT_PROJECTED`,
+  `UNAVAILABLE`, `FAILED`, or `DEGRADED` nested in an otherwise structured
+  overview. Such a result is surfaced as top-level `DEGRADED`, including when
+  a legacy adapter supplied `SUCCESS_EMPTY`; nested evidence is preserved.
+- This keeps the current CardDAV contact limitation honest without exposing
+  global contacts as private canonical data. No owner, provider, or authority
+  boundary was weakened.
+- Evidence: focused Result/contract/Run coverage `121 passed, 1 warning`; full
+  regression `6262 passed, 3 skipped, 186 warnings in 126.75s`. Status:
+  `VERIFIED_TESTED`; source-matched deployment follows this checkpoint.
