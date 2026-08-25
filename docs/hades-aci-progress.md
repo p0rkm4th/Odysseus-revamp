@@ -8,6 +8,8 @@
 | BUILD_CACHE_FIX | `172c57da` | Dockerfile provenance moved after stable layers | not rebuilt | SOURCE |
 | DECISION_INTERFACE | working tree after `818f0bcf` | 63 focused tests; strict Decision JSON, opaque choices, one repair, chat setting seam | not rebuilt | FOCUSED_TESTED |
 | FROZEN_CORPUS | working tree | 120 synthetic owner-free cases: 96 development, 24 held-out, 12 canary | not rebuilt | SOURCE |
+| FULL_REGRESSION | `a1abb6e1` + README checkpoint | `6292 passed, 3 skipped` | not rebuilt | FULL_REGRESSION |
+| FINAL_DEPLOYED_CHECKPOINT | `1ce7ec34` image | health/version, broker, Ollama, Chroma/SearXNG verified | `odysseus:candidate-1ce7ec34b9f7` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -47,6 +49,16 @@ decision handling landed afterward.
 The chat route now passes the explicit `hades_aci_mode` setting to the canonical
 agent loop. `aci` is the default, with `shadow` and `legacy` available as
 operator rollback modes; this is a setting, not model-name capability logic.
+
+## Deployment provenance
+
+The application candidate was built and deployed from source commit
+`1ce7ec34b9f70d846e6b41d3f7632a16a2c0bb8b` as
+`odysseus:candidate-1ce7ec34b9f7`. Runtime `/api/version` matched that source,
+build ID `1ce7ec34b9f70d846e6b41d3f7632a16a2c0bb8b-2026-08-25T22:08:46Z`,
+frontend ID `frontend-1ce7ec34b9f70d846e6b41d3f7632a16a2c0bb8b-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`, and
+migration head `20260825_002_work_run_completion_v6`. The documentation commit
+that records this evidence is intentionally later than the deployed image.
 
 ## Full regression gate
 
