@@ -34,12 +34,15 @@ Actionable owner/session chat turns now create or resume one canonical Work
 Run, and registered ToolBinding calls project their ActionSpec, exact approval
 reference, and structured WorkResult into that Run. Consequential bound
 results advance through `planning → ready → executing → verifying`; a binding
-failure becomes an explicit Run failure. A returned tool result is not treated
-as desired-state verification, so the Run remains pending until a canonical
-verifier records success, compensation, or failure. This is an adapter over
-the existing agent executor and policy path, not a second executor. Synthetic
-same-Run continuation and lifecycle tests are green; owner-live retest and
-provider-backed verification remain pending.
+failure becomes an explicit Run failure. Network discovery now persists host
+observations through the existing CMDB/asset-inventory writer, and a broker
+success with failed projection is preserved as `execution_ambiguous` rather
+than reported as verified. A returned tool result is not treated as desired-
+state verification, so the Run remains pending until a canonical verifier
+records success, compensation, or failure. This is an adapter over the
+existing agent executor and policy path, not a second executor. Synthetic
+same-Run continuation, lifecycle, CMDB-projection, and ambiguity tests are
+green; owner-live retest and provider-backed verification remain pending.
 
 The first Setup Center slice now uses a declarative `SetupContract` registry
 and a resumable owner-scoped state projection. It covers module categories,

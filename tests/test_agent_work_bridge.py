@@ -96,3 +96,34 @@ def test_agent_binding_is_owner_scoped(monkeypatch):
             assert db.query(WorkAction).count() == 0
     finally:
         engine.dispose()
+
+
+def test_agent_binding_preserves_ambiguous_post_action_projection_failure(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run("alice", "chat-4", "scan network", intent={"domains": ["network_ops"]})
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
+        )
+        result = bridge.record_result(
+            "alice", action_id,
+            {
+                "error": "network discovery completed but CMDB observation persistence failed",
+                "execution_ambiguous": True,
+                "persistence_error": "CMDB unavailable",
+                "exit_code": 1,
+            },
+        )
+        assert result["run_lifecycle_state"] == "execution_ambiguous"
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            action = db.query(WorkAction).filter_by(id=action_id).one()
+            assert run.lifecycle_state == "execution_ambiguous"
+            assert run.continuation_state["execution_ambiguous"] is True
+            assert action.status == "failed"
+            assert action.error.startswith("execution_ambiguous:")
+            assert db.query(WorkResult).filter_by(action_id=action_id).count() == 0
+    finally:
+        engine.dispose()
