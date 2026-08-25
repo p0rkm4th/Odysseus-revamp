@@ -121,7 +121,10 @@ def test_discovery_plan_is_single_use_and_unrelated_homelab_actions_fail(tmp_pat
     monkeypatch.setattr(broker, "client_request", request)
 
     async def run():
-        ops = HomelabOperations(receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"))
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            observation_recorder=lambda _payload: None,
+        )
         plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24"}, owner="alice")
         result = await ops.execute({"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]}, owner="alice")
         assert result["success"] is True
@@ -137,5 +140,75 @@ def test_discovery_plan_is_single_use_and_unrelated_homelab_actions_fail(tmp_pat
             pass
         else:
             raise AssertionError("discovery approval digest authorized an unrelated action")
+
+    asyncio.run(run())
+
+
+def test_network_discovery_persists_candidates_through_canonical_cmdb_writer(tmp_path, monkeypatch):
+    import src.privileged_broker as broker
+
+    recorded = []
+
+    def request(payload, timeout=5):
+        if payload.get("action") == "status":
+            return {"ok": True, "network_scanner_available": True}
+        return {
+            "ok": True,
+            "returncode": 0,
+            "output": (
+                '<nmaprun><host><status state="up"/>'
+                '<address addr="192.168.10.4" addrtype="ipv4"/>'
+                '<address addr="AA:BB:CC:DD:EE:FF" addrtype="mac"/>'
+                '<hostnames><hostname name="router"/></hostnames></host></nmaprun>'
+            ),
+        }
+
+    monkeypatch.setattr(broker, "client_request", request)
+
+    async def run():
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            observation_recorder=lambda payload: recorded.append(payload),
+        )
+        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24"}, owner="alice")
+        result = await ops.execute(
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]},
+            owner="alice",
+        )
+        assert result["success"] is True
+        assert result["observations_recorded"] is True
+        assert result["network_map_reconciled"] is True
+        assert recorded[0]["hosts"][0]["ip"] == "192.168.10.4"
+        assert recorded[0]["hosts"][0]["mac"] == "aa:bb:cc:dd:ee:ff"
+
+    asyncio.run(run())
+
+
+def test_network_discovery_does_not_claim_success_when_cmdb_persistence_fails(tmp_path, monkeypatch):
+    import src.privileged_broker as broker
+
+    def request(payload, timeout=5):
+        if payload.get("action") == "status":
+            return {"ok": True, "network_scanner_available": True}
+        return {"ok": True, "returncode": 0, "output": "<nmaprun/>"}
+
+    monkeypatch.setattr(broker, "client_request", request)
+
+    def failing_recorder(_payload):
+        raise RuntimeError("CMDB unavailable")
+
+    async def run():
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            observation_recorder=failing_recorder,
+        )
+        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24"}, owner="alice")
+        result = await ops.execute(
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]},
+            owner="alice",
+        )
+        assert result["success"] is False
+        assert result["execution_ambiguous"] is True
+        assert result["observations_recorded"] is False
 
     asyncio.run(run())

@@ -173,6 +173,16 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
         work = WorkEngine(db)
         failed = bool(result.get("error")) or result.get("exit_code") not in (None, 0)
         if failed:
+            if result.get("execution_ambiguous") and str(action.action_id or "").startswith("execute_"):
+                # A broker may have completed while the durable CMDB/world
+                # projection failed. Preserve the unknown outcome and retain
+                # the run's safety state until independent evidence resolves
+                # it; never collapse this into an ordinary execution failure.
+                return work.mark_action_ambiguous(
+                    owner,
+                    action.id,
+                    reason=str(result.get("persistence_error") or result.get("error") or "post-action state is unknown"),
+                )
             action.status = "failed"
             action.error = str(result.get("error") or result.get("output") or "action failed")[:500]
             action.revision += 1

@@ -168,9 +168,42 @@ class HomelabOperations:
     def __init__(
         self, *, receipt_store: HomelabReceiptStore | None = None,
         runner: Callable[[list[str], float], Awaitable[tuple[int, str]]] = _default_runner,
+        observation_recorder: Callable[[dict[str, Any]], Any] | None = None,
     ) -> None:
         self.receipts = receipt_store or HomelabReceiptStore()
         self.runner = runner
+        # The CMDB writer is injectable for deterministic tests, but the
+        # production default remains the existing canonical asset-inventory
+        # persistence primitive.  Discovery must not grow a second store.
+        self.observation_recorder = observation_recorder
+
+    def _record_network_observations(self, candidates: list[dict[str, Any]]) -> dict[str, Any]:
+        hosts = []
+        for candidate in candidates[:256]:
+            ips = candidate.get("ip_addresses") or []
+            ip = str(ips[0]).strip() if ips else ""
+            if not ip:
+                continue
+            macs = candidate.get("mac_addresses") or []
+            hosts.append({
+                "ip": ip,
+                "mac": str(macs[0]).strip().lower() if macs else None,
+                "open_ports": [],
+                "evidence": ["nmap_host_discovery"],
+                "hostname": candidate.get("hostname"),
+            })
+        recorder = self.observation_recorder
+        if recorder is None:
+            from src.asset_inventory import record_net
+            recorder = record_net
+        recorder({"hosts": hosts})
+        return {
+            "observations_recorded": True,
+            "observation_count": len(hosts),
+            # Network projection reads this same canonical CMDB store.  No
+            # separate Network database or inferred asset identity is made.
+            "network_map_reconciled": True,
+        }
 
     async def execute(self, request: dict[str, Any], *, owner: str) -> dict[str, Any]:
         owner = str(owner or "").strip()
@@ -333,16 +366,36 @@ class HomelabOperations:
         code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
         output = str(broker_result.get("output") or broker_result.get("error") or "")
         candidates = _parse_nmap_xml(output, cidr=cidr) if code == 0 else []
+        persistence_error = None
+        persistence = {"observations_recorded": False, "network_map_reconciled": False}
+        if code == 0:
+            try:
+                persistence = self._record_network_observations(candidates)
+            except Exception as exc:
+                # The broker may have completed while the durable observation
+                # projection failed. Preserve that distinction for the Run;
+                # callers must not report a verified discovery in this state.
+                persistence_error = str(exc)[:500]
         receipt = {
             "kind": "discovery", "owner": owner, "created_at": _now().isoformat(),
             "operation_digest": digest, **operation, "success": code == 0,
-            "exit_code": code, "candidate_count": len(candidates),
+            "exit_code": code, "candidate_count": len(candidates), **persistence,
         }
+        if persistence_error:
+            receipt["success"] = False
+            receipt["persistence_error"] = persistence_error
         await asyncio.to_thread(self.receipts.append, receipt)
-        return {
+        result = {
             **_public(receipt), "asset_draft_candidates": candidates,
             "requires_explicit_inventory_review": True, "untrusted_content": True,
         }
+        if persistence_error:
+            result.update({
+                "error": "network discovery completed but CMDB observation persistence failed",
+                "execution_ambiguous": True,
+                "persistence_error": persistence_error,
+            })
+        return result
 
     async def _diagnostic_install(
         self, request: dict[str, Any], *, owner: str, action: str,
