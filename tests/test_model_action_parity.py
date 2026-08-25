@@ -26,6 +26,13 @@ REQUESTS = (
     "What job opportunities did I save?",
     "Which applications have I submitted?",
     "What interviews do I have?",
+    "What goals do I have?",
+    "What projects am I working on?",
+    "What tasks are open?",
+    "What runs are active?",
+    "What commitments are open?",
+    "What missions are active?",
+    "What watches are active?",
 )
 
 

@@ -457,3 +457,14 @@ realistic browser gates pass. Rollback is retained as
   image `sha256:1d518a617e50...`; the broker socket and Ollama `qwen3:8b`
   were present at runtime.
 - Status: `VERIFIED_LIVE`; owner-live cross-model dogfood remains pending.
+
+## Cross-model Work read parity checkpoint
+
+- The deterministic Qwen/Luna/Sol corpus now includes goals, projects, tasks,
+  Runs, commitments, missions, and watches. Each model identity produces the
+  same IntentFrame and canonical `work.read` ActionSpec projection; provider
+  choice cannot add or remove authority.
+- Evidence: model parity, contract, and binding coverage `79 passed, 1
+  warning`; this documentation/test checkpoint is not yet deployed. Live
+  provider competence and owner-authenticated model swapping remain pending.
+- Status: `VERIFIED_TESTED`; owner-live parity remains `OWNER_DOGFOOD_PENDING`.

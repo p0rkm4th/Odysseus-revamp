@@ -24,7 +24,7 @@ or remove authority.
 | Work | `work.read` | `overview` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
 | Work | `work.read` | `review` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
 | Work | `work.read` | `context` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
-| Work | `work.read` | `list_goals` / `list_projects` / `list_tasks` / `list_runs` / `list_commitments` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
+| Work | `work.read` | `list_goals` / `list_projects` / `list_tasks` / `list_runs` / `list_commitments` / `list_missions` / `list_watches` | yes | yes | yes | yes | no | application / Work Engine, MissionService, Monitor projection | none | authenticated owner scope; canonical Work state only |
 | Home / Household | `household.read` | `overview` | yes | yes | yes | yes | no | application / InventoryService | none | authenticated owner scope; physical household state; CMDB remains separate |
 | Home / Household | `household.read` | `list_items` / `search_items` / `get_item` | yes | yes | yes | yes | no | application / InventoryService | none | authenticated owner scope; physical household state; CMDB remains separate |
 | System / Setup | `setup.read` | `state` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; secret-free configuration state; authority unchanged |
