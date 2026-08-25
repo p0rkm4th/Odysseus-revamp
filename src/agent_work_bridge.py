@@ -309,6 +309,64 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
         return projection
 
 
+def safe_auto_continuation(
+    owner: str,
+    run_id: str,
+    *,
+    allowed_tools: set[str] | None = None,
+    disabled_tools: set[str] | None = None,
+) -> dict[str, Any] | None:
+    """Project one already-safe read-only Run step for automatic execution.
+
+    This is intentionally narrower than continuation resolution.  It may only
+    return the next Action when the canonical planner has established that it
+    is READY, read-only, approval-free, and bound to a currently available
+    ToolBinding.  It never creates an Action, advances a Run, or widens scope.
+    The caller still executes the returned binding through the normal policy
+    and executor path.
+    """
+    projection = continuation_run_projection(owner, run_id)
+    if not isinstance(projection, dict):
+        return None
+    next_step = projection.get("next_step")
+    if not isinstance(next_step, dict):
+        return None
+    if next_step.get("status") != "READY" or next_step.get("safe_auto_continue") is not True:
+        return None
+    action = next_step.get("action")
+    if not isinstance(action, dict):
+        return None
+    binding = str(action.get("tool_binding_name") or "").strip()
+    action_id = str(action.get("action_id") or "").strip()
+    if not binding or not action_id:
+        return None
+    if allowed_tools is not None and binding not in allowed_tools:
+        return None
+    if disabled_tools and binding in disabled_tools:
+        return None
+    payload = action.get("normalized_input")
+    if not isinstance(payload, dict):
+        payload = {}
+    payload = dict(payload)
+    payload.setdefault("action", action_id)
+    target_resources = [
+        str(item).strip()
+        for item in (action.get("target_resources") or [])
+        if str(item).strip()
+    ]
+    if target_resources:
+        # Internal metadata lets prepare_action preserve the compiled plan's
+        # exact scope without asking the model to know the executor schema.
+        payload["_hades_target_resources"] = target_resources
+    return {
+        "run_id": str(run_id),
+        "tool": binding,
+        "action_id": action_id,
+        "content": json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        "target_resources": target_resources,
+    }
+
+
 def prepare_action(
     owner: str,
     run_id: str,
@@ -369,7 +427,13 @@ def prepare_action(
                     break
             if targets:
                 payload["targets"] = targets
+        planned_resources = payload.pop("_hades_target_resources", None)
         target_resources = list(spec.target_resources)
+        if isinstance(planned_resources, list):
+            for resource in planned_resources:
+                value = str(resource or "").strip()
+                if value and value not in target_resources:
+                    target_resources.append(value)
         locks = list(spec.locks)
         if spec.action_id == "execute_service_restart":
             service = str(payload.get("service") or "").strip()

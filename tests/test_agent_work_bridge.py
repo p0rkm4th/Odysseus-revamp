@@ -108,6 +108,110 @@ def test_continuation_projection_includes_canonical_next_step_without_materializ
         engine.dispose()
 
 
+def test_safe_auto_continuation_projects_only_available_read_action(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-auto-read", "check homelab service status",
+            intent={"domains": ["homelab"], "domain_concept": "SERVICE", "operation_class": "READ"},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.plan = [{
+                "sequence": 1,
+                "capability_id": "homelab.manage",
+                "action_id": "service_status",
+                "target_resources": ["service:nginx"],
+            }]
+            db.commit()
+
+        projected = bridge.safe_auto_continuation(
+            "alice", run_id, allowed_tools={"manage_homelab"}, disabled_tools=set(),
+        )
+        assert projected["tool"] == "manage_homelab"
+        assert projected["action_id"] == "service_status"
+        assert json.loads(projected["content"]) == {
+            "_hades_target_resources": ["service:nginx"],
+            "action": "service_status",
+        }
+        assert bridge.safe_auto_continuation(
+            "alice", run_id, allowed_tools=set(), disabled_tools=set(),
+        ) is None
+        assert bridge.safe_auto_continuation(
+            "alice", run_id, allowed_tools={"manage_homelab"}, disabled_tools={"manage_homelab"},
+        ) is None
+        with session_factory() as db:
+            assert db.query(WorkAction).filter_by(run_id=run_id).count() == 0
+    finally:
+        engine.dispose()
+
+
+def test_safe_auto_continuation_refuses_consequential_or_ambiguous_steps(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-auto-write", "discover network",
+            intent={"domains": ["network_ops"]},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.plan = [{
+                "sequence": 1,
+                "capability_id": "homelab.manage",
+                "action_id": "execute_network_discovery",
+                "target_resources": ["network:private_scope"],
+            }]
+            db.commit()
+        assert bridge.safe_auto_continuation(
+            "alice", run_id, allowed_tools={"manage_homelab"}, disabled_tools=set(),
+        ) is None
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.lifecycle_state = "execution_ambiguous"
+            db.commit()
+        assert bridge.safe_auto_continuation(
+            "alice", run_id, allowed_tools={"manage_homelab"}, disabled_tools=set(),
+        ) is None
+    finally:
+        engine.dispose()
+
+
+def test_safe_auto_continuation_advances_into_unmaterialized_declared_step(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-auto-chain", "check both services",
+            intent={"domains": ["homelab"]},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.plan = [
+                {"sequence": 1, "capability_id": "homelab.manage", "action_id": "service_status", "target_resources": ["service:nginx"]},
+                {"sequence": 2, "capability_id": "homelab.manage", "action_id": "service_status", "target_resources": ["service:postgres"]},
+            ]
+            db.commit()
+
+        first_action = bridge.prepare_action("alice", run_id, "manage_homelab", {"action": "service_status"})
+        assert first_action
+        bridge.record_result("alice", first_action, {"data": {"status": "active"}})
+        projected = bridge.safe_auto_continuation(
+            "alice", run_id, allowed_tools={"manage_homelab"}, disabled_tools=set(),
+        )
+        assert projected["action_id"] == "service_status"
+        assert projected["target_resources"] == ["service:postgres"]
+        second_action = bridge.prepare_action("alice", run_id, projected["tool"], projected["content"])
+        assert second_action
+        with session_factory() as db:
+            assert db.query(WorkAction).filter_by(run_id=run_id).count() == 2
+            row = db.query(WorkAction).filter_by(id=second_action).one()
+            assert row.target_resources == ["service:postgres"]
+    finally:
+        engine.dispose()
+
+
 def test_completion_assessment_is_durable_and_does_not_use_model_prose(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)

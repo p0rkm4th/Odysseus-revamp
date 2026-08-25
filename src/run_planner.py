@@ -113,10 +113,22 @@ class RunPlanner:
 
     def _actions(self, run: WorkRun) -> list[dict[str, Any]]:
         persisted = self.db.query(WorkAction).filter_by(run_id=run.id).order_by(WorkAction.sequence, WorkAction.id).all()
-        if persisted:
-            return [serialize(row) for row in persisted]
+        persisted_rows = [serialize(row) for row in persisted]
         plan = run.plan if isinstance(run.plan, list) else []
-        return [dict(item, sequence=index) for index, item in enumerate(plan, 1) if isinstance(item, dict)]
+        projected = []
+        persisted_sequences = {int(item.get("sequence") or 0) for item in persisted_rows}
+        for index, item in enumerate(plan, 1):
+            if not isinstance(item, dict):
+                continue
+            sequence = int(item.get("sequence") or index)
+            # Persisted Actions are authoritative for their sequence.  Keep
+            # later declared plan steps visible even before they are
+            # materialized, otherwise a completed first step makes the
+            # planner falsely report the Run complete/no-next-step.
+            if sequence in persisted_sequences:
+                continue
+            projected.append(dict(item, sequence=sequence, status=item.get("status") or "proposed"))
+        return sorted(persisted_rows + projected, key=lambda item: (int(item.get("sequence") or 0), str(item.get("id") or "")))
 
     def _spec(self, action: dict[str, Any]) -> tuple[Any, ActionSpec | None]:
         capability = capability_for_id(str(action.get("capability_id") or ""))

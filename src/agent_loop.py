@@ -5836,6 +5836,11 @@ async def stream_agent_loop(
     actual_endpoint_cost_tracked = requested_endpoint_cost_tracked
     usage_buckets = []
     total_tool_calls = 0  # for budget enforcement
+    # Server-owned read-only Run continuation budget.  This is deliberately
+    # separate from the model round budget: it bounds deterministic chaining
+    # of already-declared safe reads without allowing an agent turn to grow
+    # without limit.
+    _safe_auto_continuations = 0
     _ody_notes_tool_completed = False
     _pinned_fallback_candidate = None
     _pinned_fallback_route = None
@@ -7630,6 +7635,7 @@ async def stream_agent_loop(
         tool_result_texts = []  # plain text for native tool role messages
         tool_result_records = []  # aligned structured provenance for next round
         budget_hit = False
+        _initial_tool_block_count = len(tool_blocks)
         for i, block in enumerate(tool_blocks):
             # --- Tool budget check ---
             if max_tool_calls > 0 and total_tool_calls >= max_tool_calls:
@@ -8128,6 +8134,57 @@ async def stream_agent_loop(
                             )
                             if isinstance(_refreshed_run, dict) and isinstance(_refreshed_run.get("next_step"), dict):
                                 _intent["continuation_next_step"] = _refreshed_run["next_step"]
+
+                    # Carry the same deliverable through the next declared
+                    # read-only Action automatically.  The projection is
+                    # server-owned and narrow: one model-supplied canonical
+                    # binding, one successful result, a single-block batch,
+                    # no approval, and an explicit per-turn budget.  The
+                    # appended block still traverses normal policy, owner,
+                    # ActionSpec, and executor checks below.
+                    if (
+                        isinstance(persisted_work_result, dict)
+                        and not result.get("error")
+                        and work_run_id
+                        and _safe_auto_continuations < 8
+                        and _initial_tool_block_count == 1
+                        and i == len(tool_blocks) - 1
+                    ):
+                        from src.agent_work_bridge import safe_auto_continuation
+                        _auto_projection = await asyncio.to_thread(
+                            safe_auto_continuation,
+                            owner,
+                            str(work_run_id),
+                            allowed_tools=set(_relevant_tools or set()),
+                            disabled_tools=set(disabled_tools or set()),
+                        )
+                        if isinstance(_auto_projection, dict):
+                            _auto_block = ToolBlock(
+                                str(_auto_projection["tool"]),
+                                str(_auto_projection["content"]),
+                            )
+                            tool_blocks.append(_auto_block)
+                            _safe_auto_continuations += 1
+                            logger.info(
+                                "[hades-continuation] auto-continued safe read run=%s action=%s binding=%s count=%s",
+                                work_run_id,
+                                _auto_projection.get("action_id"),
+                                _auto_projection.get("tool"),
+                                _safe_auto_continuations,
+                            )
+                            if used_native:
+                                # Keep native provider history structurally
+                                # aligned with the server-generated binding.
+                                # The synthetic call is still subject to the
+                                # same result and policy path; it only records
+                                # why the appended tool result exists.
+                                _auto_call = {
+                                    "id": f"hades_auto_{round_num}_{_safe_auto_continuations}",
+                                    "name": _auto_block.tool_type,
+                                    "arguments": _auto_block.content,
+                                }
+                                native_tool_calls.append(_auto_call)
+                                converted_calls.append(_auto_call)
                 except Exception:
                     logger.warning("[work-bridge] failed to persist bound action result", exc_info=True)
 
