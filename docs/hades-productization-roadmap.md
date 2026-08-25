@@ -1049,3 +1049,9 @@ success/zero/failure results and no approval for private reads. Work,
 Household, and Setup/Integration remain intentionally unregistered until real
 owner-scoped executors exist. Full regression: 6116 passed, 3 skipped, 186
 warnings.
+
+The Work read convergence batch adds the read-only `work.read` capability and
+`read_work` ToolBinding over WorkEngine for owner-scoped overview, review,
+context, and typed list reads. It reuses durable Work state and does not create
+a second task/work store. Focused tests pass; full regression and deployment
+evidence remain pending until the batch is committed and built.

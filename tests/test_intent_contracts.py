@@ -82,6 +82,15 @@ def test_memory_reads_compile_to_the_canonical_read_binding(query):
     assert resolved.action.approval.value == "none"
 
 
+def test_work_reads_compile_to_the_canonical_read_binding():
+    resolved = resolve_intent(compile_intent("What am I working on?"))
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "work.read"
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_work"
+    assert resolved.action.approval.value == "none"
+
+
 def test_generated_parity_rows_have_explicit_transport_applicability():
     rows = generated_parity_matrix()
     assert rows

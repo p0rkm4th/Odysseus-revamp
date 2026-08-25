@@ -107,6 +107,11 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "explicit_memory_read",
     ),
+    "WORK": DomainContract(
+        "WORK", "work.read", {"READ": "overview"}, "read_work",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "work_overview",
+    ),
 }
 
 
@@ -149,7 +154,7 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         concept = "SECURITY_FINDING"
     elif re.search(r"\b(?:osint|open source intelligence|investigation|case)\b", q):
         concept = "OSINT_CASE"
-    elif re.search(r"\b(?:work|project|task|goal|commitment)\b", q):
+    elif re.search(r"\b(?:work|working|project|task|goal|commitment)\b", q):
         concept = "WORK"
     elif re.search(r"\b(?:setup|configured|integration|connected)\b", q):
         concept = "INTEGRATION"

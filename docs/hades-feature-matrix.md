@@ -116,3 +116,11 @@ explicit metadata and legacy DOM IDs remain compatibility bindings. Source and
 focused evidence is E2/E3; the final candidate is E4/E5 source-matched, while
 owner-live UI and memory dogfood remain pending. See
 `docs/hades-truth-audit-post-overnight.md`.
+
+The Work read convergence batch adds the read-only `work.read` capability and
+`read_work` ToolBinding over the existing durable WorkEngine. Overview, review,
+context, and typed list reads are owner-scoped structured results with no
+generic approval or filesystem fallback. “What am I working on?” now compiles
+through the generic Work contract; mutation lifecycle convergence remains
+separate. Focused evidence is green; full regression and source-matched
+deployment are pending this batch.
