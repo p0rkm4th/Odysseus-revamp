@@ -178,6 +178,16 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
             action.revision += 1
             work.event(owner, "action.failed", run_id=action.run_id, action_id=action.id, payload={"reason": action.error})
             db.commit()
+            # A failed consequential binding must not leave its durable Run
+            # advertising a still-planning operation. This is a lifecycle
+            # projection only; the existing executor remains authoritative for
+            # policy, approval, broker execution, and any ambiguity signal.
+            if str(action.action_id or "").startswith("execute_"):
+                work.verified_execution_step(
+                    owner, action.run_id, "failed",
+                    reason="bound ActionSpec execution failed",
+                    failure_class="execution_failed",
+                )
             return {"action_id": action.id, "status": "failed"}
         safe_data = result.get("data")
         try:
@@ -185,7 +195,7 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
             safe_data = json.loads(encoded[:100000]) if len(encoded) <= 100000 else {"truncated": True}
         except (TypeError, ValueError):
             safe_data = None
-        return work.complete_action(owner, action.id, {
+        completed = work.complete_action(owner, action.id, {
             "result_reference": f"agent-tool://{action.id}",
             "result": {
                 "result_type": "agent_binding_result",
@@ -195,6 +205,26 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 "provenance": {"source": "canonical ToolBinding", "run_id": action.run_id},
             },
         })
+        # A result proves that the binding returned; it does not prove the
+        # desired postcondition. Consequential Actions therefore advance the
+        # same canonical lifecycle to VERIFYING and remain incomplete until a
+        # verifier records success (or explicit compensation/failure).
+        if str(action.action_id or "").startswith("execute_"):
+            if action.status == "completed":
+                work.verified_execution_step(
+                    owner, action.run_id, "ready",
+                    reason="approval and bound result recorded",
+                )
+            lifecycle = work.verified_execution_step(
+                owner, action.run_id, "executing",
+                reason="bound ActionSpec returned; verification required",
+            )
+            lifecycle = work.verified_execution_step(
+                owner, action.run_id, "verifying",
+                reason="post-action verification required",
+            )
+            completed["run_lifecycle_state"] = lifecycle["lifecycle_state"]
+        return completed
 
 
 def mark_run_waiting(owner: str, run_id: str, *, step: str) -> None:
