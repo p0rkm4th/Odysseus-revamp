@@ -81,6 +81,35 @@ def test_model_swap_preserves_run_and_records_owner_scoped_history(monkeypatch):
         engine.dispose()
 
 
+def test_observed_fallback_model_updates_durable_run_provenance(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-observed-provider", "show my assets",
+            model_name="qwen3:8b", model_endpoint="http://ollama/v1",
+            intent={"domains": ["asset_inventory"], "domain_concept": "TECHNICAL_ASSET", "operation_class": "READ"},
+        )
+        observed = bridge.record_agent_model_observation(
+            "alice", run_id,
+            model_name="gpt-5.6-luna", model_endpoint="https://luna.example/v1",
+        )
+        assert observed["changed"] is True
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            assert run.model_name == "gpt-5.6-luna"
+            assert run.model_endpoint == "https://luna.example/v1"
+            assert [item["role"] for item in run.continuation_state["model_history"]] == [
+                "initial", "observed",
+            ]
+            assert db.query(WorkRun).filter_by(owner="bob", id=run_id).one_or_none() is None
+        assert bridge.record_agent_model_observation(
+            "bob", run_id, model_name="gpt-5.6-sol", model_endpoint="https://sol.example/v1",
+        ) is None
+    finally:
+        engine.dispose()
+
+
 def test_continuation_projection_includes_canonical_next_step_without_materializing_action(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)

@@ -234,6 +234,88 @@ def ensure_agent_run(
         return run["id"]
 
 
+def record_agent_model_observation(
+    owner: str,
+    run_id: str,
+    *,
+    model_name: str | None = None,
+    model_endpoint: str | None = None,
+) -> dict[str, Any] | None:
+    """Persist the provider that actually served a durable agent round.
+
+    The requested route and the serving route can differ when foreground
+    fallback is used.  Keep that fact on the owner-scoped Run so continuation
+    and model swapping operate on observed provenance rather than stale
+    request metadata.  This records metadata only; it grants no capability
+    and does not alter the compiled plan or approval state.
+    """
+    owner = str(owner or "").strip()
+    run_id = str(run_id or "").strip()
+    observed_model = str(model_name or "").strip() or None
+    observed_endpoint = str(model_endpoint or "").strip() or None
+    if not owner or not run_id or not (observed_model or observed_endpoint):
+        return None
+    with SessionLocal() as db:
+        run = db.query(WorkRun).filter_by(id=run_id, owner=owner).one_or_none()
+        if run is None:
+            return None
+        current_model = str(run.model_name or "").strip() or None
+        current_endpoint = str(run.model_endpoint or "").strip() or None
+        if observed_model == current_model and observed_endpoint == current_endpoint:
+            return {
+                "run_id": run.id,
+                "model_name": current_model,
+                "model_endpoint": current_endpoint,
+                "changed": False,
+            }
+        state = dict(run.continuation_state or {})
+        history = [
+            item for item in (state.get("model_history") or [])
+            if isinstance(item, dict)
+        ]
+        if not history and (current_model or current_endpoint):
+            history.append({
+                "model_name": current_model,
+                "model_endpoint": current_endpoint,
+                "role": "initial",
+            })
+        history.append({
+            "model_name": observed_model or current_model,
+            "model_endpoint": observed_endpoint or current_endpoint,
+            "role": "observed",
+            "recorded_at": now().isoformat(),
+        })
+        run.model_name = observed_model or current_model
+        run.model_endpoint = observed_endpoint or current_endpoint
+        run.continuation_state = {
+            **state,
+            "model_history": history[-20:],
+            "active_model": {
+                "model_name": run.model_name,
+                "model_endpoint": run.model_endpoint,
+            },
+        }
+        run.revision += 1
+        WorkEngine(db).event(
+            owner,
+            "run.model_observed",
+            run_id=run.id,
+            payload={
+                "from_model": current_model,
+                "to_model": run.model_name,
+                "from_endpoint": current_endpoint,
+                "to_endpoint": run.model_endpoint,
+            },
+        )
+        db.commit()
+        return {
+            "run_id": run.id,
+            "model_name": run.model_name,
+            "model_endpoint": run.model_endpoint,
+            "changed": True,
+        }
+
+
 def assess_agent_run(owner: str, run_id: str) -> dict[str, Any] | None:
     """Expose the shared durable completion decision to chat/UI adapters."""
     with SessionLocal() as db:

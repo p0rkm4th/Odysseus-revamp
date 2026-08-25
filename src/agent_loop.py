@@ -7448,6 +7448,23 @@ async def stream_agent_loop(
             cleaned_round = ""
         round_texts.append(cleaned_round)
         round_models.append(_round_actual_model)
+        # A fallback may have served this round even though the request began
+        # on another provider. Keep durable Run provenance aligned with the
+        # observed serving model so later continuation/model swaps do not
+        # reason from stale request metadata. This is metadata-only and does
+        # not change ActionSpec, policy, approval, or executor authority.
+        if work_run_id and owner and (_round_actual_model or endpoint_url):
+            try:
+                from src.agent_work_bridge import record_agent_model_observation
+                await asyncio.to_thread(
+                    record_agent_model_observation,
+                    owner,
+                    str(work_run_id),
+                    model_name=_round_actual_model,
+                    model_endpoint=endpoint_url,
+                )
+            except Exception:
+                logger.debug("[work-bridge] model provenance observation unavailable", exc_info=True)
         round_endpoint_ids.append(_round_actual_endpoint_id)
         round_endpoint_labels.append(_round_actual_endpoint_label)
         if _ody_qwen_finetune_model and not tool_blocks and cleaned_round:
