@@ -831,3 +831,15 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   `/api/health`, `/api/version`, broker-socket, Ollama-bridge, frontend
   static, browser-window, and realistic browser acceptance passed. Status:
   `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`.
+
+## Recursive canonical Result envelope checkpoint
+
+- Source change: the shared `WorkEngine` completion boundary now walks nested
+  Result envelopes, including `domain_reference` projections, when checking
+  for `DEGRADED`, `UNAVAILABLE`, `FAILED`, or `INVALID_RESULT`. A nested
+  provider failure therefore cannot be promoted to a succeeded single-read
+  Run by a direct caller.
+- Evidence: focused bridge/contract/projection coverage `130 passed, 1
+  warning`; full regression `6273 passed, 3 skipped, 186 warnings in 315.73s`.
+  Source-matched deployment follows this checkpoint. Status:
+  `VERIFIED_TESTED`.
