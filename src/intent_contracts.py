@@ -633,3 +633,43 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
         if not isinstance(result.get("findings"), list):
             return False, "INVALID_RESULT"
     return True, status
+
+
+def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tuple[bool, str]:
+    """Validate a registered binding result against its declared contract.
+
+    The dispatcher knows the canonical binding and ActionSpec but does not
+    receive natural-language text. Resolve the owning DomainContract by that
+    stable pair instead of asking an adapter or model to identify its own
+    result semantics. Mutating/unregistered actions intentionally pass
+    through here; their existing verified-execution lifecycle remains the
+    authority for those payloads.
+    """
+    binding_name = str(binding_name or "").strip()
+    action_id = str(action_id or "").strip()
+    for concept, contract in DOMAIN_CONTRACTS.items():
+        if contract.binding != binding_name:
+            continue
+        for operation, registered_action in contract.actions.items():
+            if registered_action != action_id:
+                continue
+            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
+                filters = {}
+                if operation == "READ_INTEGRATIONS":
+                    filters["view"] = "integrations"
+                elif operation == "READ_UNIDENTIFIED":
+                    filters["view"] = "unidentified"
+                elif operation == "READ_ROLES":
+                    filters["view"] = "roles"
+                frame = IntentFrame(
+                    operation_class="READ",
+                    domain_concept=concept,
+                    filters=filters,
+                    read_explicit=True,
+                )
+                return validate_result(frame, result)
+            # Contracted non-read projections currently have no additional
+            # shape rules here; the trusted executor and Run verifier remain
+            # authoritative for their effects.
+            return True, result_status(result)
+    return True, result_status(result)

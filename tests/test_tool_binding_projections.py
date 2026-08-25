@@ -116,6 +116,25 @@ def test_trusted_work_adapter_reuses_registered_binding(monkeypatch):
     assert result["success"] is True
 
 
+def test_registered_dispatch_rejects_malformed_canonical_read_result(monkeypatch):
+    async def fake_executor(block, owner=None):
+        return "manage_homelab", {
+            "exit_code": 0,
+            "success": True,
+            "data": {"status": "SUCCESS", "hosts": []},
+        }
+
+    monkeypatch.setitem(tool_execution._CAPABILITY_V1_EXECUTORS, "manage_homelab", fake_executor)
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="manage_homelab",
+        payload={"action": "read_network_observations"},
+        owner="alice",
+    ))
+    assert result["success"] is False
+    assert result["error_code"] == "RESULT_INVALID"
+    assert result["status"] == "INVALID_RESULT"
+
+
 def test_registered_binding_cannot_bypass_disabled_or_tool_policy(monkeypatch):
     calls = []
 

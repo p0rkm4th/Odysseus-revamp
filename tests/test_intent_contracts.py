@@ -9,6 +9,7 @@ from src.intent_contracts import (
     result_status,
     validate_result,
     validate_contracts,
+    validate_bound_result,
     resolve_structured_reference,
 )
 
@@ -83,6 +84,17 @@ def test_network_specialized_result_contracts_are_structured():
     assert validate_result(unidentified, {"status": "EMPTY_RESULT", "hosts": []}) == (True, "EMPTY_RESULT")
     assert validate_result(roles, {"status": "SUCCESS", "hypotheses": []}) == (True, "SUCCESS")
     assert validate_result(unidentified, {"status": "SUCCESS", "nodes": [], "edges": []}) == (False, "INVALID_RESULT")
+
+
+def test_registered_result_validation_uses_binding_and_action_contract():
+    assert validate_bound_result(
+        "manage_homelab", "read_network_observations",
+        {"status": "SUCCESS", "nodes": [], "edges": []},
+    ) == (True, "SUCCESS")
+    assert validate_bound_result(
+        "manage_homelab", "read_network_observations",
+        {"status": "SUCCESS", "hosts": []},
+    ) == (False, "INVALID_RESULT")
 
 
 def test_structured_reference_resolves_single_opaque_entity_without_authority():
