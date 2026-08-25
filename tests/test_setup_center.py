@@ -51,8 +51,27 @@ def test_integration_projection_is_secret_free_and_maps_setup_health(tmp_path, m
     projection = setup_center.SetupCenterService().integrations_projection("alice")
     telegram = next(item for item in projection["integrations"] if item["id"] == "telegram")
     assert telegram["connection"] == "NOT_CONFIGURED"
+    assert telegram["health_status"] == "NOT_CONFIGURED"
     assert telegram["secret_values_exposed"] is False
     assert projection["authority_unchanged"] is True
+
+
+def test_configured_setup_does_not_claim_provider_health_without_a_probe(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "state.json")
+    projection = setup_center.SetupCenterService().projection("alice")
+    modules = {item["id"]: item for item in projection["modules"]}
+    # Configuration evidence is useful, but it is not a successful network or
+    # runtime health check.
+    assert modules["core.models"]["status"] == "CONFIGURED"
+    assert modules["core.models"]["health_status"] == "UNKNOWN"
+    assert "no health probe" in modules["core.models"]["health_reason"]
+
+    integrations = setup_center.SetupCenterService().integrations_projection("alice")
+    email = next(item for item in integrations["integrations"] if item["id"] == "email")
+    assert email["setup_status"] == "CONFIGURED"
+    assert email["health_status"] == "UNKNOWN"
+    assert email["connection"] == "DEGRADED"
+    assert email["last_success"] is None
 
 
 def test_contract_declares_telegram_setup_requirements():

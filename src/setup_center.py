@@ -110,6 +110,27 @@ def _detected_status(contract: SetupContract, integrations: set[str]) -> tuple[s
     return "NOT_CONFIGURED", "no setup evidence recorded"
 
 
+def _health_projection(status: str) -> tuple[str, str]:
+    """Map setup/configuration state to health without inventing a probe.
+
+    ``CONFIGURED`` means that setup evidence exists; it does not mean that a
+    provider or runtime was contacted successfully.  Keeping this distinction
+    in the projection prevents the Integration Center from reporting false
+    green while retaining the resumable setup state users already own.
+    """
+    if status == "NOT_CONFIGURED":
+        return "NOT_CONFIGURED", "configuration evidence is absent"
+    if status == "SKIPPED":
+        return "DISABLED", "module was explicitly skipped"
+    if status in {"DEGRADED", "NEEDS_ATTENTION"}:
+        return "DEGRADED", "setup state requires attention"
+    if status == "PARTIAL":
+        return "PARTIAL", "setup is present but not fully validated"
+    if status == "UNAVAILABLE":
+        return "UNAVAILABLE", "module is unavailable"
+    return "UNKNOWN", "configuration exists; no health probe has run"
+
+
 class SetupCenterService:
     def contracts(self) -> list[dict[str, Any]]:
         return [_safe_contract(item) for item in CONTRACTS]
@@ -149,7 +170,17 @@ class SetupCenterService:
             status = str(override.get("status") or detected).upper()
             if status not in STATUSES:
                 status = detected
-            modules.append({**_safe_contract(contract), "status": status, "status_reason": str(override.get("status_reason") or reason), "selected": bool(override.get("selected", status not in {"SKIPPED", "NOT_CONFIGURED"})), "last_updated": override.get("last_updated")})
+            health_status, health_reason = _health_projection(status)
+            modules.append({
+                **_safe_contract(contract),
+                "status": status,
+                "status_reason": str(override.get("status_reason") or reason),
+                "health_status": str(override.get("health_status") or health_status).upper(),
+                "health_reason": str(override.get("health_reason") or health_reason),
+                "health_checked_at": override.get("health_checked_at"),
+                "selected": bool(override.get("selected", status not in {"SKIPPED", "NOT_CONFIGURED"})),
+                "last_updated": override.get("last_updated"),
+            })
         status_by_id = {item["id"]: item["status"] for item in modules}
         for module in modules:
             dependencies = list(module.get("dependencies") or [])
@@ -182,8 +213,27 @@ class SetupCenterService:
             if not descriptor:
                 continue
             status = module["status"]
-            connection = "CONNECTED" if status == "CONFIGURED" else "DEGRADED" if status in {"PARTIAL", "DEGRADED", "NEEDS_ATTENTION"} else "NOT_CONFIGURED" if status in {"NOT_CONFIGURED", "SKIPPED"} else "DISCONNECTED"
-            integrations.append({**descriptor, "connection": connection, "setup_status": status, "capabilities": list(module["permissions"]), "last_success": module.get("last_updated") if status == "CONFIGURED" else None, "last_error": None, "secret_values_exposed": False, "authority_unchanged": True})
+            health_status = module["health_status"]
+            # ``connection`` is retained for existing clients, but now reflects
+            # health evidence rather than merely setup selection.
+            connection = (
+                "CONNECTED" if health_status == "HEALTHY" else
+                "DEGRADED" if health_status in {"PARTIAL", "DEGRADED", "UNKNOWN"} else
+                "NOT_CONFIGURED" if health_status in {"NOT_CONFIGURED", "DISABLED"} else
+                "DISCONNECTED"
+            )
+            integrations.append({
+                **descriptor,
+                "connection": connection,
+                "setup_status": status,
+                "health_status": health_status,
+                "health_reason": module["health_reason"],
+                "capabilities": list(module["permissions"]),
+                "last_success": module.get("health_checked_at") if health_status == "HEALTHY" else None,
+                "last_error": module["health_reason"] if health_status in {"DEGRADED", "UNAVAILABLE"} else None,
+                "secret_values_exposed": False,
+                "authority_unchanged": True,
+            })
         return {"version": 1, "owner": owner, "integrations": integrations, "authority_unchanged": True, "secret_values_exposed": False}
 
     def permissions_projection(self, owner: str, grants: list[dict[str, Any]] | None = None) -> dict[str, Any]:
