@@ -110,6 +110,7 @@ async def hades_chat(endpoint: str, model: str, prompt: str, *, timeout: float) 
         "prompt_tokens": metrics.get("request_context_tokens") or metrics.get("input_tokens"),
         "context_construction_seconds": metrics.get("agent_prep_time"),
         "model_calls": metrics.get("agent_rounds"),
+        "model_burden": metrics.get("model_burden"),
         "tool_calls": metrics.get("tool_calls", 0),
         "output_chars": output_chars,
     }
