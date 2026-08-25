@@ -17,6 +17,7 @@
 | Exact burden checkpoint deployed | DEPLOYED/PASSIVE_LIVE_VERIFIED | `29cafccd`; `/api/version` matched source/build/frontend; broker and Ollama healthy; deployed six-case Qwen canary `6/6` |
 | Benchmark burden record projection | FOCUSED_TESTED | `c425f020`; collector preserves only bounded numeric totals and framework/model labels; 4 focused |
 | Native Decision transport | DEPLOYED/PASSIVE_LIVE_VERIFIED | `16748fe8`; native Ollama strict-output path sets `think:false`; 6307 full; deployed three-case probe had no empty decisions |
+| Packet choice schema | DEPLOYED/PASSIVE_LIVE_VERIFIED | `2405ca79`; dynamic enums are projected, but Ollama still produced one invalid choice; downstream rejection remained intact |
 | Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below; authentication and owner data remain out of automation scope |
 
 ## Final runtime checkpoint
@@ -27,7 +28,7 @@
 - Ollama: bridge healthy; `qwen3:8b` available.
 - ChromaDB and SearXNG: running; SearXNG healthy.
 - Candidate source/build/frontend provenance: matched.
-- Final candidate: `16748fe8cccdffe06547579ab0af21c6e4194e6c`; image `odysseus:candidate-16748fe8cccd`; image ID `sha256:7287faba004c72210fa3b93897658a1d96538e6d936b09228f8ead4f83335c10`.
+- Final candidate: `2405ca79d1171425fc7d9a746c1d17a5fbcc1bbd`; image `odysseus:candidate-2405ca79d117`; image ID `sha256:e3c190d51e6f0eb428ccbcb1505d7f695e4a5b2cb634eef75e4f2de09d7407a8`.
 - Runtime profile route: owner-authenticated; unauthenticated probe returned `401`.
 - Image retention: current candidate and previous `odysseus:candidate-dbaddbdaac7e` retained; no cleanup performed.
 - Final H0-equivalent ACI: 15 cases, `0.4667` success, `0.6667` weighted; 11 clean, 4 timeouts.
