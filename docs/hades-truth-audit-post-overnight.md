@@ -198,6 +198,19 @@ full regression at source level is `6136 passed, 3 skipped, 186 warnings` in
 runtime verification before deployment evidence is promoted. Owner-live E6
 remains pending.
 
+## Source-matched canonical read deployment
+
+Commit `a9ab0e04d293b2bf606d6dbebd231077cee24054` is deployed as candidate
+`odysseus:candidate-a9ab0e04d293` with image
+`sha256:9b73c475186f5aec310e3668e7fc23099cdd7140e18c8ab0550f52fec5cbc0d3`.
+Runtime health is healthy and `/api/version` reports the same source, build
+ID `a9ab0e04d293b2bf606d6dbebd231077cee24054-2026-08-25T08:05:00Z`, frontend
+build ID, and migration head. The broker socket remains
+`odysseus:odysseus`/`660`; Qwen `qwen3:8b` inference through
+`172.18.0.1:11434` returned `OK`. Frontend static, browser-window, and
+realistic browser acceptance all pass. Rollback is retained as
+`odysseus:rollback-a9ab0e04-prev`. Owner-live model parity remains pending.
+
 ## Canonical read exposure expansion checkpoint
 
 The existing registered read bindings for Homelab hosts, service status,
