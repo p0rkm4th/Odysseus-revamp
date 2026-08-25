@@ -113,14 +113,30 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
                     checks = {"owner_scoped": True, "public_source_policy": available, "network_request_performed": False}
                 elif module_id == "technology.network":
                     binding = binding_for_tool("manage_homelab")
-                    available = bool(binding and binding.execution_location == "host_broker" and binding.target_scope == "private_network")
-                    detail = "private-network broker binding is declared; no scan or broker request was performed"
-                    checks = {"owner_scoped": True, "host_broker_boundary": available, "private_scope_declared": available, "scan_performed": False}
+                    declared = bool(binding and binding.execution_location == "host_broker" and binding.target_scope == "private_network")
+                    broker = {}
+                    try:
+                        from src.privileged_broker import client_request
+                        broker = client_request({"action": "status"}, timeout=5)
+                    except Exception:
+                        broker = {"ok": False, "status": "unavailable"}
+                    broker_available = bool(broker.get("ok")) and bool(broker.get("network_scanner_available"))
+                    available = declared and broker_available
+                    detail = "private-network broker status and binding checks succeeded; no scan was requested" if available else "private-network broker or binding is unavailable; no scan was requested"
+                    checks = {"owner_scoped": True, "host_broker_boundary": declared, "private_scope_declared": declared, "broker_status_read": True, "broker_available": broker_available, "scan_performed": False}
                 else:
                     binding = binding_for_tool("manage_homelab")
-                    available = binding is not None
-                    detail = "bounded Homelab binding is declared; no host operation was performed"
-                    checks = {"owner_scoped": True, "bounded_binding": available, "host_operation_performed": False}
+                    declared = binding is not None
+                    broker = {}
+                    try:
+                        from src.privileged_broker import client_request
+                        broker = client_request({"action": "status"}, timeout=5)
+                    except Exception:
+                        broker = {"ok": False, "status": "unavailable"}
+                    broker_available = bool(broker.get("ok"))
+                    available = declared and broker_available
+                    detail = "bounded Homelab binding and broker status checks succeeded; no host operation was performed" if available else "bounded Homelab binding or broker is unavailable; no host operation was performed"
+                    checks = {"owner_scoped": True, "bounded_binding": declared, "broker_status_read": True, "broker_available": broker_available, "host_operation_performed": False}
                 return {"module_id": module_id, "status": "CONFIGURED" if available else "DEGRADED", "checks": {**checks, "safe_read_only": True, "mutations_performed": False}, "detail": detail, "authority_unchanged": True, "secret_values_exposed": False}
             return await asyncio.to_thread(lambda current_owner: persist(capability_check(current_owner)), value)
 
