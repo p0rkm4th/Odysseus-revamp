@@ -40,6 +40,8 @@ try:
         _compute_final_metrics,
         _append_tool_results,
         _insert_before_latest_user,
+        _prefetched_explicit_memory_result,
+        _successful_deterministic_read_result,
         _MCP_KEYWORDS,
     )
     _IMPORTED_AGENT_LOOP = sys.modules.get("src.agent_loop")
@@ -102,6 +104,25 @@ def test_insert_before_latest_user_appends_when_no_user_message_exists():
     context = {"role": "system", "content": "context"}
 
     assert _insert_before_latest_user(messages, context) == [messages[0], context]
+
+
+def test_completed_owner_memory_read_is_answer_terminal_not_action_reentry():
+    messages = [{
+        "role": "user",
+        "content": "CANONICAL MEMORY RESULT\nSTATUS: OK",
+        "metadata": {"context_kind": "explicit_memory_result"},
+    }]
+    assert _prefetched_explicit_memory_result(messages) is True
+    assert _successful_deterministic_read_result({
+        "data": {"status": "ok", "memories": [{"id": "m1"}]},
+        "success": True,
+        "exit_code": 0,
+    }) is True
+    assert _successful_deterministic_read_result({
+        "data": {"status": "retrieval_failed"},
+        "success": False,
+        "exit_code": 1,
+    }) is False
 
 
 # ---------------------------------------------------------------------------

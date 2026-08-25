@@ -34,7 +34,12 @@ from src.context_compactor import (
 )
 from src.settings import get_setting
 from src.prompt_security import untrusted_context_message
-from src.memory_grounding import is_explicit_memory_query
+from src.memory_grounding import (
+    is_explicit_memory_query,
+    build_runtime_self_state,
+    project_explicit_memory_result,
+    render_memory_result_projection,
+)
 from src.tool_security import (
     blocked_tools_for_owner,
     email_tool_policy_names,
@@ -3057,6 +3062,25 @@ def _has_canonical_memory_evidence(messages, tool_events) -> bool:
     return False
 
 
+def _prefetched_explicit_memory_result(messages) -> bool:
+    """Return whether chat context already performed the canonical Memory read."""
+    return any(
+        isinstance(message, dict)
+        and isinstance(message.get("metadata"), dict)
+        and message["metadata"].get("context_kind") == "explicit_memory_result"
+        for message in (messages or [])
+    )
+
+
+def _successful_deterministic_read_result(result: Any) -> bool:
+    """A successful harmless read is terminal for Action selection."""
+    if not isinstance(result, dict) or result.get("approval_required") or result.get("error"):
+        return False
+    if result.get("success") is False or result.get("blocked"):
+        return False
+    return result.get("exit_code") in (None, 0)
+
+
 def _semanticize_internal_action_names(text: str) -> str:
     """Keep transport/Action identifiers in traces, not ordinary chat prose."""
     replacements = {
@@ -4690,6 +4714,12 @@ async def stream_agent_loop(
     _aci_packet = None
     _aci_choice_map = {}
     _aci_fast_path_block = None
+    # chat_helpers may already have performed the explicit owner-scoped
+    # Memory read and inserted its protected ResultProjection. In that case
+    # the control plane must go directly to answer generation; it must not
+    # execute a duplicate Action or ask the model to choose one.
+    _aci_answer_only = False
+    _aci_completion_contract_satisfied = False
     _aci_repair_count = 0
     _aci_profile = aci_profile
     if _aci_enabled and _aci_profile is None:
@@ -4707,6 +4737,12 @@ async def stream_agent_loop(
     if _ody_qwen_finetune_model:
         temperature = _ody_qwen_temperature_cap(temperature)
     _ody_memory_identity_turn = _looks_like_memory_identity_turn(_last_user)
+    _aci_answer_only = (
+        _prefetched_explicit_memory_result(messages)
+        and is_explicit_memory_query(_last_user)
+    )
+    if _aci_answer_only:
+        _aci_completion_contract_satisfied = True
     _intent = _classify_agent_request(messages, _last_user)
     _reference_hint = _recent_reference_resolution_hint(messages, _last_user)
     _reference_ack = None
@@ -5671,8 +5707,15 @@ async def stream_agent_loop(
                 state_fingerprint=state_fingerprint(packet_state),
             )
             _aci_packet = packet
+            if _aci_answer_only:
+                # An explicit canonical Memory Result was already resolved by
+                # the context plane. Its CompletionContract is now ANSWER;
+                # retaining this packet would incorrectly re-enter ACTION
+                # parsing on the first model response.
+                _aci_packet = None
             if (
                 _aci_mode == "aci"
+                and not _aci_answer_only
                 and _intent.get("intent_frame", {}).get("operation_class") == "READ"
                 and _intent.get("intent_frame", {}).get("read_explicit") is True
                 and desired_binding
@@ -5695,14 +5738,24 @@ async def stream_agent_loop(
                         fast_payload["query"] = str(_intent.get("retrieval_query") or _last_user)
                     _aci_fast_path_block = ToolBlock(desired_binding, json.dumps(fast_payload, sort_keys=True))
                     logger.info("[hades-aci] deterministic read fast path binding=%s action=%s", desired_binding, desired_action)
-            aci_instruction = (
-                "HADES ACI MACHINE DECISION MODE. Choose only from the packet. "
-                "Return one JSON object, no Markdown and no tool call syntax. "
-                "For ACTION use {\"decision\":\"ACTION\",\"choice\":\"A\"}. "
-                "The server binds the decision to the packet fingerprint; do not invent or copy fingerprints. For ANSWER include answer. "
-                "Never invent choices, commands, tool names, arguments, approval, or authority.\n\n"
-                + json.dumps(packet.model_projection(), ensure_ascii=False, separators=(",", ":"))
-            )
+            if _aci_answer_only:
+                aci_instruction = (
+                    "HADES ACI ANSWER MODE. The protected canonical owner-scoped "
+                    "Memory Result for this turn is already complete. Do not call "
+                    "tools and do not return a machine decision. Write the concise "
+                    "human answer directly from that ResultProjection. Distinguish "
+                    "REMEMBERED, HISTORICAL, and CURRENT DERIVED HADES STATE facts; "
+                    "do not invent personal facts."
+                )
+            else:
+                aci_instruction = (
+                    "HADES ACI MACHINE DECISION MODE. Choose only from the packet. "
+                    "Return one JSON object, no Markdown and no tool call syntax. "
+                    "For ACTION use {\"decision\":\"ACTION\",\"choice\":\"A\"}. "
+                    "The server binds the decision to the packet fingerprint; do not invent or copy fingerprints. For ANSWER include answer. "
+                    "Never invent choices, commands, tool names, arguments, approval, or authority.\n\n"
+                    + json.dumps(packet.model_projection(), ensure_ascii=False, separators=(",", ":"))
+                )
             messages = _insert_before_latest_user(messages, {
                 "role": "system", "content": aci_instruction,
                 "_agent_injected": "hades_aci_packet", "_protected": True,
@@ -6050,7 +6103,7 @@ async def stream_agent_loop(
     # backstop. Counting identical repeats — not distinct same-tool calls —
     # lets a legit batch (e.g. 18 calendar events at once) through.
     _call_freq: collections.Counter = collections.Counter()
-    _force_answer = False  # set by loop-breaker → next round runs with NO tools
+    _force_answer = bool(_aci_answer_only)  # completed canonical read → answer-only
     # Supervisor: how many times we've nudged the model after it announced
     # an action without emitting the tool call. Capped to prevent a model
     # that *can't* call the tool from looping forever.
@@ -8397,6 +8450,33 @@ async def stream_agent_loop(
                         except (asyncio.CancelledError, Exception):
                             pass
 
+            # A deterministic fast-path read has already satisfied the
+            # Action portion of this Objective. It must transition to ANSWER
+            # generation, never back through the packet's Action decision
+            # parser. A failed read remains eligible for bounded recovery.
+            if (
+                _skip_model_round
+                and _successful_deterministic_read_result(result)
+            ):
+                _aci_answer_only = True
+                _aci_packet = None
+                _aci_fast_path_block = None
+                _force_answer = True
+                _aci_completion_contract_satisfied = True
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "HADES ACI COMPLETION TRANSITION: the deterministic "
+                        "owner-safe read succeeded. The CompletionContract is "
+                        "satisfied for Action execution. Generate the final "
+                        "human ANSWER from the ResultProjection now; do not "
+                        "select another Action unless the ResultProjection "
+                        "explicitly reports unresolved required information."
+                    ),
+                    "_agent_injected": "hades_aci_completion",
+                    "_protected": True,
+                })
+
             if (
                 _work_action_id
                 and isinstance(result, dict)
@@ -8684,8 +8764,23 @@ async def stream_agent_loop(
 
             # Build output for frontend tool bubble.
             # Document tools get a short summary — content goes to the editor panel.
+            _memory_projection = None
+            _memory_projection_text = None
+            if block.tool_type == "read_memory":
+                _canonical_memory_result = result.get("data") if isinstance(result.get("data"), dict) else result
+                if isinstance(_canonical_memory_result, dict):
+                    _memory_projection = project_explicit_memory_result(
+                        _canonical_memory_result,
+                        current_self_state=build_runtime_self_state(model, endpoint_url),
+                    )
+                    _memory_projection_text = render_memory_result_projection(_memory_projection)
             output_text = ""
-            if is_doc_tool and "action" in result:
+            if _memory_projection_text is not None:
+                # The UI receives the same bounded projection as the model;
+                # full CanonicalResult evidence remains behind the Action/Memory
+                # boundary and is never dumped into chat history.
+                output_text = _truncate(_memory_projection_text)
+            elif is_doc_tool and "action" in result:
                 action = result["action"]
                 title = result.get("title", "")
                 ver = result.get("version", "?")
@@ -8945,6 +9040,8 @@ async def stream_agent_loop(
             # this the diff shows live but vanishes from saved history.
             if result.get("diff"):
                 tool_event["diff"] = result["diff"]
+            if _memory_projection is not None:
+                tool_event["result_projection"] = _memory_projection
             if _pending_ask_user_event:
                 # Persist the structured question with the tool event.  On a
                 # reload, chatRenderer can restore the card; a later user
@@ -8954,7 +9051,11 @@ async def stream_agent_loop(
             if block.tool_type in _VERIFIER_EFFECTFUL_TOOLS:
                 _effectful_used = True
 
-            formatted = format_tool_result(desc, result)
+            formatted = (
+                _memory_projection_text
+                if _memory_projection_text is not None
+                else format_tool_result(desc, result)
+            )
             tool_results.append(formatted)
             tool_result_texts.append(formatted)
             tool_result_records.append(
@@ -9007,7 +9108,11 @@ async def stream_agent_loop(
             logger.info("[agent] odysseus doc tool completed after one textual tool block")
             break
 
-        if (_ody_notes_finetune_mode or _ody_qwen_finetune_model) and _ody_notes_tool_completed:
+        if (
+            (_ody_notes_finetune_mode or _ody_qwen_finetune_model)
+            and _ody_notes_tool_completed
+            and not _aci_answer_only
+        ):
             logger.info("[agent] odysseus completed from deterministic tool output")
             break
 
@@ -9078,7 +9183,10 @@ async def stream_agent_loop(
     # developer trace data, not normal chat prose.
     _why_no_action = None
     _expected_canonical_action = bool(
-        (_asset_frame.get("read_explicit") and _read_binding and _read_action)
+        (
+            not _aci_answer_only
+            and (_asset_frame.get("read_explicit") and _read_binding and _read_action)
+        )
         or _intent_frame.operation_class in {"EXECUTE", "RESEARCH", "MONITOR"}
     )
     _successful_action_event = any(
@@ -9251,6 +9359,9 @@ async def stream_agent_loop(
             logger.debug("Unable to project ACI context envelope", exc_info=True)
     if _why_no_action:
         metrics["why_no_action"] = _why_no_action
+    if _aci_completion_contract_satisfied:
+        metrics["aci_completion_transition"] = "ANSWER"
+        metrics["aci_completion_contract_satisfied"] = True
     yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
 
     # Teacher-escalation: inline takeover visible in the chat stream.

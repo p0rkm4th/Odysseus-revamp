@@ -7,8 +7,11 @@ from src.agent_loop import _classify_agent_request, _minimal_saved_memory_messag
 from src.memory import MemoryManager
 from src.memory_grounding import (
     build_explicit_memory_result,
+    build_runtime_self_state,
     is_explicit_memory_query,
+    project_explicit_memory_result,
     render_explicit_memory_context,
+    render_memory_result_projection,
 )
 from src.context_compactor import trim_for_context
 
@@ -121,3 +124,41 @@ def test_explicit_memory_result_is_protected_from_context_trim():
     ]
     trimmed = trim_for_context(messages, 120, reserve_tokens=16)
     assert any(m.get("_protected") and "IT systems administrator" in m.get("content", "") for m in trimmed)
+
+
+def test_owner_memory_projection_is_bounded_and_reconciles_current_runtime():
+    rows = [
+        {
+            "id": f"memory-{index}", "owner": "alice",
+            "text": (
+                "The current Odysseus setup uses the ChatGPT Subscription backend "
+                "and is not currently running a local LLM."
+                if index == 0 else f"Owner fact {index} " + ("x" * 180)
+            ),
+            "category": "project", "source": "user", "timestamp": index,
+        }
+        for index in range(64)
+    ]
+    result = {"status": "ok", "query_type": "summary", "memories": rows,
+              "diagnostics": {"retrieved_count": 64, "owner_scoped": True}}
+    projection = project_explicit_memory_result(
+        result,
+        current_self_state=build_runtime_self_state("qwen3:8b", "http://ollama:11434"),
+    )
+    rendered = render_memory_result_projection(projection)
+    assert len(rendered) <= 8000
+    assert projection["retrieved_count"] == 64
+    assert projection["omitted_count"] > 0
+    assert projection["contradictions"]
+    assert "current runtime is actively serving model qwen3:8b" in rendered
+    assert "HISTORICAL" in rendered
+
+
+def test_exact_owner_memory_utterance_declares_terminal_read_trajectory():
+    from benchmarks.hades_aci_corpus import CORPUS
+
+    case = next(item for item in CORPUS if item["prompt"] == "What do you remember about me?")
+    assert case["expected_trajectory"]["state_machine"] == [
+        "DETERMINISTIC_READ", "CANONICAL_RESULT", "RESULT_PROJECTION", "ANSWER", "COMPLETE"
+    ]
+    assert "SECOND_ACTION_DECISION" in case["expected_trajectory"]["must_not"]
