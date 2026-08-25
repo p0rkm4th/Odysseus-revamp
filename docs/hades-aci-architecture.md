@@ -38,3 +38,20 @@ Current convergence owners:
 
 No `AgentLoopV2`, `RunEngineV2`, second memory store, or second tool registry
 was introduced.
+
+## Terminal canonical reads
+
+Explicit Memory context is a deterministic owner-scoped read. When the chat
+context plane has already materialized its protected ResultProjection, the ACI
+loop enters answer-only mode and does not create a duplicate `read_memory`
+Action. For direct callers that use the deterministic fast path, a successful
+read clears the ephemeral decision packet immediately and transitions the same
+turn to `ANSWER`; a failed read alone may re-enter bounded recovery.
+
+The historical failure was caused by leaving `_aci_packet` alive after the
+fast-path Result. The next loop round therefore parsed the answer as another
+Action decision. The raw Memory execution envelope also reached the model/UI
+because the generic formatter serialized its `output` JSON. Memory now projects
+bounded L1 records, epistemic reconciliation, current runtime provider/model,
+and canonical references before either boundary. Full canonical evidence stays
+behind the Action/Memory store.
