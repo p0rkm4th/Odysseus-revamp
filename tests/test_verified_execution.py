@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.database import Base
 from src.work_engine import WorkEngine, WorkError
+from src.run_planner import RunPlanner
 from src.world_model import WorldModelService
 
 
@@ -127,6 +128,38 @@ def test_verification_failure_without_compensation_is_distinct(db):
     assert final["status"] == "failed" and final["result_summary"]["outcome"] == "execution_succeeded_verification_failed"
     with pytest.raises(WorkError, match="run not found"):
         svc.complete_verification("bob", run["id"], success=True)
+
+
+def test_successful_verification_advances_to_declared_next_step(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {
+        "domain": "homelab",
+        "plan": [
+            {"sequence": 1, "capability_id": "homelab.manage", "action_id": "execute_network_discovery", "target_resources": ["network:private_scope"]},
+            {"sequence": 2, "capability_id": "homelab.manage", "action_id": "service_status"},
+        ],
+    })
+    first = svc.create_action("alice", run["id"], {
+        "sequence": 1,
+        "capability_id": "homelab.manage",
+        "action_id": "execute_network_discovery",
+        "effect_class": "admin_change",
+        "target_resources": ["network:private_scope"],
+        "normalized_input": {"cidr": "192.168.10.0/24"},
+        "status": "completed",
+        "approval_reference": "approval-discovery",
+    })
+    _to_verifying(svc, "alice", run["id"])
+    advanced = svc.complete_verification("alice", run["id"], success=True, details={"observations": "persisted"})
+
+    assert advanced["lifecycle_state"] == "ready"
+    assert advanced["status"] == "queued"
+    assert "next step" in advanced["current_step"]
+    next_step = RunPlanner(db).next_step("alice", run["id"])
+    assert next_step["status"] == "READY"
+    assert next_step["action"]["action_id"] == "service_status"
+    assert next_step["safe_auto_continue"] is True
+    assert svc.get_run("alice", run["id"])["result_summary"]["outcome"] == "execution_succeeded_verified"
 
 
 def test_compensation_failure_is_terminal_and_explicit(db):

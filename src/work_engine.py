@@ -411,7 +411,7 @@ class WorkEngine:
             "waiting_approval": {"ready", "cancelled", "failed"},
             "waiting_input": {"ready", "cancelled", "failed"},
             "executing": {"verifying", "failed", "cancelled", "compensating"},
-            "verifying": {"succeeded", "failed", "compensating", "cancelled"},
+            "verifying": {"ready", "succeeded", "failed", "compensating", "cancelled"},
             "compensating": {"verifying", "failed", "cancelled"},
             "paused": {"ready", "cancelled"}, "succeeded": set(), "failed": set(), "cancelled": set(),
         }
@@ -554,6 +554,24 @@ class WorkEngine:
             outcome = "compensated_restored" if state.get("compensation_attempted") else "execution_succeeded_verified"
             row.result_summary = {**(row.result_summary or {}), "outcome": outcome, "verification": verification}
             self.db.commit()
+            # Verification proves the current Action, not necessarily the
+            # user's whole deliverable.  Keep the Run durable and resumable
+            # when the compiled plan still has declared or persisted work.
+            # The planner remains the authority for the next Action, approval,
+            # and safe-continuation decision; this transition only prevents a
+            # verified intermediate step from falsely ending the Run.
+            from src.run_planner import RunPlanner
+            remaining = [
+                item for item in RunPlanner(self.db)._actions(row)
+                if str(item.get("status") or "proposed") not in {"completed", "failed", "rejected", "cancelled", "expired"}
+            ]
+            if remaining:
+                next_item = remaining[0]
+                next_label = str(next_item.get("action_id") or next_item.get("operation") or "next declared action")
+                return self.verified_execution_step(
+                    owner, run_id, "ready",
+                    reason=f"{outcome}; next step: {next_label}",
+                )
             return self.verified_execution_step(owner, run_id, "succeeded", reason=outcome)
         if compensation_reference:
             state.update({"compensation_attempted": True, "compensation_reference": str(compensation_reference)[:500]})
@@ -607,7 +625,7 @@ class WorkEngine:
             "waiting_approval": {"ready", "cancelled", "failed"},
             "waiting_input": {"ready", "cancelled", "failed"},
             "executing": {"verifying", "failed", "cancelled", "compensating"},
-            "verifying": {"succeeded", "failed", "compensating", "cancelled"},
+            "verifying": {"ready", "succeeded", "failed", "compensating", "cancelled"},
             "compensating": {"verifying", "failed", "cancelled"},
             "paused": {"ready", "cancelled"}, "succeeded": set(), "failed": set(), "cancelled": set(),
         }
