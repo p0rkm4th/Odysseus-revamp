@@ -7850,7 +7850,7 @@ async def stream_agent_loop(
                 "manage_assets", "manage_homelab", "manage_osint",
                 "manage_security_assessment",
                 "read_memory", "read_work", "read_household", "read_setup",
-                "read_career", "read_network_observations", "list_findings",
+                "read_career", "read_communications", "read_network_observations", "list_findings",
                 "list_cases",
             }:
                 try:

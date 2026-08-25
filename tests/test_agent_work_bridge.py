@@ -173,6 +173,38 @@ def test_canonical_read_is_a_terminal_durable_run_result(monkeypatch):
         engine.dispose()
 
 
+def test_communications_canonical_read_is_persisted_in_the_shared_work_run(monkeypatch):
+    """Every first-class canonical read must remain inspectable and resumable."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-communications", "What communications are configured?",
+            intent={
+                "domains": ["communications"],
+                "domain_concept": "COMMUNICATIONS",
+                "operation_class": "READ",
+            },
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "read_communications", {"action": "overview"},
+        )
+        assert action_id
+        completed = bridge.record_result(
+            "alice", action_id,
+            {"success": True, "data": {"status": "SUCCESS_EMPTY", "email": {}, "calendar": {}}},
+        )
+        assert completed["read_completion"]["lifecycle_state"] == "succeeded"
+        with session_factory() as db:
+            action = db.query(WorkAction).filter_by(id=action_id).one()
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            assert action.tool_binding_name == "read_communications"
+            assert run.domain == "communications"
+            assert run.result_summary["result_status"] == "SUCCESS_EMPTY"
+    finally:
+        engine.dispose()
+
+
 def test_canonical_read_failure_is_not_reported_as_empty(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
