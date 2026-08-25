@@ -953,3 +953,27 @@ The repair uses a separate unprivileged, read-only HOST broker, retains exact
 SO_PEERCRED PID/UID/GID matching against the live Compose service, rejects any
 non-HOST observation as `HOST_NETWORK_CONTEXT_UNAVAILABLE`, and requires typed
 scope authorization before active discovery. No work/VPN scan was performed.
+
+## P0 replacement candidate deployment and passive runtime evidence
+
+- Source commits `bb694554`, `1eadfc47`, and `a892c755` implement the host-side
+  read-only broker boundary, durable canonical-read recovery, live-read policy
+  correction, bounded prose-only repair, and typed physical/VPN/runtime scope
+  classification.
+- Exact source commit `a892c7552337ebd7f555e1071b284e850c0c7ea3` is deployed as
+  candidate `odysseus:candidate-a892c755c9d7`. `/api/health` and `/api/version`
+  pass with matching backend/frontend provenance. Full regression is `6280
+  passed, 3 skipped, 186 warnings`; exact-image browser window and realistic
+  populated/narrow acceptance pass.
+- Passive host-context normalization reports `observation_location=HOST`, a
+  host namespace distinct from the application namespace, VPN default-route
+  evidence, and Docker bridges as `DOCKER_BRIDGE` / `RUNTIME_INTERNAL`. The
+  host broker is enabled, active, read-only, and rejects a wrong-PID container
+  exec peer. No active corporate/VPN discovery was performed.
+- Updated truth statuses: `NETWORK_CONTEXT=VERIFIED_DEPLOYED / OWNER_DOGFOOD_PENDING`;
+  `CROSS_MODEL_PARITY=SYNTHETIC_VERIFIED / LIVE_NOT_VERIFIED`;
+  `MEMORY_CANONICAL_READ=VERIFIED_DEPLOYED / OWNER_DOGFOOD_PENDING`;
+  `READ_APPROVAL_POLICY=VERIFIED_TESTED / OWNER_DOGFOOD_PENDING`.
+- Authenticated owner GUI retests for Qwen/Luna/Sol, model switching, canonical
+  Memory provenance, and read-approval rendering remain pending. No owner
+  session was reused and no approval or owner authority was bypassed.
