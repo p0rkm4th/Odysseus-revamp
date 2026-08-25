@@ -997,3 +997,17 @@ namespace, VPN fail-closed behavior, canonical Memory provenance, provider
 failure continuation, and Qwen/Luna/Sol owner-live parity remain explicitly
 `OWNER_DOGFOOD_PENDING`; no active work/VPN scan or owner authority bypass was
 performed.
+
+## P0 developer workspace namespace correction — 2026-08-25
+
+Owner feedback identified a separate runtime namespace defect: developer YOLO
+leases were validated against the host checkout pathname, while the running
+application executes from `/app`. The container happened to contain both paths
+in some configurations, but the lease contract was not portable or aligned
+with the actual execution root.
+
+The correction makes `/app` the canonical in-container workspace and mounts the
+configured host checkout there in Compose. The lease remains owner-granted,
+repo-scoped, expiring, audited, non-root, and blocked from container/root
+escape commands. Focused developer/workspace coverage is 123 passed; the new
+candidate deployment/runtime YOLO smoke remains pending.

@@ -27,7 +27,7 @@ def test_network_action_intent_uses_canonical_route_not_security_or_local_read()
 
 def test_workspace_yolo_is_explicit_profile_and_denies_escape():
     assert resolve_execution_profile("workspace_yolo").requires_workspace
-    assert WORKSPACE.startswith("/home/")
+    assert WORKSPACE == "/app"
     assert _DENY.search("docker ps")
     assert _DENY.search("sudo id")
 
