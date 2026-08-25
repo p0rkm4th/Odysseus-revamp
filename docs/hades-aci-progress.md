@@ -21,6 +21,7 @@
 | MODEL_BURDEN_INSTRUMENTATION | `885ec24f` | sanitized per-turn framework/model labels; 76 focused; 6305 full | not rebuilt | FULL_REGRESSION |
 | DEPLOYED_BURDEN_CHECKPOINT | `29cafccd` | source-matched health/provenance, broker/Ollama checks, six-case Qwen canary all scored 1.0 | `odysseus:candidate-29cafccde26a` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | BENCHMARK_BURDEN_RECORDS | `c425f020` | Jarvis collector retains sanitized model-burden totals/labels; 4 focused | not rebuilt | FOCUSED_TESTED |
+| NATIVE_DECISION_TRANSPORT | `16748fe8` | native Ollama structured ACI transport disables thinking; 45 focused; 6307 full | `odysseus:candidate-16748fe8cccd` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -134,19 +135,24 @@ migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
 
 The current implementation candidate is source commit
-`29cafccde26a3f87513031e6990a0d9a7059d516`, image
-`odysseus:candidate-29cafccde26a`, image ID
-`sha256:4b5260286db9e22daf27ef2062a64afea97beee5b7aff421a3429a5954747a33`,
-build ID `29cafccde26a3f87513031e6990a0d9a7059d516-2026-08-25T23:33:46Z`,
+`16748fe8cccdffe06547579ab0af21c6e4194e6c`, image
+`odysseus:candidate-16748fe8cccd`, image ID
+`sha256:7287faba004c72210fa3b93897658a1d96538e6d936b09228f8ead4f83335c10`,
+build ID `16748fe8cccdffe06547579ab0af21c6e4194e6c-2026-08-25T23:45:58Z`,
 and frontend ID
-`frontend-29cafccde26a3f87513031e6990a0d9a7059d516-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
+`frontend-16748fe8cccdffe06547579ab0af21c6e4194e6c-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
 The exact source gate before deployment is `6305 passed, 3 skipped, 186
 warnings` in 125.81 seconds. The touched Memory/ACI focused gate is `76
 passed`. The six-case deployed Qwen canary scored `6/6` with no runtime
-failures; its detailed records contain only synthetic fixtures.
+failures; its detailed records contain only synthetic fixtures. The replacement
+deployed three-case native-transport probe had zero provider failures and no
+empty bounded-decision payloads. It still exposed an invalid model choice on
+the broad synthetic inventory prompt and one `MODEL_PROSE_ONLY` network
+diagnostic; those remain action-exposure/routing evidence rather than
+transport failures.
 
 ## Build/cache observation
 
