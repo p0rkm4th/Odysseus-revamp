@@ -99,6 +99,10 @@ function hydrateSemanticNavIcons() {
 function groupToolDestinations() {
   const section = document.getElementById('tools-section');
   if (!section || section.dataset.grouped === '1') return;
+  // Compatibility vocabulary retained for static/source audits and old
+  // bookmarks. The actual group membership below is projected from the
+  // canonical registry; these labels are not a second navigation list.
+  // HADES TODAY RESEARCH INFRASTRUCTURE HOME COMMUNICATIONS WORK KNOWLEDGE SYSTEM
   const groups = WORKSPACE_DEFINITIONS.map(workspace => [
     workspace.label.toUpperCase(),
     workspace.modules
