@@ -23,6 +23,22 @@ OPERATION_CLASSES = frozenset({
 DEPTHS = frozenset({"QUICK", "STANDARD", "DEEP"})
 
 
+def _is_continuation_phrase(text: str) -> bool:
+    """Recognize operator continuation language without binding to a domain.
+
+    A continuation may include a bounded natural-language qualification (for
+    example, ``continue until the report is complete``).  The active Run and
+    its pending Action remain authoritative; this helper only classifies the
+    user turn and never selects or executes an Action.
+    """
+    return bool(re.match(
+        r"^\s*(?:please\s+)?(?:continue|resume|proceed|go\s+ahead|do\s+it|"
+        r"finish\s+it|keep\s+going)\b",
+        str(text or ""),
+        re.IGNORECASE,
+    ))
+
+
 @dataclass(frozen=True)
 class IntentFrame:
     operation_class: str
@@ -204,7 +220,7 @@ def _depth(text: str) -> str:
 
 def _operation(text: str, *, continuation: bool = False) -> str:
     q = text.lower().strip()
-    if continuation or (len(q.split()) <= 4 and re.fullmatch(r"(?:continue|resume|proceed|go ahead|do it|finish it|keep going)", q)):
+    if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
     if re.search(r"\b(?:delete|remove|retire)\b", q): return "DELETE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
