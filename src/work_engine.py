@@ -32,6 +32,24 @@ def parse_dt(value):
     parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     return parsed.astimezone(timezone.utc).replace(tzinfo=None) if parsed.tzinfo else parsed
 
+def canonical_failure_status(value):
+    """Find an explicit failed/degraded status anywhere in a Result envelope."""
+    failure_statuses = {"DEGRADED", "UNAVAILABLE", "FAILED", "INVALID_RESULT"}
+    if isinstance(value, dict):
+        status = str(value.get("status") or value.get("result_status") or "").upper()
+        if status in failure_statuses:
+            return status
+        for child in value.values():
+            found = canonical_failure_status(child)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for child in value:
+            found = canonical_failure_status(child)
+            if found:
+                return found
+    return None
+
 class WorkEngine:
     def __init__(self, db: Session): self.db = db
 
@@ -522,10 +540,11 @@ class WorkEngine:
         if criteria.get("completion_mode") not in {"single_verified_read", "single_read"}:
             raise WorkError("run is not a single-read deliverable")
         supplied_status = str((result or {}).get("status") or (result or {}).get("result_status") or "").upper() if isinstance(result, dict) else ""
-        if supplied_status in {"DEGRADED", "UNAVAILABLE", "FAILED", "INVALID_RESULT"}:
+        failure_status = canonical_failure_status(result)
+        if failure_status:
             return self.fail_read_deliverable(
                 owner, run_id,
-                reason=(result or {}).get("reason") or (result or {}).get("error") or f"canonical read returned {supplied_status}",
+                reason=(result or {}).get("reason") or (result or {}).get("error") or f"canonical read returned {failure_status}",
             )
         row.status = "completed"
         row.lifecycle_state = "succeeded"
