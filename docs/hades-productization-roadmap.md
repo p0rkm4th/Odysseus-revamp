@@ -43,6 +43,10 @@ records success, compensation, or failure. The network binding now invokes a
 deterministic projection verifier after its structured result; service restart
 now requires a recorded plan precheck, invalidates only its targeted current
 service observations, and verifies the structured post-restart active state.
+Diagnostic prerequisite installation now follows the same contract: its
+recorded plan is required, the package-manager resource is explicitly locked,
+broker executable verification is the postcondition, and only affected
+capability observations are invalidated.
 Unsupported bound actions remain pending rather than receiving an inferred
 success. This is an adapter over the
 existing agent executor and policy path, not a second executor. Synthetic

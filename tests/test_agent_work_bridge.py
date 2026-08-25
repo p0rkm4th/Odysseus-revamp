@@ -218,3 +218,48 @@ def test_service_restart_verification_failure_is_not_success(monkeypatch):
         assert verified["run_lifecycle_state"] == "failed"
     finally:
         engine.dispose()
+
+
+def test_diagnostic_install_requires_plan_locks_package_manager_and_verifies(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run("alice", "chat-install-1", "install the network discovery prerequisite", intent={"domains": ["homelab"]})
+        assert bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_diagnostic_install", "capability": "network_discovery", "packages": ["nmap"]},
+        ) is None
+        with session_factory() as db:
+            WorkEngine(db).record_claim(
+                "alice", {"claim_class": "Observation", "subject_ref": "capability:network_discovery", "predicate": "health", "value": "missing", "source": "setup"},
+            )
+        plan_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "plan_diagnostic_install", "capability": "network_discovery"},
+        )
+        bridge.record_result("alice", plan_id, {"data": {"success": True, "operation_digest": "f" * 64}})
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_diagnostic_install", "capability": "network_discovery", "packages": ["nmap"]},
+        )
+        assert action_id
+        with session_factory() as db:
+            action = db.query(WorkAction).filter_by(id=action_id).one()
+            assert "host:package_manager" in action.locks
+            assert "capability:network_discovery" in action.target_resources
+            assert action.verification == ["prerequisites_verified"]
+        bridge.bind_approval("alice", action_id, "approval-install-1")
+        bridge.resume_approval("alice", action_id, "approval-install-1")
+        completed = bridge.record_result(
+            "alice", action_id,
+            {"data": {"verified_prerequisites": True, "broker_result": {"verification": {"ok": True}}}},
+        )
+        assert completed["run_lifecycle_state"] == "verifying"
+        verified = bridge.verify_bound_action("alice", action_id)
+        assert verified["verified"] is True
+        assert verified["run_lifecycle_state"] == "succeeded"
+        with session_factory() as db:
+            claim = db.query(EpistemicClaim).filter_by(owner="alice").one()
+            assert (claim.provenance or {}).get("state") == "stale"
+    finally:
+        engine.dispose()

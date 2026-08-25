@@ -66,6 +66,9 @@ def _state_invalidations(action: WorkAction, spec) -> list[dict[str, Any]]:
     if action.action_id == "execute_network_discovery":
         cidr = str(payload.get("cidr") or "private_scope").strip()
         return [{"subject_ref": f"network:{cidr}", "predicate": token.split(".", 1)[-1]} for token in spec.state_invalidations]
+    if action.action_id == "execute_diagnostic_install":
+        capability = str(payload.get("capability") or "diagnostic_packages").strip()
+        return [{"subject_ref": f"capability:{capability}", "predicate": token.split(".", 1)[-1]} for token in spec.state_invalidations]
     return []
 
 
@@ -158,6 +161,9 @@ def prepare_action(
             if service:
                 target_resources.append(f"service:{service}")
                 locks.append(f"service:{service}")
+        if spec.action_id == "execute_diagnostic_install":
+            capability_name = str(payload.get("capability") or "diagnostic_packages").strip()
+            target_resources.append(f"capability:{capability_name}")
         if approval_reference:
             existing = (
                 db.query(WorkAction)
@@ -361,6 +367,26 @@ def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
             outcome = work.complete_verification(
                 str(owner), action.run_id, success=True,
                 details={"checks": checks, "service": (action.normalized_input or {}).get("service"), "verifier": "service_restart_status"},
+            )
+            return {"verified": True, "checks": checks, "run_lifecycle_state": outcome["lifecycle_state"]}
+        if action.action_id == "execute_diagnostic_install":
+            broker_result = data.get("broker_result") if isinstance(data.get("broker_result"), dict) else {}
+            verification = broker_result.get("verification") if isinstance(broker_result.get("verification"), dict) else {}
+            checks = {
+                "prerequisites_verified": data.get("verified_prerequisites") is True
+                and verification.get("ok") is True,
+            }
+            missing = [name for name in required if not checks.get(name, False)]
+            work = WorkEngine(db)
+            if missing:
+                outcome = work.complete_verification(
+                    str(owner), action.run_id, success=False,
+                    details={"checks": checks, "missing": missing, "verifier": "diagnostic_executable_verification"},
+                )
+                return {"verified": False, "checks": checks, "missing": missing, "run_lifecycle_state": outcome["lifecycle_state"]}
+            outcome = work.complete_verification(
+                str(owner), action.run_id, success=True,
+                details={"checks": checks, "capability": (action.normalized_input or {}).get("capability"), "verifier": "diagnostic_executable_verification"},
             )
             return {"verified": True, "checks": checks, "run_lifecycle_state": outcome["lifecycle_state"]}
         return {"verified": False, "reason": "no deterministic verifier registered"}
