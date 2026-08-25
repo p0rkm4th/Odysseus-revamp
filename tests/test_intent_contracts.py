@@ -49,6 +49,11 @@ def test_continuation_and_depth_are_structured_not_phrase_specific():
     assert continued.workspace_hint is None
 
 
+def test_imperative_work_request_is_not_projected_as_canonical_read():
+    assert compile_intent("do a long multi-step task").read_explicit is False
+    assert compile_intent("What am I working on?").read_explicit is True
+
+
 def test_continuation_resolves_against_durable_run_without_executing():
     frame = compile_intent("go ahead", run_reference="run-1")
     assert frame.operation_class == "CONTINUE"
