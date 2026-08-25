@@ -2,7 +2,7 @@
 
 Date: 2026-08-25  
 Branch: `recovery/live-candidate-20260823`  
-Final source under audit: `2750f78c1febca21eff7615672642afab969748a`
+Final source under audit: `2c3d2dcd0f7bc33f8f34a8477f89160df0ecd3e8`
 
 ## What changed
 
@@ -20,8 +20,12 @@ Final source under audit: `2750f78c1febca21eff7615672642afab969748a`
 - Added a first-class read-only `memory.read` Capability and `read_memory`
   ToolBinding over the existing canonical Brain store. This is an adapter, not
   a second memory engine; legacy mutations remain compatibility-only.
-- Built and deployed `odysseus:candidate-2750f78c1feb` with image
-  `sha256:a123d69bc7f0edf6bd56b292984dd4626f09aa8b1156e48bd2e725d83236432d`.
+- Added a first-class read-only `work.read` Capability and `read_work`
+  ToolBinding over the existing durable WorkEngine. Overview, review, context,
+  and typed list reads remain owner-scoped structured projections; no second
+  Work store or filesystem fallback was introduced.
+- Built and deployed `odysseus:candidate-2c3d2dcd0f7b` with image
+  `sha256:e61ca054398775352d990de5dec80ddd6078fc2c86d167e2cbc0b618e2f2a848`.
   Runtime `/api/version`, container source hash, and browser/static checks are
   attributable to this commit; rollback `odysseus:rollback-0c18805fe1d0` is
   retained.
@@ -30,7 +34,7 @@ Final source under audit: `2750f78c1febca21eff7615672642afab969748a`
 
 | Area | Evidence | Truth status |
 |---|---|---|
-| Python regression | 6116 passed, 3 skipped, 186 warnings | E3 |
+| Python regression | 6118 passed, 3 skipped, 186 warnings | E3 |
 | Focused contract/network/asset tests | green; workspace/theme focused tests green | E2/E3 |
 | Frontend static verification | `npm run test:frontend` | E3 |
 | Browser/window/realistic acceptance | all three repo commands pass against final candidate | E4 |
@@ -39,6 +43,7 @@ Final source under audit: `2750f78c1febca21eff7615672642afab969748a`
 | Ollama | bridge `/api/version` responds; model inference was verified at prior gate | E4/E5 |
 | Owner-live dogfood | no owner-authenticated session available overnight | pending E6 |
 | Memory read convergence | `memory.read`/`read_memory`, focused and full regression green | E3/E4 |
+| Work read convergence | `work.read`/`read_work`, focused and full regression green | E3/E4 |
 
 ## Reuse and convergence decisions
 
@@ -56,7 +61,7 @@ memory versus vector index, and domain documents versus evidence references.
 ## Remaining truth gaps
 
 - Intent contracts are implemented for technical assets, network, security
-  findings, OSINT planning, and explicit Memory reads. Work, Household,
+  findings, OSINT planning, explicit Memory reads, and Work reads. Household,
   Setup/Integration, and richer domain reads still require canonical
   binding/result-contract adapters; they are not claimed complete.
 - The legacy technical asset CLI storage is deployment-scoped rather than
