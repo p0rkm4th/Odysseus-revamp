@@ -95,6 +95,31 @@ memory versus vector index, and domain documents versus evidence references.
 
 Synthetic tests and source-matched browser tests are not owner dogfood. E6 is
 reserved for the owner’s manual verification on the deployed candidate.
+
+## Durable canonical-read Run checkpoint
+
+Commit `4bcce32cd85350b4d705c46cf6733a03739d0a78` extends the existing shared
+Work bridge to canonical read domains. Memory, Work, Household, Setup, Career,
+asset, security, and OSINT read Actions can now be attached to an owner/session
+Run with semantic concept/operation metadata. A successful structured read
+Result terminally completes a `single_verified_read` Run; a read failure
+terminally records a blocked failure. Consequential Actions remain on the
+existing exact-approval and verification lifecycle.
+
+Focused bridge/contract/chat tests: 119 passed, 1 warning. Full pytest:
+6131 passed, 3 skipped, 186 warnings, with one reproduced pre-existing failure
+in `tests/test_agent_rounds_exhausted.py::test_emits_intent_nudge_exhausted_when_cap_is_exhausted`.
+That failure is recorded as a remaining test-gate defect, not suppressed.
+
+The source-matched deployed candidate is now `odysseus:candidate-4bcce32c`
+with image `sha256:d60304610a4aaeb1239361627e767ddabbcad217158a2f8fd648b890eac00ad8`,
+source `4bcce32cd85350b4d705c46cf6733a03739d0a78`, build ID
+`4bcce32cd85350b4d705c46cf6733a03739d0a78-2026-08-25T05:00:00Z`, frontend
+build ID `frontend-4bcce32cd85350b4d705c46cf6733a03739d0a78-6007cced95bca9218cf0721afb8c21f149683146706fd86f2b3fb3e09d64692d`,
+and migration head `20260825_002_work_run_completion_v6`. Health, broker mode
+and ownership, Qwen bridge inference, frontend static, browser-window, and
+realistic browser checks passed. Rollback `odysseus:rollback-4bcce32c-prev`
+is retained. Owner-live E6 remains pending.
 ## Career foundation checkpoint
 
 Career is implemented as a Work child module with owner-scoped durable
