@@ -4721,6 +4721,20 @@ async def stream_agent_loop(
     _aci_answer_only = False
     _aci_completion_contract_satisfied = False
     _aci_repair_count = 0
+    # Sanitized responsibility accounting for ACI evaluation. These counters
+    # describe decisions made by the control plane versus decisions delegated
+    # to the model; they never influence execution or authority.
+    _aci_framework_burden = collections.Counter()
+    _aci_model_burden = collections.Counter()
+
+    def _record_aci_framework(label: str) -> None:
+        if _aci_enabled:
+            _aci_framework_burden[str(label)] += 1
+
+    def _record_aci_model(label: str) -> None:
+        if _aci_enabled:
+            _aci_model_burden[str(label)] += 1
+
     _aci_profile = aci_profile
     if _aci_enabled and _aci_profile is None:
         try:
@@ -4743,6 +4757,8 @@ async def stream_agent_loop(
     )
     if _aci_answer_only:
         _aci_completion_contract_satisfied = True
+        _record_aci_framework("owner_scoped_memory_read")
+        _record_aci_framework("completion_contract")
     _intent = _classify_agent_request(messages, _last_user)
     _reference_hint = _recent_reference_resolution_hint(messages, _last_user)
     _reference_ack = None
@@ -4802,6 +4818,9 @@ async def stream_agent_loop(
             ),
         )
         _resolved_contract = resolve_intent(_intent_frame)
+        _record_aci_framework("intent_resolution")
+        if _intent_frame.entity_reference or _intent_frame.run_reference or _intent_frame.reference_resolution.get("status") == "RESOLVED":
+            _record_aci_framework("reference_resolution")
         _intent["intent_frame"] = _intent_frame.as_dict()
         _intent["resolved_contract"] = _resolved_contract.as_dict()
         if _intent_frame.operation_class == "CONTINUE":
@@ -5660,6 +5679,7 @@ async def stream_agent_loop(
                 raw_actions,
                 operation_class=str((_intent.get("intent_frame") or {}).get("operation_class") or "") or None,
             )
+            _record_aci_framework("action_hard_filter")
             # A contract-resolved action is always retained when present; the
             # remaining shortlist is deliberately small for weak local models.
             filtered.sort(key=lambda item: 0 if item["binding"] == desired_binding and item["action_id"] == desired_action else 1)
@@ -5737,6 +5757,7 @@ async def stream_agent_loop(
                     if desired_action == "summarize_owner_memory":
                         fast_payload["query"] = str(_intent.get("retrieval_query") or _last_user)
                     _aci_fast_path_block = ToolBlock(desired_binding, json.dumps(fast_payload, sort_keys=True))
+                    _record_aci_framework("deterministic_read_selection")
                     logger.info("[hades-aci] deterministic read fast path binding=%s action=%s", desired_binding, desired_action)
             if _aci_answer_only:
                 aci_instruction = (
@@ -6735,6 +6756,11 @@ async def stream_agent_loop(
             if _skip_model_round:
                 yield "data: [DONE]\n\n"
                 return
+            if _aci_enabled and _aci_mode == "aci":
+                if _force_answer:
+                    _record_aci_model("answer_synthesis")
+                elif _aci_packet is not None:
+                    _record_aci_model("bounded_action_decision")
             async for item in stream_llm_with_fallback(
                 _candidates,
                 messages,
@@ -9362,6 +9388,16 @@ async def stream_agent_loop(
     if _aci_completion_contract_satisfied:
         metrics["aci_completion_transition"] = "ANSWER"
         metrics["aci_completion_contract_satisfied"] = True
+    if _aci_enabled:
+        from src.aci import model_burden
+        metrics["model_burden"] = model_burden(
+            framework=sum(_aci_framework_burden.values()),
+            model=sum(_aci_model_burden.values()),
+            labels={
+                "framework": dict(_aci_framework_burden),
+                "model": dict(_aci_model_burden),
+            },
+        )
     yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
 
     # Teacher-escalation: inline takeover visible in the chat stream.
