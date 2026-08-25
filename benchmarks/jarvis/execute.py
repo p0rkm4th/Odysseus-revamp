@@ -47,7 +47,6 @@ async def execute_case(args, case, model_metadata, hardware, headers):
                     case.get("external_untrusted_context", False)
                 ),
                 tool_executor=executor,
-                model_capability_profile=args.capability_profile,
             ):
                 for event in parse_sse([chunk]):
                     collector.consume(event)
