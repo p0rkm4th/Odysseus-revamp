@@ -1963,8 +1963,10 @@ _EXPLICIT_CONTINUATION_PHRASE_RE = re.compile(
     r"(?:yes|yeah|yep|ok|okay|sure)\s*(?:,\s*)?(?:please\s+)?"
     r"(?:continue|carry\s+on|proceed|resume|go\s+ahead(?:\s+and\s+continue)?|"
     r"(?:run|scan|start)\s+(?:it|the\s+scan|the\s+task|this|[^.!?]{0,32}\bscan\b))|"
-    r"(?:please\s+)?(?:continue(?:\s+(?:with\s+that|the\s+task))?(?:\s+please)?|"
-    r"carry\s+on|proceed|resume|keep\s+going|go\s+ahead(?:\s+and\s+continue)?)"
+    r"(?:please\s+)?(?:continue(?:\s+(?:with\s+that|the\s+task|until\s+[^.!?]{0,160}))?(?:\s+please)?|"
+    r"carry\s+on|proceed|resume|keep\s+going|go\s+ahead(?:\s+and\s+continue)?|"
+    r"do\s+that|do\s+all\s+of\s+(?:the\s+)?(?:above|those|them)|"
+    r"all\s+of\s+(?:the\s+)?(?:above|those|them))"
     r")\s*(?:[.!?]+\s*)?$",
     re.IGNORECASE,
 )

@@ -33,7 +33,8 @@ def _is_continuation_phrase(text: str) -> bool:
     """
     return bool(re.match(
         r"^\s*(?:please\s+)?(?:continue|resume|proceed|go\s+ahead|do\s+it|"
-        r"finish\s+it|keep\s+going)\b",
+        r"finish\s+it|keep\s+going|do\s+that|do\s+all\s+of\s+(?:the\s+)?"
+        r"(?:above|those|them)|all\s+of\s+(?:the\s+)?(?:above|those|them))\b",
         str(text or ""),
         re.IGNORECASE,
     ))
