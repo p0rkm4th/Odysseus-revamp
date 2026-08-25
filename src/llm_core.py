@@ -767,6 +767,13 @@ def _build_ollama_payload(
         payload["tools"] = _alias_harmony_tools(tools, model)
     if response_format:
         payload["format"] = response_format
+        # A strict ACI DecisionContract is a machine channel, not a free-form
+        # reasoning transcript. Native Ollama otherwise defaults thinking
+        # models such as Qwen3 to the `message.thinking` field, leaving
+        # `message.content` empty and making the bounded decision parser see
+        # malformed JSON. The OpenAI-compatible path already applies the
+        # equivalent transport separation below.
+        payload["think"] = False
     return payload
 
 

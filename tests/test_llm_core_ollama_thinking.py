@@ -163,3 +163,15 @@ class TestThinkSuppression:
             monkeypatch, "http://127.0.0.1:11435/v1/chat/completions", "qwen3:14b"
         )
         assert payload.get("think") is False
+
+    def test_native_ollama_structured_output_disables_thinking(self):
+        """Strict ACI JSON must not be emitted only in message.thinking."""
+        payload = llm_core._build_ollama_payload(
+            "qwen3:8b",
+            [{"role": "user", "content": "Return a decision."}],
+            temperature=0.0,
+            max_tokens=128,
+            response_format={"type": "object", "properties": {"decision": {"type": "string"}}},
+        )
+        assert payload["format"]["type"] == "object"
+        assert payload["think"] is False
