@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -244,6 +245,27 @@ def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_proje
         verification = bridge.verify_bound_action("alice", action_id)
         assert verification["verified"] is True
         assert verification["run_lifecycle_state"] == "succeeded"
+    finally:
+        engine.dispose()
+
+
+def test_continuation_run_projection_is_owner_scoped_and_read_only(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-continuation", "deep network discovery",
+            intent={"domains": ["network_ops"]},
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "plan_network_discovery", "cidr": "192.168.10.0/24"},
+        )
+        projection = bridge.continuation_run_projection("alice", run_id)
+        assert projection["id"] == run_id
+        assert projection["actions"] == [{"id": action_id, "status": "proposed", "sequence": 1}]
+        assert projection["continuation_state"]["source"] == "chat_agent"
+        assert bridge.continuation_run_projection("bob", run_id) is None
     finally:
         engine.dispose()
 
