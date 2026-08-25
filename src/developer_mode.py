@@ -4,7 +4,11 @@ from datetime import datetime, timedelta
 import os, re, subprocess
 from core.local_intelligence_models import DeveloperLease
 from src.work_engine import WorkEngine, ident, now
-WORKSPACE = "/home/scootz/Odysseus/odysseus"
+# Developer execution runs inside the Odysseus container.  The host checkout is
+# bind-mounted at this container path by Compose; using the host pathname here
+# makes leases valid in source tests but fail at runtime when the path is not
+# present in the container namespace.
+WORKSPACE = "/app"
 WORKSPACE_UID = int(os.getenv("HADES_WORKSPACE_UID", "1000"))
 WORKSPACE_GID = int(os.getenv("HADES_WORKSPACE_GID", "1000"))
 _DENY = re.compile(r"(?:^|[;&|\s])(sudo|su|doas|docker|podman|nsenter|chroot|mount)(?:$|[\s;&|])|/var/run/docker.sock|--privileged", re.I)
