@@ -1,0 +1,152 @@
+"""Measure local-backend versus Hades ACI overhead on a harmless prompt.
+
+This benchmark uses only the configured local model endpoint and a synthetic
+prompt. It never executes Actions, scans hosts, or persists application state.
+The raw request and Hades request use the same model and endpoint so the
+reported delta isolates context construction/orchestration as far as the
+provider timings permit.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import time
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
+
+import httpx
+
+from src.agent_loop import stream_agent_loop
+from src.model_context import estimate_tokens
+
+
+def _local_endpoint(endpoint: str) -> bool:
+    host = (urlparse(endpoint).hostname or "").casefold()
+    return host in {"127.0.0.1", "localhost", "::1", "172.18.0.1"}
+
+
+async def raw_chat(endpoint: str, model: str, prompt: str, *, timeout: float) -> dict[str, Any]:
+    started = time.perf_counter()
+    first_token: float | None = None
+    output = []
+    usage: dict[str, Any] = {}
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        async with client.stream(
+            "POST",
+            endpoint.rstrip("/") + "/api/chat",
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": True,
+                "think": False,
+                "options": {"temperature": 0.0, "num_predict": 128},
+            },
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line.strip():
+                    continue
+                event = json.loads(line)
+                message = event.get("message") or {}
+                content = str(message.get("content") or "")
+                if content and first_token is None:
+                    first_token = time.perf_counter()
+                output.append(content)
+                if event.get("done"):
+                    usage = event
+    finished = time.perf_counter()
+    return {
+        "path": "raw_backend",
+        "ttft_seconds": round((first_token or finished) - started, 4),
+        "completion_seconds": round(finished - started, 4),
+        "output_tokens": usage.get("eval_count"),
+        "prompt_tokens": usage.get("prompt_eval_count"),
+        "output_chars": len("".join(output)),
+    }
+
+
+async def hades_chat(endpoint: str, model: str, prompt: str, *, timeout: float) -> dict[str, Any]:
+    started = time.perf_counter()
+    first_token: float | None = None
+    output_chars = 0
+    metrics: dict[str, Any] = {}
+    async with asyncio.timeout(timeout):
+        async for chunk in stream_agent_loop(
+            endpoint_url=endpoint,
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            owner="__hades_aci_overhead_benchmark__",
+            session_id="hades-aci-overhead-benchmark",
+            aci_mode="aci",
+            max_rounds=1,
+            max_tool_calls=0,
+            context_length=8192,
+        ):
+            for line in str(chunk).splitlines():
+                if not line.startswith("data: "):
+                    continue
+                raw = line[6:]
+                if raw == "[DONE]":
+                    continue
+                try:
+                    event = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(event.get("delta"), str) and event["delta"]:
+                    if first_token is None:
+                        first_token = time.perf_counter()
+                    output_chars += len(event["delta"])
+                if event.get("type") == "metrics" and isinstance(event.get("data"), dict):
+                    metrics = dict(event["data"])
+    finished = time.perf_counter()
+    return {
+        "path": "hades_aci",
+        "ttft_seconds": round((first_token or finished) - started, 4),
+        "completion_seconds": round(finished - started, 4),
+        "output_tokens": metrics.get("output_tokens"),
+        "prompt_tokens": metrics.get("request_context_tokens") or metrics.get("input_tokens"),
+        "context_construction_seconds": metrics.get("agent_prep_time"),
+        "model_calls": metrics.get("agent_rounds"),
+        "tool_calls": metrics.get("tool_calls", 0),
+        "output_chars": output_chars,
+    }
+
+
+async def run(args: argparse.Namespace) -> dict[str, Any]:
+    prompt = "Answer with exactly one short sentence: what is 2 plus 2?"
+    raw = await raw_chat(args.endpoint, args.model, prompt, timeout=args.timeout)
+    hades = await hades_chat(args.endpoint, args.model, prompt, timeout=args.timeout)
+    return {
+        "schema_version": 1,
+        "synthetic": True,
+        "side_effects": False,
+        "endpoint": urlparse(args.endpoint)._replace(path="", query="", fragment="").geturl(),
+        "model": args.model,
+        "prompt_tokens_baseline": estimate_tokens([{"role": "user", "content": prompt}]),
+        "raw": raw,
+        "hades": hades,
+        "harness_overhead_seconds": round(hades["completion_seconds"] - raw["completion_seconds"], 4),
+        "ttft_overhead_seconds": round(hades["ttft_seconds"] - raw["ttft_seconds"], 4),
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--endpoint", required=True)
+    parser.add_argument("--model", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--timeout", type=float, default=180.0)
+    args = parser.parse_args()
+    if not _local_endpoint(args.endpoint):
+        parser.error("this benchmark only permits explicitly recognized local endpoints")
+    report = asyncio.run(run(args))
+    Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(json.dumps(report, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
