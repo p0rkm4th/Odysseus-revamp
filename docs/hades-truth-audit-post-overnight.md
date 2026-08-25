@@ -581,7 +581,9 @@ realistic browser gates pass. Rollback is retained as
   while retaining the structured verification result.
 - Evidence: focused WorkEngine/planner/bridge coverage `94 passed, 1 warning`;
   full regression `6210 passed, 3 skipped, 186 warnings in 126.82s`;
-  `py_compile` and diff checks passed. Source is committed but deployment is
-  pending the final candidate build and runtime gates. Status:
-  `VERIFIED_TESTED`; owner-live model swapping and consequential network
-  dogfood remain `OWNER_DOGFOOD_PENDING`.
+  `py_compile` and diff checks passed. Candidate `odysseus:candidate-b7e57f81b7e5`
+  is deployed with image `sha256:b7e4370d203fa18e4521d07b748038f4254dcac3f654e27d17e7567b506582d7`;
+  `/api/health`, `/api/version`, owner-scoped CMDB continuity, frontend static
+  verification, browser-window dogfood, and realistic browser acceptance
+  passed. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`; owner-live model
+  swapping and consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
