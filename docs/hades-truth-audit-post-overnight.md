@@ -174,3 +174,16 @@ Focused control-plane tests: 17 passed. Full regression after this change:
 6134 passed, 3 skipped, 186 warnings in 128.00 seconds. The new source is
 committed but requires the final candidate rebuild and runtime/browser gates
 before E4/E5 promotion. Owner-live E6 remains pending.
+
+## Source-matched deployment verification
+
+Commit `34821684ece935faa367aa491de64e16bed5e958` is deployed as candidate
+`odysseus:candidate-34821684ece9` with image
+`sha256:bd417be508f282df888e4c08a982a0f308335ea15f3799ede34ce89cf12b8b8a`.
+Runtime `/api/health` is healthy and `/api/version` reports the same source,
+build ID `34821684ece935faa367aa491de64e16bed5e958-2026-08-25T06:20:00Z`,
+frontend build ID, and migration head. Broker socket ownership/mode remain
+`odysseus:odysseus`/`660`; Qwen `qwen3:8b` inference through the intended
+`172.18.0.1:11434` bridge returned `OK`. Frontend static, browser-window, and
+realistic browser acceptance all pass. Rollback is retained as
+`odysseus:rollback-34821684-prev`.
