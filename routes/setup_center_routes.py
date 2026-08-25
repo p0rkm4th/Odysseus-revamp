@@ -66,11 +66,14 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
         if module_id not in supported:
             raise HTTPException(409, "safe health check is not implemented for this module")
 
+        def persist(result):
+            return SetupCenterService().record_health(value, module_id, result)
+
         if module_id == "home.smart-home":
             from routes.intelligence_routes import _home_assistant_overview
             overview = await _home_assistant_overview()
             healthy = overview.get("status") == "healthy"
-            return {"module_id": module_id, "status": "CONFIGURED" if healthy else "DEGRADED" if overview.get("configured") else "NOT_CONFIGURED", "checks": {"owner_scoped": True, "safe_read_only": True, "api_status_read": healthy, "entity_state_read": healthy, "mutations_performed": False}, "detail": "Home Assistant read-only health and entity projection succeeded" if healthy else "Home Assistant safe read did not succeed; no mutation was attempted", "authority_unchanged": True, "secret_values_exposed": False}
+            return persist({"module_id": module_id, "status": "CONFIGURED" if healthy else "DEGRADED" if overview.get("configured") else "NOT_CONFIGURED", "checks": {"owner_scoped": True, "safe_read_only": True, "api_status_read": healthy, "entity_state_read": healthy, "mutations_performed": False}, "detail": "Home Assistant read-only health and entity projection succeeded" if healthy else "Home Assistant safe read did not succeed; no mutation was attempted", "authority_unchanged": True, "secret_values_exposed": False})
 
         if module_id in {"business.crm", "interaction.voice", "advanced.automations"}:
             def platform_check(_current_owner):
@@ -88,7 +91,7 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
                     "advanced.automations": "canonical scheduler and monitor primitives are available; no job was scheduled or executed",
                 }
                 return {"module_id": module_id, "status": "CONFIGURED" if healthy else "DEGRADED", "checks": {"owner_scoped": True, "safe_read_only": True, "canonical_primitives": available, "network_request_performed": False, "mutations_performed": False}, "detail": details[module_id], "authority_unchanged": True, "secret_values_exposed": False}
-            return await asyncio.to_thread(platform_check, value)
+            return await asyncio.to_thread(lambda current_owner: persist(platform_check(current_owner)), value)
 
         if module_id in {"core.models", "core.memory", "investigation.osint", "technology.network", "technology.homelab"}:
             def capability_check(_current_owner):
@@ -119,7 +122,7 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
                     detail = "bounded Homelab binding is declared; no host operation was performed"
                     checks = {"owner_scoped": True, "bounded_binding": available, "host_operation_performed": False}
                 return {"module_id": module_id, "status": "CONFIGURED" if available else "DEGRADED", "checks": {**checks, "safe_read_only": True, "mutations_performed": False}, "detail": detail, "authority_unchanged": True, "secret_values_exposed": False}
-            return await asyncio.to_thread(capability_check, value)
+            return await asyncio.to_thread(lambda current_owner: persist(capability_check(current_owner)), value)
 
         def check(current_owner):
             db = session_factory()
@@ -146,7 +149,7 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
                 return {"module_id": module_id, "status": "CONFIGURED" if connected else "NOT_CONFIGURED", "checks": checks, "detail": detail, "authority_unchanged": True, "secret_values_exposed": False}
             finally:
                 db.close()
-        return await asyncio.to_thread(check, value)
+        return await asyncio.to_thread(lambda current_owner: persist(check(current_owner)), value)
 
     @router.patch("/modules/{module_id}")
     async def update_module(request: Request, module_id: str, payload: dict[str, Any] = Body(...)):

@@ -74,6 +74,22 @@ def test_configured_setup_does_not_claim_provider_health_without_a_probe(tmp_pat
     assert email["last_success"] is None
 
 
+def test_health_probe_persists_health_evidence_without_changing_setup_status(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "state.json")
+    service = setup_center.SetupCenterService()
+    service.update("alice", "communications.email", {"status": "CONFIGURED"})
+    service.record_health("alice", "communications.email", {
+        "module_id": "communications.email",
+        "status": "DEGRADED",
+        "detail": "provider check was not attempted by Setup Center",
+    })
+    module = next(item for item in service.projection("alice")["modules"] if item["id"] == "communications.email")
+    assert module["status"] == "CONFIGURED"
+    assert module["health_status"] == "DEGRADED"
+    assert module["health_reason"] == "provider check was not attempted by Setup Center"
+    assert module["health_checked_at"]
+
+
 def test_contract_declares_telegram_setup_requirements():
     telegram = next(item for item in setup_center.CONTRACTS if item.id == "communications.telegram")
     assert telegram.dependencies == ("core.identity",)
