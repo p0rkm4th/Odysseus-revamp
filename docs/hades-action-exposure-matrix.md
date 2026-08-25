@@ -25,6 +25,8 @@ or remove authority.
 | Work | `work.read` | `review` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
 | Work | `work.read` | `context` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
 | Work | `work.read` | `list_goals` / `list_projects` / `list_tasks` / `list_runs` / `list_commitments` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
+| Home / Household | `household.read` | `overview` | yes | yes | yes | yes | no | application / InventoryService | none | authenticated owner scope; physical household state; CMDB remains separate |
+| Home / Household | `household.read` | `list_items` / `search_items` / `get_item` | yes | yes | yes | yes | no | application / InventoryService | none | authenticated owner scope; physical household state; CMDB remains separate |
 
 “MODEL: yes” means the canonical binding contract may be projected when the
 intent and policy select the capability. Native function schemas and strict

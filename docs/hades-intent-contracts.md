@@ -26,12 +26,14 @@ Current registered semantic contracts:
 | `OSINT_CASE` | `research.public_sources/plan` | OSINT plan | implemented/source-tested |
 | `MEMORY` | `memory.read/summarize_owner_memory` via `read_memory` | explicit memory read | implemented/source-tested |
 | `WORK` | `work.read/overview` via `read_work` | Work overview | implemented/source-tested |
+| `HOUSEHOLD_ITEM` | `household.read/overview` via `read_household` | Household overview | implemented/source-tested |
 
-Setup/Integration, Household, and richer Network reads remain explicit
+Setup/Integration and richer Network reads remain explicit
 gaps until an existing owner-scoped service/action can be referenced without
 inventing a side registry. Their absence is surfaced as an unresolved contract,
-never repaired with filesystem or shell access. Memory’s `read_memory` and
-Work’s `read_work` bindings are deliberately read-only; legacy mutation actions
+never repaired with filesystem or shell access. Memory’s `read_memory`, Work’s
+`read_work`, and Household’s `read_household` bindings are deliberately
+read-only; legacy mutation actions
 remain on their compatibility path until they can be migrated without
 broadening this contract.
 
