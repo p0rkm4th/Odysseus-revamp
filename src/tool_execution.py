@@ -1766,6 +1766,32 @@ async def execute_registered_binding(*, tool_name, payload, owner=None, **securi
     return normalized
 
 
+def _validate_registered_result(block, result):
+    """Fail closed on a malformed success-shaped first-class Result."""
+    if not isinstance(result, tuple) or len(result) != 2 or not isinstance(result[1], dict):
+        return result
+    name, data = result
+    if data.get("error") or data.get("blocked") or not isinstance(data.get("data"), dict):
+        return result
+    from src.capability_registry import action_for_tool
+    action = action_for_tool(block.tool_type, block.content)
+    if action is None:
+        return result
+    from src.intent_contracts import validate_bound_result
+    valid, status = validate_bound_result(block.tool_type, action.action_id, data["data"])
+    if valid:
+        return result
+    invalid = dict(data)
+    invalid.update({
+        "success": False,
+        "exit_code": 1,
+        "status": "INVALID_RESULT",
+        "error_code": "RESULT_INVALID",
+        "error": f"registered ActionSpec result contract rejected payload ({status})",
+    })
+    return name, invalid
+
+
 @_ody_v34_functools.wraps(_ody_v34_original_execute_tool_block)
 async def execute_tool_block(block, *args, **kwargs):
     from src.tool_bindings import binding_for_tool
@@ -1808,7 +1834,8 @@ async def execute_tool_block(block, *args, **kwargs):
         kwargs.pop("delegated_grant_capability_id", None)
         kwargs.pop("delegated_grant_digest", None)
         kwargs.pop("delegated_grant_target_resource", None)
-        return await _ody_v34_original_execute_tool_block(block, *args, **kwargs)
+        executed = await _ody_v34_original_execute_tool_block(block, *args, **kwargs)
+        return _validate_registered_result(block, executed)
 
     return await _ody_v34_original_execute_tool_block(
         block,
