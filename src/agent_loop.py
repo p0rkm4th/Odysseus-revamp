@@ -6816,6 +6816,7 @@ async def stream_agent_loop(
             not guide_only
             and not _force_answer
             and _asset_frame.get("operation_class") == "READ"
+            and _asset_frame.get("read_explicit") is True
             and _read_binding
             and _read_action
             and not tool_blocks

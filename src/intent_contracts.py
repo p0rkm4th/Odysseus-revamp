@@ -37,6 +37,7 @@ class IntentFrame:
     depth: str = "STANDARD"
     constraints: tuple[str, ...] = ()
     desired_output: str | None = None
+    read_explicit: bool = False
     source: str = "deterministic_compiler"
 
     def as_dict(self) -> dict[str, Any]:
@@ -192,6 +193,15 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
     text = str(query or "").strip()
     q = text.lower()
     operation = _operation(text, continuation=continuation)
+    # READ is the safe fallback operation for semantically incomplete text,
+    # but canonical read projection must not treat every imperative containing
+    # a domain noun as a request to inspect state. Keep this as bounded intent
+    # metadata rather than a tool-name/route heuristic.
+    read_explicit = bool(re.match(
+        r"\s*(?:what(?:'s| is| are)?|which|who|where|when|how many|show|list|"
+        r"tell me|do you have|are there|is there|find my|what do you)\b",
+        q,
+    ))
     concept = "UNKNOWN"
     target = None
     if re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q):
@@ -235,6 +245,7 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         depth=_depth(text),
         constraints=("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK"} else (),
         desired_output="grounded_structured_summary" if operation == "READ" else None,
+        read_explicit=read_explicit,
     )
 
 
