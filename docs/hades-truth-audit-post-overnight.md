@@ -545,3 +545,23 @@ realistic browser gates pass. Rollback is retained as
   dogfood, and realistic browser acceptance passed. Status:
   `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`; owner-live network dogfood and
   cross-model provider swapping remain `OWNER_DOGFOOD_PENDING`.
+
+## Safe durable read continuation checkpoint
+
+- Source change: `4957b0af` promotes the existing `RunPlanner` projection into
+  a server-owned safe continuation seam. After a successful bound read, the
+  agent may chain the next declared read-only Action without another user
+  message, but only when the planner reports `READY` and
+  `safe_auto_continue`, the binding is currently exposed, the tool is not
+  disabled, and the per-turn continuation budget remains healthy. Approval,
+  policy, owner, and executor checks still run for the appended binding.
+- The planner now merges persisted authoritative Actions with later
+  unmaterialized declared plan steps. This prevents a completed first Action
+  from falsely terminating a multi-step Run, while preserving sequence and
+  compiled target scope.
+- Evidence: focused continuation/planner/contract coverage `80 passed, 1
+  warning`; full regression `6209 passed, 3 skipped, 186 warnings in 126.76s`.
+  The source-matched candidate passed `/api/health`, `/api/version`, frontend
+  static verification, browser-window dogfood, and realistic browser
+  acceptance. This checkpoint is `VERIFIED_TESTED`; owner-live model swapping
+  and consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
