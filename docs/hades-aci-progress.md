@@ -17,6 +17,7 @@
 | OLLAMA_CHARACTERIZATION | `4c43dfae` | metadata-only `/api/show` plus fallback `/api/tags`; qwen3:8b digest/context/capabilities recorded locally | `odysseus:candidate-4c43dfae28d8` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | PROTOCOL_PROBES | `49de2dc0` | synthetic strict Decision JSON PASS and verified native-tool PASS; no side effects | not rebuilt | FOCUSED_TESTED |
 | MEMORY_COMPLETION_FIX | `d9d07bdc` | 75 focused; 6304 full; sanitized live Qwen trajectory reaches ANSWER without tool re-entry | `odysseus:candidate-d9d07bdc` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| HARNESS_OVERHEAD | `ab11579c` | matched synthetic raw-vs-Hades qwen3:8b timing; 70 focused | not rebuilt | FOCUSED_TESTED |
 
 ## H0 evidence
 
@@ -103,6 +104,16 @@ canonical references. Full evidence remains behind the Memory/Action boundary.
 The sanitized live Qwen trajectory produced no `tool_start`, no
 `WHY_NO_ACTION`, and metrics `aci_completion_transition=ANSWER` with the
 CompletionContract satisfied. Owner GUI confirmation remains pending.
+
+## Harness overhead evidence
+
+The local-only benchmark compares the same harmless synthetic prompt through
+Ollama directly and through Hades ACI. It executes no Actions, performs no
+network scan, and writes only a local report. Two matched samples measured raw
+completion at `3.48–3.66s`, Hades completion at `14.48–14.54s`, and an
+end-to-end delta of `10.82–11.05s`. Hades context construction accounted for
+`1.38–1.48s`; both samples made zero tool calls. This is measured harness cost,
+not a claim that all operational workloads have the same overhead.
 
 ## Deployment provenance
 
