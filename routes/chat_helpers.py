@@ -244,7 +244,7 @@ def ensure_chat_agent_work_run(
         # Action instead of merely retaining the topic.
         if run_id and not continuation and frame.operation_class == "READ" and frame.read_explicit:
             resolved = resolve_intent(frame)
-            if resolved.status == "RESOLVED" and resolved.binding_name and resolved.action_id:
+            if resolved.available and resolved.binding_name and resolved.action_id:
                 payload = {"action": resolved.action_id}
                 if frame.domain_concept == "MEMORY":
                     payload["query"] = query
