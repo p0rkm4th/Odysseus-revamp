@@ -428,3 +428,13 @@ realistic browser gates pass. Rollback is retained as
 - The continuation projection is refreshed after each successful bridged
   Action before the next agent round, preserving current Run state across
   chained read-only steps.
+
+## Cross-model Run continuity checkpoint
+
+- Active owner/session Runs now record bounded model history and the current
+  model when a continuation arrives through a different provider. The same
+  Run, plan, pending authority, and Results remain authoritative; model swap
+  is an auditable cognition change, not a new Run or an authority change.
+- Evidence: owner-scoped bridge, intent, and model-parity coverage `64 passed,
+  1 warning`.
+- Status: `VERIFIED_TESTED`; live provider swapping remains pending.
