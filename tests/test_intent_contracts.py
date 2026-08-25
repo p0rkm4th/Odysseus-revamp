@@ -49,6 +49,18 @@ def test_continuation_and_depth_are_structured_not_phrase_specific():
     assert continued.workspace_hint is None
 
 
+@pytest.mark.parametrize("query", [
+    "continue until the network report is complete",
+    "please resume that task",
+    "go ahead and finish it",
+    "keep going with the current Run",
+])
+def test_natural_continuation_qualifiers_resolve_to_the_active_run(query):
+    frame = compile_intent(query, run_reference="run-1")
+    assert frame.operation_class == "CONTINUE"
+    assert frame.continuation_reference == "run-1"
+
+
 def test_imperative_work_request_is_not_projected_as_canonical_read():
     assert compile_intent("do a long multi-step task").read_explicit is False
     assert compile_intent("What am I working on?").read_explicit is True
