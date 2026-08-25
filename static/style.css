@@ -41514,6 +41514,8 @@ body.settings-sidebar-resize-active {
 .work-grid section { border:1px solid var(--border,#333); border-radius:10px; padding:14px; min-height:140px; }
 .work-card { display:grid; gap:5px; padding:10px 0; border-bottom:1px solid color-mix(in srgb, var(--border,#333) 65%, transparent); }
 .work-card span { font-size:11px; opacity:.75; text-transform:uppercase; } .work-card small { opacity:.7; }
+.control-run-card { height:auto; min-height:56px; width:100%; padding:10px 12px; text-align:left; align-content:start; }
+.control-run-card strong, .control-run-card small { min-width:0; overflow-wrap:anywhere; word-break:break-word; }
 .hades-workspace-window { position:fixed; display:flex; flex-direction:column; min-width:280px; min-height:180px; resize:both; overflow:hidden; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:12px; box-shadow:0 18px 60px #0009; }
 .hades-window-titlebar { display:flex; align-items:center; gap:4px; min-height:36px; padding:6px 8px 6px 12px; background:color-mix(in srgb,var(--panel) 86%,var(--accent,var(--red))); cursor:grab; user-select:none; }
 .hades-window-titlebar > strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

@@ -889,3 +889,21 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   browser acceptance all pass. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`;
   owner-live Luna/Sol swapping, consequential network dogfood, and external
   credential flows remain `OWNER_DOGFOOD_PENDING`.
+
+## Final convergence UI repair checkpoint
+
+- The authenticated product pass found a real P1 in Control Center: its Run
+  cards inherited the global fixed-height button rule, so multi-line Run rows
+  overlapped. The shared `.control-run-card` layout now grows with content,
+  wraps long identifiers, and remains fully clickable. This is a generic UI
+  contract repair, not a fixture-specific adjustment.
+- Exact HEAD `0d20eddb139b9c1f12785129c087239ce762822f` is deployed as
+  `odysseus:candidate-0d20eddb139b` with image
+  `sha256:c649536b01371c77c28cda7e83323b6c078c560e140479a27631d8d974809448`.
+  `/api/health`, `/api/version`, frontend static verification,
+  browser-window, realistic browser, authenticated Setup/Integration/Control
+  Center loading, and Control Center non-overlap acceptance pass.
+- Full regression is `6273 passed, 3 skipped, 186 warnings in 155.78s`.
+  Owner-authenticated cross-model swapping, owner-live network dogfood, and
+  external credential flows remain `OWNER_DOGFOOD_PENDING`; no owner authority
+  was bypassed.
