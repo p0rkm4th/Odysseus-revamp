@@ -236,6 +236,16 @@ existing migration head. Health, `/api/version`, Ollama bridge, frontend
 static, browser-window, and realistic browser gates pass. Rollback
 `odysseus:rollback-18db0e69-prev` is retained. Owner-live E6 remains pending.
 
+## Model endpoint health checkpoint
+
+Setup `core.models` now reuses the existing bounded provider reachability probe
+against the configured Ollama/model endpoint. It records endpoint reachability
+separately from capability metadata and never performs inference, downloads a
+model, or changes authority. Focused tests: 108 passed, 1 warning. Full
+regression: 6245 passed, 3 skipped, 186 warnings in 125.86 seconds. The
+source-matched deployment for this checkpoint is recorded below after the
+final candidate build.
+
 Commit `a9ab0e04d293b2bf606d6dbebd231077cee24054` is deployed as candidate
 `odysseus:candidate-a9ab0e04d293` with image
 `sha256:9b73c475186f5aec310e3668e7fc23099cdd7140e18c8ab0550f52fec5cbc0d3`.
