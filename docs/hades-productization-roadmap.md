@@ -419,6 +419,12 @@ descriptive only: it does not select a model, alter policy, expose capabilities,
 or grant authority. Live provider qualification, cost/latency optimization,
 and shadow plan review remain future work.
 
+The deterministic local-intelligence classifier now separates executable
+network intent from read-only network questions. Scan/discovery/install/restart
+phrasing resolves to the bounded canonical network-action task class and is
+ineligible for the local read-only model, while ordinary homelab status reads
+retain the local-read route where policy permits.
+
 ### Mission projection slice
 
 Missions now reuse canonical WorkGoals marked with an explicit operating-mode
