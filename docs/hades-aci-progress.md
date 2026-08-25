@@ -14,7 +14,7 @@
 | RUNTIME_PROFILE_DIAGNOSTICS | `85cb0ee4` | owner-scoped `/api/hades/runtime-profile`; sanitized runtime evidence projection; focused-tested | superseded by final candidate | FOCUSED_TESTED |
 | TOKEN_ACCOUNTING | `ce626774` | nested native tool-schema serialization included in shared estimator; 52 focused tests | `odysseus:candidate-ce626774f5ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | FINAL_RUNTIME_CHECKPOINT | `ce626774` | `6298 passed, 3 skipped`; health/version, broker, Ollama verified; unauthenticated profile route returns 401 | `odysseus:candidate-ce626774f5ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
-| OLLAMA_CHARACTERIZATION | current working tree | metadata-only `/api/show` plus fallback `/api/tags`; qwen3:8b digest/context/capabilities recorded locally | not rebuilt | FOCUSED_TESTED |
+| OLLAMA_CHARACTERIZATION | `4c43dfae` | metadata-only `/api/show` plus fallback `/api/tags`; qwen3:8b digest/context/capabilities recorded locally | `odysseus:candidate-4c43dfae28d8` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -90,10 +90,12 @@ migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
 
 The final implementation candidate is source commit
-`ce626774f5ac2aaa1ff8a93c19e18352335f6ff7`, image ID
-`sha256:bbd49d105cc8e18931e4bf4c7a0a141d3273bbfe4a604e68903d6ea29a87f141`,
+`4c43dfae28d8aa34a4761be78abbb37db1193021`, image
+`odysseus:candidate-4c43dfae28d8`, image ID
+`sha256:d37d2ec052c46056d5ba20a6d9c8d4ffcd5815c32de6c35c1a79643fd07fec09`,
+build ID `4c43dfae28d8aa34a4761be78abbb37db1193021-2026-08-25T22:43:16Z`,
 and frontend ID
-`frontend-ce626774f5ac2aaa1ff8a93c19e18352335f6ff7-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
+`frontend-4c43dfae28d8aa34a4761be78abbb37db1193021-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
