@@ -765,3 +765,19 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
 - Evidence: focused Result/contract/Run coverage `121 passed, 1 warning`; full
   regression `6262 passed, 3 skipped, 186 warnings in 126.75s`. Status:
   `VERIFIED_TESTED`; source-matched deployment follows this checkpoint.
+
+## Owner-bounded Contacts canonical read checkpoint
+
+- `CONTACT` is now a semantic IntentFrame concept mapped onto the existing
+  `communications.read` Capability and `read_communications` ToolBinding.
+  `Show my contacts` therefore follows the shared contract/Run path rather
+  than relying on model-specific `manage_contact` wording.
+- The existing CardDAV admin/single-user boundary is enforced at execution.
+  Permitted owners receive typed `contacts` data; other owners receive
+  structured `UNAVAILABLE / OWNER_BOUNDARY_UNAVAILABLE`. No CardDAV global
+  data is exposed to a non-permitted owner, and no mutation is added.
+- Explicit `UNAVAILABLE` and `DEGRADED` Result statuses now survive the shared
+  Result validator instead of becoming `RESULT_INVALID`. Evidence: focused
+  contract/security coverage `115 passed, 1 warning`; full regression `6268
+  passed, 3 skipped, 186 warnings in 125.65s`. Status:
+  `VERIFIED_TESTED`; source-matched deployment follows this checkpoint.

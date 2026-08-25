@@ -1697,10 +1697,43 @@ async def _execute_read_communications_binding(block, owner=None):
     """Adapt the existing owner-scoped Communications overview to a read binding."""
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
-        if str(payload.get("action") or "overview").strip().casefold() != "overview":
+        action = str(payload.get("action") or "overview").strip().casefold()
+        if action not in {"overview", "contacts"}:
             raise ValueError("unsupported read-only Communications action")
         if not owner:
             raise PermissionError("authenticated Communications owner is required")
+        if action == "contacts":
+            # The existing CardDAV provider is global in its storage layer.
+            # Reuse its established security boundary: only an authenticated
+            # admin/single-user owner may receive that provider projection.
+            from src.tool_security import owner_is_admin_or_single_user
+            if not owner_is_admin_or_single_user(owner):
+                result = {
+                    "status": "UNAVAILABLE",
+                    "error_code": "OWNER_BOUNDARY_UNAVAILABLE",
+                    "reason": "CardDAV contacts are not owner-isolated for this account",
+                    "contacts": [],
+                }
+                return "read_communications", {"output": _ody_v34_json.dumps(result, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+            import asyncio
+            from routes.contacts_routes import _fetch_contacts
+            rows = await asyncio.to_thread(_fetch_contacts)
+            contacts = []
+            for row in rows or []:
+                if not isinstance(row, dict):
+                    continue
+                contacts.append({
+                    key: row.get(key)
+                    for key in ("uid", "name", "emails", "phones", "address")
+                    if row.get(key) is not None
+                })
+            result = {
+                "status": "SUCCESS_WITH_DATA" if contacts else "SUCCESS_EMPTY",
+                "source": "canonical_carddav_contacts",
+                "owner_scope": "admin_or_single_user",
+                "contacts": contacts,
+            }
+            return "read_communications", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
         from datetime import datetime, timedelta
         from sqlalchemy import and_, or_
         from core.database import CalendarCal, CalendarEvent, EmailAccount, SessionLocal

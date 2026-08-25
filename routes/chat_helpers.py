@@ -201,6 +201,7 @@ def ensure_chat_agent_work_run(
             "JOB_SEARCH": "career", "JOB_OPPORTUNITY": "career",
             "APPLICATION": "career", "INTERVIEW": "career",
             "COMMUNICATIONS": "communications",
+            "CONTACT": "communications",
         }
         if frame.domain_concept in canonical_domains:
             domains.add(canonical_domains[frame.domain_concept])
