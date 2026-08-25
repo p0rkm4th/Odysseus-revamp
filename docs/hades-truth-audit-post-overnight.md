@@ -907,3 +907,26 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   Owner-authenticated cross-model swapping, owner-live network dogfood, and
   external credential flows remain `OWNER_DOGFOOD_PENDING`; no owner authority
   was bypassed.
+# P0 owner-dogfood correction checkpoint — 2026-08-25
+
+Evidence level: E3 VERIFIED_TESTED (deployment pending for this checkpoint).
+
+The owner-live retest exposed four generic seams, repaired in commit
+`0056bc0c`:
+
+- `read_network_context` now reads host interfaces/routes through the existing
+  broker, classifies VPN, host-local, and application-runtime interfaces, and
+  emits a context identity plus ownership classification. Docker bridge state
+  is not a current user-network target.
+- Omitted network discovery scope remains unresolved. Historical observations
+  are returned as `HISTORICAL_DISCOVERY` evidence and cannot become current
+  scan scope. VPN/corporate/unknown private ranges are not implicitly
+  authorized.
+- Domain contracts expose default overview reads and read Actions remain
+  approval-free; consequential Actions retain exact approval.
+- Grounding recognizes durable canonical read/observation evidence, while
+  model-only claims and unsupported shell suggestions remain rejected.
+
+Focused control-plane suite: 192 passed. Full regression: 6277 passed, 3
+skipped, 186 warnings. Deployment, browser provenance, and owner-live Qwen
+retest remain pending for this checkpoint.
