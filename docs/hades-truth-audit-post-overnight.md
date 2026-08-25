@@ -843,3 +843,15 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   warning`; full regression `6273 passed, 3 skipped, 186 warnings in 315.73s`.
   Source-matched deployment follows this checkpoint. Status:
   `VERIFIED_TESTED`.
+
+## Registry-derived durable action projection checkpoint
+
+- Source change: the streaming agent loop now derives durable Work-action
+  attachment eligibility from the canonical ToolBinding registry. The former
+  duplicated tool-name allowlist is gone; `prepare_action` still resolves the
+  exact ActionSpec and rejects unknown actions, so this changes projection
+  coverage without changing authority.
+- Evidence: focused bridge/registry/contract coverage `114 passed, 1 warning`;
+  full regression `6273 passed, 3 skipped, 186 warnings in 177.44s`.
+  Source-matched deployment and end-to-end acceptance follow this checkpoint.
+  Status: `VERIFIED_TESTED`.
