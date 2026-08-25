@@ -48,12 +48,15 @@ def db():
     c.commit()
     return c
 
-def resolve(c, key):
-    r = c.execute("SELECT * FROM assets WHERE id=?", (key,)).fetchone()
+def resolve(c, key, owner=None):
+    owner = str(owner or "").strip()
+    owner_clause = " AND a.owner=?" if owner else ""
+    owner_params = (owner,) if owner else ()
+    r = c.execute("SELECT a.* FROM assets a WHERE a.id=?" + (" AND a.owner=?" if owner else ""), (key, *owner_params)).fetchone()
     if r: return r
-    r = c.execute("SELECT a.* FROM identifiers i JOIN assets a ON a.id=i.asset_id WHERE i.value=? LIMIT 1",(key,)).fetchone()
+    r = c.execute("SELECT a.* FROM identifiers i JOIN assets a ON a.id=i.asset_id WHERE i.value=?" + owner_clause + " LIMIT 1", (key, *owner_params)).fetchone()
     if r: return r
-    rs = c.execute("SELECT * FROM assets WHERE lower(name)=lower(?)",(key,)).fetchall()
+    rs = c.execute("SELECT a.* FROM assets a WHERE lower(a.name)=lower(?)" + (" AND a.owner=?" if owner else ""), (key, *owner_params)).fetchall()
     return rs[0] if len(rs)==1 else None
 
 def putid(c, aid, kind, value, confidence=1.0, source="manual"):
@@ -71,22 +74,31 @@ def putid(c, aid, kind, value, confidence=1.0, source="manual"):
         (aid,kind,value,float(confidence),source,t,t)
     )
 
-def view(c,r):
+def view(c,r, owner=None):
     if not r: return None
     d=dict(r); d["attributes"]=json.loads(d.pop("attributes_json") or "{}")
     d["identifiers"]={x["kind"]:x["value"] for x in c.execute("SELECT kind,value FROM identifiers WHERE asset_id=?",(d["id"],))}
+    owner = str(owner or "").strip()
+    observation_sql = "SELECT * FROM observations WHERE asset_id=?"
+    observation_params = [d["id"]]
+    if owner:
+        observation_sql += " AND owner=?"
+        observation_params.append(owner)
+    observation_sql += " ORDER BY id DESC LIMIT 20"
+    d["recent_observations"]=[dict(x) for x in c.execute(observation_sql, observation_params)]
     return d
 
 def cmd_add(a):
     c=db(); aid=a.id or str(uuid.uuid4()); t=now()
-    c.execute("INSERT INTO assets(id,name,type,status,manufacturer,model,hostname,location,notes,source,confidence,attributes_json,created_at,updated_at)"
-              " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-              (aid,a.name,a.type,a.status,a.manufacturer,a.model,a.hostname,a.location,a.notes,a.source,a.confidence,a.attributes or "{}",t,t))
+    owner = str(getattr(a, "owner", "") or "").strip()
+    c.execute("INSERT INTO assets(id,name,type,status,manufacturer,model,hostname,location,notes,source,confidence,attributes_json,created_at,updated_at,owner)"
+              " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+              (aid,a.name,a.type,a.status,a.manufacturer,a.model,a.hostname,a.location,a.notes,a.source,a.confidence,a.attributes or "{}",t,t,owner or None))
     for k,v in (("serial",a.serial),("system_uuid",a.system_uuid),("mac",a.mac),("hostname",a.hostname)): putid(c,aid,k,v,a.confidence,a.source)
-    c.commit(); print(json.dumps(view(c,c.execute("SELECT * FROM assets WHERE id=?",(aid,)).fetchone()),indent=2,sort_keys=True))
+    c.commit(); print(json.dumps(view(c,c.execute("SELECT * FROM assets WHERE id=?",(aid,)).fetchone(), owner),indent=2,sort_keys=True))
 
 def cmd_update(a):
-    c=db(); r=resolve(c,a.asset)
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); r=resolve(c,a.asset, owner)
     if not r: raise SystemExit("asset not found: "+a.asset)
     f={}
     for n in ("name","type","status","manufacturer","model","hostname","location","notes","source"):
@@ -95,66 +107,83 @@ def cmd_update(a):
     if a.confidence is not None: f["confidence"]=a.confidence
     if a.attributes is not None: f["attributes_json"]=a.attributes
     f["updated_at"]=now()
-    c.execute("UPDATE assets SET "+",".join(k+"=?" for k in f)+" WHERE id=?",(*f.values(),r["id"]))
+    c.execute("UPDATE assets SET "+",".join(k+"=?" for k in f)+" WHERE id=?" + (" AND owner=?" if owner else ""),(*f.values(),r["id"],*(([owner]) if owner else [])))
     for k,v in (("serial",a.serial),("system_uuid",a.system_uuid),("mac",a.mac),("hostname",a.hostname)):
         if v is not None: putid(c,r["id"],k,v,a.confidence or r["confidence"],a.source or "manual")
-    c.commit(); print(json.dumps(view(c,c.execute("SELECT * FROM assets WHERE id=?",(r["id"],)).fetchone()),indent=2,sort_keys=True))
+    c.commit(); print(json.dumps(view(c,c.execute("SELECT * FROM assets WHERE id=?",(r["id"],)).fetchone(), owner),indent=2,sort_keys=True))
 
 def cmd_get(a):
-    c=db(); r=resolve(c,a.asset)
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); r=resolve(c,a.asset, owner)
     if not r: raise SystemExit("asset not found: "+a.asset)
-    d=view(c,r)
-    d["relationships"]=[dict(x) for x in c.execute("SELECT * FROM relationships WHERE (parent_asset_id=? OR child_asset_id=?) AND ended_at IS NULL",(r["id"],r["id"]))]
-    d["recent_observations"]=[dict(x) for x in c.execute("SELECT * FROM observations WHERE asset_id=? ORDER BY id DESC LIMIT 20",(r["id"],))]
+    d=view(c,r, owner)
+    relationship_sql = "SELECT r.* FROM relationships r JOIN assets p ON p.id=r.parent_asset_id JOIN assets ch ON ch.id=r.child_asset_id WHERE (r.parent_asset_id=? OR r.child_asset_id=?) AND r.ended_at IS NULL"
+    relationship_params = [r["id"], r["id"]]
+    if owner:
+        relationship_sql += " AND p.owner=? AND ch.owner=?"
+        relationship_params.extend([owner, owner])
+    d["relationships"]=[dict(x) for x in c.execute(relationship_sql, relationship_params)]
     print(json.dumps(d,indent=2,sort_keys=True))
 
 def cmd_list(a):
-    c=db(); sql="SELECT * FROM assets WHERE 1=1"; p=[]
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); sql="SELECT * FROM assets WHERE 1=1"; p=[]
+    if owner: sql += " AND owner=?"; p.append(owner)
     if a.type: sql+=" AND type=?"; p.append(a.type)
     if a.status: sql+=" AND status=?"; p.append(a.status)
     if a.query:
         sql+=" AND (lower(name) LIKE lower(?) OR lower(coalesce(hostname,'')) LIKE lower(?) OR lower(coalesce(model,'')) LIKE lower(?))"
         q="%"+a.query+"%"; p += [q,q,q]
     sql+=" ORDER BY updated_at DESC LIMIT ?"; p.append(a.limit)
-    print(json.dumps([view(c,r) for r in c.execute(sql,p)],indent=2,sort_keys=True))
+    print(json.dumps([view(c,r, owner) for r in c.execute(sql,p)],indent=2,sort_keys=True))
 
 def cmd_observe(a):
-    c=db(); aid=None
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); aid=None
     if a.asset:
-        r=resolve(c,a.asset)
+        r=resolve(c,a.asset, owner)
         if not r: raise SystemExit("asset not found: "+a.asset)
         aid=r["id"]
     data=json.loads(a.json) if a.json else {"text":a.text}
-    c.execute("INSERT INTO observations(asset_id,observed_at,source,kind,confidence,data_json) VALUES(?,?,?,?,?,?)",
-              (aid,now(),a.source,a.kind,a.confidence,jd(data)))
+    c.execute("INSERT INTO observations(asset_id,observed_at,source,kind,confidence,owner,data_json) VALUES(?,?,?,?,?,?,?)",
+              (aid,now(),a.source,a.kind,a.confidence,owner or None,jd(data)))
     c.commit(); print(jd({"ok":True,"asset_id":aid,"kind":a.kind}))
 
 def cmd_link(a):
-    c=db(); p=resolve(c,a.parent); ch=resolve(c,a.child)
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); p=resolve(c,a.parent, owner); ch=resolve(c,a.child, owner)
     if not p or not ch: raise SystemExit("parent or child not found")
     cur=c.execute("INSERT INTO relationships(parent_asset_id,child_asset_id,relation,started_at,source,notes) VALUES(?,?,?,?,?,?)",
                   (p["id"],ch["id"],a.relation,now(),a.source,a.notes)); c.commit()
     print(jd({"ok":True,"relationship_id":cur.lastrowid}))
 
 def cmd_unlink(a):
-    c=db(); t=now()
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); t=now()
     if a.relationship_id:
+        relationship_sql = (
+            "SELECT r.id FROM relationships r "
+            "JOIN assets p ON p.id=r.parent_asset_id "
+            "JOIN assets ch ON ch.id=r.child_asset_id "
+            "WHERE r.id=? AND r.ended_at IS NULL"
+        )
+        relationship_params = [a.relationship_id]
+        if owner:
+            relationship_sql += " AND p.owner=? AND ch.owner=?"
+            relationship_params.extend([owner, owner])
+        if c.execute(relationship_sql, relationship_params).fetchone() is None:
+            raise SystemExit("relationship not found")
         c.execute("UPDATE relationships SET ended_at=? WHERE id=? AND ended_at IS NULL",(t,a.relationship_id))
     else:
-        p=resolve(c,a.parent); ch=resolve(c,a.child)
+        p=resolve(c,a.parent, owner); ch=resolve(c,a.child, owner)
         if not p or not ch: raise SystemExit("parent or child not found")
         c.execute("UPDATE relationships SET ended_at=? WHERE parent_asset_id=? AND child_asset_id=? AND relation=? AND ended_at IS NULL",
                   (t,p["id"],ch["id"],a.relation))
     c.commit(); print(jd({"ok":True}))
 
 def cmd_retire(a):
-    c=db(); r=resolve(c,a.asset)
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); r=resolve(c,a.asset, owner)
     if not r: raise SystemExit("asset not found: "+a.asset)
-    t=now(); c.execute("UPDATE assets SET status='retired',retired_at=?,updated_at=? WHERE id=?",(t,t,r["id"])); c.commit()
+    t=now(); c.execute("UPDATE assets SET status='retired',retired_at=?,updated_at=? WHERE id=?" + (" AND owner=?" if owner else ""),(t,t,r["id"],*(([owner]) if owner else []))); c.commit()
     print(jd({"ok":True,"asset_id":r["id"]}))
 
 def cmd_merge(a):
-    c=db(); s=resolve(c,a.source_asset); d=resolve(c,a.target_asset)
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); s=resolve(c,a.source_asset, owner); d=resolve(c,a.target_asset, owner)
     if not s or not d or s["id"]==d["id"]: raise SystemExit("invalid merge")
     for x in c.execute("SELECT kind,value,confidence,source FROM identifiers WHERE asset_id=?",(s["id"],)):
         try: putid(c,d["id"],x["kind"],x["value"],x["confidence"],x["source"] or "merge")
@@ -500,37 +529,38 @@ def cmd_collect(a):
     print(json.dumps(d, indent=2, sort_keys=True))
 
 def cmd_summary(a):
-    c=db()
-    out={"database":str(DB_PATH),"assets":c.execute("SELECT count(*) FROM assets").fetchone()[0],
-         "active":c.execute("SELECT count(*) FROM assets WHERE status='active'").fetchone()[0],
-         "observed":c.execute("SELECT count(*) FROM assets WHERE status='observed'").fetchone()[0],
-         "observations":c.execute("SELECT count(*) FROM observations").fetchone()[0],
-         "relationships":c.execute("SELECT count(*) FROM relationships WHERE ended_at IS NULL").fetchone()[0],
-         "by_type":{r[0]:r[1] for r in c.execute("SELECT type,count(*) FROM assets GROUP BY type ORDER BY type")}}
+    c=db(); owner = str(getattr(a, "owner", "") or "").strip(); asset_filter = " WHERE owner=?" if owner else ""; params = (owner,) if owner else ()
+    observation_filter = " WHERE owner=?" if owner else ""; relationships_filter = " WHERE p.owner=? AND ch.owner=?" if owner else ""; relationship_params = (owner, owner) if owner else ()
+    out={"database":str(DB_PATH),"assets":c.execute("SELECT count(*) FROM assets" + asset_filter, params).fetchone()[0],
+         "active":c.execute("SELECT count(*) FROM assets" + (" WHERE owner=? AND status='active'" if owner else " WHERE status='active'"), params).fetchone()[0],
+         "observed":c.execute("SELECT count(*) FROM assets" + (" WHERE owner=? AND status='observed'" if owner else " WHERE status='observed'"), params).fetchone()[0],
+         "observations":c.execute("SELECT count(*) FROM observations" + observation_filter, params).fetchone()[0],
+         "relationships":c.execute("SELECT count(*) FROM relationships r JOIN assets p ON p.id=r.parent_asset_id JOIN assets ch ON ch.id=r.child_asset_id" + (" WHERE r.ended_at IS NULL AND p.owner=? AND ch.owner=?" if owner else " WHERE r.ended_at IS NULL"), relationship_params).fetchone()[0],
+         "by_type":{r[0]:r[1] for r in c.execute("SELECT type,count(*) FROM assets" + (" WHERE owner=?" if owner else "") + " GROUP BY type ORDER BY type", params)}}
     print(json.dumps(out,indent=2,sort_keys=True))
 
 def parser():
     p=argparse.ArgumentParser(prog="python -m src.asset_inventory"); s=p.add_subparsers(dest="cmd",required=True)
     x=s.add_parser("init"); x.set_defaults(func=lambda a:(db().close(),print(jd({"ok":True,"database":str(DB_PATH)}))))
     x=s.add_parser("migrate-owner"); x.add_argument("--owner", required=True); x.set_defaults(func=lambda a: print(jd(bind_legacy_owner(a.owner))))
-    x=s.add_parser("summary"); x.set_defaults(func=cmd_summary)
+    x=s.add_parser("summary"); x.add_argument("--owner"); x.set_defaults(func=cmd_summary)
     x=s.add_parser("add"); x.add_argument("--id"); x.add_argument("--name",required=True); x.add_argument("--type",default="unknown")
     x.add_argument("--status",default="active"); x.add_argument("--manufacturer"); x.add_argument("--model"); x.add_argument("--serial")
     x.add_argument("--system-uuid"); x.add_argument("--hostname"); x.add_argument("--mac"); x.add_argument("--location"); x.add_argument("--notes")
-    x.add_argument("--source",default="manual"); x.add_argument("--confidence",type=float,default=1.0); x.add_argument("--attributes"); x.set_defaults(func=cmd_add)
+    x.add_argument("--source",default="manual"); x.add_argument("--confidence",type=float,default=1.0); x.add_argument("--attributes"); x.add_argument("--owner"); x.set_defaults(func=cmd_add)
     x=s.add_parser("update"); x.add_argument("asset")
     for f in ("name","type","status","manufacturer","model","serial","system_uuid","hostname","mac","location","notes","source"):
         x.add_argument("--"+f.replace("_","-"),dest=f)
-    x.add_argument("--confidence",type=float); x.add_argument("--attributes"); x.set_defaults(func=cmd_update)
-    x=s.add_parser("get"); x.add_argument("asset"); x.set_defaults(func=cmd_get)
+    x.add_argument("--confidence",type=float); x.add_argument("--attributes"); x.add_argument("--owner"); x.set_defaults(func=cmd_update)
+    x=s.add_parser("get"); x.add_argument("asset"); x.add_argument("--owner"); x.set_defaults(func=cmd_get)
     for n in ("list","search"):
-        x=s.add_parser(n); x.add_argument("query",nargs="?"); x.add_argument("--type"); x.add_argument("--status"); x.add_argument("--limit",type=int,default=100); x.set_defaults(func=cmd_list)
+        x=s.add_parser(n); x.add_argument("query",nargs="?"); x.add_argument("--type"); x.add_argument("--status"); x.add_argument("--limit",type=int,default=100); x.add_argument("--owner"); x.set_defaults(func=cmd_list)
     x=s.add_parser("observe"); x.add_argument("--asset"); x.add_argument("--kind",required=True); x.add_argument("--source",default="manual")
-    x.add_argument("--confidence",type=float,default=.5); x.add_argument("--json"); x.add_argument("--text"); x.set_defaults(func=cmd_observe)
-    x=s.add_parser("link"); x.add_argument("parent"); x.add_argument("child"); x.add_argument("--relation",default="contains"); x.add_argument("--source",default="manual"); x.add_argument("--notes"); x.set_defaults(func=cmd_link)
-    x=s.add_parser("unlink"); x.add_argument("--relationship-id",type=int); x.add_argument("--parent"); x.add_argument("--child"); x.add_argument("--relation",default="contains"); x.set_defaults(func=cmd_unlink)
-    x=s.add_parser("retire"); x.add_argument("asset"); x.set_defaults(func=cmd_retire)
-    x=s.add_parser("merge"); x.add_argument("source_asset"); x.add_argument("target_asset"); x.add_argument("--reason"); x.set_defaults(func=cmd_merge)
+    x.add_argument("--confidence",type=float,default=.5); x.add_argument("--json"); x.add_argument("--text"); x.add_argument("--owner"); x.set_defaults(func=cmd_observe)
+    x=s.add_parser("link"); x.add_argument("parent"); x.add_argument("child"); x.add_argument("--relation",default="contains"); x.add_argument("--source",default="manual"); x.add_argument("--notes"); x.add_argument("--owner"); x.set_defaults(func=cmd_link)
+    x=s.add_parser("unlink"); x.add_argument("--relationship-id",type=int); x.add_argument("--parent"); x.add_argument("--child"); x.add_argument("--relation",default="contains"); x.add_argument("--owner"); x.set_defaults(func=cmd_unlink)
+    x=s.add_parser("retire"); x.add_argument("asset"); x.add_argument("--owner"); x.set_defaults(func=cmd_retire)
+    x=s.add_parser("merge"); x.add_argument("source_asset"); x.add_argument("target_asset"); x.add_argument("--reason"); x.add_argument("--owner"); x.set_defaults(func=cmd_merge)
     x=s.add_parser("collect-local"); x.add_argument("--record",action="store_true"); x.set_defaults(func=cmd_collect)
     x=s.add_parser("network-discover"); x.add_argument("--owner", required=True); x.add_argument("--install-authorized",action="store_true"); x.add_argument("--record-observations",action="store_true"); x.set_defaults(func=cmd_net)
     return p
