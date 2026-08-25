@@ -320,3 +320,15 @@ realistic browser gates pass. Rollback is retained as
   `sha256:f141fa985de7b71e26588bdff1ed086f4e5fa2d0c8b8b553d7cca873540dfac8`.
 - Evidence level: `E4 VERIFIED_DEPLOYED`; owner-live Network and cross-model
   dogfood remain `E6 OWNER_DOGFOOD_PENDING`.
+
+## Qualified continuation resolution checkpoint
+
+- Source change: `0fc294e0` adds generic anchored recognition for qualified
+  continuation turns such as “continue until…”, “resume that task”, and “keep
+  going with the current Run”. This only produces `CONTINUE` intent metadata;
+  durable Run state, ActionSpec policy, approval, and trusted execution remain
+  authoritative.
+- Evidence: focused intent/parity/network coverage `42 passed, 1 warning`;
+  full regression `6163 passed, 3 skipped, 186 warnings`.
+- Status: `VERIFIED_TESTED`; deployment of the final docs-inclusive checkpoint
+  is pending. Owner-live cross-model Run dogfood remains pending.
