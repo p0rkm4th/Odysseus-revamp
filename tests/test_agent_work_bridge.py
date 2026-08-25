@@ -203,7 +203,7 @@ def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_proje
             "alice", discovery_id,
             {"data": {
                 "asset_draft_candidates": [
-                    {"ip_addresses": ["192.168.10.4"]},
+                    {"ip_addresses": ["192.168.10.4", "192.168.10.6"]},
                     {"ip_addresses": ["192.168.10.5"]},
                 ],
                 "observations_recorded": True,
@@ -219,7 +219,7 @@ def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_proje
         )
         with session_factory() as db:
             plan = db.query(WorkAction).filter_by(id=plan_id).one()
-            assert plan.normalized_input["targets"] == ["192.168.10.4", "192.168.10.5"]
+            assert plan.normalized_input["targets"] == ["192.168.10.4", "192.168.10.6", "192.168.10.5"]
         bridge.record_result("alice", plan_id, {"data": {"operation_digest": "s" * 64}})
 
         action_id = bridge.prepare_action(
@@ -228,7 +228,7 @@ def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_proje
         )
         with session_factory() as db:
             action = db.query(WorkAction).filter_by(id=action_id).one()
-            assert action.normalized_input["targets"] == ["192.168.10.4", "192.168.10.5"]
+            assert action.normalized_input["targets"] == ["192.168.10.4", "192.168.10.6", "192.168.10.5"]
             assert action.verification == ["service_observations_persisted", "network_map_reconciled"]
         bridge.bind_approval("alice", action_id, "approval-service-enum")
         bridge.resume_approval("alice", action_id, "approval-service-enum")

@@ -222,9 +222,26 @@ def prepare_action(
             )
             data = discovery.domain_reference if discovery and isinstance(discovery.domain_reference, dict) else {}
             candidates = data.get("asset_draft_candidates") or []
-            targets = [str((item.get("ip_addresses") or [""])[0]).strip() for item in candidates if isinstance(item, dict) and item.get("ip_addresses")]
+            # A discovered CMDB draft may represent a multi-homed host.  The
+            # service-enumeration Action must inherit the complete discovered
+            # target set, not an arbitrary first address per candidate.
+            targets: list[str] = []
+            for item in candidates:
+                if not isinstance(item, dict):
+                    continue
+                addresses = item.get("ip_addresses") or []
+                if isinstance(addresses, str):
+                    addresses = [addresses]
+                for address in addresses:
+                    target = str(address or "").strip()
+                    if target and target not in targets:
+                        targets.append(target)
+                    if len(targets) >= 256:
+                        break
+                if len(targets) >= 256:
+                    break
             if targets:
-                payload["targets"] = list(dict.fromkeys(targets))[:256]
+                payload["targets"] = targets
         target_resources = list(spec.target_resources)
         locks = list(spec.locks)
         if spec.action_id == "execute_service_restart":
