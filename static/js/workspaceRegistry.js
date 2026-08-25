@@ -33,7 +33,7 @@ export const WORKSPACE_DEFINITIONS = Object.freeze([
   },
   {
     id: 'work', label: 'Work', icon: 'work', defaultModule: 'work',
-    modules: ['work', 'goals', 'projects', 'tasks', 'missions', 'business', 'commitments'],
+    modules: ['work', 'goals', 'projects', 'tasks', 'missions', 'business', 'career', 'commitments'],
   },
   {
     id: 'knowledge', label: 'Knowledge', icon: 'documents', defaultModule: 'library',
@@ -80,6 +80,7 @@ export const MODULE_DEFINITIONS = Object.freeze([
   ['projects', 'Projects', 'work', null],
   ['missions', 'Missions', 'work', null],
   ['business', 'Business', 'business', null],
+  ['career', 'Career', 'career', null],
   ['commitments', 'Commitments', 'work', null],
   ['library', 'Documents', 'documents', 'tool-library-btn'],
   ['documents', 'Documents', 'documents', null],

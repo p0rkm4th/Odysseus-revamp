@@ -21,6 +21,7 @@ export const ICONS = Object.freeze({
   security: '<path d="m12 3 8 3v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6z"/><path d="m9 12 2 2 4-4"/>',
   osint: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M10.5 7v7M7 10.5h7"/>',
   business: '<path d="M4 20V7h16v13M8 7V4h8v3M8 11h2M14 11h2M8 15h2M14 15h2"/>',
+  career: '<path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8M8 16h5"/>',
   memory: '<path d="M8 6a4 4 0 0 1 8 0v12a4 4 0 0 1-8 0z"/><path d="M8 10h8M8 14h8"/>',
   automations: '<path d="M4 12a8 8 0 1 0 3-6"/><path d="M4 5v5h5"/>',
   voice: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',

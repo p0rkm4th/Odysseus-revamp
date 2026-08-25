@@ -31,6 +31,9 @@ or remove authority.
 | System / Integrations | `setup.read` | `integrations` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; secret-free connectivity projection; configuration is not health proof |
 | System / Permissions | `setup.read` | `permissions` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; projection only; canonical policy/approval remains authoritative |
 | Research / OSINT | `research.public_sources` | `list_cases` / `get_case` | yes | yes | yes | yes | no | application / durable OSINT case store | none | authenticated owner scope; external report content remains tainted and non-authoritative |
+| Work / Career | `career.read` | `overview` / `provider_status` | yes | yes | yes | yes | no | application / Career service | none | authenticated owner scope; provider status is explicit |
+| Work / Career | `career.read` | `saved_opportunities` / `applications` / `follow_ups` / `interviews` | yes | yes | yes | yes | no | application / Career service | none | authenticated owner scope; provider records are not canonical lifecycle state |
+| Work / Career | `career.provider` | `submit_application` / `send_message` / `book_interview` | no | adapter-dependent | Work/UI where explicitly initiated | no | no | provider adapter | exact | never autonomous; owner approval and provider policy required |
 
 “MODEL: yes” means the canonical binding contract may be projected when the
 intent and policy select the capability. Native function schemas and strict

@@ -129,6 +129,14 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         description="Owner-scoped read projections over Setup Center and integrations.",
         actions=_actions(*(ActionSpec(action_id=action, effects=("read_private",), executor_key="read_setup") for action in ("state", "integrations", "permissions"))),
     ),
+    "career.read": CapabilitySpec(
+        capability_id="career.read", description="Owner-scoped Career reads under Work.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("read_private",), executor_key="read_career") for action in ("overview", "saved_opportunities", "applications", "follow_ups", "interviews", "provider_status"))),
+    ),
+    "career.provider": CapabilitySpec(
+        capability_id="career.provider", description="External Career mutations; exact approval required.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("external_side_effect",), approval=ApprovalMode.EXACT, executor_key="career_provider") for action in ("submit_application", "send_message", "book_interview"))),
+    ),
     "system.privileged_diagnostics": CapabilitySpec(
         capability_id="system.privileged_diagnostics",
         description="Narrow brokered diagnostic operations.",
@@ -271,6 +279,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_work": "work.read",
     "read_household": "household.read",
     "read_setup": "setup.read",
+    "read_career": "career.read",
 })
 
 

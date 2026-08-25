@@ -1,0 +1,15 @@
+/* Career is a Work child module: durable state lives in the canonical Career service. */
+import { openView, registerView } from './workspaceWindowManager.js';
+
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path) { const r = await fetch(path, {credentials:'same-origin'}); if (!r.ok) throw new Error(`Career request failed (${r.status})`); return r.json(); }
+function list(items, empty) { return items?.length ? `<div class="hades-record-list">${items.map(item => `<article class="work-card"><strong>${esc(item.title || item.name || item.status || 'Record')}</strong><small>${esc(item.employer || item.location || item.follow_up_at || item.starts_at || '')}</small></article>`).join('')}</div>` : `<p class="hades-empty-state">${esc(empty)}</p>`; }
+async function load(el) {
+  try {
+    const data = await api('/api/work/career/overview');
+    const provider = data.provider || {};
+    el.innerHTML = `<section class="workspace-module career-module"><header class="work-header"><div><p class="eyebrow">WORK / CAREER</p><h2>Career</h2><p>Saved searches, opportunities, applications, and interviews—without provider data becoming canonical state.</p></div><span class="status-badge">${esc(provider.status || 'UNKNOWN')}</span></header><nav class="hades-tabs" aria-label="Career views"><button type="button" data-career-tab="overview">Overview</button><button type="button" data-career-tab="saved">Saved</button><button type="button" data-career-tab="applications">Applications</button><button type="button" data-career-tab="interviews">Interviews</button></nav><div class="hades-overview-grid"><article class="hades-summary-card"><span>Saved opportunities</span><strong>${data.opportunities?.filter(x => x.state === 'saved').length || 0}</strong></article><article class="hades-summary-card"><span>Applications</span><strong>${data.applications?.length || 0}</strong></article><article class="hades-summary-card"><span>Interviews</span><strong>${data.interviews?.length || 0}</strong></article></div><section><h3>Provider availability</h3><p class="muted">${provider.status === 'NOT_CONFIGURED' ? 'No job-provider integration is configured. Connect one in Setup before searching; no listings are fabricated.' : 'Provider adapters are available.'}</p></section><section><h3>Saved opportunities</h3>${list((data.opportunities || []).filter(x => x.state === 'saved'), 'No saved opportunities yet.')}</section><section><h3>Applications needing attention</h3>${list((data.applications || []).filter(x => x.follow_up_at), 'No follow-ups recorded.')}</section><section><h3>Upcoming interviews</h3>${list(data.interviews, 'No interviews recorded.')}</section></section>`;
+  } catch (error) { el.innerHTML = `<section class="hades-error-state"><h2>Career unavailable</h2><p>${esc(error.message)}</p></section>`; }
+}
+export function openCareer() { const el = openView('career', null, 'Career', '<p>Loading Career…</p>'); load(el); return el; }
+registerView('career', () => openCareer());

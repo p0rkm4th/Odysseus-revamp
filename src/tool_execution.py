@@ -1588,6 +1588,21 @@ async def _execute_read_setup_binding(block, owner=None):
         return "read_setup", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_read_career_binding(block, owner=None):
+    """Adapt the durable Career projection; never synthesize provider jobs."""
+    try:
+        payload = json.loads(block.content or "{}")
+        if not owner:
+            raise PermissionError("authenticated Career owner is required")
+        from core.database import SessionLocal
+        from src.career_service import CareerService
+        with SessionLocal() as db:
+            result = CareerService(db).read(str(owner), str(payload.get("action") or "overview"))
+        return "read_career", {"output": json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+    except Exception as exc:
+        return "read_career", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
@@ -1598,6 +1613,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_work": _execute_read_work_binding,
     "read_household": _execute_read_household_binding,
     "read_setup": _execute_read_setup_binding,
+    "read_career": _execute_read_career_binding,
 }
 
 

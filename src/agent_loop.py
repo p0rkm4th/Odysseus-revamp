@@ -630,6 +630,13 @@ _DOMAIN_RULES["integrations"] = (
     + _DOMAIN_RULES["setup"]
 )
 _DOMAIN_RULES["system"] = _DOMAIN_RULES["setup"]
+_DOMAIN_RULES["career"] = (
+    "## Canonical Career rules\n"
+    "- Career is a Work child module. Use the owner-scoped read_career contract for profile, saved opportunities, applications, follow-ups, interviews, and provider status.\n"
+    "- External job providers are adapters; NOT_CONFIGURED is not an empty job listing. Never invent opportunities.\n"
+    "- Never submit applications, send provider messages, or book interviews autonomously. Those mutations require their provider ActionSpec and exact approval.\n"
+    "- Reuse canonical Work tasks, Contacts, Email, Calendar, and Documents rather than creating parallel truth."
+)
 
 # Capability V1 domain projection. These hints affect discovery/visibility;
 # policy, security gates, and execution remain owned by their existing layers.
