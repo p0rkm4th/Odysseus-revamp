@@ -47,6 +47,7 @@ async def execute_case(args, case, model_metadata, hardware, headers):
                     case.get("external_untrusted_context", False)
                 ),
                 tool_executor=executor,
+                aci_mode=args.aci_mode,
             ):
                 for event in parse_sse([chunk]):
                     collector.consume(event)
@@ -108,6 +109,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--capability-profile",
         choices=("standard", "local_balanced", "local_small", "auto"),
         default="standard",
+    )
+    parser.add_argument(
+        "--aci-mode",
+        choices=("legacy", "shadow", "aci"),
+        default="legacy",
+        help="agent interface protocol for the run; legacy preserves H0",
     )
     parser.add_argument(
         "--acknowledge-provider-costs",

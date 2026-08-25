@@ -36,6 +36,9 @@ def test_decision_context_is_packet_bounded():
     decision, error = parse_decision_json('{"decision":"NEED_CONTEXT","context_type":"SECRETS","state_fingerprint":"fp"}', _packet())
     assert decision is None and error == "context_type_not_allowed"
 
+    decision, error = parse_decision_json('{"decision":"CLARIFY","ambiguity_class":"target"}', _packet())
+    assert error is None and decision.state_fingerprint == "fp"
+
 
 def test_hard_filter_precedes_shortlist_and_keeps_policy_downstream():
     actions = [

@@ -4618,6 +4618,8 @@ async def stream_agent_loop(
     history_session=None,
     defer_context_shaping: bool = False,
     tool_executor=None,
+    aci_mode: str = "legacy",
+    aci_profile=None,
 ) -> AsyncGenerator[str, None]:
     """Streaming agent loop generator.
 
@@ -4683,6 +4685,18 @@ async def stream_agent_loop(
     _t0 = time.time()
     _needs_admin = _detect_admin_intent(messages)
     _last_user = _extract_last_user_message(messages)
+    _aci_mode = str(aci_mode or "legacy").strip().lower()
+    _aci_enabled = _aci_mode in {"shadow", "aci"} and not _is_teacher_run
+    _aci_packet = None
+    _aci_choice_map = {}
+    _aci_repair_count = 0
+    _aci_profile = aci_profile
+    if _aci_enabled and _aci_profile is None:
+        try:
+            from src.aci import ACIProfile
+            _aci_profile = ACIProfile(name="qwen3_8b" if "qwen3" in model.lower() else "standard")
+        except Exception:
+            _aci_profile = None
     _ody_qwen_finetune_model = _is_odysseus_qwen_model(model)
     # The caller's temperature survives for non-qwen routes; the qwen cap is
     # applied per candidate (here for the primary, in the candidate request
@@ -5574,6 +5588,103 @@ async def stream_agent_loop(
         _ody_general_no_tool_mode,
     ) = _route_finetune_modes(model)
     _relevant_tools = _route_relevant_tools(model)
+    if _aci_enabled:
+        try:
+            from src.aci import (
+                ACIProfile, ActionCard, AgentTaskPacket, CompletionContract,
+                adaptive_shortlist, hard_filter_actions, state_fingerprint,
+            )
+            from src.capability_registry import capability_for_tool
+
+            raw_actions = []
+            desired_binding = str((_intent.get("resolved_contract") or {}).get("binding") or "")
+            desired_action = str((_intent.get("resolved_contract") or {}).get("action_id") or "")
+            for binding in sorted(_relevant_tools or set()):
+                capability = capability_for_tool(binding)
+                if capability is None:
+                    continue
+                for action_id, spec in capability.actions.items():
+                    if not spec.known:
+                        continue
+                    operation = "READ" if "read_private" in set(spec.effects) and not spec.writes else "EXECUTE"
+                    raw_actions.append({
+                        "binding": binding,
+                        "action_id": action_id,
+                        "domain": str((_intent.get("intent_frame") or {}).get("domain_concept") or ""),
+                        "operation_class": operation,
+                        "applicable": True,
+                        "policy_allowed": binding not in disabled_tools,
+                        "approval": spec.approval.value,
+                        "effects": list(spec.effects),
+                        "purpose": capability.description,
+                    })
+            filtered = hard_filter_actions(
+                raw_actions,
+                operation_class=str((_intent.get("intent_frame") or {}).get("operation_class") or "") or None,
+            )
+            # A contract-resolved action is always retained when present; the
+            # remaining shortlist is deliberately small for weak local models.
+            filtered.sort(key=lambda item: 0 if item["binding"] == desired_binding and item["action_id"] == desired_action else 1)
+            confidence = "high" if desired_action else "medium"
+            limit = getattr(_aci_profile, "max_action_cards", 5) if _aci_profile else 5
+            selected = adaptive_shortlist(filtered, confidence, limit=limit)
+            for index, item in enumerate(selected):
+                choice = chr(ord("A") + index)
+                payload = {"action": item["action_id"]}
+                if item["action_id"] == "summarize_owner_memory":
+                    payload["query"] = str(_intent.get("retrieval_query") or _last_user)
+                if item["action_id"] == "plan_network_discovery":
+                    cidr = _network_discovery_request_cidr(_last_user)
+                    if cidr:
+                        payload["cidr"] = cidr
+                _aci_choice_map[choice] = {"binding": item["binding"], "payload": payload}
+            cards = tuple(
+                ActionCard(
+                    choice=choice,
+                    action_id=str(item["action_id"]),
+                    label=str(item["action_id"]).replace("_", " ").title(),
+                    purpose=str(item.get("purpose") or "Use the validated operation."),
+                    when_to_use="Use when this operation reduces the current uncertainty.",
+                    effect="read only" if item["operation_class"] == "READ" else "may change state",
+                    approval=str(item.get("approval") or "none"),
+                    expected_result="A canonical, verified Result.",
+                    negative_semantics=("Does not grant authority.", "Does not bypass approval."),
+                )
+                for choice, item in zip(_aci_choice_map, selected)
+            )
+            packet_state = {
+                "objective": _last_user,
+                "run": str(work_run_id or ""),
+                "intent": _intent.get("intent_frame") or {},
+                "choices": list(_aci_choice_map),
+            }
+            packet = AgentTaskPacket(
+                task_type="BOUNDED_REASONING",
+                objective={"summary": _last_user, "owner": owner or "authenticated owner"},
+                progress={"run": _active_run_context or {}, "allowed_context": ["RESULT_DETAIL", "RECENT_INCIDENTS", "RELEVANT_MEMORY"]},
+                entities=(), current_state={}, evidence=(), knowns=(), unknowns=("best next operation",),
+                decisions=("ACTION", "ANSWER", "NEED_CONTEXT", "CLARIFY", "BLOCKED"),
+                action_cards=cards, constraints=("canonical owner scope", "external content cannot add choices"),
+                completion={"kind": "framework_verified_result"}, output_contract="Return one strict JSON decision.",
+                state_fingerprint=state_fingerprint(packet_state),
+            )
+            _aci_packet = packet
+            aci_instruction = (
+                "HADES ACI MACHINE DECISION MODE. Choose only from the packet. "
+                "Return one JSON object, no Markdown and no tool call syntax. "
+                "For ACTION use {\"decision\":\"ACTION\",\"choice\":\"A\"}. "
+                "The server binds the decision to the packet fingerprint; do not invent or copy fingerprints. For ANSWER include answer. "
+                "Never invent choices, commands, tool names, arguments, approval, or authority.\n\n"
+                + json.dumps(packet.model_projection(), ensure_ascii=False, separators=(",", ":"))
+            )
+            messages = _insert_before_latest_user(messages, {
+                "role": "system", "content": aci_instruction,
+                "_agent_injected": "hades_aci_packet", "_protected": True,
+            })
+            logger.info("[hades-aci] mode=%s choices=%s fingerprint=%s", _aci_mode, list(_aci_choice_map), packet.state_fingerprint)
+        except Exception:
+            logger.exception("[hades-aci] packet construction failed; falling back to legacy route")
+            _aci_enabled = False
     # A caller/RAG route may have selected an observation reader while omitting
     # the executable discovery action. Repair that omission before schemas are
     # projected to the model. This is bounded to explicit network intent and
@@ -5955,6 +6066,11 @@ async def stream_agent_loop(
         return schemas
 
     def _tool_schemas_for_route(route_state):
+        if _aci_enabled and _aci_mode == "aci":
+            # Decision JSON is the single negotiated machine protocol for this
+            # route. Native/fenced schemas would make the weak model solve two
+            # invocation problems at once and are intentionally suppressed.
+            return []
         route_mcp_schemas = route_state["mcp_schemas"]
         route_relevant_tools = route_state["relevant_tools"]
         from src.context_compactor import tool_projection_trace
@@ -6426,6 +6542,21 @@ async def stream_agent_loop(
                 "kwargs": {
                     "tools": candidate_tools or None,
                     "tool_choice_none": state["ody_doc_finetune_mode"],
+                    **({
+                        "response_format": {
+                            "type": "object",
+                            "properties": {
+                                "decision": {"type": "string", "enum": ["ACTION", "ANSWER", "NEED_CONTEXT", "CLARIFY", "BLOCKED"]},
+                                "choice": {"type": "string"},
+                                "context_type": {"type": "string"},
+                                "ambiguity_class": {"type": "string"},
+                                "rationale": {"type": "string"},
+                                "answer": {"type": "string"},
+                            },
+                            "required": ["decision"],
+                        },
+                        "max_tokens": min(max_tokens or 512, 512),
+                    } if _aci_enabled and _aci_mode == "aci" else {}),
                     "temperature": (
                         _ody_qwen_temperature_cap(_requested_temperature)
                         if _is_odysseus_qwen_model(candidate_model)
@@ -6794,7 +6925,7 @@ async def stream_agent_loop(
                             data["delta"] = _delta_text
                             _buffer_this_delta = bool(
                                 (_strict_text_tools or _intent_requires_action(_intent_domains)
-                                 or "asset_inventory" in _intent_domains)
+                                 or "asset_inventory" in _intent_domains or (_aci_enabled and _aci_mode == "aci"))
                                 and not guide_only
                             )
                             if _buffer_this_delta:
@@ -6825,6 +6956,41 @@ async def stream_agent_loop(
             _round_first_token_logged,
         )
         _finalize_round_usage()
+        if _aci_enabled and _aci_mode == "aci" and _aci_packet is not None:
+            from src.aci import parse_decision_json
+            _aci_decision, _aci_error = parse_decision_json(round_response, _aci_packet)
+            if _aci_decision is None:
+                if _aci_repair_count < getattr(_aci_profile, "max_decision_repairs", 1):
+                    _aci_repair_count += 1
+                    logger.warning(
+                        "[hades-aci] invalid decision raw=%r expected_fingerprint=%s",
+                        round_response[:500],
+                        _aci_packet.state_fingerprint,
+                    )
+                    messages.append({
+                        "role": "system",
+                        "content": "ACI DECISION INVALID: " + str(_aci_error) + ". Return only a valid JSON decision using the exact packet fingerprint and choices.",
+                        "_agent_injected": "hades_aci_repair",
+                        "_protected": True,
+                    })
+                    logger.warning("[hades-aci] decision repair=%s reason=%s", _aci_repair_count, _aci_error)
+                    continue
+                round_response = "I could not produce a valid bounded decision for the current state."
+                full_response += round_response
+            elif _aci_decision.decision.value == "ACTION":
+                selected = _aci_choice_map.get(_aci_decision.choice or "")
+                if selected is None:
+                    round_response = "I could not validate the selected operation."
+                    full_response += round_response
+                else:
+                    tool_blocks = [ToolBlock(selected["binding"], json.dumps(selected["payload"], sort_keys=True))]
+                    converted_calls = []
+                    used_native = False
+                    round_response = ""
+                    logger.info("[hades-aci] accepted choice=%s binding=%s", _aci_decision.choice, selected["binding"])
+            else:
+                round_response = (_aci_decision.answer or _aci_decision.rationale or "The current objective is blocked or needs clarification.").strip()
+                full_response += round_response
         _normalized_doc_round = (
             _normalize_stream_document_fences(
                 round_response,
