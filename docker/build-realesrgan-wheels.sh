@@ -66,5 +66,12 @@ assert patched == 3, f"expected to patch 3 setup.py files, patched {patched}"
 PY
 
 echo ">> building wheels into ${OUT}"
-pip wheel --no-deps -w "$OUT" ./basicsr-* ./gfpgan-* ./facexlib-*
+# These packages declare ``torch`` in ``setup_requires`` even though the
+# default (non-CUDA) build does not import it.  PEP 517 build isolation then
+# downloads/builds a large torch toolchain for every candidate image.  Keep
+# the image build bounded: provide the small build toolchain explicitly and
+# build in the current environment, while retaining --no-deps so runtime
+# dependencies remain owned by the main image requirements.
+pip install --no-cache-dir --disable-pip-version-check setuptools wheel cython numpy
+pip wheel --no-build-isolation --no-deps -w "$OUT" ./basicsr-* ./gfpgan-* ./facexlib-*
 ls -l "$OUT"
