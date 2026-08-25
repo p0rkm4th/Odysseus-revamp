@@ -307,3 +307,16 @@ realistic browser gates pass. Rollback is retained as
 - Tests: focused Network/Run gates `20 passed, 1 warning`; full regression
   `6159 passed, 3 skipped, 186 warnings`.
 - Live status: owner-live network dogfood remains pending; no live scan was run.
+
+## Complete-target propagation deployment checkpoint
+
+- Source: `d831d84b7bb84d180ecc35978195bc2ed6a15398`
+- Candidate: `odysseus:candidate-d831d84b7bb8`
+- Image: `sha256:6c0ea2acf5409b6990bf97aff41369f663cb46736c5da63a709a2439036672cd`
+- Runtime `/api/version`, health, broker socket, Qwen bridge/model discovery,
+  frontend static verification, browser-window acceptance, and realistic
+  browser acceptance passed.
+- Rollback: `odysseus:rollback-d831d84b-prev` →
+  `sha256:f141fa985de7b71e26588bdff1ed086f4e5fa2d0c8b8b553d7cca873540dfac8`.
+- Evidence level: `E4 VERIFIED_DEPLOYED`; owner-live Network and cross-model
+  dogfood remain `E6 OWNER_DOGFOOD_PENDING`.
