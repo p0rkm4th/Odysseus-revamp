@@ -13,8 +13,8 @@ completion.
 | Output reservation | PARTIALLY_FIXED | reserve exists in compactor; requested-output coupling needs provider-aware integration |
 | Endpoint metadata cache | PARTIALLY_FIXED | cached model lists/dead-host cooldown exist; fingerprint+TTL runtime characterization remains |
 | Global local inference lock | STILL_PRESENT | `_LOCAL_MODEL_LOCK` in `src/llm_core.py`; safe single-GPU serialization is preserved, resource scheduler deferred |
-| Multiple tool protocols | STILL_PRESENT | native/fenced/provider-specific parsing remains authoritative in legacy loop; Decision JSON is only a pure contract slice |
-| Reasoning/transport separation | PARTIALLY_FIXED | thinking cleanup exists; negotiated decision channel not wired |
+| Multiple tool protocols | PARTIALLY_FIXED | synthetic Ollama probes show strict Decision JSON PASS and native tools PASS; runtime selection wiring and broader A/B matrix remain |
+| Reasoning/transport separation | PARTIALLY_FIXED | Decision JSON transport is isolated from free-form text and synthetic probes pass; broader negotiated runtime selection remains |
 | Canonical action registry | PARTIALLY_FIXED | `ActionSpec` registry is canonical for new projections; legacy schema/parser/tag compatibility paths remain |
 | oversized agent loop/core | STILL_PRESENT | strangler decomposition not yet justified by an integrated seam |
 | internal message repair | PARTIALLY_FIXED | provider normalization exists; counters and strict internal state validation incomplete |

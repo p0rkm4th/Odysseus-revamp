@@ -86,3 +86,21 @@ def test_ollama_characterization_is_metadata_only_and_cacheable(monkeypatch, tmp
     assert first.architecture_max_context == 40960
     assert second.key == first.key
     assert calls == [("http://127.0.0.1:11434/api/show", {"name": "qwen3:8b"})] * 2
+
+
+def test_probe_record_is_empirical_and_does_not_mutate_original():
+    profile = RuntimeCapabilityProfile("e", "ollama-chat", "ollama", "qwen3:8b")
+    updated = profile.with_probe("decision_json", "pass", evidence={"fixture": "synthetic"})
+    assert "decision_json" not in profile.capabilities
+    assert updated.supports("decision_json")
+    assert updated.capabilities["decision_json"].source == "capability_probe"
+
+
+def test_sanitized_protocol_probe_fixture_has_no_execution_authority():
+    import json
+    with open("benchmarks/hades_aci_protocol_probe.json", encoding="utf-8") as handle:
+        fixture = json.load(handle)
+    assert fixture["synthetic"] is True
+    assert fixture["side_effects"] is False
+    assert fixture["probes"]["native_tools"]["executed"] is False
+    assert fixture["selection"]["authority"] == "canonical_action_registry_and_policy"
