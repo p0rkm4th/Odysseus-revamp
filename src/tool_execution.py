@@ -1347,7 +1347,47 @@ async def _execute_manage_assets_binding(block, owner=None):
 
         cp = await _ody_v34_asyncio.to_thread(_run)
         output = (cp.stdout or "") + (cp.stderr or "")
-        return "manage_assets", {"output": output[-30000:], "exit_code": cp.returncode}
+        if cp.returncode != 0:
+            return "manage_assets", {
+                "error": output[-2000:] or "canonical IT asset read failed",
+                "output": output[-30000:], "exit_code": cp.returncode,
+            }
+        try:
+            parsed = _ody_v34_json.loads(cp.stdout or "")
+        except (TypeError, ValueError) as exc:
+            return "manage_assets", {
+                "error": f"canonical IT asset service returned invalid structured data: {exc}",
+                "output": output[-30000:], "exit_code": 1,
+            }
+        action = str(payload.get("action") or "")
+        if action in {"list", "search"} and isinstance(parsed, list):
+            data = {
+                "status": "EMPTY_RESULT" if not parsed else "SUCCESS",
+                "assets": parsed,
+                "asset_count": len(parsed),
+                "source": "canonical_it_asset_cmdb",
+                "owner_scope": str(owner or "authenticated_owner"),
+            }
+        elif action == "summary" and isinstance(parsed, dict):
+            data = {
+                "status": "SUCCESS",
+                **parsed,
+                "source": "canonical_it_asset_cmdb",
+                "owner_scope": str(owner or "authenticated_owner"),
+            }
+        else:
+            data = {
+                "status": "SUCCESS",
+                "result": parsed,
+                "source": "canonical_it_asset_cmdb",
+                "owner_scope": str(owner or "authenticated_owner"),
+            }
+        return "manage_assets", {
+            "output": _ody_v34_json.dumps(data, default=str, sort_keys=True),
+            "exit_code": 0,
+            "success": True,
+            "data": data,
+        }
     except Exception as exc:
         return "manage_assets", {"error": str(exc), "output": str(exc), "exit_code": 1}
 

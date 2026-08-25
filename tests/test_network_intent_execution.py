@@ -35,6 +35,36 @@ def test_network_discovery_request_without_cidr_stays_on_bounded_scope():
     assert agent_loop._network_discovery_request_cidr(query) == DEFAULT_PRIVATE_DISCOVERY_CIDR
 
 
+def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_active_scan():
+    assert agent_loop._network_service_enumeration_request(
+        "perform a deeper service scan on all discovered hosts"
+    ) is True
+    assert agent_loop._network_service_enumeration_request(
+        "show the network discovery status"
+    ) is False
+    response = agent_loop.ground_action_completion(
+        "The service scan is actively probing all hosts now.",
+        intent_domains={"network_ops"},
+        tool_events=[{
+            "command": json.dumps({"action": "plan_network_service_enumeration"}),
+            "exit_code": 0,
+        }],
+    )
+    assert response.startswith("No action completed:")
+
+
+def test_service_result_action_supports_grounded_active_execution_language():
+    response = agent_loop.ground_action_completion(
+        "The bounded service scan is running now.",
+        intent_domains={"network_ops"},
+        tool_events=[{
+            "command": json.dumps({"action": "execute_network_service_enumeration"}),
+            "exit_code": 0,
+        }],
+    )
+    assert response == "The bounded service scan is running now."
+
+
 def test_qwen_prose_only_network_request_gets_one_canonical_plan_repair(monkeypatch):
     """A weak model cannot strand a recognizable action behind prose."""
 
@@ -108,4 +138,3 @@ def test_qwen_prose_only_network_request_gets_one_canonical_plan_repair(monkeypa
     # The grounding boundary remains intact: only the synthetic tool result,
     # not the model's ARP prose, authorizes an action-completed response.
     assert not any("No action completed" in str(event.get("delta")) for event in _events(chunks))
-

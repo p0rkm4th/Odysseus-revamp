@@ -54,8 +54,8 @@ MANAGE_HOMELAB_SCHEMA = {
         "name": "manage_homelab",
         "description": "Inspect the local host and perform bounded, owner-approved homelab operations. Network discovery is private-scope and review-only for inventory.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["inspect_host", "service_status", "discovery_status", "plan_service_restart", "execute_service_restart", "plan_network_discovery", "execute_network_discovery", "plan_diagnostic_install", "execute_diagnostic_install"]},
-            "service": {"type": "string"}, "cidr": {"type": "string"}, "plan_digest": {"type": "string"},
+            "action": {"type": "string", "enum": ["inspect_host", "service_status", "discovery_status", "read_network_observations", "plan_service_restart", "execute_service_restart", "plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration", "plan_diagnostic_install", "execute_diagnostic_install"]},
+            "service": {"type": "string"}, "cidr": {"type": "string"}, "targets": {"type": "array", "items": {"type": "string"}, "maxItems": 256}, "plan_digest": {"type": "string"},
             "packages": {"type": "array", "items": {"type": "string"}},
             "capability": {"type": "string", "description": "Supported Hades capability whose declared prerequisites should be resolved deterministically; do not guess package names."},
         }, "required": ["action"]},
@@ -92,6 +92,12 @@ asset records, relationships, observations, retirement, and merges.
 Invoke through strict textual XML:
 `<invoke name="manage_assets"><parameter name="action">summary</parameter></invoke>`
 
+Read-only inventory questions use `list`, `search`, `get`, or `summary` and
+return structured canonical CMDB data. A successful empty read is represented
+as zero assets; a service error remains a retrieval failure. Never replace a
+failed canonical read with `ls`, `grep`, SQLite inspection, or another shell
+path.
+
 Actions: `summary`, `list`, `search`, `get`, `add`, `update`, `record_observation`,
 `link_component`, `unlink_component`, `retire`, and `merge`. Use the documented
 JSON/function schema for action-specific parameters.
@@ -114,6 +120,20 @@ Structured local-only homelab operations. Plan before restart, discovery, or
 package installation. Network discovery is private-scope and produces
 review-only candidates; it never writes user inventory directly.
 `<invoke name="manage_homelab"><parameter name="action">discovery_status</parameter></invoke>`
+
+Deep network work is staged explicitly: host discovery is followed by
+`plan_network_service_enumeration` / `execute_network_service_enumeration`
+against the exact private host set returned by the same Run. Service/version
+observations do not imply OS fingerprinting or exploitation.
+
+Available actions are `inspect_host`, `service_status`, `discovery_status`,
+`read_network_observations`,
+`plan_network_discovery`, `execute_network_discovery`,
+`plan_network_service_enumeration`, `execute_network_service_enumeration`,
+`plan_service_restart`, `execute_service_restart`, `plan_diagnostic_install`,
+and `execute_diagnostic_install`. Provider/tool transport differences do not
+remove an ActionSpec from this canonical operation set; unsupported transport
+must report that limitation rather than inventing a shell or claiming work.
 
 If a supported operation reports `prerequisite_missing`, call
 `plan_diagnostic_install` with its returned `capability`. Hades resolves the

@@ -545,7 +545,7 @@ _DOMAIN_RULES = {
 ## Integration/API rules
 - To query or control a configured service integration (Home Assistant, Miniflux, Gitea, Linkding, Jellyfin, or any other registered service), use `api_call` with the integration name, HTTP method, path, and optional JSON body.
 - Do not use shell, curl, or `app_api` to reach a user's connected integration when `api_call` is available.""",
-    "asset_inventory": "Asset inventory/CMDB tasks: use `python -m src.asset_inventory` for canonical asset state and observations. Keep observations separate from canonical state. Prefer system UUID/serial/MAC for identity; never identify or merge assets by IP address alone.",
+    "asset_inventory": "Technical asset/CMDB tasks: use the first-class `manage_assets` read/action contract for canonical state and observations. Never substitute filesystem inspection, raw SQLite, or generic shell. Keep observations separate from canonical state. Prefer system UUID/serial/MAC for identity; never identify or merge assets by IP address alone.",
 }
 
 _DOMAIN_RULES["network_ops"] = '## Local network discovery/diagnostic rules\n- This is an operational request about the local/internal network. Use local diagnostic tools rather than web search unless public web lookup was separately requested.\n- Start read-only/passive: hostname, interfaces and addresses, routes, DNS, neighbor tables, and SSH aliases or known-host clues.\n- Bound active discovery to directly connected private subnets and lightweight reachability/service identification. Do not modify network configuration or attempt authentication unless explicitly requested.\n- If bash is listed in TURN CAPABILITIES, use it for non-interactive network commands and do not claim shell access is unavailable.'
@@ -590,7 +590,9 @@ _DOMAIN_TOOL_MAP = {
     "settings": {"manage_settings", "manage_endpoints", "manage_mcp", "manage_webhooks", "manage_tokens", "app_api"},
     "contacts": {"resolve_contact", "manage_contact"},
     "integrations": {"api_call"},
-    "asset_inventory": {"bash", "read_file", "grep", "ls"},
+    # Technical-asset truth is a canonical CMDB read. Filesystem tools are not
+    # an alternative source of authoritative inventory state.
+    "asset_inventory": {"manage_assets"},
 }
 
 _DOMAIN_RULES["memory"] = (
@@ -826,6 +828,15 @@ def _explicit_network_discovery_request(query: str) -> bool:
         and re.search(r"\b(?:network|lan|subnet|devices?|hosts?|192(?:\.168)?|rfc1918)\b", q)
     )
 
+
+def _network_service_enumeration_request(query: str) -> bool:
+    """Recognize bounded service-enumeration intent, not generic shell scans."""
+    q = str(query or "").lower()
+    return bool(
+        re.search(r"\b(?:service(?:s)?|port(?:s)?|version|enumeration|deeper|deep(?:er)? scan)\b", q)
+        and re.search(r"\b(?:network|host(?:s)?|device(?:s)?|scan|discovery|nmap)\b", q)
+    )
+
 def _normalize_operational_intent_evidence(intent, query: str):
     # Fuse operational intent from action + object + scope evidence.
     # Existing classifier domains remain evidence, but do not erase adjacent
@@ -1034,6 +1045,17 @@ def _normalize_asset_inventory_intent(intent, query: str):
             intent["domains"] = domains
             logger.info("[agent-intent] asset inventory normalization added asset_inventory final=%s", sorted(domains))
     return intent
+
+
+def _asset_read_request(query: str) -> bool:
+    """Recognize explicit technical-asset reads without selecting mutations."""
+    q = str(query or "").lower()
+    if re.search(r"\b(?:add|update|remove|delete|retire|merge|record|move|change)\b", q):
+        return False
+    return bool(
+        re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|network devices?|unidentified devices?|know about)\b", q)
+        and re.search(r"\b(?:what|show|list|explain|know|have|inventory|recent(?:ly)? discovered|where)\b", q)
+    )
 
 
 def _normalize_homelab_intent(intent, query: str):
@@ -2957,6 +2979,23 @@ def ground_action_completion(text: str, *, intent_domains, tool_events) -> str:
         r"discover|restart|change|create|delete|update|verify|remount)\b",
         str(text or ""), re.IGNORECASE,
     ))
+    executed_actions = set()
+    for event in (tool_events or []):
+        try:
+            payload = json.loads(event.get("command") or "{}")
+            if isinstance(payload, dict) and str(payload.get("action") or "").strip():
+                executed_actions.add(str(payload["action"]).strip())
+        except (TypeError, ValueError, AttributeError):
+            continue
+    active_execution_claim = bool(re.search(
+        r"\b(?:execut(?:ing|ed)|actively\s+(?:probing|scanning)|scan\s+progress|running\s+now|i(?:'m|\s+am)\s+(?:running|scanning))\b",
+        str(text or ""), re.IGNORECASE,
+    ))
+    if active_execution_claim and not any(action.startswith("execute_") for action in executed_actions):
+        return (
+            "No action completed: I did not receive a valid execution Action or "
+            "verified Result. A plan alone does not mean scanning is active."
+        )
     evidence_prose = bool(re.search(
         r"\b(?:current|latest|inventory|asset|report|updated|physical|virtual|"
         r"server|workstation|storage array|vulnerabilit)\w*\b",
@@ -4573,6 +4612,30 @@ async def stream_agent_loop(
         if isinstance(_intent, dict)
         else _last_user,
     )
+    # One bounded semantic frame is attached to every turn. Existing domain
+    # normalizers remain compatibility evidence, but canonical first-class
+    # exposure can now be driven by the frame/contract resolver instead of a
+    # growing list of phrase-specific branches.
+    try:
+        from src.intent_contracts import compile_intent, resolve_intent
+        _intent_frame = compile_intent(
+            str(_intent.get("retrieval_query") or _last_user),
+            continuation=bool(_intent.get("continuation")),
+            run_reference=str(work_run_id or "").strip() or None,
+        )
+        _resolved_contract = resolve_intent(_intent_frame)
+        _intent["intent_frame"] = _intent_frame.as_dict()
+        _intent["resolved_contract"] = _resolved_contract.as_dict()
+        _concept_domains = {
+            "TECHNICAL_ASSET": "asset_inventory",
+            "NETWORK": "network_ops",
+            "SECURITY_FINDING": "security_audit",
+            "OSINT_CASE": "osint",
+        }
+        if _intent_frame.domain_concept in _concept_domains:
+            _intent.setdefault("domains", set()).add(_concept_domains[_intent_frame.domain_concept])
+    except Exception:
+        logger.debug("intent contract compilation unavailable", exc_info=True)
     _low_signal_turn = bool(_intent.get("low_signal"))
     _suppress_auto_skills = _suppress_automatic_skills(_last_user, _intent)
     _casual_low_signal_turn = _is_casual_low_signal(_last_user)
@@ -5202,7 +5265,7 @@ async def stream_agent_loop(
         and bool(re.search(
             r"\b(?:nmap|network[- ]discovery|network discovery|plan_network_discovery|"
             r"bounded discovery|private subnet|192\.168\.10\.0/24|"
-            r"discovery scan|scan the|scan my)\b",
+            r"discovery scan|scan the|scan my|service(?:s)?|port(?:s)?|version|enumerat|deeper scan|deep scan)\b",
             _recent_conversation_text,
         ))
     )
@@ -6595,6 +6658,7 @@ async def stream_agent_loop(
             # raw shell. Resolve that phrase to the known private /24 before
             # any fallback action is considered.
             _network_request_cidr = "192.168.10.0/24"
+        _network_service_request = _network_service_enumeration_request(_last_user)
         if (
             not tool_blocks
             and bool(_intent.get("continuation"))
@@ -6621,7 +6685,45 @@ async def stream_agent_loop(
                 and _planned_discovery_digest.group(1).lower()
                 in _conversation_for_discovery.lower()
             )
-            if _planned_discovery_digest and re.search(
+            _service_action_in_conversation = bool(re.search(
+                r"plan_network_service_enumeration",
+                _conversation_for_discovery,
+                re.IGNORECASE,
+            ))
+            _service_plan_digest = re.search(
+                r"(?:operation_digest|plan_digest)\"?\s*[:=]\s*\"?([0-9a-f]{64})",
+                _conversation_for_discovery,
+                re.IGNORECASE,
+            ) if _service_action_in_conversation else None
+            _service_result_present = bool(re.search(
+                r"(?:service_enumeration|service_observations).*?(?:success\"?\s*[:=]\s*true|observation_count|nmap_service_version_observation)",
+                _conversation_for_discovery,
+                re.IGNORECASE | re.DOTALL,
+            ))
+            if _service_plan_digest and not _service_result_present:
+                logger.info(
+                    "[agent] deterministic service-enumeration continuation repair digest=%s",
+                    _service_plan_digest.group(1)[:16],
+                )
+                tool_blocks = [ToolBlock(
+                    "manage_homelab",
+                    json.dumps({
+                        "action": "execute_network_service_enumeration",
+                        "plan_digest": _service_plan_digest.group(1),
+                    }),
+                )]
+                converted_calls = []
+                used_native = False
+            elif _network_service_request and _discovery_result_present:
+                # The service plan is deterministic and read-only. The bridge
+                # inherits the completed discovery Result's exact targets.
+                tool_blocks = [ToolBlock(
+                    "manage_homelab",
+                    json.dumps({"action": "plan_network_service_enumeration"}),
+                )]
+                converted_calls = []
+                used_native = False
+            if not tool_blocks and _planned_discovery_digest and re.search(
                 r"\b(?:network discovery|plan_network_discovery|private subnet|"
                 r"192\.168\.10\.0/24|bounded discovery)\b",
                 _conversation_for_discovery,
@@ -6641,6 +6743,42 @@ async def stream_agent_loop(
                 )]
                 converted_calls = []
                 used_native = False
+        _asset_frame = _intent.get("intent_frame") if isinstance(_intent.get("intent_frame"), dict) else {}
+        _compiled_asset_read = (
+            _asset_frame.get("domain_concept") == "TECHNICAL_ASSET"
+            and _asset_frame.get("operation_class") == "READ"
+        )
+        # Explicit technical-asset questions are canonical reads. If a model
+        # answers with prose or proposes filesystem inspection, select the
+        # existing read-only manage_assets binding once; no approval is needed
+        # and no alternate shell source is permitted.
+        if (
+            not guide_only
+            and not _force_answer
+            and not tool_blocks
+            and not tool_events
+            and total_tool_calls == 0
+            and (_compiled_asset_read or _asset_read_request(_last_user))
+            and "manage_assets" in set(_relevant_tools or set())
+            and "manage_assets" not in disabled_tools
+        ):
+            asset_query = None
+            if re.search(r"\b(?:cerberus|what do we know about)\b", _last_user, re.IGNORECASE):
+                match = re.search(r"\b(?:about|asset)\s+([A-Za-z0-9_.:-]{2,80})", _last_user, re.IGNORECASE)
+                asset_query = match.group(1) if match else None
+            asset_action = (
+                str((_intent.get("resolved_contract") or {}).get("action_id") or "list")
+                if _compiled_asset_read else ("search" if asset_query else "list")
+            )
+            asset_payload = {"action": asset_action, "limit": 500}
+            if asset_query:
+                asset_payload["query"] = asset_query
+            logger.info("[agent] deterministic canonical IT-asset read repair action=%s", asset_action)
+            if round_response and full_response.endswith(round_response):
+                full_response = full_response[:-len(round_response)]
+            tool_blocks = [ToolBlock("manage_assets", json.dumps(asset_payload))]
+            converted_calls = []
+            used_native = False
         if (
             tool_blocks
             and all(block.tool_type in {"bash", "run_shell"} for block in tool_blocks)

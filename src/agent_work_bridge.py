@@ -66,6 +66,8 @@ def _state_invalidations(action: WorkAction, spec) -> list[dict[str, Any]]:
     if action.action_id == "execute_network_discovery":
         cidr = str(payload.get("cidr") or "private_scope").strip()
         return [{"subject_ref": f"network:{cidr}", "predicate": token.split(".", 1)[-1]} for token in spec.state_invalidations]
+    if action.action_id == "execute_network_service_enumeration":
+        return [{"subject_ref": "network:private_scope", "predicate": token.split(".", 1)[-1]} for token in spec.state_invalidations]
     if action.action_id == "execute_diagnostic_install":
         capability = str(payload.get("capability") or "diagnostic_packages").strip()
         return [{"subject_ref": f"capability:{capability}", "predicate": token.split(".", 1)[-1]} for token in spec.state_invalidations]
@@ -154,6 +156,22 @@ def prepare_action(
                     {"lifecycle_state": "waiting_input", "current_step": f"precheck required: {', '.join(missing)}"},
                 )
                 return None
+        if spec.action_id in {"plan_network_service_enumeration", "execute_network_service_enumeration"} and not payload.get("targets"):
+            discovery = (
+                db.query(WorkResult)
+                .join(WorkAction, WorkAction.id == WorkResult.action_id)
+                .filter(
+                    WorkResult.owner == owner, WorkResult.run_id == run.id,
+                    WorkAction.action_id == "execute_network_discovery",
+                )
+                .order_by(WorkResult.created_at.desc())
+                .first()
+            )
+            data = discovery.domain_reference if discovery and isinstance(discovery.domain_reference, dict) else {}
+            candidates = data.get("asset_draft_candidates") or []
+            targets = [str((item.get("ip_addresses") or [""])[0]).strip() for item in candidates if isinstance(item, dict) and item.get("ip_addresses")]
+            if targets:
+                payload["targets"] = list(dict.fromkeys(targets))[:256]
         target_resources = list(spec.target_resources)
         locks = list(spec.locks)
         if spec.action_id == "execute_service_restart":
@@ -350,6 +368,18 @@ def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
                 details={"checks": checks, "observation_count": data.get("observation_count", 0), "verifier": "network_discovery_projection"},
             )
             return {"verified": True, "checks": checks, "run_lifecycle_state": outcome["lifecycle_state"]}
+        if action.action_id == "execute_network_service_enumeration":
+            checks = {
+                "service_observations_persisted": data.get("observations_recorded") is True,
+                "network_map_reconciled": data.get("network_map_reconciled") is True,
+            }
+            missing = [name for name in required if not checks.get(name, False)]
+            work = WorkEngine(db)
+            outcome = work.complete_verification(
+                str(owner), action.run_id, success=not missing,
+                details={"checks": checks, "missing": missing, "observation_count": data.get("observation_count", 0), "verifier": "network_service_observation"},
+            )
+            return {"verified": not missing, "checks": checks, "missing": missing, "run_lifecycle_state": outcome["lifecycle_state"]}
         if action.action_id == "execute_service_restart":
             checks = {
                 "service_active": data.get("success") is True

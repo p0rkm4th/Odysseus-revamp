@@ -111,6 +111,19 @@ def _private_discovery_cidr(value):
     return str(network)
 
 
+def _private_targets(value):
+    if not isinstance(value, list) or not 1 <= len(value) <= 256:
+        raise ValueError("service enumeration requires 1..256 private IPv4 targets")
+    targets = []
+    for item in value:
+        address = ipaddress.ip_address(str(item).strip())
+        if not isinstance(address, ipaddress.IPv4Address) or not address.is_private:
+            raise ValueError("service enumeration targets must be private IPv4 addresses")
+        if str(address) not in targets:
+            targets.append(str(address))
+    return targets
+
+
 def handle(req, allowed_pid, allowed_uid):
     action = req.get("action")
 
@@ -147,6 +160,24 @@ def handle(req, allowed_pid, allowed_uid):
             "cidr": cidr,
             "scanner": "nmap_ping_scan",
             **result,
+        }
+
+    if action == "run_network_service_enumeration":
+        try:
+            targets = _private_targets(req.get("targets"))
+        except (TypeError, ValueError) as exc:
+            return {"ok": False, "error": str(exc)}
+        nmap = shutil.which("nmap")
+        if not nmap:
+            return {"ok": False, "error": "nmap is not available on the host"}
+        result = run_root([
+            nmap, "-sV", "--version-light", "-Pn", "-n", "--max-retries", "1",
+            "--host-timeout", "10s", "-p", "1-1024", "-oX", "-", *targets,
+        ], timeout=90)
+        return {
+            "ok": result["returncode"] == 0,
+            "action": action, "targets": targets,
+            "scanner": "nmap_safe_service_version_observation", **result,
         }
 
     if action == "install_packages":

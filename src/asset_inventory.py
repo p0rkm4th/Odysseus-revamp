@@ -257,7 +257,8 @@ def record_net(rep):
                           (aid,"network-device-"+mac.replace(":","")[-6:],"network_device","observed","network_discovery",.65,"{}",t,t))
                 putid(c,aid,"mac",mac,.9,"network_discovery")
         c.execute("INSERT INTO observations(asset_id,observed_at,source,kind,confidence,data_json) VALUES(?,?,?,?,?,?)",
-                  (aid,t,"network_discovery","network_host",.75 if mac else .45,jd(h)))
+                  (aid,t,h.get("source") or "network_discovery",h.get("kind") or "network_host",
+                   float(h.get("confidence") or (.75 if mac else .45)),jd(h)))
     c.commit()
 
 def cmd_net(a):

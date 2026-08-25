@@ -7,6 +7,7 @@ from src.capability_registry import (
     requires_exact_approval,
 )
 from src.tool_capabilities import ToolEffect, capabilities_for_action
+from src.tool_bindings import projected_contracts, projected_schemas
 
 
 def test_custom_capabilities_have_stable_ids_and_unique_actions():
@@ -53,8 +54,35 @@ def test_network_discovery_is_host_brokered_and_private_scope_bound():
     assert action.verification == ("observations_persisted", "network_map_reconciled")
 
 
+def test_network_service_enumeration_is_a_distinct_bounded_host_broker_action():
+    capability = capability_for_tool("manage_homelab")
+    action = capability.actions["execute_network_service_enumeration"]
+    assert action.executor_key == "manage_homelab"
+    assert action.approval is ApprovalMode.EXACT
+    assert action.execution_location == "host_broker"
+    assert action.target_scope == "private_network"
+    assert action.requires_direct_container_access is False
+    assert action.target_resources == ("network:private_scope",)
+    assert action.locks == ("network:private_scope",)
+    assert action.precheck_actions == ("plan_network_service_enumeration",)
+    assert action.verification == ("service_observations_persisted", "network_map_reconciled")
+
+
 def test_security_classifier_projects_status_and_install_effects():
     status = capabilities_for_action("privileged_action", {"action": "status"})
     install = capabilities_for_action("privileged_action", {"action": "install_packages"})
     assert status.known and not status.effects
     assert install.known and ToolEffect.ADMIN_CHANGE in install.effects
+
+
+def test_network_binding_projection_is_provider_independent():
+    schemas = {schema["function"]["name"]: schema for schema in projected_schemas()}
+    assert "manage_homelab" in schemas
+    action_enum = schemas["manage_homelab"]["function"]["parameters"]["properties"]["action"]["enum"]
+    assert "plan_network_discovery" in action_enum
+    assert "execute_network_discovery" in action_enum
+    assert "plan_network_service_enumeration" in action_enum
+    assert "execute_network_service_enumeration" in action_enum
+    contract = projected_contracts()["manage_homelab"]
+    assert "plan_network_service_enumeration" in contract
+    assert "execute_network_service_enumeration" in contract

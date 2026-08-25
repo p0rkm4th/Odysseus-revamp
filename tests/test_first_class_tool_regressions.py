@@ -8,6 +8,7 @@ import pytest
 from src import asset_inventory as inventory
 from src.agent_loop import (
     _assemble_prompt,
+    _asset_read_request,
     _is_explicit_continuation,
     _privileged_action_requires_exact_approval,
 )
@@ -192,6 +193,58 @@ def test_strict_text_contracts_and_fenced_code_safety():
     assert '<invoke name="manage_assets">' in prompt
     assert '<invoke name="privileged_action">' in prompt
     assert parse_tool_blocks("```manage_assets\n{}\n```", skip_fenced=True) == []
+
+
+def test_explicit_it_asset_reads_select_canonical_domain_without_shell_fallback():
+    assert _asset_read_request("Explain my current IT asset inventory, what do I have?")
+    assert _asset_read_request("What servers do I have?")
+    assert _asset_read_request("Show unidentified devices")
+    assert _asset_read_request("What do we know about Cerberus?")
+    assert not _asset_read_request("Update the asset hostname")
+
+
+def test_canonical_asset_reads_are_read_only_and_need_no_approval():
+    from src.capability_registry import action_for_tool, requires_exact_approval
+    action = action_for_tool("manage_assets", {"action": "list"})
+    assert action.effects == ("read_private",)
+    assert action.approval.value == "none"
+    assert requires_exact_approval("manage_assets", {"action": "list"}) is False
+
+
+@pytest.mark.asyncio
+async def test_manage_assets_read_returns_structured_canonical_result(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    class Completed:
+        returncode = 0
+        stdout = '[{"id":"cerberus","name":"Cerberus","type":"server","status":"active"}]'
+        stderr = ""
+
+    monkeypatch.setattr(tool_execution._ody_v34_subprocess, "run", lambda *args, **kwargs: Completed())
+    block = type("Block", (), {"content": json.dumps({"action": "list", "limit": 500})})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["exit_code"] == 0
+    assert result["data"]["status"] == "SUCCESS"
+    assert result["data"]["assets"][0]["id"] == "cerberus"
+    assert result["data"]["owner_scope"] == "alice"
+
+
+@pytest.mark.asyncio
+async def test_manage_assets_read_failure_is_not_zero_inventory(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    class Completed:
+        returncode = 1
+        stdout = ""
+        stderr = "CMDB unavailable"
+
+    monkeypatch.setattr(tool_execution._ody_v34_subprocess, "run", lambda *args, **kwargs: Completed())
+    block = type("Block", (), {"content": json.dumps({"action": "list"})})()
+    _, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert result["exit_code"] == 1
+    assert "error" in result
+    assert "assets" not in result.get("data", {})
 
 
 @pytest.mark.parametrize(

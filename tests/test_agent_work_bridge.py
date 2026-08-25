@@ -95,6 +95,68 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
         engine.dispose()
 
 
+def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_projection(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-deep-network", "deep network discovery", intent={"domains": ["network_ops"]},
+        )
+        discovery_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
+        )
+        bridge.bind_approval("alice", discovery_id, "approval-discovery-deep")
+        bridge.resume_approval("alice", discovery_id, "approval-discovery-deep")
+        bridge.record_result(
+            "alice", discovery_id,
+            {"data": {
+                "asset_draft_candidates": [
+                    {"ip_addresses": ["192.168.10.4"]},
+                    {"ip_addresses": ["192.168.10.5"]},
+                ],
+                "observations_recorded": True,
+                "network_map_reconciled": True,
+                "observation_count": 2,
+            }},
+        )
+        bridge.verify_bound_action("alice", discovery_id)
+
+        plan_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "plan_network_service_enumeration"},
+        )
+        with session_factory() as db:
+            plan = db.query(WorkAction).filter_by(id=plan_id).one()
+            assert plan.normalized_input["targets"] == ["192.168.10.4", "192.168.10.5"]
+        bridge.record_result("alice", plan_id, {"data": {"operation_digest": "s" * 64}})
+
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_network_service_enumeration", "plan_digest": "s" * 64},
+        )
+        with session_factory() as db:
+            action = db.query(WorkAction).filter_by(id=action_id).one()
+            assert action.normalized_input["targets"] == ["192.168.10.4", "192.168.10.5"]
+            assert action.verification == ["service_observations_persisted", "network_map_reconciled"]
+        bridge.bind_approval("alice", action_id, "approval-service-enum")
+        bridge.resume_approval("alice", action_id, "approval-service-enum")
+        bridge.record_result(
+            "alice", action_id,
+            {"data": {
+                "service_observations": [{"ip": "192.168.10.4", "services": []}],
+                "observations_recorded": True,
+                "network_map_reconciled": True,
+                "observation_count": 1,
+            }},
+        )
+        verification = bridge.verify_bound_action("alice", action_id)
+        assert verification["verified"] is True
+        assert verification["run_lifecycle_state"] == "succeeded"
+    finally:
+        engine.dispose()
+
+
 def test_agent_binding_is_owner_scoped(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
