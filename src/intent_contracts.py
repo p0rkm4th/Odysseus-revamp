@@ -115,15 +115,40 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "security_finding_list",
     ),
+    "SECURITY_ENGAGEMENT": DomainContract(
+        "SECURITY_ENGAGEMENT", "security.assessment.read", {"READ": "list_engagements"}, "manage_security_assessment",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "security_engagement_list",
+    ),
+    "SECURITY_EVIDENCE": DomainContract(
+        "SECURITY_EVIDENCE", "security.assessment.read", {"READ": "list_evidence"}, "manage_security_assessment",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "security_evidence_list",
+    ),
     "NETWORK": DomainContract(
         "NETWORK", "homelab.manage", {"READ": "read_network_observations", "EXECUTE": "plan_network_discovery"}, "manage_homelab",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "network_capability_or_discovery",
     ),
+    "HOMELAB_HOST": DomainContract(
+        "HOMELAB_HOST", "homelab.manage", {"READ": "inspect_host"}, "manage_homelab",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "homelab_host_observation",
+    ),
+    "SERVICE": DomainContract(
+        "SERVICE", "homelab.manage", {"READ": "service_status"}, "manage_homelab",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "service_status_observation",
+    ),
     "OSINT_CASE": DomainContract(
         "OSINT_CASE", "research.public_sources", {"READ": "list_cases", "RESEARCH": "plan"}, "manage_osint",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "osint_case_or_plan",
+    ),
+    "RESEARCH": DomainContract(
+        "RESEARCH", "research.public_sources", {"READ": "list_cases"}, "manage_osint",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "research_case_or_history_list",
     ),
     "MEMORY": DomainContract(
         "MEMORY", "memory.read", {"READ": "summarize_owner_memory"}, "read_memory",
@@ -204,9 +229,24 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         r"tell me|do you have|are there|is there|find my|what do you)\b",
         q,
     ))
+    # Interrogative requests about the research store are canonical reads;
+    # the noun "research" must not turn "What research history do I have?"
+    # into a new research execution request.
+    if read_explicit and operation == "RESEARCH":
+        operation = "READ"
     concept = "UNKNOWN"
     target = None
-    if re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q):
+    if re.search(r"\b(?:security\s+engagement|engagements?)\b", q):
+        concept = "SECURITY_ENGAGEMENT"
+    elif re.search(r"\b(?:security\s+evidence|evidence\s+for\s+security|security\s+artifacts?)\b", q):
+        concept = "SECURITY_EVIDENCE"
+    elif re.search(r"\b(?:service(?:s)?|daemon(?:s)?)\b", q) and re.search(r"\b(?:status|running|active|homelab|server)\b", q):
+        concept = "SERVICE"
+    elif re.search(r"\b(?:homelab|container(?:s)?|storage|remote host(?:s)?)\b", q):
+        concept = "HOMELAB_HOST"
+    elif re.search(r"\b(?:research|research history)\b", q) and not re.search(r"\b(?:osint|investigation|case|cases)\b", q):
+        concept = "RESEARCH"
+    elif re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q):
         concept = "TECHNICAL_ASSET"
     elif re.search(r"\b(?:memory|remember|brain)\b", q):
         concept = "MEMORY"
@@ -233,8 +273,10 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
     workspace = {
         "MEMORY": "hades", "WORK": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
         "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",
-        "TECHNICAL_ASSET": "infrastructure", "NETWORK": "infrastructure", "SECURITY_FINDING": "infrastructure",
-        "OSINT_CASE": "research", "HOUSEHOLD_ITEM": "home", "INTEGRATION": "system",
+        "TECHNICAL_ASSET": "infrastructure", "NETWORK": "infrastructure", "HOMELAB_HOST": "infrastructure",
+        "SERVICE": "infrastructure", "SECURITY_FINDING": "infrastructure", "SECURITY_ENGAGEMENT": "infrastructure",
+        "SECURITY_EVIDENCE": "infrastructure", "OSINT_CASE": "research", "RESEARCH": "research",
+        "HOUSEHOLD_ITEM": "home", "INTEGRATION": "system",
     }.get(concept)
     return IntentFrame(
         operation_class=operation,
@@ -245,7 +287,7 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         run_reference=run_reference,
         continuation_reference=run_reference if operation == "CONTINUE" else None,
         depth=_depth(text),
-        constraints=("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK"} else (),
+        constraints=("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK", "HOMELAB_HOST", "SERVICE"} else (),
         desired_output="grounded_structured_summary" if operation == "READ" else None,
         read_explicit=read_explicit,
     )
