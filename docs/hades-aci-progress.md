@@ -19,6 +19,7 @@
 | MEMORY_COMPLETION_FIX | `d9d07bdc` | 75 focused; 6304 full; sanitized live Qwen trajectory reaches ANSWER without tool re-entry | `odysseus:candidate-d9d07bdc` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | HARNESS_OVERHEAD | `ab11579c` | matched synthetic raw-vs-Hades qwen3:8b timing; 70 focused | not rebuilt | FOCUSED_TESTED |
 | MODEL_BURDEN_INSTRUMENTATION | `885ec24f` | sanitized per-turn framework/model labels; 76 focused; 6305 full | not rebuilt | FULL_REGRESSION |
+| DEPLOYED_BURDEN_CHECKPOINT | `29cafccd` | source-matched health/provenance, broker/Ollama checks, six-case Qwen canary all scored 1.0 | `odysseus:candidate-29cafccde26a` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -132,17 +133,19 @@ migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
 
 The current implementation candidate is source commit
-`d9d07bdc4a5c5c22a319ed724076c8335b500519`, image
-`odysseus:candidate-d9d07bdc`, image ID
-`sha256:bec0b1db31a30a3a0819668741b20f141a2eeda21dc372ba4cd8fce4ac1afae8`,
-build ID `d9d07bdc4a5c5c22a319ed724076c8335b500519-2026-08-25T23:12:44Z`,
+`29cafccde26a3f87513031e6990a0d9a7059d516`, image
+`odysseus:candidate-29cafccde26a`, image ID
+`sha256:4b5260286db9e22daf27ef2062a64afea97beee5b7aff421a3429a5954747a33`,
+build ID `29cafccde26a3f87513031e6990a0d9a7059d516-2026-08-25T23:33:46Z`,
 and frontend ID
-`frontend-d9d07bdc4a5c5c22a319ed724076c8335b500519-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
+`frontend-29cafccde26a3f87513031e6990a0d9a7059d516-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
-The exact deployed source gate is `6304 passed, 3 skipped, 186 warnings` in
-123.36 seconds. The touched Memory/ACI focused gate is `75 passed`.
+The exact source gate before deployment is `6305 passed, 3 skipped, 186
+warnings` in 125.81 seconds. The touched Memory/ACI focused gate is `76
+passed`. The six-case deployed Qwen canary scored `6/6` with no runtime
+failures; its detailed records contain only synthetic fixtures.
 
 ## Build/cache observation
 
