@@ -28,7 +28,8 @@ class HomelabOperationError(ValueError):
 _SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.@:-]{0,127}$")
 _ACTIONS = frozenset({
     "inspect_host", "service_status", "plan_service_restart", "execute_service_restart",
-    "discovery_status", "plan_network_discovery", "execute_network_discovery",
+    "discovery_status", "read_network_observations", "plan_network_discovery", "execute_network_discovery",
+    "plan_network_service_enumeration", "execute_network_service_enumeration",
     "plan_diagnostic_install", "execute_diagnostic_install",
 })
 _PROTECTED_RESTART_UNITS = frozenset({"odysseus.service"})
@@ -110,6 +111,80 @@ def _parse_nmap_xml(raw: str, *, cidr: str) -> list[dict[str, Any]]:
                 candidate["manufacturer"] = mac_node.get("vendor")
         candidates.append(candidate)
     return candidates
+
+
+def _private_targets(value: Any) -> list[str]:
+    if not isinstance(value, list) or not 1 <= len(value) <= 256:
+        raise HomelabOperationError("service enumeration requires 1..256 discovered private hosts")
+    targets = []
+    for item in value:
+        try:
+            address = ipaddress.ip_address(str(item).strip())
+        except ValueError as exc:
+            raise HomelabOperationError("service enumeration targets must be IPv4 addresses") from exc
+        if not isinstance(address, ipaddress.IPv4Address) or not address.is_private:
+            raise HomelabOperationError("service enumeration is limited to discovered private IPv4 hosts")
+        text = str(address)
+        if text not in targets:
+            targets.append(text)
+    return targets
+
+
+def _parse_nmap_services(raw: str, *, targets: list[str]) -> list[dict[str, Any]]:
+    if len(raw.encode("utf-8")) > 4_000_000:
+        raise HomelabOperationError("service scanner output exceeded the safety limit")
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as exc:
+        raise HomelabOperationError("service scanner returned invalid structured output") from exc
+    allowed = set(targets)
+    observations = []
+    for host in root.findall("host")[:256]:
+        address = next((n.get("addr") for n in host.findall("address") if n.get("addrtype") == "ipv4"), None)
+        if address not in allowed:
+            continue
+        services = []
+        for port in host.findall("ports/port")[:256]:
+            state = port.find("state")
+            service = port.find("service")
+            if state is None or state.get("state") != "open":
+                continue
+            services.append({
+                "port": int(port.get("portid")) if str(port.get("portid") or "").isdigit() else port.get("portid"),
+                "protocol": port.get("protocol"),
+                "service": service.get("name") if service is not None else None,
+                "product": service.get("product") if service is not None else None,
+                "version": service.get("version") if service is not None else None,
+                "evidence": "nmap_service_version_observation",
+            })
+        observations.append({"ip": address, "services": services, "observation_kind": "observed"})
+    return observations
+
+
+def _role_hypotheses(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Produce bounded, explicitly inferred role hypotheses from observations."""
+    hypotheses = []
+    for observation in observations[:256]:
+        services = observation.get("services") or []
+        names = {str(item.get("service") or "").lower() for item in services if isinstance(item, dict)}
+        ports = {item.get("port") for item in services if isinstance(item, dict)}
+        candidates = []
+        if {"http", "https"} & names or {80, 443} & ports:
+            candidates.append(("web_server_or_appliance", 0.55, "HTTP(S) service observation"))
+        if {"ssh", "sftp"} & names or 22 in ports:
+            candidates.append(("unix_like_server_or_network_appliance", 0.45, "SSH service observation"))
+        if {"smb", "microsoft-ds", "netbios-ssn"} & names or {139, 445} & ports:
+            candidates.append(("file_server_or_windows_host", 0.55, "SMB/NetBIOS service observation"))
+        for label, confidence, evidence in candidates[:4]:
+            hypotheses.append({
+                "ip": observation.get("ip"),
+                "role": label,
+                "classification": "INFERRED",
+                "confidence": confidence,
+                "evidence": [evidence],
+                "canonical_identity_updated": False,
+            })
+    return hypotheses
 
 
 class HomelabReceiptStore:
@@ -205,6 +280,33 @@ class HomelabOperations:
             "network_map_reconciled": True,
         }
 
+    def _record_network_service_observations(self, observations: list[dict[str, Any]]) -> dict[str, Any]:
+        """Persist service evidence through the existing canonical CMDB writer."""
+        hosts = []
+        for observation in observations[:256]:
+            ip = str(observation.get("ip") or "").strip()
+            if not ip:
+                continue
+            hosts.append({
+                "ip": ip,
+                "mac": None,
+                "open_ports": observation.get("services") or [],
+                "evidence": ["nmap_service_version_observation"],
+                "kind": "network_service",
+                "source": "network_service_enumeration",
+                "confidence": 0.7,
+            })
+        recorder = self.observation_recorder
+        if recorder is None:
+            from src.asset_inventory import record_net
+            recorder = record_net
+        recorder({"hosts": hosts})
+        return {
+            "observations_recorded": True,
+            "observation_count": len(hosts),
+            "network_map_reconciled": True,
+        }
+
     async def execute(self, request: dict[str, Any], *, owner: str) -> dict[str, Any]:
         owner = str(owner or "").strip()
         if not owner:
@@ -229,10 +331,35 @@ class HomelabOperations:
                 "broker_scanner_available": broker_scanner,
                 "capability_health": health, "exit_code": 0,
             }
+        if action == "read_network_observations":
+            from src.network_projection import map_projection
+            projection = map_projection()
+            if projection.get("warning"):
+                return {
+                    "status": "UNAVAILABLE",
+                    "action": action,
+                    "error": projection["warning"],
+                    "source": "canonical_cmdb",
+                    "exit_code": 1,
+                }
+            nodes = projection.get("nodes") or []
+            return {
+                "status": "EMPTY_RESULT" if not nodes else "SUCCESS",
+                "action": action,
+                "nodes": nodes,
+                "edges": projection.get("edges") or [],
+                "node_count": len(nodes),
+                "edge_count": len(projection.get("edges") or []),
+                "source": "canonical_cmdb",
+                "owner_scope": owner,
+                "exit_code": 0,
+            }
         if action in {"plan_diagnostic_install", "execute_diagnostic_install"}:
             return await self._diagnostic_install(request, owner=owner, action=action)
         if action in {"plan_network_discovery", "execute_network_discovery"}:
             return await self._network_discovery(request, owner=owner, action=action)
+        if action in {"plan_network_service_enumeration", "execute_network_service_enumeration"}:
+            return await self._network_service_enumeration(request, owner=owner, action=action)
         service = _service(request.get("service"))
         if action == "service_status":
             return await self._read(owner, action, [
@@ -392,6 +519,66 @@ class HomelabOperations:
         if persistence_error:
             result.update({
                 "error": "network discovery completed but CMDB observation persistence failed",
+                "execution_ambiguous": True,
+                "persistence_error": persistence_error,
+            })
+        return result
+
+    async def _network_service_enumeration(
+        self, request: dict[str, Any], *, owner: str, action: str,
+    ) -> dict[str, Any]:
+        targets = _private_targets(request.get("targets"))
+        operation = {
+            "action": "execute_network_service_enumeration",
+            "target_kind": "discovered_private_ipv4_hosts",
+            "targets": targets,
+            "scanner": "nmap_safe_service_version_observation",
+        }
+        digest = _digest(operation)
+        if action == "plan_network_service_enumeration":
+            receipt = {
+                "kind": "plan", "owner": owner, "created_at": _now().isoformat(),
+                "operation_digest": digest, **operation,
+                "preflight": "Observe services and versions only on the exact discovered private hosts; no OS fingerprinting, credentials, or exploitation.",
+                "recovery": "Service observations are evidence and do not confirm inferred device roles.",
+            }
+            await asyncio.to_thread(self.receipts.append, receipt)
+            return {**_public(receipt), "exit_code": 0}
+        supplied = str(request.get("plan_digest") or "")
+        if supplied != digest or not await asyncio.to_thread(self.receipts.valid_plan, owner=owner, digest=supplied):
+            raise HomelabOperationError("a current owner-bound service enumeration plan is required")
+        from src.privileged_broker import client_request
+        broker_result = await asyncio.to_thread(
+            client_request, {"action": "run_network_service_enumeration", "targets": targets}, timeout=90,
+        )
+        code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
+        output = str(broker_result.get("output") or broker_result.get("error") or "")
+        observations = _parse_nmap_services(output, targets=targets) if code == 0 else []
+        persistence_error = None
+        persistence = {"observations_recorded": False, "network_map_reconciled": False}
+        if code == 0:
+            try:
+                persistence = self._record_network_service_observations(observations)
+            except Exception as exc:
+                persistence_error = str(exc)[:500]
+        receipt = {
+            "kind": "service_enumeration", "owner": owner, "created_at": _now().isoformat(),
+            "operation_digest": digest, **operation, "success": code == 0,
+            "exit_code": code, "observation_count": len(observations), **persistence,
+        }
+        if persistence_error:
+            receipt.update({"success": False, "persistence_error": persistence_error})
+        await asyncio.to_thread(self.receipts.append, receipt)
+        result = {
+            **_public(receipt),
+            "service_observations": observations,
+            "role_hypotheses": _role_hypotheses(observations),
+            "role_hypothesis_policy": "inferred_only_requires_reconciliation_before_canonical_identity",
+            "untrusted_content": True,
+        }
+        if persistence_error:
+            result.update({
+                "error": "service enumeration completed but CMDB observation persistence failed",
                 "execution_ambiguous": True,
                 "persistence_error": persistence_error,
             })

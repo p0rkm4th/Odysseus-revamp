@@ -171,10 +171,11 @@ class PendingToolApproval:
             # resolved card lets history-derived session grants remain bound to
             # this exact chat and prevents inheritance by a forked session.
             "session_id": self.session_id,
-            "question": "Allow this task to continue?",
+            "question": "Approve this exact action?",
             "description": reason or (
-                "Untrusted context influenced this run, so continuing with "
-                "otherwise-gated actions needs your explicit approval."
+                f"The sealed action {self.tool_name} (digest {self.digest[:16]}) "
+                "requires your approval. This approval covers only the displayed "
+                "action and the selected continuation scope."
             ),
             "options": [
                 {

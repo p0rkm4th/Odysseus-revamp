@@ -1004,3 +1004,30 @@ records, and contradictions remain visibly grounded in canonical state. Report
 prose and external findings remain tainted artifacts and are not promoted into
 claims. Broader graph/timeline integration and live provider dogfood remain
 future work.
+
+### Network deep-dive execution-parity checkpoint
+
+Bounded network work now distinguishes host discovery from service/version
+enumeration. The latter is a separate host-brokered ActionSpec exposed through
+the existing `manage_homelab` binding, exact private IPv4 target validation,
+single-use owner-bound planning, and the same Work Run. When targets are
+omitted, the Work bridge inherits the exact host set from that Run's completed
+discovery Result; it never asks the model to reproduce or broaden the scope.
+Service observations persist through the existing CMDB observation writer and
+are verified separately from broker exit status. Role labels are explicitly
+`INFERRED`, carry evidence/confidence, and do not change canonical identity.
+Deterministic continuation repair advances an unresolved service plan/action;
+provider-specific model tool choice is not authority. Synthetic action,
+broker, target-propagation, and grounding coverage is green; owner-live
+Qwen/Luna/Sol comparison remains pending.
+
+### IntentFrame/domain-contract checkpoint
+
+The agent now attaches a bounded IntentFrame and resolves registered semantic
+concepts through existing Capability, ActionSpec, and ToolBinding authority.
+Technical-asset reads use the owner-authenticated `manage_assets` read action
+and structured Result contract; no approval or filesystem fallback is
+permitted. Contract validation and paraphrase tests are source-level green.
+The layer deliberately reports unresolved concepts rather than creating a
+second executor; Memory, Work, Setup/Integration, Household, and richer
+Network read contracts remain explicit follow-up work.
