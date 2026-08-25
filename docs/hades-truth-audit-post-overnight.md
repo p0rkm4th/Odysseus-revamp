@@ -242,9 +242,14 @@ Setup `core.models` now reuses the existing bounded provider reachability probe
 against the configured Ollama/model endpoint. It records endpoint reachability
 separately from capability metadata and never performs inference, downloads a
 model, or changes authority. Focused tests: 108 passed, 1 warning. Full
-regression: 6245 passed, 3 skipped, 186 warnings in 125.86 seconds. The
-source-matched deployment for this checkpoint is recorded below after the
-final candidate build.
+regression: 6245 passed, 3 skipped, 186 warnings in 125.86 seconds.
+Candidate `odysseus:candidate-7d061e77` is deployed with image
+`sha256:f2891ced21433279f8437ce4e992f195c6a7bbced3734dba20ebed8a7518400b`,
+source `7d061e77a8b04dcd9deea69c02145a4ecb1a7b60`, build ID
+`7d061e77a8b04dcd9deea69c02145a4ecb1a7b60-2026-08-25T10:19:10Z`, and the
+existing migration head. Health, `/api/version`, Ollama bridge, frontend
+static, browser-window, and realistic browser gates pass. Rollback
+`odysseus:rollback-7d061e77-prev` is retained. Owner-live E6 remains pending.
 
 Commit `a9ab0e04d293b2bf606d6dbebd231077cee24054` is deployed as candidate
 `odysseus:candidate-a9ab0e04d293` with image
