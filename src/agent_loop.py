@@ -4692,9 +4692,13 @@ async def stream_agent_loop(
                 active_run = await asyncio.to_thread(
                     continuation_run_projection, owner, str(work_run_id),
                 )
-            _intent["continuation_resolution"] = resolve_continuation(
-                _intent_frame, active_run,
-            ).as_dict()
+            _continuation_result = resolve_continuation(_intent_frame, active_run)
+            _intent["continuation_resolution"] = _continuation_result.as_dict()
+            if isinstance(active_run, dict) and isinstance(active_run.get("next_step"), dict):
+                # Keep the planner projection server-owned and compact.  The
+                # automatic read-only path below may use it only after the
+                # planner has marked the next Action safe_auto_continue.
+                _intent["continuation_next_step"] = active_run["next_step"]
         _concept_domains = {
             "TECHNICAL_ASSET": "asset_inventory",
             "NETWORK": "network_ops",
@@ -6852,6 +6856,35 @@ async def stream_agent_loop(
                 used_native = False
         _asset_frame = _intent.get("intent_frame") if isinstance(_intent.get("intent_frame"), dict) else {}
         _resolved_read = _intent.get("resolved_contract") if isinstance(_intent.get("resolved_contract"), dict) else {}
+        _continuation_step = _intent.get("continuation_next_step") if isinstance(_intent.get("continuation_next_step"), dict) else {}
+        _continuation_action = _continuation_step.get("action") if isinstance(_continuation_step.get("action"), dict) else {}
+        _continuation_payload = _continuation_action.get("normalized_input") if isinstance(_continuation_action.get("normalized_input"), dict) else {}
+        _continuation_binding = str(_continuation_action.get("tool_binding_name") or "").strip()
+        # A durable Run may advance through an already-validated read-only
+        # Action without asking the user to type "continue" again.  This is a
+        # projection of the canonical planner only: it cannot select a
+        # consequential Action, bypass approval, or execute a new binding
+        # outside the normal tool loop.
+        if (
+            not guide_only
+            and not _force_answer
+            and _intent_frame.operation_class == "CONTINUE"
+            and _intent.get("continuation_resolution", {}).get("status") == "RESOLVED"
+            and _continuation_step.get("safe_auto_continue") is True
+            and _continuation_step.get("status") == "READY"
+            and _continuation_binding
+            and _continuation_binding in set(_relevant_tools or set())
+            and _continuation_binding not in disabled_tools
+            and not tool_blocks
+            and not tool_events
+            and total_tool_calls == 0
+        ):
+            _continuation_payload = dict(_continuation_payload)
+            _continuation_payload.setdefault("action", _continuation_action.get("action_id"))
+            logger.info("[agent] projecting planner-approved safe continuation binding=%s action=%s", _continuation_binding, _continuation_action.get("action_id"))
+            tool_blocks = [ToolBlock(_continuation_binding, json.dumps(_continuation_payload))]
+            converted_calls = []
+            used_native = False
         # Generic canonical-read repair: once the server-owned IntentFrame has
         # resolved a READ contract, project its existing binding directly. The
         # model does not need to remember a route/tool name, and no filesystem

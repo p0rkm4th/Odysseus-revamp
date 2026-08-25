@@ -157,6 +157,7 @@ def test_next_step_projects_safe_read_continuation_without_execution(db):
     result = RunPlanner(db).next_step("alice", run["id"])
     assert result["status"] == "READY"
     assert result["action"]["action_id"] == "service_status"
+    assert result["action"]["tool_binding_name"] == "manage_homelab"
     assert result["safe_auto_continue"] is True
     assert result["authority_required"] is False
     assert db.query(WorkAction).count() == 0

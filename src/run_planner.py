@@ -326,5 +326,10 @@ class RunPlanner:
                 return base | {"status": "WAITING_APPROVAL", "action": projected, "reason": "exact action authority is required", "safe_auto_continue": False, "authority_required": True, "validation": {"failures": failures, "warnings": validation["warnings"]}}
             return base | {"status": "BLOCKED", "action": projected, "reason": "next Action cannot pass Run validation", "safe_auto_continue": False, "authority_required": False, "validation": {"failures": failures, "warnings": validation["warnings"]}}
         contract = next((item.get("contract") for item in validation["preview"]["actions"] if item.get("sequence") == sequence), {})
+        capability = capability_for_id(str(action.get("capability_id") or ""))
+        spec = capability.actions.get(str(action.get("action_id") or "")) if capability else None
+        binding = binding_for_tool(str(spec.executor_key or "")) if spec and spec.executor_key else None
+        if binding is not None:
+            projected["tool_binding_name"] = binding.transport_name
         read_only = contract.get("approval") == "none" and not contract.get("writes") and contract.get("effect_class") in {"read_private", "read_only", "read", "internal"}
         return base | {"status": "READY", "action": projected, "reason": "next declared Action is valid", "safe_auto_continue": bool(read_only), "authority_required": False, "validation": {"failures": [], "warnings": validation["warnings"]}}
