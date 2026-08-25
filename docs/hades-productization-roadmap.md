@@ -90,6 +90,16 @@ configuration and clearly report when provider connectivity was not probed.
 Actual Email/Calendar provider tests continue through their existing routes and
 credentials; Setup Center does not duplicate those operations.
 
+## Exact-approval continuation checkpoint
+
+An exact-approved Action now restores its parent Run to durable `ready` state
+with the owner-scoped pending Action reference intact. The shared Run planner
+revalidates the persisted contract and permits automatic continuation only when
+the Action is already authorized with its sealed input digest (or is inherently
+approval-free). Missing approval references, missing seals, stale preconditions,
+and validation failures remain blocked. This extends the existing Run planner
+and Work Engine; it does not create a second executor or bypass policy.
+
 Home Assistant Setup Center validation now reuses the existing read-only Smart
 Home projection. An explicit owner-triggered check performs only the existing
 `GET /api/` and `GET /api/states` adapter calls, reports configured/healthy/
