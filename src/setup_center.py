@@ -267,3 +267,40 @@ class SetupCenterService:
             owner_state[module_id] = {"status": status, "selected": bool(data.get("selected", status != "SKIPPED")), "status_reason": str(data.get("status_reason") or "operator updated setup state")[:500], "last_updated": datetime.datetime.now(datetime.timezone.utc).isoformat()}
             atomic_write_json(SETUP_STATE_FILE, state, indent=2)
         return self.projection(owner)
+
+    def record_health(self, owner: str, module_id: str, result: dict[str, Any]) -> dict[str, Any]:
+        """Persist secret-free evidence from one bounded health probe.
+
+        Health evidence is deliberately separate from resumable setup status:
+        a successful probe must not silently mark a module configured, and a
+        failed optional probe must not erase configuration or permissions.
+        """
+        if not owner:
+            raise ValueError("setup owner is required")
+        if not isinstance(result, dict):
+            raise ValueError("health result must be structured")
+        if next((item for item in CONTRACTS if item.id == module_id), None) is None:
+            raise ValueError("unknown setup module")
+        import datetime
+        status = str(result.get("status") or "UNKNOWN").upper()
+        health_status = {
+            "CONFIGURED": "HEALTHY",
+            "HEALTHY": "HEALTHY",
+            "DEGRADED": "DEGRADED",
+            "UNAVAILABLE": "UNAVAILABLE",
+            "NOT_CONFIGURED": "NOT_CONFIGURED",
+        }.get(status, "UNKNOWN")
+        detail = str(result.get("detail") or result.get("health_reason") or "health probe completed")[:500]
+        checked_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        with _STATE_LOCK:
+            state = _read_state()
+            owner_state = state.setdefault(owner, {})
+            entry = owner_state.get(module_id) if isinstance(owner_state.get(module_id), dict) else {}
+            entry.update({
+                "health_status": health_status,
+                "health_reason": detail,
+                "health_checked_at": checked_at,
+            })
+            owner_state[module_id] = entry
+            atomic_write_json(SETUP_STATE_FILE, state, indent=2)
+        return result
