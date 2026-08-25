@@ -4654,7 +4654,7 @@ async def stream_agent_loop(
     # exposure can now be driven by the frame/contract resolver instead of a
     # growing list of phrase-specific branches.
     try:
-        from src.intent_contracts import compile_intent, resolve_intent
+        from src.intent_contracts import compile_intent, resolve_continuation, resolve_intent
         _intent_frame = compile_intent(
             str(_intent.get("retrieval_query") or _last_user),
             continuation=bool(_intent.get("continuation")),
@@ -4663,6 +4663,16 @@ async def stream_agent_loop(
         _resolved_contract = resolve_intent(_intent_frame)
         _intent["intent_frame"] = _intent_frame.as_dict()
         _intent["resolved_contract"] = _resolved_contract.as_dict()
+        if _intent_frame.operation_class == "CONTINUE":
+            from src.agent_work_bridge import continuation_run_projection
+            active_run = None
+            if work_run_id:
+                active_run = await asyncio.to_thread(
+                    continuation_run_projection, owner, str(work_run_id),
+                )
+            _intent["continuation_resolution"] = resolve_continuation(
+                _intent_frame, active_run,
+            ).as_dict()
         _concept_domains = {
             "TECHNICAL_ASSET": "asset_inventory",
             "NETWORK": "network_ops",

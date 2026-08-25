@@ -182,6 +182,35 @@ def assess_agent_run(owner: str, run_id: str) -> dict[str, Any] | None:
         return WorkEngine(db).assess_deliverable_completion(owner, run.id)
 
 
+def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | None:
+    """Return the minimal owner-scoped Run projection needed by continuation.
+
+    This is read-only state for the semantic resolver. It deliberately omits
+    result payloads and never changes lifecycle, approval, or Action state.
+    """
+    with SessionLocal() as db:
+        run = db.query(WorkRun).filter_by(id=str(run_id), owner=str(owner)).one_or_none()
+        if run is None:
+            return None
+        actions = (
+            db.query(WorkAction)
+            .filter_by(run_id=run.id)
+            .order_by(WorkAction.sequence.asc(), WorkAction.id.asc())
+            .all()
+        )
+        return {
+            "id": run.id,
+            "owner": run.owner,
+            "status": run.status,
+            "lifecycle_state": run.lifecycle_state,
+            "continuation_state": dict(run.continuation_state or {}),
+            "actions": [
+                {"id": action.id, "status": action.status, "sequence": action.sequence}
+                for action in actions
+            ],
+        }
+
+
 def prepare_action(
     owner: str,
     run_id: str,
