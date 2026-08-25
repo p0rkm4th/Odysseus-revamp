@@ -424,3 +424,7 @@ realistic browser gates pass. Rollback is retained as
   explicit binding projection assertion.
 - Status: `VERIFIED_TESTED`; owner-live multi-step and cross-model continuation
   remain pending.
+
+- The continuation projection is refreshed after each successful bridged
+  Action before the next agent round, preserving current Run state across
+  chained read-only steps.
