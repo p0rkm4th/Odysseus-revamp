@@ -98,9 +98,18 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
                 from src.capability_registry import capability_for_id
                 from src.tool_bindings import binding_for_tool
                 if module_id == "core.models":
-                    available = capability_for_id("intelligence.route") is not None
-                    detail = "model routing capability metadata is available; no inference was requested"
-                    checks = {"owner_scoped": True, "capability_registry": available, "inference_performed": False}
+                    import os
+                    capability_available = capability_for_id("intelligence.route") is not None
+                    endpoint = os.getenv("HADES_OLLAMA_ENDPOINT") or os.getenv("OLLAMA_BASE_URL") or "http://host.docker.internal:11434"
+                    try:
+                        from routes.model_routes import _ping_endpoint
+                        probe = _ping_endpoint(endpoint, timeout=3)
+                    except Exception:
+                        probe = {"reachable": False, "error": "model endpoint probe unavailable"}
+                    endpoint_reachable = bool(probe.get("reachable"))
+                    available = capability_available and endpoint_reachable
+                    detail = "model routing metadata and configured model endpoint are reachable; no inference was requested" if available else "model routing metadata or configured model endpoint is unavailable; no inference was requested"
+                    checks = {"owner_scoped": True, "capability_registry": capability_available, "model_endpoint_read": True, "endpoint_reachable": endpoint_reachable, "inference_performed": False}
                 elif module_id == "core.memory":
                     from src.memory_grounding import summarize_owner_memory
                     available = callable(summarize_owner_memory)
