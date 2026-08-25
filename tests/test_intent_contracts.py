@@ -48,6 +48,17 @@ def test_technical_asset_paraphrases_compile_to_one_read_contract(query):
     assert resolved.action.approval.value == "none"
 
 
+def test_inventory_state_is_a_canonical_asset_read_but_household_inventory_is_not():
+    frame = compile_intent("What is the inventory state?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert resolved.action_id == "list"
+    assert resolved.binding_name == "manage_assets"
+
+    household = compile_intent("What is my pantry inventory?")
+    assert household.domain_concept == "HOUSEHOLD_ITEM"
+
+
 def test_continuation_and_depth_are_structured_not_phrase_specific():
     frame = compile_intent(
         "perform a deep scan of all discovered hosts",
