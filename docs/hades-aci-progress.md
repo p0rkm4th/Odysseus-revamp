@@ -20,6 +20,7 @@
 | HARNESS_OVERHEAD | `ab11579c` | matched synthetic raw-vs-Hades qwen3:8b timing; 70 focused | not rebuilt | FOCUSED_TESTED |
 | MODEL_BURDEN_INSTRUMENTATION | `885ec24f` | sanitized per-turn framework/model labels; 76 focused; 6305 full | not rebuilt | FULL_REGRESSION |
 | DEPLOYED_BURDEN_CHECKPOINT | `29cafccd` | source-matched health/provenance, broker/Ollama checks, six-case Qwen canary all scored 1.0 | `odysseus:candidate-29cafccde26a` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| BENCHMARK_BURDEN_RECORDS | `c425f020` | Jarvis collector retains sanitized model-burden totals/labels; 4 focused | not rebuilt | FOCUSED_TESTED |
 
 ## H0 evidence
 
