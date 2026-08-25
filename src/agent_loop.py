@@ -8092,6 +8092,16 @@ async def stream_agent_loop(
                         completion = await asyncio.to_thread(assess_agent_run, owner, work_run_id)
                         if completion:
                             yield f'data: {json.dumps({"type": "run_completion", "data": completion}, default=str)}\n\n'
+                        # Refresh planner state before the next model round so
+                        # a continuation turn can chain ordinary read-only
+                        # steps without relying on stale initial Run state.
+                        if _intent_frame.operation_class == "CONTINUE" and not result.get("error"):
+                            from src.agent_work_bridge import continuation_run_projection
+                            _refreshed_run = await asyncio.to_thread(
+                                continuation_run_projection, owner, str(work_run_id),
+                            )
+                            if isinstance(_refreshed_run, dict) and isinstance(_refreshed_run.get("next_step"), dict):
+                                _intent["continuation_next_step"] = _refreshed_run["next_step"]
                 except Exception:
                     logger.warning("[work-bridge] failed to persist bound action result", exc_info=True)
 
