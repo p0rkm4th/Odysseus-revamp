@@ -660,3 +660,17 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   Source-matched deployment and browser gates are pending this checkpoint.
   Status: `VERIFIED_TESTED`; owner-live model swapping and consequential
   network dogfood remain `OWNER_DOGFOOD_PENDING`.
+
+## Persisted Setup health evidence checkpoint
+
+- Source change: bounded Setup Center module health probes now persist their
+  secret-free health status, reason, and probe timestamp through the existing
+  owner-scoped Setup state. Persisted setup/configuration status remains
+  separate, so a probe cannot silently configure a module or grant authority.
+- All existing supported health branches use the same persistence path; no
+  provider credential, mutation, or alternate policy path was introduced.
+- Evidence: focused Setup/binding coverage `31 passed, 1 warning`; full
+  regression `6245 passed, 3 skipped, 186 warnings in 124.67s`.
+  Source-matched deployment and browser gates are pending this checkpoint.
+  Status: `VERIFIED_TESTED`; owner-live provider health remains
+  `OWNER_DOGFOOD_PENDING`.
