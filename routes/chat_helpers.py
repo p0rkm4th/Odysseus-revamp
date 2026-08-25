@@ -19,7 +19,12 @@ from src.model_context import estimate_tokens, get_context_length
 from src.auth_helpers import effective_user
 from src.prompt_security import untrusted_context_message
 from src.attachment_refs import attachment_ref
-from src.memory_grounding import is_explicit_memory_query, build_explicit_memory_result, render_explicit_memory_context
+from src.memory_grounding import (
+    is_explicit_memory_query,
+    build_explicit_memory_result,
+    build_runtime_self_state,
+    render_explicit_memory_context,
+)
 from routes.prefs_routes import _load_for_user as load_prefs_for_user
 
 from fastapi import HTTPException
@@ -964,7 +969,12 @@ async def build_chat_context(
             )
             _memory_context = untrusted_context_message(
                 "saved memory: explicit canonical result",
-                render_explicit_memory_context(explicit_memory_result),
+                render_explicit_memory_context(
+                    explicit_memory_result,
+                    current_self_state=build_runtime_self_state(
+                        getattr(sess, "model", ""), getattr(sess, "endpoint_url", "")
+                    ),
+                ),
             )
             _memory_context["_protected"] = True
             _memory_context["metadata"] = {
@@ -1003,7 +1013,12 @@ async def build_chat_context(
             }
             _memory_context = untrusted_context_message(
                 "saved memory: explicit canonical result",
-                render_explicit_memory_context(explicit_memory_result),
+                render_explicit_memory_context(
+                    explicit_memory_result,
+                    current_self_state=build_runtime_self_state(
+                        getattr(sess, "model", ""), getattr(sess, "endpoint_url", "")
+                    ),
+                ),
             )
             _memory_context["_protected"] = True
             _memory_context["metadata"] = {
