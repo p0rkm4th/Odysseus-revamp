@@ -22,7 +22,7 @@ completion.
 | stable prompt prefix/cache | PARTIALLY_FIXED | chat prefix ordering exists; ACI packet integration and cache evidence remain |
 | loose ~50-round budgets | PARTIALLY_FIXED | local profile caps exist but are not authoritative in current loop |
 | harness overhead benchmark | STILL_PRESENT | no matched raw-vs-Hades timing report yet |
-| runtime diagnostic profile | PARTIALLY_FIXED | sanitized runtime profile/cache primitives exist; Control Center projection and active probe UI remain |
+| runtime diagnostic profile | PARTIALLY_FIXED | sanitized runtime profile/cache primitives and owner-scoped `/api/hades/runtime-profile` now exist; active probe UI remains |
 | outbound URL/SSRF boundary | PARTIALLY_FIXED | `url_safety.py`/`url_security.py` exist; one unified policy boundary remains |
 | developer sandbox | PARTIALLY_FIXED | Workspace YOLO is non-root, repo-scoped, leased and audited; stronger resource/egress isolation remains |
 | test order independence | PARTIALLY_FIXED | broad suite infrastructure exists; ACI-specific order checks are new work |

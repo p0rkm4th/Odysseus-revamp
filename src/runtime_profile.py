@@ -188,6 +188,19 @@ class RuntimeProfileCache:
         item = data.get(key) if isinstance(data, Mapping) else None
         return RuntimeCapabilityProfile.from_dict(item) if isinstance(item, Mapping) else None
 
+    def all(self) -> tuple[RuntimeCapabilityProfile, ...]:
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, PermissionError, json.JSONDecodeError):
+            return ()
+        if not isinstance(data, Mapping):
+            return ()
+        return tuple(
+            RuntimeCapabilityProfile.from_dict(item)
+            for item in data.values()
+            if isinstance(item, Mapping)
+        )
+
     def save(self, profile: RuntimeCapabilityProfile) -> None:
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
