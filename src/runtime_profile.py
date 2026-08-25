@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -123,6 +123,18 @@ class RuntimeCapabilityProfile:
         if evidence is None or evidence.status not in {"pass", "verified", "supported"}:
             return False
         return not fresh_only or self.is_fresh()
+
+    def with_probe(self, capability: str, status: str, *, evidence: Mapping[str, Any] | None = None,
+                   tested_at: float | None = None) -> "RuntimeCapabilityProfile":
+        """Return a profile with one empirical capability observation recorded."""
+        observations = dict(self.capabilities)
+        observations[_clean(capability)] = CapabilityEvidence(
+            status=_clean(status) or "unknown",
+            source="capability_probe",
+            tested_at=tested_at if tested_at is not None else time.time(),
+            evidence=dict(evidence or {}),
+        )
+        return replace(self, capabilities=observations, refreshed_at=time.time())
 
     def to_dict(self) -> dict[str, Any]:
         return {

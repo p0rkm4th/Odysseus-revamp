@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "endpoint_runtime": "ollama",
+  "protocol": "ollama-chat",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "synthetic": true,
+  "side_effects": false,
+  "probes": {
+    "decision_json": {"status": "pass", "schema_valid": true, "decision": "ACTION", "choice": "A"},
+    "native_tools": {"status": "pass", "tool_name": "inspect_services", "arguments": {"target": "synthetic-host"}, "executed": false},
+    "streaming": {"status": "pass", "source": "existing_qwen_benchmark"}
+  },
+  "selection": {"weak_model_default": "decision_json", "native_tools": "verified_alternate", "authority": "canonical_action_registry_and_policy"}
+}
