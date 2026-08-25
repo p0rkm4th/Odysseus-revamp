@@ -4,6 +4,8 @@ Hades now records a bounded `IntentFrame` for each agent turn before provider
 tool projection. The frame contains operation class, domain concept, target,
 entity/run references, filters/scope, depth, constraints, and desired output.
 It is a semantic routing artifact; raw wording is not an execution identity.
+It may also carry a workspace hint and continuation reference so UI context
+and durable Run continuity remain structured rather than prompt-only.
 
 Resolution is:
 
@@ -15,6 +17,11 @@ capability registry. Its contract entries reference existing capability IDs,
 ActionSpec IDs, and ToolBindings. `validate_contracts()` fails on missing
 capabilities/actions/bindings, missing result contracts, and approval on a
 declared read.
+
+Generic continuation phrases resolve through `resolve_continuation` against a
+durable Run projection. That resolver only returns a decision (`RESOLVED`,
+`BLOCKED`, or `NOT_CONTINUATION`); it never executes an Action or grants
+authority. Terminal Runs and missing Run references remain blocked.
 
 Current registered semantic contracts:
 

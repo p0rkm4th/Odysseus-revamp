@@ -27,9 +27,11 @@ DEPTHS = frozenset({"QUICK", "STANDARD", "DEEP"})
 class IntentFrame:
     operation_class: str
     domain_concept: str
+    workspace_hint: str | None = None
     target: str | None = None
     entity_reference: str | None = None
     run_reference: str | None = None
+    continuation_reference: str | None = None
     filters: Mapping[str, Any] = field(default_factory=dict)
     scope: Mapping[str, Any] = field(default_factory=dict)
     depth: str = "STANDARD"
@@ -75,6 +77,24 @@ class ResolvedContract:
             "reason": self.reason,
             "result_contract": self.contract.result_contract if self.contract else None,
             "exposure": dict(self.contract.exposures) if self.contract else {},
+        }
+
+
+@dataclass(frozen=True)
+class ContinuationResolution:
+    """Pure resolution result; it never executes or grants authority."""
+
+    status: str
+    run_reference: str | None = None
+    action_reference: str | None = None
+    reason: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "run_reference": self.run_reference,
+            "action_reference": self.action_reference,
+            "reason": self.reason,
         }
 
 
@@ -155,9 +175,9 @@ def _depth(text: str) -> str:
 
 
 def _operation(text: str, *, continuation: bool = False) -> str:
-    if continuation:
+    q = text.lower().strip()
+    if continuation or (len(q.split()) <= 4 and re.fullmatch(r"(?:continue|resume|proceed|go ahead|do it|finish it|keep going)", q)):
         return "CONTINUE"
-    q = text.lower()
     if re.search(r"\b(?:delete|remove|retire)\b", q): return "DELETE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
@@ -198,16 +218,45 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
     match = re.search(r"\b(?:about|for|asset)\s+([A-Za-z0-9_.:-]{2,80})", text, re.IGNORECASE)
     if match:
         target = match.group(1)
+    workspace = {
+        "MEMORY": "hades", "WORK": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
+        "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",
+        "TECHNICAL_ASSET": "infrastructure", "NETWORK": "infrastructure", "SECURITY_FINDING": "infrastructure",
+        "OSINT_CASE": "research", "HOUSEHOLD_ITEM": "home", "INTEGRATION": "system",
+    }.get(concept)
     return IntentFrame(
         operation_class=operation,
         domain_concept=concept,
+        workspace_hint=workspace,
         target=target,
         entity_reference=target,
         run_reference=run_reference,
+        continuation_reference=run_reference if operation == "CONTINUE" else None,
         depth=_depth(text),
         constraints=("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK"} else (),
         desired_output="grounded_structured_summary" if operation == "READ" else None,
     )
+
+
+def resolve_continuation(frame: IntentFrame, active_run: Mapping[str, Any] | None) -> ContinuationResolution:
+    """Resolve generic continuation language against durable Run state.
+
+    This is deliberately a decision projection. The caller still performs
+    normal policy, approval, ActionSpec, and executor checks.
+    """
+    if frame.operation_class != "CONTINUE":
+        return ContinuationResolution("NOT_CONTINUATION", reason="intent is not CONTINUE")
+    if not isinstance(active_run, Mapping):
+        return ContinuationResolution("BLOCKED", reason="no active Run")
+    status = str(active_run.get("status") or "").lower()
+    if status in {"completed", "failed", "cancelled"}:
+        return ContinuationResolution("BLOCKED", run_reference=str(active_run.get("id") or "") or None, reason="Run is terminal")
+    run_id = str(active_run.get("id") or active_run.get("run_id") or "").strip() or None
+    state = active_run.get("continuation_state") if isinstance(active_run.get("continuation_state"), Mapping) else {}
+    action_id = str(state.get("pending_action_id") or active_run.get("pending_action_id") or "").strip() or None
+    if not run_id:
+        return ContinuationResolution("BLOCKED", reason="active Run has no durable reference")
+    return ContinuationResolution("RESOLVED", run_reference=run_id, action_reference=action_id)
 
 
 def resolve_intent(frame: IntentFrame) -> ResolvedContract:
