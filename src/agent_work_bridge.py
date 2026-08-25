@@ -83,6 +83,7 @@ def ensure_agent_run(
     model_name: str | None = None,
     intent: dict[str, Any] | None = None,
     continuation: bool = False,
+    completion_criteria: dict[str, Any] | None = None,
 ) -> str | None:
     """Return or create the active owner/session run for actionable homelab work."""
     owner = str(owner or "").strip()
@@ -118,6 +119,11 @@ def ensure_agent_run(
                 "query": str(query or "")[:4000],
                 "domains": sorted(domains.intersection(_WORK_DOMAINS)),
             },
+            "completion_criteria": completion_criteria or {
+                "objective": str(query or "")[:4000],
+                "deliverable": "canonical network/homelab result",
+                "completion_mode": "verified_run_terminal_state",
+            },
             "assumptions": [{
                 "kind": "scope",
                 "value": "private IPv4 discovery remains bounded by ActionSpec and broker policy",
@@ -127,6 +133,15 @@ def ensure_agent_run(
         work.transition_run(owner, run["id"], "planning", {"current_step": "intent routed to canonical capability"})
         work.transition_run(owner, run["id"], "ready", {"current_step": "awaiting canonical action selection"})
         return run["id"]
+
+
+def assess_agent_run(owner: str, run_id: str) -> dict[str, Any] | None:
+    """Expose the shared durable completion decision to chat/UI adapters."""
+    with SessionLocal() as db:
+        run = db.query(WorkRun).filter_by(id=str(run_id), owner=str(owner)).one_or_none()
+        if run is None:
+            return None
+        return WorkEngine(db).assess_deliverable_completion(owner, run.id)
 
 
 def prepare_action(

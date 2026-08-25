@@ -23,6 +23,13 @@ durable Run projection. That resolver only returns a decision (`RESOLVED`,
 `BLOCKED`, or `NOT_CONTINUATION`); it never executes an Action or grants
 authority. Terminal Runs and missing Run references remain blocked.
 
+Durable Runs now also carry `completion_criteria` (deliverable/objective,
+required stages, and completion mode). `WorkEngine.assess_deliverable_completion`
+projects `COMPLETE`, `IN_PROGRESS`, or `BLOCKED` from persisted Run/action/result
+state. This is observational control-plane state: model prose cannot mark a
+deliverable complete, and the projection does not grant authority or execute
+the next step.
+
 Current registered semantic contracts:
 
 | Concept | Canonical capability/action | Result contract | Status |

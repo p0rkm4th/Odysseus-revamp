@@ -39,6 +39,37 @@ def test_agent_network_intent_creates_one_owner_session_run_and_reuses_it(monkey
             assert run.intent["source"] == "chat_agent"
             assert run.model_name == "qwen3:8b"
             assert db.query(WorkRun).filter_by(owner="alice", session_id="chat-1").count() == 1
+            assert run.completion_criteria["completion_mode"] == "verified_run_terminal_state"
+    finally:
+        engine.dispose()
+
+
+def test_completion_assessment_is_durable_and_does_not_use_model_prose(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-completion", "deep network discovery",
+            intent={"domains": ["network_ops"]},
+            completion_criteria={
+                "objective": "deep network discovery",
+                "deliverable": "verified host inventory",
+                "required_stages": ["discovery", "report"],
+            },
+        )
+        in_progress = bridge.assess_agent_run("alice", run_id)
+        assert in_progress["status"] == "IN_PROGRESS"
+        assert in_progress["deliverable"] == "verified host inventory"
+
+        with session_factory() as db:
+            WorkEngine(db).set_run_status(
+                "alice", run_id, "completed",
+                {"lifecycle_state": "succeeded", "current_step": "verified host inventory"},
+            )
+        complete = bridge.assess_agent_run("alice", run_id)
+        assert complete["status"] == "COMPLETE"
+        assert complete["lifecycle_state"] == "succeeded"
+        assert complete["completion_criteria"]["required_stages"] == ["discovery", "report"]
     finally:
         engine.dispose()
 

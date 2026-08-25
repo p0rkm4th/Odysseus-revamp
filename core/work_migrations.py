@@ -94,3 +94,19 @@ def apply_work_v5(connection: Connection) -> None:
     WorldRelationship.__table__.create(bind=connection, checkfirst=True)
 
 register_schema_migration(SchemaMigration(WORK_V5_VERSION, WORK_V5_CHECKSUM, apply_work_v5))
+
+WORK_V6_VERSION = "20260825_002_work_run_completion_v6"
+WORK_V6_DEFINITION = """work-engine-v6
+durable-deliverable-and-completion-criteria
+generic-run-completion-projection
+backward-compatible-additive-column
+"""
+WORK_V6_CHECKSUM = migration_checksum(WORK_V6_DEFINITION)
+
+def apply_work_v6(connection: Connection) -> None:
+    inspector = inspect(connection)
+    existing = {column["name"] for column in inspector.get_columns("work_runs")}
+    if "completion_criteria" not in existing:
+        connection.execute(text("ALTER TABLE work_runs ADD COLUMN completion_criteria JSON"))
+
+register_schema_migration(SchemaMigration(WORK_V6_VERSION, WORK_V6_CHECKSUM, apply_work_v6))
