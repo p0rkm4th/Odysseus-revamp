@@ -471,3 +471,21 @@ realistic browser gates pass. Rollback is retained as
   with image `sha256:945da2e8fddf...`; live provider competence and
   owner-authenticated model swapping remain pending.
 - Status: `VERIFIED_LIVE`; owner-live parity remains `OWNER_DOGFOOD_PENDING`.
+
+## Durable conversational reference checkpoint
+
+- `resolve_structured_reference` now resolves “it”, “that one”, ordinals, and
+  plural references only against a bounded server-owned opaque reference set
+  from the durable Run/result projection. Ambiguous singular references,
+  missing context, and out-of-range ordinals fail closed. The resolved refs are
+  carried by `IntentFrame`; they do not select Actions, widen scope, or grant
+  authority.
+- Evidence: focused intent/parity/bridge coverage `81 passed, 1 warning`; full
+  regression `6198 passed, 3 skipped, 186 warnings in 127s`; frontend static,
+  browser-window, and realistic-browser gates passed. Candidate
+  `odysseus:candidate-0975fcf6` is deployed with image
+  `sha256:6d17ca70d6f7...`; `/api/version` reports source
+  `0975fcf67637ee32ad86ffffe993cb31978a3237` and migration
+  `20260825_002_work_run_completion_v6`.
+- Status: `VERIFIED_LIVE`; owner-live cross-model reference dogfood remains
+  `OWNER_DOGFOOD_PENDING`.
