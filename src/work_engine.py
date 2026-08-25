@@ -471,6 +471,52 @@ class WorkEngine:
             "current_step": row.current_step,
         }
 
+    def complete_read_deliverable(self, owner, run_id, action_id, *, result=None):
+        """Terminally complete a single canonical read without model prose.
+
+        Read Actions have no postcondition-changing effect, so a structured
+        successful Result is their verification.  This is deliberately
+        generic and refuses to terminally complete a consequential Action.
+        """
+        row = self._one(WorkRun, owner, run_id, "run")
+        action = self.db.query(WorkAction).filter_by(id=str(action_id), run_id=row.id).one_or_none()
+        if action is None or action.status != "completed":
+            raise WorkError("completed read action is required")
+        if action.effect_class != "read_private":
+            raise WorkError("only read-private actions may complete a read deliverable")
+        if row.status in {"completed", "failed", "cancelled"}:
+            return serialize(row)
+        criteria = row.completion_criteria if isinstance(row.completion_criteria, dict) else {}
+        if criteria.get("completion_mode") not in {"single_verified_read", "single_read"}:
+            raise WorkError("run is not a single-read deliverable")
+        row.status = "completed"
+        row.lifecycle_state = "succeeded"
+        row.current_step = "canonical read verified"
+        supplied_status = str((result or {}).get("status") or (result or {}).get("result_status") or "").upper() if isinstance(result, dict) else ""
+        result_status = "SUCCESS_EMPTY" if supplied_status in {"EMPTY", "EMPTY_RESULT", "SUCCESS_EMPTY"} or result in (None, [], {}) else "SUCCESS_WITH_DATA"
+        row.result_summary = {
+            "outcome": "canonical_read_verified",
+            "action_id": action.id,
+            "result_status": result_status,
+        }
+        row.verification = {"success": True, "kind": "structured_read_result", "action_id": action.id}
+        row.ended_at = now()
+        row.revision += 1
+        self.event(owner, "run.completed", run_id=row.id, payload={"reason": "canonical read result verified"})
+        self.db.commit(); self.db.refresh(row)
+        return serialize(row)
+
+    def fail_read_deliverable(self, owner, run_id, *, reason):
+        """Preserve a canonical read failure as a terminal blocked Run."""
+        row = self._one(WorkRun, owner, run_id, "run")
+        if row.status in {"completed", "failed", "cancelled"}:
+            return serialize(row)
+        return self.set_run_status(owner, run_id, "failed", {
+            "lifecycle_state": "failed",
+            "current_step": "canonical read failed",
+            "error_summary": str(reason or "canonical read failed")[:500],
+        })
+
     def checkpoint_run(self, owner, run_id, checkpoint):
         row = self._one(WorkRun, owner, run_id, "run")
         entries = list(row.checkpoints or [])

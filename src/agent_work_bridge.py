@@ -18,7 +18,14 @@ from src.tool_bindings import binding_for_tool
 from src.work_engine import WorkEngine, WorkError
 
 
-_WORK_DOMAINS = frozenset({"homelab", "network_ops"})
+# These are domains whose canonical ActionSpecs are already executable through
+# the shared chat/work bridge.  Keeping this list here is an adapter boundary,
+# not a second registry: capability/action/binding metadata remains the source
+# of authority.
+_WORK_DOMAINS = frozenset({
+    "homelab", "network_ops", "asset_inventory", "security_audit", "osint",
+    "memory", "work", "household", "setup", "career",
+})
 
 
 def _payload(content: Any) -> dict[str, Any] | None:
@@ -85,7 +92,7 @@ def ensure_agent_run(
     continuation: bool = False,
     completion_criteria: dict[str, Any] | None = None,
 ) -> str | None:
-    """Return or create the active owner/session run for actionable homelab work."""
+    """Return or create the active owner/session Run for bridged agent work."""
     owner = str(owner or "").strip()
     session_id = str(session_id or "").strip()
     if not owner or not session_id:
@@ -103,31 +110,49 @@ def ensure_agent_run(
             .order_by(WorkRun.updated_at.desc())
             .first()
         )
-        if active is not None and (continuation or domains.intersection(_WORK_DOMAINS)):
+        if active is not None and (
+            continuation or active.domain in domains.intersection(_WORK_DOMAINS)
+        ):
             return active.id
-        if not domains.intersection(_WORK_DOMAINS):
+        bridged_domains = domains.intersection(_WORK_DOMAINS)
+        if not bridged_domains:
             return None
+        semantic_domain = str((intent or {}).get("domain_concept") or "").strip().lower()
+        domain_name = {
+            "technical_asset": "asset_inventory",
+            "security_finding": "security_audit",
+            "osint_case": "osint",
+            "household_item": "household",
+            "job_opportunity": "career",
+            "job_application": "career",
+            "interview": "career",
+        }.get(semantic_domain, "")
+        if domain_name not in bridged_domains:
+            domain_name = "network_ops" if "network_ops" in bridged_domains else sorted(bridged_domains)[0]
+        is_read = str((intent or {}).get("operation_class") or "").upper() == "READ"
         work = WorkEngine(db)
         run = work.create_run(owner, {
             "session_id": session_id,
-            "domain": "network_ops" if "network_ops" in domains else "homelab",
+            "domain": domain_name,
             "requested_by": owner,
             "model_endpoint": model_endpoint,
             "model_name": model_name,
             "intent": {
                 "source": "chat_agent",
                 "query": str(query or "")[:4000],
-                "domains": sorted(domains.intersection(_WORK_DOMAINS)),
+                "domains": sorted(bridged_domains),
+                "domain_concept": (intent or {}).get("domain_concept"),
+                "operation_class": (intent or {}).get("operation_class"),
             },
             "completion_criteria": completion_criteria or {
                 "objective": str(query or "")[:4000],
-                "deliverable": "canonical network/homelab result",
-                "completion_mode": "verified_run_terminal_state",
+                "deliverable": "canonical read result" if is_read else "canonical network/homelab result",
+                "completion_mode": "single_verified_read" if is_read else "verified_run_terminal_state",
             },
-            "assumptions": [{
+            "assumptions": ([{
                 "kind": "scope",
                 "value": "private IPv4 discovery remains bounded by ActionSpec and broker policy",
-            }],
+            }] if "network_ops" in bridged_domains else []),
             "continuation_state": {"source": "chat_agent", "session_id": session_id},
         })
         work.transition_run(owner, run["id"], "planning", {"current_step": "intent routed to canonical capability"})
@@ -256,6 +281,9 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
         if action is None:
             return None
         work = WorkEngine(db)
+        run = db.query(WorkRun).filter_by(id=action.run_id, owner=str(owner)).one()
+        criteria = run.completion_criteria if isinstance(run.completion_criteria, dict) else {}
+        single_read = action.effect_class == "read_private" and criteria.get("completion_mode") in {"single_verified_read", "single_read"}
         failed = bool(result.get("error")) or result.get("exit_code") not in (None, 0)
         if failed:
             if result.get("execution_ambiguous") and str(action.action_id or "").startswith("execute_"):
@@ -283,6 +311,8 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                     reason="bound ActionSpec execution failed",
                     failure_class="execution_failed",
                 )
+            elif single_read:
+                work.fail_read_deliverable(owner, action.run_id, reason=action.error)
             return {"action_id": action.id, "status": "failed"}
         safe_data = result.get("data")
         try:
@@ -338,6 +368,10 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 reason="post-action verification required",
             )
             completed["run_lifecycle_state"] = lifecycle["lifecycle_state"]
+        elif single_read:
+            completed["read_completion"] = work.complete_read_deliverable(
+                owner, action.run_id, action.id, result=safe_data,
+            )
         return completed
 
 

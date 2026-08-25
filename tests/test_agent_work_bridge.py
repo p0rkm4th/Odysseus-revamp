@@ -74,6 +74,62 @@ def test_completion_assessment_is_durable_and_does_not_use_model_prose(monkeypat
         engine.dispose()
 
 
+def test_canonical_read_is_a_terminal_durable_run_result(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-memory", "What do you remember about me?",
+            intent={
+                "domains": ["memory"],
+                "domain_concept": "MEMORY",
+                "operation_class": "READ",
+            },
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "read_memory",
+            {"action": "summarize_owner_memory"},
+        )
+        assert action_id
+        completed = bridge.record_result(
+            "alice", action_id,
+            {"success": True, "data": {"status": "SUCCESS_EMPTY", "records": []}},
+        )
+        assert completed["status"] == "completed"
+        assert completed["read_completion"]["lifecycle_state"] == "succeeded"
+        assessment = bridge.assess_agent_run("alice", run_id)
+        assert assessment["status"] == "COMPLETE"
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            assert run.domain == "memory"
+            assert run.result_summary["result_status"] == "SUCCESS_EMPTY"
+            assert db.query(WorkResult).filter_by(run_id=run_id, owner="alice").count() == 1
+    finally:
+        engine.dispose()
+
+
+def test_canonical_read_failure_is_not_reported_as_empty(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-assets", "What IT assets do I have?",
+            intent={
+                "domains": ["asset_inventory"],
+                "domain_concept": "TECHNICAL_ASSET",
+                "operation_class": "READ",
+            },
+        )
+        action_id = bridge.prepare_action("alice", run_id, "manage_assets", {"action": "list"})
+        assert action_id
+        bridge.record_result("alice", action_id, {"error": "CMDB unavailable", "exit_code": 1})
+        assessment = bridge.assess_agent_run("alice", run_id)
+        assert assessment["status"] == "BLOCKED"
+        assert "CMDB unavailable" in assessment["reason"]
+    finally:
+        engine.dispose()
+
+
 def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
