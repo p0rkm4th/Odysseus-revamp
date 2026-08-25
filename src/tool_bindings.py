@@ -96,6 +96,18 @@ READ_MEMORY_SCHEMA = {
     }
 }
 
+READ_WORK_SCHEMA = {
+    "type": "function", "function": {
+        "name": "read_work",
+        "description": "Read authenticated owner-scoped Work Engine state. Read-only; do not substitute chat context or filesystem data for canonical Work records.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["overview", "review", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments"]},
+            "run_id": {"type": "string"}, "goal_id": {"type": "string"}, "project_id": {"type": "string"}, "task_id": {"type": "string"},
+            "horizon_hours": {"type": "integer", "minimum": 1, "maximum": 336},
+        }, "required": ["action"]},
+    }
+}
+
 _MANAGE_CONTRACT = '''### `manage_assets`
 First-class persistent asset/CMDB tool. Use this instead of Bash for canonical
 asset records, relationships, observations, retirement, and merges.
@@ -171,6 +183,13 @@ filesystem inspection, and invented personal facts are not substitutes.
 Use `summarize_owner_memory`, `search_memory`, or `inspect_memory`.
 `<invoke name="read_memory"><parameter name="action">summarize_owner_memory</parameter></invoke>`.'''
 
+_WORK_READ_CONTRACT = '''### `read_work`
+Canonical read-only Work Engine projection. Use `overview`, `review`,
+`context`, or a typed list action for durable goals, projects, tasks, runs, and
+commitments. Results are owner-scoped; do not invent work state or use files as
+a substitute.
+`<invoke name="read_work"><parameter name="action">overview</parameter></invoke>`.'''
+
 
 TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_assets": ToolBinding("manage_assets", TOOL_CAPABILITY_IDS["manage_assets"], MANAGE_ASSETS_SCHEMA, _MANAGE_CONTRACT, frozenset({"asset_inventory"}), "manage_assets"),
@@ -179,6 +198,7 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_osint": ToolBinding("manage_osint", TOOL_CAPABILITY_IDS["manage_osint"], MANAGE_OSINT_SCHEMA, _OSINT_CONTRACT, frozenset({"osint"}), "manage_osint"),
     "manage_security_assessment": ToolBinding("manage_security_assessment", TOOL_CAPABILITY_IDS["manage_security_assessment"], MANAGE_SECURITY_ASSESSMENT_SCHEMA, _SECURITY_CONTRACT, frozenset({"security_audit", "pentest_ops", "network_ops"}), "manage_security_assessment"),
     "read_memory": ToolBinding("read_memory", TOOL_CAPABILITY_IDS["read_memory"], READ_MEMORY_SCHEMA, _MEMORY_READ_CONTRACT, frozenset({"memory"}), "read_memory"),
+    "read_work": ToolBinding("read_work", TOOL_CAPABILITY_IDS["read_work"], READ_WORK_SCHEMA, _WORK_READ_CONTRACT, frozenset({"work"}), "read_work"),
 })
 
 

@@ -108,6 +108,14 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             for action in ("summarize_owner_memory", "search_memory", "inspect_memory")
         )),
     ),
+    "work.read": CapabilitySpec(
+        capability_id="work.read",
+        description="Owner-scoped read projections over the canonical Work Engine.",
+        actions=_actions(*(
+            ActionSpec(action_id=action, effects=("read_private",), executor_key="read_work")
+            for action in ("overview", "review", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments")
+        )),
+    ),
     "system.privileged_diagnostics": CapabilitySpec(
         capability_id="system.privileged_diagnostics",
         description="Narrow brokered diagnostic operations.",
@@ -245,6 +253,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "manage_osint": "research.public_sources",
     "manage_security_assessment": "security.assessment.read",
     "read_memory": "memory.read",
+    "read_work": "work.read",
 })
 
 

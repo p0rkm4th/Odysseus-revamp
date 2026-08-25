@@ -21,6 +21,10 @@ or remove authority.
 | Hades / Memory | `memory.read` | `summarize_owner_memory` | yes | yes | yes | yes | no | application / canonical Brain store | none | authenticated owner scope; no Skills/filesystem fallback |
 | Hades / Memory | `memory.read` | `search_memory` | yes | yes | yes | yes | no | application / canonical Brain store | none | authenticated owner scope; no Skills/filesystem fallback |
 | Hades / Memory | `memory.read` | `inspect_memory` | yes | yes | yes | yes | no | application / canonical Brain store | none | authenticated owner scope; no Skills/filesystem fallback |
+| Work | `work.read` | `overview` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
+| Work | `work.read` | `review` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
+| Work | `work.read` | `context` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
+| Work | `work.read` | `list_goals` / `list_projects` / `list_tasks` / `list_runs` / `list_commitments` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
 
 “MODEL: yes” means the canonical binding contract may be projected when the
 intent and policy select the capability. Native function schemas and strict

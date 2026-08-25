@@ -1495,6 +1495,42 @@ async def _execute_read_memory_binding(block, owner=None):
         return "read_memory", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_read_work_binding(block, owner=None):
+    """Adapt the canonical WorkEngine projections to a read-only binding."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        action = str(payload.get("action") or "").strip().casefold()
+        allowed = {"overview", "review", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments"}
+        if action not in allowed:
+            raise ValueError("unsupported read-only Work action")
+        if not owner:
+            raise PermissionError("authenticated Work owner is required")
+        from core.database import SessionLocal
+        from core.work_models import WorkCommitment, WorkGoal, WorkProject, WorkRun, WorkTask
+        from src.work_engine import WorkEngine
+        with SessionLocal() as db:
+            service = WorkEngine(db)
+            if action == "overview":
+                result = {
+                    "goals": service.list_records(owner, WorkGoal, status="active"),
+                    "projects": service.list_records(owner, WorkProject, status="active"),
+                    "tasks": service.list_records(owner, WorkTask),
+                    "runs": service.list_records(owner, WorkRun),
+                    "commitments": service.list_records(owner, WorkCommitment, status="open"),
+                }
+            elif action == "review":
+                result = service.life_review(owner, horizon_hours=int(payload.get("horizon_hours") or 48))
+            elif action == "context":
+                result = service.context(owner, goal_id=payload.get("goal_id"), project_id=payload.get("project_id"), task_id=payload.get("task_id"), run_id=payload.get("run_id"))
+            else:
+                models = {"list_goals": (WorkGoal, None), "list_projects": (WorkProject, None), "list_tasks": (WorkTask, None), "list_runs": (WorkRun, None), "list_commitments": (WorkCommitment, "open")}
+                model, status = models[action]
+                result = {action.removeprefix("list_"): service.list_records(owner, model, status=status)}
+        return "read_work", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+    except Exception as exc:
+        return "read_work", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
@@ -1502,6 +1538,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "manage_osint": _execute_manage_osint_binding,
     "manage_security_assessment": _execute_security_assessment_binding,
     "read_memory": _execute_read_memory_binding,
+    "read_work": _execute_read_work_binding,
 }
 
 

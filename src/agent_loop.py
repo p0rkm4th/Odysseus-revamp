@@ -603,6 +603,13 @@ _DOMAIN_RULES["memory"] = (
     "- If the canonical result says retrieval failed, say retrieval failed. Only say zero memories when the canonical result explicitly says ZERO_RESULT."
 )
 
+_DOMAIN_RULES["work"] = (
+    "## Canonical Work rules\n"
+    "- Explicit questions about goals, projects, tasks, runs, or commitments use the owner-scoped Work Engine read contract.\n"
+    "- Do not infer current Work state from prose, passive memory, or filesystem data.\n"
+    "- Distinguish empty canonical Work results from unavailable or failed retrieval."
+)
+
 # Capability V1 domain projection. These hints affect discovery/visibility;
 # policy, security gates, and execution remain owned by their existing layers.
 from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings

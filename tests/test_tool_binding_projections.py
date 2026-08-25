@@ -33,8 +33,8 @@ def test_tags_contracts_domains_and_executors_are_projected():
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 6
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 7
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
@@ -86,3 +86,21 @@ def test_memory_read_binding_is_read_only_and_structured(monkeypatch):
     assert result["success"] is True
     assert result["data"]["status"] == "ok"
     assert result["data"]["memories"][0]["text"] == "likes tea"
+
+
+def test_work_read_binding_is_owner_scoped_and_structured(monkeypatch):
+    from core.database import Base
+    from tests.helpers.sqlite_db import make_temp_sqlite
+    from src.work_engine import WorkEngine
+    session_factory, engine, tmpfile = make_temp_sqlite(Base.metadata)
+    monkeypatch.setattr("core.database.SessionLocal", session_factory)
+    with session_factory() as db:
+        goal = WorkEngine(db).create_goal("alice", {"title": "Ship the release"})
+        WorkEngine(db).update_goal("alice", goal["id"], {"status": "active"})
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_work", payload={"action": "overview"}, owner="alice"))
+    assert result["success"] is True
+    assert len(result["data"]["goals"]) == 1
+    assert result["data"]["goals"][0]["title"] == "Ship the release"
+    engine.dispose()
+    tmpfile.close()
