@@ -43,8 +43,8 @@ def test_native_action_enums_cover_every_registered_action():
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 10
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career", "read_communications"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 11
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
@@ -220,6 +220,13 @@ def test_setup_read_binding_reuses_secret_free_owner_projection(monkeypatch, tmp
     assert result["success"] is True
     assert result["data"]["owner"] == "alice"
     assert result["data"]["secrets_exposed"] is False
+
+
+def test_communications_read_binding_requires_authenticated_owner():
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_communications", payload={"action": "overview"}, owner=None))
+    assert result["success"] is False
+    assert "owner" in result["error"].lower()
 
 
 def test_osint_read_binding_reuses_owner_scoped_case_store(tmp_path, monkeypatch):

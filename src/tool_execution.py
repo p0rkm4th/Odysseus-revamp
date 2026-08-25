@@ -1635,6 +1635,62 @@ async def _execute_read_career_binding(block, owner=None):
         return "read_career", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_read_communications_binding(block, owner=None):
+    """Adapt the existing owner-scoped Communications overview to a read binding."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        if str(payload.get("action") or "overview").strip().casefold() != "overview":
+            raise ValueError("unsupported read-only Communications action")
+        if not owner:
+            raise PermissionError("authenticated Communications owner is required")
+        from datetime import datetime, timedelta
+        from sqlalchemy import and_, or_
+        from core.database import CalendarCal, CalendarEvent, EmailAccount, SessionLocal
+        now = datetime.utcnow()
+        horizon = now + timedelta(days=14)
+        with SessionLocal() as db:
+            accounts = db.query(EmailAccount).filter(
+                or_(
+                    EmailAccount.owner == owner,
+                    and_(or_(EmailAccount.owner.is_(None), EmailAccount.owner == ""), EmailAccount.from_address == owner),
+                )
+            ).order_by(EmailAccount.is_default.desc(), EmailAccount.created_at.asc()).all()
+            calendars = db.query(CalendarCal).filter(CalendarCal.owner == owner).all()
+            calendar_ids = [calendar.id for calendar in calendars]
+            events = []
+            if calendar_ids:
+                events = db.query(CalendarEvent).filter(
+                    CalendarEvent.calendar_id.in_(calendar_ids),
+                    CalendarEvent.status != "cancelled",
+                    CalendarEvent.dtstart < horizon,
+                    CalendarEvent.dtend >= now,
+                ).order_by(CalendarEvent.dtstart).limit(20).all()
+            result = {
+                "status": "SUCCESS" if accounts or calendars or events else "SUCCESS_EMPTY",
+                "source": "canonical_email_accounts_and_calendar",
+                "email": {
+                    "configured": len(accounts),
+                    "enabled": sum(1 for account in accounts if account.enabled),
+                    "accounts": [
+                        {"id": account.id, "name": account.name, "enabled": bool(account.enabled), "default": bool(account.is_default)}
+                        for account in accounts
+                    ],
+                },
+                "calendar": {
+                    "calendars": len(calendars),
+                    "upcoming_14_days": len(events),
+                    "events": [
+                        {"uid": event.uid, "summary": event.summary, "dtstart": event.dtstart.isoformat(), "calendar_id": event.calendar_id}
+                        for event in events
+                    ],
+                },
+                "contacts": {"status": "NOT_PROJECTED", "reason": "CardDAV contact ownership is not yet a canonical read binding"},
+            }
+        return "read_communications", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+    except Exception as exc:
+        return "read_communications", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
@@ -1646,6 +1702,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_household": _execute_read_household_binding,
     "read_setup": _execute_read_setup_binding,
     "read_career": _execute_read_career_binding,
+    "read_communications": _execute_read_communications_binding,
 }
 
 

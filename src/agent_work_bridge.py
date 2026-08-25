@@ -25,6 +25,7 @@ from src.work_engine import WorkEngine, WorkError, now
 _WORK_DOMAINS = frozenset({
     "homelab", "network_ops", "asset_inventory", "security_audit", "osint",
     "memory", "work", "household", "setup", "career",
+    "communications",
 })
 
 

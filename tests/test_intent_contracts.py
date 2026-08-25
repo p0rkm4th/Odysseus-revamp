@@ -17,6 +17,18 @@ def test_contract_registry_is_complete_for_registered_contracts():
     assert validate_contracts() == []
 
 
+def test_communications_read_uses_canonical_owner_scoped_projection():
+    frame = compile_intent("What communications are configured?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "COMMUNICATIONS"
+    assert frame.operation_class == "READ"
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "communications.read"
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_communications"
+    assert resolved.action.approval.value == "none"
+
+
 @pytest.mark.parametrize("query", [
     "What IT assets do I have?",
     "What machines are recorded?",

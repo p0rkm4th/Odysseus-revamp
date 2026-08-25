@@ -143,6 +143,16 @@ READ_CAREER_SCHEMA = {
     }
 }
 
+READ_COMMUNICATIONS_SCHEMA = {
+    "type": "function", "function": {
+        "name": "read_communications",
+        "description": "Read the authenticated owner's canonical configured email accounts and calendar overview. Read-only; provider credentials and message bodies are never exposed by this contract.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["overview"]},
+        }, "required": ["action"]},
+    }
+}
+
 _MANAGE_CONTRACT = '''### `manage_assets`
 First-class persistent asset/CMDB tool. Use this instead of Bash for canonical
 asset records, relationships, observations, retirement, and merges.
@@ -243,6 +253,13 @@ Canonical owner-scoped Career reads under Work. Use `overview`, `saved_opportuni
 are adapters; NOT_CONFIGURED is not an empty listing and applications are never autonomous.
 `<invoke name="read_career"><parameter name="action">overview</parameter></invoke>`.'''
 
+_COMMUNICATIONS_READ_CONTRACT = '''### `read_communications`
+Read-only owner-scoped Communications overview. It reports configured email
+accounts and upcoming canonical calendar events without exposing secrets or
+message bodies. Provider connectivity and message retrieval remain separate
+provider operations.
+`<invoke name="read_communications"><parameter name="action">overview</parameter></invoke>`.'''
+
 
 TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_assets": ToolBinding("manage_assets", TOOL_CAPABILITY_IDS["manage_assets"], MANAGE_ASSETS_SCHEMA, _MANAGE_CONTRACT, frozenset({"asset_inventory"}), "manage_assets"),
@@ -255,6 +272,7 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
     "read_setup": ToolBinding("read_setup", TOOL_CAPABILITY_IDS["read_setup"], READ_SETUP_SCHEMA, _SETUP_READ_CONTRACT, frozenset({"setup", "integrations", "system"}), "read_setup"),
     "read_career": ToolBinding("read_career", TOOL_CAPABILITY_IDS["read_career"], READ_CAREER_SCHEMA, _CAREER_READ_CONTRACT, frozenset({"work", "career"}), "read_career"),
+    "read_communications": ToolBinding("read_communications", TOOL_CAPABILITY_IDS["read_communications"], READ_COMMUNICATIONS_SCHEMA, _COMMUNICATIONS_READ_CONTRACT, frozenset({"communications", "system"}), "read_communications"),
 })
 
 

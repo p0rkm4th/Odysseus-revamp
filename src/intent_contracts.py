@@ -195,6 +195,11 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "setup_state_or_integrations",
     ),
+    "COMMUNICATIONS": DomainContract(
+        "COMMUNICATIONS", "communications.read", {"READ": "overview"}, "read_communications",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "communications_overview",
+    ),
     "CAREER_PROFILE": DomainContract(
         "CAREER_PROFILE", "career.read", {"READ": "overview"}, "read_career",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "career_overview",
@@ -369,6 +374,8 @@ def compile_intent(
         concept = "WORK"
     elif re.search(r"\b(?:work|working|project|task|goal|commitment)\b", q):
         concept = "WORK"
+    elif re.search(r"\b(?:communications?|email accounts?|calendars?|calendar events?)\b", q):
+        concept = "COMMUNICATIONS"
     elif re.search(r"\b(?:setup|configured|integrations?|connected)\b", q):
         concept = "INTEGRATION"
     elif re.search(r"\b(?:career|job search|jobs?|opportunit(?:y|ies)|applications?|interviews?|resume|roles?)\b", q):
@@ -412,6 +419,7 @@ def compile_intent(
         "SERVICE": "infrastructure", "SECURITY_FINDING": "infrastructure", "SECURITY_ENGAGEMENT": "infrastructure",
         "SECURITY_EVIDENCE": "infrastructure", "OSINT_CASE": "research", "RESEARCH": "research",
         "HOUSEHOLD_ITEM": "home", "INTEGRATION": "system",
+        "COMMUNICATIONS": "communications",
     }.get(concept)
     return IntentFrame(
         operation_class=operation,
