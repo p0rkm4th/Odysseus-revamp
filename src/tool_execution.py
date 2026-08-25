@@ -1863,7 +1863,12 @@ async def execute_tool_block(block, *args, **kwargs):
         # read from model tool arguments and cannot replace policy, approval,
         # owner isolation, disabled-tools, or broker authorization.
         grant_id = kwargs.get("delegated_grant_id")
-        from src.capability_registry import action_for_tool
+        from src.capability_registry import action_for_tool, canonicalize_action_content
+        normalized_content = canonicalize_action_content(block.tool_type, block.content)
+        if normalized_content != block.content:
+            # ToolBlock is a namedtuple. Rebuild it so approval, dispatch, and
+            # Result validation all see the same canonical Action payload.
+            block = block._replace(content=normalized_content)
         action = action_for_tool(block.tool_type, block.content)
         exact_approval = kwargs.get("exact_approval")
         if action is None or not action.known:
