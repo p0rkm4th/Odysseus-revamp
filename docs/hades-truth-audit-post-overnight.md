@@ -501,4 +501,6 @@ realistic browser gates pass. Rollback is retained as
   binding.
 - Evidence: registry, capability-gate, parity, and binding coverage `230
   passed, 1 warning`; full regression `6201 passed, 3 skipped, 186 warnings
-  in 124.58s`. Status: `VERIFIED_TESTED`; deployment pending this checkpoint.
+  in 124.58s`. Candidate `odysseus:candidate-4433f2ad` is deployed and matched
+  by source commit `4433f2ad1d7cd113099b3eaba2534ccad609d0c2`; health and all
+  frontend/browser gates passed. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`.
