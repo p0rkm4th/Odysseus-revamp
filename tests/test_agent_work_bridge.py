@@ -45,6 +45,33 @@ def test_agent_network_intent_creates_one_owner_session_run_and_reuses_it(monkey
         engine.dispose()
 
 
+def test_continuation_projection_includes_canonical_next_step_without_materializing_action(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-next-step", "check homelab service status",
+            intent={"domains": ["homelab"], "domain_concept": "SERVICE", "operation_class": "READ"},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.plan = [{
+                "sequence": 1,
+                "capability_id": "homelab.manage",
+                "action_id": "service_status",
+                "target_resources": ["service:nginx"],
+            }]
+            db.commit()
+        projection = bridge.continuation_run_projection("alice", run_id)
+        assert projection["next_step"]["status"] == "READY"
+        assert projection["next_step"]["safe_auto_continue"] is True
+        assert projection["next_step"]["action"]["action_id"] == "service_status"
+        with session_factory() as db:
+            assert db.query(WorkAction).filter_by(run_id=run_id).count() == 0
+    finally:
+        engine.dispose()
+
+
 def test_completion_assessment_is_durable_and_does_not_use_model_prose(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)

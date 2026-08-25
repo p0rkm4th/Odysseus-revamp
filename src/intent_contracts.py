@@ -348,6 +348,21 @@ def resolve_continuation(frame: IntentFrame, active_run: Mapping[str, Any] | Non
             "BLOCKED", run_reference=run_id, action_reference=action_id,
             phase="EXECUTION_AMBIGUOUS", reason="independent verification is required before retry",
         )
+    next_step = active_run.get("next_step")
+    if isinstance(next_step, Mapping):
+        next_status = str(next_step.get("status") or "").upper()
+        next_action = next_step.get("action") if isinstance(next_step.get("action"), Mapping) else {}
+        next_action_id = str(next_action.get("id") or "").strip() or action_id
+        if next_status == "WAITING_APPROVAL":
+            return ContinuationResolution("RESOLVED", run_id, next_action_id, "AWAITING_APPROVAL", "exact approval is pending")
+        if next_status == "WAITING_INPUT":
+            return ContinuationResolution("RESOLVED", run_id, next_action_id, "AWAITING_INPUT", "required input is pending")
+        if next_status in {"READY", "IN_PROGRESS"} and next_action:
+            return ContinuationResolution("RESOLVED", run_id, next_action_id, next_status, "durable next Action is available")
+        if next_status == "COMPLETE":
+            return ContinuationResolution("BLOCKED", run_id, next_action_id, "COMPLETE", "Run deliverable is already complete")
+        if next_status in {"BLOCKED", "NO_PLAN", "UNAVAILABLE"}:
+            return ContinuationResolution("BLOCKED", run_id, next_action_id, next_status, str(next_step.get("reason") or "Run cannot be continued safely"))
     actions = active_run.get("actions")
     if isinstance(actions, list):
         candidates = [item for item in actions if isinstance(item, Mapping) and item.get("status") in {
