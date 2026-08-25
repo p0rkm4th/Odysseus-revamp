@@ -977,3 +977,23 @@ scope authorization before active discovery. No work/VPN scan was performed.
 - Authenticated owner GUI retests for Qwen/Luna/Sol, model switching, canonical
   Memory provenance, and read-approval rendering remain pending. No owner
   session was reused and no approval or owner authority was bypassed.
+
+## P0 live default-read regression checkpoint — 2026-08-25
+
+An authenticated isolated runtime using the deployed Qwen path exposed one
+additional generic defect: Qwen emitted a `read_work` tool block without its
+low-level `action` field. The registry treated that as an unknown consequential
+Action, causing a meaningless exact-approval card instead of the declared Work
+overview read. This was reproduced in the live chat-stream path, not only in a
+registry unit test.
+
+Commit `b6157b5c` repairs the seam by declaring safe default overview Actions
+for first-class read bindings and materializing the canonical payload before
+approval, trusted dispatch, and Result validation. Consequential bindings have
+no implicit default and remain fail-closed. Focused coverage is 103 passed.
+
+The replacement candidate and full regression remain pending. Network host
+namespace, VPN fail-closed behavior, canonical Memory provenance, provider
+failure continuation, and Qwen/Luna/Sol owner-live parity remain explicitly
+`OWNER_DOGFOOD_PENDING`; no active work/VPN scan or owner authority bypass was
+performed.
