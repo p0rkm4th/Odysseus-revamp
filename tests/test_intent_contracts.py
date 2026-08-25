@@ -3,6 +3,7 @@ import pytest
 from src.intent_contracts import (
     DOMAIN_CONTRACTS,
     compile_intent,
+    resolve_continuation,
     generated_parity_matrix,
     resolve_intent,
     result_status,
@@ -45,6 +46,17 @@ def test_continuation_and_depth_are_structured_not_phrase_specific():
     continued = compile_intent("continue", continuation=True, run_reference="run-1")
     assert continued.operation_class == "CONTINUE"
     assert continued.run_reference == "run-1"
+    assert continued.workspace_hint is None
+
+
+def test_continuation_resolves_against_durable_run_without_executing():
+    frame = compile_intent("go ahead", run_reference="run-1")
+    assert frame.operation_class == "CONTINUE"
+    resolved = resolve_continuation(frame, {"id": "run-1", "status": "awaiting_input", "continuation_state": {"pending_action_id": "action-1"}})
+    assert resolved.status == "RESOLVED"
+    assert resolved.run_reference == "run-1"
+    assert resolved.action_reference == "action-1"
+    assert resolve_continuation(frame, {"id": "run-1", "status": "completed"}).status == "BLOCKED"
 
 
 def test_result_status_distinguishes_empty_from_failure():
@@ -89,6 +101,7 @@ def test_work_reads_compile_to_the_canonical_read_binding():
     assert resolved.action_id == "overview"
     assert resolved.binding_name == "read_work"
     assert resolved.action.approval.value == "none"
+    assert resolved.frame.workspace_hint == "work"
 
 
 def test_osint_reads_compile_to_the_existing_case_store_binding():
