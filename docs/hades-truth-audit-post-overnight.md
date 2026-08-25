@@ -295,3 +295,15 @@ Runtime `/api/version` reports the same source/build/frontend provenance;
 health, broker socket, Qwen inference, frontend static, browser-window, and
 realistic browser gates pass. Rollback is retained as
 `odysseus:rollback-8c1c6e58-prev`.
+## Complete discovered target propagation checkpoint
+
+- Status: `VERIFIED_TESTED` / `OWNER_DOGFOOD_PENDING`
+- Evidence: the canonical Work bridge now propagates every discovered private
+  address from each CMDB draft candidate, including multi-homed candidates,
+  into the durable service-enumeration Plan and Action in stable order.
+- Bound: propagation remains owner/run scoped and capped at 256 targets; the
+  existing private-scope validation, exact approval, broker, and verification
+  gates remain authoritative.
+- Tests: focused Network/Run gates `20 passed, 1 warning`; full regression
+  `6159 passed, 3 skipped, 186 warnings`.
+- Live status: owner-live network dogfood remains pending; no live scan was run.
