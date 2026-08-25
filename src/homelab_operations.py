@@ -394,7 +394,9 @@ class HomelabOperations:
                 kind = (
                     "VPN" if re.search(r"(?:^|[-_.])(?:tun|tap|wg|vpn|proton|tailscale|zerotier)|(?:vpn)", name, re.I)
                     or ("POINTOPOINT" in flags and link_type in {"none", "ipip", "sit"})
-                    else "APPLICATION_RUNTIME" if re.search(r"^(docker|br-|veth|cni|virbr)", name, re.I)
+                    else "DOCKER_BRIDGE" if re.search(r"^(docker|br-|veth)", name, re.I)
+                    else "APPLICATION_RUNTIME" if re.search(r"^(cni|virbr)", name, re.I)
+                    else "PHYSICAL_LAN" if re.search(r"^(wl|en|eth)", name, re.I)
                     else "HOST_LOCAL"
                 )
                 entries = [{"address": info["local"], "prefix_length": info.get("prefixlen"), "family": info.get("family")} for info in (item.get("addr_info") or []) if isinstance(info, dict) and info.get("local")]
@@ -409,14 +411,15 @@ class HomelabOperations:
                     if addr.get("family") == "inet" and item["name"] != "lo":
                         try:
                             cidr = str(ipaddress.ip_interface(f"{addr['address']}/{addr.get('prefix_length')}").network)
+                            runtime_internal = item["kind"] in {"APPLICATION_RUNTIME", "DOCKER_BRIDGE", "SANDBOX_INTERNAL"}
                             ownership = (
-                                "RUNTIME_INTERNAL" if item["kind"] == "APPLICATION_RUNTIME"
+                                "RUNTIME_INTERNAL" if runtime_internal
                                 else "VPN/CORPORATE_OR_UNKNOWN" if vpn
                                 else "UNKNOWN"
                             )
                             scope = {"interface": item["name"], "cidr": cidr, "ownership": ownership, "context_kind": item["kind"]}
                             scopes.append(scope)
-                            (runtime_scopes if item["kind"] == "APPLICATION_RUNTIME" else user_scopes).append(scope)
+                            (runtime_scopes if runtime_internal else user_scopes).append(scope)
                         except ValueError:
                             pass
             context_id = hashlib.sha256(json.dumps({"interfaces": interfaces, "routes": default_routes}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
