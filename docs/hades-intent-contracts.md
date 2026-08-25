@@ -23,7 +23,7 @@ Current registered semantic contracts:
 | `TECHNICAL_ASSET` | `inventory.manage/list` via `manage_assets` | technical asset list | implemented/source-tested |
 | `NETWORK` | `homelab.manage/read_network_observations` or bounded discovery plan | network observations/discovery | implemented/source-tested |
 | `SECURITY_FINDING` | `security.assessment.read/list_findings` | finding list | implemented/source-tested |
-| `OSINT_CASE` | `research.public_sources/plan` | OSINT plan | implemented/source-tested |
+| `OSINT_CASE` | `research.public_sources/list_cases` or `plan` via `manage_osint` | Owner-scoped case read or OSINT plan | implemented/source-tested |
 | `MEMORY` | `memory.read/summarize_owner_memory` via `read_memory` | explicit memory read | implemented/source-tested |
 | `WORK` | `work.read/overview` via `read_work` | Work overview | implemented/source-tested |
 | `HOUSEHOLD_ITEM` | `household.read/overview` via `read_household` | Household overview | implemented/source-tested |
@@ -33,7 +33,7 @@ Richer Network reads remain an explicit gap until additional owner-scoped
 service/actions can be referenced without inventing a side registry. Setup’s
 `read_setup` adapter reuses the existing secret-free SetupCenterService and
 never grants authority. Memory’s `read_memory`, Work’s `read_work`, Household’s
-`read_household`, and Setup’s `read_setup` bindings are deliberately read-only;
+`read_household`, Setup’s `read_setup`, and OSINT case reads are deliberately read-only;
 legacy mutation actions
 remain on their compatibility path until they can be migrated without
 broadening this contract.

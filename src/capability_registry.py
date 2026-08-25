@@ -181,6 +181,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="research.public_sources",
         description="Public-source-only research planning and validation.",
         actions=_actions(
+            ActionSpec(action_id="list_cases", effects=("read_private",), executor_key="manage_osint"),
+            ActionSpec(action_id="get_case", effects=("read_private",), executor_key="manage_osint"),
             ActionSpec(action_id="plan", executor_key="manage_osint"),
             ActionSpec(action_id="search", executor_key="manage_osint"),
             ActionSpec(action_id="fetch", executor_key="manage_osint"),

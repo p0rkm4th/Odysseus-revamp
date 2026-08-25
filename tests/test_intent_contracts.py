@@ -91,6 +91,15 @@ def test_work_reads_compile_to_the_canonical_read_binding():
     assert resolved.action.approval.value == "none"
 
 
+def test_osint_reads_compile_to_the_existing_case_store_binding():
+    resolved = resolve_intent(compile_intent("What investigations do I have?"))
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "research.public_sources"
+    assert resolved.action_id == "list_cases"
+    assert resolved.binding_name == "manage_osint"
+    assert resolved.action.approval.value == "none"
+
+
 def test_household_reads_compile_to_the_canonical_read_binding():
     resolved = resolve_intent(compile_intent("What is in my pantry?"))
     assert resolved.available is True

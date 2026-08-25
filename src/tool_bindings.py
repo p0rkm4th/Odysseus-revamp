@@ -67,10 +67,11 @@ MANAGE_OSINT_SCHEMA = {
         "name": "manage_osint",
         "description": "Plan or validate public-source-only research. No credentials, private targets, access-control bypass, or sensitive personal-data collection.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["plan", "search", "fetch"]},
-            "target": {"type": "string"}, "objective": {"type": "string"},
+            "action": {"type": "string", "enum": ["list_cases", "get_case", "plan", "search", "fetch"]},
+            "target": {"type": "string"}, "case_id": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 200},
+            "objective": {"type": "string"},
             "sources": {"type": "array", "items": {"type": "string"}},
-        }, "required": ["action", "target"]},
+        }, "required": ["action"]},
     }
 }
 

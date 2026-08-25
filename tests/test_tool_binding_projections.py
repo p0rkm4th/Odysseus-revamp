@@ -133,3 +133,19 @@ def test_setup_read_binding_reuses_secret_free_owner_projection(monkeypatch, tmp
     assert result["success"] is True
     assert result["data"]["owner"] == "alice"
     assert result["data"]["secrets_exposed"] is False
+
+
+def test_osint_read_binding_reuses_owner_scoped_case_store(tmp_path, monkeypatch):
+    import json
+    import src.osint_read as osint_read
+    monkeypatch.setattr(osint_read, "RESEARCH_DATA_DIR", tmp_path)
+    (tmp_path / "case-1.json").write_text(json.dumps({
+        "owner": "alice", "query": "Cerberus", "status": "done",
+        "sources": [{"url": "https://example.test/source", "title": "Example"}],
+    }), encoding="utf-8")
+    (tmp_path / "other.json").write_text(json.dumps({"owner": "bob", "query": "private"}), encoding="utf-8")
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="manage_osint", payload={"action": "list_cases"}, owner="alice"))
+    assert result["success"] is True
+    assert result["data"]["case_count"] == 1
+    assert result["data"]["cases"][0]["id"] == "case-1"
