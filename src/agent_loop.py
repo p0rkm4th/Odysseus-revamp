@@ -6779,6 +6779,51 @@ async def stream_agent_loop(
                 converted_calls = []
                 used_native = False
         _asset_frame = _intent.get("intent_frame") if isinstance(_intent.get("intent_frame"), dict) else {}
+        _resolved_read = _intent.get("resolved_contract") if isinstance(_intent.get("resolved_contract"), dict) else {}
+        _canonical_read_actions = {
+            "TECHNICAL_ASSET": "list",
+            "NETWORK": "read_network_observations",
+            "SECURITY_FINDING": "list_findings",
+            "OSINT_CASE": "list_cases",
+            "MEMORY": "summarize_owner_memory",
+            "WORK": "overview",
+            "HOUSEHOLD_ITEM": "overview",
+            "INTEGRATION": "state",
+            "CAREER_PROFILE": "overview",
+            "JOB_SEARCH": "overview",
+            "JOB_OPPORTUNITY": "saved_opportunities",
+            "APPLICATION": "applications",
+            "INTERVIEW": "interviews",
+        }
+        # Generic canonical-read repair: once the server-owned IntentFrame has
+        # resolved a READ contract, project its existing binding directly. The
+        # model does not need to remember a route/tool name, and no filesystem
+        # or shell fallback is introduced. Domain-specific payload shaping is
+        # intentionally limited to the registered read Action id.
+        _read_concept = str(_asset_frame.get("domain_concept") or "")
+        _read_binding = str(_resolved_read.get("binding") or "")
+        _read_action = _canonical_read_actions.get(_read_concept)
+        if (
+            not guide_only
+            and not _force_answer
+            and _asset_frame.get("operation_class") == "READ"
+            and _read_binding
+            and _read_action
+            and not tool_blocks
+            and not tool_events
+            and total_tool_calls == 0
+            and _read_binding in set(_relevant_tools or set())
+            and _read_binding not in disabled_tools
+        ):
+            logger.info("[agent] generic canonical read projection concept=%s action=%s", _read_concept, _read_action)
+            if round_response and full_response.endswith(round_response):
+                full_response = full_response[:-len(round_response)]
+            _read_payload = {"action": _read_action}
+            if _read_concept == "MEMORY":
+                _read_payload["query"] = _retrieval_query or "what do you remember about me"
+            tool_blocks = [ToolBlock(_read_binding, json.dumps(_read_payload))]
+            converted_calls = []
+            used_native = False
         _compiled_asset_read = (
             _asset_frame.get("domain_concept") == "TECHNICAL_ASSET"
             and _asset_frame.get("operation_class") == "READ"
