@@ -133,6 +133,16 @@ READ_SETUP_SCHEMA = {
     }
 }
 
+READ_CAREER_SCHEMA = {
+    "type": "function", "function": {
+        "name": "read_career",
+        "description": "Read authenticated owner-scoped Career state. Providers are adapters; NOT_CONFIGURED is not a fake empty listing.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["overview", "saved_opportunities", "applications", "follow_ups", "interviews", "provider_status"]},
+        }, "required": ["action"]},
+    }
+}
+
 _MANAGE_CONTRACT = '''### `manage_assets`
 First-class persistent asset/CMDB tool. Use this instead of Bash for canonical
 asset records, relationships, observations, retirement, and merges.
@@ -227,6 +237,12 @@ configuration and health state without exposing secret values or changing
 authority. Use `state`, `integrations`, or `permissions`.
 `<invoke name="read_setup"><parameter name="action">state</parameter></invoke>`.'''
 
+_CAREER_READ_CONTRACT = '''### `read_career`
+Canonical owner-scoped Career reads under Work. Use `overview`, `saved_opportunities`,
+`applications`, `follow_ups`, `interviews`, or `provider_status`. External providers
+are adapters; NOT_CONFIGURED is not an empty listing and applications are never autonomous.
+`<invoke name="read_career"><parameter name="action">overview</parameter></invoke>`.'''
+
 
 TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_assets": ToolBinding("manage_assets", TOOL_CAPABILITY_IDS["manage_assets"], MANAGE_ASSETS_SCHEMA, _MANAGE_CONTRACT, frozenset({"asset_inventory"}), "manage_assets"),
@@ -238,6 +254,7 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "read_work": ToolBinding("read_work", TOOL_CAPABILITY_IDS["read_work"], READ_WORK_SCHEMA, _WORK_READ_CONTRACT, frozenset({"work"}), "read_work"),
     "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
     "read_setup": ToolBinding("read_setup", TOOL_CAPABILITY_IDS["read_setup"], READ_SETUP_SCHEMA, _SETUP_READ_CONTRACT, frozenset({"setup", "integrations", "system"}), "read_setup"),
+    "read_career": ToolBinding("read_career", TOOL_CAPABILITY_IDS["read_career"], READ_CAREER_SCHEMA, _CAREER_READ_CONTRACT, frozenset({"work", "career"}), "read_career"),
 })
 
 

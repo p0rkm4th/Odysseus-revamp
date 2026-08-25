@@ -122,6 +122,26 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "setup_state",
     ),
+    "CAREER_PROFILE": DomainContract(
+        "CAREER_PROFILE", "career.read", {"READ": "overview"}, "read_career",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "career_overview",
+    ),
+    "JOB_SEARCH": DomainContract(
+        "JOB_SEARCH", "career.read", {"READ": "overview", "RESEARCH": "provider_status"}, "read_career",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "career_search_or_provider",
+    ),
+    "JOB_OPPORTUNITY": DomainContract(
+        "JOB_OPPORTUNITY", "career.read", {"READ": "saved_opportunities", "RESEARCH": "provider_status"}, "read_career",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "career_opportunities",
+    ),
+    "APPLICATION": DomainContract(
+        "APPLICATION", "career.read", {"READ": "applications"}, "read_career",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "career_applications",
+    ),
+    "INTERVIEW": DomainContract(
+        "INTERVIEW", "career.read", {"READ": "interviews"}, "read_career",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "career_interviews",
+    ),
 }
 
 
@@ -170,6 +190,11 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         concept = "WORK"
     elif re.search(r"\b(?:setup|configured|integration|connected)\b", q):
         concept = "INTEGRATION"
+    elif re.search(r"\b(?:career|job search|jobs?|opportunit(?:y|ies)|applications?|interviews?|resume|roles?)\b", q):
+        if re.search(r"\b(?:application|applied|follow[- ]?up)", q): concept = "APPLICATION"
+        elif re.search(r"\b(?:interview|interviews)", q): concept = "INTERVIEW"
+        elif re.search(r"\b(?:saved|roles?|similar|find|search)", q): concept = "JOB_OPPORTUNITY"
+        else: concept = "CAREER_PROFILE"
     match = re.search(r"\b(?:about|for|asset)\s+([A-Za-z0-9_.:-]{2,80})", text, re.IGNORECASE)
     if match:
         target = match.group(1)

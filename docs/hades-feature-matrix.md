@@ -143,3 +143,11 @@ case store through the existing `research.public_sources` capability and
 `manage_osint` binding. `list_cases`/`get_case` return structured case
 projections without promoting report prose to canonical claims; focused tests
 are green and owner-live OSINT dogfood remains separate.
+
+Career foundation adds Career as a Work child module. Its owner-scoped profile,
+search, normalized/deduplicated opportunity, application, and interview state
+is durable and provider-neutral. `career.read`/`read_career` supplies explicit
+read contracts with `NOT_CONFIGURED` provider status and no fabricated jobs;
+future provider mutations are declared exact-approval actions and autonomous
+application submission is not implemented. Focused evidence is E2; external
+provider and owner-live acceptance remain pending.

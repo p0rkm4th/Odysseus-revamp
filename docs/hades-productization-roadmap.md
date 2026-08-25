@@ -1072,3 +1072,11 @@ The OSINT read convergence batch now exposes owner-scoped durable case reads
 `manage_osint` path. It reuses the current case store and keeps report prose
 tainted/non-authoritative; no second research engine or case database was
 added.
+
+Career foundation is now a Work workspace module, not a new top-level
+workspace. It owns normalized opportunity/application/interview projections
+and references existing Work, Contact, Email, Calendar, Document, and
+Notification primitives. Provider adapters remain unconfigured and are
+reported as `NOT_CONFIGURED`; no listings are invented and no autonomous
+applications are submitted. Read contracts are focused-tested; provider setup
+and owner-live dogfood remain future work.

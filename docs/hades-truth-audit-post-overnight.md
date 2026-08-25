@@ -95,3 +95,12 @@ memory versus vector index, and domain documents versus evidence references.
 
 Synthetic tests and source-matched browser tests are not owner dogfood. E6 is
 reserved for the owner’s manual verification on the deployed candidate.
+## Career foundation checkpoint
+
+Career is implemented as a Work child module with owner-scoped durable
+profile/search/opportunity/application/interview projections. It uses the
+generic intent contract and canonical `career.read` binding. No provider is
+configured in this environment, so external search is `NOT_CONFIGURED` and no
+listings or application submissions are fabricated. Focused and full test
+evidence is source-level; provider-backed and owner-live acceptance remain
+pending external owner configuration.
