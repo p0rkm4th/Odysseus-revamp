@@ -198,6 +198,16 @@ full regression at source level is `6136 passed, 3 skipped, 186 warnings` in
 runtime verification before deployment evidence is promoted. Owner-live E6
 remains pending.
 
+## Canonical read exposure expansion checkpoint
+
+The existing registered read bindings for Homelab hosts, service status,
+Security engagements/evidence, and Research history are now exposed through
+the semantic IntentFrame/DomainContract projection. Interrogative research
+questions remain `READ` operations rather than being misclassified as new
+research work. No executor or registry was duplicated. Full regression after
+the change: 6143 passed, 3 skipped, 186 warnings. Owner-live model parity
+remains pending.
+
 ## Source-matched consequential binding deployment
 
 Commit `e7993fdb84c091b1a5a20f746829f8f322fc72f0` is deployed as candidate

@@ -131,6 +131,22 @@ def test_work_reads_compile_to_the_canonical_read_binding():
     assert resolved.frame.workspace_hint == "work"
 
 
+@pytest.mark.parametrize(("query", "concept", "action_id", "binding"), [
+    ("What is the status of my homelab services?", "SERVICE", "service_status", "manage_homelab"),
+    ("Inspect my homelab host", "HOMELAB_HOST", "inspect_host", "manage_homelab"),
+    ("Show my security engagements", "SECURITY_ENGAGEMENT", "list_engagements", "manage_security_assessment"),
+    ("Show my security evidence", "SECURITY_EVIDENCE", "list_evidence", "manage_security_assessment"),
+    ("What research history do I have?", "RESEARCH", "list_cases", "manage_osint"),
+])
+def test_existing_domain_read_bindings_are_semantically_exposed(query, concept, action_id, binding):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == concept
+    assert resolved.action_id == action_id
+    assert resolved.binding_name == binding
+    assert resolved.action.approval.value == "none"
+
+
 def test_osint_reads_compile_to_the_existing_case_store_binding():
     resolved = resolve_intent(compile_intent("What investigations do I have?"))
     assert resolved.available is True

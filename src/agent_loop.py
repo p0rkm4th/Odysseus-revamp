@@ -4664,8 +4664,13 @@ async def stream_agent_loop(
         _concept_domains = {
             "TECHNICAL_ASSET": "asset_inventory",
             "NETWORK": "network_ops",
+            "HOMELAB_HOST": "homelab",
+            "SERVICE": "homelab",
             "SECURITY_FINDING": "security_audit",
+            "SECURITY_ENGAGEMENT": "security_audit",
+            "SECURITY_EVIDENCE": "security_audit",
             "OSINT_CASE": "osint",
+            "RESEARCH": "osint",
             "MEMORY": "memory",
             "WORK": "work",
             "HOUSEHOLD_ITEM": "household",

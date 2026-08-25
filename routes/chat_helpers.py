@@ -182,7 +182,10 @@ def ensure_chat_agent_work_run(
         continuation = frame.operation_class == "CONTINUE"
         canonical_domains = {
             "TECHNICAL_ASSET": "asset_inventory", "NETWORK": "network_ops",
+            "HOMELAB_HOST": "homelab", "SERVICE": "homelab",
             "SECURITY_FINDING": "security_audit", "OSINT_CASE": "osint",
+            "SECURITY_ENGAGEMENT": "security_audit", "SECURITY_EVIDENCE": "security_audit",
+            "RESEARCH": "osint",
             "MEMORY": "memory", "WORK": "work", "HOUSEHOLD_ITEM": "household",
             "INTEGRATION": "setup", "CAREER_PROFILE": "career",
             "JOB_SEARCH": "career", "JOB_OPPORTUNITY": "career",
