@@ -4,6 +4,20 @@ Date: 2026-08-25
 Branch: `recovery/live-candidate-20260823`  
 Final source under audit: `b4e362c1bd18`
 
+## Current continuation update (2026-08-25)
+
+- CMDB owner-boundary repair is now deployed in `9f86213a`: registered Hades
+  asset operations require an authenticated owner and pass it through the
+  existing CLI adapter. Legacy ownerless CLI compatibility remains outside the
+  Hades binding; ownerless rows are fail-closed rather than guessed into an
+  owner.
+- Registered read executors now enforce declared collection/result shapes for
+  Work, Household, OSINT, Communications, technical-asset, Network, and
+  Security reads. Malformed success-shaped payloads become `RESULT_INVALID`.
+- CardDAV contacts remain `NOT_PROJECTED` because the current provider path has
+  no proven owner boundary. No global contacts data is presented as private
+  canonical truth.
+
 ## What changed
 
 - Preserved and committed the handoff IntentFrame/domain-contract, canonical

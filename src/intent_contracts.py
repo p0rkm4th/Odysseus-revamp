@@ -602,7 +602,10 @@ def result_status(result: Any) -> str:
         return "INVALID_RESULT"
     if result.get("error") or result.get("failed") is True or result.get("unavailable") is True:
         return "FAILED" if not result.get("unavailable") else "UNAVAILABLE"
-    if result.get("status") in {"EMPTY_RESULT", "SUCCESS", "SUCCESS_RESULT"}:
+    if result.get("status") in {
+        "EMPTY_RESULT", "SUCCESS_EMPTY", "SUCCESS", "SUCCESS_WITH_DATA",
+        "SUCCESS_RESULT",
+    }:
         return str(result["status"])
     if not result:
         return "INVALID_RESULT"
@@ -667,7 +670,30 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     filters=filters,
                     read_explicit=True,
                 )
-                return validate_result(frame, result)
+                valid, reason = validate_result(frame, result)
+                if not valid:
+                    return valid, reason
+                # Collection reads have a stable top-level member even when
+                # the collection is empty.  Enforce that small contract at
+                # the control-plane boundary rather than allowing an
+                # adapter's bare SUCCESS marker to become canonical truth.
+                expected = {
+                    ("OSINT_CASE", "list_cases"): "cases",
+                    ("RESEARCH", "list_cases"): "cases",
+                    ("GOAL", "list_goals"): "goals",
+                    ("PROJECT", "list_projects"): "projects",
+                    ("TASK", "list_tasks"): "tasks",
+                    ("RUN", "list_runs"): "runs",
+                    ("COMMITMENT", "list_commitments"): "commitments",
+                    ("MISSION", "list_missions"): "missions",
+                    ("WATCH", "list_watches"): "watches",
+                    ("HOUSEHOLD_ITEM", "list_items"): "items",
+                    ("HOUSEHOLD_ITEM", "search_items"): "items",
+                    ("COMMUNICATIONS", "overview"): "email",
+                }.get((concept, action_id))
+                if expected and not isinstance(result.get(expected), (list, dict)):
+                    return False, "INVALID_RESULT"
+                return True, reason
             # Contracted non-read projections currently have no additional
             # shape rules here; the trusted executor and Run verifier remain
             # authoritative for their effects.
