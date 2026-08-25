@@ -111,6 +111,10 @@ def setup_work_routes(*, session_factory=SessionLocal):
     @router.post("/runs/{run_id}/validate")
     async def validate_run(request: Request, run_id: str):
         return await tx(request, lambda svc,o,u: RunPlanner(svc.db).validate(o, run_id))
+    @router.get("/runs/{run_id}/next-step")
+    async def next_run_step(request: Request, run_id: str):
+        """Read-only deterministic projection; never executes or grants authority."""
+        return await tx(request, lambda svc,o,u: RunPlanner(svc.db).next_step(o, run_id))
     @router.post("/runs/{run_id}/execution/{lifecycle_state}")
     async def execution_step(request: Request, run_id: str, lifecycle_state: str, payload: dict[str, Any] = Body(default={})): 
         return await tx(request, lambda svc,o,u: svc.verified_execution_step(o, run_id, lifecycle_state, reason=payload.get("reason"), failure_class=payload.get("failure_class")))

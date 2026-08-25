@@ -279,3 +279,52 @@ class RunPlanner:
             if contract["irreversible"]:
                 warnings.append({"code": "irreversible", "sequence": action.get("sequence"), "message": "action cannot be undone"})
         return {"valid": not failures, "failures": failures, "warnings": warnings, "preview": preview}
+
+    def next_step(self, owner: str, run_id: str) -> dict[str, Any]:
+        """Project the next durable Run step without advancing or authorizing it.
+
+        This is intentionally a resolver, not an executor.  It gives chat and
+        the UI one model-independent answer to ``what happens next?`` while
+        preserving exact approval, verification, and owner-scope boundaries.
+        """
+        run = self._run(owner, run_id)
+        actions = self._actions(run)
+        base = {"run_id": run.id, "lifecycle_state": run.lifecycle_state, "run_status": run.status}
+        if run.status == "completed" and run.lifecycle_state == "succeeded":
+            return base | {"status": "COMPLETE", "action": None, "reason": "run reached verified terminal success", "safe_auto_continue": False, "authority_required": False}
+        if run.status in {"failed", "cancelled"} or run.lifecycle_state in {"failed", "cancelled", "execution_ambiguous", "partial_unknown_state"} or (run.continuation_state or {}).get("execution_ambiguous"):
+            return base | {"status": "BLOCKED", "action": None, "reason": run.error_summary or "run is not safely continuable", "safe_auto_continue": False, "authority_required": False}
+        if run.status == "awaiting_input" or run.lifecycle_state == "waiting_input":
+            return base | {"status": "WAITING_INPUT", "action": None, "reason": run.current_step or "operator input is required", "safe_auto_continue": False, "authority_required": False}
+        if run.lifecycle_state in {"verifying", "compensating"}:
+            return base | {"status": "VERIFYING", "action": None, "reason": run.current_step or "postcondition verification is required", "safe_auto_continue": False, "authority_required": False}
+
+        # Persisted actions are authoritative; plan entries are projected by
+        # _actions when a Run has not materialized its actions yet.
+        pending = [action for action in actions if action.get("status") not in {"completed", "failed", "rejected", "cancelled", "expired"}]
+        if not pending:
+            if actions and all(action.get("status") == "completed" for action in actions):
+                return base | {"status": "COMPLETE", "action": None, "reason": "all declared Run actions completed", "safe_auto_continue": False, "authority_required": False}
+            if not actions:
+                return base | {"status": "NO_PLAN", "action": None, "reason": "Run has no declared actions", "safe_auto_continue": False, "authority_required": False}
+            return base | {"status": "BLOCKED", "action": None, "reason": "Run contains a failed or rejected action", "safe_auto_continue": False, "authority_required": False}
+
+        action = sorted(pending, key=lambda item: (int(item.get("sequence") or 0), str(item.get("id") or "")))[0]
+        action_status = str(action.get("status") or "proposed")
+        projected = {"id": action.get("id"), "sequence": action.get("sequence"), "capability_id": action.get("capability_id"), "action_id": action.get("action_id"), "status": action_status, "target_resources": list(action.get("target_resources") or []), "normalized_input": action.get("normalized_input") or {}}
+        if action_status == "awaiting_approval" or run.status == "awaiting_approval" or run.lifecycle_state == "waiting_approval":
+            return base | {"status": "WAITING_APPROVAL", "action": projected, "reason": "exact action authority is required", "safe_auto_continue": False, "authority_required": True}
+        if action_status in {"executing", "approved"}:
+            return base | {"status": "IN_PROGRESS" if action_status == "executing" else "READY", "action": projected, "reason": "action is approved and ready for the trusted executor" if action_status == "approved" else "action is already executing", "safe_auto_continue": False, "authority_required": False}
+
+        validation = self.validate(owner, run_id)
+        sequence = action.get("sequence")
+        failures = [failure for failure in validation["failures"] if failure.get("sequence") == sequence]
+        if failures:
+            approval_only = all(failure.get("code") == "approval_required" for failure in failures)
+            if approval_only:
+                return base | {"status": "WAITING_APPROVAL", "action": projected, "reason": "exact action authority is required", "safe_auto_continue": False, "authority_required": True, "validation": {"failures": failures, "warnings": validation["warnings"]}}
+            return base | {"status": "BLOCKED", "action": projected, "reason": "next Action cannot pass Run validation", "safe_auto_continue": False, "authority_required": False, "validation": {"failures": failures, "warnings": validation["warnings"]}}
+        contract = next((item.get("contract") for item in validation["preview"]["actions"] if item.get("sequence") == sequence), {})
+        read_only = contract.get("approval") == "none" and not contract.get("writes") and contract.get("effect_class") in {"read_private", "read_only", "read", "internal"}
+        return base | {"status": "READY", "action": projected, "reason": "next declared Action is valid", "safe_auto_continue": bool(read_only), "authority_required": False, "validation": {"failures": [], "warnings": validation["warnings"]}}

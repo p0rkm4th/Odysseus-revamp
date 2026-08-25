@@ -118,6 +118,8 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
             if run is None:
                 return None
             context = WorkEngine(db).context(owner, run_id=run.id)
+            from src.run_planner import RunPlanner
+            next_step = RunPlanner(db).next_step(owner, run.id)
         from src.intent_contracts import compile_intent, resolve_continuation
         continuation = resolve_continuation(
             compile_intent("continue", continuation=True, run_reference=run.id),
@@ -134,6 +136,7 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
             "pending_approval": bool(context.get("pending_approval")),
             "pending_input": bool(context.get("pending_input")),
             "continuation": continuation.as_dict(),
+            "next_step": next_step,
             "recent_events": context.get("recent_events", [])[:8],
         }
         message = untrusted_context_message(
