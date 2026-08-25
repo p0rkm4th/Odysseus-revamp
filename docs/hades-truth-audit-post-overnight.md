@@ -17,6 +17,11 @@ Final source under audit: `b4e362c1bd18`
 - CardDAV contacts remain `NOT_PROJECTED` because the current provider path has
   no proven owner boundary. No global contacts data is presented as private
   canonical truth.
+- Full regression at this checkpoint: **6259 passed, 3 skipped, 186
+  warnings** in 126.64 seconds. Candidate `odysseus:candidate-20c6c0e84d69`
+  is deployed with image `sha256:96519f4a5870d49bdcd5b7a5e8feef2414c157f46dc1ad6116cd6fcdd3dbd03c`.
+  `/api/health`, `/api/version`, frontend static, browser-window, and
+  realistic browser gates passed. Owner-live E6 remains pending.
 
 ## What changed
 
