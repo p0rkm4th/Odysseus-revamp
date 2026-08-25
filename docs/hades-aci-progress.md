@@ -14,6 +14,7 @@
 | RUNTIME_PROFILE_DIAGNOSTICS | `85cb0ee4` | owner-scoped `/api/hades/runtime-profile`; sanitized runtime evidence projection; focused-tested | superseded by final candidate | FOCUSED_TESTED |
 | TOKEN_ACCOUNTING | `ce626774` | nested native tool-schema serialization included in shared estimator; 52 focused tests | `odysseus:candidate-ce626774f5ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | FINAL_RUNTIME_CHECKPOINT | `ce626774` | `6298 passed, 3 skipped`; health/version, broker, Ollama verified; unauthenticated profile route returns 401 | `odysseus:candidate-ce626774f5ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| OLLAMA_CHARACTERIZATION | current working tree | metadata-only `/api/show` plus fallback `/api/tags`; qwen3:8b digest/context/capabilities recorded locally | not rebuilt | FOCUSED_TESTED |
 
 ## H0 evidence
 
@@ -71,6 +72,12 @@ capability probe, provider report, endpoint configuration, registry, heuristic,
 then unknown. The cache is observational and cannot grant an Action. ACI final
 metrics include the effective context projection with runtime allocation,
 profile target, requested input, and reserved output separated.
+
+Live local characterization evidence for the configured Ollama bridge recorded
+protocol `ollama-chat`, runtime `ollama`, model `qwen3:8b`, digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`, architecture
+context `40960`, and provider-reported capabilities `completion`, `tools`, and
+`thinking`. No discovery or inference probe was performed.
 
 ## Deployment provenance
 

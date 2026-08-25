@@ -6,7 +6,7 @@ completion.
 
 | Finding | Current classification | Evidence / disposition |
 |---|---|---|
-| Model-name capability heuristics | PARTIALLY_FIXED | provider/model readers remain; runtime evidence now has explicit precedence and a persisted TTL cache, but active provider probes are still a follow-up |
+| Model-name capability heuristics | PARTIALLY_FIXED | provider/model readers remain; runtime evidence now has explicit precedence, persisted TTL cache, and metadata-only Ollama characterization; active structured/native behavior probes remain |
 | Protocol/runtime identity split | PARTIALLY_FIXED | provider readers distinguish vendors in places; generic runtime seam is incomplete |
 | ContextEnvelope | PARTIALLY_FIXED | canonical `ContextEnvelope.from_runtime_profile` and per-ACI metrics now distinguish runtime allocation from architecture maximum; provider discovery wiring remains |
 | Token accounting incl. schemas | PARTIALLY_FIXED | nested native schema JSON is now counted by the shared estimator; runtime tokenizer calibration and provider-reported error tracking remain |
