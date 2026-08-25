@@ -30,6 +30,7 @@ or remove authority.
 | System / Setup | `setup.read` | `state` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; secret-free configuration state; authority unchanged |
 | System / Integrations | `setup.read` | `integrations` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; secret-free connectivity projection; configuration is not health proof |
 | System / Permissions | `setup.read` | `permissions` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; projection only; canonical policy/approval remains authoritative |
+| Research / OSINT | `research.public_sources` | `list_cases` / `get_case` | yes | yes | yes | yes | no | application / durable OSINT case store | none | authenticated owner scope; external report content remains tainted and non-authoritative |
 
 “MODEL: yes” means the canonical binding contract may be projected when the
 intent and policy select the capability. Native function schemas and strict

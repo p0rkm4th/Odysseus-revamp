@@ -98,9 +98,9 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "network_capability_or_discovery",
     ),
     "OSINT_CASE": DomainContract(
-        "OSINT_CASE", "research.public_sources", {"RESEARCH": "plan"}, "manage_osint",
+        "OSINT_CASE", "research.public_sources", {"READ": "list_cases", "RESEARCH": "plan"}, "manage_osint",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
-        "osint_plan",
+        "osint_case_or_plan",
     ),
     "MEMORY": DomainContract(
         "MEMORY", "memory.read", {"READ": "summarize_owner_memory"}, "read_memory",
@@ -162,7 +162,7 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         concept = "NETWORK"
     elif re.search(r"\b(?:finding|findings|security engagement|security assessment)\b", q):
         concept = "SECURITY_FINDING"
-    elif re.search(r"\b(?:osint|open source intelligence|investigation|case)\b", q):
+    elif re.search(r"\b(?:osint|open source intelligence|investigations?|cases?)\b", q):
         concept = "OSINT_CASE"
     elif re.search(r"\b(?:household|pantry|stock|shopping|recipe|recipes|groceries)\b", q):
         concept = "HOUSEHOLD_ITEM"

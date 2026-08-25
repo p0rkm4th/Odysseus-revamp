@@ -137,3 +137,9 @@ Setup/Integration read convergence now projects the existing secret-free
 integration projection, and permissions projection. It adds no settings store,
 secret resolution, or authority grant. Focused tests and exact source-matched
 deployment are green; owner-live provider health remains separate.
+
+OSINT case-read convergence now reuses the durable owner-scoped research JSON
+case store through the existing `research.public_sources` capability and
+`manage_osint` binding. `list_cases`/`get_case` return structured case
+projections without promoting report prose to canonical claims; focused tests
+are green and owner-live OSINT dogfood remains separate.

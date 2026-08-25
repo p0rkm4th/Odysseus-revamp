@@ -2,7 +2,7 @@
 
 Date: 2026-08-25  
 Branch: `recovery/live-candidate-20260823`  
-Final source under audit: `b4b5057f`
+Final source under audit: `38e3f984`
 
 ## What changed
 
@@ -35,6 +35,9 @@ Final source under audit: `b4b5057f`
 - Preserved the mature `api_call` integration routing rule pack while adding
   Setup/Integration guidance; the full regression caught and verified this
   convergence detail.
+- Added owner-scoped OSINT case reads (`list_cases`/`get_case`) through the
+  existing public-source capability and durable research case store. Report
+  prose remains tainted and does not promote itself into canonical claims.
 - Built and deployed `odysseus:candidate-90cc66b0` with image
   `sha256:7434e78a8e375a8a37f09bdeb21e54d43c75f3612ca30da18fe0cad4f904ac18`.
   Runtime `/api/version`, container source hash, and browser/static checks are
@@ -57,6 +60,7 @@ Final source under audit: `b4b5057f`
 | Work read convergence | `work.read`/`read_work`, focused and full regression green | E3/E4 |
 | Household read convergence | `household.read`/`read_household`, focused and full regression green | E3/E4 |
 | Setup/Integration read convergence | `setup.read`/`read_setup`, focused tests green and deployed source-matched | E2/E4 |
+| OSINT case read convergence | `research.public_sources` case reads, focused/full regression green | E3 pending deployment |
 
 ## Reuse and convergence decisions
 
@@ -75,7 +79,7 @@ memory versus vector index, and domain documents versus evidence references.
 
 - Intent contracts are implemented for technical assets, network, security
   findings, OSINT planning, explicit Memory reads, Work reads, Household
-  reads, and Setup/Integration state. Richer domain reads still require
+  reads, Setup/Integration state, and OSINT case reads. Richer domain reads still require
   canonical binding/result-contract adapters; they are not claimed complete.
 - The legacy technical asset CLI storage is deployment-scoped rather than
   row-owner keyed. Hades entry is owner-aware, but multi-owner CMDB isolation

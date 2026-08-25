@@ -1066,3 +1066,9 @@ secret-free `SetupCenterService` through `setup.read`/`read_setup` for state,
 integration, and permissions reads. It does not create a configuration store,
 resolve secrets, or grant authority. Focused tests and exact source-matched
 deployment are green; owner-live provider health remains pending.
+
+The OSINT read convergence batch now exposes owner-scoped durable case reads
+(`list_cases`/`get_case`) through the existing `research.public_sources` and
+`manage_osint` path. It reuses the current case store and keeps report prose
+tainted/non-authoritative; no second research engine or case database was
+added.

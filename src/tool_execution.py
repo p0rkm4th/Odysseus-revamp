@@ -1427,6 +1427,13 @@ async def _execute_manage_homelab_binding(block, owner=None):
 async def _execute_manage_osint_binding(block, owner=None):
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
+        read_action = str(payload.get("action") or "").strip().casefold()
+        if read_action in {"list_cases", "get_case"}:
+            if not owner:
+                raise PermissionError("authenticated OSINT owner is required")
+            from src.osint_read import get_case, list_cases
+            result = list_cases(owner, limit=int(payload.get("limit") or 50)) if read_action == "list_cases" else get_case(owner, str(payload.get("case_id") or payload.get("target") or ""))
+            return "manage_osint", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
         from src.osint_policy import build_plan, validate_request
         action, target, objective, sources = validate_request(payload)
         if action == "plan":
