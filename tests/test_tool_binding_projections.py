@@ -33,8 +33,8 @@ def test_tags_contracts_domains_and_executors_are_projected():
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 5
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 6
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
@@ -69,3 +69,20 @@ def test_trusted_work_adapter_rejects_unknown_binding():
         assert "unavailable" in str(exc)
     else:
         raise AssertionError("unknown binding was accepted")
+
+
+def test_memory_read_binding_is_read_only_and_structured(monkeypatch):
+    class Memory:
+        def load_all_for_update(self):
+            return [{"id": "m1", "owner": "alice", "category": "fact", "text": "likes tea", "source": "owner"}]
+
+    import src.ai_interaction as ai_interaction
+    monkeypatch.setattr(ai_interaction, "_memory_manager", Memory())
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_memory",
+        payload={"action": "summarize_owner_memory", "query": "what do you remember about me"},
+        owner="alice",
+    ))
+    assert result["success"] is True
+    assert result["data"]["status"] == "ok"
+    assert result["data"]["memories"][0]["text"] == "likes tea"

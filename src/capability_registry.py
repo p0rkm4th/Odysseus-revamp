@@ -100,6 +100,14 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             )
         ),
     ),
+    "memory.read": CapabilitySpec(
+        capability_id="memory.read",
+        description="Owner-scoped explicit reads from the canonical Brain memory store.",
+        actions=_actions(*(
+            ActionSpec(action_id=action, effects=("read_private",), executor_key="read_memory")
+            for action in ("summarize_owner_memory", "search_memory", "inspect_memory")
+        )),
+    ),
     "system.privileged_diagnostics": CapabilitySpec(
         capability_id="system.privileged_diagnostics",
         description="Narrow brokered diagnostic operations.",
@@ -236,6 +244,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "manage_homelab": "homelab.manage",
     "manage_osint": "research.public_sources",
     "manage_security_assessment": "security.assessment.read",
+    "read_memory": "memory.read",
 })
 
 

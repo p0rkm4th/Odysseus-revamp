@@ -69,6 +69,19 @@ def test_exposure_is_explicit_and_not_implied_for_automation():
     assert exposure["AUTOMATION"] == "N/A"
 
 
+@pytest.mark.parametrize("query", [
+    "What do you remember about me?",
+    "Show me what you remember about my work",
+])
+def test_memory_reads_compile_to_the_canonical_read_binding(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "memory.read"
+    assert resolved.action_id == "summarize_owner_memory"
+    assert resolved.binding_name == "read_memory"
+    assert resolved.action.approval.value == "none"
+
+
 def test_generated_parity_rows_have_explicit_transport_applicability():
     rows = generated_parity_matrix()
     assert rows

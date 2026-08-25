@@ -1470,12 +1470,38 @@ async def _execute_security_assessment_binding(block, owner=None):
         return "manage_security_assessment", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_read_memory_binding(block, owner=None):
+    """Adapt the canonical Brain store to the capability binding boundary."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        action = str(payload.get("action") or "").strip().casefold()
+        if action not in {"summarize_owner_memory", "search_memory", "inspect_memory"}:
+            raise ValueError("unsupported read-only memory action")
+        from src import ai_interaction
+        from src.memory_grounding import build_explicit_memory_result
+        result = build_explicit_memory_result(
+            ai_interaction._memory_manager,
+            owner,
+            str(payload.get("query") or "what do you remember about me"),
+        )
+        success = result.get("status") in {"ok", "zero_result"}
+        return "read_memory", {
+            "output": _ody_v34_json.dumps(result, default=str, sort_keys=True),
+            "exit_code": 0 if success else 1,
+            "success": success,
+            "data": result,
+        }
+    except Exception as exc:
+        return "read_memory", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
     "manage_homelab": _execute_manage_homelab_binding,
     "manage_osint": _execute_manage_osint_binding,
     "manage_security_assessment": _execute_security_assessment_binding,
+    "read_memory": _execute_read_memory_binding,
 }
 
 

@@ -90,6 +90,13 @@ failure, Qwen compact-projection, and trim tests are green. Live authenticated
 dogfood remains credential-gated. A sanitized Memory Inspector now receives
 request diagnostics and saved turn metrics without memory content.
 
+The follow-on convergence batch now projects those explicit reads through a
+first-class `memory.read` Capability, `read_memory` ToolBinding, and structured
+Result adapter. Legacy memory mutations remain compatibility-only; Work,
+Household, and Setup/Integration reads remain unregistered until real
+owner-scoped executors exist. Full regression after this batch: 6116 passed,
+3 skipped, 186 warnings.
+
 Theme/icon checkpoint: the existing semantic token system and centralized
 icon registry now cover the previously plain-text legacy sidebar destinations
 Household, IT Assets, Network, Developer, and Hades. Their navigation SVGs
