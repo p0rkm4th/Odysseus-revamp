@@ -587,3 +587,27 @@ realistic browser gates pass. Rollback is retained as
   verification, browser-window dogfood, and realistic browser acceptance
   passed. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`; owner-live model
   swapping and consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
+
+## Terminal Run and staged execution validation checkpoint
+
+- Source change: `a06fd71b` closes the shared lifecycle gap that allowed new
+  Actions to be appended to terminal Runs. `WorkEngine.create_action` now
+  rejects completed, failed, cancelled, and succeeded Runs while preserving
+  the existing cancellation boundary. Trusted execution validates the current
+  Action as a focused step, so a later declared step's not-yet-due approval or
+  precheck does not block the present step; unknown and structurally invalid
+  future Actions still invalidate the plan before effects occur.
+- The network service-enumeration regression now declares discovery,
+  enumeration planning, and enumeration execution as one durable deliverable
+  Run. This prevents verified discovery from falsely terminating the Run
+  before the remaining work is assessed.
+- Evidence: focused lifecycle/planner/bridge/verification coverage `70 passed,
+  2 warnings`; full regression `6212 passed, 3 skipped, 186 warnings in
+  125.25s`; `git diff --check` passed. Candidate
+  `odysseus:candidate-a06fd71b` is source-matched and deployed as image
+  `sha256:03e7a04817eed4d4ead358d419a32f6c2478c285fb480998d1152babe4c2d60c`.
+  Runtime provenance, health, Ollama bridge, persistent CMDB continuity,
+  frontend static verification, browser-window dogfood, and realistic browser
+  acceptance passed. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`; owner-live
+  model swapping and consequential network dogfood remain
+  `OWNER_DOGFOOD_PENDING`.
