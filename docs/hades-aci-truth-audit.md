@@ -14,17 +14,18 @@
 | Canonical Memory completion transition | DEPLOYED/PASSIVE_LIVE_VERIFIED | `d9d07bdc`; 75 focused, 6304 full, sanitized live Qwen answer-only trajectory |
 | Harness overhead measurement | FOCUSED_TESTED | `ab11579c`; two matched synthetic raw-vs-Hades qwen3:8b samples; 70 focused |
 | Model burden instrumentation | FULL_REGRESSION | `885ec24f`; sanitized framework/model responsibility labels; `6305 passed, 3 skipped, 186 warnings` |
+| Exact burden checkpoint deployed | DEPLOYED/PASSIVE_LIVE_VERIFIED | `29cafccd`; `/api/version` matched source/build/frontend; broker and Ollama healthy; deployed six-case Qwen canary `6/6` |
 | Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below; authentication and owner data remain out of automation scope |
 
 ## Final runtime checkpoint
 
-- Full regression at the deployed source: `6304 passed, 3 skipped, 186 warnings`.
+- Full regression before the deployed burden checkpoint: `6305 passed, 3 skipped, 186 warnings`.
 - App health: `/api/health` healthy.
 - Broker: user service active; socket `660 scootz:scootz`.
 - Ollama: bridge healthy; `qwen3:8b` available.
 - ChromaDB and SearXNG: running; SearXNG healthy.
 - Candidate source/build/frontend provenance: matched.
-- Final candidate: `d9d07bdc4a5c5c22a319ed724076c8335b500519`; image ID `sha256:bec0b1db31a30a3a0819668741b20f141a2eeda21dc372ba4cd8fce4ac1afae8`.
+- Final candidate: `29cafccde26a3f87513031e6990a0d9a7059d516`; image `odysseus:candidate-29cafccde26a`; image ID `sha256:4b5260286db9e22daf27ef2062a64afea97beee5b7aff421a3429a5954747a33`.
 - Runtime profile route: owner-authenticated; unauthenticated probe returned `401`.
 - Image retention: current candidate and previous `odysseus:candidate-dbaddbdaac7e` retained; no cleanup performed.
 - Final H0-equivalent ACI: 15 cases, `0.4667` success, `0.6667` weighted; 11 clean, 4 timeouts.
