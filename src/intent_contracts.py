@@ -88,6 +88,7 @@ class ContinuationResolution:
     status: str
     run_reference: str | None = None
     action_reference: str | None = None
+    phase: str | None = None
     reason: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
@@ -95,6 +96,7 @@ class ContinuationResolution:
             "status": self.status,
             "run_reference": self.run_reference,
             "action_reference": self.action_reference,
+            "phase": self.phase,
             "reason": self.reason,
         }
 
@@ -260,14 +262,34 @@ def resolve_continuation(frame: IntentFrame, active_run: Mapping[str, Any] | Non
     if not isinstance(active_run, Mapping):
         return ContinuationResolution("BLOCKED", reason="no active Run")
     status = str(active_run.get("status") or "").lower()
-    if status in {"completed", "failed", "cancelled"}:
-        return ContinuationResolution("BLOCKED", run_reference=str(active_run.get("id") or "") or None, reason="Run is terminal")
     run_id = str(active_run.get("id") or active_run.get("run_id") or "").strip() or None
+    if status in {"completed", "failed", "cancelled"}:
+        return ContinuationResolution("BLOCKED", run_reference=run_id, phase="TERMINAL", reason="Run is terminal")
     state = active_run.get("continuation_state") if isinstance(active_run.get("continuation_state"), Mapping) else {}
     action_id = str(state.get("pending_action_id") or active_run.get("pending_action_id") or "").strip() or None
     if not run_id:
         return ContinuationResolution("BLOCKED", reason="active Run has no durable reference")
-    return ContinuationResolution("RESOLVED", run_reference=run_id, action_reference=action_id)
+    if state.get("execution_ambiguous"):
+        return ContinuationResolution(
+            "BLOCKED", run_reference=run_id, action_reference=action_id,
+            phase="EXECUTION_AMBIGUOUS", reason="independent verification is required before retry",
+        )
+    actions = active_run.get("actions")
+    if isinstance(actions, list):
+        candidates = [item for item in actions if isinstance(item, Mapping) and item.get("status") in {
+            "awaiting_approval", "awaiting_input", "proposed", "approved", "executing", "completed",
+        }]
+        for item in reversed(candidates):
+            item_id = str(item.get("id") or "").strip() or None
+            item_status = str(item.get("status") or "").lower()
+            if item_status == "awaiting_approval":
+                return ContinuationResolution("RESOLVED", run_id, item_id, "AWAITING_APPROVAL", "exact approval is pending")
+            if item_status == "awaiting_input":
+                return ContinuationResolution("RESOLVED", run_id, item_id, "AWAITING_INPUT", "required input is pending")
+            if item_status in {"proposed", "approved", "executing"}:
+                return ContinuationResolution("RESOLVED", run_id, item_id, item_status.upper(), "pending Action is available")
+    phase = "AWAITING_APPROVAL" if status == "awaiting_approval" else "AWAITING_INPUT" if status == "awaiting_input" else "RUNNING"
+    return ContinuationResolution("RESOLVED", run_id, action_id, phase)
 
 
 def resolve_intent(frame: IntentFrame) -> ResolvedContract:

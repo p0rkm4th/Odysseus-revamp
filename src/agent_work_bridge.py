@@ -62,6 +62,19 @@ def _required_prechecks(run: WorkRun, spec) -> list[str]:
     ]
 
 
+def _continuation_state(run: WorkRun, *, action_id: str | None = None, phase: str | None = None, **extra) -> dict[str, Any]:
+    """Persist the small server-owned continuation pointer for one Run."""
+    state = dict(run.continuation_state or {})
+    if action_id is not None:
+        state["pending_action_id"] = action_id
+    elif "pending_action_id" in state:
+        state["pending_action_id"] = None
+    if phase is not None:
+        state["phase"] = phase
+    state.update({key: value for key, value in extra.items() if value is not None})
+    return state
+
+
 def _state_invalidations(action: WorkAction, spec) -> list[dict[str, Any]]:
     """Translate declarative invalidation tokens into scoped claim keys."""
     payload = action.normalized_input if isinstance(action.normalized_input, dict) else {}
@@ -253,6 +266,10 @@ def prepare_action(
         work.set_run_status(owner, run.id, "awaiting_approval" if status == "awaiting_approval" else "running", {
             "lifecycle_state": "waiting_approval" if status == "awaiting_approval" else "planning",
             "current_step": f"canonical action: {spec.action_id}",
+            "continuation_state": _continuation_state(
+                run, action_id=action["id"],
+                phase="AWAITING_APPROVAL" if status == "awaiting_approval" else "PROPOSED",
+            ),
         })
         return action["id"]
 
@@ -330,6 +347,19 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 "provenance": {"source": "canonical ToolBinding", "run_id": action.run_id},
             },
         })
+        # Keep the durable continuation pointer honest. A completed read is
+        # terminal for its Run; a consequential result moves the Run into
+        # verification and must remain resumable by the shared lifecycle.
+        refreshed_run = db.query(WorkRun).filter_by(id=action.run_id, owner=str(owner)).one()
+        if str(action.action_id or "").startswith("execute_"):
+            refreshed_run.continuation_state = _continuation_state(
+                refreshed_run, action_id=action.id, phase="VERIFYING",
+            )
+        else:
+            refreshed_run.continuation_state = _continuation_state(
+                refreshed_run, action_id=None, phase="COMPLETE",
+            )
+        db.commit()
         if str(action.action_id or "").startswith("plan_"):
             # A successful plan is durable precheck evidence for a later
             # consequential action in the same Run. Keep only structured

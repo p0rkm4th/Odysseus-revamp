@@ -210,3 +210,14 @@ build ID, and migration head. The broker socket remains
 `172.18.0.1:11434` returned `OK`. Frontend static, browser-window, and
 realistic browser acceptance all pass. Rollback is retained as
 `odysseus:rollback-e7993fdb-prev`. Owner-live E6 remains pending.
+
+## Durable continuation pointer checkpoint
+
+The shared continuation contract now projects the server-owned Run reference,
+pending Action reference, and lifecycle phase into the durable Work context.
+Registered binding preparation persists phases such as `PROPOSED` and
+`AWAITING_APPROVAL`; structured results advance consequential work to
+`VERIFYING` and terminal reads to `COMPLETE`. Ambiguous execution remains
+blocked until independent verification. Focused coverage: 42 passed. Full
+regression: 6138 passed, 3 skipped, 186 warnings. Owner-live cross-model
+continuation remains pending.
