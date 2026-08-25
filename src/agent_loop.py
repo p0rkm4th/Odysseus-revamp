@@ -872,6 +872,28 @@ def _network_service_enumeration_request(query: str) -> bool:
         and re.search(r"\b(?:network|host(?:s)?|device(?:s)?|scan|discovery|nmap)\b", q)
     )
 
+
+def _canonical_read_action(domain_concept: str, filters: dict | None = None) -> str | None:
+    """Project a resolved semantic read onto its registered read Action."""
+    concept = str(domain_concept or "")
+    view = dict(filters or {}).get("view")
+    actions = {
+        "TECHNICAL_ASSET": "list",
+        "NETWORK": "read_network_observations",
+        "SECURITY_FINDING": "list_findings",
+        "OSINT_CASE": "list_cases",
+        "MEMORY": "summarize_owner_memory",
+        "WORK": "attention" if view == "attention" else "overview",
+        "HOUSEHOLD_ITEM": "overview",
+        "INTEGRATION": "integrations" if view == "integrations" else "state",
+        "CAREER_PROFILE": "overview",
+        "JOB_SEARCH": "overview",
+        "JOB_OPPORTUNITY": "saved_opportunities",
+        "APPLICATION": "applications",
+        "INTERVIEW": "interviews",
+    }
+    return actions.get(concept)
+
 def _normalize_operational_intent_evidence(intent, query: str):
     # Fuse operational intent from action + object + scope evidence.
     # Existing classifier domains remain evidence, but do not erase adjacent
@@ -6830,21 +6852,6 @@ async def stream_agent_loop(
                 used_native = False
         _asset_frame = _intent.get("intent_frame") if isinstance(_intent.get("intent_frame"), dict) else {}
         _resolved_read = _intent.get("resolved_contract") if isinstance(_intent.get("resolved_contract"), dict) else {}
-        _canonical_read_actions = {
-            "TECHNICAL_ASSET": "list",
-            "NETWORK": "read_network_observations",
-            "SECURITY_FINDING": "list_findings",
-            "OSINT_CASE": "list_cases",
-            "MEMORY": "summarize_owner_memory",
-            "WORK": "attention" if _asset_frame.get("filters", {}).get("view") == "attention" else "overview",
-            "HOUSEHOLD_ITEM": "overview",
-            "INTEGRATION": "state",
-            "CAREER_PROFILE": "overview",
-            "JOB_SEARCH": "overview",
-            "JOB_OPPORTUNITY": "saved_opportunities",
-            "APPLICATION": "applications",
-            "INTERVIEW": "interviews",
-        }
         # Generic canonical-read repair: once the server-owned IntentFrame has
         # resolved a READ contract, project its existing binding directly. The
         # model does not need to remember a route/tool name, and no filesystem
@@ -6852,7 +6859,7 @@ async def stream_agent_loop(
         # intentionally limited to the registered read Action id.
         _read_concept = str(_asset_frame.get("domain_concept") or "")
         _read_binding = str(_resolved_read.get("binding") or "")
-        _read_action = _canonical_read_actions.get(_read_concept)
+        _read_action = _canonical_read_action(_read_concept, _asset_frame.get("filters"))
         if (
             not guide_only
             and not _force_answer
