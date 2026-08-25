@@ -216,6 +216,28 @@ class ContextEnvelope:
     requested_input_budget: int = 0
     reserved_output_budget: int = 1024
 
+    @classmethod
+    def from_runtime_profile(cls, profile: Any, *, user_configured_limit: int = 0,
+                             aci_profile_target: int = 6000,
+                             requested_input_budget: int = 0,
+                             reserved_output_budget: int = 1024) -> "ContextEnvelope":
+        """Project runtime evidence into the model-facing context budget.
+
+        Architecture maximum is retained as evidence, never treated as the
+        desired allocation. Unknown limits stay zero and therefore do not
+        create a false hard bound.
+        """
+        return cls(
+            architecture_max_context=max(0, int(getattr(profile, "architecture_max_context", 0) or 0)),
+            provider_configured_max_context=max(0, int(getattr(profile, "provider_configured_max_context", 0) or 0)),
+            runtime_allocated_context=max(0, int(getattr(profile, "runtime_allocated_context", 0) or 0)),
+            hardware_recommended_context=max(0, int(getattr(profile, "hardware_recommended_context", 0) or 0)),
+            user_configured_limit=max(0, int(user_configured_limit or 0)),
+            aci_profile_target=max(1, int(aci_profile_target or 6000)),
+            requested_input_budget=max(0, int(requested_input_budget or 0)),
+            reserved_output_budget=max(0, int(reserved_output_budget or 0)),
+        )
+
     @property
     def effective_context(self) -> int:
         limits = [value for value in (

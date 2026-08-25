@@ -10,6 +10,7 @@
 | FROZEN_CORPUS | working tree | 120 synthetic owner-free cases: 96 development, 24 held-out, 12 canary | not rebuilt | SOURCE |
 | FULL_REGRESSION | `a1abb6e1` + README checkpoint | `6292 passed, 3 skipped` | not rebuilt | FULL_REGRESSION |
 | FINAL_DEPLOYED_CHECKPOINT | `1ce7ec34` image | health/version, broker, Ollama, Chroma/SearXNG verified | `odysseus:candidate-1ce7ec34b9f7` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| RUNTIME_PROFILE_CONTEXT | working tree after `8c988446` | 65 focused tests; runtime-keyed evidence cache, TTL, protocol/runtime separation, ACI context-envelope metrics | not rebuilt | FOCUSED_TESTED |
 
 ## H0 evidence
 
@@ -59,6 +60,14 @@ tokens across 11 measured records. Raw artifact: `/tmp/hades-aci-final-15.json`
 The chat route now passes the explicit `hades_aci_mode` setting to the canonical
 agent loop. `aci` is the default, with `shadow` and `legacy` available as
 operator rollback modes; this is a setting, not model-name capability logic.
+
+Runtime characterization is now represented by a persisted, sanitized cache
+keyed by endpoint identity, protocol, serving runtime, model identity/digest,
+and server fingerprint. Evidence precedence is explicit administrator override,
+capability probe, provider report, endpoint configuration, registry, heuristic,
+then unknown. The cache is observational and cannot grant an Action. ACI final
+metrics include the effective context projection with runtime allocation,
+profile target, requested input, and reserved output separated.
 
 ## Deployment provenance
 
