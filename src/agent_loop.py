@@ -6648,8 +6648,13 @@ async def stream_agent_loop(
                             "type": "object",
                             "properties": {
                                 "decision": {"type": "string", "enum": ["ACTION", "ANSWER", "NEED_CONTEXT", "CLARIFY", "BLOCKED"]},
-                                "choice": {"type": "string"},
-                                "context_type": {"type": "string"},
+                                # The packet is the only valid machine
+                                # affordance. Dynamic enums make providers
+                                # enforce that boundary during decoding;
+                                # DecisionContract validation remains the
+                                # authoritative downstream check.
+                                "choice": {"type": "string", "enum": sorted(_aci_choice_map)} if _aci_choice_map else {"type": "string"},
+                                "context_type": {"type": "string", "enum": list((_aci_packet.progress if _aci_packet else {}).get("allowed_context", ())) or ["RESULT_DETAIL"]},
                                 "ambiguity_class": {"type": "string"},
                                 "rationale": {"type": "string"},
                                 "answer": {"type": "string"},
