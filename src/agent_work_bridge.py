@@ -12,7 +12,7 @@ import json
 from typing import Any
 
 from core.database import SessionLocal
-from core.work_models import WorkAction, WorkRun
+from core.work_models import WorkAction, WorkResult, WorkRun
 from src.capability_registry import ApprovalMode, action_for_tool
 from src.tool_bindings import binding_for_tool
 from src.work_engine import WorkEngine, WorkError
@@ -235,6 +235,51 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
             )
             completed["run_lifecycle_state"] = lifecycle["lifecycle_state"]
         return completed
+
+
+def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
+    """Run the deterministic verifier for a completed bound action.
+
+    This first verifier is intentionally narrow: network discovery can be
+    verified from the structured result only after the canonical CMDB writer
+    reports both required projection postconditions. It never interprets
+    model prose or treats a broker exit code as desired-state success.
+    """
+    with SessionLocal() as db:
+        action = (
+            db.query(WorkAction)
+            .join(WorkRun)
+            .filter(WorkAction.id == str(action_id), WorkRun.owner == str(owner))
+            .one_or_none()
+        )
+        if action is None or not str(action.action_id or "").startswith("execute_"):
+            return None
+        if action.status != "completed":
+            return {"verified": False, "reason": "action is not completed"}
+        result = db.query(WorkResult).filter_by(action_id=action.id, run_id=action.run_id, owner=str(owner)).one_or_none()
+        if result is None:
+            return {"verified": False, "reason": "structured action result is missing"}
+        data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
+        required = tuple(action.verification or ())
+        if action.action_id == "execute_network_discovery":
+            checks = {
+                "observations_persisted": data.get("observations_recorded") is True,
+                "network_map_reconciled": data.get("network_map_reconciled") is True,
+            }
+            missing = [name for name in required if not checks.get(name, False)]
+            work = WorkEngine(db)
+            if missing:
+                outcome = work.complete_verification(
+                    str(owner), action.run_id, success=False,
+                    details={"checks": checks, "missing": missing, "verifier": "network_discovery_projection"},
+                )
+                return {"verified": False, "checks": checks, "missing": missing, "run_lifecycle_state": outcome["lifecycle_state"]}
+            outcome = work.complete_verification(
+                str(owner), action.run_id, success=True,
+                details={"checks": checks, "observation_count": data.get("observation_count", 0), "verifier": "network_discovery_projection"},
+            )
+            return {"verified": True, "checks": checks, "run_lifecycle_state": outcome["lifecycle_state"]}
+        return {"verified": False, "reason": "no deterministic verifier registered"}
 
 
 def mark_run_waiting(owner: str, run_id: str, *, step: str) -> None:
