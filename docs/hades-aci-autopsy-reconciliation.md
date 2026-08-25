@@ -9,7 +9,7 @@ completion.
 | Model-name capability heuristics | PARTIALLY_FIXED | provider/model readers remain; runtime evidence now has explicit precedence and a persisted TTL cache, but active provider probes are still a follow-up |
 | Protocol/runtime identity split | PARTIALLY_FIXED | provider readers distinguish vendors in places; generic runtime seam is incomplete |
 | ContextEnvelope | PARTIALLY_FIXED | canonical `ContextEnvelope.from_runtime_profile` and per-ACI metrics now distinguish runtime allocation from architecture maximum; provider discovery wiring remains |
-| Token accounting incl. schemas | PARTIALLY_FIXED | schema counts are instrumented, but estimator remains approximate |
+| Token accounting incl. schemas | PARTIALLY_FIXED | nested native schema JSON is now counted by the shared estimator; runtime tokenizer calibration and provider-reported error tracking remain |
 | Output reservation | PARTIALLY_FIXED | reserve exists in compactor; requested-output coupling needs provider-aware integration |
 | Endpoint metadata cache | PARTIALLY_FIXED | cached model lists/dead-host cooldown exist; fingerprint+TTL runtime characterization remains |
 | Global local inference lock | STILL_PRESENT | `_LOCAL_MODEL_LOCK` in `src/llm_core.py`; safe single-GPU serialization is preserved, resource scheduler deferred |

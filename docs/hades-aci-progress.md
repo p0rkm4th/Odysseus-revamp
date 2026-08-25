@@ -12,6 +12,7 @@
 | FINAL_DEPLOYED_CHECKPOINT | `1ce7ec34` image | health/version, broker, Ollama, Chroma/SearXNG verified | `odysseus:candidate-1ce7ec34b9f7` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | RUNTIME_PROFILE_CONTEXT | working tree after `8c988446` | 65 focused tests; runtime-keyed evidence cache, TTL, protocol/runtime separation, ACI context-envelope metrics | not rebuilt | FOCUSED_TESTED |
 | RUNTIME_PROFILE_DIAGNOSTICS | current working tree | owner-scoped `/api/hades/runtime-profile`; sanitized runtime evidence projection | not rebuilt | FOCUSED_TESTED |
+| TOKEN_ACCOUNTING | current working tree | nested native tool-schema serialization included in shared estimator; 52 focused tests | not rebuilt | FOCUSED_TESTED |
 
 ## H0 evidence
 
