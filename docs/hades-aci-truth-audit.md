@@ -9,23 +9,27 @@
 | H0 vs final improvement | PARTIAL | final 15-case ACI weighted `0.6667` vs H0 `0.4333`; synthetic only |
 | Chat route ACI mode | FOCUSED_TESTED | explicit `hades_aci_mode` setting passed to canonical loop; default `aci`, reversible |
 | Frozen evaluation corpus | SOURCE | 120 synthetic cases: 96 development, 24 held-out, 12 canary |
-| Exact ACI candidate deployed | DEPLOYED | `odysseus:candidate-4c43dfae28d8`; `/api/version` source/build/frontend match |
+| Exact ACI candidate deployed | DEPLOYED | `odysseus:candidate-d9d07bdc`; `/api/version` source/build/frontend match |
 | Runtime passive health | PASSIVE_LIVE_VERIFIED | compose, broker, Ollama bridge inspected |
+| Canonical Memory completion transition | DEPLOYED/PASSIVE_LIVE_VERIFIED | `d9d07bdc`; 75 focused, 6304 full, sanitized live Qwen answer-only trajectory |
 | Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below; authentication and owner data remain out of automation scope |
 
 ## Final runtime checkpoint
 
-- Full regression: `6298 passed, 3 skipped, 186 warnings`.
+- Full regression at the deployed source: `6304 passed, 3 skipped, 186 warnings`.
 - App health: `/api/health` healthy.
 - Broker: user service active; socket `660 scootz:scootz`.
 - Ollama: bridge healthy; `qwen3:8b` available.
 - ChromaDB and SearXNG: running; SearXNG healthy.
 - Candidate source/build/frontend provenance: matched.
-- Final candidate: `4c43dfae28d8aa34a4761be78abbb37db1193021`; image ID `sha256:d37d2ec052c46056d5ba20a6d9c8d4ffcd5815c32de6c35c1a79643fd07fec09`.
+- Final candidate: `d9d07bdc4a5c5c22a319ed724076c8335b500519`; image ID `sha256:bec0b1db31a30a3a0819668741b20f141a2eeda21dc372ba4cd8fce4ac1afae8`.
 - Runtime profile route: owner-authenticated; unauthenticated probe returned `401`.
 - Image retention: current candidate and previous `odysseus:candidate-dbaddbdaac7e` retained; no cleanup performed.
 - Final H0-equivalent ACI: 15 cases, `0.4667` success, `0.6667` weighted; 11 clean, 4 timeouts.
 - Improvement is synthetic benchmark evidence, not owner-live evidence.
+- The exact Memory utterance now follows deterministic read → projected Result →
+  answer → completion; the owner-reported failure is fixed in the deployed
+  candidate. Owner GUI confirmation remains pending.
 
 No synthetic result is labeled as live owner evidence. No private runtime data,
 database, backup, log, model blob, or owner Memory was added to the benchmark

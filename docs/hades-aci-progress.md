@@ -16,6 +16,7 @@
 | FINAL_RUNTIME_CHECKPOINT | `ce626774` | `6298 passed, 3 skipped`; health/version, broker, Ollama verified; unauthenticated profile route returns 401 | `odysseus:candidate-ce626774f5ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | OLLAMA_CHARACTERIZATION | `4c43dfae` | metadata-only `/api/show` plus fallback `/api/tags`; qwen3:8b digest/context/capabilities recorded locally | `odysseus:candidate-4c43dfae28d8` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | PROTOCOL_PROBES | `49de2dc0` | synthetic strict Decision JSON PASS and verified native-tool PASS; no side effects | not rebuilt | FOCUSED_TESTED |
+| MEMORY_COMPLETION_FIX | `d9d07bdc` | 75 focused; 6304 full; sanitized live Qwen trajectory reaches ANSWER without tool re-entry | `odysseus:candidate-d9d07bdc` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -86,6 +87,23 @@ The later synthetic protocol probes recorded strict Decision JSON as schema-vali
 sanitized fixture is `benchmarks/hades_aci_protocol_probe.json`; canonical
 ActionSpec, policy, approval, and executor authority remain downstream.
 
+## Owner Memory completion defect
+
+The exact utterance `What do you remember about me?` is now a frozen trajectory
+case: `DETERMINISTIC_READ -> CANONICAL_RESULT -> RESULT_PROJECTION -> ANSWER ->
+COMPLETE`. A protected explicit Memory pre-read is recognized as the unique
+owner-scoped read, so ACI does not duplicate it or parse a second Action
+decision. A standalone deterministic read also clears its packet and
+transitions to answer-only mode after a successful Result; failed reads retain
+bounded recovery behavior.
+
+The model/UI receive a bounded L1 projection with retrieved count, compact
+records, epistemic labels, current runtime provider/model, contradictions, and
+canonical references. Full evidence remains behind the Memory/Action boundary.
+The sanitized live Qwen trajectory produced no `tool_start`, no
+`WHY_NO_ACTION`, and metrics `aci_completion_transition=ANSWER` with the
+CompletionContract satisfied. Owner GUI confirmation remains pending.
+
 ## Deployment provenance
 
 The application candidate was built and deployed from source commit
@@ -96,20 +114,18 @@ frontend ID `frontend-1ce7ec34b9f70d846e6b41d3f7632a16a2c0bb8b-ed62c6f38298daf5f
 migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
 
-The final implementation candidate is source commit
-`4c43dfae28d8aa34a4761be78abbb37db1193021`, image
-`odysseus:candidate-4c43dfae28d8`, image ID
-`sha256:d37d2ec052c46056d5ba20a6d9c8d4ffcd5815c32de6c35c1a79643fd07fec09`,
-build ID `4c43dfae28d8aa34a4761be78abbb37db1193021-2026-08-25T22:43:16Z`,
+The current implementation candidate is source commit
+`d9d07bdc4a5c5c22a319ed724076c8335b500519`, image
+`odysseus:candidate-d9d07bdc`, image ID
+`sha256:bec0b1db31a30a3a0819668741b20f141a2eeda21dc372ba4cd8fce4ac1afae8`,
+build ID `d9d07bdc4a5c5c22a319ed724076c8335b500519-2026-08-25T23:12:44Z`,
 and frontend ID
-`frontend-4c43dfae28d8aa34a4761be78abbb37db1193021-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
+`frontend-d9d07bdc4a5c5c22a319ed724076c8335b500519-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
-The prior gate was `6284 passed, 3 skipped, 5 failed`. Two failures were stale
-README assertions, one was the orphan-image check coupled to the intentional
-README redesign, and two were GPU compose parity failures. The new focused gate
-is `63 passed`. A fresh full gate remains required after the route integration.
+The exact deployed source gate is `6304 passed, 3 skipped, 186 warnings` in
+123.36 seconds. The touched Memory/ACI focused gate is `75 passed`.
 
 ## Build/cache observation
 
