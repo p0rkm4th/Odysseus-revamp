@@ -826,5 +826,8 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   rather than allowing a direct caller to mark the deliverable succeeded.
 - Evidence: focused agent-bridge/contract/planner coverage `126 passed, 1
   warning`; full regression `6272 passed, 3 skipped, 186 warnings in 127.31s`.
-  Source-matched deployment follows this checkpoint. Status:
-  `VERIFIED_TESTED`.
+  Candidate `odysseus:candidate-5c335a0a` is deployed as image
+  `sha256:46efbd17770ad2b8d7030490d2b862cfa9f56593006a396e777f5a8e62e10467`;
+  `/api/health`, `/api/version`, broker-socket, Ollama-bridge, frontend
+  static, browser-window, and realistic browser acceptance passed. Status:
+  `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`.
