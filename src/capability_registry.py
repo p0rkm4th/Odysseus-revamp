@@ -113,7 +113,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         description="Owner-scoped read projections over the canonical Work Engine.",
         actions=_actions(*(
             ActionSpec(action_id=action, effects=("read_private",), executor_key="read_work")
-            for action in ("overview", "review", "attention", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments")
+            for action in ("overview", "review", "attention", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments", "list_missions", "list_watches")
         )),
     ),
     "household.read": CapabilitySpec(

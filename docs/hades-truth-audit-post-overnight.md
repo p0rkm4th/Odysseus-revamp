@@ -438,3 +438,19 @@ realistic browser gates pass. Rollback is retained as
 - Evidence: owner-scoped bridge, intent, and model-parity coverage `64 passed,
   1 warning`.
 - Status: `VERIFIED_TESTED`; live provider swapping remains pending.
+
+## Canonical Work/Mission/Watch read sweep checkpoint
+
+- The semantic compiler now distinguishes first-class Work concepts for goals,
+  projects, tasks, Runs, commitments, missions, and watches. Each resolves to
+  an explicit read-only `work.read` Action through the existing `read_work`
+  binding; missions reuse `MissionService` over canonical Work goals and
+  watches reuse the owner-scoped `Monitor` store.
+- Read-explicit phrasing such as “What runs are active?” is normalized to
+  `READ`, while imperative execution requests remain distinct. Empty results
+  retain `EMPTY_RESULT` rather than being represented as a successful data
+  response.
+- Evidence: semantic contract and binding coverage `93 passed, 1 warning`;
+  full regression and deployment gates are pending for this uncommitted
+  checkpoint. Owner-live cross-model dogfood remains pending.
+- Status: `VERIFIED_TESTED` for focused source behavior; not yet deployed.
