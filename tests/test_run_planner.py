@@ -149,6 +149,33 @@ def test_exact_approval_requires_sealed_input_digest(db):
     assert action["sealed_input_digest"]
 
 
+def test_exact_approval_reference_does_not_authorize_until_action_is_resumed(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "network"})
+    action = work.create_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "normalized_input": {"cidr": "192.168.10.0/24"},
+        "target_resources": ["network:private_scope"],
+        "approval_reference": "approval-discovery-1",
+        "status": "proposed",
+    })
+    result = RunPlanner(db).validate("alice", run["id"])
+    assert any(failure["code"] == "exact_approval_not_resumed" for failure in result["failures"])
+
+
+def test_exact_approved_action_requires_reference_and_seal(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "network"})
+    work.create_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "normalized_input": {"cidr": "192.168.10.0/24"},
+        "target_resources": ["network:private_scope"], "status": "approved",
+    })
+    result = RunPlanner(db).validate("alice", run["id"])
+    codes = {failure["code"] for failure in result["failures"]}
+    assert "approval_required" in codes
+
+
 def test_next_step_projects_safe_read_continuation_without_execution(db):
     work = WorkEngine(db)
     run = work.create_run("alice", {"domain": "homelab", "plan": [{

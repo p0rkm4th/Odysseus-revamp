@@ -226,7 +226,7 @@ class RunPlanner:
             "lifecycle_state": run.lifecycle_state, "plan_revision": run.revision,
         }
 
-    def validate(self, owner: str, run_id: str, *, focus_sequence: int | None = None) -> dict[str, Any]:
+    def validate(self, owner: str, run_id: str, *, focus_sequence: int | None = None, enforce_exact_authority: bool = True) -> dict[str, Any]:
         """Validate a compiled Run, optionally focusing execution checks.
 
         Full validation remains the default for previews and plan gates. A
@@ -282,8 +282,18 @@ class RunPlanner:
                     failures.append({"code": "scope_invalid", "sequence": action.get("sequence"), "message": "private-network action has an out-of-scope resource", "resources": invalid})
             if is_focus and contract["approval"] != "none" and not action.get("approval_reference") and action.get("status") not in {"approved", "completed"}:
                 failures.append({"code": "approval_required", "sequence": action.get("sequence"), "message": "exact or normal approval is not bound"})
-            if contract["approval"] == "exact" and action.get("approval_reference") and not action.get("sealed_input_digest"):
-                failures.append({"code": "approval_digest_missing", "sequence": action.get("sequence"), "message": "exact approval is not bound to a sealed action-input digest"})
+            if contract["approval"] == "exact" and action.get("status") != "completed" and enforce_exact_authority:
+                # A reference is only a request/binding until the durable
+                # approval transition resumes this exact Action.  The trusted
+                # executor performs the same check immediately before effects;
+                # this projection also explains an approved-but-incomplete
+                # action without treating it as safe to continue.
+                if action.get("approval_reference") and action.get("status") != "approved":
+                    failures.append({"code": "exact_approval_not_resumed", "sequence": action.get("sequence"), "message": "exact approval has not resumed this Action"})
+                if not action.get("approval_reference"):
+                    failures.append({"code": "approval_required", "sequence": action.get("sequence"), "message": "exact approval reference is missing"})
+                if (action.get("approval_reference") or action.get("status") == "approved") and not action.get("sealed_input_digest"):
+                    failures.append({"code": "approval_digest_missing", "sequence": action.get("sequence"), "message": "exact approval is not bound to a sealed action-input digest"})
             if contract["risk_level"] in {"high", "critical"} and not contract["verification"]:
                 failures.append({"code": "verification_required", "sequence": action.get("sequence"), "message": "higher-risk action has no verification contract"})
             if contract["compensatable"] and not contract["compensating_action"]:
@@ -345,6 +355,9 @@ class RunPlanner:
             validation = self.validate(owner, run_id, focus_sequence=sequence)
             failures = [failure for failure in validation["failures"] if failure.get("sequence") == sequence]
             if failures:
+                authority_failures = {"approval_required", "approval_digest_missing"}
+                if failures and all(failure.get("code") in authority_failures for failure in failures):
+                    return base | {"status": "READY", "action": projected, "reason": "approved Action still needs exact sealed authority", "safe_auto_continue": False, "authority_required": True, "validation": {"failures": failures, "warnings": validation["warnings"]}}
                 return base | {"status": "BLOCKED", "action": projected, "reason": "approved Action cannot pass current Run validation", "safe_auto_continue": False, "authority_required": False, "validation": {"failures": failures, "warnings": validation["warnings"]}}
             capability = capability_for_id(str(action.get("capability_id") or ""))
             spec = capability.actions.get(str(action.get("action_id") or "")) if capability else None
