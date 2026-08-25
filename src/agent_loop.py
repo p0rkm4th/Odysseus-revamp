@@ -14,6 +14,7 @@ import json
 import re
 import time
 import logging
+import uuid
 from typing import Any, AsyncGenerator, List, Dict, Optional, Set
 from urllib.parse import urlparse
 
@@ -4461,6 +4462,7 @@ async def stream_agent_loop(
     workload: str = "foreground",
     external_untrusted_context_seen: bool = False,
     exact_approval: Optional[ExactToolApproval] = None,
+    work_run_id: Optional[str] = None,
     _is_teacher_run: bool = False,
     history_session=None,
     defer_context_shaping: bool = False,
@@ -4488,6 +4490,7 @@ async def stream_agent_loop(
         approval_gate_bypassed=bool(
             exact_approval and exact_approval.allow_remaining_actions
         ),
+        run_id=str(work_run_id or "").strip() or uuid.uuid4().hex,
     )
     mcp_mgr = get_mcp_manager()
     prep_timings: Dict[str, float] = {}
@@ -7507,12 +7510,48 @@ async def stream_agent_loop(
             else:
                 cmd_display = full_command
 
+            _work_action_id = None
+            if work_run_id and block.tool_type in {
+                "manage_assets", "manage_homelab", "manage_osint",
+                "manage_security_assessment",
+            }:
+                try:
+                    from src.agent_work_bridge import prepare_action
+                    _work_action_id = await asyncio.to_thread(
+                        prepare_action,
+                        owner,
+                        work_run_id,
+                        block.tool_type,
+                        block.content,
+                        approval_reference=(
+                            exact_approval.pending.approval_id
+                            if exact_approval is not None
+                            else None
+                        ),
+                    )
+                    if exact_approval is not None and _work_action_id:
+                        from src.agent_work_bridge import resume_approval
+                        await asyncio.to_thread(
+                            resume_approval,
+                            owner,
+                            _work_action_id,
+                            exact_approval.pending.approval_id,
+                        )
+                except Exception:
+                    # The Work projection is diagnostic durability; it must
+                    # never weaken or replace the existing policy gate.
+                    logger.warning("[work-bridge] failed to prepare bound action", exc_info=True)
+
             security_decision = run_security.decision_for(
                 block.tool_type,
                 block.content,
             )
             # Capability V1 exact-approval bridge. The decision is derived
             # from ActionSpec metadata, not from a tool-specific action list.
+            # Every registered ActionSpec marked EXACT must enter the same
+            # approval projection. The historical helper name is retained for
+            # compatibility, but approval is no longer limited to the
+            # privileged_action transport (network discovery is also exact).
             if _privileged_action_requires_exact_approval(
                 block.tool_type,
                 block.content,
@@ -7637,6 +7676,17 @@ async def stream_agent_loop(
                             block.content,
                         ),
                     )
+                    if _work_action_id:
+                        try:
+                            from src.agent_work_bridge import bind_approval
+                            await asyncio.to_thread(
+                                bind_approval,
+                                owner,
+                                _work_action_id,
+                                pending_approval.approval_id,
+                            )
+                        except Exception:
+                            logger.warning("[work-bridge] failed to bind approval", exc_info=True)
                     desc = f"{block.tool_type}: APPROVAL REQUIRED"
                     result = {
                         "output": "Waiting for an exact user approval.",
@@ -7706,6 +7756,17 @@ async def stream_agent_loop(
                             await _tool_task
                         except (asyncio.CancelledError, Exception):
                             pass
+
+            if (
+                _work_action_id
+                and isinstance(result, dict)
+                and not result.get("approval_required")
+            ):
+                try:
+                    from src.agent_work_bridge import record_result
+                    await asyncio.to_thread(record_result, owner, _work_action_id, result)
+                except Exception:
+                    logger.warning("[work-bridge] failed to persist bound action result", exc_info=True)
 
             run_security.observe_tool_result(block.tool_type, result, block.content)
             if block.tool_type == "bash" and isinstance(result, dict):
