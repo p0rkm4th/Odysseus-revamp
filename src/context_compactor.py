@@ -227,6 +227,55 @@ def context_trace(
     return trace
 
 
+def tool_projection_trace(
+    candidate_schemas: Optional[List[Dict]],
+    projected_schemas: Optional[List[Dict]],
+    *,
+    route_relevant_tools=None,
+    disabled_tools=None,
+    policy_exclusions=None,
+) -> Dict[str, Any]:
+    """Return bounded, secret-free evidence for provider tool projection.
+
+    Tool names are control-plane identifiers, not user content.  Keeping the
+    projection accounting here alongside context tracing lets every provider
+    route explain silent action disappearance without logging prompts,
+    arguments, or credentials.
+    """
+    candidate = list(candidate_schemas or [])
+    projected = list(projected_schemas or [])
+
+    def _name(schema):
+        if not isinstance(schema, dict):
+            return None
+        function = schema.get("function")
+        if isinstance(function, dict) and function.get("name"):
+            return str(function["name"])
+        if schema.get("name"):
+            return str(schema["name"])
+        return None
+
+    candidate_names = {name for schema in candidate if (name := _name(schema))}
+    projected_names = {name for schema in projected if (name := _name(schema))}
+    disabled = {str(name) for name in (disabled_tools or set())}
+    relevant = {str(name) for name in (route_relevant_tools or set())}
+    malformed = sum(1 for schema in candidate + projected if _name(schema) is None)
+    route_filtered = candidate_names - projected_names
+    disabled_excluded = candidate_names & disabled
+    return {
+        "candidate_action_count": len(candidate_names),
+        "projected_tool_count": len(projected_names),
+        "route_filtered_count": len(route_filtered),
+        "route_filtered_tools": sorted(route_filtered)[:32],
+        "disabled_tool_count": len(disabled_excluded),
+        "disabled_tools": sorted(disabled_excluded)[:32],
+        "policy_exclusion_count": len(set(policy_exclusions or set())),
+        "policy_exclusions": sorted({str(name) for name in (policy_exclusions or set())})[:32],
+        "schema_serialization_failures": malformed,
+        "relevant_tool_count": len(relevant),
+    }
+
+
 def _truncate_text_to_token_budget(text: str, token_budget: int) -> str:
     """Trim a too-large current user message instead of dropping it entirely."""
     if token_budget <= 32:

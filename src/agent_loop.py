@@ -5832,6 +5832,7 @@ async def stream_agent_loop(
     def _tool_schemas_for_route(route_state):
         route_mcp_schemas = route_state["mcp_schemas"]
         route_relevant_tools = route_state["relevant_tools"]
+        from src.context_compactor import tool_projection_trace
         if _force_answer:
             return []
         if route_state["is_api_model"]:
@@ -5862,11 +5863,34 @@ async def stream_agent_loop(
                     if schema.get("function", {}).get("name") not in disabled_tools
                     and schema.get("name") not in disabled_tools
                 ]
-            return _filter_route_tool_schemas(schemas)
+            schemas = _filter_route_tool_schemas(schemas)
+            logger.info(
+                "[hades-tool-projection] model=%s trace=%s",
+                route_state.get("model"),
+                tool_projection_trace(
+                    FUNCTION_TOOL_SCHEMAS + route_mcp_schemas,
+                    schemas,
+                    route_relevant_tools=route_relevant_tools,
+                    disabled_tools=disabled_tools,
+                    policy_exclusions=_ADMIN_SCHEMA_NAMES if not _needs_admin else set(),
+                ),
+            )
+            return schemas
 
         wants_mcp = any(keyword in _last_user.lower() for keyword in _MCP_KEYWORDS)
         schemas = route_mcp_schemas if wants_mcp and route_mcp_schemas else []
-        return _filter_route_tool_schemas(schemas)
+        schemas = _filter_route_tool_schemas(schemas)
+        logger.info(
+            "[hades-tool-projection] model=%s trace=%s",
+            route_state.get("model"),
+            tool_projection_trace(
+                route_mcp_schemas,
+                schemas,
+                route_relevant_tools=route_relevant_tools,
+                disabled_tools=disabled_tools,
+            ),
+        )
+        return schemas
 
     _approved_result_injected = False
     if exact_approval is not None:
