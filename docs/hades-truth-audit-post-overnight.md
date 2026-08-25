@@ -215,6 +215,27 @@ continuation remains pending.
 
 ## Source-matched canonical read deployment
 
+## Infrastructure Setup broker-health checkpoint
+
+The authenticated Setup Center health probe for `technology.network` and
+`technology.homelab` now checks the existing broker's read-only `status`
+operation in addition to declared bindings. Network health requires the
+private-scope host-broker binding and reported scanner availability; Homelab
+health requires the bounded binding and broker availability. These probes do
+not scan, mutate hosts, expose secrets, or alter authority. Results continue
+through the existing persisted Setup health evidence path, with configuration
+status kept separate from runtime health.
+
+Focused Setup/workspace/binding tests: 34 passed, 1 warning. Full regression
+after this change: 6245 passed, 3 skipped, 186 warnings in 125.71 seconds.
+Candidate `odysseus:candidate-18db0e69` is source-matched and deployed with
+image `sha256:c596d3bef9d812ca79e5be476db5a73d6f901b7efdb9a6b315a89133076a0b88`,
+source `18db0e691f07e35bf59fd65acf63d875c9cdb816`, build ID
+`18db0e691f07e35bf59fd65acf63d875c9cdb816-2026-08-25T10:08:20Z`, and the
+existing migration head. Health, `/api/version`, Ollama bridge, frontend
+static, browser-window, and realistic browser gates pass. Rollback
+`odysseus:rollback-18db0e69-prev` is retained. Owner-live E6 remains pending.
+
 Commit `a9ab0e04d293b2bf606d6dbebd231077cee24054` is deployed as candidate
 `odysseus:candidate-a9ab0e04d293` with image
 `sha256:9b73c475186f5aec310e3668e7fc23099cdd7140e18c8ab0550f52fec5cbc0d3`.
