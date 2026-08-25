@@ -359,3 +359,15 @@ realistic browser gates pass. Rollback is retained as
   warnings`.
 - Status: `VERIFIED_TESTED`; owner-live multi-step reference dogfood remains
   pending.
+
+## Live durable continuation projection checkpoint
+
+- Source change: `07d86113` wires the existing pure
+  `resolve_continuation()` decision into the agent loop using a minimal,
+  owner-scoped durable Run/Action projection. The projection is read-only and
+  omits result payloads; it cannot advance lifecycle, grant approval, or
+  execute Actions.
+- Evidence: focused bridge/intent/reference coverage `60 passed, 1 warning`;
+  full regression `6172 passed, 3 skipped, 186 warnings`.
+- Status: `VERIFIED_TESTED`; owner-live continuation and model-swap dogfood
+  remain pending.
