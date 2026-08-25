@@ -504,3 +504,14 @@ realistic browser gates pass. Rollback is retained as
   in 124.58s`. Candidate `odysseus:candidate-4433f2ad` is deployed and matched
   by source commit `4433f2ad1d7cd113099b3eaba2534ccad609d0c2`; health and all
   frontend/browser gates passed. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`.
+
+## Communications durable-Run bridge checkpoint
+
+- The shared chat-to-Work bridge now persists `read_communications` alongside
+  the other first-class canonical reads. A successful or empty Communications
+  overview therefore remains inspectable in the owner/session Run and uses the
+  existing structured read completion path; no Communications-specific loop or
+  executor was added.
+- Evidence: focused bridge/intent/parity/binding coverage `100 passed, 1
+  warning`; full regression `6202 passed, 3 skipped, 186 warnings in
+  126.15s`. Deployment of this source checkpoint remains pending.
