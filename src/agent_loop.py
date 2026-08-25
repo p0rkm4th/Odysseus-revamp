@@ -7764,7 +7764,13 @@ async def stream_agent_loop(
             ):
                 try:
                     from src.agent_work_bridge import record_result
-                    await asyncio.to_thread(record_result, owner, _work_action_id, result)
+                    persisted_work_result = await asyncio.to_thread(record_result, owner, _work_action_id, result)
+                    if (
+                        isinstance(persisted_work_result, dict)
+                        and persisted_work_result.get("run_lifecycle_state") == "verifying"
+                    ):
+                        from src.agent_work_bridge import verify_bound_action
+                        await asyncio.to_thread(verify_bound_action, owner, _work_action_id)
                 except Exception:
                     logger.warning("[work-bridge] failed to persist bound action result", exc_info=True)
 

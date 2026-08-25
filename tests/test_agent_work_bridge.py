@@ -70,16 +70,24 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
         assert resumed["status"] == "approved"
         completed = bridge.record_result(
             "alice", action_id,
-            {"data": {"hosts": [{"ip": "192.168.10.1", "inference": {"label": "router", "confidence": 0.8}}]}},
+            {"data": {
+                "hosts": [{"ip": "192.168.10.1", "inference": {"label": "router", "confidence": 0.8}}],
+                "observations_recorded": True,
+                "network_map_reconciled": True,
+                "observation_count": 1,
+            }},
         )
         assert completed["status"] == "completed"
         assert completed["run_lifecycle_state"] == "verifying"
+        verification = bridge.verify_bound_action("alice", action_id)
+        assert verification["verified"] is True
+        assert verification["run_lifecycle_state"] == "succeeded"
         with session_factory() as db:
             result = db.query(WorkResult).filter_by(action_id=action_id).one()
             run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
             assert result.owner == "alice"
             assert result.run_id == run_id
-            assert run.lifecycle_state == "verifying"
+            assert run.lifecycle_state == "succeeded"
             assert result.provenance["source"] == "canonical ToolBinding"
             assert result.domain_reference["hosts"][0]["inference"]["label"] == "router"
     finally:
