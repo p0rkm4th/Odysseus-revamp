@@ -1,4 +1,4 @@
-from src.agent_tools import FUNCTION_TOOL_SCHEMAS, TOOL_TAGS
+from src.agent_tools import FUNCTION_TOOL_SCHEMAS, TOOL_TAGS, ToolBlock
 from src.agent_loop import TOOL_SECTIONS, _DOMAIN_TOOL_MAP
 from src.capability_registry import capability_for_tool
 from src.tool_bindings import TOOL_BINDINGS, binding_for_tool
@@ -219,6 +219,22 @@ def test_work_read_binding_is_owner_scoped_and_structured(monkeypatch):
     assert result["data"]["goals"][0]["title"] == "Ship the release"
     engine.dispose()
     tmpfile.close()
+
+
+def test_registered_read_default_is_materialized_before_executor(monkeypatch):
+    seen = []
+
+    async def fake_executor(block, owner=None):
+        seen.append(json.loads(block.content))
+        return "read_work", {"exit_code": 0, "success": True, "output": "ok"}
+
+    monkeypatch.setitem(tool_execution._CAPABILITY_V1_EXECUTORS, "read_work", fake_executor)
+    result = asyncio.run(tool_execution.execute_tool_block(
+        ToolBlock("read_work", "{}"),
+        owner="alice",
+    ))
+    assert result[1]["success"] is True
+    assert seen == [{"action": "overview"}]
 
 
 def test_work_mission_and_watch_reads_are_owner_scoped(monkeypatch):

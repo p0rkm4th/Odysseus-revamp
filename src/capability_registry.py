@@ -292,6 +292,22 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_communications": "communications.read",
 })
 
+# Safe overview defaults for multiplexed first-class read bindings. These are
+# canonical registry semantics, not natural-language phrase handling. Actions
+# with consequential or materially ambiguous meaning intentionally have no
+# default and continue to fail closed.
+DEFAULT_READ_ACTIONS: Mapping[str, str] = MappingProxyType({
+    "manage_assets": "summary",
+    "manage_osint": "list_cases",
+    "manage_security_assessment": "list_engagements",
+    "read_memory": "summarize_owner_memory",
+    "read_work": "overview",
+    "read_household": "overview",
+    "read_setup": "state",
+    "read_career": "overview",
+    "read_communications": "overview",
+})
+
 
 def capability_for_id(capability_id: str) -> CapabilitySpec | None:
     return CAPABILITY_REGISTRY.get(capability_id)
@@ -315,7 +331,31 @@ def action_from_content(tool_name: str, content: Any) -> str | None:
     if not isinstance(payload, dict):
         return None
     action = payload.get("action")
+    if not isinstance(action, str) or not action.strip():
+        action = DEFAULT_READ_ACTIONS.get(tool_name)
     return action.strip().replace("-", "_").casefold() if isinstance(action, str) and action.strip() else None
+
+
+def canonicalize_action_content(tool_name: str, content: Any) -> Any:
+    """Materialize a safe registry default before trusted execution."""
+    action = action_from_content(tool_name, content)
+    if not action:
+        return content
+    if isinstance(content, Mapping):
+        payload = dict(content)
+        if not payload.get("action"):
+            payload["action"] = action
+            return payload
+        return content
+    if isinstance(content, str):
+        try:
+            payload = json.loads(content or "{}")
+        except (TypeError, ValueError):
+            return content
+        if isinstance(payload, dict) and not payload.get("action"):
+            payload["action"] = action
+            return json.dumps(payload, sort_keys=True)
+    return content
 
 
 def action_for_tool(tool_name: str, content: Any) -> ActionSpec | None:

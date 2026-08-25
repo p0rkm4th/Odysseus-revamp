@@ -3,6 +3,7 @@ import json
 from src.capability_registry import (
     ApprovalMode,
     action_for_tool,
+    canonicalize_action_content,
     capability_for_tool,
     requires_exact_approval,
 )
@@ -36,6 +37,20 @@ def test_unknown_privileged_action_fails_closed():
     assert requires_exact_approval("privileged_action", {"action": "reboot"}) is True
     classified = capabilities_for_action("privileged_action", {"action": "reboot"})
     assert classified.known is False
+
+
+def test_first_class_read_defaults_are_safe_and_canonical():
+    action = action_for_tool("read_work", {})
+    assert action.action_id == "overview"
+    assert action.known is True
+    assert requires_exact_approval("read_work", {}) is False
+    assert canonicalize_action_content("read_work", "{}") == '{"action": "overview"}'
+
+
+def test_consequential_actions_have_no_implicit_default():
+    action = action_for_tool("privileged_action", {})
+    assert action.known is False
+    assert requires_exact_approval("privileged_action", {}) is True
 
 
 def test_network_discovery_is_host_brokered_and_private_scope_bound():
