@@ -166,9 +166,9 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "household_overview",
     ),
     "INTEGRATION": DomainContract(
-        "INTEGRATION", "setup.read", {"READ": "state"}, "read_setup",
+        "INTEGRATION", "setup.read", {"READ": "state", "READ_INTEGRATIONS": "integrations"}, "read_setup",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
-        "setup_state",
+        "setup_state_or_integrations",
     ),
     "CAREER_PROFILE": DomainContract(
         "CAREER_PROFILE", "career.read", {"READ": "overview"}, "read_career",
@@ -260,7 +260,7 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         concept = "HOUSEHOLD_ITEM"
     elif re.search(r"\b(?:work|working|project|task|goal|commitment)\b", q):
         concept = "WORK"
-    elif re.search(r"\b(?:setup|configured|integration|connected)\b", q):
+    elif re.search(r"\b(?:setup|configured|integrations?|connected)\b", q):
         concept = "INTEGRATION"
     elif re.search(r"\b(?:career|job search|jobs?|opportunit(?:y|ies)|applications?|interviews?|resume|roles?)\b", q):
         if re.search(r"\b(?:application|applied|follow[- ]?up)", q): concept = "APPLICATION"
@@ -289,6 +289,11 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         depth=_depth(text),
         constraints=("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK", "HOMELAB_HOST", "SERVICE"} else (),
         desired_output="grounded_structured_summary" if operation == "READ" else None,
+        filters={
+            "view": "integrations"
+        } if concept == "INTEGRATION" and re.search(
+            r"\bintegrations?\b.*\b(?:degraded|broken|attention|health|connected|working)\b|"
+            r"\b(?:degraded|broken|attention|health)\b.*\bintegrations?\b", q) else {},
         read_explicit=read_explicit,
     )
 
@@ -338,7 +343,10 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     contract = DOMAIN_CONTRACTS.get(frame.domain_concept)
     if contract is None:
         return ResolvedContract(frame, None, None, None, None, False, "no_domain_contract")
-    action_id = contract.actions.get(frame.operation_class)
+    action_key = frame.operation_class
+    if frame.domain_concept == "INTEGRATION" and frame.filters.get("view") == "integrations":
+        action_key = "READ_INTEGRATIONS"
+    action_id = contract.actions.get(action_key)
     if action_id is None and frame.operation_class == "CONTINUE":
         action_id = contract.actions.get("EXECUTE") or contract.actions.get("READ")
     if action_id is None:
@@ -367,9 +375,9 @@ def validate_contracts() -> list[str]:
                 continue
             if contract.binding and binding_for_tool(contract.binding) is None:
                 errors.append(f"{concept}: missing ToolBinding {contract.binding}")
-            if operation == "READ" and action.approval.value != "none":
+            if operation in {"READ", "READ_INTEGRATIONS"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
-            if operation == "READ" and "read_private" not in action.effects:
+            if operation in {"READ", "READ_INTEGRATIONS"} and "read_private" not in action.effects:
                 errors.append(f"{concept}/{action_id}: read lacks read_private effect")
             if not action.executor_key:
                 errors.append(f"{concept}/{action_id}: missing executor")
