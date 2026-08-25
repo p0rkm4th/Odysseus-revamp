@@ -23,6 +23,9 @@ REQUESTS = (
     "What needs attention?",
     "What is Hades waiting on?",
     "What integrations are degraded?",
+    "What job opportunities did I save?",
+    "Which applications have I submitted?",
+    "What interviews do I have?",
 )
 
 
