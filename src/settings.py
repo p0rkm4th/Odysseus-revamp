@@ -36,6 +36,9 @@ def _invalidate_caches():
 # ── Default values ──
 
 DEFAULT_SETTINGS = {
+    # Explicit rollout control for the canonical Hades weak/local-model
+    # interface. This is deliberately not inferred from model-family names.
+    "hades_aci_mode": "aci",
     # Agent email safety: when True, the MCP send_email / reply_to_email
     # tools don't SMTP directly. They stage the composed message into the
     # scheduled_emails table with status='agent_draft' and return a

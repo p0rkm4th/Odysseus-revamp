@@ -6,6 +6,8 @@
 | ACI_CORE | `172c57da` | `tests/test_aci_contracts.py` plus intent/context parity | not rebuilt | FOCUSED_TESTED |
 | BENCHMARK_DRIVER_REPAIR | `172c57da` | current `stream_agent_loop` executor seam; live Qwen subset | not rebuilt | PARTIAL |
 | BUILD_CACHE_FIX | `172c57da` | Dockerfile provenance moved after stable layers | not rebuilt | SOURCE |
+| DECISION_INTERFACE | working tree after `818f0bcf` | 63 focused tests; strict Decision JSON, opaque choices, one repair, chat setting seam | not rebuilt | FOCUSED_TESTED |
+| FROZEN_CORPUS | working tree | 120 synthetic owner-free cases: 96 development, 24 held-out, 12 canary | not rebuilt | SOURCE |
 
 ## H0 evidence
 
@@ -25,11 +27,33 @@ remain required.
 Runtime observation: Qwen `qwen3:8b`, Ollama native endpoint, reported tools and
 thinking capability, 40960 model context, digest retained in local evidence.
 
+## ACI evidence
+
+The final six-case ACI canary used the same Ollama/qwen3:8b route and synthetic
+executor as the H0 harness. All six records were clean and scoreable:
+canonical grounding, network semantic routing, shell-fallback safety, action
+narration grounding, referent selection, and duplicate-read-loop control. The
+subset score was `6/6` (`1.00`); this is a canary, not a replacement for the
+full-suite comparison. Median request context was 1248 tokens and median
+response time was 27.42s. The network case emitted one canonical
+`manage_homelab` action; no raw shell command or arbitrary action identifier was
+accepted. Raw artifact: `/tmp/hades-aci-final-canary.json` (local only).
+
+The earlier full 15-case ACI run is retained as pre-fast-path evidence
+(`success_rate=0.3333`, `weighted_score=0.4667`, routing `1.00`, grounding
+`0.75`) but is not called final because deterministic reads and malformed
+decision handling landed afterward.
+
+The chat route now passes the explicit `hades_aci_mode` setting to the canonical
+agent loop. `aci` is the default, with `shadow` and `legacy` available as
+operator rollback modes; this is a setting, not model-name capability logic.
+
 ## Full regression gate
 
-`6284 passed, 3 skipped, 5 failed`. Two failures were stale README assertions,
-one was the orphan-image check coupled to the intentional README redesign, and
-two were GPU compose parity failures. No ACI focused test failed.
+The prior gate was `6284 passed, 3 skipped, 5 failed`. Two failures were stale
+README assertions, one was the orphan-image check coupled to the intentional
+README redesign, and two were GPU compose parity failures. The new focused gate
+is `63 passed`. A fresh full gate remains required after the route integration.
 
 ## Build/cache observation
 

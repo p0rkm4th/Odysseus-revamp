@@ -4689,6 +4689,7 @@ async def stream_agent_loop(
     _aci_enabled = _aci_mode in {"shadow", "aci"} and not _is_teacher_run
     _aci_packet = None
     _aci_choice_map = {}
+    _aci_fast_path_block = None
     _aci_repair_count = 0
     _aci_profile = aci_profile
     if _aci_enabled and _aci_profile is None:
@@ -4818,6 +4819,7 @@ async def stream_agent_loop(
     _prompt_active_document = active_document if _active_document_relevant else None
     _direct_low_signal = (
         _low_signal_turn
+        and not _aci_enabled
         and not _existing_conversation
         and not bool(_intent.get("continuation"))
         and not plan_mode
@@ -5669,6 +5671,30 @@ async def stream_agent_loop(
                 state_fingerprint=state_fingerprint(packet_state),
             )
             _aci_packet = packet
+            if (
+                _aci_mode == "aci"
+                and _intent.get("intent_frame", {}).get("operation_class") == "READ"
+                and _intent.get("intent_frame", {}).get("read_explicit") is True
+                and desired_binding
+                and desired_action
+                and desired_binding in set(_relevant_tools or set())
+            ):
+                # Canonical reads do not spend model tokens on Action choice.
+                # The existing executor/policy/result path remains the only
+                # execution path; this merely seeds its first read Action.
+                from src.capability_registry import action_for_tool
+                read_spec = action_for_tool(desired_binding, {"action": desired_action})
+                if (
+                    read_spec is not None
+                    and read_spec.known
+                    and read_spec.approval.value == "none"
+                    and not set(read_spec.effects) & {"write_private", "admin_change", "external_side_effect", "external_network"}
+                ):
+                    fast_payload = {"action": desired_action}
+                    if desired_action == "summarize_owner_memory":
+                        fast_payload["query"] = str(_intent.get("retrieval_query") or _last_user)
+                    _aci_fast_path_block = ToolBlock(desired_binding, json.dumps(fast_payload, sort_keys=True))
+                    logger.info("[hades-aci] deterministic read fast path binding=%s action=%s", desired_binding, desired_action)
             aci_instruction = (
                 "HADES ACI MACHINE DECISION MODE. Choose only from the packet. "
                 "Return one JSON object, no Markdown and no tool call syntax. "
@@ -6456,6 +6482,7 @@ async def stream_agent_loop(
         if round_num == 1 and not _approved_result_injected:
             _active_route_state["request_messages"] = _initial_route_request_messages
         all_tool_schemas = _tool_schemas_for_route(_active_route_state)
+        _skip_model_round = bool(_aci_fast_path_block is not None and round_num == 1)
         agent_stream_timeout = int(get_setting("agent_stream_timeout_seconds", 300) or 300)
 
         _tool_names_sent = [t.get("function", {}).get("name") for t in (all_tool_schemas or []) if t.get("function")]
@@ -6651,22 +6678,29 @@ async def stream_agent_loop(
             )
         except Exception:
             logger.debug("Provider context trace unavailable", exc_info=True)
-        async for chunk in stream_llm_with_fallback(
-            _candidates,
-            messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            prompt_type=prompt_type if round_num == 1 else None,
-            tools=all_tool_schemas if all_tool_schemas else None,
-            tool_choice_none=_ody_doc_finetune_mode,
-            timeout=agent_stream_timeout,
-            session_id=session_id,
-            workload=workload,
-            fallback_statuses=fallback_statuses,
-            fallback_on_empty=fallback_on_empty,
-            candidate_request_factory=_candidate_request,
-            candidate_route_descriptors=_candidate_route_descriptors,
-        ):
+        async def _round_stream():
+            if _skip_model_round:
+                yield "data: [DONE]\n\n"
+                return
+            async for item in stream_llm_with_fallback(
+                _candidates,
+                messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                prompt_type=prompt_type if round_num == 1 else None,
+                tools=all_tool_schemas if all_tool_schemas else None,
+                tool_choice_none=_ody_doc_finetune_mode,
+                timeout=agent_stream_timeout,
+                session_id=session_id,
+                workload=workload,
+                fallback_statuses=fallback_statuses,
+                fallback_on_empty=fallback_on_empty,
+                candidate_request_factory=_candidate_request,
+                candidate_route_descriptors=_candidate_route_descriptors,
+            ):
+                yield item
+
+        async for chunk in _round_stream():
             if not _round_first_event_logged:
                 _round_first_event_logged = True
                 logger.info(
@@ -6956,7 +6990,14 @@ async def stream_agent_loop(
             _round_first_token_logged,
         )
         _finalize_round_usage()
-        if _aci_enabled and _aci_mode == "aci" and _aci_packet is not None:
+        tool_blocks = []
+        used_native = False
+        converted_calls = []
+        if _skip_model_round:
+            tool_blocks = [_aci_fast_path_block]
+            used_native = False
+            converted_calls = []
+        elif _aci_enabled and _aci_mode == "aci" and _aci_packet is not None:
             from src.aci import parse_decision_json
             _aci_decision, _aci_error = parse_decision_json(round_response, _aci_packet)
             if _aci_decision is None:
@@ -6991,22 +7032,26 @@ async def stream_agent_loop(
             else:
                 round_response = (_aci_decision.answer or _aci_decision.rationale or "The current objective is blocked or needs clarification.").strip()
                 full_response += round_response
-        _normalized_doc_round = (
-            _normalize_stream_document_fences(
-                round_response,
-                "create_document" if _ody_doc_stream_create_mode else "update_document",
+        if not _skip_model_round:
+            _normalized_doc_round = (
+                _normalize_stream_document_fences(
+                    round_response,
+                    "create_document" if _ody_doc_stream_create_mode else "update_document",
+                )
+                if _ody_doc_finetune_mode
+                else round_response
             )
-            if _ody_doc_finetune_mode
-            else round_response
-        )
-        tool_blocks, used_native, converted_calls = _resolve_tool_blocks(
-            _normalized_doc_round,
-            native_tool_calls,
-            round_num,
-            is_api_model=(_is_api_model and not guide_only),
-            allow_fenced_for_api=_ody_doc_finetune_mode,
-            skip_fenced_tools=_strict_text_tools,
-        )
+            # ACI ACTION decisions have already been mapped to a canonical
+            # ToolBlock above; never re-parse their JSON as legacy syntax.
+            if not (_aci_enabled and _aci_mode == "aci" and tool_blocks):
+                tool_blocks, used_native, converted_calls = _resolve_tool_blocks(
+                    _normalized_doc_round,
+                    native_tool_calls,
+                    round_num,
+                    is_api_model=(_is_api_model and not guide_only),
+                    allow_fenced_for_api=_ody_doc_finetune_mode,
+                    skip_fenced_tools=_strict_text_tools,
+                )
         # Weak local models may still emit a fenced Bash install after the
         # capability-first clamp. Never route that raw package command to the
         # approval gate. Convert it into the bounded first-class prerequisite

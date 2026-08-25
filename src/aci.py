@@ -277,9 +277,31 @@ def parse_decision_json(value: Any, packet: AgentTaskPacket) -> tuple[DecisionCo
         return None, "decision_not_object"
     try:
         decision_mode = DecisionMode(str(value.get("decision", "")).upper())
+        supplied_choice = value.get("choice")
+        packet_choices = {card.choice for card in packet.action_cards}
+        # A weak model sometimes labels a clarification as ACTION while
+        # supplying no packet choice (or inventing ``ask_user``). Treating the
+        # accompanying explanation as CLARIFY is safe; accepting the invented
+        # choice would not be. This is a semantic repair, never an execution
+        # repair.
+        if (
+            decision_mode is DecisionMode.ACTION
+            and supplied_choice not in packet_choices
+            and (value.get("answer") or value.get("rationale"))
+        ):
+            decision_mode = DecisionMode.CLARIFY
+        elif (
+            decision_mode is DecisionMode.NEED_CONTEXT
+            and value.get("context_type") not in set(packet.progress.get("allowed_context", ()))
+            and (value.get("answer") or value.get("rationale"))
+        ):
+            # Do not let a weak model smuggle an arbitrary retrieval category
+            # into the control plane. Preserve its explanation as a bounded
+            # clarification instead.
+            decision_mode = DecisionMode.CLARIFY
         decision = DecisionContract(
             decision=decision_mode,
-            choice=value.get("choice"),
+            choice=supplied_choice,
             context_type=value.get("context_type"),
             ambiguity_class=(value.get("ambiguity_class") or ("unspecified" if decision_mode is DecisionMode.CLARIFY else None)),
             rationale=str(value.get("rationale"))[:240] if value.get("rationale") else None,

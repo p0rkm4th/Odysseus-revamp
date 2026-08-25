@@ -6,7 +6,9 @@
 | Existing canonical read/Run foundations | FOCUSED_TESTED | 130 focused tests |
 | ACI contract projections | FOCUSED_TESTED | `tests/test_aci_contracts.py` |
 | Qwen live baseline | PARTIAL | 15-case subset; success 0.20, weighted 0.4333; 9 provider errors |
-| H0 vs final improvement | BLOCKED | final Decision-JSON path not yet wired/deployed |
+| H0 vs final improvement | PARTIAL | final six-case ACI canary 6/6; full H0-equivalent ACI run still required |
+| Chat route ACI mode | FOCUSED_TESTED | explicit `hades_aci_mode` setting passed to canonical loop; default `aci`, reversible |
+| Frozen evaluation corpus | SOURCE | 120 synthetic cases: 96 development, 24 held-out, 12 canary |
 | Exact ACI candidate deployed | OWNER_DOGFOOD_PENDING | running image predates local ACI changes |
 | Runtime passive health | PASSIVE_LIVE_VERIFIED | compose, broker, Ollama bridge inspected |
 | Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below |

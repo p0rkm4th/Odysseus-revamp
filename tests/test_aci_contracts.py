@@ -40,6 +40,14 @@ def test_decision_context_is_packet_bounded():
     assert error is None and decision.state_fingerprint == "fp"
 
 
+def test_weak_model_action_label_with_explanation_is_safe_clarification():
+    decision, error = parse_decision_json(
+        '{"decision":"ACTION","choice":"ask_user","answer":"Which service?"}', _packet()
+    )
+    assert error is None
+    assert decision.decision is DecisionMode.CLARIFY
+
+
 def test_hard_filter_precedes_shortlist_and_keeps_policy_downstream():
     actions = [
         {"action_id": "wrong-domain", "domain": "email"},
