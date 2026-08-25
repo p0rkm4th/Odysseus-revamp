@@ -3035,6 +3035,43 @@ def _has_stored_canonical_evidence(messages) -> bool:
     return False
 
 
+_SAVED_MEMORY_PROVENANCE_RE = re.compile(
+    r"\b(?:I remember|saved (?:Hades )?memory|your saved memory|I have stored|"
+    r"stored (?:memory|profile)|from your profile|remembered profile)\b",
+    re.IGNORECASE,
+)
+
+
+def _has_canonical_memory_evidence(messages, tool_events) -> bool:
+    for event in tool_events or []:
+        if not isinstance(event, dict) or _resolved_tool_event_name(event) != "read_memory":
+            continue
+        if event.get("success") is True or event.get("exit_code") == 0:
+            return True
+    for message in messages or []:
+        metadata = message.get("metadata") if isinstance(message, dict) else None
+        if not isinstance(metadata, dict) or metadata.get("context_kind") != "explicit_memory_result":
+            continue
+        if metadata.get("memory_result_status") in {"ok", "zero_result"}:
+            return True
+    return False
+
+
+def _semanticize_internal_action_names(text: str) -> str:
+    """Keep transport/Action identifiers in traces, not ordinary chat prose."""
+    replacements = {
+        "read_network_context": "host network context check",
+        "manage_homelab": "infrastructure operation",
+        "read_memory": "saved-memory read",
+        "manage_assets": "technical asset operation",
+        "read_work": "work overview read",
+    }
+    value = str(text or "")
+    for internal, label in replacements.items():
+        value = re.sub(rf"\b{re.escape(internal)}\b", label, value)
+    return value
+
+
 def ground_action_completion(text: str, *, intent_domains, tool_events, stored_evidence=False) -> str:
     """Allow claims supported by current or durable canonical evidence."""
     successful_result = any(
@@ -6935,6 +6972,30 @@ async def stream_agent_loop(
         _read_action = str(_resolved_read.get("action_id") or "").strip() or _canonical_read_action(
             _read_concept, _asset_frame.get("filters")
         )
+        # Implicit current/local-network execution cannot resolve a safe target
+        # from historical CMDB or the application namespace. Perform the
+        # approval-free HOST context precheck first when no explicit CIDR was
+        # supplied. Any later scan still needs typed ownership authority.
+        if (
+            not guide_only
+            and not _force_answer
+            and _asset_frame.get("domain_concept") == "NETWORK"
+            and _asset_frame.get("operation_class") == "EXECUTE"
+            and not _network_request_cidr
+            and not tool_blocks
+            and not tool_events
+            and total_tool_calls == 0
+            and "manage_homelab" in set(_relevant_tools or set())
+            and "manage_homelab" not in disabled_tools
+        ):
+            logger.info("[agent] projecting required host network context precheck")
+            if round_response and full_response.endswith(round_response):
+                full_response = full_response[:-len(round_response)]
+            tool_blocks = [ToolBlock(
+                "manage_homelab", json.dumps({"action": "read_network_context"}),
+            )]
+            converted_calls = []
+            used_native = False
         if (
             not guide_only
             and not _force_answer
@@ -8654,10 +8715,9 @@ async def stream_agent_loop(
                 "success": result.get("success") is True or str(result.get("status") or "").upper() in {
                     "SUCCESS", "SUCCESS_WITH_DATA", "SUCCESS_EMPTY", "VERIFIED",
                 },
-                "evidence_class": (
-                    "CURRENT_ACTION_RESULT"
-                    if str(result.get("action") or "").startswith(("execute_", "plan_"))
-                    else "STORED_CANONICAL_RESULT"
+                "evidence_class": "CURRENT_ACTION_RESULT",
+                "provenance_domain": (
+                    "MEMORY" if block.tool_type == "read_memory" else None
                 ),
             }
             if result.get("image_url"):
@@ -8788,6 +8848,61 @@ async def stream_agent_loop(
     # prose. Local finetunes may emit those before the parser catches and
     # executes them; saved history should contain only the user-facing answer.
     full_response = strip_tool_blocks(full_response).strip()
+    if (
+        "memory" in set(_intent_domains or set())
+        and _SAVED_MEMORY_PROVENANCE_RE.search(full_response or "")
+        and not _has_canonical_memory_evidence(messages, tool_events)
+    ):
+        logger.warning("[memory-grounding] suppressed unsupported saved-memory provenance")
+        full_response = (
+            "I couldn't retrieve your saved Hades memory for this turn, so I "
+            "can't attribute personal facts to durable memory. I can still use "
+            "the current conversation as conversation context."
+        )
+    # Sanitized architecture diagnostic for turns whose resolved intent
+    # expected a canonical Action but produced no successful Result. This is
+    # developer trace data, not normal chat prose.
+    _why_no_action = None
+    _expected_canonical_action = bool(
+        (_asset_frame.get("read_explicit") and _read_binding and _read_action)
+        or _intent_frame.operation_class in {"EXECUTE", "RESEARCH", "MONITOR"}
+    )
+    _successful_action_event = any(
+        isinstance(event, dict)
+        and not event.get("approval_required")
+        and not event.get("blocked")
+        and event.get("exit_code") in (None, 0)
+        and event.get("success") is not False
+        for event in tool_events
+    )
+    if _expected_canonical_action and not _successful_action_event:
+        if any(isinstance(event, dict) and (event.get("approval_required") or event.get("ask_user")) for event in tool_events):
+            _why_no_action = "APPROVAL_REQUIRED"
+        elif any(isinstance(event, dict) and event.get("blocked") for event in tool_events):
+            _why_no_action = "POLICY_DENIED"
+        elif any(isinstance(event, dict) and event.get("exit_code") not in (None, 0) for event in tool_events):
+            _why_no_action = "EXECUTION_FAILED"
+        elif not _read_binding and _intent_frame.operation_class == "READ":
+            _why_no_action = "NO_CONTRACT"
+        elif _read_binding in disabled_tools:
+            _why_no_action = "ACTION_NOT_PROJECTED"
+        else:
+            _why_no_action = "MODEL_PROSE_ONLY"
+        logger.warning(
+            "[WHY_NO_ACTION] reason=%s concept=%s operation=%s binding=%s action=%s model=%s",
+            _why_no_action, _asset_frame.get("domain_concept"),
+            _intent_frame.operation_class, _read_binding, _read_action,
+            actual_model,
+        )
+        yield "data: " + json.dumps({
+            "type": "why_no_action",
+            "data": {
+                "reason": _why_no_action,
+                "domain_concept": _asset_frame.get("domain_concept"),
+                "operation_class": _intent_frame.operation_class,
+                "model": actual_model,
+            },
+        }) + "\n\n"
     # Action-grounding boundary: prose is never evidence of an external
     # operation. Only persisted tool events/results authorize completion
     # language. This applies to every model, including local Qwen routes.
@@ -8899,6 +9014,8 @@ async def stream_agent_loop(
             )
     metrics["requested_endpoint_id"] = requested_endpoint_id
     metrics["requested_endpoint_label"] = requested_endpoint_label
+    if _why_no_action:
+        metrics["why_no_action"] = _why_no_action
     yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
 
     # Teacher-escalation: inline takeover visible in the chat stream.

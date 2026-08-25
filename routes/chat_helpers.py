@@ -181,8 +181,8 @@ def ensure_chat_agent_work_run(
             _normalize_homelab_intent,
             _normalize_operational_intent_evidence,
         )
-        from src.intent_contracts import compile_intent
-        from src.agent_work_bridge import ensure_agent_run
+        from src.intent_contracts import compile_intent, resolve_intent
+        from src.agent_work_bridge import ensure_agent_run, prepare_action
         query = str(message or "")
         intent = _classify_agent_request([], query)
         intent = _normalize_homelab_intent(intent, query)
@@ -218,7 +218,7 @@ def ensure_chat_agent_work_run(
             re.IGNORECASE,
         ):
             return None
-        return ensure_agent_run(
+        run_id = ensure_agent_run(
             str(owner), str(session_id), query,
             model_endpoint=model_endpoint,
             model_name=model_name,
@@ -238,6 +238,18 @@ def ensure_chat_agent_work_run(
                 "intent_frame": frame.as_dict(),
             } if not continuation else None,
         )
+        # Materialize a deterministic read before contacting the model. A
+        # provider/stream failure therefore leaves the semantic operation
+        # READY on the durable Run, and a model-switched Continue resumes that
+        # Action instead of merely retaining the topic.
+        if run_id and not continuation and frame.operation_class == "READ" and frame.read_explicit:
+            resolved = resolve_intent(frame)
+            if resolved.status == "RESOLVED" and resolved.binding_name and resolved.action_id:
+                payload = {"action": resolved.action_id}
+                if frame.domain_concept == "MEMORY":
+                    payload["query"] = query
+                prepare_action(str(owner), run_id, resolved.binding_name, payload)
+        return run_id
     except Exception:
         logger.warning("Failed to attach actionable chat turn to Work ledger", exc_info=True)
         return None
@@ -948,7 +960,7 @@ async def build_chat_context(
     if mem_enabled and is_explicit_memory_query(context_message):
         try:
             explicit_memory_result = build_explicit_memory_result(
-                memory_manager, user, context_message,
+                chat_processor.memory_manager, user, context_message,
             )
             _memory_context = untrusted_context_message(
                 "saved memory: explicit canonical result",

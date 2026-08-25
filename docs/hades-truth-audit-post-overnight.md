@@ -930,3 +930,26 @@ The owner-live retest exposed four generic seams, repaired in commit
 Focused control-plane suite: 192 passed. Full regression: 6277 passed, 3
 skipped, 186 warnings. Deployment, browser provenance, and owner-live Qwen
 retest remain pending for this checkpoint.
+
+## P0 live acceptance correction — host namespace and model execution
+
+The owner-live `74e5f9b2` retest invalidated the prior live interpretation.
+The socket broker was trusted by peer identity but launched inside the
+application container; its interface read therefore observed the Docker
+namespace. Live logs also showed canonical reads being stopped by the legacy
+post-external-context approval gate, zero native tool schemas on Luna/Sol text
+routes, a failed explicit Memory projection (`memory_manager` was undefined),
+and provider failure without a materialized pending read Action.
+
+Truth statuses are downgraded until the replacement candidate is deployed and
+passively retested:
+
+- NETWORK_CONTEXT: `PARTIAL / LIVE_WRONG_NAMESPACE` (E1 repair in progress).
+- CROSS_MODEL_PARITY: `SYNTHETIC_VERIFIED / LIVE_NOT_VERIFIED`.
+- MEMORY_CANONICAL_READ: `PARTIAL / LIVE_NOT_VERIFIED`.
+- READ_APPROVAL_POLICY: `SOURCE_TESTED / LIVE_REGRESSION`.
+
+The repair uses a separate unprivileged, read-only HOST broker, retains exact
+SO_PEERCRED PID/UID/GID matching against the live Compose service, rejects any
+non-HOST observation as `HOST_NETWORK_CONTEXT_UNAVAILABLE`, and requires typed
+scope authorization before active discovery. No work/VPN scan was performed.

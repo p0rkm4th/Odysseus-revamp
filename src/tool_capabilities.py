@@ -739,6 +739,25 @@ class ToolRunSecurityContext:
         if not self.external_untrusted_context_seen:
             return ToolGateDecision(True)
         capabilities = capabilities_for_action(tool_name, content)
+        # The ActionSpec is canonical approval authority. Authenticated,
+        # owner-scoped reads remain safe after untrusted context retrieval;
+        # the taint gate exists to prevent influenced effects, not to turn
+        # ordinary reads into a workflow approval button.
+        try:
+            from src.capability_registry import ApprovalMode, action_for_tool
+            spec = action_for_tool(tool_name, content)
+        except Exception:
+            spec = None
+        if (
+            spec is not None
+            and spec.known
+            and spec.approval is ApprovalMode.NONE
+            and set(spec.effects).issubset({
+                "read_private", "read_public", "read_workspace",
+                "brokered_network_read",
+            })
+        ):
+            return ToolGateDecision(True)
         blocked_effects = capabilities.effects & POST_EXTERNAL_BLOCKED_EFFECTS
         if capabilities.known and not blocked_effects:
             return ToolGateDecision(True)

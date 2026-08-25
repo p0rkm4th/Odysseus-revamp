@@ -76,11 +76,11 @@ def test_homelab_network_plan_is_private_and_nmap_candidates_are_review_only(tmp
 
     async def run():
         ops = HomelabOperations(receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"), runner=runner)
-        planned = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24"}, owner="alice")
+        planned = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED"}, owner="alice")
         assert planned["target"] == "192.168.10.0/24"
         assert "asset_draft_candidates" not in planned
         try:
-            await ops.execute({"action": "plan_network_discovery", "cidr": "8.8.8.0/24"}, owner="alice")
+            await ops.execute({"action": "plan_network_discovery", "cidr": "8.8.8.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED"}, owner="alice")
         except HomelabOperationError:
             pass
         else:
@@ -98,8 +98,9 @@ def test_network_context_read_separates_vpn_and_runtime_interfaces(monkeypatch):
     monkeypatch.setattr(
         broker,
         "client_request",
-        lambda request, timeout=15: {
+        lambda request, socket_path=None, timeout=15: {
             "ok": True,
+            "execution_location": "HOST",
             "addresses": '[{"ifname":"eth0","operstate":"UP","addr_info":[{"local":"10.20.0.4","prefixlen":24,"family":"inet"}]},{"ifname":"tun0","operstate":"UNKNOWN","addr_info":[{"local":"100.64.0.2","prefixlen":32,"family":"inet"}]},{"ifname":"docker0","operstate":"UP","addr_info":[{"local":"172.30.0.1","prefixlen":16,"family":"inet"}]}]',
             "routes": '[{"dst":"default","dev":"tun0"}]',
         },
@@ -112,6 +113,39 @@ def test_network_context_read_separates_vpn_and_runtime_interfaces(monkeypatch):
         assert any(scope["ownership"] == "VPN/CORPORATE_OR_UNKNOWN" for scope in result["candidate_scopes"])
         assert any(scope["ownership"] == "RUNTIME_INTERNAL" for scope in result["candidate_scopes"])
         assert result["vpn_present"] is True
+
+    asyncio.run(run())
+
+
+def test_network_context_fails_closed_when_broker_is_not_host(monkeypatch):
+    import src.privileged_broker as broker
+    monkeypatch.setattr(
+        broker, "client_request",
+        lambda request, socket_path=None, timeout=15: {
+            "ok": True, "execution_location": "APPLICATION_RUNTIME",
+            "addresses": "[]", "routes": "[]",
+        },
+    )
+
+    result = asyncio.run(HomelabOperations().execute(
+        {"action": "read_network_context"}, owner="alice",
+    ))
+    assert result["status"] == "UNAVAILABLE"
+    assert result["error_code"] == "HOST_NETWORK_CONTEXT_UNAVAILABLE"
+    assert result["observation_location"] == "APPLICATION_RUNTIME"
+
+
+def test_private_scope_without_ownership_authorization_is_rejected():
+    async def run():
+        try:
+            await HomelabOperations().execute(
+                {"action": "plan_network_discovery", "cidr": "10.20.0.0/24"},
+                owner="alice",
+            )
+        except HomelabOperationError as exc:
+            assert "private addressing alone is not authorization" in str(exc)
+        else:
+            raise AssertionError("unowned private scope was accepted")
 
     asyncio.run(run())
 
@@ -232,11 +266,11 @@ def test_discovery_plan_is_single_use_and_unrelated_homelab_actions_fail(tmp_pat
             receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
             observation_recorder=lambda _payload: None,
         )
-        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24"}, owner="alice")
-        result = await ops.execute({"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]}, owner="alice")
+        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED"}, owner="alice")
+        result = await ops.execute({"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED", "plan_digest": plan["operation_digest"]}, owner="alice")
         assert result["success"] is True
         try:
-            await ops.execute({"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]}, owner="alice")
+            await ops.execute({"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED", "plan_digest": plan["operation_digest"]}, owner="alice")
         except HomelabOperationError:
             pass
         else:
@@ -277,9 +311,9 @@ def test_network_discovery_persists_candidates_through_canonical_cmdb_writer(tmp
             receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
             observation_recorder=lambda payload: recorded.append(payload),
         )
-        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24"}, owner="alice")
+        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED"}, owner="alice")
         result = await ops.execute(
-            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]},
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED", "plan_digest": plan["operation_digest"]},
             owner="alice",
         )
         assert result["success"] is True
@@ -309,9 +343,9 @@ def test_network_discovery_does_not_claim_success_when_cmdb_persistence_fails(tm
             receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
             observation_recorder=failing_recorder,
         )
-        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24"}, owner="alice")
+        plan = await ops.execute({"action": "plan_network_discovery", "cidr": "192.168.10.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED"}, owner="alice")
         result = await ops.execute(
-            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "plan_digest": plan["operation_digest"]},
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24", "scope_authorization": "EXPLICITLY_AUTHORIZED", "plan_digest": plan["operation_digest"]},
             owner="alice",
         )
         assert result["success"] is False

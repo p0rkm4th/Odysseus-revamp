@@ -218,6 +218,21 @@ def test_canonical_asset_reads_are_read_only_and_need_no_approval():
     assert requires_exact_approval("manage_assets", {"action": "list"}) is False
 
 
+def test_tainted_run_still_allows_registered_owner_scoped_reads():
+    from src.tool_capabilities import ToolRunSecurityContext
+    security = ToolRunSecurityContext(external_untrusted_context_seen=True)
+    for tool, payload in (
+        ("read_memory", {"action": "summarize_owner_memory"}),
+        ("read_work", {"action": "overview"}),
+        ("manage_assets", {"action": "summary"}),
+        ("manage_homelab", {"action": "read_network_context"}),
+    ):
+        assert security.decision_for(tool, payload).allowed is True
+    assert security.decision_for(
+        "manage_homelab", {"action": "execute_network_discovery", "cidr": "10.0.0.0/24"}
+    ).allowed is False
+
+
 @pytest.mark.asyncio
 async def test_manage_assets_read_returns_structured_canonical_result(monkeypatch):
     import src.tool_execution as tool_execution

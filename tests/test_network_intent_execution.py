@@ -111,6 +111,11 @@ def test_qwen_prose_only_network_request_does_not_get_a_stale_scope_repair(monke
     async def fake_execute(block, *args, **kwargs):
         calls.append(block)
         payload = json.loads(block.content)
+        if payload["action"] == "read_network_context":
+            return "manage_homelab", {
+                "action": "read_network_context", "status": "UNAVAILABLE",
+                "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE", "exit_code": 1,
+            }
         return "manage_homelab", {
             "kind": "plan",
             "action": payload["action"],
@@ -133,8 +138,11 @@ def test_qwen_prose_only_network_request_does_not_get_a_stale_scope_repair(monke
         )
     )
 
-    assert calls == []
-    assert not any(event.get("type") == "tool_start" for event in _events(chunks))
+    assert [json.loads(call.content)["action"] for call in calls] == ["read_network_context"]
+    assert not any(
+        json.loads(call.content).get("action") == "plan_network_discovery"
+        for call in calls
+    )
     # The grounding boundary remains intact: only the synthetic tool result,
     # not the model's ARP prose, authorizes an action-completed response.
     assert not any("No action completed" in str(event.get("delta")) for event in _events(chunks))
