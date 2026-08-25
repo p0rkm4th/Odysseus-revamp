@@ -346,3 +346,16 @@ realistic browser gates pass. Rollback is retained as
   full regression `6168 passed, 3 skipped, 186 warnings`.
 - Status: `VERIFIED_TESTED`; owner-live cross-model attention dogfood remains
   pending.
+
+## Conversational reference intent checkpoint
+
+- Source change: `af82c82e` aligns the semantic compiler and agent classifier
+  for “do that”, “all of them”, “do all of the above”, and qualified
+  continuation language. These turns now preserve structured continuation /
+  reference intent for resolution against recent durable context or an active
+  Run; they do not select, approve, or execute Actions.
+- Evidence: focused continuation, reference, and regex-safety coverage
+  `78 passed, 1 warning`; full regression `6171 passed, 3 skipped, 186
+  warnings`.
+- Status: `VERIFIED_TESTED`; owner-live multi-step reference dogfood remains
+  pending.
