@@ -2,7 +2,7 @@
 
 Date: 2026-08-25  
 Branch: `recovery/live-candidate-20260823`  
-Final source under audit: `90cc66b0c8c455dd0ba2ee949a2fca7e89da919a`
+Final source under audit: `b4b5057f`
 
 ## What changed
 
@@ -32,6 +32,9 @@ Final source under audit: `90cc66b0c8c455dd0ba2ee949a2fca7e89da919a`
   ToolBinding over existing secret-free SetupCenterService projections for
   state, integrations, and permissions. Setup metadata remains distinct from
   authority and never resolves secrets.
+- Preserved the mature `api_call` integration routing rule pack while adding
+  Setup/Integration guidance; the full regression caught and verified this
+  convergence detail.
 - Built and deployed `odysseus:candidate-90cc66b0` with image
   `sha256:7434e78a8e375a8a37f09bdeb21e54d43c75f3612ca30da18fe0cad4f904ac18`.
   Runtime `/api/version`, container source hash, and browser/static checks are
