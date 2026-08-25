@@ -371,3 +371,14 @@ realistic browser gates pass. Rollback is retained as
   full regression `6172 passed, 3 skipped, 186 warnings`.
 - Status: `VERIFIED_TESTED`; owner-live continuation and model-swap dogfood
   remain pending.
+
+## Setup/Integration canonical read projection checkpoint
+
+- Source change: `6efde1cb` centralizes canonical read Action projection and
+  preserves the resolved `INTEGRATION` `view=integrations` filter. Integration
+  health requests therefore use `read_setup / integrations`; ordinary Setup
+  state requests continue using `read_setup / state`.
+- Evidence: focused Setup/contract/parity/projection coverage `93 passed, 1
+  warning`; full regression `6173 passed, 3 skipped, 186 warnings`.
+- Status: `VERIFIED_TESTED`; provider credential/live health remains distinct
+  from configuration metadata and owner-live dogfood remains pending.
