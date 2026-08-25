@@ -382,3 +382,16 @@ realistic browser gates pass. Rollback is retained as
   warning`; full regression `6173 passed, 3 skipped, 186 warnings`.
 - Status: `VERIFIED_TESTED`; provider credential/live health remains distinct
   from configuration metadata and owner-live dogfood remains pending.
+
+## Career opportunity semantic-read checkpoint
+
+- Source change: the bounded Career intent compiler now treats opportunity and
+  role nouns, plus ordinary save/search inflections such as “did I save?”, as
+  `JOB_OPPORTUNITY` semantics. These requests project to the existing
+  owner-scoped `read_career / saved_opportunities` Action; profile,
+  application, and interview reads remain distinct.
+- Evidence: Career, intent-contract, and cross-model parity coverage `51
+  passed, 1 warning`; full regression `6174 passed, 3 skipped, 186 warnings`.
+- Status: `VERIFIED_TESTED`; external job-provider configuration and owner-live
+  dogfood remain pending. No fake listings or autonomous applications were
+  introduced.

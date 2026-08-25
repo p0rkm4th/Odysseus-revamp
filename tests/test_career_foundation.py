@@ -29,6 +29,18 @@ def test_career_intents_resolve_to_owner_scoped_read_without_approval():
         assert resolved.action.approval.value == "none"
 
 
+def test_career_opportunity_paraphrases_use_the_saved_opportunity_contract():
+    for query in (
+        "What job opportunities did I save?",
+        "Which roles have I saved?",
+        "Show similar jobs I bookmarked",
+    ):
+        resolved = resolve_intent(compile_intent(query))
+        assert resolved.frame.domain_concept == "JOB_OPPORTUNITY"
+        assert resolved.action_id == "saved_opportunities"
+        assert resolved.binding_name == "read_career"
+
+
 def test_career_opportunity_normalization_deduplicates_per_owner_and_provider():
     db = db_session(); service = CareerService(db)
     payload = {"external_id": "abc-1", "title": "Linux Infrastructure Engineer", "employer": "Example", "location": "Remote"}

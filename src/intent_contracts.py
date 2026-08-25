@@ -284,7 +284,12 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
     elif re.search(r"\b(?:career|job search|jobs?|opportunit(?:y|ies)|applications?|interviews?|resume|roles?)\b", q):
         if re.search(r"\b(?:application|applied|follow[- ]?up)", q): concept = "APPLICATION"
         elif re.search(r"\b(?:interview|interviews)", q): concept = "INTERVIEW"
-        elif re.search(r"\b(?:saved|roles?|similar|find|search)", q): concept = "JOB_OPPORTUNITY"
+        # Opportunity nouns and ordinary save/search language are semantic
+        # evidence for the canonical opportunity collection.  In particular,
+        # "did I save" must not fall through to the broader career profile.
+        elif re.search(r"\b(?:opportunit(?:y|ies)|roles?)\b", q) or re.search(
+            r"\b(?:sav(?:e|ed|ing)|similar|find|search)\b", q
+        ): concept = "JOB_OPPORTUNITY"
         else: concept = "CAREER_PROFILE"
     match = re.search(r"\b(?:about|for|asset)\s+([A-Za-z0-9_.:-]{2,80})", text, re.IGNORECASE)
     if match:
