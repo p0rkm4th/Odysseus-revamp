@@ -40,9 +40,11 @@ success with failed projection is preserved as `execution_ambiguous` rather
 than reported as verified. A returned tool result is not treated as desired-
 state verification, so the Run remains pending until a canonical verifier
 records success, compensation, or failure. The network binding now invokes a
-deterministic projection verifier after its structured result; unsupported
-bound actions remain pending rather than receiving an inferred success. This
-is an adapter over the
+deterministic projection verifier after its structured result; service restart
+now requires a recorded plan precheck, invalidates only its targeted current
+service observations, and verifies the structured post-restart active state.
+Unsupported bound actions remain pending rather than receiving an inferred
+success. This is an adapter over the
 existing agent executor and policy path, not a second executor. Synthetic
 same-Run continuation, lifecycle, CMDB-projection, and ambiguity tests are
 green; owner-live retest and provider-backed verification remain pending.

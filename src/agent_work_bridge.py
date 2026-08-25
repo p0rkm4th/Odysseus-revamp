@@ -13,7 +13,7 @@ from typing import Any
 
 from core.database import SessionLocal
 from core.work_models import WorkAction, WorkResult, WorkRun
-from src.capability_registry import ApprovalMode, action_for_tool
+from src.capability_registry import ApprovalMode, action_for_tool, capability_for_id
 from src.tool_bindings import binding_for_tool
 from src.work_engine import WorkEngine, WorkError
 
@@ -38,6 +38,35 @@ def _action_contract(tool_name: str, content: Any):
     if binding is None or spec is None or not spec.known:
         return None, None, None
     return binding, spec, _payload(content)
+
+
+def _required_prechecks(run: WorkRun, spec) -> list[str]:
+    required = [str(item) for item in (spec.precheck_actions or ()) if str(item).strip()]
+    if not required:
+        return []
+    checkpoints = [item for item in (run.checkpoints or []) if isinstance(item, dict) and item.get("kind") == "precheck"]
+    return [
+        action_id for action_id in required
+        if not any(
+            item.get("action_id") == action_id
+            and (item.get("success") is True or item.get("status") in {"passed", "succeeded", "success", "verified"})
+            for item in checkpoints
+        )
+    ]
+
+
+def _state_invalidations(action: WorkAction, spec) -> list[dict[str, Any]]:
+    """Translate declarative invalidation tokens into scoped claim keys."""
+    payload = action.normalized_input if isinstance(action.normalized_input, dict) else {}
+    if action.action_id == "execute_service_restart":
+        service = str(payload.get("service") or "").strip()
+        if not service:
+            return []
+        return [{"subject_ref": f"service:{service}", "predicate": token.split(".", 1)[-1]} for token in spec.state_invalidations]
+    if action.action_id == "execute_network_discovery":
+        cidr = str(payload.get("cidr") or "private_scope").strip()
+        return [{"subject_ref": f"network:{cidr}", "predicate": token.split(".", 1)[-1]} for token in spec.state_invalidations]
+    return []
 
 
 def ensure_agent_run(
@@ -112,6 +141,23 @@ def prepare_action(
         run = db.query(WorkRun).filter_by(id=str(run_id), owner=str(owner)).one_or_none()
         if run is None:
             return None
+        capability = capability_for_id(binding.capability_id)
+        registered_spec = capability.actions.get(spec.action_id) if capability else None
+        if registered_spec is not None:
+            missing = _required_prechecks(run, registered_spec)
+            if missing:
+                work.set_run_status(
+                    owner, run.id, "awaiting_input",
+                    {"lifecycle_state": "waiting_input", "current_step": f"precheck required: {', '.join(missing)}"},
+                )
+                return None
+        target_resources = list(spec.target_resources)
+        locks = list(spec.locks)
+        if spec.action_id == "execute_service_restart":
+            service = str(payload.get("service") or "").strip()
+            if service:
+                target_resources.append(f"service:{service}")
+                locks.append(f"service:{service}")
         if approval_reference:
             existing = (
                 db.query(WorkAction)
@@ -127,9 +173,9 @@ def prepare_action(
             "tool_binding_name": binding.transport_name,
             "effect_class": spec.effects[0] if spec.effects else "internal",
             "normalized_input": payload,
-            "target_resources": list(spec.target_resources),
+            "target_resources": target_resources,
             "preconditions": list(spec.preconditions),
-            "locks": list(spec.locks),
+            "locks": locks,
             "risk_level": spec.risk_level,
             "retry_policy": dict(spec.retry_policy or {}),
             "timeout_seconds": spec.timeout_seconds,
@@ -215,6 +261,17 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 "provenance": {"source": "canonical ToolBinding", "run_id": action.run_id},
             },
         })
+        if str(action.action_id or "").startswith("plan_"):
+            # A successful plan is durable precheck evidence for a later
+            # consequential action in the same Run. Keep only structured
+            # references, never raw provider output, in the checkpoint.
+            work.record_precheck(owner, action.run_id, {
+                "action_id": action.action_id,
+                "status": "passed",
+                "success": True,
+                "result_reference": f"agent-tool://{action.id}",
+                "operation_digest": safe_data.get("operation_digest") if isinstance(safe_data, dict) else None,
+            })
         # A result proves that the binding returned; it does not prove the
         # desired postcondition. Consequential Actions therefore advance the
         # same canonical lifecycle to VERIFYING and remain incomplete until a
@@ -229,6 +286,14 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 owner, action.run_id, "executing",
                 reason="bound ActionSpec returned; verification required",
             )
+            capability = capability_for_id(action.capability_id)
+            registered_spec = capability.actions.get(action.action_id) if capability else None
+            invalidations = _state_invalidations(action, registered_spec) if registered_spec else []
+            if invalidations:
+                work.invalidate_state(
+                    owner, action.run_id, invalidations,
+                    reason="consequential action completed; current observations require refresh",
+                )
             lifecycle = work.verified_execution_step(
                 owner, action.run_id, "verifying",
                 reason="post-action verification required",
@@ -277,6 +342,25 @@ def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
             outcome = work.complete_verification(
                 str(owner), action.run_id, success=True,
                 details={"checks": checks, "observation_count": data.get("observation_count", 0), "verifier": "network_discovery_projection"},
+            )
+            return {"verified": True, "checks": checks, "run_lifecycle_state": outcome["lifecycle_state"]}
+        if action.action_id == "execute_service_restart":
+            checks = {
+                "service_active": data.get("success") is True
+                and data.get("verification_exit_code") == 0
+                and str(data.get("verification_output") or "").strip() == "active",
+            }
+            missing = [name for name in required if not checks.get(name, False)]
+            work = WorkEngine(db)
+            if missing:
+                outcome = work.complete_verification(
+                    str(owner), action.run_id, success=False,
+                    details={"checks": checks, "missing": missing, "verifier": "service_restart_status"},
+                )
+                return {"verified": False, "checks": checks, "missing": missing, "run_lifecycle_state": outcome["lifecycle_state"]}
+            outcome = work.complete_verification(
+                str(owner), action.run_id, success=True,
+                details={"checks": checks, "service": (action.normalized_input or {}).get("service"), "verifier": "service_restart_status"},
             )
             return {"verified": True, "checks": checks, "run_lifecycle_state": outcome["lifecycle_state"]}
         return {"verified": False, "reason": "no deterministic verifier registered"}

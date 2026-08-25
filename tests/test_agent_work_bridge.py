@@ -4,8 +4,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from core.database import Base
-from core.work_models import WorkAction, WorkResult, WorkRun
+from core.work_models import EpistemicClaim, WorkAction, WorkResult, WorkRun
 import src.agent_work_bridge as bridge
+from src.work_engine import WorkEngine
 
 
 def _session_factory():
@@ -133,5 +134,87 @@ def test_agent_binding_preserves_ambiguous_post_action_projection_failure(monkey
             assert action.status == "failed"
             assert action.error.startswith("execution_ambiguous:")
             assert db.query(WorkResult).filter_by(action_id=action_id).count() == 0
+    finally:
+        engine.dispose()
+
+
+def test_service_restart_requires_plan_records_invalidation_and_verifies(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-service-1", "restart the synthetic service",
+            intent={"domains": ["homelab"]},
+        )
+        assert bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_service_restart", "service": "nginx"},
+        ) is None
+        with session_factory() as db:
+            waiting = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            assert waiting.lifecycle_state == "waiting_input"
+            WorkEngine(db).record_claim(
+                "alice", {"claim_class": "Observation", "subject_ref": "service:nginx", "predicate": "status", "value": "active", "source": "probe"},
+            )
+            WorkEngine(db).record_claim(
+                "alice", {"claim_class": "Observation", "subject_ref": "service:nginx", "predicate": "uptime", "value": "10m", "source": "probe"},
+            )
+
+        plan_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "plan_service_restart", "service": "nginx"},
+        )
+        assert plan_id
+        bridge.record_result(
+            "alice", plan_id,
+            {"data": {"success": True, "operation_digest": "d" * 64, "current_state": "active"}},
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_service_restart", "service": "nginx", "plan_digest": "d" * 64},
+        )
+        assert action_id
+        with session_factory() as db:
+            action = db.query(WorkAction).filter_by(id=action_id).one()
+            assert "service:nginx" in action.target_resources
+            assert "service:nginx" in action.locks
+            assert action.verification == ["service_active"]
+
+        bridge.bind_approval("alice", action_id, "approval-service-1")
+        bridge.resume_approval("alice", action_id, "approval-service-1")
+        completed = bridge.record_result(
+            "alice", action_id,
+            {"data": {"success": True, "verification_exit_code": 0, "verification_output": "active"}},
+        )
+        assert completed["run_lifecycle_state"] == "verifying"
+        verified = bridge.verify_bound_action("alice", action_id)
+        assert verified["verified"] is True
+        assert verified["run_lifecycle_state"] == "succeeded"
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            assert run.lifecycle_state == "succeeded"
+            claims = db.query(EpistemicClaim).filter_by(owner="alice").all()
+            assert claims and all((claim.provenance or {}).get("state") == "stale" for claim in claims)
+    finally:
+        engine.dispose()
+
+
+def test_service_restart_verification_failure_is_not_success(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run("alice", "chat-service-2", "restart the synthetic service", intent={"domains": ["homelab"]})
+        plan_id = bridge.prepare_action("alice", run_id, "manage_homelab", {"action": "plan_service_restart", "service": "nginx"})
+        bridge.record_result("alice", plan_id, {"data": {"success": True, "operation_digest": "e" * 64}})
+        action_id = bridge.prepare_action("alice", run_id, "manage_homelab", {"action": "execute_service_restart", "service": "nginx"})
+        bridge.bind_approval("alice", action_id, "approval-service-2")
+        bridge.resume_approval("alice", action_id, "approval-service-2")
+        bridge.record_result(
+            "alice", action_id,
+            {"data": {"success": True, "verification_exit_code": 1, "verification_output": "inactive"}},
+        )
+        verified = bridge.verify_bound_action("alice", action_id)
+        assert verified["verified"] is False
+        assert verified["run_lifecycle_state"] == "failed"
     finally:
         engine.dispose()

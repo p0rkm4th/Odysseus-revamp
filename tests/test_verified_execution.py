@@ -139,6 +139,7 @@ def test_compensation_failure_is_terminal_and_explicit(db):
 def test_bound_compensation_uses_persisted_contract_and_requires_restoration_verification(db):
     svc = WorkEngine(db); run = svc.create_run("alice", {"domain": "homelab"})
     action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "execute_service_restart", "status": "approved", "approval_reference": "approval-restore", "compensating_action": {"capability_id": "homelab.manage", "action_id": "execute_service_restart", "input": {"service": "nginx", "mode": "restore"}}})
+    svc.record_precheck("alice", run["id"], {"action_id": "plan_service_restart", "success": True, "status": "passed"})
     _to_verifying(svc, "alice", run["id"])
     svc.complete_verification("alice", run["id"], success=False, compensation_reference=action["id"])
     seen = {}
@@ -152,6 +153,7 @@ def test_bound_compensation_uses_persisted_contract_and_requires_restoration_ver
 def test_bound_compensation_failure_is_durable(db):
     svc = WorkEngine(db); run = svc.create_run("alice", {"domain": "homelab"})
     action = svc.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "execute_service_restart", "status": "approved", "approval_reference": "approval-restore", "compensating_action": {"capability_id": "homelab.manage", "action_id": "execute_service_restart"}})
+    svc.record_precheck("alice", run["id"], {"action_id": "plan_service_restart", "success": True, "status": "passed"})
     _to_verifying(svc, "alice", run["id"]); svc.complete_verification("alice", run["id"], success=False, compensation_reference=action["id"])
     final = svc.execute_bound_compensation("alice", run["id"], action["id"], lambda _payload: {"success": False, "error": "restore unavailable"})
     assert final["status"] == "failed" and final["result_summary"]["outcome"] == "compensation_failed"
