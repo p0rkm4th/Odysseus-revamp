@@ -151,6 +151,7 @@ def test_work_read_binding_is_owner_scoped_and_structured(monkeypatch):
     result = asyncio.run(tool_execution.execute_registered_binding(
         tool_name="read_work", payload={"action": "overview"}, owner="alice"))
     assert result["success"] is True
+    assert result["data"]["status"] == "SUCCESS_WITH_DATA"
     assert len(result["data"]["goals"]) == 1
     assert result["data"]["goals"][0]["title"] == "Ship the release"
     engine.dispose()
@@ -218,8 +219,18 @@ def test_setup_read_binding_reuses_secret_free_owner_projection(monkeypatch, tmp
     result = asyncio.run(tool_execution.execute_registered_binding(
         tool_name="read_setup", payload={"action": "state"}, owner="alice"))
     assert result["success"] is True
+    assert result["data"]["status"] == "SUCCESS_WITH_DATA"
     assert result["data"]["owner"] == "alice"
     assert result["data"]["secrets_exposed"] is False
+
+
+def test_statusless_canonical_read_payload_distinguishes_empty_from_data():
+    from src.tool_execution import _with_canonical_read_status
+
+    assert _with_canonical_read_status({"items": []})["status"] == "SUCCESS_EMPTY"
+    assert _with_canonical_read_status({"items": [{"id": "item-1"}]})["status"] == "SUCCESS_WITH_DATA"
+    assert _with_canonical_read_status({"status": "DEGRADED", "items": []})["status"] == "DEGRADED"
+    assert _with_canonical_read_status({"error": "provider unavailable"})["status"] == "FAILED"
 
 
 def test_communications_read_binding_requires_authenticated_owner():

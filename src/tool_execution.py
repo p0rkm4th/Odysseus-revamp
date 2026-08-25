@@ -1490,7 +1490,8 @@ async def _execute_security_assessment_binding(block, owner=None):
                 result = {"evidence": [{column.name: getattr(row, column.name) for column in row.__table__.columns} for row in db.query(SecurityEvidence).filter_by(owner=str(owner)).all()]}
             else:
                 raise ValueError("unsupported read-only security assessment action")
-        return "manage_security_assessment", {"output": _ody_v34_json.dumps(result, default=str, indent=2, sort_keys=True), "exit_code": 0, "data": result}
+        result = _with_canonical_read_status(result)
+        return "manage_security_assessment", {"output": _ody_v34_json.dumps(result, default=str, indent=2, sort_keys=True), "exit_code": 0, "success": True, "data": result}
     except Exception as exc:
         return "manage_security_assessment", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
@@ -1518,6 +1519,29 @@ async def _execute_read_memory_binding(block, owner=None):
         }
     except Exception as exc:
         return "read_memory", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
+def _with_canonical_read_status(result: Any) -> dict[str, Any]:
+    """Attach an explicit status without changing a domain's payload shape.
+
+    Read adapters historically returned useful domain dictionaries but left
+    empty-list interpretation to the model.  The control plane needs a
+    machine-readable distinction: an empty canonical collection is not a
+    failed or unavailable read. Existing explicit domain statuses are retained
+    verbatim for compatibility; only status-less structured results are
+    classified here.
+    """
+    if not isinstance(result, dict):
+        return {"status": "INVALID_RESULT", "data": result}
+    if str(result.get("status") or "").strip():
+        return result
+    if result.get("unavailable") is True:
+        return {"status": "UNAVAILABLE", **result}
+    if result.get("error"):
+        return {"status": "FAILED", **result}
+    collections = [value for value in result.values() if isinstance(value, list)]
+    status = "SUCCESS_EMPTY" if collections and not any(collections) else "SUCCESS_WITH_DATA"
+    return {"status": status, **result}
 
 
 async def _execute_read_work_binding(block, owner=None):
@@ -1565,6 +1589,7 @@ async def _execute_read_work_binding(block, owner=None):
                 models = {"list_goals": (WorkGoal, None), "list_projects": (WorkProject, None), "list_tasks": (WorkTask, None), "list_runs": (WorkRun, None), "list_commitments": (WorkCommitment, "open")}
                 model, status = models[action]
                 result = {action.removeprefix("list_"): service.list_records(owner, model, status=status)}
+        result = _with_canonical_read_status(result)
         return "read_work", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
     except Exception as exc:
         return "read_work", {"error": str(exc), "output": str(exc), "exit_code": 1}
@@ -1596,6 +1621,7 @@ async def _execute_read_household_binding(block, owner=None):
             if not item_id:
                 raise ValueError("item_id is required for get_item")
             result = {"item": service.get_item(owner, item_id), "lots": service.list_lots(owner, item_id)}
+        result = _with_canonical_read_status(result)
         return "read_household", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
     except Exception as exc:
         return "read_household", {"error": str(exc), "output": str(exc), "exit_code": 1}
@@ -1615,6 +1641,7 @@ async def _execute_read_setup_binding(block, owner=None):
         result = {"state": service.projection, "integrations": service.integrations_projection, "permissions": service.permissions_projection}[action](str(owner))
         if result.get("secrets_exposed") or result.get("secret_values_exposed"):
             raise ValueError("Setup projection violated secret-free contract")
+        result = _with_canonical_read_status(result)
         return "read_setup", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
     except Exception as exc:
         return "read_setup", {"error": str(exc), "output": str(exc), "exit_code": 1}
@@ -1630,6 +1657,7 @@ async def _execute_read_career_binding(block, owner=None):
         from src.career_service import CareerService
         with SessionLocal() as db:
             result = CareerService(db).read(str(owner), str(payload.get("action") or "overview"))
+        result = _with_canonical_read_status(result)
         return "read_career", {"output": json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
     except Exception as exc:
         return "read_career", {"error": str(exc), "output": str(exc), "exit_code": 1}
@@ -1686,6 +1714,7 @@ async def _execute_read_communications_binding(block, owner=None):
                 },
                 "contacts": {"status": "NOT_PROJECTED", "reason": "CardDAV contact ownership is not yet a canonical read binding"},
             }
+        result = _with_canonical_read_status(result)
         return "read_communications", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
     except Exception as exc:
         return "read_communications", {"error": str(exc), "output": str(exc), "exit_code": 1}
