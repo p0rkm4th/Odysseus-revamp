@@ -1,7 +1,7 @@
 # Hades architecture convergence audit
 
 Status: **bounded archaeology recorded; migration queue active**  
-Source basis: `7f574716` plus prior truth-audit evidence in
+Source basis: `be1435f8` plus prior truth-audit evidence in
 `docs/hades-truth-audit.md`. Runtime provenance is not yet deployed from this
 source, so live claims remain below E4/E5.
 
@@ -101,6 +101,20 @@ compatibility, UI/test coverage, rollback, and a deprecation period. The
 preferred strangler shape is `old caller → compatibility adapter → canonical
 service`; no legacy subsystem is removable from this audit alone.
 
+## Current convergence evidence
+
+The existing workspace registry was audited rather than replaced. Before this
+batch, `static/app.js` maintained a second hard-coded workspace grouping list
+while `static/js/workspaceRegistry.js` owned the compact rail. That was a
+parallel UI identity path. The expanded grouping now projects workspace member
+IDs through `MODULE_BY_ID`; virtual/contextual modules are declared explicitly
+with a null legacy DOM binding instead of being silently omitted. Structural
+tests assert that every workspace member has label/icon metadata and an
+intentional legacy-or-virtual navigation binding.
+
+This is source/focused evidence only. It does not establish deployed browser
+acceptance or owner dogfood.
+
 ## Reuse metrics (baseline)
 
 - Original subsystems deliberately retained/reused: provider integrations,
@@ -113,4 +127,3 @@ service`; no legacy subsystem is removable from this audit alone.
   Calendar/Work, Documents/domain evidence, Execution Profiles/Nodes, Search.
 - Deletion is intentionally deferred. No dead path is removed without parity,
   migration, compatibility, and rollback evidence.
-
