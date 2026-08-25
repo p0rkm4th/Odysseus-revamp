@@ -100,3 +100,12 @@ OSINT claim projection checkpoint: owner/case-scoped claim reads now include a
 structured epistemic summary (claim classes, lifecycle statuses, and claims
 with contradiction references). The dossier displays this summary while
 keeping external report/findings tainted and non-authoritative.
+
+### Overnight convergence checkpoint — 2026-08-25
+
+The expanded sidebar now projects workspace groups from the existing canonical
+`WorkspaceDefinition`/`ModuleDefinition` registry; virtual modules have
+explicit metadata and legacy DOM IDs remain compatibility bindings. Source and
+focused evidence is E2/E3; the final candidate is E4/E5 source-matched, while
+owner-live UI and memory dogfood remain pending. See
+`docs/hades-truth-audit-post-overnight.md`.
