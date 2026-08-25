@@ -4617,6 +4617,7 @@ async def stream_agent_loop(
     _is_teacher_run: bool = False,
     history_session=None,
     defer_context_shaping: bool = False,
+    tool_executor=None,
 ) -> AsyncGenerator[str, None]:
     """Streaming agent loop generator.
 
@@ -6050,7 +6051,8 @@ async def stream_agent_loop(
 
         async def _run_approved_tool():
             try:
-                return await execute_tool_block(
+                executor = tool_executor or execute_tool_block
+                return await executor(
                     approved_block,
                     session_id=session_id,
                     disabled_tools=disabled_tools,
@@ -8142,7 +8144,8 @@ async def stream_agent_loop(
 
                 async def _run_tool():
                     try:
-                        return await execute_tool_block(
+                        executor = tool_executor or execute_tool_block
+                        return await executor(
                             block,
                             session_id=session_id,
                             disabled_tools=disabled_tools,

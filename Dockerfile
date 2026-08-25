@@ -11,25 +11,6 @@ RUN bash /usr/local/bin/build-realesrgan-wheels.sh /wheels
 
 FROM python:3.14-slim
 
-# Build provenance is supplied by the candidate-build command from the exact
-# checkout being built. Keeping these as image ENV/LABEL values makes the
-# identity survive container recreation without requiring host mounts or a
-# Docker socket inside Hades.
-ARG ODYSSEUS_SOURCE_COMMIT=unknown
-ARG ODYSSEUS_BUILD_ID=unidentified
-ARG ODYSSEUS_BUILD_TIME=unknown
-ARG ODYSSEUS_FRONTEND_BUILD_ID=unidentified
-ARG ODYSSEUS_MIGRATION_HEAD=unknown
-ENV ODYSSEUS_SOURCE_COMMIT="$ODYSSEUS_SOURCE_COMMIT" \
-    ODYSSEUS_BUILD_ID="$ODYSSEUS_BUILD_ID" \
-    ODYSSEUS_BUILD_TIME="$ODYSSEUS_BUILD_TIME" \
-    ODYSSEUS_FRONTEND_BUILD_ID="$ODYSSEUS_FRONTEND_BUILD_ID" \
-    ODYSSEUS_MIGRATION_HEAD="$ODYSSEUS_MIGRATION_HEAD"
-LABEL org.opencontainers.image.revision="$ODYSSEUS_SOURCE_COMMIT" \
-      org.opencontainers.image.version="$ODYSSEUS_BUILD_ID" \
-      org.opencontainers.image.created="$ODYSSEUS_BUILD_TIME" \
-      org.odysseus.frontend.revision="$ODYSSEUS_FRONTEND_BUILD_ID"
-
 # System deps. tmux is required by Cookbook for background downloads/serves.
 # openssh-client is required for Cookbook remote server tests, setup, probes,
 # downloads, and serves from Docker installs.
@@ -115,6 +96,24 @@ RUN pip install --no-cache-dir --no-deps /tmp/odysseus-wheels/*.whl \
 
 # Copy app code
 COPY . .
+
+# Keep mutable provenance after the stable OS/dependency/source layers. Build
+# IDs remain exact and inspectable, while source-only candidates do not rebuild
+# Chromium/Node/system packages merely because identity metadata changed.
+ARG ODYSSEUS_SOURCE_COMMIT=unknown
+ARG ODYSSEUS_BUILD_ID=unidentified
+ARG ODYSSEUS_BUILD_TIME=unknown
+ARG ODYSSEUS_FRONTEND_BUILD_ID=unidentified
+ARG ODYSSEUS_MIGRATION_HEAD=unknown
+ENV ODYSSEUS_SOURCE_COMMIT="$ODYSSEUS_SOURCE_COMMIT" \
+    ODYSSEUS_BUILD_ID="$ODYSSEUS_BUILD_ID" \
+    ODYSSEUS_BUILD_TIME="$ODYSSEUS_BUILD_TIME" \
+    ODYSSEUS_FRONTEND_BUILD_ID="$ODYSSEUS_FRONTEND_BUILD_ID" \
+    ODYSSEUS_MIGRATION_HEAD="$ODYSSEUS_MIGRATION_HEAD"
+LABEL org.opencontainers.image.revision="$ODYSSEUS_SOURCE_COMMIT" \
+      org.opencontainers.image.version="$ODYSSEUS_BUILD_ID" \
+      org.opencontainers.image.created="$ODYSSEUS_BUILD_TIME" \
+      org.odysseus.frontend.revision="$ODYSSEUS_FRONTEND_BUILD_ID"
 
 # Create data directory (mount a volume here for persistence)
 RUN mkdir -p data logs services/cache/search
