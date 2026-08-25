@@ -4678,6 +4678,15 @@ async def stream_agent_loop(
         if isinstance(_intent, dict)
         else _last_user,
     )
+    _active_run_context = None
+    if work_run_id and owner:
+        try:
+            from src.agent_work_bridge import continuation_run_projection
+            _active_run_context = await asyncio.to_thread(
+                continuation_run_projection, owner, str(work_run_id),
+            )
+        except Exception:
+            logger.debug("durable reference context unavailable", exc_info=True)
     # One bounded semantic frame is attached to every turn. Existing domain
     # normalizers remain compatibility evidence, but canonical first-class
     # exposure can now be driven by the frame/contract resolver instead of a
@@ -4688,17 +4697,18 @@ async def stream_agent_loop(
             str(_intent.get("retrieval_query") or _last_user),
             continuation=bool(_intent.get("continuation")),
             run_reference=str(work_run_id or "").strip() or None,
+            reference_context=(
+                _active_run_context.get("reference_context")
+                if isinstance(_active_run_context, dict)
+                else None
+            ),
         )
         _resolved_contract = resolve_intent(_intent_frame)
         _intent["intent_frame"] = _intent_frame.as_dict()
         _intent["resolved_contract"] = _resolved_contract.as_dict()
         if _intent_frame.operation_class == "CONTINUE":
             from src.agent_work_bridge import continuation_run_projection
-            active_run = None
-            if work_run_id:
-                active_run = await asyncio.to_thread(
-                    continuation_run_projection, owner, str(work_run_id),
-                )
+            active_run = _active_run_context
             _continuation_result = resolve_continuation(_intent_frame, active_run)
             _intent["continuation_resolution"] = _continuation_result.as_dict()
             if isinstance(active_run, dict) and isinstance(active_run.get("next_step"), dict):

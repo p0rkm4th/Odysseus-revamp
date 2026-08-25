@@ -54,6 +54,7 @@ class IntentFrame:
     depth: str = "STANDARD"
     constraints: tuple[str, ...] = ()
     desired_output: str | None = None
+    reference_resolution: Mapping[str, Any] = field(default_factory=dict)
     read_explicit: bool = False
     source: str = "deterministic_compiler"
 
@@ -226,6 +227,67 @@ def _depth(text: str) -> str:
     return "STANDARD"
 
 
+def resolve_structured_reference(
+    text: str,
+    context: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Resolve conversational references against server-owned opaque refs.
+
+    This is intentionally a pure projection.  It never looks up a guessed ID,
+    broadens scope, or authorizes an Action.  Callers may persist the compact
+    context and pass it back after a model/provider swap.  Singular references
+    fail closed when more than one candidate exists; plural language returns
+    the exact bounded set supplied by the caller.
+    """
+    query = str(text or "").strip().lower()
+    supplied = context if isinstance(context, Mapping) else {}
+    candidates = [
+        item for item in (supplied.get("entities") or supplied.get("references") or [])
+        if isinstance(item, Mapping) and str(item.get("ref") or item.get("id") or "").strip()
+    ]
+    last = supplied.get("last") if isinstance(supplied.get("last"), Mapping) else None
+    if last is not None and not any(
+        str(item.get("ref") or item.get("id") or "") == str(last.get("ref") or last.get("id") or "")
+        for item in candidates
+    ):
+        candidates.insert(0, last)
+
+    plural = bool(re.search(
+        r"\b(?:those|them|these|all(?:\s+of)?\s+(?:the\s+)?(?:above|those|them)|"
+        r"all\s+of\s+them|everything)\b", query,
+    ))
+    ordinal_match = re.search(r"\b(?:the\s+)?(first|second|third)\s+one\b", query)
+    singular = bool(re.search(r"\b(?:it|that|this|that\s+one)\b", query)) or bool(ordinal_match)
+    if not plural and not singular:
+        return {"status": "NOT_REFERENCE", "refs": [], "reason": "no structured reference phrase"}
+    if not candidates:
+        return {"status": "UNRESOLVED", "refs": [], "reason": "no durable reference context"}
+    if ordinal_match:
+        index = {"first": 0, "second": 1, "third": 2}[ordinal_match.group(1)]
+        if index >= len(candidates):
+            return {"status": "UNRESOLVED", "refs": [], "reason": "ordinal reference is out of range"}
+        selected = [candidates[index]]
+    elif plural:
+        selected = candidates
+    elif len(candidates) == 1:
+        selected = candidates
+    else:
+        return {
+            "status": "AMBIGUOUS", "refs": [],
+            "candidate_refs": [str(item.get("ref") or item.get("id")) for item in candidates],
+            "reason": "singular reference has multiple candidates",
+        }
+    refs = [str(item.get("ref") or item.get("id")) for item in selected]
+    concepts = sorted({str(item.get("concept") or "").strip() for item in selected if item.get("concept")})
+    return {
+        "status": "RESOLVED",
+        "refs": refs,
+        "concept": concepts[0] if len(concepts) == 1 else None,
+        "concepts": concepts,
+        "selection": "ALL" if plural else "ONE",
+    }
+
+
 def _operation(text: str, *, continuation: bool = False) -> str:
     q = text.lower().strip()
     if continuation or _is_continuation_phrase(q):
@@ -239,10 +301,17 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     return "READ"
 
 
-def compile_intent(query: str, *, continuation: bool = False, run_reference: str | None = None) -> IntentFrame:
+def compile_intent(
+    query: str,
+    *,
+    continuation: bool = False,
+    run_reference: str | None = None,
+    reference_context: Mapping[str, Any] | None = None,
+) -> IntentFrame:
     """Compile common current product concepts into a bounded IntentFrame."""
     text = str(query or "").strip()
     q = text.lower()
+    reference_resolution = resolve_structured_reference(text, reference_context)
     operation = _operation(text, continuation=continuation)
     # READ is the safe fallback operation for semantically incomplete text,
     # but canonical read projection must not treat every imperative containing
@@ -312,9 +381,30 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
             r"\b(?:sav(?:e|ed|ing)|similar|find|search)\b", q
         ): concept = "JOB_OPPORTUNITY"
         else: concept = "CAREER_PROFILE"
+    # A resolved opaque reference may supply the semantic subject when the
+    # latest turn is intentionally terse (for example, "scan those hosts").
+    # It never supplies an ActionSpec or executor.  Conflicting concepts stay
+    # ambiguous and are handled by the normal caller/UI clarification path.
+    if reference_resolution.get("status") == "RESOLVED":
+        referenced_concept = str(reference_resolution.get("concept") or "").strip()
+        if concept == "UNKNOWN" and referenced_concept:
+            concept = referenced_concept
+        resolved_refs = list(reference_resolution.get("refs") or [])
+        if len(resolved_refs) == 1 and not target:
+            target = resolved_refs[0]
     match = re.search(r"\b(?:about|for|asset)\s+([A-Za-z0-9_.:-]{2,80})", text, re.IGNORECASE)
     if match:
         target = match.group(1)
+    reference_filters = {}
+    if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
+        reference_filters["entity_refs"] = list(reference_resolution["refs"])
+    if concept == "WORK" and re.search(r"\b(?:attention|waiting\s+on|pending\s+approvals?)\b", q):
+        reference_filters["view"] = "attention"
+    elif concept == "INTEGRATION" and re.search(
+        r"\bintegrations?\b.*\b(?:degraded|broken|attention|health|connected|working)\b|"
+        r"\b(?:degraded|broken|attention|health)\b.*\bintegrations?\b", q,
+    ):
+        reference_filters["view"] = "integrations"
     workspace = {
         "MEMORY": "hades", "WORK": "work", "GOAL": "work", "PROJECT": "work", "TASK": "work", "RUN": "work", "COMMITMENT": "work", "MISSION": "work", "WATCH": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
         "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",
@@ -328,20 +418,18 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         domain_concept=concept,
         workspace_hint=workspace,
         target=target,
-        entity_reference=target,
+        entity_reference=target or (
+            (reference_resolution.get("refs") or [None])[0]
+            if reference_resolution.get("status") == "RESOLVED"
+            else None
+        ),
         run_reference=run_reference,
         continuation_reference=run_reference if operation == "CONTINUE" else None,
         depth=_depth(text),
         constraints=("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK", "HOMELAB_HOST", "SERVICE"} else (),
         desired_output="grounded_structured_summary" if operation == "READ" else None,
-        filters={
-            "view": "attention"
-        } if concept == "WORK" and re.search(
-            r"\b(?:attention|waiting\s+on|pending\s+approvals?)\b", q) else ({
-            "view": "integrations"
-        } if concept == "INTEGRATION" and re.search(
-            r"\bintegrations?\b.*\b(?:degraded|broken|attention|health|connected|working)\b|"
-            r"\b(?:degraded|broken|attention|health)\b.*\bintegrations?\b", q) else {}),
+        reference_resolution=reference_resolution,
+        filters=reference_filters,
         read_explicit=read_explicit,
     )
 

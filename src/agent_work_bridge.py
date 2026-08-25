@@ -258,12 +258,35 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
             .order_by(WorkAction.sequence.asc(), WorkAction.id.asc())
             .all()
         )
+        results = (
+            db.query(WorkResult)
+            .filter_by(run_id=run.id, owner=owner)
+            .order_by(WorkResult.created_at.asc(), WorkResult.id.asc())
+            .all()
+        )
+        references = []
+        for result in results:
+            data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
+            for item in data.get("canonical_refs", data.get("entity_refs", [])):
+                if isinstance(item, dict) and str(item.get("ref") or item.get("id") or "").strip():
+                    references.append({
+                        "ref": str(item.get("ref") or item.get("id"))[:500],
+                        "concept": str(item.get("concept") or "").strip()[:80] or None,
+                    })
+            if isinstance(data.get("refs"), list):
+                for ref in data["refs"]:
+                    if isinstance(ref, str) and ref.strip():
+                        references.append({"ref": ref.strip()[:500]})
         projection = {
             "id": run.id,
             "owner": run.owner,
             "status": run.status,
             "lifecycle_state": run.lifecycle_state,
             "continuation_state": dict(run.continuation_state or {}),
+            "reference_context": {
+                "entities": references[-100:],
+                "last": references[-1] if references else None,
+            },
             "actions": [
                 {"id": action.id, "status": action.status, "sequence": action.sequence}
                 for action in actions
