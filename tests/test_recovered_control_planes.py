@@ -93,6 +93,29 @@ def test_homelab_network_plan_is_private_and_nmap_candidates_are_review_only(tmp
     assert candidates[0]["hostname"] == "switch"
 
 
+def test_network_context_read_separates_vpn_and_runtime_interfaces(monkeypatch):
+    import src.privileged_broker as broker
+    monkeypatch.setattr(
+        broker,
+        "client_request",
+        lambda request, timeout=15: {
+            "ok": True,
+            "addresses": '[{"ifname":"eth0","operstate":"UP","addr_info":[{"local":"10.20.0.4","prefixlen":24,"family":"inet"}]},{"ifname":"tun0","operstate":"UNKNOWN","addr_info":[{"local":"100.64.0.2","prefixlen":32,"family":"inet"}]},{"ifname":"docker0","operstate":"UP","addr_info":[{"local":"172.30.0.1","prefixlen":16,"family":"inet"}]}]',
+            "routes": '[{"dst":"default","dev":"tun0"}]',
+        },
+    )
+
+    async def run():
+        result = await HomelabOperations().execute({"action": "read_network_context"}, owner="alice")
+        assert result["status"] == "SUCCESS_WITH_DATA"
+        assert {item["kind"] for item in result["interfaces"]} == {"HOST_LOCAL", "VPN", "APPLICATION_RUNTIME"}
+        assert any(scope["ownership"] == "VPN/CORPORATE_OR_UNKNOWN" for scope in result["candidate_scopes"])
+        assert any(scope["ownership"] == "RUNTIME_INTERNAL" for scope in result["candidate_scopes"])
+        assert result["vpn_present"] is True
+
+    asyncio.run(run())
+
+
 def test_privileged_broker_network_discovery_is_bounded(monkeypatch):
     import src.privileged_broker as broker
 

@@ -553,7 +553,7 @@ _DOMAIN_RULES = {
     "asset_inventory": "Technical asset/CMDB tasks: use the first-class `manage_assets` read/action contract for canonical state and observations. Never substitute filesystem inspection, raw SQLite, or generic shell. Keep observations separate from canonical state. Prefer system UUID/serial/MAC for identity; never identify or merge assets by IP address alone.",
 }
 
-_DOMAIN_RULES["network_ops"] = '## Local network discovery/diagnostic rules\n- This is an operational request about the local/internal network. Use local diagnostic tools rather than web search unless public web lookup was separately requested.\n- Start read-only/passive: hostname, interfaces and addresses, routes, DNS, neighbor tables, and SSH aliases or known-host clues.\n- Bound active discovery to directly connected private subnets and lightweight reachability/service identification. Do not modify network configuration or attempt authentication unless explicitly requested.\n- If bash is listed in TURN CAPABILITIES, use it for non-interactive network commands and do not claim shell access is unavailable.'
+_DOMAIN_RULES["network_ops"] = '## Network context and discovery rules\n- Use the canonical manage_homelab Actions for current network context, observations, bounded discovery, and service enumeration.\n- A container bridge or historical observation is not the owner\'s current network. Preserve context kind, freshness, provenance, and scope ownership.\n- Read current interfaces/routes/VPN state before proposing a scan. Private addressing alone is not authorization; VPN/corporate/unknown scope requires explicit target and authorization context.\n- Do not suggest raw Bash, arp-scan, arbitrary nmap flags, Docker socket/log commands, firewall commands, or other unregistered executable operations. If a needed capability is unavailable, say so.'
 
 _DOMAIN_RULES["storage_ops"] = '## Storage diagnostic/management rules\n- Start read-only: filesystem usage, block topology, mounts, inode usage, SMART/NVMe health, LVM/RAID/ZFS/Btrfs state, and relevant logs.\n- Diagnose before changing anything. Do not format, wipe signatures, remove volumes, destroy pools, shrink filesystems, or run automatic repair merely as a diagnostic shortcut.\n- Destructive or repair operations require explicit user intent and the normal approval path.'
 _DOMAIN_RULES["system_ops"] = '## Host/system diagnostic rules\n- Inspect current host state with real tools before diagnosing CPU, memory, swap, load, processes, boot, kernel, hardware, thermal, or general performance problems.\n- Prefer read-only evidence first: uptime/load, memory pressure, process state, system logs, hardware inventory, and recent errors.\n- Do not claim a diagnostic command ran until an actual tool result exists.'
@@ -697,7 +697,7 @@ def _intent_requires_action(intent_domains) -> bool:
 _HARD_ACTION_HINTS = {
     "shell_exec": "Invoke bash with the exact non-interactive command the user requested.",
     "operations": "Begin with a real read-only status/log/configuration inspection using bash or the available read tools.",
-    "network_ops": "Begin by invoking bash with a safe local discovery command such as: hostname; ip -brief address; ip route; ip neigh",
+    "network_ops": "Begin with the registered manage_homelab read_network_context Action; use only registered discovery Actions for later bounded work.",
     "storage_ops": "Begin by invoking bash with a safe storage inventory such as: lsblk; df -hT; df -i; findmnt",
     "system_ops": "Begin by invoking bash with a safe host snapshot such as: uptime; free -h; ps -eo pid,ppid,stat,%cpu,%mem,comm --sort=-%cpu | head -25",
     "container_ops": "Begin with portable container introspection. Check `command -v docker` and Docker socket access before invoking Docker CLI; otherwise inspect `/.dockerenv`, `/proc/1/cgroup`, hostname, mounts, and environment. Never treat missing Docker CLI/socket as shell failure.",
@@ -719,24 +719,7 @@ def _hard_action_hint(intent_domains) -> str:
 
 
 _HARD_ACTION_FALLBACK_COMMANDS = {
-    "network_ops": (
-        "set +e; "
-        "echo '=== HOST ==='; hostname; "
-        "echo '=== NETWORK TOOLS ==='; "
-        "for c in ip nmap ping getent hostname arp route netstat ss; do "
-        "command -v \"$c\" 2>/dev/null || true; done; "
-        "if command -v ip >/dev/null 2>&1; then "
-        "echo '=== ADDRESSES ==='; ip -brief address; "
-        "echo '=== ROUTES ==='; ip route; "
-        "echo '=== NEIGHBORS ==='; ip neigh; "
-        "else "
-        "echo '=== ROUTES (/proc/net/route) ==='; cat /proc/net/route 2>/dev/null || true; "
-        "echo '=== ARP (/proc/net/arp) ==='; cat /proc/net/arp 2>/dev/null || true; "
-        "echo '=== INTERFACES (/proc/net/dev) ==='; cat /proc/net/dev 2>/dev/null || true; "
-        "fi; "
-        "echo '=== RESOLVER ==='; cat /etc/resolv.conf 2>/dev/null || true; "
-        "exit 0"
-    ),
+    "network_ops": "",
     "storage_ops": "lsblk; df -hT; df -i; findmnt",
     "system_ops": "uptime; free -h; ps -eo pid,ppid,stat,%cpu,%mem,comm --sort=-%cpu | head -25",
     "container_ops": "set +e; echo '=== CONTAINER CONTEXT ==='; hostname; if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then docker ps --no-trunc; docker network ls; docker volume ls; else echo 'Docker CLI/socket unavailable in this runtime'; test -f /.dockerenv && echo '/.dockerenv present'; cat /proc/1/cgroup 2>/dev/null || true; findmnt 2>/dev/null | head -40 || true; fi; exit 0",
@@ -765,9 +748,8 @@ def _hard_action_followup_hint(intent_domains) -> str:
         return (
             " FOLLOW-UP AFTER STARTER: The initial snapshot only establishes execution "
             "context. Continue to the user's actual network objective. Determine the "
-            "directly connected private CIDR from observed evidence. If the user explicitly "
-            "authorized installing missing diagnostic tools, use the detected package manager "
-            "through bash and normal approval policy to install the minimum needed tools, then "
+            "directly connected scope from the registered context result. If a prerequisite is "
+            "missing, use only its registered prerequisite Action and exact approval path, then "
             "perform bounded non-invasive host/service discovery. Do not repeat the starter."
         )
     if "security_audit" in domains:
@@ -903,6 +885,8 @@ def _canonical_read_action(domain_concept: str, filters: dict | None = None) -> 
         operation = "READ_INTEGRATIONS"
     elif concept == "NETWORK" and view == "unidentified":
         operation = "READ_UNIDENTIFIED"
+    elif concept == "NETWORK" and view == "context":
+        operation = "READ_CONTEXT"
     elif concept == "NETWORK" and view == "roles":
         operation = "READ_ROLES"
     return contract.actions.get(operation)
@@ -1167,20 +1151,13 @@ def _network_discovery_cidr(text: str) -> str | None:
 
 
 def _network_discovery_request_cidr(text: str) -> str | None:
-    """Resolve a recognized discovery request to its bounded plan scope.
+    """Return only a scope explicitly present in the current request.
 
-    An omitted CIDR is not permission to broaden discovery. It selects the
-    existing owner-approved private /24 only for the plan step; the canonical
-    homelab ActionSpec, exact approval, and host broker remain authoritative
-    for any execution.
+    A missing CIDR is deliberately unresolved. Current host/VPN context is a
+    separate read and historical observations are evidence, never implicit
+    authorization or a current scan target.
     """
-    explicit = _network_discovery_cidr(text)
-    if explicit:
-        return explicit
-    if _explicit_network_discovery_request(text):
-        from src.homelab_operations import DEFAULT_PRIVATE_DISCOVERY_CIDR
-        return DEFAULT_PRIVATE_DISCOVERY_CIDR
-    return None
+    return _network_discovery_cidr(text)
 
 
 def _hard_turn_capability_directive(route_tools, disabled_tools, intent_domains) -> str:
@@ -3033,8 +3010,33 @@ def _looks_like_success_claim(text: str) -> bool:
     return bool(_FAKE_SUCCESS_RE.search(text or ""))
 
 
-def ground_action_completion(text: str, *, intent_domains, tool_events) -> str:
-    """Allow completion language only when an actual tool event exists."""
+def _has_stored_canonical_evidence(messages) -> bool:
+    """Recognize durable canonical reads without treating prose as evidence."""
+    read_tools = {
+        "read_memory", "read_work", "read_assets", "manage_assets",
+        "manage_homelab", "read_security", "read_osint", "read_setup",
+        "read_integrations", "read_documents", "read_contacts",
+    }
+    for message in messages or []:
+        metadata = message.get("metadata") if isinstance(message, dict) else None
+        events = metadata.get("tool_events") if isinstance(metadata, dict) else None
+        for event in events or []:
+            if not isinstance(event, dict) or event.get("ask_user"):
+                continue
+            if _resolved_tool_event_name(event) not in read_tools:
+                continue
+            if event.get("evidence_class") in {
+                "STORED_CANONICAL_RESULT", "DURABLE_OBSERVATION", "EPISODIC_CANONICAL_MEMORY",
+            }:
+                return True
+            output = str(event.get("output") or "").strip().lower()
+            if output and "error" not in output and "unavailable" not in output:
+                return True
+    return False
+
+
+def ground_action_completion(text: str, *, intent_domains, tool_events, stored_evidence=False) -> str:
+    """Allow claims supported by current or durable canonical evidence."""
     successful_result = any(
         isinstance(event, dict)
         and (
@@ -3075,6 +3077,7 @@ def ground_action_completion(text: str, *, intent_domains, tool_events) -> str:
     ))
     if (
         not successful_result
+        and not stored_evidence
         and (
             (_intent_requires_action(intent_domains) and (action_prose or _looks_like_success_claim(text)))
             or ("asset_inventory" in set(intent_domains or set()) and evidence_prose)
@@ -5392,7 +5395,7 @@ async def stream_agent_loop(
         and "network_ops" in _intent_domains
         and bool(re.search(
             r"\b(?:nmap|network[- ]discovery|network discovery|plan_network_discovery|"
-            r"bounded discovery|private subnet|192\.168\.10\.0/24|"
+            r"bounded discovery|private subnet|"
             r"discovery scan|scan the|scan my|service(?:s)?|port(?:s)?|version|enumerat|deeper scan|deep scan)\b",
             _recent_conversation_text,
         ))
@@ -6805,16 +6808,6 @@ async def stream_agent_loop(
         # plan so the existing resolver, broker policy, and verification path
         # remain authoritative.
         _network_request_cidr = _network_discovery_request_cidr(_last_user)
-        if (
-            not _network_request_cidr
-            and _explicit_network_discovery_request(_last_user)
-            and re.search(r"\b192(?:\.168)?\s+network\b", _last_user, re.IGNORECASE)
-        ):
-            # The authorized homelab 192 target is bounded by policy/context;
-            # weak models may mention only “the 192 network” and then emit
-            # raw shell. Resolve that phrase to the known private /24 before
-            # any fallback action is considered.
-            _network_request_cidr = "192.168.10.0/24"
         _network_service_request = _network_service_enumeration_request(_last_user)
         if (
             not tool_blocks
@@ -6881,11 +6874,10 @@ async def stream_agent_loop(
                 converted_calls = []
                 used_native = False
             if not tool_blocks and _planned_discovery_digest and re.search(
-                r"\b(?:network discovery|plan_network_discovery|private subnet|"
-                r"192\.168\.10\.0/24|bounded discovery)\b",
+                r"\b(?:network discovery|plan_network_discovery|private subnet|bounded discovery)\b",
                 _conversation_for_discovery,
                 re.IGNORECASE,
-            ) and not _discovery_result_present:
+            ) and _network_request_cidr and not _discovery_result_present:
                 logger.info(
                     "[agent] deterministic approved discovery continuation repair digest=%s",
                     _planned_discovery_digest.group(1)[:16],
@@ -6894,7 +6886,7 @@ async def stream_agent_loop(
                     "manage_homelab",
                     json.dumps({
                         "action": "execute_network_discovery",
-                        "cidr": _network_request_cidr or "192.168.10.0/24",
+                        "cidr": _network_request_cidr,
                         "plan_digest": _planned_discovery_digest.group(1),
                     }),
                 )]
@@ -7321,12 +7313,6 @@ async def stream_agent_loop(
         # selection deterministically after that single repair attempt. CIDR
         # validation and approval remain in HomelabOperations.
         _network_cidr = _network_discovery_request_cidr(_ody_v38_user_text)
-        if (
-            not _network_cidr
-            and _explicit_network_discovery_request(_ody_v38_user_text)
-            and re.search(r"\b192(?:\.168)?\s+network\b", _ody_v38_user_text, re.IGNORECASE)
-        ):
-            _network_cidr = "192.168.10.0/24"
         if (
             not guide_only
             and not _force_answer
@@ -8665,6 +8651,14 @@ async def stream_agent_loop(
                 "command": cmd_display,
                 "output": output_text,
                 "exit_code": result.get("exit_code"),
+                "success": result.get("success") is True or str(result.get("status") or "").upper() in {
+                    "SUCCESS", "SUCCESS_WITH_DATA", "SUCCESS_EMPTY", "VERIFIED",
+                },
+                "evidence_class": (
+                    "CURRENT_ACTION_RESULT"
+                    if str(result.get("action") or "").startswith(("execute_", "plan_"))
+                    else "STORED_CANONICAL_RESULT"
+                ),
             }
             if result.get("image_url"):
                 for ik in ("image_url", "image_prompt", "image_model", "image_size", "image_quality"):
@@ -8798,7 +8792,10 @@ async def stream_agent_loop(
     # operation. Only persisted tool events/results authorize completion
     # language. This applies to every model, including local Qwen routes.
     _grounded_response = ground_action_completion(
-        full_response, intent_domains=_intent_domains, tool_events=tool_events,
+        full_response,
+        intent_domains=_intent_domains,
+        tool_events=tool_events,
+        stored_evidence=_has_stored_canonical_evidence(messages),
     )
     if _grounded_response != full_response:
         logger.warning(

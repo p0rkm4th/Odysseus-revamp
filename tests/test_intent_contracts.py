@@ -157,6 +157,24 @@ def test_imperative_work_request_is_not_projected_as_canonical_read():
     assert compile_intent("What am I working on?").read_explicit is True
 
 
+def test_default_work_overview_is_canonical_and_approval_free():
+    frame = compile_intent("What am I working on?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "WORK"
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_work"
+    assert resolved.action.approval.value == "none"
+
+
+def test_current_network_context_is_typed_and_approval_free():
+    frame = compile_intent("What network am I currently connected to?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.filters["view"] == "context"
+    assert resolved.action_id == "read_network_context"
+    assert resolved.action.approval.value == "none"
+
+
 def test_continuation_resolves_against_durable_run_without_executing():
     frame = compile_intent("go ahead", run_reference="run-1")
     assert frame.operation_class == "CONTINUE"

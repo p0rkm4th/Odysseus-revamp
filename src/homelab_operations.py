@@ -28,16 +28,14 @@ class HomelabOperationError(ValueError):
 _SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.@:-]{0,127}$")
 _ACTIONS = frozenset({
     "inspect_host", "service_status", "plan_service_restart", "execute_service_restart",
-    "discovery_status", "read_network_observations", "list_unidentified_hosts", "infer_role_hypotheses",
+    "discovery_status", "read_network_context", "read_network_observations", "list_unidentified_hosts", "infer_role_hypotheses",
     "plan_network_discovery", "execute_network_discovery",
     "plan_network_service_enumeration", "execute_network_service_enumeration",
     "plan_diagnostic_install", "execute_diagnostic_install",
 })
 _PROTECTED_RESTART_UNITS = frozenset({"odysseus.service"})
-# The existing owner-approved homelab discovery scope.  This is used only to
-# form a non-mutating plan when a user clearly requests local network
-# discovery without spelling out a CIDR.  The broker and ActionSpec still
-# enforce private IPv4 and the <=256-address boundary before execution.
+# Retained for compatibility with historical fixtures and migration data. It
+# is never selected as a current scope by the agent loop.
 DEFAULT_PRIVATE_DISCOVERY_CIDR = "192.168.10.0/24"
 _receipt_lock = threading.Lock()
 logger = logging.getLogger(__name__)
@@ -372,6 +370,56 @@ class HomelabOperations:
                 "broker_scanner_available": broker_scanner,
                 "capability_health": health, "exit_code": 0,
             }
+        if action == "read_network_context":
+            from src.privileged_broker import client_request
+            try:
+                raw = await asyncio.to_thread(client_request, {"action": action}, timeout=15)
+            except Exception as exc:
+                return {"status": "UNAVAILABLE", "action": action, "error": str(exc), "source": "host_broker"}
+            if not raw.get("ok"):
+                return {"status": "UNAVAILABLE", "action": action, "error": raw.get("error") or "host network context unavailable", "source": "host_broker"}
+            try:
+                addresses = json.loads(raw.get("addresses") or "[]")
+                routes = json.loads(raw.get("routes") or "[]")
+            except (TypeError, ValueError) as exc:
+                return {"status": "INVALID_RESULT", "action": action, "error": f"host network context was not structured: {exc}", "source": "host_broker"}
+            interfaces = []
+            for item in addresses if isinstance(addresses, list) else []:
+                name = str(item.get("ifname") or "").strip()
+                if not name:
+                    continue
+                kind = "VPN" if re.search(r"^(tun|tap|wg|vpn)", name, re.I) else "APPLICATION_RUNTIME" if re.search(r"^(docker|br-|veth|cni|virbr)", name, re.I) else "HOST_LOCAL"
+                entries = [{"address": info["local"], "prefix_length": info.get("prefixlen"), "family": info.get("family")} for info in (item.get("addr_info") or []) if isinstance(info, dict) and info.get("local")]
+                interfaces.append({"name": name, "kind": kind, "addresses": entries, "up": bool(item.get("operstate") in {"UP", "UNKNOWN"})})
+            default_routes = [route for route in routes if isinstance(route, dict) and route.get("dst") == "default"] if isinstance(routes, list) else []
+            vpn = any(item["kind"] == "VPN" for item in interfaces)
+            scopes = []
+            runtime_scopes = []
+            user_scopes = []
+            for item in interfaces:
+                for addr in item["addresses"]:
+                    if addr.get("family") == "inet":
+                        try:
+                            cidr = str(ipaddress.ip_interface(f"{addr['address']}/{addr.get('prefix_length')}").network)
+                            ownership = (
+                                "RUNTIME_INTERNAL" if item["kind"] == "APPLICATION_RUNTIME"
+                                else "VPN/CORPORATE_OR_UNKNOWN" if vpn
+                                else "UNKNOWN"
+                            )
+                            scope = {"interface": item["name"], "cidr": cidr, "ownership": ownership, "context_kind": item["kind"]}
+                            scopes.append(scope)
+                            (runtime_scopes if item["kind"] == "APPLICATION_RUNTIME" else user_scopes).append(scope)
+                        except ValueError:
+                            pass
+            context_id = hashlib.sha256(json.dumps({"interfaces": interfaces, "routes": default_routes}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
+            return {
+                "status": "SUCCESS_WITH_DATA" if interfaces else "SUCCESS_EMPTY", "action": action,
+                "interfaces": interfaces, "default_routes": default_routes,
+                "candidate_scopes": scopes, "user_network_scopes": user_scopes,
+                "runtime_scopes": runtime_scopes, "vpn_present": vpn,
+                "source": "host_broker", "context_id": context_id,
+                "context_kinds": sorted({item["kind"] for item in interfaces}),
+            }
         if action == "read_network_observations":
             from src.network_projection import map_projection
             projection = map_projection(owner=owner)
@@ -393,6 +441,8 @@ class HomelabOperations:
                 "edge_count": len(projection.get("edges") or []),
                 "source": "canonical_cmdb",
                 "owner_scope": owner,
+                "observation_kind": "HISTORICAL_DISCOVERY",
+                "freshness": "historical_until_matched_to_current_context",
                 "exit_code": 0,
             }
         if action in {"list_unidentified_hosts", "infer_role_hypotheses"}:
@@ -500,6 +550,8 @@ class HomelabOperations:
     async def _network_discovery(
         self, request: dict[str, Any], *, owner: str, action: str,
     ) -> dict[str, Any]:
+        if not str(request.get("cidr") or "").strip():
+            raise HomelabOperationError("current network context or an explicitly authorized CIDR is required; historical scope is not reused")
         network = _private_network(request.get("cidr"))
         cidr = str(network)
         operation = {
