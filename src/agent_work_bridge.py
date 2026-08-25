@@ -198,7 +198,7 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
             .order_by(WorkAction.sequence.asc(), WorkAction.id.asc())
             .all()
         )
-        return {
+        projection = {
             "id": run.id,
             "owner": run.owner,
             "status": run.status,
@@ -209,6 +209,20 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
                 for action in actions
             ],
         }
+        # Reuse the canonical durable planner for continuation decisions.  It
+        # is observational here: no Action is materialized, approved, or
+        # executed.  If a malformed/incomplete Run cannot be projected, keep
+        # continuation fail-closed instead of inventing a next step.
+        try:
+            from src.run_planner import RunPlanner
+            projection["next_step"] = RunPlanner(db).next_step(owner, run.id)
+        except Exception as exc:
+            projection["next_step"] = {
+                "status": "UNAVAILABLE",
+                "reason": "durable next-step projection unavailable",
+                "error_class": type(exc).__name__,
+            }
+        return projection
 
 
 def prepare_action(

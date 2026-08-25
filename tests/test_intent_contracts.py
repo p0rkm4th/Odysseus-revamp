@@ -91,6 +91,22 @@ def test_continuation_derives_pending_action_phase_from_durable_actions():
     assert resolved.phase == "APPROVED"
 
 
+def test_continuation_uses_canonical_durable_next_step_projection():
+    frame = compile_intent("continue", continuation=True, run_reference="run-2")
+    resolved = resolve_continuation(frame, {
+        "id": "run-2", "status": "queued", "continuation_state": {}, "actions": [],
+        "next_step": {
+            "status": "READY",
+            "action": {"id": "planned-action", "action_id": "service_status"},
+            "reason": "next declared Action is valid",
+        },
+    })
+    assert resolved.status == "RESOLVED"
+    assert resolved.action_reference == "planned-action"
+    assert resolved.phase == "READY"
+    assert resolved.reason == "durable next Action is available"
+
+
 def test_continuation_blocks_ambiguous_execution_even_when_run_is_running():
     frame = compile_intent("continue", continuation=True, run_reference="run-3")
     resolved = resolve_continuation(frame, {

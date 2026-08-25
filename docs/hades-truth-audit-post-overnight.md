@@ -403,3 +403,13 @@ realistic browser gates pass. Rollback is retained as
   Infrastructure, Research, and Integration requests.
 - Evidence: model parity plus Career foundation coverage `19 passed, 1
   warning`; provider calls and owner-live model swapping remain pending.
+
+## Durable next-step continuation checkpoint
+
+- Source change: the owner-scoped continuation projection now reuses the
+  existing `RunPlanner.next_step()` decision. It exposes the next valid,
+  waiting-approval, blocked, or complete state without materializing an
+  Action, granting authority, or executing anything.
+- Evidence: continuation/bridge/planner coverage `64 passed, 1 warning`.
+- Status: `VERIFIED_TESTED`; live multi-step provider continuation and
+  owner-live model swapping remain pending.
