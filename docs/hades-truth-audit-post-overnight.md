@@ -120,6 +120,14 @@ and migration head `20260825_002_work_run_completion_v6`. Health, broker mode
 and ownership, Qwen bridge inference, frontend static, browser-window, and
 realistic browser checks passed. Rollback `odysseus:rollback-4bcce32c-prev`
 is retained. Owner-live E6 remains pending.
+
+## Read-intent boundary correction
+
+Commit `2ec09bdf` adds bounded `IntentFrame.read_explicit` metadata. The shared
+canonical-read projection now requires an explicit semantic read request, so an
+imperative such as “do a long multi-step task” cannot be misrouted into a Work
+overview read. Focused tests: 124 passed. Full pytest after this correction:
+6133 passed, 3 skipped, 186 warnings, 127.22 seconds.
 ## Career foundation checkpoint
 
 Career is implemented as a Work child module with owner-scoped durable
