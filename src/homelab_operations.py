@@ -371,26 +371,34 @@ class HomelabOperations:
                 "capability_health": health, "exit_code": 0,
             }
         if action == "read_network_context":
-            from src.privileged_broker import client_request
+            from src.privileged_broker import HOST_NETWORK_SOCKET_PATH, client_request
+            host_socket = os.getenv("ODYSSEUS_HOST_NETWORK_BROKER_SOCKET", HOST_NETWORK_SOCKET_PATH)
             try:
-                raw = await asyncio.to_thread(client_request, {"action": action}, timeout=15)
+                raw = await asyncio.to_thread(client_request, {"action": action}, socket_path=host_socket, timeout=15)
             except Exception as exc:
-                return {"status": "UNAVAILABLE", "action": action, "error": str(exc), "source": "host_broker"}
-            if not raw.get("ok"):
-                return {"status": "UNAVAILABLE", "action": action, "error": raw.get("error") or "host network context unavailable", "source": "host_broker"}
+                return {"status": "UNAVAILABLE", "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE", "action": action, "error": str(exc), "source": "host_network_broker", "observation_location": "HOST"}
+            if not raw.get("ok") or raw.get("execution_location") != "HOST":
+                return {"status": "UNAVAILABLE", "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE", "action": action, "error": raw.get("error") or "trusted host network context unavailable", "source": "host_network_broker", "observation_location": raw.get("execution_location") or "UNKNOWN"}
             try:
                 addresses = json.loads(raw.get("addresses") or "[]")
                 routes = json.loads(raw.get("routes") or "[]")
             except (TypeError, ValueError) as exc:
-                return {"status": "INVALID_RESULT", "action": action, "error": f"host network context was not structured: {exc}", "source": "host_broker"}
+                return {"status": "INVALID_RESULT", "error_code": "RESULT_INVALID", "action": action, "error": f"host network context was not structured: {exc}", "source": "host_network_broker", "observation_location": "HOST"}
             interfaces = []
             for item in addresses if isinstance(addresses, list) else []:
                 name = str(item.get("ifname") or "").strip()
                 if not name:
                     continue
-                kind = "VPN" if re.search(r"^(tun|tap|wg|vpn)", name, re.I) else "APPLICATION_RUNTIME" if re.search(r"^(docker|br-|veth|cni|virbr)", name, re.I) else "HOST_LOCAL"
+                flags = {str(flag).upper() for flag in (item.get("flags") or [])}
+                link_type = str(item.get("link_type") or "").lower()
+                kind = (
+                    "VPN" if re.search(r"(?:^|[-_.])(?:tun|tap|wg|vpn|proton|tailscale|zerotier)|(?:vpn)", name, re.I)
+                    or ("POINTOPOINT" in flags and link_type in {"none", "ipip", "sit"})
+                    else "APPLICATION_RUNTIME" if re.search(r"^(docker|br-|veth|cni|virbr)", name, re.I)
+                    else "HOST_LOCAL"
+                )
                 entries = [{"address": info["local"], "prefix_length": info.get("prefixlen"), "family": info.get("family")} for info in (item.get("addr_info") or []) if isinstance(info, dict) and info.get("local")]
-                interfaces.append({"name": name, "kind": kind, "addresses": entries, "up": bool(item.get("operstate") in {"UP", "UNKNOWN"})})
+                interfaces.append({"name": name, "kind": kind, "addresses": entries, "up": bool(item.get("operstate") in {"UP", "UNKNOWN"}), "flags": sorted(flags), "link_type": link_type or None})
             default_routes = [route for route in routes if isinstance(route, dict) and route.get("dst") == "default"] if isinstance(routes, list) else []
             vpn = any(item["kind"] == "VPN" for item in interfaces)
             scopes = []
@@ -398,7 +406,7 @@ class HomelabOperations:
             user_scopes = []
             for item in interfaces:
                 for addr in item["addresses"]:
-                    if addr.get("family") == "inet":
+                    if addr.get("family") == "inet" and item["name"] != "lo":
                         try:
                             cidr = str(ipaddress.ip_interface(f"{addr['address']}/{addr.get('prefix_length')}").network)
                             ownership = (
@@ -417,7 +425,9 @@ class HomelabOperations:
                 "interfaces": interfaces, "default_routes": default_routes,
                 "candidate_scopes": scopes, "user_network_scopes": user_scopes,
                 "runtime_scopes": runtime_scopes, "vpn_present": vpn,
-                "source": "host_broker", "context_id": context_id,
+                "source": "host_network_broker", "context_id": context_id,
+                "observation_location": "HOST",
+                "network_namespace_id": raw.get("network_namespace_id"),
                 "context_kinds": sorted({item["kind"] for item in interfaces}),
             }
         if action == "read_network_observations":
@@ -554,9 +564,16 @@ class HomelabOperations:
             raise HomelabOperationError("current network context or an explicitly authorized CIDR is required; historical scope is not reused")
         network = _private_network(request.get("cidr"))
         cidr = str(network)
+        authorization = str(request.get("scope_authorization") or "").strip().upper()
+        if authorization not in {"USER_MANAGED", "EXPLICITLY_AUTHORIZED"}:
+            raise HomelabOperationError(
+                "active discovery requires USER_MANAGED or EXPLICITLY_AUTHORIZED scope; "
+                "private addressing alone is not authorization"
+            )
         operation = {
             "action": "execute_network_discovery", "target_kind": "private_ipv4_network",
             "target": cidr, "scanner": "nmap_ping_scan",
+            "scope_authorization": authorization,
         }
         digest = _digest(operation)
         # LAN discovery is never executed in the Hades application runtime.

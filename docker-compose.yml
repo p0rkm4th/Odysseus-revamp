@@ -6,6 +6,10 @@ services:
     volumes:
       - ${APP_DATA_DIR:-./data}:/app/data:z
       - ${APP_LOGS_DIR:-./logs}:/app/logs:z
+      # Read-only host network truth is served by a separate host process.
+      # Absence of this socket fails closed; the container broker is never a
+      # substitute for host interfaces/routes.
+      - ${HADES_HOST_BROKER_DIR:-./data/host-broker}:/run/odysseus-host-broker:z
       # Cookbook remote-server SSH identity. Odysseus can generate a key here;
       # add the shown public key to each remote server's authorized_keys.
       - ${APP_DATA_DIR:-./data}/ssh:/app/.ssh:z
@@ -30,6 +34,7 @@ services:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
       - HADES_OLLAMA_ENDPOINT=${HADES_OLLAMA_ENDPOINT:-http://host.docker.internal:11434}
       - HADES_HOST_PLATFORM=${HADES_HOST_PLATFORM:-unknown}
+      - ODYSSEUS_HOST_NETWORK_BROKER_SOCKET=/run/odysseus-host-broker/network.sock
       - HADES_LOCAL_CONTEXT_LENGTH=${HADES_LOCAL_CONTEXT_LENGTH:-8192}
       - HADES_WORKSPACE_UID=${HADES_WORKSPACE_UID:-1000}
       - HADES_WORKSPACE_GID=${HADES_WORKSPACE_GID:-1000}

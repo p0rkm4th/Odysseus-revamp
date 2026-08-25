@@ -13,7 +13,8 @@ import subprocess
 import time
 
 SOCKET_PATH = "/run/odysseus-privd.sock"
-AUDIT_PATH = Path("/app/data/logs/privileged_broker.log")
+HOST_NETWORK_SOCKET_PATH = "/run/odysseus-host-broker/network.sock"
+AUDIT_PATH = Path(os.getenv("ODYSSEUS_BROKER_AUDIT_PATH", "/app/data/logs/privileged_broker.log"))
 MAX_REQUEST = 16384
 MAX_RESPONSE = 65536
 
@@ -49,6 +50,31 @@ def peer_is_allowed(pid, uid, gid, allowed_pid, allowed_uid, allowed_gid):
         and uid == allowed_uid
         and gid == allowed_gid
     )
+
+
+def compose_service_pid(project: str, service: str) -> int | None:
+    """Resolve the exact live init PID for one Compose service on the host."""
+    if not project or not service:
+        return None
+    try:
+        cp = subprocess.run(
+            ["docker", "ps", "-q", "--filter", f"label=com.docker.compose.project={project}",
+             "--filter", f"label=com.docker.compose.service={service}"],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            text=True, timeout=3, check=False,
+        )
+        container_ids = [line.strip() for line in cp.stdout.splitlines() if line.strip()]
+        if cp.returncode != 0 or len(container_ids) != 1:
+            return None
+        inspected = subprocess.run(
+            ["docker", "inspect", "-f", "{{.State.Pid}}", container_ids[0]],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            text=True, timeout=3, check=False,
+        )
+        value = int(inspected.stdout.strip()) if inspected.returncode == 0 else 0
+        return value if value > 0 else None
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
 
 
 def package_manager():
@@ -124,7 +150,14 @@ def _private_targets(value):
     return targets
 
 
-def handle(req, allowed_pid, allowed_uid):
+def _network_namespace_id():
+    try:
+        return str(os.stat("/proc/self/ns/net").st_ino)
+    except OSError:
+        return None
+
+
+def handle(req, allowed_pid, allowed_uid, *, execution_location="APPLICATION_RUNTIME", read_only=False):
     action = req.get("action")
 
     if action == "status":
@@ -140,6 +173,9 @@ def handle(req, allowed_pid, allowed_uid):
             "package_manager_path": path,
             "network_scanner_available": bool(nmap),
             "allowed_packages": sorted(ALLOWED_PACKAGES),
+            "execution_location": execution_location,
+            "network_namespace_id": _network_namespace_id(),
+            "read_only": bool(read_only),
         }
 
     if action == "read_network_context":
@@ -151,7 +187,12 @@ def handle(req, allowed_pid, allowed_uid):
             "addresses": addresses["output"],
             "routes": routes["output"],
             "exit_code": max(addresses["returncode"], routes["returncode"]),
+            "execution_location": execution_location,
+            "network_namespace_id": _network_namespace_id(),
         }
+
+    if read_only:
+        return {"ok": False, "error": "host network broker is read-only"}
 
     if action == "run_network_discovery":
         try:
@@ -239,8 +280,12 @@ def serve(
     allowed_pid=1,
     allowed_uid=1000,
     allowed_gid=1000,
+    execution_location="APPLICATION_RUNTIME",
+    read_only=False,
+    compose_project=None,
+    compose_service=None,
 ):
-    if os.geteuid() != 0:
+    if os.geteuid() != 0 and not read_only:
         raise SystemExit("privileged broker must run as root")
 
     path = Path(socket_path)
@@ -252,7 +297,8 @@ def serve(
 
     srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     srv.bind(socket_path)
-    os.chown(socket_path, allowed_uid, allowed_gid)
+    if os.geteuid() == 0:
+        os.chown(socket_path, allowed_uid, allowed_gid)
     os.chmod(socket_path, 0o660)
     srv.listen(8)
 
@@ -262,6 +308,9 @@ def serve(
         "allowed_pid": allowed_pid,
         "allowed_uid": allowed_uid,
         "socket": socket_path,
+        "execution_location": execution_location,
+        "network_namespace_id": _network_namespace_id(),
+        "read_only": bool(read_only),
     })
 
     while True:
@@ -269,11 +318,15 @@ def serve(
         with conn:
             pid, uid, gid = peercred(conn)
 
-            if not peer_is_allowed(
+            expected_pid = (
+                compose_service_pid(compose_project, compose_service)
+                if compose_project and compose_service else allowed_pid
+            )
+            if expected_pid is None or not peer_is_allowed(
                 pid,
                 uid,
                 gid,
-                allowed_pid,
+                expected_pid,
                 allowed_uid,
                 allowed_gid,
             ):
@@ -287,6 +340,7 @@ def serve(
                     "pid": pid,
                     "uid": uid,
                     "gid": gid,
+                    "expected_pid": expected_pid,
                 })
                 conn.sendall((json.dumps(resp) + "\n").encode())
                 continue
@@ -306,7 +360,11 @@ def serve(
                     req = json.loads(
                         data.split(b"\n", 1)[0].decode("utf-8")
                     )
-                    resp = handle(req, allowed_pid, allowed_uid)
+                    resp = handle(
+                        req, expected_pid, allowed_uid,
+                        execution_location=execution_location,
+                        read_only=read_only,
+                    )
                 except Exception as exc:
                     resp = {"ok": False, "error": str(exc)}
 
@@ -364,6 +422,10 @@ def main():
     p.add_argument("--allowed-pid", type=int, default=1)
     p.add_argument("--allowed-uid", type=int, default=1000)
     p.add_argument("--allowed-gid", type=int, default=1000)
+    p.add_argument("--execution-location", choices=("HOST", "APPLICATION_RUNTIME", "SANDBOX", "REMOTE_NODE"), default="APPLICATION_RUNTIME")
+    p.add_argument("--read-only", action="store_true")
+    p.add_argument("--compose-project")
+    p.add_argument("--compose-service")
     args = p.parse_args()
 
     if args.serve:
@@ -372,6 +434,10 @@ def main():
             args.allowed_pid,
             args.allowed_uid,
             args.allowed_gid,
+            args.execution_location,
+            args.read_only,
+            args.compose_project,
+            args.compose_service,
         )
         return 0
 

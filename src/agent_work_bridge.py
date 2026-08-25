@@ -533,6 +533,21 @@ def prepare_action(
             )
             if existing is not None:
                 return existing.id
+        existing = (
+            db.query(WorkAction)
+            .filter(
+                WorkAction.run_id == run.id,
+                WorkAction.action_id == spec.action_id,
+                WorkAction.status.in_(("proposed", "awaiting_approval", "approved", "executing")),
+            )
+            .order_by(WorkAction.sequence.desc())
+            .first()
+        )
+        if existing is not None and dict(existing.normalized_input or {}) == payload:
+            return existing.id
+        read_only = bool(spec.effects) and set(spec.effects).issubset({
+            "read_private", "read_public", "read_workspace", "brokered_network_read",
+        })
         status = "awaiting_approval" if spec.approval is ApprovalMode.EXACT and approval_reference else "proposed"
         action = work.create_action(owner, run.id, {
             "capability_id": binding.capability_id,
@@ -554,11 +569,11 @@ def prepare_action(
             "approval_reference": approval_reference,
         })
         work.set_run_status(owner, run.id, "awaiting_approval" if status == "awaiting_approval" else "running", {
-            "lifecycle_state": "waiting_approval" if status == "awaiting_approval" else "planning",
+            "lifecycle_state": "waiting_approval" if status == "awaiting_approval" else "ready" if read_only else "planning",
             "current_step": f"canonical action: {spec.action_id}",
             "continuation_state": _continuation_state(
                 run, action_id=action["id"],
-                phase="AWAITING_APPROVAL" if status == "awaiting_approval" else "PROPOSED",
+                phase="AWAITING_APPROVAL" if status == "awaiting_approval" else "READY" if read_only else "PROPOSED",
             ),
         })
         return action["id"]

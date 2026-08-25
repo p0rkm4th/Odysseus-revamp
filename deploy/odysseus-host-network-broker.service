@@ -1,0 +1,15 @@
+[Unit]
+Description=Odysseus read-only host network context broker
+After=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/scootz/Odysseus/odysseus
+Environment=ODYSSEUS_BROKER_AUDIT_PATH=/home/scootz/Odysseus/odysseus/logs/host-network-broker.log
+ExecStartPre=/usr/bin/mkdir -p /home/scootz/Odysseus/odysseus/data/host-broker
+ExecStart=/home/scootz/Odysseus/odysseus/venv/bin/python -m src.privileged_broker --serve --socket /home/scootz/Odysseus/odysseus/data/host-broker/network.sock --allowed-pid 0 --allowed-uid 1000 --allowed-gid 1000 --execution-location HOST --read-only --compose-project odysseus --compose-service odysseus
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
