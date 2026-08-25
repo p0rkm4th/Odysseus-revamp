@@ -65,7 +65,7 @@ import { getSettings } from './js/appConfig.js';
 import { initSidebarLayout, syncRailSide } from './js/sidebar-layout.js?v=20260715startupclean';
 import { initSectionCollapse, initSectionDrag } from './js/section-management.js';
 import { iconSvg } from './js/ui-components.js';
-import { WORKSPACE_DEFINITIONS } from './js/workspaceRegistry.js';
+import { MODULE_BY_ID, WORKSPACE_DEFINITIONS } from './js/workspaceRegistry.js';
 
 const API_BASE = window.location.origin;
 window.themeModule = themeModule;
@@ -99,17 +99,12 @@ function hydrateSemanticNavIcons() {
 function groupToolDestinations() {
   const section = document.getElementById('tools-section');
   if (!section || section.dataset.grouped === '1') return;
-  const groups = [
-    ['HADES', ['tool-hades-btn', 'tool-memory-btn']],
-    ['TODAY', ['tool-calendar-btn', 'tool-tasks-btn']],
-    ['RESEARCH', ['tool-osint-btn', 'tool-research-btn', 'tool-security-btn']],
-    ['INFRASTRUCTURE', ['tool-inventory-btn', 'tool-it-assets-btn', 'tool-network-btn', 'tool-homelab-btn', 'tool-world-model-btn']],
-    ['HOME', ['tool-household-btn', 'tool-smart-home-btn']],
-    ['COMMUNICATIONS', ['tool-communications-btn', 'tool-telegram-btn']],
-    ['WORK', ['tool-work-btn']],
-    ['KNOWLEDGE', ['tool-library-btn', 'tool-gallery-btn', 'tool-notes-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
-    ['SYSTEM', ['tool-control-center-btn', 'tool-setup-center-btn', 'tool-integrations-center-btn', 'tool-developer-btn', 'tool-theme-btn']],
-  ];
+  const groups = WORKSPACE_DEFINITIONS.map(workspace => [
+    workspace.label.toUpperCase(),
+    workspace.modules
+      .map(moduleId => MODULE_BY_ID[moduleId]?.navId)
+      .filter(Boolean),
+  ]);
   const header = section.querySelector('.section-header-flex');
   if (!header) return;
   const stateKey = 'odysseus-sidebar-groups-v1';
