@@ -45,6 +45,42 @@ def test_agent_network_intent_creates_one_owner_session_run_and_reuses_it(monkey
         engine.dispose()
 
 
+def test_model_swap_preserves_run_and_records_owner_scoped_history(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-model-swap", "deep network discovery",
+            model_name="qwen3:8b", model_endpoint="http://ollama/v1",
+            intent={"domains": ["network_ops"]},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.plan = [{"sequence": 1, "capability_id": "homelab.manage", "action_id": "service_status"}]
+            db.commit()
+        assert bridge.ensure_agent_run(
+            "alice", "chat-model-swap", "continue", continuation=True,
+            model_name="gpt-5.6-luna", model_endpoint="https://luna.example/v1",
+            intent={"domains": []},
+        ) == run_id
+        assert bridge.ensure_agent_run(
+            "alice", "chat-model-swap", "continue", continuation=True,
+            model_name="gpt-5.6-sol", model_endpoint="https://sol.example/v1",
+            intent={"domains": []},
+        ) == run_id
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            assert run.model_name == "gpt-5.6-sol"
+            assert run.plan[0]["action_id"] == "service_status"
+            history = run.continuation_state["model_history"]
+            assert [item["model_name"] for item in history] == [
+                "qwen3:8b", "gpt-5.6-luna", "gpt-5.6-sol",
+            ]
+            assert db.query(WorkRun).filter_by(owner="bob", session_id="chat-model-swap").count() == 0
+    finally:
+        engine.dispose()
+
+
 def test_continuation_projection_includes_canonical_next_step_without_materializing_action(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)

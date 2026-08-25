@@ -15,7 +15,7 @@ from core.database import SessionLocal
 from core.work_models import WorkAction, WorkResult, WorkRun
 from src.capability_registry import ApprovalMode, action_for_tool, capability_for_id
 from src.tool_bindings import binding_for_tool
-from src.work_engine import WorkEngine, WorkError
+from src.work_engine import WorkEngine, WorkError, now
 
 
 # These are domains whose canonical ActionSpecs are already executable through
@@ -126,6 +126,54 @@ def ensure_agent_run(
         if active is not None and (
             continuation or active.domain in domains.intersection(_WORK_DOMAINS)
         ):
+            requested_model = str(model_name or "").strip() or None
+            requested_endpoint = str(model_endpoint or "").strip() or None
+            if requested_model or requested_endpoint:
+                previous_model = str(active.model_name or "").strip() or None
+                previous_endpoint = str(active.model_endpoint or "").strip() or None
+                if (requested_model and requested_model != previous_model) or (
+                    requested_endpoint and requested_endpoint != previous_endpoint
+                ):
+                    state = dict(active.continuation_state or {})
+                    history = [
+                        item for item in (state.get("model_history") or [])
+                        if isinstance(item, dict)
+                    ]
+                    if not history and (previous_model or previous_endpoint):
+                        history.append({
+                            "model_name": previous_model,
+                            "model_endpoint": previous_endpoint,
+                            "role": "initial",
+                        })
+                    history.append({
+                        "model_name": requested_model or previous_model,
+                        "model_endpoint": requested_endpoint or previous_endpoint,
+                        "role": "continuation",
+                        "recorded_at": now().isoformat(),
+                    })
+                    active.model_name = requested_model or previous_model
+                    active.model_endpoint = requested_endpoint or previous_endpoint
+                    active.continuation_state = {
+                        **state,
+                        "model_history": history[-20:],
+                        "active_model": {
+                            "model_name": active.model_name,
+                            "model_endpoint": active.model_endpoint,
+                        },
+                    }
+                    active.revision += 1
+                    WorkEngine(db).event(
+                        owner,
+                        "run.model_switched",
+                        run_id=active.id,
+                        payload={
+                            "from_model": previous_model,
+                            "to_model": active.model_name,
+                            "from_endpoint": previous_endpoint,
+                            "to_endpoint": active.model_endpoint,
+                        },
+                    )
+                    db.commit()
             return active.id
         bridged_domains = domains.intersection(_WORK_DOMAINS)
         if not bridged_domains:
@@ -166,7 +214,19 @@ def ensure_agent_run(
                 "kind": "scope",
                 "value": "private IPv4 discovery remains bounded by ActionSpec and broker policy",
             }] if "network_ops" in bridged_domains else []),
-            "continuation_state": {"source": "chat_agent", "session_id": session_id},
+            "continuation_state": {
+                "source": "chat_agent",
+                "session_id": session_id,
+                "model_history": ([{
+                    "model_name": model_name,
+                    "model_endpoint": model_endpoint,
+                    "role": "initial",
+                }] if model_name or model_endpoint else []),
+                "active_model": {
+                    "model_name": model_name,
+                    "model_endpoint": model_endpoint,
+                } if model_name or model_endpoint else {},
+            },
         })
         work.transition_run(owner, run["id"], "planning", {"current_step": "intent routed to canonical capability"})
         work.transition_run(owner, run["id"], "ready", {"current_step": "awaiting canonical action selection"})
