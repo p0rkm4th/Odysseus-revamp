@@ -545,6 +545,11 @@ _DOMAIN_RULES = {
 ## Integration/API rules
 - To query or control a configured service integration (Home Assistant, Miniflux, Gitea, Linkding, Jellyfin, or any other registered service), use `api_call` with the integration name, HTTP method, path, and optional JSON body.
 - Do not use shell, curl, or `app_api` to reach a user's connected integration when `api_call` is available.""",
+    "communications": """\
+## Communications canonical-read rules
+- Use `read_communications` for the owner-scoped configured email-account and calendar overview.
+- This read is secret-free and does not fetch message bodies or send anything.
+- Contact/CardDAV records and provider message operations remain on their existing owner-scoped provider paths.""",
     "asset_inventory": "Technical asset/CMDB tasks: use the first-class `manage_assets` read/action contract for canonical state and observations. Never substitute filesystem inspection, raw SQLite, or generic shell. Keep observations separate from canonical state. Prefer system UUID/serial/MAC for identity; never identify or merge assets by IP address alone.",
 }
 
@@ -588,6 +593,7 @@ _DOMAIN_TOOL_MAP = {
     "homelab": {"manage_homelab"},
     "shell_exec": {"bash"},
     "settings": {"manage_settings", "manage_endpoints", "manage_mcp", "manage_webhooks", "manage_tokens", "app_api"},
+    "communications": {"read_communications"},
     "contacts": {"resolve_contact", "manage_contact"},
     "integrations": {"api_call"},
     # Technical-asset truth is a canonical CMDB read. Filesystem tools are not
@@ -4732,6 +4738,7 @@ async def stream_agent_loop(
             "COMMITMENT": "work", "MISSION": "work", "WATCH": "work",
             "HOUSEHOLD_ITEM": "household",
             "INTEGRATION": "setup",
+            "COMMUNICATIONS": "communications",
             "CAREER_PROFILE": "career",
             "JOB_SEARCH": "career",
             "JOB_OPPORTUNITY": "career",

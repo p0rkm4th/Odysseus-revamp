@@ -51,6 +51,7 @@ Current registered semantic contracts:
 | `WORK` | `work.read/overview` via `read_work` | Work overview | implemented/source-tested |
 | `HOUSEHOLD_ITEM` | `household.read/overview` via `read_household` | Household overview | implemented/source-tested |
 | `INTEGRATION` | `setup.read/state` via `read_setup` | Setup/configuration state | implemented/source-tested |
+| `COMMUNICATIONS` | `communications.read/overview` via `read_communications` | Configured email accounts and upcoming canonical calendar events | implemented/source-tested; contacts remain separate |
 | `CAREER_PROFILE` | `career.read/overview` via `read_career` | Work-scoped Career profile and provider posture | implemented/source-tested |
 | `JOB_SEARCH` | `career.read/overview` or `provider_status` via `read_career` | Saved search/provider contract | implemented/source-tested; provider not configured |
 | `JOB_OPPORTUNITY` | `career.read/saved_opportunities` via `read_career` | Owner-saved normalized opportunities | implemented/source-tested |
