@@ -367,7 +367,11 @@ def compile_intent(
         r"\b(?:look like|probably|role|roles|unidentified|unknown|on my network)\b", q,
     ):
         concept = "NETWORK"
-    elif re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q):
+    elif re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q) or (
+        re.search(r"\binventory\b", q)
+        and re.search(r"\b(?:state|status|registered|recorded|current|known|show|list)\b", q)
+        and not re.search(r"\b(?:pantry|shopping|groceries|recipe|household|stock)\b", q)
+    ):
         concept = "TECHNICAL_ASSET"
     elif re.search(r"\b(?:memory|remember|brain)\b", q):
         concept = "MEMORY"
