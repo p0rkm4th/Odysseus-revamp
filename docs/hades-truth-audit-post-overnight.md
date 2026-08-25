@@ -198,6 +198,21 @@ full regression at source level is `6136 passed, 3 skipped, 186 warnings` in
 runtime verification before deployment evidence is promoted. Owner-live E6
 remains pending.
 
+## Deterministic next-step projection checkpoint
+
+Commit `761d3b58` adds a read-only `RunPlanner.next_step` projection over the
+existing durable Work Run/action plan. It deterministically reports READY,
+WAITING_APPROVAL, WAITING_INPUT, VERIFYING, BLOCKED, COMPLETE, or NO_PLAN;
+selects the next incomplete action by sequence; surfaces validation failures;
+and marks only validated read-only actions as safe for automatic continuation.
+It never creates actions, executes them, grants authority, or bypasses exact
+approval. The authenticated Work API exposes the same projection at
+`GET /api/work/runs/{run_id}/next-step`, and the durable chat Work context
+includes it when available. Focused coverage: 53 passed. Full regression:
+6148 passed, 3 skipped, 186 warnings in 126.40 seconds. Source-matched
+deployment and runtime verification are pending. Owner-live cross-model Run
+continuation remains pending.
+
 ## Source-matched canonical read deployment
 
 Commit `a9ab0e04d293b2bf606d6dbebd231077cee24054` is deployed as candidate
