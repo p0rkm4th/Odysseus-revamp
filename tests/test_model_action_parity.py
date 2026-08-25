@@ -9,6 +9,8 @@ separate evaluation concerns.
 import pytest
 
 from src.intent_contracts import compile_intent, resolve_continuation, resolve_intent
+from src.intent_contracts import DOMAIN_CONTRACTS, validate_contracts
+from src.tool_bindings import binding_for_tool
 
 
 MODELS = ("qwen3:8b", "gpt-5.6-luna", "gpt-5.6-sol")
@@ -78,3 +80,13 @@ def test_qwen_luna_sol_continue_receive_identical_durable_run_resolution():
         "phase": "APPROVED",
         "reason": "pending Action is available",
     }
+
+
+def test_registered_contract_actions_are_native_schema_exposed():
+    assert validate_contracts() == []
+    for contract in DOMAIN_CONTRACTS.values():
+        binding = binding_for_tool(contract.binding or "")
+        assert binding is not None
+        properties = binding.native_schema["function"]["parameters"]["properties"]
+        actions = set(properties["action"]["enum"])
+        assert set(contract.actions.values()) <= actions

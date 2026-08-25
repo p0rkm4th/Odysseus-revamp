@@ -5086,6 +5086,21 @@ async def stream_agent_loop(
     # RAG-based tool selection: retrieve relevant tools for this query.
     # If caller provided a pre-computed set (e.g. task_scheduler), use that.
     _relevant_tools = relevant_tools
+    # The server-owned IntentFrame/contract projection is the semantic source
+    # of truth for the current turn. When the caller has not deliberately
+    # supplied a narrower tool set, keep its canonical transport binding in
+    # the provider projection even if RAG is cold or a weak model used an
+    # unfamiliar phrase. This does not create authority: the binding still
+    # passes the normal policy, owner, ActionSpec, and executor gates.
+    _canonical_binding = str(
+        ((_intent.get("resolved_contract") or {}).get("binding")
+         if isinstance(_intent.get("resolved_contract"), dict) else "")
+        or ""
+    ).strip()
+    if not guide_only and not relevant_tools and _canonical_binding and not _low_signal_turn:
+        from src.tool_index import ALWAYS_AVAILABLE
+        _relevant_tools = set(ALWAYS_AVAILABLE) | {_canonical_binding}
+        logger.info("[tool-rag] Canonical contract binding projected: %s", _canonical_binding)
     _t1 = time.time()
     _deterministic_intent_domains = set(_intent.get("domains") or set()) & _DETERMINISTIC_TOOL_DOMAINS
     if not guide_only and not _relevant_tools and _deterministic_intent_domains:

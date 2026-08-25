@@ -548,6 +548,13 @@ def validate_contracts() -> list[str]:
                 continue
             if contract.binding and binding_for_tool(contract.binding) is None:
                 errors.append(f"{concept}: missing ToolBinding {contract.binding}")
+            if contract.binding:
+                binding = binding_for_tool(contract.binding)
+                properties = (((binding.native_schema or {}).get("function") or {}).get("parameters") or {}).get("properties") or {} if binding else {}
+                action_enum = ((properties.get("action") or {}).get("enum") or []) if isinstance(properties, Mapping) else []
+                missing_exposure = sorted(set(contract.actions.values()) - set(action_enum))
+                if missing_exposure:
+                    errors.append(f"{concept}: native schema omits ActionSpec exposure {missing_exposure}")
             if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
             if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"} and "read_private" not in action.effects:
