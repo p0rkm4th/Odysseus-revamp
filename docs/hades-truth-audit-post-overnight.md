@@ -489,3 +489,16 @@ realistic browser gates pass. Rollback is retained as
   `20260825_002_work_run_completion_v6`.
 - Status: `VERIFIED_LIVE`; owner-live cross-model reference dogfood remains
   `OWNER_DOGFOOD_PENDING`.
+
+## Communications canonical-read checkpoint
+
+- The existing owner-scoped EmailAccount and Calendar projection is now
+  exposed through `communications.read/overview` and the shared
+  `read_communications` ToolBinding. The contract is read-only and
+  secret-free; it reports configured accounts and upcoming canonical calendar
+  events. Contact/CardDAV records remain explicitly `NOT_PROJECTED` because
+  the current provider cache is not yet a sufficient owner-scoped canonical
+  binding.
+- Evidence: registry, capability-gate, parity, and binding coverage `230
+  passed, 1 warning`; full regression `6201 passed, 3 skipped, 186 warnings
+  in 124.58s`. Status: `VERIFIED_TESTED`; deployment pending this checkpoint.
