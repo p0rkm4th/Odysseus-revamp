@@ -623,7 +623,12 @@ _DOMAIN_RULES["setup"] = (
     "- Never expose secret values or treat setup metadata as granted authority.\n"
     "- Distinguish configured, degraded, unavailable, skipped, and not configured states."
 )
-_DOMAIN_RULES["integrations"] = _DOMAIN_RULES["setup"]
+_DOMAIN_RULES["integrations"] = (
+    "## Integration/API rules\n"
+    "- Use api_call for configured service integrations when a named canonical binding is not available.\n"
+    "- Do not use shell, curl, or app_api as a substitute for a named integration boundary.\n"
+    + _DOMAIN_RULES["setup"]
+)
 _DOMAIN_RULES["system"] = _DOMAIN_RULES["setup"]
 
 # Capability V1 domain projection. These hints affect discovery/visibility;
