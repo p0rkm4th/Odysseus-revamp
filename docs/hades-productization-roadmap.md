@@ -1059,5 +1059,6 @@ deployment are green; owner-live Work dogfood remains pending.
 Household read convergence now reuses the existing owner-scoped
 `InventoryService` through `household.read`/`read_household` for overview,
 listing, search, and item reads. It preserves the Household-versus-CMDB truth
-boundary and adds no parallel store. Focused evidence is green; full
-regression and deployment evidence remain pending this batch.
+boundary and adds no parallel store. Focused/full regression and exact
+source-matched deployment are green; owner-live Household dogfood remains
+pending.
