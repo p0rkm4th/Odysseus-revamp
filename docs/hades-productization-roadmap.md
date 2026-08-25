@@ -1116,3 +1116,15 @@ This closes a transport-projection gap without adding actions, authority, or a
 second registry. Focused parity/control-plane coverage is 144 passed and the
 broader routing/policy slice is 252 passed; full regression and deployment of
 this checkpoint remain the next gate.
+
+### CMDB owner-boundary checkpoint — 2026-08-25
+
+The first-class `manage_assets` adapter now requires an authenticated owner and
+passes that owner into the existing CMDB command path for every read and
+mutation. The CMDB CLI preserves compatibility for explicit legacy callers,
+but owner-bound invocations filter assets, observations, summaries, and
+relationships and reject cross-owner relationship removal. Ownerless legacy
+rows remain hidden from the owner-aware Network projection; no automatic
+reclassification or data reset was introduced. Focused inventory/network and
+security coverage is 60 passed / 185 passed respectively. Full regression and
+source-matched deployment remain the next gate.
