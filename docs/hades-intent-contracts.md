@@ -23,6 +23,15 @@ durable Run projection. That resolver only returns a decision (`RESOLVED`,
 `BLOCKED`, or `NOT_CONTINUATION`); it never executes an Action or grants
 authority. Terminal Runs and missing Run references remain blocked.
 
+Conversational entity references use the same boundary through
+`resolve_structured_reference`. The caller supplies a bounded set of opaque
+canonical references from the durable Run/result projection. Singular phrases
+such as “it” or “that one” resolve only when exactly one candidate exists;
+ordinal references are range-checked; plural phrases preserve the exact set;
+ambiguous or missing references fail closed. The resulting refs are carried in
+the IntentFrame and are never interpreted as an Action, scope grant, or
+executor selection.
+
 Durable Runs now also carry `completion_criteria` (deliverable/objective,
 required stages, and completion mode). `WorkEngine.assess_deliverable_completion`
 projects `COMPLETE`, `IN_PROGRESS`, or `BLOCKED` from persisted Run/action/result

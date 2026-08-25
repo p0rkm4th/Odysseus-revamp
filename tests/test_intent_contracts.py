@@ -9,6 +9,7 @@ from src.intent_contracts import (
     result_status,
     validate_result,
     validate_contracts,
+    resolve_structured_reference,
 )
 
 
@@ -47,6 +48,46 @@ def test_continuation_and_depth_are_structured_not_phrase_specific():
     assert continued.operation_class == "CONTINUE"
     assert continued.run_reference == "run-1"
     assert continued.workspace_hint is None
+
+
+def test_structured_reference_resolves_single_opaque_entity_without_authority():
+    context = {"entities": [{"ref": "network-host:abc", "concept": "NETWORK"}]}
+    resolution = resolve_structured_reference("scan it", context)
+    assert resolution == {
+        "status": "RESOLVED",
+        "refs": ["network-host:abc"],
+        "concept": "NETWORK",
+        "concepts": ["NETWORK"],
+        "selection": "ONE",
+    }
+    frame = compile_intent("scan it", reference_context=context)
+    assert frame.entity_reference == "network-host:abc"
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "EXECUTE"
+
+
+def test_structured_reference_preserves_exact_plural_scope_and_fails_closed():
+    context = {"entities": [
+        {"ref": "network-host:a", "concept": "NETWORK"},
+        {"ref": "network-host:b", "concept": "NETWORK"},
+    ]}
+    frame = compile_intent("scan those devices", reference_context=context)
+    assert frame.filters["entity_refs"] == ["network-host:a", "network-host:b"]
+    assert frame.reference_resolution["selection"] == "ALL"
+    ambiguous = resolve_structured_reference("scan that", context)
+    assert ambiguous["status"] == "AMBIGUOUS"
+    assert ambiguous["refs"] == []
+
+
+def test_structured_reference_ordinal_is_bounded_and_durable():
+    context = {"entities": [
+        {"ref": "asset:first", "concept": "TECHNICAL_ASSET"},
+        {"ref": "asset:second", "concept": "TECHNICAL_ASSET"},
+    ]}
+    frame = compile_intent("show the second one", reference_context=context)
+    assert frame.entity_reference == "asset:second"
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert resolve_structured_reference("show the third one", context)["status"] == "UNRESOLVED"
 
 
 @pytest.mark.parametrize("query", [
