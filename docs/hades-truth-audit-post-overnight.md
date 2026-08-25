@@ -332,3 +332,17 @@ realistic browser gates pass. Rollback is retained as
   full regression `6163 passed, 3 skipped, 186 warnings`.
 - Status: `VERIFIED_TESTED`; deployment of the final docs-inclusive checkpoint
   is pending. Owner-live cross-model Run dogfood remains pending.
+
+## Canonical attention read checkpoint
+
+- Source change: `59f1aa8c` promotes the existing owner-scoped
+  `PersistentAgent.attention()` projection through the Work `read_work`
+  binding as `work.read / attention`. “What needs attention?”, “What is Hades
+  waiting on?”, and pending-approval phrasing now resolve semantically without
+  model knowledge of internal tools or routes.
+- The projection remains read-only and aggregates existing notifications,
+  blocked/waiting Runs, and commitments; no second attention engine was added.
+- Evidence: focused contract/parity/binding coverage `91 passed, 1 warning`;
+  full regression `6168 passed, 3 skipped, 186 warnings`.
+- Status: `VERIFIED_TESTED`; owner-live cross-model attention dogfood remains
+  pending.
