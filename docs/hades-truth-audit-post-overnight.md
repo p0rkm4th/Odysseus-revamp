@@ -104,3 +104,16 @@ configured in this environment, so external search is `NOT_CONFIGURED` and no
 listings or application submissions are fabricated. Focused and full test
 evidence is source-level; provider-backed and owner-live acceptance remain
 pending external owner configuration.
+
+## Universal Run checkpoint
+
+`WorkRun.completion_criteria` is durable via migration
+`20260825_002_work_run_completion_v6`. `WorkEngine.assess_deliverable_completion`
+returns a model-independent `COMPLETE`, `IN_PROGRESS`, or `BLOCKED` projection
+from persisted lifecycle/action/result state. Chat attaches IntentFrame and
+deliverable metadata and emits the projection as `run_completion` for the GUI.
+Canonical READ contract projection now covers the registered Memory, Work,
+Household, Setup, Career, IT Asset, Network, Security, and OSINT read bindings;
+the model is not required to name those bindings. The projection is focused
+tested and committed in `723ca846`; it is pending rebuild/deployment
+verification.
