@@ -2,8 +2,7 @@
 
 Date: 2026-08-25  
 Branch: `recovery/live-candidate-20260823`  
-Final source under audit: `0c18805fe1d0f9a4337c4c3ca3b6c5d7e313a5cf` plus the
-follow-on Memory read convergence batch.
+Final source under audit: `2750f78c1febca21eff7615672642afab969748a`
 
 ## What changed
 
@@ -21,6 +20,11 @@ follow-on Memory read convergence batch.
 - Added a first-class read-only `memory.read` Capability and `read_memory`
   ToolBinding over the existing canonical Brain store. This is an adapter, not
   a second memory engine; legacy mutations remain compatibility-only.
+- Built and deployed `odysseus:candidate-2750f78c1feb` with image
+  `sha256:a123d69bc7f0edf6bd56b292984dd4626f09aa8b1156e48bd2e725d83236432d`.
+  Runtime `/api/version`, container source hash, and browser/static checks are
+  attributable to this commit; rollback `odysseus:rollback-0c18805fe1d0` is
+  retained.
 
 ## Evidence
 
@@ -34,6 +38,7 @@ follow-on Memory read convergence batch.
 | Broker | socket present, `odysseus:odysseus`, mode 660 | E4/E5 |
 | Ollama | bridge `/api/version` responds; model inference was verified at prior gate | E4/E5 |
 | Owner-live dogfood | no owner-authenticated session available overnight | pending E6 |
+| Memory read convergence | `memory.read`/`read_memory`, focused and full regression green | E3/E4 |
 
 ## Reuse and convergence decisions
 
