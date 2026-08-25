@@ -226,7 +226,14 @@ class RunPlanner:
             "lifecycle_state": run.lifecycle_state, "plan_revision": run.revision,
         }
 
-    def validate(self, owner: str, run_id: str) -> dict[str, Any]:
+    def validate(self, owner: str, run_id: str, *, focus_sequence: int | None = None) -> dict[str, Any]:
+        """Validate a compiled Run, optionally focusing execution checks.
+
+        Full validation remains the default for previews and plan gates. A
+        trusted executor may focus validation on the current persisted Action
+        so future declared steps do not block the present step with their
+        not-yet-due approval or precheck requirements.
+        """
         preview = self.compile(owner, run_id)
         failures: list[dict[str, Any]] = []
         warnings: list[dict[str, Any]] = []
@@ -240,6 +247,7 @@ class RunPlanner:
                 configured = constraints.get("allowed_capabilities")
                 mission_allowed = {str(item) for item in configured if str(item).strip()} if isinstance(configured, list) else set()
         for item, action in zip(preview["actions"], actions):
+            is_focus = focus_sequence is None or int(action.get("sequence") or 0) == int(focus_sequence)
             if not item.get("known"):
                 failures.append({"code": "unknown_action_spec", "sequence": action.get("sequence"), "message": "ActionSpec is not registered"})
                 continue
@@ -260,7 +268,7 @@ class RunPlanner:
                     precheck_action = str(requirement.get("action_id") or "")
                     if capability is None or precheck_action not in capability.actions:
                         failures.append({"code": "precheck_action_missing", "sequence": action.get("sequence"), "action_id": precheck_action, "message": "declared precheck ActionSpec is not registered"})
-                    elif not requirement.get("satisfied"):
+                    elif is_focus and not requirement.get("satisfied"):
                         failures.append({"code": "precheck_required", "sequence": action.get("sequence"), "action_id": precheck_action, "message": "declared precheck has not produced successful evidence"})
             requirements = contract.get("execution_requirements") or {}
             if requirements:
@@ -272,7 +280,7 @@ class RunPlanner:
                 invalid = [r for r in contract["target_resources"] if not _private_network_resource(r)]
                 if invalid:
                     failures.append({"code": "scope_invalid", "sequence": action.get("sequence"), "message": "private-network action has an out-of-scope resource", "resources": invalid})
-            if contract["approval"] != "none" and not action.get("approval_reference") and action.get("status") not in {"approved", "completed"}:
+            if is_focus and contract["approval"] != "none" and not action.get("approval_reference") and action.get("status") not in {"approved", "completed"}:
                 failures.append({"code": "approval_required", "sequence": action.get("sequence"), "message": "exact or normal approval is not bound"})
             if contract["approval"] == "exact" and action.get("approval_reference") and not action.get("sealed_input_digest"):
                 failures.append({"code": "approval_digest_missing", "sequence": action.get("sequence"), "message": "exact approval is not bound to a sealed action-input digest"})
@@ -280,13 +288,13 @@ class RunPlanner:
                 failures.append({"code": "verification_required", "sequence": action.get("sequence"), "message": "higher-risk action has no verification contract"})
             if contract["compensatable"] and not contract["compensating_action"]:
                 failures.append({"code": "compensation_missing", "sequence": action.get("sequence"), "message": "action claims compensation without a compensation contract"})
-            if action.get("id"):
+            if is_focus and action.get("id"):
                 conflicts = self.work.lock_conflicts(owner, action["id"])
                 if conflicts:
                     failures.append({"code": "lock_conflict", "sequence": action.get("sequence"), "message": "declared resources are currently locked", "locks": conflicts})
             for gap in preview["knowledge_gaps"]:
                 requirement = gap.get("requirement") or {}
-                if requirement in contract["preconditions"]:
+                if is_focus and requirement in contract["preconditions"]:
                     failures.append({"code": "knowledge_gap", "sequence": action.get("sequence"), "message": "required state is stale or unknown", "gap": gap})
             if contract["irreversible"]:
                 warnings.append({"code": "irreversible", "sequence": action.get("sequence"), "message": "action cannot be undone"})

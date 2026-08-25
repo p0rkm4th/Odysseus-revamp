@@ -237,6 +237,20 @@ def test_complete_action_persists_structured_result_record(db):
     assert svc.get_run("alice", run["id"])["results"][0]["reference"] == "service://nginx/status"
 
 
+def test_terminal_run_rejects_new_actions(db):
+    svc = WorkEngine(db)
+    run = svc.create_run("alice", {"domain": "homelab"})
+    svc.set_run_status("alice", run["id"], "completed", {
+        "lifecycle_state": "succeeded",
+        "current_step": "deliverable verified",
+    })
+    with pytest.raises(WorkError, match="terminal Run cannot accept new actions"):
+        svc.create_action("alice", run["id"], {
+            "capability_id": "homelab.manage",
+            "action_id": "service_status",
+        })
+
+
 def test_add_result_rejects_cross_owner_or_cross_run_action_reference(db):
     svc = WorkEngine(db)
     alice_run = svc.create_run("alice", {"domain": "homelab"})

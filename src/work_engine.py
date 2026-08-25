@@ -106,6 +106,8 @@ class WorkEngine:
         run = self._one(WorkRun, owner, run_id, "run")
         if (run.continuation_state or {}).get("cancellation_requested"):
             raise WorkError("run cancellation requested; no new actions may be added")
+        if run.status in {"completed", "failed", "cancelled"} or run.lifecycle_state in {"succeeded", "failed", "cancelled"}:
+            raise WorkError("terminal Run cannot accept new actions")
         sequence = int(data.get("sequence") or (self.db.query(WorkAction).filter_by(run_id=run.id).count() + 1))
         digest = data.get("sealed_input_digest")
         if not digest:
@@ -252,7 +254,7 @@ class WorkEngine:
         if action.status == "completed": return serialize(action) | {"replayed": True}
         if action.status not in {"proposed", "approved"}: raise WorkError("action is not ready for binding execution")
         from src.run_planner import RunPlanner
-        validation = RunPlanner(self.db).validate(owner, run.id)
+        validation = RunPlanner(self.db).validate(owner, run.id, focus_sequence=action.sequence)
         if not validation["valid"]:
             codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))
             raise WorkError(f"plan validation failed before binding execution: {codes}")
@@ -429,7 +431,17 @@ class WorkEngine:
         if "current_step" in payload: row.current_step = str(payload["current_step"] or "")[:300] or None
         if lifecycle_state == "executing" and (row.plan or self.db.query(WorkAction).filter_by(run_id=run_id).count()):
             from src.run_planner import RunPlanner
-            validation = RunPlanner(self.db).validate(owner, run_id)
+            current_action = (
+                self.db.query(WorkAction)
+                .filter_by(run_id=run_id)
+                .filter(WorkAction.status.notin_(("completed", "failed", "rejected", "cancelled", "expired")))
+                .order_by(WorkAction.sequence.asc(), WorkAction.id.asc())
+                .first()
+            )
+            validation = RunPlanner(self.db).validate(
+                owner, run_id,
+                focus_sequence=current_action.sequence if current_action is not None else None,
+            )
             if not validation["valid"]:
                 codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))
                 self.db.rollback()
@@ -643,7 +655,21 @@ class WorkEngine:
             actions = self.db.query(WorkAction).filter_by(run_id=run_id).count()
             if actions or (row.plan and isinstance(row.plan, list)):
                 from src.run_planner import RunPlanner
-                validation = RunPlanner(self.db).validate(owner, run_id)
+                current_action = (
+                    self.db.query(WorkAction)
+                    .filter_by(run_id=run_id)
+                    .filter(WorkAction.status.notin_(("completed", "failed", "rejected", "cancelled", "expired")))
+                    .order_by(WorkAction.sequence.asc(), WorkAction.id.asc())
+                    .first()
+                )
+                if current_action is None:
+                    pending_id = str((row.continuation_state or {}).get("pending_action_id") or "").strip()
+                    if pending_id:
+                        current_action = self.db.query(WorkAction).filter_by(id=pending_id, run_id=run_id).one_or_none()
+                validation = RunPlanner(self.db).validate(
+                    owner, run_id,
+                    focus_sequence=current_action.sequence if current_action is not None else None,
+                )
                 if not validation["valid"]:
                     codes = ", ".join(sorted({str(item.get("code") or "invalid_plan") for item in validation["failures"]}))
                     raise WorkError(f"plan validation failed before execution: {codes}")

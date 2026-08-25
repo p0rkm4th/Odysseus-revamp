@@ -393,6 +393,17 @@ def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_proje
         run_id = bridge.ensure_agent_run(
             "alice", "chat-deep-network", "deep network discovery", intent={"domains": ["network_ops"]},
         )
+        # The whole network deliverable is one durable Run. Declaring the
+        # later stages up front prevents the verified discovery step from
+        # becoming a falsely terminal Run before service enumeration begins.
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.plan = [
+                {"sequence": 1, "capability_id": "homelab.manage", "action_id": "execute_network_discovery", "target_resources": ["network:private_scope"]},
+                {"sequence": 2, "capability_id": "homelab.manage", "action_id": "plan_network_service_enumeration"},
+                {"sequence": 3, "capability_id": "homelab.manage", "action_id": "execute_network_service_enumeration", "target_resources": ["network:private_scope"]},
+            ]
+            db.commit()
         discovery_id = bridge.prepare_action(
             "alice", run_id, "manage_homelab",
             {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
