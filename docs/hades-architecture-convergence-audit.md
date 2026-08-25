@@ -127,3 +127,15 @@ acceptance or owner dogfood.
   Calendar/Work, Documents/domain evidence, Execution Profiles/Nodes, Search.
 - Deletion is intentionally deferred. No dead path is removed without parity,
   migration, compatibility, and rollback evidence.
+
+## Registered-binding gate migration checkpoint
+
+Commit `5b5c28fe` advances the P0 Tool execution decision. The existing mature
+binding executors remain unchanged as implementation adapters, but the
+registered-binding wrapper now routes them through the original shared
+dispatcher gate for security context, exact approval, disabled-tool policy,
+and active tool-policy checks. Unknown ActionSpecs fail closed, while
+owner-scoped canonical reads and delegated grants retain their existing
+trusted-caller behavior. Regression coverage proves that a registered binding
+cannot execute when disabled, denied by tool policy, or invoked for an exact
+ActionSpec without approval. No legacy tool path was deleted.

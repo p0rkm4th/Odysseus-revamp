@@ -187,3 +187,13 @@ frontend build ID, and migration head. Broker socket ownership/mode remain
 `172.18.0.1:11434` bridge returned `OK`. Frontend static, browser-window, and
 realistic browser acceptance all pass. Rollback is retained as
 `odysseus:rollback-a423e87a-prev`.
+
+## Consequential binding migration checkpoint
+
+Commit `5b5c28fe` closes a concrete P0 control-plane gap: registered
+Capability → ActionSpec → ToolBinding executors no longer dispatch around the
+shared dispatcher gate. Focused binding/delegation/policy tests pass, and the
+full regression at source level is `6136 passed, 3 skipped, 186 warnings` in
+127.48 seconds. The change is source-tested and requires candidate rebuild and
+runtime verification before deployment evidence is promoted. Owner-live E6
+remains pending.
