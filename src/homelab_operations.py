@@ -252,7 +252,7 @@ class HomelabOperations:
         # persistence primitive.  Discovery must not grow a second store.
         self.observation_recorder = observation_recorder
 
-    def _record_network_observations(self, candidates: list[dict[str, Any]]) -> dict[str, Any]:
+    def _record_network_observations(self, candidates: list[dict[str, Any]], *, owner: str) -> dict[str, Any]:
         hosts = []
         for candidate in candidates[:256]:
             ips = candidate.get("ip_addresses") or []
@@ -270,7 +270,7 @@ class HomelabOperations:
         recorder = self.observation_recorder
         if recorder is None:
             from src.asset_inventory import record_net
-            recorder = record_net
+            recorder = lambda payload: record_net(payload, owner=owner)
         recorder({"hosts": hosts})
         return {
             "observations_recorded": True,
@@ -280,7 +280,7 @@ class HomelabOperations:
             "network_map_reconciled": True,
         }
 
-    def _record_network_service_observations(self, observations: list[dict[str, Any]]) -> dict[str, Any]:
+    def _record_network_service_observations(self, observations: list[dict[str, Any]], *, owner: str) -> dict[str, Any]:
         """Persist service evidence through the existing canonical CMDB writer."""
         hosts = []
         for observation in observations[:256]:
@@ -299,7 +299,7 @@ class HomelabOperations:
         recorder = self.observation_recorder
         if recorder is None:
             from src.asset_inventory import record_net
-            recorder = record_net
+            recorder = lambda payload: record_net(payload, owner=owner)
         recorder({"hosts": hosts})
         return {
             "observations_recorded": True,
@@ -333,7 +333,7 @@ class HomelabOperations:
             }
         if action == "read_network_observations":
             from src.network_projection import map_projection
-            projection = map_projection()
+            projection = map_projection(owner=owner)
             if projection.get("warning"):
                 return {
                     "status": "UNAVAILABLE",
@@ -497,7 +497,7 @@ class HomelabOperations:
         persistence = {"observations_recorded": False, "network_map_reconciled": False}
         if code == 0:
             try:
-                persistence = self._record_network_observations(candidates)
+                persistence = self._record_network_observations(candidates, owner=owner)
             except Exception as exc:
                 # The broker may have completed while the durable observation
                 # projection failed. Preserve that distinction for the Run;
@@ -558,7 +558,7 @@ class HomelabOperations:
         persistence = {"observations_recorded": False, "network_map_reconciled": False}
         if code == 0:
             try:
-                persistence = self._record_network_service_observations(observations)
+                persistence = self._record_network_service_observations(observations, owner=owner)
             except Exception as exc:
                 persistence_error = str(exc)[:500]
         receipt = {

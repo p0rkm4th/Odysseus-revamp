@@ -260,7 +260,9 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
             try:return developer_mode.execute(db,value,str(payload.get("lease_id") or ""),payload.get("command"))
             except ValueError as exc: raise HTTPException(403,str(exc)) from exc
     @router.get("/api/network/map")
-    async def network_map(request: Request): owner(request); return await asyncio.to_thread(map_projection)
+    async def network_map(request: Request):
+        value = owner(request)
+        return await asyncio.to_thread(map_projection, owner=value)
     @router.get("/api/home-assistant/overview")
     async def home_assistant_overview(request: Request):
         owner(request)

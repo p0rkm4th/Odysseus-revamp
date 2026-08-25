@@ -231,7 +231,7 @@ def setup_work_routes(*, session_factory=SessionLocal):
     async def sync_cmdb_relationships(request: Request):
         def operation(svc, o, _u):
             from src.network_projection import map_projection
-            projection = map_projection()
+            projection = map_projection(owner=o)
             return __import__("src.world_model", fromlist=["WorldModelService"]).WorldModelService(svc.db).sync_cmdb_edges(o, projection.get("edges") or [])
         return await tx(request, operation)
     @router.get("/world/entities/{entity_ref:path}/neighbors")
