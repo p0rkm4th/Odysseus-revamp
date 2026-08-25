@@ -2,7 +2,7 @@ from pathlib import Path
 
 from src.agent_loop import _classify_agent_request, _minimal_saved_memory_message, _suppress_automatic_skills
 from src.memory_grounding import is_explicit_memory_query
-from src.context_compactor import context_trace
+from src.context_compactor import context_trace, tool_projection_trace
 
 
 def test_breakdown_wording_is_an_explicit_canonical_memory_query():
@@ -53,3 +53,26 @@ def test_provider_context_trace_reports_memory_presence_without_content():
     assert trace["memory"]["retrieved_count"] == 2
     assert trace["memory"]["content_logged"] is False
     assert "CANONICAL MEMORY RESULT" not in str(trace)
+
+
+def test_tool_projection_trace_explains_route_and_policy_exclusions_without_content():
+    candidate = [
+        {"function": {"name": "read_memory"}},
+        {"function": {"name": "manage_assets"}},
+        {"function": {"name": "manage_settings"}},
+    ]
+    projected = [candidate[0]]
+    trace = tool_projection_trace(
+        candidate,
+        projected,
+        route_relevant_tools={"read_memory"},
+        disabled_tools={"manage_assets"},
+        policy_exclusions={"manage_settings"},
+    )
+    assert trace["candidate_action_count"] == 3
+    assert trace["projected_tool_count"] == 1
+    assert trace["route_filtered_count"] == 2
+    assert trace["disabled_tools"] == ["manage_assets"]
+    assert trace["policy_exclusions"] == ["manage_settings"]
+    assert trace["schema_serialization_failures"] == 0
+    assert "read_memory" not in str(trace.get("messages", ""))
