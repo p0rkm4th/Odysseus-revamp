@@ -4,7 +4,6 @@ import asyncio
 import json
 
 import src.agent_loop as agent_loop
-from src.homelab_operations import DEFAULT_PRIVATE_DISCOVERY_CIDR
 
 
 def _collect(generator):
@@ -26,13 +25,13 @@ def _events(chunks):
     return values
 
 
-def test_network_discovery_request_without_cidr_stays_on_bounded_scope():
+def test_network_discovery_request_without_cidr_does_not_reuse_historical_scope():
     query = (
         "do a deep dive network discovery scan, download whatever network "
         "tools you need, such as nmap or ip. list all hosts and what you "
         "think they are and may do. Begin now"
     )
-    assert agent_loop._network_discovery_request_cidr(query) == DEFAULT_PRIVATE_DISCOVERY_CIDR
+    assert agent_loop._network_discovery_request_cidr(query) is None
 
 
 def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_active_scan():
@@ -65,8 +64,18 @@ def test_service_result_action_supports_grounded_active_execution_language():
     assert response == "The bounded service scan is running now."
 
 
-def test_qwen_prose_only_network_request_gets_one_canonical_plan_repair(monkeypatch):
-    """A weak model cannot strand a recognizable action behind prose."""
+def test_stored_canonical_evidence_supports_truthful_followup_without_new_action():
+    response = agent_loop.ground_action_completion(
+        "The containers currently recorded for Odysseus are healthy.",
+        intent_domains={"homelab"},
+        tool_events=[],
+        stored_evidence=True,
+    )
+    assert response == "The containers currently recorded for Odysseus are healthy."
+
+
+def test_qwen_prose_only_network_request_does_not_get_a_stale_scope_repair(monkeypatch):
+    """A weak model cannot cause a historical scope to be scanned by prose."""
 
     query = (
         "do a deep dive network discovery scan, download whatever network "
@@ -124,17 +133,8 @@ def test_qwen_prose_only_network_request_gets_one_canonical_plan_repair(monkeypa
         )
     )
 
-    assert len(calls) == 1
-    assert calls[0].tool_type == "manage_homelab"
-    payload = json.loads(calls[0].content)
-    assert payload == {
-        "action": "plan_network_discovery",
-        "cidr": DEFAULT_PRIVATE_DISCOVERY_CIDR,
-    }
-    assert any(
-        event.get("type") == "tool_start" and event.get("tool") == "manage_homelab"
-        for event in _events(chunks)
-    )
+    assert calls == []
+    assert not any(event.get("type") == "tool_start" for event in _events(chunks))
     # The grounding boundary remains intact: only the synthetic tool result,
     # not the model's ARP prose, authorizes an action-completed response.
     assert not any("No action completed" in str(event.get("delta")) for event in _events(chunks))

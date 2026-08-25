@@ -142,6 +142,17 @@ def handle(req, allowed_pid, allowed_uid):
             "allowed_packages": sorted(ALLOWED_PACKAGES),
         }
 
+    if action == "read_network_context":
+        addresses = run_root(["ip", "-j", "addr"], timeout=10)
+        routes = run_root(["ip", "-j", "route"], timeout=10)
+        return {
+            "ok": addresses["returncode"] == 0 and routes["returncode"] == 0,
+            "action": action,
+            "addresses": addresses["output"],
+            "routes": routes["output"],
+            "exit_code": max(addresses["returncode"], routes["returncode"]),
+        }
+
     if action == "run_network_discovery":
         try:
             cidr = _private_discovery_cidr(req.get("cidr"))

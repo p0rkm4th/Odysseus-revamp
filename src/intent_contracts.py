@@ -144,7 +144,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "security_evidence_list",
     ),
     "NETWORK": DomainContract(
-        "NETWORK", "homelab.manage", {"READ": "read_network_observations", "READ_UNIDENTIFIED": "list_unidentified_hosts", "READ_ROLES": "infer_role_hypotheses", "EXECUTE": "plan_network_discovery"}, "manage_homelab",
+        "NETWORK", "homelab.manage", {"READ": "read_network_observations", "READ_CONTEXT": "read_network_context", "READ_UNIDENTIFIED": "list_unidentified_hosts", "READ_ROLES": "infer_role_hypotheses", "EXECUTE": "plan_network_discovery"}, "manage_homelab",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "network_capability_or_discovery",
     ),
@@ -425,6 +425,11 @@ def compile_intent(
         reference_filters["view"] = "integrations"
     elif concept == "NETWORK" and re.search(r"\b(?:unidentified|unknown|unrecognised|unrecognized)\b", q):
         reference_filters["view"] = "unidentified"
+    elif concept == "NETWORK" and re.search(
+        r"\b(?:what\s+network|which\s+network|network\s+am\s+i|currently\s+connected|current(?:ly)?\s+(?:on|connected))\b",
+        q,
+    ):
+        reference_filters["view"] = "context"
     elif concept == "NETWORK" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
         reference_filters["view"] = "roles"
     workspace = {
@@ -525,6 +530,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_INTEGRATIONS"
     elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "unidentified":
         action_key = "READ_UNIDENTIFIED"
+    elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "context":
+        action_key = "READ_CONTEXT"
     elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "roles":
         action_key = "READ_ROLES"
     action_id = contract.actions.get(action_key)
@@ -570,9 +577,9 @@ def validate_contracts() -> list[str]:
                 )
                 if missing_textual:
                     errors.append(f"{concept}: textual contract omits ActionSpec exposure {missing_textual}")
-            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"} and action.approval.value != "none":
+            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
-            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"} and "read_private" not in action.effects:
+            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and "read_private" not in action.effects:
                 errors.append(f"{concept}/{action_id}: read lacks read_private effect")
             if not action.executor_key:
                 errors.append(f"{concept}/{action_id}: missing executor")
