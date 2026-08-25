@@ -1228,18 +1228,22 @@ import sys as _ody_v34_sys
 _ody_v34_original_execute_tool_block = execute_tool_block
 
 
-def _ody_v34_asset_argv(args):
+def _ody_v34_asset_argv(args, owner=None):
     if not isinstance(args, dict):
         raise ValueError("manage_assets arguments must be an object")
 
     action = str(args.get("action") or "")
     argv = [_ody_v34_sys.executable, "-m", "src.asset_inventory"]
+    owner = str(owner or "").strip()
+
+    def _with_owner(command):
+        return argv + [command] + (["--owner", owner] if owner else [])
 
     if action == "summary":
-        return argv + ["summary"]
+        return _with_owner("summary")
 
     if action in ("list", "search"):
-        argv += [action]
+        argv = _with_owner(action)
         if args.get("query"):
             argv.append(str(args["query"]))
         if args.get("type"):
@@ -1251,10 +1255,10 @@ def _ody_v34_asset_argv(args):
         return argv
 
     if action == "get":
-        return argv + ["get", str(args["asset"])]
+        return _with_owner("get") + [str(args["asset"])]
 
     if action == "add":
-        argv += ["add", "--name", str(args["name"])]
+        argv = _with_owner("add") + ["--name", str(args["name"])]
         for key in (
             "id", "type", "status", "manufacturer", "model", "serial",
             "system_uuid", "hostname", "mac", "location", "notes", "source"
@@ -1273,7 +1277,7 @@ def _ody_v34_asset_argv(args):
         return argv
 
     if action == "update":
-        argv += ["update", str(args["asset"])]
+        argv = _with_owner("update") + [str(args["asset"])]
         for key in (
             "name", "type", "status", "manufacturer", "model", "serial",
             "system_uuid", "hostname", "mac", "location", "notes", "source"
@@ -1292,8 +1296,7 @@ def _ody_v34_asset_argv(args):
         return argv
 
     if action == "record_observation":
-        argv += [
-            "observe",
+        argv = _with_owner("observe") + [
             "--kind",
             str(args.get("kind") or "observation"),
         ]
@@ -1315,8 +1318,7 @@ def _ody_v34_asset_argv(args):
         return argv
 
     if action == "link_component":
-        argv += [
-            "link",
+        argv = _with_owner("link") + [
             str(args["parent"]),
             str(args["child"]),
             "--relation",
@@ -1329,19 +1331,17 @@ def _ody_v34_asset_argv(args):
         return argv
 
     if action == "unlink_component":
-        return argv + [
-            "unlink",
+        return _with_owner("unlink") + [
             "--parent", str(args["parent"]),
             "--child", str(args["child"]),
             "--relation", str(args.get("relation") or "installed_in"),
         ]
 
     if action == "retire":
-        return argv + ["retire", str(args["asset"])]
+        return _with_owner("retire") + [str(args["asset"])]
 
     if action == "merge":
-        argv += [
-            "merge",
+        argv = _with_owner("merge") + [
             str(args["source_asset"]),
             str(args["target_asset"]),
         ]
@@ -1354,8 +1354,10 @@ def _ody_v34_asset_argv(args):
 
 async def _execute_manage_assets_binding(block, owner=None):
     try:
+        if not owner:
+            raise PermissionError("authenticated IT asset owner is required")
         payload = _ody_v34_json.loads(block.content or "{}")
-        argv = _ody_v34_asset_argv(payload)
+        argv = _ody_v34_asset_argv(payload, owner=owner)
 
         def _run():
             return _ody_v34_subprocess.run(

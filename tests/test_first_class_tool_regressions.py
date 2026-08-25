@@ -221,13 +221,18 @@ def test_canonical_asset_reads_are_read_only_and_need_no_approval():
 @pytest.mark.asyncio
 async def test_manage_assets_read_returns_structured_canonical_result(monkeypatch):
     import src.tool_execution as tool_execution
+    calls = []
 
     class Completed:
         returncode = 0
         stdout = '[{"id":"cerberus","name":"Cerberus","type":"server","status":"active"}]'
         stderr = ""
 
-    monkeypatch.setattr(tool_execution._ody_v34_subprocess, "run", lambda *args, **kwargs: Completed())
+    monkeypatch.setattr(
+        tool_execution._ody_v34_subprocess,
+        "run",
+        lambda *args, **kwargs: (calls.append(args[0]) or Completed()),
+    )
     block = type("Block", (), {"content": json.dumps({"action": "list", "limit": 500})})()
     binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
     assert binding == "manage_assets"
@@ -235,6 +240,24 @@ async def test_manage_assets_read_returns_structured_canonical_result(monkeypatc
     assert result["data"]["status"] == "SUCCESS"
     assert result["data"]["assets"][0]["id"] == "cerberus"
     assert result["data"]["owner_scope"] == "alice"
+    assert "--owner" in calls[0]
+    assert calls[0][calls[0].index("--owner") + 1] == "alice"
+
+
+@pytest.mark.asyncio
+async def test_manage_assets_binding_requires_owner_before_legacy_cli(monkeypatch):
+    import src.tool_execution as tool_execution
+    called = []
+    monkeypatch.setattr(
+        tool_execution._ody_v34_subprocess,
+        "run",
+        lambda *args, **kwargs: called.append(args[0]),
+    )
+    block = type("Block", (), {"content": json.dumps({"action": "list"})})()
+    _, result = await tool_execution._execute_manage_assets_binding(block, owner=None)
+    assert result["exit_code"] == 1
+    assert "authenticated IT asset owner" in result["error"]
+    assert called == []
 
 
 @pytest.mark.asyncio

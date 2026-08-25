@@ -2,9 +2,50 @@
 
 import json
 import sqlite3
+import argparse
+import pytest
 
 from src import asset_inventory
 from src.network_projection import map_projection
+
+
+def _asset_args(**overrides):
+    values = {
+        "id": None, "name": "asset", "type": "server", "status": "active",
+        "manufacturer": None, "model": None, "serial": None, "system_uuid": None,
+        "hostname": None, "mac": None, "location": None, "notes": None, "source": "test",
+        "confidence": 1.0, "attributes": None, "asset": None, "query": None, "limit": 100, "relationship_id": None, "kind": "observation",
+        "text": None, "json": None, "owner": None,
+    }
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+def test_asset_cli_owner_filter_does_not_cross_partitions(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "assets.db"
+    monkeypatch.setattr(asset_inventory, "DB_PATH", path)
+    asset_inventory.cmd_add(_asset_args(id="alice-asset", name="Alice server", owner="alice"))
+    asset_inventory.cmd_add(_asset_args(id="bob-asset", name="Bob server", owner="bob"))
+    capsys.readouterr()
+
+    asset_inventory.cmd_list(_asset_args(owner="alice", limit=50))
+    rows = json.loads(capsys.readouterr().out)
+    assert [row["id"] for row in rows] == ["alice-asset"]
+    assert rows[0]["owner"] == "alice"
+
+
+def test_asset_relationship_unlink_is_owner_scoped(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "assets.db"
+    monkeypatch.setattr(asset_inventory, "DB_PATH", path)
+    asset_inventory.cmd_add(_asset_args(id="alice-host", name="Alice host", owner="alice"))
+    asset_inventory.cmd_add(_asset_args(id="alice-runtime", name="Alice runtime", owner="alice"))
+    capsys.readouterr()
+    asset_inventory.cmd_link(_asset_args(parent="alice-host", child="alice-runtime", owner="alice", relation="runs_on", source="test", notes=None))
+    relationship_id = json.loads(capsys.readouterr().out)["relationship_id"]
+    with pytest.raises(SystemExit, match="relationship not found"):
+        asset_inventory.cmd_unlink(_asset_args(relationship_id=relationship_id, owner="bob"))
+    with asset_inventory.db() as db:
+        assert db.execute("SELECT ended_at FROM relationships WHERE id=?", (relationship_id,)).fetchone()[0] is None
 
 
 def test_network_projection_is_owner_scoped_and_same_mac_never_merges(tmp_path, monkeypatch):
