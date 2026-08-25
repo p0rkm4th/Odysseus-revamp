@@ -6,7 +6,7 @@
 | Existing canonical read/Run foundations | FOCUSED_TESTED | 130 focused tests |
 | ACI contract projections | FOCUSED_TESTED | `tests/test_aci_contracts.py` |
 | Qwen live baseline | PARTIAL | 15-case subset; success 0.20, weighted 0.4333; 9 provider errors |
-| H0 vs final improvement | PARTIAL | final six-case ACI canary 6/6; full H0-equivalent ACI run still required |
+| H0 vs final improvement | PARTIAL | final 15-case ACI weighted `0.6667` vs H0 `0.4333`; synthetic only |
 | Chat route ACI mode | FOCUSED_TESTED | explicit `hades_aci_mode` setting passed to canonical loop; default `aci`, reversible |
 | Frozen evaluation corpus | SOURCE | 120 synthetic cases: 96 development, 24 held-out, 12 canary |
 | Exact ACI candidate deployed | DEPLOYED | `odysseus:candidate-1ce7ec34b9f7`; `/api/version` source/build/frontend match |
@@ -22,6 +22,8 @@
 - ChromaDB and SearXNG: running; SearXNG healthy.
 - Candidate source/build/frontend provenance: matched.
 - Image retention: current candidate and previous `odysseus:candidate-dbaddbdaac7e` retained; no cleanup performed.
+- Final H0-equivalent ACI: 15 cases, `0.4667` success, `0.6667` weighted; 11 clean, 4 timeouts.
+- Improvement is synthetic benchmark evidence, not owner-live evidence.
 
 No synthetic result is labeled as live owner evidence. No private runtime data,
 database, backup, log, model blob, or owner Memory was added to the benchmark
