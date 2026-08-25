@@ -12,6 +12,19 @@ def test_security_and_mutation_do_not_route_local():
     assert result["model_profile"] == "strong-default"
     assert result["consequential_execution"] is True
 
+
+def test_network_action_intent_uses_canonical_route_not_security_or_local_read():
+    result = route_request(
+        "do a deep dive network discovery scan, download whatever network tools you need, and begin now",
+        requested_profile="hades-local-test",
+    )
+    assert result["domains"] == ["network"]
+    assert result["task_class"] == "network_action"
+    assert result["model_profile"] == "strong-default"
+    assert result["local_recommended"] is False
+    assert result["consequential_execution"] is True
+    assert result["reason_codes"] == ["bounded_network_action_requires_canonical_homelab_route"]
+
 def test_workspace_yolo_is_explicit_profile_and_denies_escape():
     assert resolve_execution_profile("workspace_yolo").requires_workspace
     assert WORKSPACE.startswith("/home/")
