@@ -1,9 +1,9 @@
 # Hades truth audit — post-runtime-gate comparison
 
 Observed: 2026-08-24  
-Source candidate: `98dbb0368a9e6e83a089ec8384b20f145ad80ca2`  
-Candidate image: `odysseus:candidate-26444587`  
-Candidate digest: `sha256:9518d18e01b590a6346a6894817b9861def94d014fc17c13484a755edaf03167`
+Source candidate: `faf15d68bd9b6c3c3dc27b070a6424cfd583de87`  
+Candidate image: `odysseus:candidate-faf15d68`  
+Candidate image ID: `sha256:6a275b04ae5b388f8cd4ef1307d98bc4af1db17441c7c32ed6102139ac5a1fbb`
 
 This is a bounded rerun of the independent truth-audit methodology. It does
 not overwrite the historical `docs/hades-truth-audit.md`, and it does not
@@ -17,7 +17,7 @@ promote the currently running service to source-matched acceptance.
 | Frontend identity | no build marker or canonical verification command | static marker plus `npm run test:frontend` | E2/E4 candidate |
 | Compact navigation | separate hard-coded legacy rail omitted newer modules | workspace registry projects the same nine workspaces into grouped sidebar and compact rail | source/focused E2; synthetic browser E4 |
 | Architecture convergence | duplicate paths were documented informally | module parity, workspace IA, and convergence artifacts recorded | E1/E2 |
-| Full regression | historical counts varied 6063/6064 | current run: 6076 passed, 3 skipped, 186 warnings | E3; deterministic within this run |
+| Full regression | historical counts varied 6063/6064 | current run: 6079 passed, 3 skipped, 186 warnings | E3; deterministic within this run |
 | Migrations | prior audit reported fresh/rerun/copied passes | fresh and rerun loaded 21 registered versions | E3 |
 | Broker | host namespace check falsely suggested missing socket | socket verified inside application container with owner/mode and SO_PEERCRED boundary preserved | E5 current deployment |
 | Ollama | prior loopback probe failed | bridge endpoint responds, lists `qwen3:8b`, and container reaches `/api/version` | E5 bridge; inference request pending |
@@ -25,6 +25,7 @@ promote the currently running service to source-matched acceptance.
 | Browser | Playwright unavailable | repo-scoped Chromium and canonical window/realistic OSINT suites pass | E3/E4 synthetic |
 | Action execution parity | weak Qwen network request ended in prose and grounding safeguard | one bounded deterministic `manage_homelab` plan repair now precedes approval/execution; exact-scope/broker path unchanged | E2/E4 synthetic; owner retest pending |
 | Agent-to-Work provenance | detached agent stream had no durable Run proof | owner/session actionable turns now create/reuse one Work Run and project registered ToolBinding actions/results with exact approval references | E2 focused; owner-live continuation pending |
+| Exact candidate browser | prior candidate browser evidence was source-attributed to an earlier build | `npm run test:frontend`, `npm run test:browser`, and `npm run test:browser:realistic` pass against `candidate-faf15d68` | E4 synthetic |
 
 ## Remaining discrepancies
 
