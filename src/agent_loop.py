@@ -7944,6 +7944,15 @@ async def stream_agent_loop(
                     ):
                         from src.agent_work_bridge import verify_bound_action
                         await asyncio.to_thread(verify_bound_action, owner, _work_action_id)
+                    # The GUI receives the same durable completion projection
+                    # that continuation logic can use. This is intentionally
+                    # observational; it never advances a Run or treats model
+                    # prose as evidence.
+                    if work_run_id:
+                        from src.agent_work_bridge import assess_agent_run
+                        completion = await asyncio.to_thread(assess_agent_run, owner, work_run_id)
+                        if completion:
+                            yield f'data: {json.dumps({"type": "run_completion", "data": completion}, default=str)}\n\n'
                 except Exception:
                     logger.warning("[work-bridge] failed to persist bound action result", exc_info=True)
 
