@@ -534,5 +534,14 @@ realistic browser gates pass. Rollback is retained as
   success or another owner's data.
 - Evidence: owner-scope, legacy migration, cross-owner MAC, Security, network,
   and first-class binding coverage passed; full regression `6206 passed, 3
-  skipped, 186 warnings in 126.22s`. Deployment and explicit legacy-owner
-  migration remain pending for this checkpoint.
+  skipped, 186 warnings in 126.22s`. The explicit migration was executed for
+  the sole configured owner `scotty`; the database retained 8 assets and 59
+  observations, and the owner-scoped projection returned `SUCCESS` with 19
+  nodes and 1 relationship edge. The pre-migration database copy is retained
+  at `/tmp/odysseus-assets-pre-owner-745e3936.db` for this deployment check.
+- Candidate `odysseus:candidate-745e3936` is deployed with image
+  `sha256:b6465f6078822cac9d6be41eeb4cccac971f836ded5fe37c0bbc99a9e35f38fd`;
+  `/api/health`, `/api/version`, frontend static verification, browser-window
+  dogfood, and realistic browser acceptance passed. Status:
+  `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`; owner-live network dogfood and
+  cross-model provider swapping remain `OWNER_DOGFOOD_PENDING`.
