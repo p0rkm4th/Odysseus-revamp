@@ -855,3 +855,20 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   full regression `6273 passed, 3 skipped, 186 warnings in 177.44s`.
   Source-matched deployment and end-to-end acceptance follow this checkpoint.
   Status: `VERIFIED_TESTED`.
+
+## Morning convergence acceptance checkpoint
+
+- The final candidate is source-matched at commit `a3d84c0d12190d10170424246ed25c07b7757db8`, image
+  `sha256:abcf8e0480a696b49f6bdc4d6ba8ee66bdf8c724f8d09d10ba0d773c9024de17`,
+  build `a3d84c0d12190d10170424246ed25c07b7757db8-2026-08-25T13:15:53Z`,
+  frontend build `frontend-a3d84c0d12190d10170424246ed25c07b7757db8-6007cced95bca9218cf0721afb8c21f149683146706fd86f2b3fb3e09d64692d`.
+- `/api/health`, `/api/version`, broker socket ownership/mode, and Ollama
+  bridge health passed. Direct Qwen3:8b inference returned the acceptance
+  sentinel. Frontend static, browser-window, and realistic populated/narrow
+  browser acceptance passed against this deployed candidate.
+- The synthetic golden-flow matrix covering Hades, Infrastructure, Research,
+  continuation, owner scope, and Qwen/Luna/Sol contract parity passed `136
+  tests, 3 warnings`. Full regression remains `6273 passed, 3 skipped, 186
+  warnings`. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE` for the local
+  runtime and synthetic architecture; owner-live Luna/Sol swapping and
+  consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
