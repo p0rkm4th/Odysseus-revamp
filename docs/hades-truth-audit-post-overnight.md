@@ -197,3 +197,16 @@ full regression at source level is `6136 passed, 3 skipped, 186 warnings` in
 127.48 seconds. The change is source-tested and requires candidate rebuild and
 runtime verification before deployment evidence is promoted. Owner-live E6
 remains pending.
+
+## Source-matched consequential binding deployment
+
+Commit `e7993fdb84c091b1a5a20f746829f8f322fc72f0` is deployed as candidate
+`odysseus:candidate-e7993fdb84c0` with image
+`sha256:45508b7b960d2612b62a6b26d95c443692b264d9276b2641dc9d7502b75acb6c`.
+Runtime health is healthy and `/api/version` reports the same source, build ID
+`e7993fdb84c091b1a5a20f746829f8f322fc72f0-2026-08-25T07:15:00Z`, frontend
+build ID, and migration head. The broker socket remains
+`odysseus:odysseus`/`660`; Qwen `qwen3:8b` inference through
+`172.18.0.1:11434` returned `OK`. Frontend static, browser-window, and
+realistic browser acceptance all pass. Rollback is retained as
+`odysseus:rollback-e7993fdb-prev`. Owner-live E6 remains pending.
