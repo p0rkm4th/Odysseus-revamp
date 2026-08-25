@@ -933,6 +933,12 @@ events, preserving lifecycle, verification, and result state without creating a
 second executor. Cross-owner or nonexistent evidence Run references fail
 closed; diagnostic evidence history remains intact.
 
+Canonical Hades-owned evidence references (`run://`, completed action
+references, WorkResult, and WorkArtifact references) are now resolved through
+the owner-scoped Work tables and must match the supplied Run. Opaque external
+references such as provider/public `result://` identifiers remain supported as
+tainted external evidence and are not treated as Hades-owned records.
+
 ### Mission/Watch lifecycle checkpoint
 
 Mission projections now derive `WAITING` from durable approval/input Runs and

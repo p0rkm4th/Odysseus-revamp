@@ -1,6 +1,6 @@
 """Incident/Change service; WorkEngine remains the execution authority."""
 from core.incident_models import Change, Incident, IncidentHypothesis
-from core.work_models import WorkRun
+from core.work_models import WorkAction, WorkArtifact, WorkResult, WorkRun
 from src.run_planner import RunPlanner
 from src.work_engine import WorkError, ident, now, parse_dt, serialize
 
@@ -79,12 +79,50 @@ class IncidentChangeService:
         incident.timeline = timeline[-200:]
         self.db.commit(); self.db.refresh(row); return serialize(row)
 
+    def _canonical_evidence_run(self, owner, reference, supplied_run_id):
+        """Resolve durable Hades evidence references without owning external evidence.
+
+        Public/provider references such as ``result://provider-record`` are
+        intentionally opaque.  Hades-owned references are different: they
+        must resolve through the canonical Work tables and cannot be adopted
+        across owners or Runs by merely supplying an unrelated ID.
+        """
+        value = str(reference or "").strip()
+        prefixes = ("run://", "agent-tool://", "action-result://", "work-result://", "result-record://", "artifact://")
+        if not value.startswith(prefixes):
+            return supplied_run_id
+
+        kind, record_id = value.split("://", 1)
+        record_id = record_id.strip()
+        if not record_id:
+            raise WorkError("canonical evidence reference is invalid")
+
+        if kind == "run":
+            row = self.db.query(WorkRun).filter_by(owner=owner, id=record_id).one_or_none()
+        elif kind in {"agent-tool", "action-result"}:
+            row = self.db.query(WorkAction).join(WorkRun, WorkRun.id == WorkAction.run_id).filter(
+                WorkAction.id == record_id, WorkRun.owner == owner,
+            ).one_or_none()
+            if row is not None and row.status != "completed":
+                raise WorkError("canonical evidence action is not completed")
+        elif kind in {"work-result", "result-record"}:
+            row = self.db.query(WorkResult).filter_by(owner=owner, id=record_id).one_or_none()
+        else:
+            row = self.db.query(WorkArtifact).filter_by(owner=owner, id=record_id).one_or_none()
+
+        if row is None:
+            raise WorkError("canonical evidence reference not found")
+        resolved_run_id = row.id if kind == "run" else row.run_id
+        if supplied_run_id and str(supplied_run_id) != str(resolved_run_id):
+            raise WorkError("evidence Run does not match canonical reference")
+        return resolved_run_id
+
     def add_evidence(self, owner, incident_id, data):
         incident = self._incident(owner, incident_id)
         reference = str(data.get("reference") or "").strip()
         if not reference: raise WorkError("incident evidence reference is required")
         if len(reference) > 1000: raise WorkError("incident evidence reference is too long")
-        run_id = data.get("run_id")
+        run_id = self._canonical_evidence_run(owner, reference, data.get("run_id"))
         if run_id and self.db.query(WorkRun).filter_by(owner=owner, id=run_id).one_or_none() is None:
             raise WorkError("evidence Run not found")
         refs = list(incident.evidence_references or [])

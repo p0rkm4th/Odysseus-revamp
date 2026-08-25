@@ -83,6 +83,44 @@ def test_incident_evidence_rejects_cross_owner_run(db):
         svc.add_evidence("bob", incident["id"], {"reference":"result://private", "run_id":run["id"]})
 
 
+def test_incident_evidence_accepts_completed_canonical_action_reference(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "homelab"})
+    action = work.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "service_status"})
+    completed = work.complete_action("alice", action["id"], {
+        "result": {"result_type": "diagnostic", "reference": f"agent-tool://{action['id']}"},
+        "result_reference": f"agent-tool://{action['id']}",
+    })
+    svc = IncidentChangeService(db)
+    incident = svc.create_incident("alice", {"title": "Canonical evidence"})
+    evidence = svc.add_evidence("alice", incident["id"], {"reference": completed["result"]["reference"], "run_id": run["id"]})
+    assert evidence["evidence_reference"] == f"agent-tool://{action['id']}"
+    assert evidence["timeline_event"]["run_id"] == run["id"]
+
+
+def test_incident_evidence_rejects_cross_run_canonical_action_reference(db):
+    work = WorkEngine(db)
+    first = work.create_run("alice", {"domain": "homelab"})
+    second = work.create_run("alice", {"domain": "homelab"})
+    action = work.create_action("alice", first["id"], {"capability_id": "homelab.manage", "action_id": "service_status"})
+    work.complete_action("alice", action["id"], {"result_reference": f"action-result://{action['id']}"})
+    svc = IncidentChangeService(db)
+    incident = svc.create_incident("alice", {"title": "Cross-run evidence"})
+    with pytest.raises(WorkError, match="does not match canonical reference"):
+        svc.add_evidence("alice", incident["id"], {"reference": f"action-result://{action['id']}", "run_id": second["id"]})
+
+
+def test_incident_evidence_rejects_cross_owner_canonical_action_reference(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "homelab"})
+    action = work.create_action("alice", run["id"], {"capability_id": "homelab.manage", "action_id": "service_status"})
+    work.complete_action("alice", action["id"], {"result_reference": f"action-result://{action['id']}"})
+    svc = IncidentChangeService(db)
+    incident = svc.create_incident("bob", {"title": "Cross-owner evidence"})
+    with pytest.raises(WorkError, match="canonical evidence reference not found"):
+        svc.add_evidence("bob", incident["id"], {"reference": f"action-result://{action['id']}"})
+
+
 def test_change_completion_requires_verified_canonical_run(db):
     work=WorkEngine(db); run=work.create_run("alice", {"domain":"homelab"})
     svc=IncidentChangeService(db)
