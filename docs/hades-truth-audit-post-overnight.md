@@ -451,6 +451,9 @@ realistic browser gates pass. Rollback is retained as
   retain `EMPTY_RESULT` rather than being represented as a successful data
   response.
 - Evidence: semantic contract and binding coverage `93 passed, 1 warning`;
-  full regression and deployment gates are pending for this uncommitted
-  checkpoint. Owner-live cross-model dogfood remains pending.
-- Status: `VERIFIED_TESTED` for focused source behavior; not yet deployed.
+  full regression `6188 passed, 3 skipped, 186 warnings`; frontend static,
+  browser-window, and realistic-browser gates all passed. Candidate
+  `odysseus:candidate-d91d08930be1` is source-matched and live-verified with
+  image `sha256:1d518a617e50...`; the broker socket and Ollama `qwen3:8b`
+  were present at runtime.
+- Status: `VERIFIED_LIVE`; owner-live cross-model dogfood remains pending.
