@@ -46,6 +46,16 @@ The earlier full 15-case ACI run is retained as pre-fast-path evidence
 `0.75`) but is not called final because deterministic reads and malformed
 decision handling landed afterward.
 
+The final H0-equivalent 15-case ACI run completed after those fixes with
+`success_rate=0.4667`, `weighted_score=0.6667`, 11 clean records, and 4
+timeouts. Compared with H0 (`0.20` / `0.4333`, 4 clean records), the weighted
+delta is `+0.2334` and success delta is `+0.2667`. Category deltas were routing
+`0→0.50`, prerequisite `0.50→1.00`, efficiency `0.50→1.00`, grounding
+`0.50→0.75`, approval `0.25→0.50`, security `0→0.50`, continuity
+`0.60→0.70`; identity remained `0`. Final ACI median request context was 1248
+tokens across 11 measured records. Raw artifact: `/tmp/hades-aci-final-15.json`
+(local only).
+
 The chat route now passes the explicit `hades_aci_mode` setting to the canonical
 agent loop. `aci` is the default, with `shadow` and `legacy` available as
 operator rollback modes; this is a setting, not model-name capability logic.
