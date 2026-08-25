@@ -413,3 +413,14 @@ realistic browser gates pass. Rollback is retained as
 - Evidence: continuation/bridge/planner coverage `64 passed, 1 warning`.
 - Status: `VERIFIED_TESTED`; live multi-step provider continuation and
   owner-live model swapping remain pending.
+
+## Safe automatic continuation checkpoint
+
+- Source change: the shared agent loop may now project a planner-approved
+  `safe_auto_continue` read-only Action from the durable Run into the normal
+  ToolBinding loop. Consequential Actions, approval-required Actions, blocked
+  Runs, and unavailable projections remain fail-closed.
+- Evidence: agent-loop/planner/bridge coverage `82 passed, 1 warning` plus the
+  explicit binding projection assertion.
+- Status: `VERIFIED_TESTED`; owner-live multi-step and cross-model continuation
+  remain pending.
