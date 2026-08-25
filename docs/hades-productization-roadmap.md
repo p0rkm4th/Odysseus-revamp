@@ -1105,3 +1105,14 @@ the binding's native action schema, preventing silent provider exposure drift.
 Focused coverage is 125 passed; full regression is 6249 passed, 3 skipped,
 186 warnings. Provider swaps and owner-live Qwen/Luna/Sol torture remain
 pending; this checkpoint changes exposure parity, not authority.
+
+### Textual provider action-exposure checkpoint — 2026-08-25
+
+The same registered contract actions are now required to appear in both the
+native function schema and the textual/XML binding contract. The missing
+Network unidentified/role reads, OSINT case reads, Security ledger reads, and
+typed Work reads are now explicitly documented in the existing bindings.
+This closes a transport-projection gap without adding actions, authority, or a
+second registry. Focused parity/control-plane coverage is 144 passed and the
+broader routing/policy slice is 252 passed; full regression and deployment of
+this checkpoint remain the next gate.
