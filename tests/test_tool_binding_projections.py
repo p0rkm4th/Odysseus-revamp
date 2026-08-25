@@ -3,6 +3,7 @@ from src.agent_loop import TOOL_SECTIONS, _DOMAIN_TOOL_MAP
 from src.capability_registry import capability_for_tool
 from src.tool_bindings import TOOL_BINDINGS, binding_for_tool
 import asyncio
+import json
 import src.tool_execution as tool_execution
 
 
@@ -57,6 +58,49 @@ def test_network_binding_preserves_host_broker_boundary():
     assert binding.target_scope == "private_network"
     assert binding.requires_direct_container_access is False
     assert "manage_homelab" in _DOMAIN_TOOL_MAP["network_ops"]
+
+
+def test_network_read_views_project_owner_scoped_canonical_data(monkeypatch):
+    projection = {
+        "identity_rule": "IP addresses remain observations; no IP-only merge",
+        "nodes": [
+            {
+                "id": "unidentified:192.168.10.20",
+                "resolution_state": "unidentified",
+                "canonical": False,
+                "attributes": {"ip": "192.168.10.20"},
+                "observations": [],
+            },
+            {
+                "id": "asset-server",
+                "resolution_state": "canonical",
+                "canonical": True,
+                "attributes": {"observed_ip": "192.168.10.30"},
+                "observations": [{
+                    "observed_at": "2026-08-25T10:00:00+00:00",
+                    "data_json": json.dumps({"open_ports": [445], "port_meanings": ["microsoft-ds"]}),
+                }],
+            },
+        ],
+        "edges": [],
+    }
+    monkeypatch.setattr("src.network_projection.map_projection", lambda *, owner: projection)
+
+    unidentified = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="manage_homelab", payload={"action": "list_unidentified_hosts"}, owner="alice"))
+    assert unidentified["success"] is True
+    assert unidentified["data"]["status"] == "SUCCESS"
+    assert unidentified["data"]["owner_scope"] == "alice"
+    assert [host["id"] for host in unidentified["data"]["hosts"]] == ["unidentified:192.168.10.20"]
+
+    roles = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="manage_homelab", payload={"action": "infer_role_hypotheses"}, owner="alice"))
+    assert roles["success"] is True
+    assert roles["data"]["status"] == "SUCCESS"
+    assert roles["data"]["hypotheses"][0]["role"] == "file_server_or_windows_host"
+    assert roles["data"]["hypotheses"][0]["classification"] == "INFERRED"
+    assert roles["data"]["hypotheses"][0]["canonical_ref"] == "asset-server"
+    assert roles["data"]["hypotheses"][0]["canonical_identity_updated"] is False
 
 
 def test_trusted_work_adapter_reuses_registered_binding(monkeypatch):

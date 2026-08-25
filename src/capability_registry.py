@@ -183,6 +183,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 idempotency=("conditional_retry" if action in {"execute_network_service_enumeration", "execute_service_restart", "execute_diagnostic_install"} else ("replay_safe" if action == "execute_network_discovery" else "unknown")),
             ) for action in (
                 "inspect_host", "service_status", "discovery_status", "read_network_observations",
+                "list_unidentified_hosts", "infer_role_hypotheses",
                 "plan_service_restart", "execute_service_restart",
                 "plan_network_discovery", "execute_network_discovery",
                 "plan_network_service_enumeration", "execute_network_service_enumeration",

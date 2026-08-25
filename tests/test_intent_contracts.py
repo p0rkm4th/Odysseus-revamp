@@ -62,6 +62,29 @@ def test_continuation_and_depth_are_structured_not_phrase_specific():
     assert continued.workspace_hint is None
 
 
+@pytest.mark.parametrize(("query", "view", "action_id"), [
+    ("Which hosts are unidentified on my network?", "unidentified", "list_unidentified_hosts"),
+    ("Which devices look like servers?", "roles", "infer_role_hypotheses"),
+])
+def test_network_read_views_compile_to_specialized_canonical_contracts(query, view, action_id):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "READ"
+    assert frame.filters["view"] == view
+    assert resolved.available is True
+    assert resolved.action_id == action_id
+    assert resolved.action.approval.value == "none"
+
+
+def test_network_specialized_result_contracts_are_structured():
+    unidentified = compile_intent("Which hosts are unidentified on my network?")
+    roles = compile_intent("Which devices look like servers?")
+    assert validate_result(unidentified, {"status": "EMPTY_RESULT", "hosts": []}) == (True, "EMPTY_RESULT")
+    assert validate_result(roles, {"status": "SUCCESS", "hypotheses": []}) == (True, "SUCCESS")
+    assert validate_result(unidentified, {"status": "SUCCESS", "nodes": [], "edges": []}) == (False, "INVALID_RESULT")
+
+
 def test_structured_reference_resolves_single_opaque_entity_without_authority():
     context = {"entities": [{"ref": "network-host:abc", "concept": "NETWORK"}]}
     resolution = resolve_structured_reference("scan it", context)
