@@ -206,6 +206,20 @@ class WorkEngine:
         if row.status != "awaiting_approval" or row.approval_reference != str(approval_reference or ""): raise WorkError("approval is not bound to this awaiting action")
         if digest and row.sealed_input_digest and str(digest) != row.sealed_input_digest: raise WorkError("approval digest does not match the persisted action")
         row.status = "approved"; row.revision += 1
+        run = self.db.query(WorkRun).filter_by(id=row.run_id, owner=owner).one()
+        # Approval is exact authority for this already-sealed Action, not a
+        # request to make the operator type a redundant continuation command.
+        # Restore the durable Run to a ready state while preserving its
+        # owner-bound pending action reference and normal execution gate.
+        if run.status == "awaiting_approval" or run.lifecycle_state == "waiting_approval":
+            run.status = "queued"
+            run.lifecycle_state = "ready"
+            run.current_step = f"approved action ready: {row.action_id}"
+            continuation = dict(run.continuation_state or {})
+            continuation["pending_action_id"] = row.id
+            continuation["phase"] = "READY"
+            run.continuation_state = continuation
+            run.revision += 1
         self.event(owner, "approval.resumed", run_id=row.run_id, action_id=row.id, payload={"approval_reference": row.approval_reference})
         self.db.commit(); self.db.refresh(row); return serialize(row)
 

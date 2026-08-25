@@ -175,6 +175,37 @@ def test_next_step_requires_authority_for_consequential_action(db):
     assert result["safe_auto_continue"] is False
 
 
+def test_next_step_auto_continues_sealed_approved_action(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "network"})
+    action = work.create_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "normalized_input": {"cidr": "192.168.10.0/24"},
+        "target_resources": ["network:private_scope"], "status": "awaiting_approval",
+        "approval_reference": "approval-discovery-1",
+    })
+    resumed = work.resume_approved_action("alice", action["id"], "approval-discovery-1", digest=action["sealed_input_digest"])
+    assert resumed["status"] == "approved"
+    next_step = RunPlanner(db).next_step("alice", run["id"])
+    assert next_step["status"] == "READY"
+    assert next_step["safe_auto_continue"] is True
+    assert next_step["authority_required"] is False
+    assert work.get_run("alice", run["id"])["lifecycle_state"] == "ready"
+
+
+def test_approved_action_without_exact_seal_does_not_auto_continue(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {"domain": "network"})
+    action = work.create_action("alice", run["id"], {
+        "capability_id": "homelab.manage", "action_id": "execute_network_discovery",
+        "normalized_input": {"cidr": "192.168.10.0/24"},
+        "target_resources": ["network:private_scope"], "status": "approved",
+    })
+    next_step = RunPlanner(db).next_step("alice", run["id"])
+    assert next_step["status"] == "READY"
+    assert next_step["safe_auto_continue"] is False
+
+
 def test_next_step_skips_completed_action_and_selects_next_sequence(db):
     work = WorkEngine(db)
     run = work.create_run("alice", {"domain": "homelab", "plan": []})
