@@ -611,3 +611,19 @@ realistic browser gates pass. Rollback is retained as
   acceptance passed. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`; owner-live
   model swapping and consequential network dogfood remain
   `OWNER_DOGFOOD_PENDING`.
+
+## Contract-driven canonical-read projection checkpoint
+
+- Source change: `f134baa9` removes the agent loop's duplicate semantic
+  concept-to-read-action table. Generic canonical-read repair now obtains the
+  Action ID from the authoritative `DomainContract.actions` metadata, while
+  preserving the existing specialized Work-attention and Integration-health
+  view selectors. Security engagement/evidence and Research reads therefore
+  resolve and project through the same contract path as Memory, Work, CMDB,
+  Network, Household, Setup, Communications, and Career.
+- Evidence: contract and memory-grounding coverage `80 passed, 1 warning`;
+  agent-loop/bridge/capability coverage `114 passed, 1 warning`; full
+  regression `6239 passed, 3 skipped, 186 warnings in 126.04s`; `git diff
+  --check` passed. Source-matched deployment and browser gates are pending
+  this checkpoint. Status: `VERIFIED_TESTED`; owner-live cross-model and
+  consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
