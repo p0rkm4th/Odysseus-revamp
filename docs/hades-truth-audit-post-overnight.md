@@ -872,3 +872,20 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   warnings`. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE` for the local
   runtime and synthetic architecture; owner-live Luna/Sol swapping and
   consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
+
+## Source-matched deployment reliability and final candidate checkpoint
+
+- The candidate image-generation wheel stage now preinstalls its small build
+  toolchain and uses `--no-build-isolation`, preventing an unnecessary torch
+  bootstrap for the non-CUDA patched Real-ESRGAN dependencies. The isolated
+  wheel target built all three patched wheels successfully.
+- Exact current HEAD `f491d6a1b6204c7f846b365680a8127708210f58` built as
+  `odysseus:candidate-f491d6a1` with image
+  `sha256:fc4731a67d33733c1727286d4c4300e214947d7c6a0b3876af562c8e77703537`,
+  source/build/frontend provenance, and migration head
+  `20260825_002_work_run_completion_v6`.
+- The candidate is deployed and `/api/health`, `/api/version`, broker socket,
+  Ollama bridge, Qwen sentinel, frontend static, browser-window, and realistic
+  browser acceptance all pass. Status: `VERIFIED_DEPLOYED` / `VERIFIED_LIVE`;
+  owner-live Luna/Sol swapping, consequential network dogfood, and external
+  credential flows remain `OWNER_DOGFOOD_PENDING`.
