@@ -159,3 +159,18 @@ source `7d8b10dea3d1e975ee62fba89f54f46f39ac5474`, build ID
 migration head `20260825_002_work_run_completion_v6`. Health, broker, Qwen,
 frontend static, browser-window, and realistic browser checks passed. Rollback
 `odysseus:rollback-7d8b10de-prev` is retained.
+
+## Setup health/configuration boundary checkpoint
+
+Commit `dccc0acada8d7e268dd1cde6355e27f58a8d1546` keeps Setup Center's
+resumable `status` as configuration state and adds separate `health_status`,
+`health_reason`, and probe timestamp fields. `CONFIGURED` no longer implies a
+successful provider or runtime health check. Integration projections retain
+the compatibility `connection` field, but report unprobed configured modules
+as `DEGRADED`/`UNKNOWN` rather than `CONNECTED`; absent, skipped, degraded,
+and unavailable states remain distinct and secret-free.
+
+Focused control-plane tests: 17 passed. Full regression after this change:
+6134 passed, 3 skipped, 186 warnings in 128.00 seconds. The new source is
+committed but requires the final candidate rebuild and runtime/browser gates
+before E4/E5 promotion. Owner-live E6 remains pending.
