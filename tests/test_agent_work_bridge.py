@@ -330,6 +330,27 @@ def test_canonical_read_unavailable_is_not_recorded_as_success(monkeypatch):
         engine.dispose()
 
 
+def test_work_engine_direct_read_completion_preserves_failure_status():
+    engine, session_factory = _session_factory()
+    try:
+        with session_factory() as db:
+            work = WorkEngine(db)
+            run = work.create_run("alice", {
+                "domain": "memory",
+                "completion_criteria": {"completion_mode": "single_verified_read", "deliverable": "memory"},
+            })
+            action = work.create_action("alice", run["id"], {
+                "capability_id": "memory.read", "action_id": "summarize_owner_memory",
+                "effect_class": "read_private", "status": "proposed",
+            })
+            work.complete_action("alice", action["id"], {"result": {"domain_reference": {"status": "UNAVAILABLE"}}})
+            failed = work.complete_read_deliverable("alice", run["id"], action["id"], result={"status": "UNAVAILABLE", "reason": "provider offline"})
+            assert failed["status"] == "failed"
+            assert failed["lifecycle_state"] == "failed"
+    finally:
+        engine.dispose()
+
+
 def test_communications_canonical_read_is_persisted_in_the_shared_work_run(monkeypatch):
     """Every first-class canonical read must remain inspectable and resumable."""
     engine, session_factory = _session_factory()

@@ -521,10 +521,15 @@ class WorkEngine:
         criteria = row.completion_criteria if isinstance(row.completion_criteria, dict) else {}
         if criteria.get("completion_mode") not in {"single_verified_read", "single_read"}:
             raise WorkError("run is not a single-read deliverable")
+        supplied_status = str((result or {}).get("status") or (result or {}).get("result_status") or "").upper() if isinstance(result, dict) else ""
+        if supplied_status in {"DEGRADED", "UNAVAILABLE", "FAILED", "INVALID_RESULT"}:
+            return self.fail_read_deliverable(
+                owner, run_id,
+                reason=(result or {}).get("reason") or (result or {}).get("error") or f"canonical read returned {supplied_status}",
+            )
         row.status = "completed"
         row.lifecycle_state = "succeeded"
         row.current_step = "canonical read verified"
-        supplied_status = str((result or {}).get("status") or (result or {}).get("result_status") or "").upper() if isinstance(result, dict) else ""
         result_status = "SUCCESS_EMPTY" if supplied_status in {"EMPTY", "EMPTY_RESULT", "SUCCESS_EMPTY"} or result in (None, [], {}) else "SUCCESS_WITH_DATA"
         row.result_summary = {
             "outcome": "canonical_read_verified",

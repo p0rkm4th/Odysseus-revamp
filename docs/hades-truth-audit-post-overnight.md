@@ -817,3 +817,14 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   contract/security coverage `115 passed, 1 warning`; full regression `6268
   passed, 3 skipped, 186 warnings in 125.65s`. Status:
   `VERIFIED_TESTED`; source-matched deployment follows this checkpoint.
+
+## Canonical read completion invariant checkpoint
+
+- Source change: `WorkEngine.complete_read_deliverable` now enforces the same
+  Result-status boundary as the agent bridge. Explicit `DEGRADED`,
+  `UNAVAILABLE`, `FAILED`, and `INVALID_RESULT` outcomes persist a failed Run
+  rather than allowing a direct caller to mark the deliverable succeeded.
+- Evidence: focused agent-bridge/contract/planner coverage `126 passed, 1
+  warning`; full regression `6272 passed, 3 skipped, 186 warnings in 127.31s`.
+  Source-matched deployment follows this checkpoint. Status:
+  `VERIFIED_TESTED`.
