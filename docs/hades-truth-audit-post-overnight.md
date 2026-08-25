@@ -641,5 +641,22 @@ realistic browser gates pass. Rollback is retained as
 - Evidence: focused binding/bridge/contract coverage `109 passed, 1 warning`;
   full regression `6240 passed, 3 skipped, 186 warnings in 124.25s`; `git diff
   --check` passed. Source-matched deployment and browser gates are pending
-  this checkpoint. Status: `VERIFIED_TESTED`; owner-live provider swapping and
-  consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
+this checkpoint. Status: `VERIFIED_TESTED`; owner-live provider swapping and
+consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
+
+## Specialized owner-scoped Network read checkpoint
+
+- Source change: the existing `homelab.manage` ActionSpec family now exposes
+  `list_unidentified_hosts` and `infer_role_hypotheses` as read-only canonical
+  projections. Network intent contracts select these actions from structured
+  views (`unidentified` and `roles`); no model-facing sentence or tool-name
+  branch is required.
+- Both projections reuse `network_projection.map_projection(owner=...)`.
+  Unidentified devices remain non-canonical observations. Role output is
+  explicitly `INFERRED`, includes canonical reference/freshness when present,
+  and declares that canonical identity was not updated.
+- Evidence: focused intent/binding/network coverage `103 passed, 1 warning`;
+  full regression `6244 passed, 3 skipped, 186 warnings in 126.92s`.
+  Source-matched deployment and browser gates are pending this checkpoint.
+  Status: `VERIFIED_TESTED`; owner-live model swapping and consequential
+  network dogfood remain `OWNER_DOGFOOD_PENDING`.
