@@ -733,3 +733,22 @@ consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
   Source-matched deployment and browser gates are pending this checkpoint.
   Status: `VERIFIED_TESTED`; owner-live provider health remains
   `OWNER_DOGFOOD_PENDING`.
+
+## Durable Run observed-provider provenance checkpoint
+
+- Source change: `1ab830fe` records the model and endpoint that actually
+  served each durable agent round, including foreground fallback, in the
+  existing owner-scoped Run continuation state and audit events. This is
+  metadata-only: the compiled plan, ActionSpec policy, approvals, and trusted
+  executor authority are unchanged.
+- Cross-owner observation is fail-closed. Existing explicit model swaps remain
+  durable, and fallback observations now become truthful active-model context
+  for later continuation.
+- Evidence: focused bridge/chat/parity coverage `81 passed, 1 warning`; full
+  regression `6261 passed, 3 skipped, 186 warnings in 126.65s`. Candidate
+  `odysseus:candidate-1ab830fe172a` is deployed with image
+  `sha256:f20c1ed914b8a7221104755d54435ebb49207fb811159ca23caa8abbbd063905`;
+  `/api/health`, `/api/version`, frontend static verification, browser-window,
+  and realistic browser acceptance passed. Status: `VERIFIED_DEPLOYED` /
+  `VERIFIED_LIVE`; owner-live Qwen-to-Luna-to-Sol dogfood remains
+  `OWNER_DOGFOOD_PENDING`.
