@@ -6,9 +6,9 @@ completion.
 
 | Finding | Current classification | Evidence / disposition |
 |---|---|---|
-| Model-name capability heuristics | PARTIALLY_FIXED | provider/model capability readers exist; runtime empirical characterization and persisted TTL profile remain |
+| Model-name capability heuristics | PARTIALLY_FIXED | provider/model readers remain; runtime evidence now has explicit precedence and a persisted TTL cache, but active provider probes are still a follow-up |
 | Protocol/runtime identity split | PARTIALLY_FIXED | provider readers distinguish vendors in places; generic runtime seam is incomplete |
-| ContextEnvelope | STILL_PRESENT | context probing and budgeting exist, but effective runtime/provider/user envelope is not one canonical object; ACI `ContextEnvelope` is currently a pure contract |
+| ContextEnvelope | PARTIALLY_FIXED | canonical `ContextEnvelope.from_runtime_profile` and per-ACI metrics now distinguish runtime allocation from architecture maximum; provider discovery wiring remains |
 | Token accounting incl. schemas | PARTIALLY_FIXED | schema counts are instrumented, but estimator remains approximate |
 | Output reservation | PARTIALLY_FIXED | reserve exists in compactor; requested-output coupling needs provider-aware integration |
 | Endpoint metadata cache | PARTIALLY_FIXED | cached model lists/dead-host cooldown exist; fingerprint+TTL runtime characterization remains |
@@ -22,7 +22,7 @@ completion.
 | stable prompt prefix/cache | PARTIALLY_FIXED | chat prefix ordering exists; ACI packet integration and cache evidence remain |
 | loose ~50-round budgets | PARTIALLY_FIXED | local profile caps exist but are not authoritative in current loop |
 | harness overhead benchmark | STILL_PRESENT | no matched raw-vs-Hades timing report yet |
-| runtime diagnostic profile | STILL_PRESENT | capability readers exist; no unified Control Center projection |
+| runtime diagnostic profile | PARTIALLY_FIXED | sanitized runtime profile/cache primitives exist; Control Center projection and active probe UI remain |
 | outbound URL/SSRF boundary | PARTIALLY_FIXED | `url_safety.py`/`url_security.py` exist; one unified policy boundary remains |
 | developer sandbox | PARTIALLY_FIXED | Workspace YOLO is non-root, repo-scoped, leased and audited; stronger resource/egress isolation remains |
 | test order independence | PARTIALLY_FIXED | broad suite infrastructure exists; ACI-specific order checks are new work |

@@ -9228,6 +9228,27 @@ async def stream_agent_loop(
             )
     metrics["requested_endpoint_id"] = requested_endpoint_id
     metrics["requested_endpoint_label"] = requested_endpoint_label
+    if _aci_enabled:
+        try:
+            from src.aci import ContextEnvelope
+            # The route context is the currently allocated/provider-facing
+            # bound. Architecture maxima, when known, are evidence only and
+            # never become the ACI target by themselves.
+            envelope = ContextEnvelope(
+                runtime_allocated_context=max(0, int(_last_route_context_length or 0)),
+                aci_profile_target=max(1, int(getattr(_aci_profile, "target_context_tokens", 6000) or 6000)),
+                requested_input_budget=max(0, int(final_context_tokens or 0)),
+                reserved_output_budget=512 if _aci_mode == "aci" else 1024,
+            )
+            metrics["aci_context_envelope"] = {
+                "runtime_allocated_context": envelope.runtime_allocated_context,
+                "aci_profile_target": envelope.aci_profile_target,
+                "requested_input_budget": envelope.requested_input_budget,
+                "reserved_output_budget": envelope.reserved_output_budget,
+                "effective_context": envelope.effective_context,
+            }
+        except Exception:
+            logger.debug("Unable to project ACI context envelope", exc_info=True)
     if _why_no_action:
         metrics["why_no_action"] = _why_no_action
     yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
