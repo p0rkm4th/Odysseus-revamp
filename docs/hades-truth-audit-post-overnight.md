@@ -627,3 +627,19 @@ realistic browser gates pass. Rollback is retained as
   --check` passed. Source-matched deployment and browser gates are pending
   this checkpoint. Status: `VERIFIED_TESTED`; owner-live cross-model and
   consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
+
+## Canonical read status normalization checkpoint
+
+- Source change: `de13ed11` adds a shared status projection at the existing
+  read-binding boundary. Status-less structured reads now explicitly report
+  `SUCCESS_WITH_DATA` or `SUCCESS_EMPTY`; existing `DEGRADED`, `UNAVAILABLE`,
+  and failure-shaped payloads remain authoritative and are not converted into
+  empty collections. Domain payloads and owner scopes are unchanged.
+- The projection covers the first-class Security, Work, Household, Setup,
+  Career, and Communications read adapters while preserving explicit legacy
+  statuses.
+- Evidence: focused binding/bridge/contract coverage `109 passed, 1 warning`;
+  full regression `6240 passed, 3 skipped, 186 warnings in 124.25s`; `git diff
+  --check` passed. Source-matched deployment and browser gates are pending
+  this checkpoint. Status: `VERIFIED_TESTED`; owner-live provider swapping and
+  consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
