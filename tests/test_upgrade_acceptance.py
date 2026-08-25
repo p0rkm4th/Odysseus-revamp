@@ -16,6 +16,10 @@ def test_explicit_continuation_phrases_inherit_context():
         "keep going",
         "continue with that",
         "continue the task",
+        "continue until the network report is complete",
+        "do that",
+        "all of them",
+        "do all of the above",
         "resume",
     ):
         assert _is_explicit_continuation(text), text

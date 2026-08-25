@@ -54,6 +54,9 @@ def test_continuation_and_depth_are_structured_not_phrase_specific():
     "please resume that task",
     "go ahead and finish it",
     "keep going with the current Run",
+    "do that",
+    "all of them",
+    "do all of the above",
 ])
 def test_natural_continuation_qualifiers_resolve_to_the_active_run(query):
     frame = compile_intent(query, run_reference="run-1")
