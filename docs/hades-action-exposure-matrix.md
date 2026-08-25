@@ -18,6 +18,9 @@ or remove authority.
 | Infrastructure / Homelab | `homelab.manage` | `execute_service_restart` | yes | yes | yes | yes | no | trusted host operation | exact | protected-unit and profile policy |
 | Infrastructure / Homelab | `homelab.manage` | `plan_diagnostic_install` | yes | yes | yes | yes | no | application precheck | none | declared capability remediation |
 | Infrastructure / Homelab | `homelab.manage` | `execute_diagnostic_install` | yes | yes | yes | yes | no | host broker allowlist | exact | package allowlist; no model package guessing |
+| Hades / Memory | `memory.read` | `summarize_owner_memory` | yes | yes | yes | yes | no | application / canonical Brain store | none | authenticated owner scope; no Skills/filesystem fallback |
+| Hades / Memory | `memory.read` | `search_memory` | yes | yes | yes | yes | no | application / canonical Brain store | none | authenticated owner scope; no Skills/filesystem fallback |
+| Hades / Memory | `memory.read` | `inspect_memory` | yes | yes | yes | yes | no | application / canonical Brain store | none | authenticated owner scope; no Skills/filesystem fallback |
 
 “MODEL: yes” means the canonical binding contract may be projected when the
 intent and policy select the capability. Native function schemas and strict

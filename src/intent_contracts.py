@@ -102,6 +102,11 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "osint_plan",
     ),
+    "MEMORY": DomainContract(
+        "MEMORY", "memory.read", {"READ": "summarize_owner_memory"}, "read_memory",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "explicit_memory_read",
+    ),
 }
 
 

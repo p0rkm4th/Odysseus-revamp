@@ -85,6 +85,17 @@ MANAGE_SECURITY_ASSESSMENT_SCHEMA = {
     }
 }
 
+READ_MEMORY_SCHEMA = {
+    "type": "function", "function": {
+        "name": "read_memory",
+        "description": "Read the authenticated owner's canonical Brain memory. Read-only; never use Skills or filesystem data as a substitute.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["summarize_owner_memory", "search_memory", "inspect_memory"]},
+            "query": {"type": "string", "description": "Optional question or search text."},
+        }, "required": ["action"]},
+    }
+}
+
 _MANAGE_CONTRACT = '''### `manage_assets`
 First-class persistent asset/CMDB tool. Use this instead of Bash for canonical
 asset records, relationships, observations, retirement, and merges.
@@ -153,6 +164,13 @@ merges CMDB assets. V1 records bounded plans and evidence only; it has no
  exploit, credential, persistence, arbitrary-shell, or public-scanning action.
 `<invoke name="manage_security_assessment"><parameter name="action">list_engagements</parameter></invoke>`.'''
 
+_MEMORY_READ_CONTRACT = '''### `read_memory`
+Canonical explicit Brain-memory read. It is owner-scoped, read-only, and
+returns structured memory entries with retrieval status. Skills, vector indexes,
+filesystem inspection, and invented personal facts are not substitutes.
+Use `summarize_owner_memory`, `search_memory`, or `inspect_memory`.
+`<invoke name="read_memory"><parameter name="action">summarize_owner_memory</parameter></invoke>`.'''
+
 
 TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_assets": ToolBinding("manage_assets", TOOL_CAPABILITY_IDS["manage_assets"], MANAGE_ASSETS_SCHEMA, _MANAGE_CONTRACT, frozenset({"asset_inventory"}), "manage_assets"),
@@ -160,6 +178,7 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_homelab": ToolBinding("manage_homelab", TOOL_CAPABILITY_IDS["manage_homelab"], MANAGE_HOMELAB_SCHEMA, _HOMELAB_CONTRACT, frozenset({"homelab", "network_ops"}), "manage_homelab", "host_broker", "private_network", False),
     "manage_osint": ToolBinding("manage_osint", TOOL_CAPABILITY_IDS["manage_osint"], MANAGE_OSINT_SCHEMA, _OSINT_CONTRACT, frozenset({"osint"}), "manage_osint"),
     "manage_security_assessment": ToolBinding("manage_security_assessment", TOOL_CAPABILITY_IDS["manage_security_assessment"], MANAGE_SECURITY_ASSESSMENT_SCHEMA, _SECURITY_CONTRACT, frozenset({"security_audit", "pentest_ops", "network_ops"}), "manage_security_assessment"),
+    "read_memory": ToolBinding("read_memory", TOOL_CAPABILITY_IDS["read_memory"], READ_MEMORY_SCHEMA, _MEMORY_READ_CONTRACT, frozenset({"memory"}), "read_memory"),
 })
 
 

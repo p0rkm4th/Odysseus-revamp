@@ -1042,3 +1042,10 @@ backend truth stores were merged. Full regression is green at 6113 passed, 3
 skipped, 186 warnings, and the repo-scoped frontend/window/realistic browser
 commands pass. Remaining canonical read contracts and owner-live acceptance
 are explicitly partial/pending rather than promoted.
+
+The next convergence batch added the read-only `memory.read` capability and
+`read_memory` ToolBinding over the existing Brain store, with structured
+success/zero/failure results and no approval for private reads. Work,
+Household, and Setup/Integration remain intentionally unregistered until real
+owner-scoped executors exist. Full regression: 6116 passed, 3 skipped, 186
+warnings.

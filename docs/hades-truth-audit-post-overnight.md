@@ -2,7 +2,8 @@
 
 Date: 2026-08-25  
 Branch: `recovery/live-candidate-20260823`  
-Final source under audit: `124941740bc6e1c7d13458d4aa32bcd3d6e59354`
+Final source under audit: `0c18805fe1d0f9a4337c4c3ca3b6c5d7e313a5cf` plus the
+follow-on Memory read convergence batch.
 
 ## What changed
 
@@ -17,12 +18,15 @@ Final source under audit: `124941740bc6e1c7d13458d4aa32bcd3d6e59354`
   Commits: `5163533d`, `12494174`.
 - Kept legacy routes/DOM bindings and mature provider implementations as
   compatibility/adaptation paths; no backend databases were merged.
+- Added a first-class read-only `memory.read` Capability and `read_memory`
+  ToolBinding over the existing canonical Brain store. This is an adapter, not
+  a second memory engine; legacy mutations remain compatibility-only.
 
 ## Evidence
 
 | Area | Evidence | Truth status |
 |---|---|---|
-| Python regression | 6113 passed, 3 skipped, 186 warnings | E3 |
+| Python regression | 6116 passed, 3 skipped, 186 warnings | E3 |
 | Focused contract/network/asset tests | green; workspace/theme focused tests green | E2/E3 |
 | Frontend static verification | `npm run test:frontend` | E3 |
 | Browser/window/realistic acceptance | all three repo commands pass against final candidate | E4 |
@@ -47,9 +51,9 @@ memory versus vector index, and domain documents versus evidence references.
 ## Remaining truth gaps
 
 - Intent contracts are implemented for technical assets, network, security
-  findings, and OSINT planning. Memory, Work, Household, Setup/Integration, and
-  richer domain reads still require canonical binding/result-contract adapters;
-  they are not claimed complete.
+  findings, OSINT planning, and explicit Memory reads. Work, Household,
+  Setup/Integration, and richer domain reads still require canonical
+  binding/result-contract adapters; they are not claimed complete.
 - The legacy technical asset CLI storage is deployment-scoped rather than
   row-owner keyed. Hades entry is owner-aware, but multi-owner CMDB isolation
   remains a migration gap.
