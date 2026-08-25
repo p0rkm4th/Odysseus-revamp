@@ -17,14 +17,14 @@ def service(tmp_path):
     cmdb_path = tmp_path / "assets.db"
     with sqlite3.connect(cmdb_path) as db:
         db.executescript("""
-        CREATE TABLE assets(id TEXT PRIMARY KEY, name TEXT, type TEXT, status TEXT, manufacturer TEXT, model TEXT, hostname TEXT, location TEXT, notes TEXT, source TEXT, confidence REAL, attributes_json TEXT, created_at TEXT, updated_at TEXT, retired_at TEXT);
+        CREATE TABLE assets(id TEXT PRIMARY KEY, name TEXT, type TEXT, status TEXT, manufacturer TEXT, model TEXT, hostname TEXT, location TEXT, notes TEXT, source TEXT, confidence REAL, attributes_json TEXT, created_at TEXT, updated_at TEXT, retired_at TEXT, owner TEXT);
         CREATE TABLE identifiers(id INTEGER PRIMARY KEY, asset_id TEXT, kind TEXT, value TEXT, confidence REAL, source TEXT, first_seen TEXT, last_seen TEXT);
-        CREATE TABLE observations(id INTEGER PRIMARY KEY, asset_id TEXT, observed_at TEXT, source TEXT, kind TEXT, confidence REAL, data_json TEXT);
+        CREATE TABLE observations(id INTEGER PRIMARY KEY, asset_id TEXT, observed_at TEXT, source TEXT, kind TEXT, confidence REAL, owner TEXT, data_json TEXT);
         CREATE TABLE relationships(id INTEGER PRIMARY KEY, parent_asset_id TEXT, child_asset_id TEXT, relation TEXT, started_at TEXT, ended_at TEXT, source TEXT, notes TEXT);
-        INSERT INTO assets VALUES ('asset-1','test host','server','active','Acme','Model X','test-host','lab','','test',1.0,'{}','2026-08-23','2026-08-23',NULL);
+        INSERT INTO assets VALUES ('asset-1','test host','server','active','Acme','Model X','test-host','lab','','test',1.0,'{}','2026-08-23','2026-08-23',NULL,'alice');
         INSERT INTO identifiers VALUES (1,'asset-1','serial','SER-1',1.0,'test','2026-08-23','2026-08-23');
-        INSERT INTO observations VALUES (1,'asset-1','2026-08-23','test','service',0.9,'{"port":443}');
-        INSERT INTO assets VALUES ('asset-retired','old','server','retired',NULL,NULL,NULL,NULL,NULL,'test',1.0,'{}','2026-08-23','2026-08-23','2026-08-23');
+        INSERT INTO observations VALUES (1,'asset-1','2026-08-23','test','service',0.9,'alice','{"port":443}');
+        INSERT INTO assets VALUES ('asset-retired','old','server','retired',NULL,NULL,NULL,NULL,NULL,'test',1.0,'{}','2026-08-23','2026-08-23','2026-08-23','alice');
         """)
     sessions = sessionmaker(bind=engine)
     with sessions() as db:

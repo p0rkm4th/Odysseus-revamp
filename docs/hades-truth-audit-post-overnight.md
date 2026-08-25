@@ -518,3 +518,21 @@ realistic browser gates pass. Rollback is retained as
   by source commit `fcf3daaee63814340a8ebbf7f2d203eb0c37844d`; health and
   frontend/browser gates are source-matched. Status: `VERIFIED_DEPLOYED` /
   `VERIFIED_LIVE`.
+
+## Network CMDB owner-scope checkpoint
+
+- The standalone SQLite CMDB now has additive `owner` columns for assets and
+  observations. New brokered network discovery writes the authenticated owner;
+  projections filter assets, observations, and relationships by that owner,
+  and same-MAC observations from another owner remain unattached rather than
+  merging identity. Legacy ownerless rows are preserved but hidden from
+  authenticated reads until an explicit `migrate-owner --owner <owner>` action
+  binds them.
+- `/api/network/map`, Security CMDB resolution, Work world-model sync, and the
+  shared Homelab read path now pass authenticated owner context. Missing owner
+  metadata returns `UNAVAILABLE / OWNER_SCOPE_NOT_CONFIGURED`, not an empty
+  success or another owner's data.
+- Evidence: owner-scope, legacy migration, cross-owner MAC, Security, network,
+  and first-class binding coverage passed; full regression `6206 passed, 3
+  skipped, 186 warnings in 126.22s`. Deployment and explicit legacy-owner
+  migration remain pending for this checkpoint.

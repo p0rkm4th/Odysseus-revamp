@@ -23,12 +23,16 @@ class CmdbSecurityContext:
 
     def resolve(self, asset_id: str, *, owner: str | None = None) -> dict[str, Any]:
         asset_id = str(asset_id or "").strip()
-        if not asset_id or not self.path.is_file():
+        owner = str(owner or "").strip()
+        if not asset_id or not owner or not self.path.is_file():
             return {"resolution_state": "unresolved", "canonical_asset_id": asset_id or None}
         try:
             with sqlite3.connect(self.path) as db:
                 db.row_factory = sqlite3.Row
-                asset = db.execute("SELECT * FROM assets WHERE id = ?", (asset_id,)).fetchone()
+                columns = {row[1] for row in db.execute("PRAGMA table_info(assets)")}
+                if "owner" not in columns:
+                    return {"resolution_state": "unresolved", "canonical_asset_id": asset_id, "error_code": "OWNER_SCOPE_NOT_CONFIGURED"}
+                asset = db.execute("SELECT * FROM assets WHERE id = ? AND owner = ?", (asset_id, owner)).fetchone()
                 if asset is None:
                     return {"resolution_state": "unresolved", "canonical_asset_id": asset_id}
                 result = dict(asset)
@@ -39,13 +43,13 @@ class CmdbSecurityContext:
                 )]
                 result["observations"] = []
                 for row in db.execute(
-                    "SELECT id, observed_at, source, kind, confidence, data_json FROM observations WHERE asset_id = ? ORDER BY observed_at DESC LIMIT 50",
-                    (asset_id,),
+                    "SELECT id, observed_at, source, kind, confidence, data_json FROM observations WHERE asset_id = ? AND owner = ? ORDER BY observed_at DESC LIMIT 50",
+                    (asset_id, owner),
                 ):
                     item = dict(row); item["data"] = _json(item.pop("data_json", "{}")); result["observations"].append(item)
                 result["relationships"] = [dict(row) for row in db.execute(
-                    "SELECT parent_asset_id, child_asset_id, relation, started_at, ended_at, source, notes FROM relationships WHERE (parent_asset_id = ? OR child_asset_id = ?) AND ended_at IS NULL",
-                    (asset_id, asset_id),
+                    "SELECT r.parent_asset_id, r.child_asset_id, r.relation, r.started_at, r.ended_at, r.source, r.notes FROM relationships r JOIN assets p ON p.id=r.parent_asset_id JOIN assets c ON c.id=r.child_asset_id WHERE (r.parent_asset_id = ? OR r.child_asset_id = ?) AND r.ended_at IS NULL AND p.owner = ? AND c.owner = ?",
+                    (asset_id, asset_id, owner, owner),
                 )]
                 retired = str(result.get("status") or "").casefold() == "retired" or bool(result.get("retired_at"))
                 result["resolution_state"] = "retired" if retired else "canonical"

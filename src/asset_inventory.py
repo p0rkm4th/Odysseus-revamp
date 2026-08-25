@@ -18,7 +18,7 @@ def db():
         "id TEXT PRIMARY KEY,name TEXT NOT NULL,type TEXT NOT NULL DEFAULT 'unknown',"
         "status TEXT NOT NULL DEFAULT 'active',manufacturer TEXT,model TEXT,hostname TEXT,"
         "location TEXT,notes TEXT,source TEXT,confidence REAL NOT NULL DEFAULT 1.0,"
-        "attributes_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL,updated_at TEXT NOT NULL,retired_at TEXT);"
+        "attributes_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL,updated_at TEXT NOT NULL,retired_at TEXT,owner TEXT);"
         "CREATE INDEX IF NOT EXISTS idx_assets_name ON assets(name);"
         "CREATE TABLE IF NOT EXISTS identifiers("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,"
@@ -26,7 +26,7 @@ def db():
         "first_seen TEXT NOT NULL,last_seen TEXT NOT NULL,UNIQUE(kind,value));"
         "CREATE TABLE IF NOT EXISTS observations("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,"
-        "observed_at TEXT NOT NULL,source TEXT NOT NULL,kind TEXT NOT NULL,confidence REAL NOT NULL DEFAULT 0.5,"
+        "observed_at TEXT NOT NULL,source TEXT NOT NULL,kind TEXT NOT NULL,confidence REAL NOT NULL DEFAULT 0.5,owner TEXT,"
         "data_json TEXT NOT NULL);"
         "CREATE TABLE IF NOT EXISTS relationships("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,parent_asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,"
@@ -36,6 +36,16 @@ def db():
         "id INTEGER PRIMARY KEY AUTOINCREMENT,source_asset_id TEXT NOT NULL,target_asset_id TEXT NOT NULL,"
         "merged_at TEXT NOT NULL,reason TEXT);"
     )
+    # The original CMDB predates multi-owner storage.  Additive migration keeps
+    # legacy rows intact but leaves them ownerless; owner-aware projections must
+    # fail closed or exclude them rather than silently reclassifying them.
+    for table, column in (("assets", "owner"), ("observations", "owner")):
+        columns = {row[1] for row in c.execute(f"PRAGMA table_info({table})")}
+        if column not in columns:
+            c.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_assets_owner ON assets(owner)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_observations_owner ON observations(owner)")
+    c.commit()
     return c
 
 def resolve(c, key):
@@ -244,22 +254,53 @@ def maybe_install(ok):
             r["reason"]="installed" if rc==0 else "install_failed_stdlib_fallback"; return r
     r["reason"]="no_package_manager_stdlib_fallback"; return r
 
-def record_net(rep):
+def record_net(rep, owner=None):
+    owner = str(owner or "").strip()
+    if not owner:
+        raise ValueError("network observation recording requires an authenticated owner")
     c=db(); t=now()
     for h in rep["hosts"]:
         mac=(h.get("mac") or "").lower(); aid=None
         if mac and mac!="00:00:00:00:00:00":
-            e=c.execute("SELECT asset_id FROM identifiers WHERE kind='mac' AND value=?",(mac,)).fetchone()
-            if e: aid=e["asset_id"]
+            e=c.execute(
+                "SELECT i.asset_id,a.owner FROM identifiers i JOIN assets a ON a.id=i.asset_id "
+                "WHERE i.kind='mac' AND i.value=?", (mac,),
+            ).fetchone()
+            if e and e["owner"] == owner: aid=e["asset_id"]
             else:
                 aid=str(uuid.uuid4())
-                c.execute("INSERT INTO assets(id,name,type,status,source,confidence,attributes_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                          (aid,"network-device-"+mac.replace(":","")[-6:],"network_device","observed","network_discovery",.65,"{}",t,t))
-                putid(c,aid,"mac",mac,.9,"network_discovery")
-        c.execute("INSERT INTO observations(asset_id,observed_at,source,kind,confidence,data_json) VALUES(?,?,?,?,?,?)",
+                # A globally unique legacy identifier cannot be safely reused
+                # for another owner.  Keep the observation unattached when the
+                # MAC belongs to a different owner instead of merging identity.
+                if not e:
+                    c.execute("INSERT INTO assets(id,name,type,status,source,confidence,attributes_json,created_at,updated_at,owner) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                              (aid,"network-device-"+mac.replace(":","")[-6:],"network_device","observed","network_discovery",.65,"{}",t,t,owner))
+                    putid(c,aid,"mac",mac,.9,"network_discovery")
+                else:
+                    aid = None
+        c.execute("INSERT INTO observations(asset_id,observed_at,source,kind,confidence,owner,data_json) VALUES(?,?,?,?,?,?,?)",
                   (aid,t,h.get("source") or "network_discovery",h.get("kind") or "network_host",
-                   float(h.get("confidence") or (.75 if mac else .45)),jd(h)))
+                   float(h.get("confidence") or (.75 if mac else .45)),owner,jd(h)))
     c.commit()
+
+
+def bind_legacy_owner(owner):
+    """Bind ownerless legacy CMDB rows during an explicit migration.
+
+    This is intentionally not automatic: an authenticated owner or operator
+    must choose the destination owner.  The migration only adds ownership
+    metadata and preserves every asset/observation row.
+    """
+    owner = str(owner or "").strip()
+    if not owner:
+        raise ValueError("legacy CMDB binding requires an explicit owner")
+    c = db()
+    assets = c.execute("UPDATE assets SET owner=? WHERE owner IS NULL OR owner=''", (owner,)).rowcount
+    observations = c.execute(
+        "UPDATE observations SET owner=? WHERE owner IS NULL OR owner=''", (owner,)
+    ).rowcount
+    c.commit()
+    return {"owner": owner, "assets_bound": assets, "observations_bound": observations, "preserved": True}
 
 def cmd_net(a):
     inst = maybe_install(a.install_authorized)
@@ -335,7 +376,7 @@ def cmd_net(a):
         key=lambda x: tuple(int(p) for p in x["ip"].split(".")),
     )
     if a.record_observations:
-        record_net(rep)
+        record_net(rep, owner=a.owner)
         rep["observations_recorded"] = True
     print(json.dumps(rep, indent=2, sort_keys=True))
 
@@ -471,6 +512,7 @@ def cmd_summary(a):
 def parser():
     p=argparse.ArgumentParser(prog="python -m src.asset_inventory"); s=p.add_subparsers(dest="cmd",required=True)
     x=s.add_parser("init"); x.set_defaults(func=lambda a:(db().close(),print(jd({"ok":True,"database":str(DB_PATH)}))))
+    x=s.add_parser("migrate-owner"); x.add_argument("--owner", required=True); x.set_defaults(func=lambda a: print(jd(bind_legacy_owner(a.owner))))
     x=s.add_parser("summary"); x.set_defaults(func=cmd_summary)
     x=s.add_parser("add"); x.add_argument("--id"); x.add_argument("--name",required=True); x.add_argument("--type",default="unknown")
     x.add_argument("--status",default="active"); x.add_argument("--manufacturer"); x.add_argument("--model"); x.add_argument("--serial")
@@ -490,7 +532,7 @@ def parser():
     x=s.add_parser("retire"); x.add_argument("asset"); x.set_defaults(func=cmd_retire)
     x=s.add_parser("merge"); x.add_argument("source_asset"); x.add_argument("target_asset"); x.add_argument("--reason"); x.set_defaults(func=cmd_merge)
     x=s.add_parser("collect-local"); x.add_argument("--record",action="store_true"); x.set_defaults(func=cmd_collect)
-    x=s.add_parser("network-discover"); x.add_argument("--install-authorized",action="store_true"); x.add_argument("--record-observations",action="store_true"); x.set_defaults(func=cmd_net)
+    x=s.add_parser("network-discover"); x.add_argument("--owner", required=True); x.add_argument("--install-authorized",action="store_true"); x.add_argument("--record-observations",action="store_true"); x.set_defaults(func=cmd_net)
     return p
 
 def main():
