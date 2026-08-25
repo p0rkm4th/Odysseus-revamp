@@ -555,6 +555,13 @@ def validate_contracts() -> list[str]:
                 missing_exposure = sorted(set(contract.actions.values()) - set(action_enum))
                 if missing_exposure:
                     errors.append(f"{concept}: native schema omits ActionSpec exposure {missing_exposure}")
+                textual_contract = str(binding.textual_contract or "") if binding else ""
+                missing_textual = sorted(
+                    action_id for action_id in set(contract.actions.values())
+                    if action_id not in textual_contract
+                )
+                if missing_textual:
+                    errors.append(f"{concept}: textual contract omits ActionSpec exposure {missing_textual}")
             if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
             if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"} and "read_private" not in action.effects:

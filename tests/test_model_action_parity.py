@@ -90,3 +90,12 @@ def test_registered_contract_actions_are_native_schema_exposed():
         properties = binding.native_schema["function"]["parameters"]["properties"]
         actions = set(properties["action"]["enum"])
         assert set(contract.actions.values()) <= actions
+
+
+def test_registered_contract_actions_are_textual_schema_exposed():
+    assert validate_contracts() == []
+    for contract in DOMAIN_CONTRACTS.values():
+        binding = binding_for_tool(contract.binding or "")
+        assert binding is not None
+        for action_id in set(contract.actions.values()):
+            assert action_id in binding.textual_contract
