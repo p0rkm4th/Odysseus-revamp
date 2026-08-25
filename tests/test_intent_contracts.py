@@ -91,6 +91,15 @@ def test_work_reads_compile_to_the_canonical_read_binding():
     assert resolved.action.approval.value == "none"
 
 
+def test_household_reads_compile_to_the_canonical_read_binding():
+    resolved = resolve_intent(compile_intent("What is in my pantry?"))
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "household.read"
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_household"
+    assert resolved.action.approval.value == "none"
+
+
 def test_generated_parity_rows_have_explicit_transport_applicability():
     rows = generated_parity_matrix()
     assert rows

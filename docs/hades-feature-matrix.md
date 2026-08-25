@@ -124,3 +124,10 @@ generic approval or filesystem fallback. “What am I working on?” now compile
 through the generic Work contract; mutation lifecycle convergence remains
 separate. Focused and full regression evidence is green, and the exact
 source-matched candidate is deployed. Owner-live Work dogfood remains separate.
+
+Household read convergence now projects the existing owner-scoped
+`InventoryService` through `household.read`/`read_household` for overview,
+listing, search, and item reads. Household Inventory remains distinct from
+technical CMDB/IT Assets; no second store or filesystem fallback was added.
+Focused evidence is green; full regression and deployment evidence are
+pending this batch.

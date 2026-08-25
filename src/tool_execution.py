@@ -1531,6 +1531,37 @@ async def _execute_read_work_binding(block, owner=None):
         return "read_work", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_read_household_binding(block, owner=None):
+    """Adapt canonical Household Inventory reads to the binding registry."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        action = str(payload.get("action") or "").strip().casefold()
+        allowed = {"overview", "list_items", "search_items", "get_item"}
+        if action not in allowed:
+            raise ValueError("unsupported read-only Household action")
+        if not owner:
+            raise PermissionError("authenticated Household owner is required")
+        from src.inventory_service import get_inventory_service
+        service = get_inventory_service()
+        if action == "overview":
+            result = service.household_overview(owner, expiry_days=int(payload.get("expiry_days") or 30))
+        elif action == "list_items":
+            result = {"items": service.list_items(owner, domain=payload.get("domain"))}
+        elif action == "search_items":
+            query = str(payload.get("query") or "").strip()
+            if not query:
+                raise ValueError("query is required for search_items")
+            result = {"items": service.search_items(owner, query, domain=payload.get("domain"))}
+        else:
+            item_id = str(payload.get("item_id") or "").strip()
+            if not item_id:
+                raise ValueError("item_id is required for get_item")
+            result = {"item": service.get_item(owner, item_id), "lots": service.list_lots(owner, item_id)}
+        return "read_household", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+    except Exception as exc:
+        return "read_household", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
@@ -1539,6 +1570,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "manage_security_assessment": _execute_security_assessment_binding,
     "read_memory": _execute_read_memory_binding,
     "read_work": _execute_read_work_binding,
+    "read_household": _execute_read_household_binding,
 }
 
 

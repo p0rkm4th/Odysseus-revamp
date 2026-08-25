@@ -610,6 +610,14 @@ _DOMAIN_RULES["work"] = (
     "- Distinguish empty canonical Work results from unavailable or failed retrieval."
 )
 
+_DOMAIN_RULES["household"] = (
+    "## Canonical Household Inventory rules\n"
+    "- Explicit questions about household items, pantry, stock, recipes, or shopping use the owner-scoped Inventory service read contract.\n"
+    "- Technical asset identity belongs to CMDB/IT Assets; do not answer household questions from CMDB or filesystem data.\n"
+    "- Distinguish empty household inventory from unavailable or failed retrieval."
+)
+_DOMAIN_RULES["home"] = _DOMAIN_RULES["household"]
+
 # Capability V1 domain projection. These hints affect discovery/visibility;
 # policy, security gates, and execution remain owned by their existing layers.
 from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings

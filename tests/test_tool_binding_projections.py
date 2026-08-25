@@ -33,8 +33,8 @@ def test_tags_contracts_domains_and_executors_are_projected():
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 7
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 8
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
@@ -102,5 +102,24 @@ def test_work_read_binding_is_owner_scoped_and_structured(monkeypatch):
     assert result["success"] is True
     assert len(result["data"]["goals"]) == 1
     assert result["data"]["goals"][0]["title"] == "Ship the release"
+    engine.dispose()
+    tmpfile.close()
+
+
+def test_household_read_binding_reuses_owner_scoped_inventory_service(monkeypatch):
+    from core import database as cdb
+    from core import inventory_models  # noqa: F401
+    from src.inventory_service import get_inventory_service
+    from tests.helpers.sqlite_db import make_temp_sqlite
+    session_factory, engine, tmpfile = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    service.create_item("alice", name="Rice", domain="kitchen", item_kind="ingredient")
+    monkeypatch.setattr("src.inventory_service.get_inventory_service", lambda: service)
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_household", payload={"action": "overview"}, owner="alice"))
+    assert result["success"] is True
+    assert result["data"]["canonical_store"] == "inventory_service"
+    assert result["data"]["item_count"] == 1
+    assert result["data"]["items"][0]["name"] == "Rice"
     engine.dispose()
     tmpfile.close()

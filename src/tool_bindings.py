@@ -108,6 +108,20 @@ READ_WORK_SCHEMA = {
     }
 }
 
+READ_HOUSEHOLD_SCHEMA = {
+    "type": "function", "function": {
+        "name": "read_household",
+        "description": "Read authenticated owner-scoped Household Inventory state. Read-only; do not substitute memory or filesystem data.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["overview", "list_items", "search_items", "get_item"]},
+            "query": {"type": "string", "maxLength": 200},
+            "item_id": {"type": "string"},
+            "domain": {"type": "string", "maxLength": 64},
+            "expiry_days": {"type": "integer", "minimum": 0, "maximum": 365},
+        }, "required": ["action"]},
+    }
+}
+
 _MANAGE_CONTRACT = '''### `manage_assets`
 First-class persistent asset/CMDB tool. Use this instead of Bash for canonical
 asset records, relationships, observations, retirement, and merges.
@@ -190,6 +204,12 @@ commitments. Results are owner-scoped; do not invent work state or use files as
 a substitute.
 `<invoke name="read_work"><parameter name="action">overview</parameter></invoke>`.'''
 
+_HOUSEHOLD_READ_CONTRACT = '''### `read_household`
+Canonical read-only Household Inventory projection. Use `overview`, `list_items`,
+`search_items`, or `get_item` for owner-facing physical stock and household
+items. Technical asset identity remains owned by CMDB/IT Assets.
+`<invoke name="read_household"><parameter name="action">overview</parameter></invoke>`.'''
+
 
 TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_assets": ToolBinding("manage_assets", TOOL_CAPABILITY_IDS["manage_assets"], MANAGE_ASSETS_SCHEMA, _MANAGE_CONTRACT, frozenset({"asset_inventory"}), "manage_assets"),
@@ -199,6 +219,7 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_security_assessment": ToolBinding("manage_security_assessment", TOOL_CAPABILITY_IDS["manage_security_assessment"], MANAGE_SECURITY_ASSESSMENT_SCHEMA, _SECURITY_CONTRACT, frozenset({"security_audit", "pentest_ops", "network_ops"}), "manage_security_assessment"),
     "read_memory": ToolBinding("read_memory", TOOL_CAPABILITY_IDS["read_memory"], READ_MEMORY_SCHEMA, _MEMORY_READ_CONTRACT, frozenset({"memory"}), "read_memory"),
     "read_work": ToolBinding("read_work", TOOL_CAPABILITY_IDS["read_work"], READ_WORK_SCHEMA, _WORK_READ_CONTRACT, frozenset({"work"}), "read_work"),
+    "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
 })
 
 
