@@ -102,7 +102,7 @@ READ_WORK_SCHEMA = {
         "name": "read_work",
         "description": "Read authenticated owner-scoped Work Engine state. Read-only; do not substitute chat context or filesystem data for canonical Work records.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["overview", "review", "attention", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments"]},
+            "action": {"type": "string", "enum": ["overview", "review", "attention", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments", "list_missions", "list_watches"]},
             "run_id": {"type": "string"}, "goal_id": {"type": "string"}, "project_id": {"type": "string"}, "task_id": {"type": "string"},
             "horizon_hours": {"type": "integer", "minimum": 1, "maximum": 336},
         }, "required": ["action"]},

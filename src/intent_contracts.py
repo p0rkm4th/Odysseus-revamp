@@ -177,6 +177,13 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "work_overview",
     ),
+    "GOAL": DomainContract("GOAL", "work.read", {"READ": "list_goals"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_goals"),
+    "PROJECT": DomainContract("PROJECT", "work.read", {"READ": "list_projects"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_projects"),
+    "TASK": DomainContract("TASK", "work.read", {"READ": "list_tasks"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_tasks"),
+    "RUN": DomainContract("RUN", "work.read", {"READ": "list_runs"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_runs"),
+    "COMMITMENT": DomainContract("COMMITMENT", "work.read", {"READ": "list_commitments"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_commitments"),
+    "MISSION": DomainContract("MISSION", "work.read", {"READ": "list_missions"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_missions"),
+    "WATCH": DomainContract("WATCH", "work.read", {"READ": "list_watches"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_watches"),
     "HOUSEHOLD_ITEM": DomainContract(
         "HOUSEHOLD_ITEM", "household.read", {"READ": "overview"}, "read_household",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
@@ -249,7 +256,7 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
     # Interrogative requests about the research store are canonical reads;
     # the noun "research" must not turn "What research history do I have?"
     # into a new research execution request.
-    if read_explicit and operation == "RESEARCH":
+    if read_explicit and operation in {"RESEARCH", "MONITOR", "EXECUTE"}:
         operation = "READ"
     concept = "UNKNOWN"
     target = None
@@ -261,6 +268,20 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         concept = "SERVICE"
     elif re.search(r"\b(?:homelab|container(?:s)?|storage|remote host(?:s)?)\b", q):
         concept = "HOMELAB_HOST"
+    elif re.search(r"\b(?:mission(?:s)?)\b", q):
+        concept = "MISSION"
+    elif re.search(r"\b(?:watch(?:es)?|monitors?)\b", q):
+        concept = "WATCH"
+    elif re.search(r"\b(?:goal(?:s)?)\b", q):
+        concept = "GOAL"
+    elif re.search(r"\b(?:project(?:s)?)\b", q):
+        concept = "PROJECT"
+    elif re.search(r"\b(?:task(?:s)?)\b", q):
+        concept = "TASK"
+    elif re.search(r"\b(?:commitment(?:s)?)\b", q):
+        concept = "COMMITMENT"
+    elif re.search(r"\b(?:run(?:s)?)\b", q) and re.search(r"\b(?:active|current|durable|waiting|pending|run)\b", q):
+        concept = "RUN"
     elif re.search(r"\b(?:research|research history)\b", q) and not re.search(r"\b(?:osint|investigation|case|cases)\b", q):
         concept = "RESEARCH"
     elif re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q):
@@ -295,7 +316,7 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
     if match:
         target = match.group(1)
     workspace = {
-        "MEMORY": "hades", "WORK": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
+        "MEMORY": "hades", "WORK": "work", "GOAL": "work", "PROJECT": "work", "TASK": "work", "RUN": "work", "COMMITMENT": "work", "MISSION": "work", "WATCH": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
         "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",
         "TECHNICAL_ASSET": "infrastructure", "NETWORK": "infrastructure", "HOMELAB_HOST": "infrastructure",
         "SERVICE": "infrastructure", "SECURITY_FINDING": "infrastructure", "SECURITY_ENGAGEMENT": "infrastructure",

@@ -157,6 +157,42 @@ def test_work_read_binding_is_owner_scoped_and_structured(monkeypatch):
     tmpfile.close()
 
 
+def test_work_mission_and_watch_reads_are_owner_scoped(monkeypatch):
+    from core.database import Base
+    from core.persistent_agent_models import Monitor
+    from tests.helpers.sqlite_db import make_temp_sqlite
+    from src.mission_projection import MissionService
+    from src.work_engine import WorkEngine
+    session_factory, engine, tmpfile = make_temp_sqlite(Base.metadata)
+    monkeypatch.setattr("core.database.SessionLocal", session_factory)
+    with session_factory() as db:
+        mission = MissionService(db).create("alice", {"title": "Night watch", "desired_outcome": "Finish the report"})
+        db.add(Monitor(
+            id="watch-alice", owner="alice", name="Build health", condition_type="health",
+            source_domain="system", query={}, condition={}, consequence_tier=1,
+            notification_policy={}, cooldown_seconds=3600,
+        ))
+        db.add(Monitor(
+            id="watch-bob", owner="bob", name="Private watch", condition_type="health",
+            source_domain="system", query={}, condition={}, consequence_tier=1,
+            notification_policy={}, cooldown_seconds=3600,
+        ))
+        db.commit()
+
+    mission_result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_work", payload={"action": "list_missions"}, owner="alice"))
+    watch_result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_work", payload={"action": "list_watches"}, owner="alice"))
+    assert mission_result["success"] is True
+    assert mission_result["data"]["status"] == "SUCCESS"
+    assert mission_result["data"]["missions"][0]["id"] == mission["id"]
+    assert watch_result["success"] is True
+    assert watch_result["data"]["status"] == "SUCCESS"
+    assert [watch["id"] for watch in watch_result["data"]["watches"]] == ["watch-alice"]
+    engine.dispose()
+    tmpfile.close()
+
+
 def test_household_read_binding_reuses_owner_scoped_inventory_service(monkeypatch):
     from core import database as cdb
     from core import inventory_models  # noqa: F401

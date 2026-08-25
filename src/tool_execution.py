@@ -1525,13 +1525,15 @@ async def _execute_read_work_binding(block, owner=None):
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
         action = str(payload.get("action") or "").strip().casefold()
-        allowed = {"overview", "review", "attention", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments"}
+        allowed = {"overview", "review", "attention", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments", "list_missions", "list_watches"}
         if action not in allowed:
             raise ValueError("unsupported read-only Work action")
         if not owner:
             raise PermissionError("authenticated Work owner is required")
         from core.database import SessionLocal
+        from core.persistent_agent_models import Monitor
         from core.work_models import WorkCommitment, WorkGoal, WorkProject, WorkRun, WorkTask
+        from src.mission_projection import MissionService
         from src.work_engine import WorkEngine
         with SessionLocal() as db:
             service = WorkEngine(db)
@@ -1550,6 +1552,15 @@ async def _execute_read_work_binding(block, owner=None):
                 result = PersistentAgent(db).attention(owner)
             elif action == "context":
                 result = service.context(owner, goal_id=payload.get("goal_id"), project_id=payload.get("project_id"), task_id=payload.get("task_id"), run_id=payload.get("run_id"))
+            elif action == "list_missions":
+                missions = MissionService(db).list(owner, lifecycle=payload.get("lifecycle"), limit=int(payload.get("limit") or 200))
+                result = {"missions": missions, "status": "SUCCESS" if missions else "EMPTY_RESULT"}
+            elif action == "list_watches":
+                watches = db.query(Monitor).filter_by(owner=owner).order_by(Monitor.updated_at.desc()).limit(max(1, min(int(payload.get("limit") or 200), 500))).all()
+                result = {"watches": [
+                    {column.name: (getattr(row, column.name).isoformat() if hasattr(getattr(row, column.name), "isoformat") else getattr(row, column.name)) for column in row.__table__.columns}
+                    for row in watches
+                ], "status": "SUCCESS" if watches else "EMPTY_RESULT"}
             else:
                 models = {"list_goals": (WorkGoal, None), "list_projects": (WorkProject, None), "list_tasks": (WorkTask, None), "list_runs": (WorkRun, None), "list_commitments": (WorkCommitment, "open")}
                 model, status = models[action]

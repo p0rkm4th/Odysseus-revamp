@@ -161,6 +161,26 @@ def test_work_reads_compile_to_the_canonical_read_binding():
     assert resolved.action.approval.value == "none"
 
 
+@pytest.mark.parametrize(("query", "concept", "action_id"), [
+    ("What goals do I have?", "GOAL", "list_goals"),
+    ("What projects am I working on?", "PROJECT", "list_projects"),
+    ("What tasks are open?", "TASK", "list_tasks"),
+    ("What runs are active?", "RUN", "list_runs"),
+    ("What commitments are open?", "COMMITMENT", "list_commitments"),
+    ("What missions are active?", "MISSION", "list_missions"),
+    ("What watches are active?", "WATCH", "list_watches"),
+])
+def test_work_subconcept_reads_resolve_to_first_class_canonical_actions(query, concept, action_id):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == concept
+    assert resolved.frame.operation_class == "READ"
+    assert resolved.contract.capability_id == "work.read"
+    assert resolved.action_id == action_id
+    assert resolved.binding_name == "read_work"
+    assert resolved.action.approval.value == "none"
+
+
 @pytest.mark.parametrize("query", [
     "What needs attention?",
     "What is Hades waiting on?",
