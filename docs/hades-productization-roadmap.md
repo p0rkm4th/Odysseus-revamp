@@ -1053,5 +1053,5 @@ warnings.
 The Work read convergence batch adds the read-only `work.read` capability and
 `read_work` ToolBinding over WorkEngine for owner-scoped overview, review,
 context, and typed list reads. It reuses durable Work state and does not create
-a second task/work store. Focused tests pass; full regression and deployment
-evidence remain pending until the batch is committed and built.
+a second task/work store. Focused/full regression and source-matched candidate
+deployment are green; owner-live Work dogfood remains pending.

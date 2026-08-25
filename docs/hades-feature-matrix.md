@@ -122,5 +122,5 @@ The Work read convergence batch adds the read-only `work.read` capability and
 context, and typed list reads are owner-scoped structured results with no
 generic approval or filesystem fallback. “What am I working on?” now compiles
 through the generic Work contract; mutation lifecycle convergence remains
-separate. Focused evidence is green; full regression and source-matched
-deployment are pending this batch.
+separate. Focused and full regression evidence is green, and the exact
+source-matched candidate is deployed. Owner-live Work dogfood remains separate.
