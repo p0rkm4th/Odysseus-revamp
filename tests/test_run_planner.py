@@ -205,3 +205,22 @@ def test_next_step_is_owner_scoped(db):
     }]})
     with pytest.raises(Exception):
         RunPlanner(db).next_step("bob", run["id"])
+
+
+def test_focused_execution_validation_still_rejects_unknown_future_action(db):
+    work = WorkEngine(db)
+    run = work.create_run("alice", {
+        "domain": "homelab",
+        "plan": [
+            {"sequence": 1, "capability_id": "homelab.manage", "action_id": "service_status"},
+            {"sequence": 2, "capability_id": "homelab.manage", "action_id": "not_registered"},
+        ],
+    })
+    current = work.create_action("alice", run["id"], {
+        "sequence": 1,
+        "capability_id": "homelab.manage",
+        "action_id": "service_status",
+    })
+    validation = RunPlanner(db).validate("alice", run["id"], focus_sequence=current["sequence"])
+    assert validation["valid"] is False
+    assert any(item["code"] == "unknown_action_spec" and item["sequence"] == 2 for item in validation["failures"])
