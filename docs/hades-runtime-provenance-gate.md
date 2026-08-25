@@ -1,7 +1,7 @@
 # Hades Runtime Truth / Deployment Provenance Gate
 
 Status: IN_PROGRESS — source-matched candidate deployed; owner-live gates pending  
-Audited source: `26444587f9efcf62c854faa7e6bdba0c3e831cef`  
+Audited source: `98dbb0368a9e6e83a089ec8384b20f145ad80ca2`  
 Branch: `recovery/live-candidate-20260823`  
 Observed: 2026-08-24
 
@@ -12,7 +12,7 @@ or synthetic feature rows to live acceptance.
 
 | Area | Evidence | Level | Status |
 |---|---|---:|---|
-| Checkout identity | `git rev-parse HEAD` = `26444587...` | E1 | VERIFIED |
+| Checkout identity | `git rev-parse HEAD` = `98dbb036...` | E1 | VERIFIED |
 | Git integrity | `git fsck --full` reports no integrity errors; dangling objects remain | E1 | VERIFIED |
 | Test residue | empty ignored `tmp_pytest_probe/` directory; no files found | E1 | SAFE_RESIDUE |
 | Running image | `sha256:9518d18e...` (`odysseus:candidate-26444587`) | E4 | SOURCE_MATCHED |
@@ -26,6 +26,7 @@ or synthetic feature rows to live acceptance.
 | Frontend architecture | intentionally unbundled static assets; canonical `npm run test:frontend` now runs Node syntax/static checks | E2 | VERIFIED_SOURCE |
 | Playwright | repo-scoped Chromium installed; window and realistic OSINT suites pass | E3/E4 | VERIFIED_SYNTHETIC |
 | Network action parity | prose-only Qwen network intent receives one bounded `manage_homelab` plan repair; no generic shell/ARP path | E2/E4 | VERIFIED_SYNTHETIC |
+| Durable agent Work bridge | actionable owner/session chat turns create or resume one canonical Work Run; bound ToolBindings project ActionSpec metadata, exact approval references, and structured results into WorkAction/WorkResult | E2 | FOCUSED_TESTED; owner-live continuation pending |
 | Candidate image | `odysseus:candidate-26444587`, digest `sha256:9518d18e...` | E4 | VERIFIED_SOURCE_MATCHED_CANDIDATE |
 | Candidate frontend | `frontend-26444587...-27432b15...` | E4 | VERIFIED_SOURCE_MATCHED_CANDIDATE |
 | Candidate migration head | `20260824_011_sandbox_v1`; fresh and rerun rehearsal each loaded 21 versions | E3 | VERIFIED |
@@ -48,6 +49,7 @@ The running service has been recreated from the candidate built from the
 audited source. `/api/version`, backend hash, and recorded container digest
 agree on source/build identity. The image digest is recorded outside the
 container because Docker does not inject it into image environment
-automatically. Synthetic browser acceptance and the network intent regression
-pass; owner-live network/action and visual acceptance remain pending. Vector /
-memory is healthy through the explicit local fallback.
+automatically. Synthetic browser acceptance, the network intent regression, and
+the durable Work bridge/continuation tests pass. Owner-live network/action and
+visual acceptance remain pending. Vector / memory is healthy through the
+explicit local fallback.
