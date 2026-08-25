@@ -565,3 +565,23 @@ realistic browser gates pass. Rollback is retained as
   static verification, browser-window dogfood, and realistic browser
   acceptance. This checkpoint is `VERIFIED_TESTED`; owner-live model swapping
   and consequential network dogfood remain `OWNER_DOGFOOD_PENDING`.
+
+## Verified deliverable progression checkpoint
+
+- Source change: `081908b1` fixes a shared lifecycle defect in which every
+  successful postcondition verification transitioned the Run directly to
+  terminal `succeeded`, even when later declared or persisted Actions still
+  belonged to the deliverable. Successful verification now advances the Run
+  to `ready` when remaining work exists; the existing planner then determines
+  whether the next step is safe to continue, requires exact authority, or is
+  blocked. Single-step verified Runs remain terminally successful.
+- The transition is model-independent and does not create approvals, execute
+  Actions, or weaken owner/policy checks. The regression proves a verified
+  network Action exposes the next declared read Action with `safe_auto_continue`
+  while retaining the structured verification result.
+- Evidence: focused WorkEngine/planner/bridge coverage `94 passed, 1 warning`;
+  full regression `6210 passed, 3 skipped, 186 warnings in 126.82s`;
+  `py_compile` and diff checks passed. Source is committed but deployment is
+  pending the final candidate build and runtime gates. Status:
+  `VERIFIED_TESTED`; owner-live model swapping and consequential network
+  dogfood remain `OWNER_DOGFOOD_PENDING`.
