@@ -514,4 +514,7 @@ realistic browser gates pass. Rollback is retained as
   executor was added.
 - Evidence: focused bridge/intent/parity/binding coverage `100 passed, 1
   warning`; full regression `6202 passed, 3 skipped, 186 warnings in
-  126.15s`. Deployment of this source checkpoint remains pending.
+  126.15s`. Candidate `odysseus:candidate-fcf3daae` is deployed and matched
+  by source commit `fcf3daaee63814340a8ebbf7f2d203eb0c37844d`; health and
+  frontend/browser gates are source-matched. Status: `VERIFIED_DEPLOYED` /
+  `VERIFIED_LIVE`.
