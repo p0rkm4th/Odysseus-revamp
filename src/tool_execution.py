@@ -604,6 +604,7 @@ async def execute_tool_block(
         | _MissingToolSecurityContext
     ) = _MISSING_TOOL_SECURITY_CONTEXT,
     exact_approval: Optional[ExactToolApproval] = None,
+    _registered_executor: Optional[Callable[..., Awaitable[Tuple[str, Dict]]]] = None,
 ) -> Tuple[str, Dict]:
     """Execute a single tool block. Returns (description, result_dict).
 
@@ -711,29 +712,46 @@ async def execute_tool_block(
 
     token = _active_workspace.set(workspace or None)
     try:
-        output = await _execute_tool_block_impl(
-            block,
-            session_id=session_id,
-            disabled_tools=disabled_tools,
-            owner=owner,
-            progress_cb=progress_cb,
-            tool_policy=tool_policy,
-            approved_document_id=(
-                exact_approval.pending.document_id
-                if approval_claimed
-                else None
-            ),
-            approved_document_version=(
-                exact_approval.pending.document_version
-                if approval_claimed
-                else None
-            ),
-            approved_document_digest=(
-                exact_approval.pending.document_digest
-                if approval_claimed
-                else None
-            ),
-        )
+        if _registered_executor is not None:
+            policy_names = email_tool_policy_names(getattr(block, "tool_type", None))
+            if disabled_tools and not policy_names.isdisjoint(disabled_tools):
+                output = (
+                    f"{getattr(block, 'tool_type', None)}: BLOCKED",
+                    {"error": f"Tool '{getattr(block, 'tool_type', None)}' is disabled by user.", "exit_code": 1, "blocked": True, "policy": "disabled_tools"},
+                )
+            elif tool_policy and any(tool_policy.blocks(name) for name in policy_names):
+                output = (
+                    f"{getattr(block, 'tool_type', None)}: BLOCKED",
+                    {"error": f"Execution of tool '{getattr(block, 'tool_type', None)}' is forbade by the active guide-only policy.", "exit_code": 1, "blocked": True, "policy": "tool_policy"},
+                )
+            else:
+            # Registered bindings reuse the same security/approval gate above;
+            # only their mature executor implementation is supplied here.
+                output = await _registered_executor(block, owner=owner)
+        else:
+            output = await _execute_tool_block_impl(
+                block,
+                session_id=session_id,
+                disabled_tools=disabled_tools,
+                owner=owner,
+                progress_cb=progress_cb,
+                tool_policy=tool_policy,
+                approved_document_id=(
+                    exact_approval.pending.document_id
+                    if approval_claimed
+                    else None
+                ),
+                approved_document_version=(
+                    exact_approval.pending.document_version
+                    if approval_claimed
+                    else None
+                ),
+                approved_document_digest=(
+                    exact_approval.pending.document_digest
+                    if approval_claimed
+                    else None
+                ),
+            )
         if isinstance(security_context, ToolRunSecurityContext):
             security_context.observe_tool_result(
                 getattr(block, "tool_type", None),
@@ -1632,6 +1650,10 @@ async def execute_registered_binding(*, tool_name, payload, owner=None, **securi
     if not isinstance(payload, dict):
         raise ValueError("registered binding payload must be an object")
     block = SimpleNamespace(tool_type=binding.transport_name, content=_ody_v34_json.dumps(payload, sort_keys=True))
+    # Headless callers must opt into the explicit no-taint context. This keeps
+    # the adapter usable for canonical reads while ensuring consequential
+    # calls cannot silently omit the shared dispatcher context.
+    security_context.setdefault("security_context", NO_TOOL_SECURITY_CONTEXT)
     result = await execute_tool_block(block, owner=owner, **security_context)
     if not isinstance(result, tuple) or len(result) != 2 or not isinstance(result[1], dict):
         raise ValueError("registered binding returned an invalid result")
@@ -1652,6 +1674,13 @@ async def execute_tool_block(block, *args, **kwargs):
         # read from model tool arguments and cannot replace policy, approval,
         # owner isolation, disabled-tools, or broker authorization.
         grant_id = kwargs.get("delegated_grant_id")
+        from src.capability_registry import action_for_tool
+        action = action_for_tool(block.tool_type, block.content)
+        exact_approval = kwargs.get("exact_approval")
+        if action is None or not action.known:
+            return (f"{block.tool_type}: BLOCKED", {"error": "Unknown registered ActionSpec.", "exit_code": 1, "blocked": True, "policy": "actionspec"})
+        if action.approval.value == "exact" and exact_approval is None and not grant_id:
+            return (f"{block.tool_type}: BLOCKED", {"error": "This exact ActionSpec requires exact approval.", "exit_code": 1, "blocked": True, "policy": "exact_tool_approval"})
         if grant_id:
             owner = kwargs.get("owner")
             if not owner:
@@ -1669,7 +1698,15 @@ async def execute_tool_block(block, *args, **kwargs):
                     })
             except Exception as exc:
                 return (f"{block.tool_type}: BLOCKED", {"error": str(exc), "exit_code": 1, "blocked": True, "policy": "delegated_capability_grant"})
-        return await executor(block, owner=kwargs.get("owner"))
+        kwargs.setdefault("security_context", NO_TOOL_SECURITY_CONTEXT)
+        kwargs["_registered_executor"] = executor
+        kwargs.pop("delegated_grant_id", None)
+        kwargs.pop("delegated_grant_run_id", None)
+        kwargs.pop("delegated_grant_action_id", None)
+        kwargs.pop("delegated_grant_capability_id", None)
+        kwargs.pop("delegated_grant_digest", None)
+        kwargs.pop("delegated_grant_target_resource", None)
+        return await _ody_v34_original_execute_tool_block(block, *args, **kwargs)
 
     return await _ody_v34_original_execute_tool_block(
         block,

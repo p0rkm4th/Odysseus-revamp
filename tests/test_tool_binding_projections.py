@@ -62,6 +62,47 @@ def test_trusted_work_adapter_reuses_registered_binding(monkeypatch):
     assert result["success"] is True
 
 
+def test_registered_binding_cannot_bypass_disabled_or_tool_policy(monkeypatch):
+    calls = []
+
+    async def fake_executor(block, owner=None):
+        calls.append(block.tool_type)
+        return "manage_assets", {"exit_code": 0}
+
+    monkeypatch.setitem(tool_execution._CAPABILITY_V1_EXECUTORS, "manage_assets", fake_executor)
+    block = type("Block", (), {"tool_type": "manage_assets", "content": '{"action":"summary"}'})()
+
+    disabled = asyncio.run(tool_execution.execute_tool_block(block, owner="alice", disabled_tools={"manage_assets"}))
+    assert disabled[1]["blocked"] is True
+    assert disabled[1]["policy"] == "disabled_tools"
+
+    class Policy:
+        def blocks(self, name):
+            return name == "manage_assets"
+
+    policy = asyncio.run(tool_execution.execute_tool_block(block, owner="alice", tool_policy=Policy()))
+    assert policy[1]["blocked"] is True
+    assert policy[1]["policy"] == "tool_policy"
+    assert calls == []
+
+
+def test_registered_consequential_action_requires_exact_approval_or_grant(monkeypatch):
+    called = []
+
+    async def fake_executor(block, owner=None):
+        called.append(True)
+        return "manage_homelab", {"exit_code": 0}
+
+    monkeypatch.setitem(tool_execution._CAPABILITY_V1_EXECUTORS, "manage_homelab", fake_executor)
+    result = asyncio.run(tool_execution.execute_tool_block(
+        type("Block", (), {"tool_type": "manage_homelab", "content": '{"action":"execute_network_discovery"}'})(),
+        owner="alice",
+    ))
+    assert result[1]["blocked"] is True
+    assert result[1]["policy"] == "exact_tool_approval"
+    assert called == []
+
+
 def test_trusted_work_adapter_rejects_unknown_binding():
     try:
         asyncio.run(tool_execution.execute_registered_binding(tool_name="unknown", payload={}, owner="alice"))
