@@ -22,6 +22,10 @@ Final source under audit: `b4e362c1bd18`
   is deployed with image `sha256:96519f4a5870d49bdcd5b7a5e8feef2414c157f46dc1ad6116cd6fcdd3dbd03c`.
   `/api/health`, `/api/version`, frontend static, browser-window, and
   realistic browser gates passed. Owner-live E6 remains pending.
+- Follow-up `b5029dc7` repairs the chat-to-Run seam for explicit canonical
+  Communications reads. Full regression is **6260 passed, 3 skipped, 186
+  warnings** in 127.55 seconds. The source-matched candidate and browser gate
+  evidence for that commit are recorded below; owner-live E6 remains pending.
 
 ## What changed
 
