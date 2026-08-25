@@ -9,18 +9,20 @@
 | H0 vs final improvement | PARTIAL | final 15-case ACI weighted `0.6667` vs H0 `0.4333`; synthetic only |
 | Chat route ACI mode | FOCUSED_TESTED | explicit `hades_aci_mode` setting passed to canonical loop; default `aci`, reversible |
 | Frozen evaluation corpus | SOURCE | 120 synthetic cases: 96 development, 24 held-out, 12 canary |
-| Exact ACI candidate deployed | DEPLOYED | `odysseus:candidate-1ce7ec34b9f7`; `/api/version` source/build/frontend match |
+| Exact ACI candidate deployed | DEPLOYED | `odysseus:candidate-ce626774f5ac`; `/api/version` source/build/frontend match |
 | Runtime passive health | PASSIVE_LIVE_VERIFIED | compose, broker, Ollama bridge inspected |
 | Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below; authentication and owner data remain out of automation scope |
 
 ## Final runtime checkpoint
 
-- Full regression: `6292 passed, 3 skipped, 186 warnings`.
+- Full regression: `6298 passed, 3 skipped, 186 warnings`.
 - App health: `/api/health` healthy.
 - Broker: user service active; socket `660 scootz:scootz`.
 - Ollama: bridge healthy; `qwen3:8b` available.
 - ChromaDB and SearXNG: running; SearXNG healthy.
 - Candidate source/build/frontend provenance: matched.
+- Final candidate: `ce626774f5ac2aaa1ff8a93c19e18352335f6ff7`; image ID `sha256:bbd49d105cc8e18931e4bf4c7a0a141d3273bbfe4a604e68903d6ea29a87f141`.
+- Runtime profile route: owner-authenticated; unauthenticated probe returned `401`.
 - Image retention: current candidate and previous `odysseus:candidate-dbaddbdaac7e` retained; no cleanup performed.
 - Final H0-equivalent ACI: 15 cases, `0.4667` success, `0.6667` weighted; 11 clean, 4 timeouts.
 - Improvement is synthetic benchmark evidence, not owner-live evidence.
