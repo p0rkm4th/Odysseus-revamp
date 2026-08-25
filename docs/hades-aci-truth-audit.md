@@ -9,9 +9,19 @@
 | H0 vs final improvement | PARTIAL | final six-case ACI canary 6/6; full H0-equivalent ACI run still required |
 | Chat route ACI mode | FOCUSED_TESTED | explicit `hades_aci_mode` setting passed to canonical loop; default `aci`, reversible |
 | Frozen evaluation corpus | SOURCE | 120 synthetic cases: 96 development, 24 held-out, 12 canary |
-| Exact ACI candidate deployed | OWNER_DOGFOOD_PENDING | running image predates local ACI changes |
+| Exact ACI candidate deployed | DEPLOYED | `odysseus:candidate-1ce7ec34b9f7`; `/api/version` source/build/frontend match |
 | Runtime passive health | PASSIVE_LIVE_VERIFIED | compose, broker, Ollama bridge inspected |
-| Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below |
+| Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below; authentication and owner data remain out of automation scope |
+
+## Final runtime checkpoint
+
+- Full regression: `6292 passed, 3 skipped, 186 warnings`.
+- App health: `/api/health` healthy.
+- Broker: user service active; socket `660 scootz:scootz`.
+- Ollama: bridge healthy; `qwen3:8b` available.
+- ChromaDB and SearXNG: running; SearXNG healthy.
+- Candidate source/build/frontend provenance: matched.
+- Image retention: current candidate and previous `odysseus:candidate-dbaddbdaac7e` retained; no cleanup performed.
 
 No synthetic result is labeled as live owner evidence. No private runtime data,
 database, backup, log, model blob, or owner Memory was added to the benchmark
