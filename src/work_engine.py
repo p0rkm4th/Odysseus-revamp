@@ -98,7 +98,7 @@ class WorkEngine:
     def create_run(self, owner, data):
         for model, key, label in ((WorkGoal, "goal_id", "goal"), (WorkProject, "project_id", "project"), (WorkTask, "task_id", "task")):
             if data.get(key): self._one(model, owner, data[key], label)
-        row = WorkRun(id=ident("run"), owner=owner, goal_id=data.get("goal_id"), project_id=data.get("project_id"), task_id=data.get("task_id"), session_id=data.get("session_id"), domain=str(data.get("domain") or "general")[:64], requested_by=str(data.get("requested_by") or owner)[:200], model_endpoint=data.get("model_endpoint"), model_name=data.get("model_name"), lifecycle_state=str(data.get("lifecycle_state") or "created"), intent=data.get("intent") or {}, plan=data.get("plan") or [], assumptions=data.get("assumptions") or [], costs=data.get("costs") or {}, checkpoints=data.get("checkpoints") or [], verification=data.get("verification") or {}, continuation_state=data.get("continuation_state") or {})
+        row = WorkRun(id=ident("run"), owner=owner, goal_id=data.get("goal_id"), project_id=data.get("project_id"), task_id=data.get("task_id"), session_id=data.get("session_id"), domain=str(data.get("domain") or "general")[:64], requested_by=str(data.get("requested_by") or owner)[:200], model_endpoint=data.get("model_endpoint"), model_name=data.get("model_name"), lifecycle_state=str(data.get("lifecycle_state") or "created"), intent=data.get("intent") or {}, plan=data.get("plan") or [], completion_criteria=data.get("completion_criteria") or {}, assumptions=data.get("assumptions") or [], costs=data.get("costs") or {}, checkpoints=data.get("checkpoints") or [], verification=data.get("verification") or {}, continuation_state=data.get("continuation_state") or {})
         if row.lifecycle_state not in RUN_LIFECYCLE_STATES: raise WorkError("invalid run lifecycle state")
         self.db.add(row); self.event(owner, "run.started", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload={"domain": row.domain}); self.db.commit(); self.db.refresh(row); return serialize(row)
 
@@ -425,6 +425,7 @@ class WorkEngine:
         if "checkpoints" in payload: row.checkpoints = payload["checkpoints"]
         if "costs" in payload: row.costs = payload["costs"]
         if "verification" in payload: row.verification = payload["verification"]
+        if "completion_criteria" in payload: row.completion_criteria = payload["completion_criteria"] or {}
         if "current_step" in payload: row.current_step = str(payload["current_step"] or "")[:300] or None
         if lifecycle_state == "executing" and (row.plan or self.db.query(WorkAction).filter_by(run_id=run_id).count()):
             from src.run_planner import RunPlanner
@@ -437,6 +438,38 @@ class WorkEngine:
         self.event(owner, f"Run{''.join(part.title() for part in lifecycle_state.split('_'))}", goal_id=row.goal_id, project_id=row.project_id, task_id=row.task_id, run_id=row.id, payload={"lifecycle_state": lifecycle_state, "current_step": row.current_step})
         self.db.commit(); self.db.refresh(row)
         return serialize(row)
+
+    def assess_deliverable_completion(self, owner, run_id):
+        """Return a durable, model-independent completion decision.
+
+        This is deliberately observational: it never advances a Run and never
+        treats assistant prose as evidence.  A caller may use the decision to
+        schedule the next safe step or to report a blocker.
+        """
+        row = self._one(WorkRun, owner, run_id, "run")
+        criteria = row.completion_criteria if isinstance(row.completion_criteria, dict) else {}
+        actions = self.db.query(WorkAction).filter_by(run_id=row.id).order_by(WorkAction.sequence.asc()).all()
+        results = self.db.query(WorkResult).filter_by(owner=owner, run_id=row.id).all()
+        if row.status == "completed" and row.lifecycle_state == "succeeded":
+            status, reason = "COMPLETE", "run reached verified terminal success"
+        elif row.status in {"failed", "cancelled"} or row.lifecycle_state in {"failed", "cancelled", "execution_ambiguous", "partial_unknown_state"}:
+            status, reason = "BLOCKED", row.error_summary or "run is not safely continuable"
+        elif row.status in {"awaiting_approval", "awaiting_input", "suspended"}:
+            status, reason = "BLOCKED", row.current_step or "run is waiting for required input or authority"
+        else:
+            status, reason = "IN_PROGRESS", row.current_step or "deliverable is not yet terminal"
+        return {
+            "status": status,
+            "reason": reason,
+            "run_id": row.id,
+            "deliverable": criteria.get("deliverable") or criteria.get("objective") or None,
+            "completion_criteria": criteria,
+            "action_count": len(actions),
+            "completed_action_count": sum(1 for action in actions if action.status == "completed"),
+            "result_count": len(results),
+            "lifecycle_state": row.lifecycle_state,
+            "current_step": row.current_step,
+        }
 
     def checkpoint_run(self, owner, run_id, checkpoint):
         row = self._one(WorkRun, owner, run_id, "run")
