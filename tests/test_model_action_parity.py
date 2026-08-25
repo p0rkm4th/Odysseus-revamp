@@ -20,6 +20,8 @@ REQUESTS = (
     "Deep scan those devices.",
     "Show my current security findings.",
     "Show my OSINT cases.",
+    "What needs attention?",
+    "What is Hades waiting on?",
     "What integrations are degraded?",
 )
 
@@ -41,6 +43,8 @@ def test_qwen_luna_sol_receive_identical_canonical_contract_projection(query):
     assert projections[MODELS[0]]["contract"]["available"] is True
     if query == "What integrations are degraded?":
         assert projections[MODELS[0]]["contract"]["action_id"] == "integrations"
+    if query in {"What needs attention?", "What is Hades waiting on?"}:
+        assert projections[MODELS[0]]["contract"]["action_id"] == "attention"
 
 
 def test_qwen_luna_sol_continue_receive_identical_durable_run_resolution():

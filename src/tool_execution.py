@@ -1525,7 +1525,7 @@ async def _execute_read_work_binding(block, owner=None):
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
         action = str(payload.get("action") or "").strip().casefold()
-        allowed = {"overview", "review", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments"}
+        allowed = {"overview", "review", "attention", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments"}
         if action not in allowed:
             raise ValueError("unsupported read-only Work action")
         if not owner:
@@ -1545,6 +1545,9 @@ async def _execute_read_work_binding(block, owner=None):
                 }
             elif action == "review":
                 result = service.life_review(owner, horizon_hours=int(payload.get("horizon_hours") or 48))
+            elif action == "attention":
+                from src.persistent_agent import PersistentAgent
+                result = PersistentAgent(db).attention(owner)
             elif action == "context":
                 result = service.context(owner, goal_id=payload.get("goal_id"), project_id=payload.get("project_id"), task_id=payload.get("task_id"), run_id=payload.get("run_id"))
             else:

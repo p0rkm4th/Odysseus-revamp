@@ -172,7 +172,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "explicit_memory_read",
     ),
     "WORK": DomainContract(
-        "WORK", "work.read", {"READ": "overview"}, "read_work",
+        "WORK", "work.read", {"READ": "overview", "READ_ATTENTION": "attention"}, "read_work",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "work_overview",
     ),
@@ -274,6 +274,8 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         concept = "OSINT_CASE"
     elif re.search(r"\b(?:household|pantry|stock|shopping|recipe|recipes|groceries)\b", q):
         concept = "HOUSEHOLD_ITEM"
+    elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
+        concept = "WORK"
     elif re.search(r"\b(?:work|working|project|task|goal|commitment)\b", q):
         concept = "WORK"
     elif re.search(r"\b(?:setup|configured|integrations?|connected)\b", q):
@@ -306,10 +308,13 @@ def compile_intent(query: str, *, continuation: bool = False, run_reference: str
         constraints=("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK", "HOMELAB_HOST", "SERVICE"} else (),
         desired_output="grounded_structured_summary" if operation == "READ" else None,
         filters={
+            "view": "attention"
+        } if concept == "WORK" and re.search(
+            r"\b(?:attention|waiting\s+on|pending\s+approvals?)\b", q) else ({
             "view": "integrations"
         } if concept == "INTEGRATION" and re.search(
             r"\bintegrations?\b.*\b(?:degraded|broken|attention|health|connected|working)\b|"
-            r"\b(?:degraded|broken|attention|health)\b.*\bintegrations?\b", q) else {},
+            r"\b(?:degraded|broken|attention|health)\b.*\bintegrations?\b", q) else {}),
         read_explicit=read_explicit,
     )
 
@@ -360,7 +365,9 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     if contract is None:
         return ResolvedContract(frame, None, None, None, None, False, "no_domain_contract")
     action_key = frame.operation_class
-    if frame.domain_concept == "INTEGRATION" and frame.filters.get("view") == "integrations":
+    if frame.domain_concept == "WORK" and frame.filters.get("view") == "attention":
+        action_key = "READ_ATTENTION"
+    elif frame.domain_concept == "INTEGRATION" and frame.filters.get("view") == "integrations":
         action_key = "READ_INTEGRATIONS"
     action_id = contract.actions.get(action_key)
     if action_id is None and frame.operation_class == "CONTINUE":

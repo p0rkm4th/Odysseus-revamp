@@ -140,6 +140,22 @@ def test_work_reads_compile_to_the_canonical_read_binding():
     assert resolved.action_id == "overview"
     assert resolved.binding_name == "read_work"
     assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
+    "What needs attention?",
+    "What is Hades waiting on?",
+    "Show pending approvals",
+])
+def test_attention_reads_use_the_canonical_owner_scoped_projection(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "WORK"
+    assert resolved.frame.filters["view"] == "attention"
+    assert resolved.contract.capability_id == "work.read"
+    assert resolved.action_id == "attention"
+    assert resolved.binding_name == "read_work"
+    assert resolved.action.approval.value == "none"
     assert resolved.frame.workspace_hint == "work"
 
 

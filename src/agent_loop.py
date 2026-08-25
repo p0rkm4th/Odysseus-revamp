@@ -6824,7 +6824,7 @@ async def stream_agent_loop(
             "SECURITY_FINDING": "list_findings",
             "OSINT_CASE": "list_cases",
             "MEMORY": "summarize_owner_memory",
-            "WORK": "overview",
+            "WORK": "attention" if _asset_frame.get("filters", {}).get("view") == "attention" else "overview",
             "HOUSEHOLD_ITEM": "overview",
             "INTEGRATION": "state",
             "CAREER_PROFILE": "overview",
