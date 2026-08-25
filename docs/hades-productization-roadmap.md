@@ -1031,3 +1031,14 @@ permitted. Contract validation and paraphrase tests are source-level green.
 The layer deliberately reports unresolved concepts rather than creating a
 second executor; Memory, Work, Setup/Integration, Household, and richer
 Network read contracts remain explicit follow-up work.
+
+### Overnight architecture convergence checkpoint — 2026-08-25
+
+The handoff intent/network batch is committed and deployed source-matched.
+Workspace grouping now derives from the existing workspace registry instead of
+maintaining a second expanded-navigation list. Original provider/domain
+implementations remain composed through adapters where they are stronger; no
+backend truth stores were merged. Full regression is green at 6113 passed, 3
+skipped, 186 warnings, and the repo-scoped frontend/window/realistic browser
+commands pass. Remaining canonical read contracts and owner-live acceptance
+are explicitly partial/pending rather than promoted.

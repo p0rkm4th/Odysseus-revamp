@@ -1,7 +1,7 @@
 # Hades architecture convergence audit
 
 Status: **bounded archaeology recorded; migration queue active**  
-Source basis: `be1435f8` plus prior truth-audit evidence in
+Source basis: `12494174` plus prior truth-audit evidence in
 `docs/hades-truth-audit.md`. Runtime provenance is not yet deployed from this
 source, so live claims remain below E4/E5.
 
