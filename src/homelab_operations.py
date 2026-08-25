@@ -28,7 +28,8 @@ class HomelabOperationError(ValueError):
 _SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.@:-]{0,127}$")
 _ACTIONS = frozenset({
     "inspect_host", "service_status", "plan_service_restart", "execute_service_restart",
-    "discovery_status", "read_network_observations", "plan_network_discovery", "execute_network_discovery",
+    "discovery_status", "read_network_observations", "list_unidentified_hosts", "infer_role_hypotheses",
+    "plan_network_discovery", "execute_network_discovery",
     "plan_network_service_enumeration", "execute_network_service_enumeration",
     "plan_diagnostic_install", "execute_diagnostic_install",
 })
@@ -176,15 +177,55 @@ def _role_hypotheses(observations: list[dict[str, Any]]) -> list[dict[str, Any]]
         if {"smb", "microsoft-ds", "netbios-ssn"} & names or {139, 445} & ports:
             candidates.append(("file_server_or_windows_host", 0.55, "SMB/NetBIOS service observation"))
         for label, confidence, evidence in candidates[:4]:
-            hypotheses.append({
+            hypothesis = {
                 "ip": observation.get("ip"),
                 "role": label,
                 "classification": "INFERRED",
                 "confidence": confidence,
                 "evidence": [evidence],
                 "canonical_identity_updated": False,
-            })
+            }
+            for key in ("canonical_ref", "freshness"):
+                if observation.get(key) is not None:
+                    hypothesis[key] = observation[key]
+            hypotheses.append(hypothesis)
     return hypotheses
+
+
+def _projected_service_observations(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Normalize persisted network evidence for the shared role classifier."""
+    observations = []
+    for node in nodes[:256]:
+        services = []
+        latest_observed_at = None
+        for raw in node.get("observations") or []:
+            if not isinstance(raw, dict):
+                continue
+            latest_observed_at = latest_observed_at or raw.get("observed_at")
+            try:
+                data = json.loads(raw.get("data_json") or "{}")
+            except (TypeError, ValueError):
+                data = {}
+            if not isinstance(data, dict):
+                continue
+            for service in data.get("services") or []:
+                if isinstance(service, dict):
+                    services.append(service)
+            ports = data.get("open_ports") or []
+            meanings = data.get("port_meanings") or []
+            if isinstance(ports, list):
+                for index, port in enumerate(ports):
+                    service = meanings[index] if index < len(meanings) else None
+                    services.append({"port": port, "service": service})
+        if services:
+            attributes = node.get("attributes") or {}
+            observations.append({
+                "ip": attributes.get("observed_ip") or attributes.get("ip") or node.get("ip"),
+                "services": services,
+                "canonical_ref": node.get("id"),
+                "freshness": latest_observed_at,
+            })
+    return observations
 
 
 class HomelabReceiptStore:
@@ -352,6 +393,45 @@ class HomelabOperations:
                 "edge_count": len(projection.get("edges") or []),
                 "source": "canonical_cmdb",
                 "owner_scope": owner,
+                "exit_code": 0,
+            }
+        if action in {"list_unidentified_hosts", "infer_role_hypotheses"}:
+            from src.network_projection import map_projection
+            projection = map_projection(owner=owner)
+            if projection.get("warning"):
+                return {
+                    "status": "UNAVAILABLE",
+                    "action": action,
+                    "error": projection["warning"],
+                    "source": "canonical_cmdb",
+                    "owner_scope": owner,
+                    "exit_code": 1,
+                }
+            nodes = projection.get("nodes") or []
+            if action == "list_unidentified_hosts":
+                hosts = [
+                    node for node in nodes
+                    if node.get("resolution_state") == "unidentified" or node.get("canonical") is False
+                ]
+                return {
+                    "status": "EMPTY_RESULT" if not hosts else "SUCCESS",
+                    "action": action,
+                    "hosts": hosts,
+                    "host_count": len(hosts),
+                    "source": "canonical_cmdb",
+                    "owner_scope": owner,
+                    "identity_rule": projection.get("identity_rule"),
+                    "exit_code": 0,
+                }
+            hypotheses = _role_hypotheses(_projected_service_observations(nodes))
+            return {
+                "status": "EMPTY_RESULT" if not hypotheses else "SUCCESS",
+                "action": action,
+                "hypotheses": hypotheses,
+                "hypothesis_count": len(hypotheses),
+                "source": "canonical_cmdb",
+                "owner_scope": owner,
+                "inference_policy": "inferred_only; canonical identity is not overwritten",
                 "exit_code": 0,
             }
         if action in {"plan_diagnostic_install", "execute_diagnostic_install"}:

@@ -144,7 +144,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "security_evidence_list",
     ),
     "NETWORK": DomainContract(
-        "NETWORK", "homelab.manage", {"READ": "read_network_observations", "EXECUTE": "plan_network_discovery"}, "manage_homelab",
+        "NETWORK", "homelab.manage", {"READ": "read_network_observations", "READ_UNIDENTIFIED": "list_unidentified_hosts", "READ_ROLES": "infer_role_hypotheses", "EXECUTE": "plan_network_discovery"}, "manage_homelab",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "network_capability_or_discovery",
     ),
@@ -358,6 +358,10 @@ def compile_intent(
         concept = "RUN"
     elif re.search(r"\b(?:research|research history)\b", q) and not re.search(r"\b(?:osint|investigation|case|cases)\b", q):
         concept = "RESEARCH"
+    elif re.search(r"\b(?:devices?|hosts?)\b", q) and re.search(
+        r"\b(?:look like|probably|role|roles|unidentified|unknown|on my network)\b", q,
+    ):
+        concept = "NETWORK"
     elif re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q):
         concept = "TECHNICAL_ASSET"
     elif re.search(r"\b(?:memory|remember|brain)\b", q):
@@ -412,6 +416,10 @@ def compile_intent(
         r"\b(?:degraded|broken|attention|health)\b.*\bintegrations?\b", q,
     ):
         reference_filters["view"] = "integrations"
+    elif concept == "NETWORK" and re.search(r"\b(?:unidentified|unknown|unrecognised|unrecognized)\b", q):
+        reference_filters["view"] = "unidentified"
+    elif concept == "NETWORK" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
+        reference_filters["view"] = "roles"
     workspace = {
         "MEMORY": "hades", "WORK": "work", "GOAL": "work", "PROJECT": "work", "TASK": "work", "RUN": "work", "COMMITMENT": "work", "MISSION": "work", "WATCH": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
         "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",
@@ -507,6 +515,10 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_ATTENTION"
     elif frame.domain_concept == "INTEGRATION" and frame.filters.get("view") == "integrations":
         action_key = "READ_INTEGRATIONS"
+    elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "unidentified":
+        action_key = "READ_UNIDENTIFIED"
+    elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "roles":
+        action_key = "READ_ROLES"
     action_id = contract.actions.get(action_key)
     if action_id is None and frame.operation_class == "CONTINUE":
         action_id = contract.actions.get("EXECUTE") or contract.actions.get("READ")
@@ -536,9 +548,9 @@ def validate_contracts() -> list[str]:
                 continue
             if contract.binding and binding_for_tool(contract.binding) is None:
                 errors.append(f"{concept}: missing ToolBinding {contract.binding}")
-            if operation in {"READ", "READ_INTEGRATIONS"} and action.approval.value != "none":
+            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
-            if operation in {"READ", "READ_INTEGRATIONS"} and "read_private" not in action.effects:
+            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"} and "read_private" not in action.effects:
                 errors.append(f"{concept}/{action_id}: read lacks read_private effect")
             if not action.executor_key:
                 errors.append(f"{concept}/{action_id}: missing executor")
@@ -594,7 +606,14 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
         if not isinstance(result.get("assets"), list):
             return False, "INVALID_RESULT"
     if frame.domain_concept == "NETWORK" and frame.operation_class == "READ":
-        if not isinstance(result.get("nodes"), list) or not isinstance(result.get("edges"), list):
+        view = frame.filters.get("view")
+        if view == "unidentified":
+            if not isinstance(result.get("hosts"), list):
+                return False, "INVALID_RESULT"
+        elif view == "roles":
+            if not isinstance(result.get("hypotheses"), list):
+                return False, "INVALID_RESULT"
+        elif not isinstance(result.get("nodes"), list) or not isinstance(result.get("edges"), list):
             return False, "INVALID_RESULT"
     if frame.domain_concept == "SECURITY_FINDING" and frame.operation_class == "READ":
         if not isinstance(result.get("findings"), list):

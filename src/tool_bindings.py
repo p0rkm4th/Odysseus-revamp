@@ -54,7 +54,7 @@ MANAGE_HOMELAB_SCHEMA = {
         "name": "manage_homelab",
         "description": "Inspect the local host and perform bounded, owner-approved homelab operations. Network discovery is private-scope and review-only for inventory.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["inspect_host", "service_status", "discovery_status", "read_network_observations", "plan_service_restart", "execute_service_restart", "plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration", "plan_diagnostic_install", "execute_diagnostic_install"]},
+            "action": {"type": "string", "enum": ["inspect_host", "service_status", "discovery_status", "read_network_observations", "list_unidentified_hosts", "infer_role_hypotheses", "plan_service_restart", "execute_service_restart", "plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration", "plan_diagnostic_install", "execute_diagnostic_install"]},
             "service": {"type": "string"}, "cidr": {"type": "string"}, "targets": {"type": "array", "items": {"type": "string"}, "maxItems": 256}, "plan_digest": {"type": "string"},
             "packages": {"type": "array", "items": {"type": "string"}},
             "capability": {"type": "string", "description": "Supported Hades capability whose declared prerequisites should be resolved deterministically; do not guess package names."},

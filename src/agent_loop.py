@@ -901,6 +901,10 @@ def _canonical_read_action(domain_concept: str, filters: dict | None = None) -> 
         operation = "READ_ATTENTION"
     elif concept == "INTEGRATION" and view == "integrations":
         operation = "READ_INTEGRATIONS"
+    elif concept == "NETWORK" and view == "unidentified":
+        operation = "READ_UNIDENTIFIED"
+    elif concept == "NETWORK" and view == "roles":
+        operation = "READ_ROLES"
     return contract.actions.get(operation)
 
 def _normalize_operational_intent_evidence(intent, query: str):
