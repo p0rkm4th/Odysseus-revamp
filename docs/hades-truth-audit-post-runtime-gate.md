@@ -1,7 +1,7 @@
 # Hades truth audit — post-runtime-gate comparison
 
 Observed: 2026-08-24  
-Source candidate: `26444587f9efcf62c854faa7e6bdba0c3e831cef`  
+Source candidate: `98dbb0368a9e6e83a089ec8384b20f145ad80ca2`  
 Candidate image: `odysseus:candidate-26444587`  
 Candidate digest: `sha256:9518d18e01b590a6346a6894817b9861def94d014fc17c13484a755edaf03167`
 
@@ -24,6 +24,7 @@ promote the currently running service to source-matched acceptance.
 | Vector/memory | degraded/unverified | ChromaDB heartbeat succeeds; VectorRAG and MemoryVectorStore startup logs report healthy local FastEmbed fallback; HTTP embedding lane unavailable | partial/healthy-fallback |
 | Browser | Playwright unavailable | repo-scoped Chromium and canonical window/realistic OSINT suites pass | E3/E4 synthetic |
 | Action execution parity | weak Qwen network request ended in prose and grounding safeguard | one bounded deterministic `manage_homelab` plan repair now precedes approval/execution; exact-scope/broker path unchanged | E2/E4 synthetic; owner retest pending |
+| Agent-to-Work provenance | detached agent stream had no durable Run proof | owner/session actionable turns now create/reuse one Work Run and project registered ToolBinding actions/results with exact approval references | E2 focused; owner-live continuation pending |
 
 ## Remaining discrepancies
 
@@ -34,7 +35,9 @@ promote the currently running service to source-matched acceptance.
    against the candidate remain deployment-gated.
 3. Owner-live network/action and visual acceptance remain distinct from the
    synthetic suites.
-4. The 186-warning set remains classified but not broadly reduced; SQLAlchemy,
+4. Durable Work projection is focused-tested but the deployed candidate and
+   owner-live “Continue” behavior still require acceptance.
+5. The 186-warning set remains classified but not broadly reduced; SQLAlchemy,
    UTC datetime, Pydantic, and third-party warnings should be handled in a
    separate debt batch.
 
