@@ -1535,12 +1535,40 @@ def _with_canonical_read_status(result: Any) -> dict[str, Any]:
     """
     if not isinstance(result, dict):
         return {"status": "INVALID_RESULT", "data": result}
-    if str(result.get("status") or "").strip():
+    explicit_status = str(result.get("status") or "").strip().upper()
+    if explicit_status and explicit_status not in {"SUCCESS", "SUCCESS_EMPTY", "SUCCESS_WITH_DATA"}:
         return result
     if result.get("unavailable") is True:
         return {"status": "UNAVAILABLE", **result}
     if result.get("error"):
         return {"status": "FAILED", **result}
+
+    # A structured overview may contain a deliberately unprojected or
+    # unavailable subdomain (for example Contacts while the CardDAV provider
+    # has no proven owner boundary). Do not flatten that partial truth into an
+    # apparently complete empty result. Preserve the nested detail and mark
+    # the enclosing read degraded for model/UI grounding.
+    def _nested_status(value: Any) -> str | None:
+        if isinstance(value, dict):
+            nested = str(value.get("status") or "").strip().upper()
+            if nested in {"DEGRADED", "NOT_PROJECTED", "UNAVAILABLE", "FAILED"}:
+                return nested
+            for child in value.values():
+                found = _nested_status(child)
+                if found:
+                    return found
+        elif isinstance(value, list):
+            for child in value:
+                found = _nested_status(child)
+                if found:
+                    return found
+        return None
+
+    nested_status = _nested_status(result)
+    if nested_status and explicit_status not in {"DEGRADED", "UNAVAILABLE", "FAILED"}:
+        return {**result, "status": "DEGRADED", "degraded_reason": nested_status}
+    if explicit_status:
+        return result
     collections = [value for value in result.values() if isinstance(value, list)]
     status = "SUCCESS_EMPTY" if collections and not any(collections) else "SUCCESS_WITH_DATA"
     return {"status": status, **result}
