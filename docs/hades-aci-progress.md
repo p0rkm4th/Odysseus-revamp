@@ -18,6 +18,7 @@
 | PROTOCOL_PROBES | `49de2dc0` | synthetic strict Decision JSON PASS and verified native-tool PASS; no side effects | not rebuilt | FOCUSED_TESTED |
 | MEMORY_COMPLETION_FIX | `d9d07bdc` | 75 focused; 6304 full; sanitized live Qwen trajectory reaches ANSWER without tool re-entry | `odysseus:candidate-d9d07bdc` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | HARNESS_OVERHEAD | `ab11579c` | matched synthetic raw-vs-Hades qwen3:8b timing; 70 focused | not rebuilt | FOCUSED_TESTED |
+| MODEL_BURDEN_INSTRUMENTATION | `885ec24f` | sanitized per-turn framework/model labels; 76 focused; 6305 full | not rebuilt | FULL_REGRESSION |
 
 ## H0 evidence
 
@@ -114,6 +115,11 @@ completion at `3.48–3.66s`, Hades completion at `14.48–14.54s`, and an
 end-to-end delta of `10.82–11.05s`. Hades context construction accounted for
 `1.38–1.48s`; both samples made zero tool calls. This is measured harness cost,
 not a claim that all operational workloads have the same overhead.
+
+The same benchmark now records responsibility accounting. A synthetic ACI turn
+measured two framework steps (`intent_resolution`, `action_hard_filter`) and
+one model-required step (`bounded_action_decision`); the counters are
+observational and cannot grant authority.
 
 ## Deployment provenance
 
