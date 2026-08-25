@@ -139,8 +139,11 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
     ),
     "communications.read": CapabilitySpec(
         capability_id="communications.read",
-        description="Owner-scoped read projection over configured email accounts and calendars.",
-        actions=_actions(ActionSpec(action_id="overview", effects=("read_private",), executor_key="read_communications")),
+        description="Owner-scoped read projection over configured communications providers.",
+        actions=_actions(*(
+            ActionSpec(action_id=action, effects=("read_private",), executor_key="read_communications")
+            for action in ("overview", "contacts")
+        )),
     ),
     "system.privileged_diagnostics": CapabilitySpec(
         capability_id="system.privileged_diagnostics",

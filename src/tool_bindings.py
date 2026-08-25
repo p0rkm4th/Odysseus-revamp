@@ -148,7 +148,7 @@ READ_COMMUNICATIONS_SCHEMA = {
         "name": "read_communications",
         "description": "Read the authenticated owner's canonical configured email accounts and calendar overview. Read-only; provider credentials and message bodies are never exposed by this contract.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["overview"]},
+            "action": {"type": "string", "enum": ["overview", "contacts"]},
         }, "required": ["action"]},
     }
 }
@@ -262,8 +262,10 @@ are adapters; NOT_CONFIGURED is not an empty listing and applications are never 
 _COMMUNICATIONS_READ_CONTRACT = '''### `read_communications`
 Read-only owner-scoped Communications overview. It reports configured email
 accounts and upcoming canonical calendar events without exposing secrets or
-message bodies. Provider connectivity and message retrieval remain separate
-provider operations.
+message bodies. Use `contacts` to list CardDAV contacts only when the existing
+admin/single-user provider boundary permits it; other owners receive an honest
+`UNAVAILABLE` result. Provider connectivity and message retrieval remain
+separate provider operations.
 `<invoke name="read_communications"><parameter name="action">overview</parameter></invoke>`.'''
 
 

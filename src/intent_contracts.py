@@ -200,6 +200,11 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "communications_overview",
     ),
+    "CONTACT": DomainContract(
+        "CONTACT", "communications.read", {"READ": "contacts"}, "read_communications",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "contact_list_or_unavailable",
+    ),
     "CAREER_PROFILE": DomainContract(
         "CAREER_PROFILE", "career.read", {"READ": "overview"}, "read_career",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "career_overview",
@@ -380,6 +385,8 @@ def compile_intent(
         concept = "WORK"
     elif re.search(r"\b(?:communications?|email accounts?|calendars?|calendar events?)\b", q):
         concept = "COMMUNICATIONS"
+    elif re.search(r"\b(?:contacts?|address\s*book)\b", q):
+        concept = "CONTACT"
     elif re.search(r"\b(?:setup|configured|integrations?|connected)\b", q):
         concept = "INTEGRATION"
     elif re.search(r"\b(?:career|job search|jobs?|opportunit(?:y|ies)|applications?|interviews?|resume|roles?)\b", q):
@@ -428,6 +435,7 @@ def compile_intent(
         "SECURITY_EVIDENCE": "infrastructure", "OSINT_CASE": "research", "RESEARCH": "research",
         "HOUSEHOLD_ITEM": "home", "INTEGRATION": "system",
         "COMMUNICATIONS": "communications",
+        "CONTACT": "communications",
     }.get(concept)
     return IntentFrame(
         operation_class=operation,
@@ -604,7 +612,7 @@ def result_status(result: Any) -> str:
         return "FAILED" if not result.get("unavailable") else "UNAVAILABLE"
     if result.get("status") in {
         "EMPTY_RESULT", "SUCCESS_EMPTY", "SUCCESS", "SUCCESS_WITH_DATA",
-        "SUCCESS_RESULT",
+        "SUCCESS_RESULT", "DEGRADED", "UNAVAILABLE", "FAILED",
     }:
         return str(result["status"])
     if not result:
@@ -671,6 +679,12 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     read_explicit=True,
                 )
                 valid, reason = validate_result(frame, result)
+                # Explicit adapter availability failures are truthful control
+                # plane outcomes, not malformed successful payloads. Preserve
+                # them for grounded reporting while still rejecting invalid
+                # success-shaped data below.
+                if reason in {"FAILED", "UNAVAILABLE"}:
+                    return True, reason
                 if not valid:
                     return valid, reason
                 # Collection reads have a stable top-level member even when
@@ -690,6 +704,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     ("HOUSEHOLD_ITEM", "list_items"): "items",
                     ("HOUSEHOLD_ITEM", "search_items"): "items",
                     ("COMMUNICATIONS", "overview"): "email",
+                    ("CONTACT", "contacts"): "contacts",
                 }.get((concept, action_id))
                 if expected and not isinstance(result.get(expected), (list, dict)):
                     return False, "INVALID_RESULT"

@@ -315,6 +315,52 @@ def test_nested_unprojected_read_cannot_be_reported_as_empty_success():
     assert explicit["status"] == "DEGRADED"
 
 
+def test_contacts_read_result_requires_typed_contacts_collection():
+    from src.intent_contracts import validate_bound_result
+
+    valid, reason = validate_bound_result(
+        "read_communications", "contacts",
+        {"status": "SUCCESS_EMPTY", "contacts": []},
+    )
+    assert valid is True
+    assert reason == "SUCCESS_EMPTY"
+
+    valid, reason = validate_bound_result(
+        "read_communications", "contacts",
+        {"status": "SUCCESS_WITH_DATA", "contacts": "not-a-list"},
+    )
+    assert valid is False
+    assert reason == "INVALID_RESULT"
+
+
+def test_contacts_read_fails_closed_for_non_single_user_owner(monkeypatch):
+    import asyncio
+    import src.tool_security as tool_security
+    import src.tool_execution as tool_execution
+
+    monkeypatch.setattr(tool_security, "owner_is_admin_or_single_user", lambda owner: False)
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_communications", payload={"action": "contacts"}, owner="alice",
+    ))
+    assert result["success"] is True
+    assert result["data"]["status"] == "UNAVAILABLE"
+    assert result["data"]["error_code"] == "OWNER_BOUNDARY_UNAVAILABLE"
+
+
+def test_contacts_unavailable_result_is_not_rewritten_as_result_invalid():
+    from src.intent_contracts import validate_bound_result
+
+    valid, reason = validate_bound_result(
+        "read_communications", "contacts", {
+            "status": "UNAVAILABLE",
+            "error_code": "OWNER_BOUNDARY_UNAVAILABLE",
+            "contacts": [],
+        },
+    )
+    assert valid is True
+    assert reason == "UNAVAILABLE"
+
+
 def test_communications_read_binding_requires_authenticated_owner():
     result = asyncio.run(tool_execution.execute_registered_binding(
         tool_name="read_communications", payload={"action": "overview"}, owner=None))

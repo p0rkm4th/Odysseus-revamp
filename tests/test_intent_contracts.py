@@ -286,6 +286,16 @@ def test_attention_reads_use_the_canonical_owner_scoped_projection(query):
     assert resolved.frame.workspace_hint == "work"
 
 
+@pytest.mark.parametrize("query", ["Show my contacts", "List my address book"])
+def test_contact_reads_resolve_to_existing_communications_binding(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "CONTACT"
+    assert resolved.action_id == "contacts"
+    assert resolved.binding_name == "read_communications"
+    assert resolved.action.approval.value == "none"
+
+
 @pytest.mark.parametrize(
     ("binding", "action", "payload"),
     [
