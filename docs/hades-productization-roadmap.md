@@ -1090,3 +1090,18 @@ Notification primitives. Provider adapters remain unconfigured and are
 reported as `NOT_CONFIGURED`; no listings are invented and no autonomous
 applications are submitted. Read contracts are focused-tested; provider setup
 and owner-live dogfood remain future work.
+
+### Canonical provider action-exposure checkpoint — 2026-08-25
+
+The server-owned IntentFrame contract binding is now retained in the provider
+tool projection when the turn is semantically substantive and the caller did
+not provide a narrower tool set. This keeps canonical actions available to
+weak or unfamiliar model phrasing while preserving caller restrictions,
+guide-only mode, policy, owner, ActionSpec, and executor gates. Low-signal
+workspace exploration retains its established read-only file-tool behavior.
+
+Contract validation now also checks that every mapped ActionSpec is present in
+the binding's native action schema, preventing silent provider exposure drift.
+Focused coverage is 125 passed; full regression is 6249 passed, 3 skipped,
+186 warnings. Provider swaps and owner-live Qwen/Luna/Sol torture remain
+pending; this checkpoint changes exposure parity, not authority.
