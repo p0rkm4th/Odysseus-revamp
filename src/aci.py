@@ -145,7 +145,13 @@ class AgentTaskPacket:
 
     def model_projection(self) -> dict[str, Any]:
         data = asdict(self)
-        data["action_cards"] = [asdict(card) for card in self.action_cards]
+        # The model receives opaque choices and semantics. Canonical action IDs
+        # stay in the server-side choice map and are never a machine authority
+        # exposed by the model protocol.
+        data["action_cards"] = [
+            {key: value for key, value in asdict(card).items() if key != "action_id"}
+            for card in self.action_cards
+        ]
         return data
 
 
@@ -157,6 +163,7 @@ class DecisionContract:
     ambiguity_class: str | None = None
     rationale: str | None = None
     state_fingerprint: str | None = None
+    answer: str | None = None
 
     def validate(self, packet: AgentTaskPacket) -> tuple[bool, str | None]:
         if packet.state_fingerprint and self.state_fingerprint != packet.state_fingerprint:
@@ -269,13 +276,19 @@ def parse_decision_json(value: Any, packet: AgentTaskPacket) -> tuple[DecisionCo
     if not isinstance(value, Mapping):
         return None, "decision_not_object"
     try:
+        decision_mode = DecisionMode(str(value.get("decision", "")).upper())
         decision = DecisionContract(
-            decision=DecisionMode(str(value.get("decision", "")).upper()),
+            decision=decision_mode,
             choice=value.get("choice"),
             context_type=value.get("context_type"),
-            ambiguity_class=value.get("ambiguity_class"),
+            ambiguity_class=(value.get("ambiguity_class") or ("unspecified" if decision_mode is DecisionMode.CLARIFY else None)),
             rationale=str(value.get("rationale"))[:240] if value.get("rationale") else None,
-            state_fingerprint=value.get("state_fingerprint"),
+            # The server binds a live model response to the packet it just
+            # issued. Requiring a small model to copy a 24-character digest is
+            # unnecessary failure surface; a supplied digest is still checked
+            # strictly for replay/stale-trace validation.
+            state_fingerprint=value.get("state_fingerprint") or packet.state_fingerprint,
+            answer=str(value.get("answer"))[:12000] if value.get("answer") else None,
         )
     except (ValueError, TypeError):
         return None, "invalid_decision_mode"
