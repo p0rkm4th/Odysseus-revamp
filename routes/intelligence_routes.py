@@ -140,6 +140,34 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         value = owner(request)
         with session_factory() as db:
             return PersistentAgent(db).runtime_snapshot(value)
+    @router.get("/api/hades/runtime-profile")
+    async def hades_runtime_profile(request: Request):
+        """Return sanitized runtime/model evidence for Control Center diagnostics."""
+        value = owner(request)
+        from src.runtime_profile import RuntimeProfileCache
+        profiles = []
+        for profile in RuntimeProfileCache().all():
+            profiles.append({
+                "key": profile.key,
+                "endpoint_id": profile.endpoint_id,
+                "protocol": profile.protocol,
+                "runtime": profile.runtime,
+                "model_id": profile.model_id,
+                "model_digest": profile.model_digest,
+                "server_fingerprint": profile.server_fingerprint,
+                "context": {
+                    "architecture_max": profile.architecture_max_context,
+                    "provider_configured": profile.provider_configured_max_context,
+                    "runtime_allocated": profile.runtime_allocated_context,
+                    "hardware_recommended": profile.hardware_recommended_context,
+                },
+                "capabilities": {
+                    name: evidence.to_dict() for name, evidence in profile.capabilities.items()
+                },
+                "fresh": profile.is_fresh(),
+                "refreshed_at": profile.refreshed_at,
+            })
+        return {"owner": value, "profiles": profiles, "authority_unchanged": True}
     @router.get("/api/hades/episodes")
     async def hades_episodes(request: Request, limit: int = 50):
         value = owner(request)

@@ -11,6 +11,7 @@
 | FULL_REGRESSION | `a1abb6e1` + README checkpoint | `6292 passed, 3 skipped` | not rebuilt | FULL_REGRESSION |
 | FINAL_DEPLOYED_CHECKPOINT | `1ce7ec34` image | health/version, broker, Ollama, Chroma/SearXNG verified | `odysseus:candidate-1ce7ec34b9f7` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | RUNTIME_PROFILE_CONTEXT | working tree after `8c988446` | 65 focused tests; runtime-keyed evidence cache, TTL, protocol/runtime separation, ACI context-envelope metrics | not rebuilt | FOCUSED_TESTED |
+| RUNTIME_PROFILE_DIAGNOSTICS | current working tree | owner-scoped `/api/hades/runtime-profile`; sanitized runtime evidence projection | not rebuilt | FOCUSED_TESTED |
 
 ## H0 evidence
 
