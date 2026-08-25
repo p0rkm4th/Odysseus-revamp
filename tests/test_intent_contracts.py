@@ -61,7 +61,29 @@ def test_continuation_resolves_against_durable_run_without_executing():
     assert resolved.status == "RESOLVED"
     assert resolved.run_reference == "run-1"
     assert resolved.action_reference == "action-1"
+    assert resolved.phase == "AWAITING_INPUT"
     assert resolve_continuation(frame, {"id": "run-1", "status": "completed"}).status == "BLOCKED"
+
+
+def test_continuation_derives_pending_action_phase_from_durable_actions():
+    frame = compile_intent("continue", continuation=True, run_reference="run-2")
+    resolved = resolve_continuation(frame, {
+        "id": "run-2", "status": "running", "continuation_state": {},
+        "actions": [{"id": "action-2", "status": "approved"}],
+    })
+    assert resolved.status == "RESOLVED"
+    assert resolved.action_reference == "action-2"
+    assert resolved.phase == "APPROVED"
+
+
+def test_continuation_blocks_ambiguous_execution_even_when_run_is_running():
+    frame = compile_intent("continue", continuation=True, run_reference="run-3")
+    resolved = resolve_continuation(frame, {
+        "id": "run-3", "status": "running",
+        "continuation_state": {"execution_ambiguous": True, "pending_action_id": "action-3"},
+    })
+    assert resolved.status == "BLOCKED"
+    assert resolved.phase == "EXECUTION_AMBIGUOUS"
 
 
 def test_result_status_distinguishes_empty_from_failure():

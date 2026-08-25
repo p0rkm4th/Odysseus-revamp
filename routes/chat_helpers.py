@@ -118,6 +118,11 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
             if run is None:
                 return None
             context = WorkEngine(db).context(owner, run_id=run.id)
+        from src.intent_contracts import compile_intent, resolve_continuation
+        continuation = resolve_continuation(
+            compile_intent("continue", continuation=True, run_reference=run.id),
+            {**(context.get("run") or {}), "actions": context.get("actions", [])},
+        )
         # Keep the durable projection compact; the full records remain available
         # through authenticated Work APIs/tools.
         compact = {
@@ -128,6 +133,7 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
             "actions": context.get("actions", [])[-8:],
             "pending_approval": bool(context.get("pending_approval")),
             "pending_input": bool(context.get("pending_input")),
+            "continuation": continuation.as_dict(),
             "recent_events": context.get("recent_events", [])[:8],
         }
         message = untrusted_context_message(

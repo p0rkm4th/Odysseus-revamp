@@ -104,6 +104,7 @@ def test_canonical_read_is_a_terminal_durable_run_result(monkeypatch):
             assert run.domain == "memory"
             assert run.result_summary["result_status"] == "SUCCESS_EMPTY"
             assert db.query(WorkResult).filter_by(run_id=run_id, owner="alice").count() == 1
+            assert run.continuation_state["phase"] == "COMPLETE"
     finally:
         engine.dispose()
 
@@ -145,11 +146,14 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
         assert action_id
         with session_factory() as db:
             action = db.query(WorkAction).filter_by(id=action_id).one()
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
             assert action.capability_id == "homelab.manage"
             assert action.action_id == "execute_network_discovery"
             assert action.tool_binding_name == "manage_homelab"
             assert action.status == "proposed"
             assert action.sealed_input_digest
+            assert run.continuation_state["pending_action_id"] == action_id
+            assert run.continuation_state["phase"] == "PROPOSED"
 
         approval_id = "approval-chat-2"
         bound = bridge.bind_approval("alice", action_id, approval_id)
