@@ -880,32 +880,28 @@ def _network_service_enumeration_request(query: str) -> bool:
 
 
 def _canonical_read_action(domain_concept: str, filters: dict | None = None) -> str | None:
-    """Project a resolved semantic read onto its registered read Action."""
-    concept = str(domain_concept or "")
+    """Project a semantic read through the authoritative DomainContract.
+
+    The agent loop must not maintain a second concept-to-ActionSpec registry.
+    ``resolve_intent`` already selects the contract operation, including
+    specialized read views such as Work attention and Integration health. This
+    helper mirrors only that operation-key selection and obtains the Action ID
+    from the canonical contract table, so newly registered read concepts are
+    executable without another provider-specific map.
+    """
+    from src.intent_contracts import DOMAIN_CONTRACTS
+
+    concept = str(domain_concept or "").strip()
+    contract = DOMAIN_CONTRACTS.get(concept)
+    if contract is None:
+        return None
     view = dict(filters or {}).get("view")
-    actions = {
-        "TECHNICAL_ASSET": "list",
-        "NETWORK": "read_network_observations",
-        "SECURITY_FINDING": "list_findings",
-        "OSINT_CASE": "list_cases",
-        "MEMORY": "summarize_owner_memory",
-        "WORK": "attention" if view == "attention" else "overview",
-        "GOAL": "list_goals",
-        "PROJECT": "list_projects",
-        "TASK": "list_tasks",
-        "RUN": "list_runs",
-        "COMMITMENT": "list_commitments",
-        "MISSION": "list_missions",
-        "WATCH": "list_watches",
-        "HOUSEHOLD_ITEM": "overview",
-        "INTEGRATION": "integrations" if view == "integrations" else "state",
-        "CAREER_PROFILE": "overview",
-        "JOB_SEARCH": "overview",
-        "JOB_OPPORTUNITY": "saved_opportunities",
-        "APPLICATION": "applications",
-        "INTERVIEW": "interviews",
-    }
-    return actions.get(concept)
+    operation = "READ"
+    if concept == "WORK" and view == "attention":
+        operation = "READ_ATTENTION"
+    elif concept == "INTEGRATION" and view == "integrations":
+        operation = "READ_INTEGRATIONS"
+    return contract.actions.get(operation)
 
 def _normalize_operational_intent_evidence(intent, query: str):
     # Fuse operational intent from action + object + scope evidence.
@@ -6923,7 +6919,11 @@ async def stream_agent_loop(
         # intentionally limited to the registered read Action id.
         _read_concept = str(_asset_frame.get("domain_concept") or "")
         _read_binding = str(_resolved_read.get("binding") or "")
-        _read_action = _canonical_read_action(_read_concept, _asset_frame.get("filters"))
+        # The resolved contract is authoritative; the helper is retained as
+        # a defensive consistency check for callers that only carry a frame.
+        _read_action = str(_resolved_read.get("action_id") or "").strip() or _canonical_read_action(
+            _read_concept, _asset_frame.get("filters")
+        )
         if (
             not guide_only
             and not _force_answer
