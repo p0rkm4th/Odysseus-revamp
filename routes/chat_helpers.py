@@ -200,15 +200,17 @@ def ensure_chat_agent_work_run(
             "INTEGRATION": "setup", "CAREER_PROFILE": "career",
             "JOB_SEARCH": "career", "JOB_OPPORTUNITY": "career",
             "APPLICATION": "career", "INTERVIEW": "career",
+            "COMMUNICATIONS": "communications",
         }
         if frame.domain_concept in canonical_domains:
             domains.add(canonical_domains[frame.domain_concept])
         if not domains.intersection({
             "homelab", "network_ops", "asset_inventory", "security_audit", "osint",
             "memory", "work", "household", "setup", "career",
+            "communications",
         }) and not continuation:
             return None
-        if not continuation and not re.search(
+        if not continuation and not frame.read_explicit and not re.search(
             r"\b(?:scan|discover|discovery|map|enumerate|identify|install|restart|"
             r"execute|inspect|check|diagnose|list|show|find|begin|start)\b",
             query,

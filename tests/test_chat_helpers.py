@@ -23,6 +23,24 @@ from routes.chat_helpers import (
 )
 
 
+def test_communications_chat_turn_attaches_to_shared_work_run(monkeypatch):
+    captured = {}
+
+    def fake_ensure(owner, session_id, query, **kwargs):
+        captured.update({"owner": owner, "session_id": session_id, "query": query, **kwargs})
+        return "run-communications"
+
+    monkeypatch.setattr("src.agent_work_bridge.ensure_agent_run", fake_ensure)
+    run_id = chat_helpers.ensure_chat_agent_work_run(
+        "alice", "chat-communications", "What communications are configured?",
+        model_name="qwen3:8b", enabled=True,
+    )
+    assert run_id == "run-communications"
+    assert "communications" in captured["intent"]["domains"]
+    assert captured["intent"]["domain_concept"] == "COMMUNICATIONS"
+    assert captured["intent"]["operation_class"] == "READ"
+
+
 class _AuthManager:
     def __init__(self, privileges):
         self._privileges = privileges
