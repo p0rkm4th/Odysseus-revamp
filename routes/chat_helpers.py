@@ -118,8 +118,15 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
             if run is None:
                 return None
             context = WorkEngine(db).context(owner, run_id=run.id)
-            from src.run_planner import RunPlanner
-            next_step = RunPlanner(db).next_step(owner, run.id)
+            try:
+                from src.run_planner import RunPlanner
+                next_step = RunPlanner(db).next_step(owner, run.id)
+            except Exception:
+                # The durable Work context remains useful if an optional
+                # planner projection is unavailable; the planner itself
+                # still fails closed when called through its authenticated API.
+                logger.debug("Durable next-step projection unavailable", exc_info=True)
+                next_step = None
         from src.intent_contracts import compile_intent, resolve_continuation
         continuation = resolve_continuation(
             compile_intent("continue", continuation=True, run_reference=run.id),
