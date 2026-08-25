@@ -1029,8 +1029,7 @@ Technical-asset reads use the owner-authenticated `manage_assets` read action
 and structured Result contract; no approval or filesystem fallback is
 permitted. Contract validation and paraphrase tests are source-level green.
 The layer deliberately reports unresolved concepts rather than creating a
-second executor; Memory, Work, Setup/Integration, Household, and richer
-Network read contracts remain explicit follow-up work.
+second executor; richer Network read contracts remain explicit follow-up work.
 
 ### Overnight architecture convergence checkpoint — 2026-08-25
 
@@ -1046,9 +1045,8 @@ are explicitly partial/pending rather than promoted.
 The next convergence batch added the read-only `memory.read` capability and
 `read_memory` ToolBinding over the existing Brain store, with structured
 success/zero/failure results and no approval for private reads. Work,
-Household, and Setup/Integration remain intentionally unregistered until real
-owner-scoped executors exist. Full regression: 6116 passed, 3 skipped, 186
-warnings.
+Household remained intentionally unregistered until a real owner-scoped
+executor existed. Full regression: 6116 passed, 3 skipped, 186 warnings.
 
 The Work read convergence batch adds the read-only `work.read` capability and
 `read_work` ToolBinding over WorkEngine for owner-scoped overview, review,
@@ -1062,3 +1060,9 @@ listing, search, and item reads. It preserves the Household-versus-CMDB truth
 boundary and adds no parallel store. Focused/full regression and exact
 source-matched deployment are green; owner-live Household dogfood remains
 pending.
+
+The Setup/Integration read convergence batch now reuses the existing
+secret-free `SetupCenterService` through `setup.read`/`read_setup` for state,
+integration, and permissions reads. It does not create a configuration store,
+resolve secrets, or grant authority. Focused tests and exact source-matched
+deployment are green; owner-live provider health remains pending.

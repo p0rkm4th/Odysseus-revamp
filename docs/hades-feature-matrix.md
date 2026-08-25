@@ -131,3 +131,9 @@ listing, search, and item reads. Household Inventory remains distinct from
 technical CMDB/IT Assets; no second store or filesystem fallback was added.
 Focused/full regression evidence is green, and the exact source-matched
 candidate is deployed. Owner-live Household dogfood remains separate.
+
+Setup/Integration read convergence now projects the existing secret-free
+`SetupCenterService` through `setup.read`/`read_setup` for configuration state,
+integration projection, and permissions projection. It adds no settings store,
+secret resolution, or authority grant. Focused tests and exact source-matched
+deployment are green; owner-live provider health remains separate.

@@ -301,6 +301,11 @@ _register(
     result_integrity=ResultIntegrity.SYSTEM,
 )
 _register(
+    {"read_setup"},
+    ToolEffect.READ_PRIVATE,
+    result_integrity=ResultIntegrity.SYSTEM,
+)
+_register(
     {"privileged_action"},
     ToolEffect.READ_PRIVATE,
     ToolEffect.EXECUTE_CODE,

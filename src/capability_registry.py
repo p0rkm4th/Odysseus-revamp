@@ -124,6 +124,11 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             for action in ("overview", "list_items", "search_items", "get_item")
         )),
     ),
+    "setup.read": CapabilitySpec(
+        capability_id="setup.read",
+        description="Owner-scoped read projections over Setup Center and integrations.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("read_private",), executor_key="read_setup") for action in ("state", "integrations", "permissions"))),
+    ),
     "system.privileged_diagnostics": CapabilitySpec(
         capability_id="system.privileged_diagnostics",
         description="Narrow brokered diagnostic operations.",
@@ -263,6 +268,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_memory": "memory.read",
     "read_work": "work.read",
     "read_household": "household.read",
+    "read_setup": "setup.read",
 })
 
 

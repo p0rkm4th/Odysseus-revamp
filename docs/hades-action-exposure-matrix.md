@@ -27,6 +27,9 @@ or remove authority.
 | Work | `work.read` | `list_goals` / `list_projects` / `list_tasks` / `list_runs` / `list_commitments` | yes | yes | yes | yes | no | application / Work Engine | none | authenticated owner scope; canonical Work state only |
 | Home / Household | `household.read` | `overview` | yes | yes | yes | yes | no | application / InventoryService | none | authenticated owner scope; physical household state; CMDB remains separate |
 | Home / Household | `household.read` | `list_items` / `search_items` / `get_item` | yes | yes | yes | yes | no | application / InventoryService | none | authenticated owner scope; physical household state; CMDB remains separate |
+| System / Setup | `setup.read` | `state` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; secret-free configuration state; authority unchanged |
+| System / Integrations | `setup.read` | `integrations` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; secret-free connectivity projection; configuration is not health proof |
+| System / Permissions | `setup.read` | `permissions` | yes | yes | yes | yes | no | application / SetupCenterService | none | authenticated owner scope; projection only; canonical policy/approval remains authoritative |
 
 “MODEL: yes” means the canonical binding contract may be projected when the
 intent and policy select the capability. Native function schemas and strict

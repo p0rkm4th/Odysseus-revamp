@@ -2,7 +2,7 @@
 
 Date: 2026-08-25  
 Branch: `recovery/live-candidate-20260823`  
-Final source under audit: `67f6810cff770fe2fe5e0502bc5382373fcf9f34`
+Final source under audit: `90cc66b0c8c455dd0ba2ee949a2fca7e89da919a`
 
 ## What changed
 
@@ -28,8 +28,12 @@ Final source under audit: `67f6810cff770fe2fe5e0502bc5382373fcf9f34`
   `read_household` ToolBinding over the existing owner-scoped InventoryService
   for household overview, listing, search, and item reads. Household Inventory
   remains distinct from technical CMDB/IT Assets.
-- Built and deployed `odysseus:candidate-67f6810c` with image
-  `sha256:bb5f6cff02dbd74ec4d2917f3aa9cdb92dfefb70e4fdb141a5cabce3d0ad796c`.
+- Added a first-class read-only `setup.read` Capability and `read_setup`
+  ToolBinding over existing secret-free SetupCenterService projections for
+  state, integrations, and permissions. Setup metadata remains distinct from
+  authority and never resolves secrets.
+- Built and deployed `odysseus:candidate-90cc66b0` with image
+  `sha256:7434e78a8e375a8a37f09bdeb21e54d43c75f3612ca30da18fe0cad4f904ac18`.
   Runtime `/api/version`, container source hash, and browser/static checks are
   attributable to this commit; rollback `odysseus:rollback-0c18805fe1d0` is
   retained.
@@ -49,6 +53,7 @@ Final source under audit: `67f6810cff770fe2fe5e0502bc5382373fcf9f34`
 | Memory read convergence | `memory.read`/`read_memory`, focused and full regression green | E3/E4 |
 | Work read convergence | `work.read`/`read_work`, focused and full regression green | E3/E4 |
 | Household read convergence | `household.read`/`read_household`, focused and full regression green | E3/E4 |
+| Setup/Integration read convergence | `setup.read`/`read_setup`, focused tests green and deployed source-matched | E2/E4 |
 
 ## Reuse and convergence decisions
 
@@ -66,9 +71,9 @@ memory versus vector index, and domain documents versus evidence references.
 ## Remaining truth gaps
 
 - Intent contracts are implemented for technical assets, network, security
-  findings, OSINT planning, explicit Memory reads, Work reads, and Household
-  reads. Setup/Integration and richer domain reads still require canonical
-  binding/result-contract adapters; they are not claimed complete.
+  findings, OSINT planning, explicit Memory reads, Work reads, Household
+  reads, and Setup/Integration state. Richer domain reads still require
+  canonical binding/result-contract adapters; they are not claimed complete.
 - The legacy technical asset CLI storage is deployment-scoped rather than
   row-owner keyed. Hades entry is owner-aware, but multi-owner CMDB isolation
   remains a migration gap.

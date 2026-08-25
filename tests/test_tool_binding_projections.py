@@ -33,8 +33,8 @@ def test_tags_contracts_domains_and_executors_are_projected():
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 8
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 9
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
@@ -123,3 +123,13 @@ def test_household_read_binding_reuses_owner_scoped_inventory_service(monkeypatc
     assert result["data"]["items"][0]["name"] == "Rice"
     engine.dispose()
     tmpfile.close()
+
+
+def test_setup_read_binding_reuses_secret_free_owner_projection(monkeypatch, tmp_path):
+    import src.setup_center as setup_center
+    monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "setup.json")
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_setup", payload={"action": "state"}, owner="alice"))
+    assert result["success"] is True
+    assert result["data"]["owner"] == "alice"
+    assert result["data"]["secrets_exposed"] is False

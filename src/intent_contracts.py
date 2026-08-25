@@ -117,6 +117,11 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "household_overview",
     ),
+    "INTEGRATION": DomainContract(
+        "INTEGRATION", "setup.read", {"READ": "state"}, "read_setup",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "setup_state",
+    ),
 }
 
 
