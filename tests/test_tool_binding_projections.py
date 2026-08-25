@@ -32,6 +32,16 @@ def test_tags_contracts_domains_and_executors_are_projected():
             assert name in _DOMAIN_TOOL_MAP[domain]
 
 
+def test_native_action_enums_cover_every_registered_action():
+    """Native providers must not silently lose a canonical ActionSpec."""
+    for name, binding in TOOL_BINDINGS.items():
+        capability = capability_for_tool(name)
+        schema_actions = set(
+            binding.native_schema["function"]["parameters"]["properties"]["action"].get("enum", ())
+        )
+        assert set(capability.actions) <= schema_actions, (name, set(capability.actions) - schema_actions)
+
+
 def test_projection_has_no_duplicate_conflicting_bindings():
     assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career"}
     assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 10

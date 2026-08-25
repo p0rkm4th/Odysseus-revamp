@@ -80,7 +80,7 @@ MANAGE_SECURITY_ASSESSMENT_SCHEMA = {
         "name": "manage_security_assessment",
         "description": "Read the durable owner-scoped bounded security assessment ledger. V1 has no exploit, credential, persistence, arbitrary-shell, or public-scanning action.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["list_engagements", "get_engagement", "list_findings"]},
+            "action": {"type": "string", "enum": ["list_engagements", "get_engagement", "list_findings", "list_evidence"]},
             "engagement_id": {"type": "string"},
         }, "required": ["action"]},
     }
