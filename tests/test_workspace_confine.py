@@ -374,6 +374,15 @@ def test_low_signal_without_workspace_excludes_file_tools(monkeypatch):
     assert "get_workspace" not in names
 
 
+def test_named_host_signal_requires_computer_action_context():
+    from src.agent_loop import _looks_like_local_computer_request
+
+    assert not _looks_like_local_computer_request("Start working on Hades.")
+    assert _looks_like_local_computer_request("Run the check on gpu-box.")
+    assert _looks_like_local_computer_request("Inspect Cerberus.") is False
+    assert _looks_like_local_computer_request("Inspect Cerberus on gpu-box.")
+
+
 def test_explicit_workspace_request_without_workspace_stops(monkeypatch):
     import asyncio
     import src.agent_loop as al
