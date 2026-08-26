@@ -19,6 +19,7 @@
 | Native Decision transport | DEPLOYED/PASSIVE_LIVE_VERIFIED | `16748fe8`; native Ollama strict-output path sets `think:false`; 6307 full; deployed three-case probe had no empty decisions |
 | Packet choice schema | DEPLOYED/PASSIVE_LIVE_VERIFIED | `2405ca79`; dynamic enums are projected, but Ollama still produced one invalid choice; downstream rejection remained intact |
 | Inventory read fast path | DEPLOYED/PASSIVE_LIVE_VERIFIED | `0147c77a`; deployed synthetic case completed with one deterministic `manage_assets` read and one answer-synthesis call; no runtime failure |
+| Contract Action retention | DEPLOYED/PASSIVE_LIVE_VERIFIED | `67106c5e`; deployed network trace recorded `contract_action_retained`; Qwen prose remained fail-closed |
 | Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below; authentication and owner data remain out of automation scope |
 
 ## Final runtime checkpoint
@@ -29,7 +30,7 @@
 - Ollama: bridge healthy; `qwen3:8b` available.
 - ChromaDB and SearXNG: running; SearXNG healthy.
 - Candidate source/build/frontend provenance: matched.
-- Final candidate: `0147c77a08031cb04aae851f186ecfcfb48a70c7`; image `odysseus:candidate-0147c77a0803`; image ID `sha256:5ff66e85d9608370f08434f055e5a5d0c3509005786e38190d65ceac9278b850`.
+- Final candidate: `67106c5e8e8ae85db6c3ee9ba6728494de2ea379`; image `odysseus:candidate-67106c5e8e8a`; image ID `sha256:9314ba07b4d1ff301ffee8908ea3ab060b1310de5ba22044b01889da66763b4a`.
 - Runtime profile route: owner-authenticated; unauthenticated probe returned `401`.
 - Image retention: current candidate and previous `odysseus:candidate-dbaddbdaac7e` retained; no cleanup performed.
 - Final H0-equivalent ACI: 15 cases, `0.4667` success, `0.6667` weighted; 11 clean, 4 timeouts.
