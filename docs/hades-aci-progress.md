@@ -272,6 +272,15 @@ source/root-cause checkpoint.
 
 ## Direct fallback subtraction checkpoint — 2026-08-26
 
+- `a51e9297` makes the sanitized live canary assert trajectory classes rather
+  than only transport success: read families require completion, general
+  fallback requires fallback/no tools, and clarification/security families
+  require safe answer/no execution without pretending they are read
+  CompletionContracts. The focused harness/control-plane gate is
+  `92 passed`. No authenticated live cookie was present in this execution
+  environment for a new canary run; prior b471 live evidence remains the
+  deployed runtime evidence.
+
 - `b471e104` removes the empty bounded-decision round for benign unknown
   read-style questions. When no specialized contract exists and the semantic
   frame is `UNKNOWN`/`READ`, Hades now enters authority-free
