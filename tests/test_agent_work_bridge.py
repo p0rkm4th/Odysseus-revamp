@@ -66,6 +66,35 @@ def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch)
         engine.dispose()
 
 
+def test_new_referenced_objective_does_not_reuse_terminal_run(monkeypatch):
+    """A completed read's references survive, but its Run is not appendable."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        first = bridge.ensure_agent_run(
+            "alice", "chat-terminal-reference", "What machines do I have?",
+            intent={"domains": ["asset_inventory"], "domain_concept": "TECHNICAL_ASSET", "operation_class": "READ"},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=first, owner="alice").one()
+            run.status = "completed"
+            run.lifecycle_state = "succeeded"
+            db.commit()
+
+        second = bridge.ensure_agent_run(
+            "alice", "chat-terminal-reference", "Tell me about the first one",
+            intent={"domains": ["asset_inventory"], "domain_concept": "TECHNICAL_ASSET", "operation_class": "READ"},
+            reference_context={"ordered_entities": [{"ref": "asset:first"}]},
+        )
+        assert second and second != first
+        with session_factory() as db:
+            runs = db.query(WorkRun).filter_by(owner="alice", session_id="chat-terminal-reference").all()
+            assert len(runs) == 2
+            assert db.query(WorkRun).filter_by(id=second).one().lifecycle_state == "ready"
+    finally:
+        engine.dispose()
+
+
 def test_latest_canonical_result_owns_ordinal_reference_order(monkeypatch):
     """Older results must not shift ordinals for the current result."""
     engine, session_factory = _session_factory()

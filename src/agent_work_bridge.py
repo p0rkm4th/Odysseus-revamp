@@ -121,6 +121,13 @@ def ensure_agent_run(
                 WorkRun.session_id == session_id,
                 WorkRun.domain.in_(tuple(_WORK_DOMAINS)),
                 WorkRun.status.in_(("queued", "running", "awaiting_approval", "awaiting_input", "suspended")),
+                # Some completion paths update lifecycle_state before the
+                # denormalized status.  Never reuse such a terminal Run for a
+                # new user objective: WorkEngine.create_action correctly
+                # rejects it, and the current turn must get a fresh durable
+                # Run while recent canonical results remain available for
+                # reference resolution.
+                ~WorkRun.lifecycle_state.in_(("succeeded", "failed", "cancelled")),
             )
             .order_by(WorkRun.updated_at.desc())
             .first()
