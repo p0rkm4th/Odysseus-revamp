@@ -136,6 +136,15 @@ def test_work_status_paraphrases_are_canonical_reads(query):
     assert resolved.action.approval.value == "none"
 
 
+@pytest.mark.parametrize("query", ["Where did we leave off?", "Where'd I leave off?"])
+def test_work_status_continuity_question_is_a_safe_work_read(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "WORK"
+    assert resolved.action_id == "overview"
+    assert resolved.action.approval.value == "none"
+
+
 @pytest.mark.parametrize("query", ["Review outstanding work.", "Show my open work."])
 def test_outstanding_work_review_is_the_existing_work_read(query):
     resolved = resolve_intent(compile_intent(query))
