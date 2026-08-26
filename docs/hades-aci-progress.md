@@ -30,6 +30,7 @@
 | SERVICE_CONTRACT_CONVERGENCE | `a61f06c5` | restart language resolves to canonical read-only `plan_service_restart` preflight; 152 focused; 6310 full | `odysseus:candidate-a61f06c5a2d9` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | SERVICE_TARGET_CLARIFICATION | `0cefba69` | unqualified restart is clarification-bound; qualified targets retain safe preflight; 154 focused; 6312 full; deployed Qwen synthetic canary 2/2, zero model/tool calls | `odysseus:candidate-0cefba69f3ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | DETERMINISTIC_SAFETY_BOUNDARIES | `0dc6ce15` | IP-only identity, public scope, changed approval, and replay boundaries are framework refusals; 157 focused; 6315 full; deployed four-case canary 4/4 | `odysseus:candidate-0dc6ce153ff5` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| CONTINUITY_HARNESS_RECOVERY | `05dd1e0d` | continuity cases now inject a loopback primary failure and verify configured-provider fallback; both recovered with one retry; 6316 full | no rebuild (benchmark-only) | FULL_REGRESSION |
 
 ## H0 evidence
 
@@ -213,3 +214,9 @@ safety cases passed. The two remaining misses are the synthetic
 their runs completed without runtime failure but did not exercise the harness
 recovery injection. This is measured synthetic evidence, not owner-live GUI
 evidence.
+
+After benchmark-driver correction `05dd1e0d`, both continuity cases exercise a
+deliberate loopback provider failure followed by the configured Ollama endpoint
+and report `recovered=true`, one fallback retry, and no provider failure. This
+changes evaluation validity only; the deployed application candidate remains
+`0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf`.
