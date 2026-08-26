@@ -6896,7 +6896,7 @@ async def stream_agent_loop(
                             "required": ["decision"],
                         },
                         "max_tokens": min(max_tokens or 512, 512),
-                    } if _aci_enabled and _aci_mode == "aci" else {}),
+                    } if _aci_enabled and _aci_mode == "aci" and not _aci_answer_only and not _aci_model_fallback else {}),
                     "temperature": (
                         _ody_qwen_temperature_cap(_requested_temperature)
                         if _is_odysseus_qwen_model(candidate_model)
