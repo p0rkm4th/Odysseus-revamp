@@ -12,7 +12,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `72f41428` | `origin/hades-aci-v1` matches |
+| Pushed source | `bb8f5555` plus current unpushed slice | remote update follows focused gate |
 | Deployed source | `cfbe6244` | `/api/version`, image labels |
 | Running image | `odysseus:candidate-cfbe6244` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
@@ -47,6 +47,10 @@ against its 30 GiB guard.
 - Homelab binding now maps structured `UNAVAILABLE`, `INVALID_RESULT`, and
   related statuses to failed executor semantics instead of transport success.
   This is source-level focused evidence, not yet deployed evidence.
+- Unknown benign ACI reads now bypass generic tool-index retrieval before the
+  authority-free MODEL_FALLBACK path. The source-path benchmark reduced tool
+  selection from `1.363s` to `0.076s`; focused fallback/intent/benchmark tests
+  pass (`103 passed`).
 
 ## Required metrics and present evidence
 
@@ -56,9 +60,9 @@ against its 30 GiB guard.
 | ACI improvement | Historical synthetic ACI checkpoint: approximately `0.8667` case success / `0.9333` weighted; not a substitute for broad held-out live evidence. |
 | Live Qwen | Prior deployed matrix: `36/36` answers, corrected trajectory scorer `36/36`, zero transport errors/leaks. |
 | Model calls | Live deterministic reads generally used one answer/model call and zero tool-index lookup in recorded probes. |
-| Tool-index subtraction | Unique canonical reads record bypass; broad current totals require a fresh source-matched run. |
+| Tool-index subtraction | Unknown benign fallback bypass reduced source-path selection to `0.076s`; canonical reads also bypass. Broad final-image totals remain pending deployment. |
 | Result projection | Memory raw result was historically ~17K characters; the repaired path projects before answer synthesis in covered tests. |
-| Latency | Fresh source-path qwen3:8b benchmark: raw `0.223s`; Hades `5.375s`; prep `1.587s`; Hades provider response `3.790s`; extra model-inference cost `3.567s`; residual framework overhead approximately `0s` within timing noise. The benchmark now reports these spans separately. |
+| Latency | Before bypass: raw `0.223s`, Hades `5.375s`, prep `1.587s`. After bypass: Hades `3.568s`, prep `0.219s`, tool selection `0.076s`, provider `3.350s`, extra inference `3.118s`, framework residual `0s` within timing noise. |
 | Model burden | Framework/model burden labels and totals are instrumented; latest broad source-matched aggregate is pending deployment. |
 | Context envelope | Runtime allocation, ACI target, requested input, reserved output, and effective context are instrumented. |
 
@@ -88,7 +92,7 @@ authority. No current evidence authorizes weakening any of these.
 - Exact unreferenced obsolete Odysseus candidate images were removed; no broad
   `docker system prune -a` was used and no containerd storage was manually
   deleted.
-- Root Btrfs is at approximately 80% used with 18 GiB free. The storage
+- Root Btrfs is at approximately 74% used with 23 GiB free. The storage
   preflight correctly fails closed below its 30 GiB build-headroom target.
 - The next deployment must preserve the current candidate and rollback, build
   once after a passing preflight, verify exact source/image/migration
