@@ -45,7 +45,8 @@ E6.
 ## Current release state
 
 - Branch: `hades-aci-v1`, synchronized with `origin`.
-- Source head: `17cbbb97` (conceptual fallback routing and configurable
+- Source head: `16d42ccc` (Ollama/Qwen ordinary-chat thinking suppression,
+  conceptual fallback routing, and configurable
   equivalent-deliverable benchmark prompts); deployed runtime remains
   `c0a281f5` until the next storage-approved candidate build.
 - Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
@@ -87,3 +88,11 @@ E6.
   this remains an attribution/ provider-output issue, not equivalent benchmark
   evidence. The harness now accepts `--prompt` so future matched probes do not
   depend on the old arithmetic wording.
+- Direct bridge evidence then isolated the provider cause: this Ollama runtime
+  ignored `think:false` on ordinary Qwen chat, while honoring
+  `reasoning_effort:none`. After `16d42ccc`, the same probe produced normal
+  content with consistent accounting: raw `4.695s` / Hades `7.319s`, total
+  delta `2.624s`, preparation `0.245s`, extra provider span `2.375s`, one
+  model call, and zero tools. This is source/live-bridge evidence; deployment
+  E4/E5 for this newest adapter commit is still pending storage-approved build
+  and authenticated live canary.
