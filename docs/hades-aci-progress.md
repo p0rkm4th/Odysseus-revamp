@@ -13,7 +13,7 @@ This section supersedes older historical rows below for present-state claims.
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
   reports `runtime_source_kind=image_source_marker` and `source_match=true`.
-- Source evidence: current full regression is `6422 passed, 3 skipped, 186
+- Source evidence: current full regression is `6424 passed, 3 skipped, 186
   warnings`; control-plane slice `237 passed`; fallback/read
   slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
   infrastructure semantic family `73 passed`; final focused provenance,
@@ -25,8 +25,8 @@ This section supersedes older historical rows below for present-state claims.
   safety through the authenticated production chat path.
 - Current deployed targeted E5: ordinary "Start working on Hades." now uses
   one authority-free model answer with zero tool calls, zero tool-index
-  lookups, and no internal leakage. A fresh-session replacement core matrix
-  is in progress and will be recorded only after its sanitized report ends.
+  lookups, and no internal leakage. The corrected fresh-session core matrix
+  is recorded below with its sanitized live result.
 - Durable continuation fix: terminal/blocked durable Run state now transitions
   directly to answer-only completion instead of re-entering bounded Action
   selection; the continuation/intent/loop focused gate is `177 passed`.
@@ -34,6 +34,9 @@ This section supersedes older historical rows below for present-state claims.
   asset and Review outstanding work → Continue both passed. The asset follow-up
   selected strong canonical `PHYSICAL-001`; Continue resumed with zero tool
   calls and no fallback. Both had zero index lookups and no leakage.
+- Fresh-session core E5 on the deployed Qwen runtime: `22/22` trajectory
+  passes, `22/22` answers, zero transport errors, zero internal leaks; the
+  corrected canary sampler excludes continuation follow-ups from fresh mode.
 - Follow-up live E5 evidence on the same source-matched image: seeded held-out
   slice `12/12` and rotating slice `16/16` trajectory passes, both with zero
   errors and zero internal leaks. Across all three runs: `53/53` trajectory
