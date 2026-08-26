@@ -61,6 +61,9 @@ This section supersedes older historical rows below for present-state claims.
   / 80% used against its 30 GiB / 80% guard. Six exact dangling intermediate
   image IDs with no container references were removed; current, rollback,
   harness, pinned images, volumes, and model data were preserved.
+- The live corpus now includes additional asset ordinal, infrastructure health,
+  and network-to-general-topic contamination trajectories; these remain
+  fixture-only until the next source-matched deployment and live run.
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.
