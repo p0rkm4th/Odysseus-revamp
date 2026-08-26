@@ -4,6 +4,18 @@ import asyncio
 import json
 
 
+def test_conceptual_storage_explanation_does_not_route_to_storage_operations():
+    from src.agent_loop import _classify_agent_request
+
+    for query in (
+        "Explain why RAID isn't a backup.",
+        "Why isn't RAID a backup?",
+        "Explain in one short sentence why RAID is not a backup.",
+    ):
+        intent = _classify_agent_request([], query)
+        assert "storage_ops" not in intent["domains"]
+
+
 def _events(generator):
     async def collect():
         return [chunk async for chunk in generator]
