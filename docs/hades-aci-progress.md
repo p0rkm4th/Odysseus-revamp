@@ -66,6 +66,10 @@ This section supersedes older historical rows below for present-state claims.
   fixture-only until the next source-matched deployment and live run.
 - The current source head is not yet deployed: the running candidate remains
   `cfbe6244` while storage preflight blocks a large replacement build.
+- A second exact audit removed six obsolete untagged Odysseus candidates
+  labeled `a20ade61`, `7f0a8576`, `52cdfd5e`, `121cb6d7`, `8419fea9`, and
+  `936fe437`; no active container referenced them. Security/control-plane
+  regression coverage remains green (`181 passed`, 39 dependency warnings).
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.
