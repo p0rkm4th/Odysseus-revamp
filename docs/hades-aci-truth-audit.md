@@ -146,6 +146,25 @@ phrases is therefore `OWNER_DOGFOOD_PENDING`.
 
 ## Automated live E5 checkpoint
 
+## Current deployed truth — 2026-08-26
+
+The deployed source is `7f0a857687b43777194f3210ce0045011e449a27` in
+`odysseus:candidate-7f0a857687b4`. The final control-plane fixes are deployed
+and verified by focused/full tests plus a real qwen3:8b targeted matrix:
+
+- Asset list followed by “Tell me about the first physical one”: canonical
+  ordered reference, one read Action, complete.
+- “What’s running in Odysseus?” and “Anything unhealthy right now?”: valid
+  broad read-only service status execution, one Action each, complete.
+- “Review outstanding work.” followed by “Continue.”: Work read then safe
+  answer-only continuation with no active Run, no duplicate Action, complete.
+
+The infrastructure correction is at the executor boundary: named service
+status remains strict, while a unit-less broad health request uses the
+read-only user-service listing. Empty continuation is an explicit semantic
+disposition, not a parser retry or authority path. Owner GUI/E6 remains
+pending by definition.
+
 The source-matched deployed candidate is `121cb6d7b74b3160fe4e6fe05edd981036966926`,
 image `odysseus:candidate-121cb6d7b74b`, digest
 `sha256:bdc4aab4cfef9f8e4fd6a1cad9073dcbf2ce96af1b9025b7a11944343891dbb9`.
