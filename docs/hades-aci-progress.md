@@ -652,3 +652,8 @@ source/root-cause checkpoint.
   lookups. Attribution was `2.420s` extra provider/model time, `0.255s`
   context preparation, and `0.001s` remaining framework span. This is
   diagnostic latency evidence, not deployed quality or owner-live E5 evidence.
+
+- Developer ACI, workspace confinement, ActionBinding, verified execution, and
+  action-intent gate: `94 passed, 1 warning`. This confirms the read/patch
+  authority boundary remains covered while the newer semantic/fallback source
+  is awaiting deployment.
