@@ -571,17 +571,24 @@ def _is_ollama_native_url(url: str) -> bool:
         return True
     if path.startswith("/v1"):
         return False
-    local_ollama_host = host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} or parsed.port == 11434
-    return local_ollama_host and (path == "" or path == "/api" or path.startswith("/api/"))
+    # An explicit native API path is stronger evidence than the hostname.
+    if path == "/api" or (path.startswith("/api/") and not path.startswith("/api/v1")):
+        return True
+    # The default Ollama port is a useful convention for local and remote
+    # installations.  A pathless arbitrary loopback port is not: LM Studio,
+    # llama.cpp, vLLM, and custom OpenAI-compatible servers commonly use one.
+    ollama_named_host = "ollama" in host
+    default_port = parsed.port == 11434
+    local_default_host = host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} and default_port
+    return path == "" and (ollama_named_host or default_port or local_default_host)
 
 
 def _is_ollama_openai_compat_url(url: str) -> bool:
     """Return True for local Ollama's OpenAI-compatible /v1 surface.
 
-    Mirrors the host detection used by ``_is_ollama_native_url`` so that the
-    two helpers stay in lockstep: a localhost Ollama on a non-default port
-    (custom ``OLLAMA_HOST``, reverse proxy, container port remap) is treated
-    the same way here as it is on the native ``/api`` path.
+    Only positively identified Ollama endpoints use this Ollama-specific
+    transport hint.  A pathless or ``/v1`` endpoint on an arbitrary loopback
+    port remains generic unless it uses Ollama's conventional port or host.
     """
     try:
         parsed = urlparse(url or "")
@@ -589,8 +596,8 @@ def _is_ollama_openai_compat_url(url: str) -> bool:
         return False
     host = parsed.hostname or ""
     path = (parsed.path or "").rstrip("/")
-    local_ollama_host = host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} or parsed.port == 11434
-    return local_ollama_host and (path == "/v1" or path.startswith("/v1/"))
+    ollama_identified = parsed.port == 11434 or "ollama" in host
+    return ollama_identified and (path == "/v1" or path.startswith("/v1/"))
 
 
 def _ollama_api_root(url: str) -> str:
