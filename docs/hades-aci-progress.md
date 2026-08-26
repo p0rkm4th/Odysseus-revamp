@@ -13,7 +13,7 @@ This section supersedes older historical rows below for present-state claims.
   source overlay of the previously fully built candidate; `/api/version`
   reports `runtime_source_kind=image_source_marker` and `source_match=true`.
 - Source evidence: last full regression on the behavior-identical parent is
-  `6424 passed, 3 skipped, 186 warnings`; the telemetry overlay focused gate is
+  `6478 passed, 3 skipped, 186 warnings` in 124.60s; the telemetry overlay focused gate is
   `93 passed`; control-plane slice `237 passed`; fallback/read
   slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
   infrastructure semantic family `73 passed`; final focused provenance,
