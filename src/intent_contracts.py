@@ -351,7 +351,9 @@ def compile_intent(
         concept = "SECURITY_EVIDENCE"
     elif re.search(r"\b(?:service(?:s)?|daemon(?:s)?)\b", q) and re.search(r"\b(?:status|running|active|homelab|server|restart|recover|logs?|errors?)\b", q):
         concept = "SERVICE"
-    elif re.search(r"\b(?:homelab|container(?:s)?|storage|remote host(?:s)?)\b", q):
+    elif re.search(r"\b(?:homelab|container(?:s)?|storage|remote host(?:s)?)\b", q) and not re.search(
+        r"\b(?:difference\s+between|what(?:'s|\s+is)\s+the\s+difference|explain)\b", q,
+    ):
         concept = "HOMELAB_HOST"
     elif re.search(r"\b(?:mission(?:s)?)\b", q):
         concept = "MISSION"
@@ -373,10 +375,12 @@ def compile_intent(
         r"\b(?:look like|probably|role|roles|unidentified|unknown|on my network)\b", q,
     ):
         concept = "NETWORK"
-    elif re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q) or (
+    elif not re.search(r"\b(?:difference\s+between|versus|explain)\b", q) and (
+        re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|technical equipment|machines?)\b", q) or (
         re.search(r"\binventory\b", q)
         and re.search(r"\b(?:state|status|registered|recorded|current|known|show|list)\b", q)
         and not re.search(r"\b(?:pantry|shopping|groceries|recipe|household|stock)\b", q)
+        )
     ):
         concept = "TECHNICAL_ASSET"
     elif re.search(r"\b(?:memory|remember|brain)\b", q):

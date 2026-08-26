@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""Run sanitized live ACI dogfood through the authenticated HTTP chat path.
+
+The caller supplies an existing owner session cookie. This harness creates
+owner-scoped temporary sessions through the normal session API and never
+persists raw prompts, answers, Memory records, or SSE payloads.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sys
+import time
+from dataclasses import dataclass
+from typing import Any
+
+import requests
+
+
+INTERNAL = re.compile(
+    r"(?:manage_memory|read_memory|read_work|manage_assets|manage_homelab|"
+    r"ToolBinding|ActionSpec|invalid bounded decision|invalid action choice)", re.I
+)
+
+
+@dataclass(frozen=True)
+class Case:
+    name: str
+    prompt: str
+    mode: str = "fresh"
+    group: str | None = None
+
+
+CASES = [
+    *(Case(f"memory_{i}", p) for i, p in enumerate([
+        "Tell me about me.", "What do you know about me?",
+        "What do you remember about me?", "What kinda stuff do you know about me?",
+        "What have you learned about me?",
+    ], 1)),
+    *(Case(f"work_{i}", p) for i, p in enumerate([
+        "What's on my plate right now?", "What projects am I working on?",
+        "Remind me what I've got going.",
+    ], 1)),
+    Case("assets_list", "What machines have I got?", "continuation", "assets_reference"),
+    Case("assets_reference", "Tell me about the first physical one.", "continuation", "assets_reference"),
+    *(Case(f"network_{i}", p) for i, p in enumerate([
+        "Where am I connected right now?", "What network am I on?",
+        "What's my current network?",
+    ], 1)),
+    Case("network_deep", "Do a deep dive on my local network."),
+    Case("infra_running", "What's running in Odysseus?"),
+    Case("infra_health", "Anything unhealthy right now?"),
+    *(Case(f"fallback_{i}", p) for i, p in enumerate([
+        "Explain why RAID isn't a backup.",
+        "What makes a good personal AI assistant?",
+        "What's the difference between a VM and a container?",
+    ], 1)),
+    Case("ambiguity_restart", "Restart it."),
+    Case("unknown_action", "Make Cerberus stop being weird."),
+    Case("continuation_start", "Review outstanding work.", "continuation", "continuation"),
+    Case("continuation_resume", "Continue.", "continuation", "continuation"),
+]
+
+
+def digest(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()[:16]
+
+
+def create_session(base: str, cookie: str, name: str) -> str:
+    response = requests.post(
+        f"{base}/api/session",
+        cookies={"odysseus_session": cookie},
+        data={"name": name, "endpoint_id": "e4e4196b", "model": "qwen3:8b", "skip_validation": "true"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return str(response.json()["id"])
+
+
+def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, Any]:
+    started = time.monotonic()
+    events: list[dict[str, Any]] = []
+    response = requests.post(
+        f"{base}/api/chat_stream",
+        cookies={"odysseus_session": cookie},
+        data={
+            "session": session_id,
+            "message": case.prompt,
+            "mode": "agent",
+            "allow_web_search": "false",
+        },
+        stream=True,
+        timeout=(15, 180),
+    )
+    response.raise_for_status()
+    for line in response.iter_lines(decode_unicode=True):
+        if not line or not line.startswith("data: ") or line == "data: [DONE]":
+            continue
+        try:
+            value = json.loads(line[6:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            events.append(value)
+
+    metrics = next((e.get("data", {}) for e in reversed(events) if e.get("type") == "metrics"), {})
+    answer = "".join(str(e.get("delta") or "") for e in events)
+    tools = [e for e in events if e.get("type") == "tool_start"]
+    approvals = [e for e in events if e.get("type") == "ask_user"]
+    return {
+        "case": case.name,
+        "prompt_digest": digest(case.prompt),
+        "session_mode": case.mode,
+        "session_group": case.group,
+        "session_digest": digest(session_id),
+        "answer_present": bool(answer.strip()),
+        "answer_chars": len(answer),
+        "internal_leak": bool(INTERNAL.search(answer)),
+        "internal_error": bool(INTERNAL.search(answer) and "decision" in answer.lower()),
+        "tool_calls": len(tools),
+        "approval_count": len(approvals),
+        "model_calls": metrics.get("model_calls"),
+        "tool_index_bypass": metrics.get("tool_index_bypass_count", 0),
+        "tool_index_lookup": metrics.get("tool_index_lookup_count", 0),
+        "completion": bool(metrics.get("aci_completion_contract_satisfied")),
+        "completion_transition": metrics.get("aci_completion_transition"),
+        "fallback": bool(metrics.get("aci_model_fallback")),
+        "why_no_action": metrics.get("why_no_action"),
+        "latency_seconds": round(time.monotonic() - started, 2),
+        "input_tokens": metrics.get("input_tokens"),
+        "output_tokens": metrics.get("output_tokens"),
+        "error": next((e.get("error") for e in events if e.get("error")), None),
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base-url", default=os.environ.get("HADES_LIVE_BASE_URL", "http://127.0.0.1:7000"))
+    parser.add_argument("--cookie", default=os.environ.get("HADES_LIVE_COOKIE"))
+    parser.add_argument("--output", default="/tmp/hades-live-dogfood.json")
+    args = parser.parse_args()
+    if not args.cookie:
+        raise SystemExit("HADES_LIVE_COOKIE or --cookie is required")
+
+    results: list[dict[str, Any]] = []
+    sessions: dict[str, str] = {}
+    for case in CASES:
+        if case.mode == "continuation" and case.group:
+            session_id = sessions.get(case.group)
+            if session_id is None:
+                session_id = create_session(args.base_url, args.cookie, f"ACI live {case.group}")
+                sessions[case.group] = session_id
+        else:
+            session_id = create_session(args.base_url, args.cookie, f"ACI live {case.name}")
+        try:
+            results.append(run_case(args.base_url, args.cookie, session_id, case))
+        except Exception as exc:  # retain a sanitized failure and continue the matrix
+            results.append({
+                "case": case.name, "prompt_digest": digest(case.prompt),
+                "session_mode": case.mode, "session_group": case.group,
+                "session_digest": digest(session_id), "error": type(exc).__name__,
+                "answer_present": False, "latency_seconds": None,
+            })
+        print(json.dumps(results[-1], sort_keys=True), flush=True)
+
+    summary = {
+        "case_count": len(results),
+        "answer_success": sum(bool(r.get("answer_present")) for r in results),
+        "internal_leaks": sum(bool(r.get("internal_leak")) for r in results),
+        "errors": sum(bool(r.get("error")) for r in results),
+        "tool_index_lookups": sum(int(r.get("tool_index_lookup") or 0) for r in results),
+        "total_tool_calls": sum(int(r.get("tool_calls") or 0) for r in results),
+    }
+    with open(args.output, "w", encoding="utf-8") as handle:
+        json.dump({"summary": summary, "results": results}, handle, indent=2, sort_keys=True)
+    print(json.dumps({"summary": summary, "output": args.output}, sort_keys=True))
+    return 0 if not summary["errors"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

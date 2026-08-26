@@ -12,7 +12,7 @@ import re
 
 _READ_REQUEST = re.compile(
     r"^(?:what|which|where|who|show|list|tell|describe|summarize|give|provide|"
-    r"review|display|remind|do\s+i|have\s+i|you\s+know)\b",
+    r"review|display|remind|anything|do\s+i|have\s+i|you\s+know)\b",
     re.IGNORECASE,
 )
 _OWNER_SELF = re.compile(
@@ -26,11 +26,12 @@ _MEMORY_KNOWLEDGE = re.compile(
 )
 _WORK_SUBJECT = re.compile(
     r"\b(?:work|working|workload|"
-    r"on\s+my\s+plate)\b",
+    r"on\s+my\s+plate|got\s+(?:going|on)|keeping\s+me\s+busy|"
+    r"currently\s+in\s+progress|unfinished|active\s+projects?)\b",
     re.IGNORECASE,
 )
 _WORK_OWNER = re.compile(
-    r"\b(?:my|i(?:'m|\s+am)?|i\s+have|have\s+i|i(?:'ve)?\s+got)\b",
+    r"\b(?:my|me|i(?:'m|\s+am)?|i\s+have|have\s+i|i(?:'ve)?\s+got)\b",
     re.IGNORECASE,
 )
 _ASSET_SUBJECT = re.compile(
@@ -47,6 +48,14 @@ _NETWORK_SUBJECT = re.compile(r"\b(?:network|lan|connection|connected)\b", re.IG
 _CURRENT_STATE = re.compile(
     r"\b(?:current(?:ly)?|right\s+now|now|am\s+i\s+on|connected\s+to|"
     r"where\s+am\s+i\s+connected)\b",
+    re.IGNORECASE,
+)
+_INFRASTRUCTURE_STATUS = re.compile(
+    r"\b(?:what(?:'s|\s+is)?\s+running(?:\s+in\s+\w+)?|"
+    r"anything\s+(?:un)?healthy|what(?:'s|\s+is)\s+up|"
+    r"what\s+services?\s+(?:(?:are|is)\s+)?(?:up|alive)|"
+    r"(?:are|is)\s+(?:my\s+)?services?\s+(?:up|alive)|"
+    r"what(?:'s|\s+is)\s+(?:dead|broken|busted))\b",
     re.IGNORECASE,
 )
 
@@ -70,14 +79,25 @@ def deterministic_read_concept(text: str) -> str | None:
         return "MEMORY"
     if (
         _WORK_SUBJECT.search(query)
-        and _WORK_OWNER.search(query)
+        and (_WORK_OWNER.search(query) or re.search(r"\bprojects?\b", query))
         and not re.search(r"\b(?:projects?|tasks?|goals?|commitments?|runs?|missions?|watches?)\b", query)
+    ):
+        return "WORK"
+    if (
+        _WORK_SUBJECT.search(query)
+        and re.search(r"\bprojects?\b", query)
+        and re.search(r"\b(?:current(?:ly)?|active|progress|going|have|got)\b", query)
     ):
         return "WORK"
     if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
         return "TECHNICAL_ASSET"
     if _NETWORK_SUBJECT.search(query) and _CURRENT_STATE.search(query):
         return "NETWORK"
+    # Operational status questions share the existing harmless service-status
+    # Action.  Keep this narrow enough that ordinary explanations such as
+    # "what is a service?" remain general-model questions.
+    if _INFRASTRUCTURE_STATUS.search(query):
+        return "SERVICE"
     # A broad self-description request with no narrower subject is an
     # owner-self-knowledge read.  This covers "tell me about me" compositionally
     # (read/report verb + owner-self subject), without matching arbitrary
