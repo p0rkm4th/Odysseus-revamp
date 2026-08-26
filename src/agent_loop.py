@@ -2294,7 +2294,11 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
     def has(*patterns: str) -> bool:
         return any(re.search(p, q) for p in patterns)
 
-    if has(r"\b(cookbook|serve|serving|served|launch|start|preset|vllm|sglang|llama\.?cpp|ollama|download|downloading|pull|cached models?|running models?|model servers?|models? (?:are )?running|what models?|model picker|gpu box|workstation|qwen|gemma|llama|mistral|minimax)\b"):
+    # `start` is ordinary conversational language (for example, "start
+    # working on Hades"). It is a Cookbook signal only when paired with a
+    # serving/model/server noun; treating the bare verb as a domain selector
+    # incorrectly exposes model-serving tools for unrelated objectives.
+    if has(r"\b(cookbook|serve|serving|served|launch|preset|vllm|sglang|llama\.?cpp|ollama|download|downloading|pull|cached models?|running models?|model servers?|models? (?:are )?running|what models?|model picker|gpu box|workstation|server|qwen|gemma|llama|mistral|minimax)\b"):
         domains.add("cookbook")
     if has(r"\b(emails?|mails?|gmail|inbox|reply|forward|cc|bcc|send email|compose email|draft email|message chris|message him|message her)\b"):
         domains.add("email")
