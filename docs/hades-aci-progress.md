@@ -70,6 +70,10 @@ This section supersedes older historical rows below for present-state claims.
   labeled `a20ade61`, `7f0a8576`, `52cdfd5e`, `121cb6d7`, `8419fea9`, and
   `936fe437`; no active container referenced them. Security/control-plane
   regression coverage remains green (`181 passed`, 39 dependency warnings).
+- A supported dangling-image prune subsequently reclaimed `9.067 GiB`; root
+  is now approximately 74% used / 23 GiB free. Remaining Docker images are
+  current, rollback, active auth harness, protected milestones, or unrelated
+  active services. The 30 GiB build-headroom guard remains closed.
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.
