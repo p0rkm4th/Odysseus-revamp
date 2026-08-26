@@ -1,6 +1,6 @@
 import pytest
 
-from scripts.hades_live_dogfood import CASES, select_cases
+from scripts.hades_live_dogfood import CASES, cookie_from_file, select_cases
 
 
 def test_live_selection_is_reproducible_for_rotating_sets():
@@ -62,3 +62,13 @@ def test_core_and_held_out_suites_are_disjoint_and_nonempty():
 def test_sample_must_be_positive(bad):
     with pytest.raises(ValueError, match="positive"):
         select_cases(CASES, sample=bad)
+
+
+def test_cookie_file_reader_supports_netscape_and_plain_token(tmp_path):
+    netscape = tmp_path / "cookies.txt"
+    netscape.write_text("# Netscape HTTP Cookie File\n. localhost\tTRUE\t/\tFALSE\t0\todysseus_session\towner-token\n")
+    assert cookie_from_file(str(netscape)) == "owner-token"
+
+    plain = tmp_path / "token.txt"
+    plain.write_text("owner-token\n")
+    assert cookie_from_file(str(plain)) == "owner-token"
