@@ -1,10 +1,11 @@
 from src.aci import (
     ACIProfile, AgentTaskPacket, ActionCard, CompletionContract,
-    ContextEnvelope, DecisionMode, ObjectiveSpec, WorkingSet,
+    ContextEnvelope, DecisionMode, ObjectiveSpec, TurnDisposition, WorkingSet,
     PostResultState, classify_post_result,
     adaptive_shortlist, hard_filter_actions, model_burden,
     parse_decision_json, state_fingerprint,
 )
+from src.agent_loop import _minimal_aci_model_fallback_messages
 
 
 def _packet(cards=(ActionCard("A", "inspect", "Inspect", "Read state"),)):
@@ -96,3 +97,22 @@ def test_post_result_state_does_not_reenter_decision_for_sufficient_canonical_re
     assert classify_post_result(
         {"approval_required": True}, canonical_read=True,
     ) is PostResultState.NEEDS_APPROVAL
+
+
+def test_model_fallback_is_a_non_authoritative_turn_disposition():
+    assert TurnDisposition.MODEL_FALLBACK.value == "MODEL_FALLBACK"
+
+
+def test_model_fallback_context_excludes_internal_execution_plumbing():
+    messages = _minimal_aci_model_fallback_messages([
+        {"role": "system", "content": "manage_memory ActionSpec ToolBinding"},
+        {"role": "assistant", "content": "Prior answer"},
+        {"role": "user", "content": "Do the thing to Cerberus."},
+        {"role": "tool", "content": "secret raw result"},
+    ])
+    assert messages[-1] == {"role": "user", "content": "Do the thing to Cerberus."}
+    assert all(message.get("role") != "tool" for message in messages)
+    serialized = " ".join(str(message.get("content", "")) for message in messages)
+    assert "manage_memory" not in serialized
+    assert "ToolBinding" not in serialized
+    assert "Execution authority: NONE" in serialized

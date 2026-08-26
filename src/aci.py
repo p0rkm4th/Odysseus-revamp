@@ -32,6 +32,20 @@ class PostResultState(StrEnum):
     NEEDS_APPROVAL = "NEEDS_APPROVAL"
 
 
+class TurnDisposition(StrEnum):
+    """One semantic disposition for the current turn, not authority."""
+
+    ANSWER = "ANSWER"
+    EXECUTE_DIRECT = "EXECUTE_DIRECT"
+    DECIDE = "DECIDE"
+    CONTINUE = "CONTINUE"
+    REQUEST_CONTEXT = "REQUEST_CONTEXT"
+    CLARIFY = "CLARIFY"
+    AWAIT_APPROVAL = "AWAIT_APPROVAL"
+    BLOCK = "BLOCK"
+    MODEL_FALLBACK = "MODEL_FALLBACK"
+
+
 class RelevanceTier(StrEnum):
     T0 = "T0"
     T1 = "T1"
