@@ -53,6 +53,8 @@ E6.
   `6492 passed, 3 skipped, 186 warnings` in 123 seconds. Later focused gates:
   `210 passed` for fallback/control-plane behavior and `198 passed` for
   security/authority coverage.
+- Current source-tip full regression: `6511 passed, 3 skipped, 186 warnings`
+  in 124 seconds. Deployment and live-E5 claims remain unchanged.
 - Current telemetry/reference gate: `97 passed`.
 - Storage: 74% used / 23 GiB free; large replacement builds remain closed by
   the 30 GiB preflight guard. Current, rollback, and live-auth images are

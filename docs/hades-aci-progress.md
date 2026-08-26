@@ -17,6 +17,10 @@ This section supersedes older historical rows below for present-state claims.
   changes have focused coverage of `210 passed` and security coverage of `198
   passed`. These later source changes are not represented in the deployed
   image.
+- Current full regression at source tip: `6511 passed, 3 skipped, 186
+  warnings` in 124s. This validates the infrastructure result-normalization,
+  durable terminal-continuation, and live-canary telemetry changes; it does
+  not change deployed-source or live-E5 claims.
 - Live E5 evidence: real deployed qwen3:8b core matrix `25/25 answers` and
   `25/25` trajectory passes, zero transport errors, zero internal leaks, and
   zero assertion failures. It covered asset ordinal references, infrastructure
