@@ -58,7 +58,7 @@ against its 30 GiB guard.
 | Model calls | Live deterministic reads generally used one answer/model call and zero tool-index lookup in recorded probes. |
 | Tool-index subtraction | Unique canonical reads record bypass; broad current totals require a fresh source-matched run. |
 | Result projection | Memory raw result was historically ~17K characters; the repaired path projects before answer synthesis in covered tests. |
-| Latency | Existing matched benchmark records total, TTFT, prep, model wait, tokens, and calls. The prior owner report was roughly raw 3.5s vs Hades 14.5s; a fresh attribution run is still required. |
+| Latency | Fresh source-path qwen3:8b benchmark: raw `0.223s`; Hades `5.375s`; prep `1.587s`; Hades provider response `3.790s`; extra model-inference cost `3.567s`; residual framework overhead approximately `0s` within timing noise. The benchmark now reports these spans separately. |
 | Model burden | Framework/model burden labels and totals are instrumented; latest broad source-matched aggregate is pending deployment. |
 | Context envelope | Runtime allocation, ACI target, requested input, reserved output, and effective context are instrumented. |
 
