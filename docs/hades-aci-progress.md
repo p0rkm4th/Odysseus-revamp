@@ -175,6 +175,19 @@ retries and had no provider failures. Two broad service-operation cases still
 emit `WHY_NO_ACTION=MODEL_PROSE_ONLY` and remain explicit follow-up evidence;
 they produced no unsafe tool calls.
 
+## Service operation contract convergence
+
+Owner-style prompts `Restart the registered service` and `Restart the service`
+were classified as `EXECUTE` but previously had no `SERVICE` contract, causing
+the ACI path to fall through to model prose/`WHY_NO_ACTION`. The canonical
+contract now maps this semantic operation to the read-only
+`plan_service_restart` preflight Action. The exact restart Action remains
+separate, exact-approval protected, and is not selected by this resolution
+change. Focused coverage: `152 passed`; full regression after the change:
+`6310 passed, 3 skipped, 186 warnings` in 122.43 seconds. A host-side live
+Qwen rerun was unavailable because the deployed Ollama bridge is not exposed
+in the host namespace; no provider result is claimed from that attempt.
+
 ## Build/cache observation
 
 Previously mutable provenance arguments appeared before expensive system and
