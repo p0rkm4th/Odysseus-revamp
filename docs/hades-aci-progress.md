@@ -280,6 +280,12 @@ source/root-cause checkpoint.
   `92 passed`. No authenticated live cookie was present in this execution
   environment for a new canary run; prior b471 live evidence remains the
   deployed runtime evidence.
+- `48ff97db` exposes the existing semantic route as
+  `aci_turn_disposition` telemetry without changing authority or execution:
+  `EXECUTE_DIRECT`, `ANSWER`, `DECIDE`, `CLARIFY`, or
+  `MODEL_FALLBACK`. Focused continuation/intent/corpus/projection suites
+  passed `123` tests; the runtime metric is source-present and not yet
+  deployed.
 
 - `b471e104` removes the empty bounded-decision round for benign unknown
   read-style questions. When no specialized contract exists and the semantic
