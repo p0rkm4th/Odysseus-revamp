@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `074d240f`, remote
+- Source head: branch `hades-aci-v1`, commit `695183d9`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-074d240f`, source-only overlay based on
   the prior validated candidate, exact runtime source `074d240f`, branch
@@ -40,6 +40,8 @@ This section supersedes older historical rows below for present-state claims.
 - Live canaries now expose sanitized reference disposition telemetry (status,
   semantic concept, selection, count, and context source); asset ordinal cases
   assert `RESOLVED` / `TECHNICAL_ASSET` rather than relying only on prose.
+- The live canary is model-selectable and accepts an owner Netscape cookie
+  export through `--cookie-file`; no credential is printed or committed.
 - Follow-up live E5 evidence on the same source-matched image: seeded held-out
   slice `12/12` and rotating slice `16/16` trajectory passes, both with zero
   errors and zero internal leaks. Across all three runs: `53/53` trajectory
