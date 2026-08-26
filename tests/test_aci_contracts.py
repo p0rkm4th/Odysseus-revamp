@@ -126,3 +126,23 @@ def test_model_fallback_context_excludes_internal_execution_plumbing():
     assert "manage_memory" not in serialized
     assert "ToolBinding" not in serialized
     assert "Execution authority: NONE" in serialized
+
+
+def test_model_fallback_can_receive_sanitized_runtime_self_state_without_authority():
+    messages = _minimal_aci_model_fallback_messages(
+        [{"role": "user", "content": "What model are you using?"}],
+        runtime_self_state={
+            "active": True,
+            "model": "qwen3:8b",
+            "provider": "ollama",
+            "active_branch": "hades-aci-v1",
+            "endpoint": "http://secret.example.invalid/token",
+        },
+    )
+    serialized = " ".join(str(message.get("content", "")) for message in messages)
+    assert "qwen3:8b" in serialized
+    assert "ollama" in serialized
+    assert "hades-aci-v1" in serialized
+    assert "secret.example.invalid" not in serialized
+    assert "Execution authority: NONE" in serialized
+    assert "ToolBinding" not in serialized

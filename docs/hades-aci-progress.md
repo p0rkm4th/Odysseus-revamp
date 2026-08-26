@@ -630,3 +630,9 @@ source/root-cause checkpoint.
   `HOMELAB_HOST/inspect_host` contract instead of being shadowed by generic
   Network routing. The focused host/ACI gate is `166 passed`; no new executor,
   authority, or discovery capability was introduced.
+
+- General MODEL_FALLBACK now accepts an optional compact derived SelfState
+  projection containing only active model, provider, and branch. It excludes
+  endpoint/credential material and retains `Execution authority: NONE`; the
+  fallback/control-plane gate is `210 passed`. This is source-tested but not
+  yet deployed or live-qwen verified.
