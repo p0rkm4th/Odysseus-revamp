@@ -39,6 +39,8 @@ class Case:
     split: str = "core"
     expect_reference: str | None = None
     expect_bounded_decisions: int | None = None
+    expect_tool_index_lookups: int | None = None
+    expect_approvals: int | None = None
 
 
 CASES = [
@@ -117,6 +119,20 @@ CASES = tuple(
                 or case.name.startswith(("assets_list", "assets_reference"))
             ) and case.family not in {"negative_near_miss", "security"}
             else case.expect_bounded_decisions
+        ),
+        "expect_tool_index_lookups": (
+            0 if (
+                case.name.startswith(("memory_", "work_", "network_", "infra_"))
+                or case.name.startswith(("assets_list", "assets_reference"))
+            ) and case.family not in {"negative_near_miss", "security"}
+            else case.expect_tool_index_lookups
+        ),
+        "expect_approvals": (
+            0 if (
+                case.name.startswith(("memory_", "work_", "network_", "infra_"))
+                or case.name.startswith(("assets_list", "assets_reference"))
+            ) and case.family not in {"negative_near_miss", "security"}
+            else case.expect_approvals
         ),
     })
     for case in CASES
@@ -274,6 +290,7 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         "model_calls": metrics.get("model_calls"),
         "tool_index_bypass": metrics.get("tool_index_bypass_count", 0),
         "tool_index_lookup": metrics.get("tool_index_lookup_count", 0),
+        "approvals": len(approvals),
         "completion": bool(metrics.get("aci_completion_contract_satisfied")),
         "completion_transition": metrics.get("aci_completion_transition"),
         "fallback": bool(metrics.get("aci_model_fallback")),
@@ -316,6 +333,10 @@ def assert_case(case: Case, result: dict[str, Any]) -> list[str]:
             failures.append("reference_concept_mismatch")
     if case.expect_bounded_decisions is not None and result.get("bounded_action_decisions") != case.expect_bounded_decisions:
         failures.append("unexpected_bounded_decisions")
+    if case.expect_tool_index_lookups is not None and int(result.get("tool_index_lookup") or 0) != case.expect_tool_index_lookups:
+        failures.append("unexpected_tool_index_lookups")
+    if case.expect_approvals is not None and int(result.get("approvals") or 0) != case.expect_approvals:
+        failures.append("unexpected_approvals")
     return failures
 
 
