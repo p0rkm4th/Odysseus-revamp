@@ -5,25 +5,25 @@ ARG ODYSSEUS_BASE_IMAGE
 FROM ${ODYSSEUS_BASE_IMAGE}
 
 WORKDIR /app
-ARG ODYSSEUS_SOURCE_COMMIT=unknown
-ARG ODYSSEUS_BUILD_ID=unidentified
-ARG ODYSSEUS_BUILD_TIME=unknown
-ARG ODYSSEUS_FRONTEND_BUILD_ID=unidentified
-ARG ODYSSEUS_MIGRATION_HEAD=unknown
+ARG HADES_OVERLAY_SOURCE_COMMIT=unknown
+ARG HADES_OVERLAY_BUILD_ID=unidentified
+ARG HADES_OVERLAY_BUILD_TIME=unknown
+ARG HADES_OVERLAY_FRONTEND_BUILD_ID=unidentified
+ARG HADES_OVERLAY_MIGRATION_HEAD=unknown
 
 # Declare provenance arguments before the source copy so changing a candidate
 # identity cannot reuse a layer containing stale metadata or marker content.
 COPY . .
 
-ENV ODYSSEUS_SOURCE_COMMIT="$ODYSSEUS_SOURCE_COMMIT" \
-    ODYSSEUS_BUILD_ID="$ODYSSEUS_BUILD_ID" \
-    ODYSSEUS_BUILD_TIME="$ODYSSEUS_BUILD_TIME" \
-    ODYSSEUS_FRONTEND_BUILD_ID="$ODYSSEUS_FRONTEND_BUILD_ID" \
-    ODYSSEUS_MIGRATION_HEAD="$ODYSSEUS_MIGRATION_HEAD"
-LABEL org.opencontainers.image.revision="$ODYSSEUS_SOURCE_COMMIT" \
-      org.opencontainers.image.version="$ODYSSEUS_BUILD_ID" \
-      org.opencontainers.image.created="$ODYSSEUS_BUILD_TIME" \
-      org.odysseus.frontend.revision="$ODYSSEUS_FRONTEND_BUILD_ID" \
-      org.odysseus.migration.head="$ODYSSEUS_MIGRATION_HEAD" \
+ENV ODYSSEUS_SOURCE_COMMIT="$HADES_OVERLAY_SOURCE_COMMIT" \
+    ODYSSEUS_BUILD_ID="$HADES_OVERLAY_BUILD_ID" \
+    ODYSSEUS_BUILD_TIME="$HADES_OVERLAY_BUILD_TIME" \
+    ODYSSEUS_FRONTEND_BUILD_ID="$HADES_OVERLAY_FRONTEND_BUILD_ID" \
+    ODYSSEUS_MIGRATION_HEAD="$HADES_OVERLAY_MIGRATION_HEAD"
+LABEL org.opencontainers.image.revision="$HADES_OVERLAY_SOURCE_COMMIT" \
+      org.opencontainers.image.version="$HADES_OVERLAY_BUILD_ID" \
+      org.opencontainers.image.created="$HADES_OVERLAY_BUILD_TIME" \
+      org.odysseus.frontend.revision="$HADES_OVERLAY_FRONTEND_BUILD_ID" \
+      org.odysseus.migration.head="$HADES_OVERLAY_MIGRATION_HEAD" \
       org.odysseus.source.overlay="full-source"
-RUN printf '%s\n' "$ODYSSEUS_SOURCE_COMMIT" > /app/.odysseus-source-commit
+RUN printf '%s\n' "$HADES_OVERLAY_SOURCE_COMMIT" > /app/.odysseus-source-commit

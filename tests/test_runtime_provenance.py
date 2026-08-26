@@ -22,6 +22,7 @@ def test_candidate_image_and_frontend_verification_are_source_attributable():
     assert ".odysseus-source-commit" in dockerfile
     overlay = (ROOT / "docker" / "Dockerfile.source-overlay").read_text()
     assert "ODYSSEUS_BASE_IMAGE" in overlay
+    assert "HADES_OVERLAY_SOURCE_COMMIT" in overlay
     assert ".odysseus-source-commit" in overlay
 
 
