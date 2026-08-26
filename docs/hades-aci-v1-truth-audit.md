@@ -12,7 +12,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `8ae04b89` | `origin/hades-aci-v1` |
+| Pushed source | `a8b0c6ed` | `origin/hades-aci-v1` |
 | Deployed source | `cfbe6244` | `/api/version`, image labels |
 | Running image | `odysseus:candidate-cfbe6244` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
