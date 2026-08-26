@@ -61,11 +61,12 @@ zero model calls and zero tool calls; owner GUI verification remains pending.
 
 The current deployed source is `0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf`,
 image `odysseus:candidate-0dc6ce153ff5`, with matching build/frontend
-provenance. Its 15-case Qwen3:8b ACI checkpoint scored `0.8667` case success
-and `0.9333` weighted versus H0 `0.20` and `0.4333` weighted. All
-security/approval/identity cases pass; only the two synthetic continuity
-recovery flags remain incomplete. This is synthetic evidence; owner GUI
-verification remains pending.
+provenance. Its pre-correction 15-case Qwen3:8b ACI checkpoint scored `0.8667`
+case success and `0.9333` weighted versus H0 `0.20` and `0.4333` weighted.
+After benchmark-driver correction `05dd1e0d`, the authoritative rerun scored
+`1.0` case success and `1.0` weighted across all 15 cases and categories, with
+no runtime failures. This is synthetic evidence; owner GUI verification
+remains pending.
 
 The continuity benchmark harness was corrected in `05dd1e0d` and full-tested
 (`6316 passed, 3 skipped, 186 warnings`). Its two recovery cases now inject a
