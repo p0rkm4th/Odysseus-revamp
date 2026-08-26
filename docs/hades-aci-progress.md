@@ -57,6 +57,10 @@ This section supersedes older historical rows below for present-state claims.
 - Canary reports now retain split-level case, answer, and trajectory-pass
   totals alongside family totals; the combined reference/executor slice is
   green (`131 passed`, one existing SQLAlchemy deprecation warning).
+- Storage preflight remains correctly blocked for a large build at 18 GiB free
+  / 80% used against its 30 GiB / 80% guard. Six exact dangling intermediate
+  image IDs with no container references were removed; current, rollback,
+  harness, pinned images, volumes, and model data were preserved.
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.
