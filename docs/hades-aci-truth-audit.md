@@ -53,6 +53,12 @@ owner-live verification remains pending.
 The deployed runtime now reports source `a61f06c5a2d935ab2116252c01c3ac180e36551d`,
 image `odysseus:candidate-a61f06c5a2d9`, and matching build/frontend provenance.
 
+Current deployed runtime supersedes that candidate with source
+`0cefba69f3ac1477b495ddc0601afbb7b481608d`, image
+`odysseus:candidate-0cefba69f3ac`, and matching build/frontend provenance.
+The deployed Qwen3:8b synthetic service-ambiguity canary passed `2/2`, with
+zero model calls and zero tool calls; owner GUI verification remains pending.
+
 ## Owner-live script
 
 1. What do you remember about me?
