@@ -864,6 +864,14 @@ class HomelabOperations:
             "kind": "read", "owner": owner, "created_at": _now().isoformat(),
             "action": action, "target": target, "command_digest": _digest({"argv": argv}),
             "success": code == 0, "exit_code": code,
+            # Keep subprocess-backed infrastructure reads in the same
+            # canonical result vocabulary as broker-backed reads.  Without a
+            # status, downstream projection had to infer success from an
+            # adapter-shaped receipt and could classify a real read as an
+            # unstructured/failed infrastructure result.
+            "status": "SUCCESS_WITH_DATA" if code == 0 else "FAILED",
+            "source": "host_operator_read",
+            "observation_location": "HOST_OPERATOR",
         }
         await asyncio.to_thread(self.receipts.append, receipt)
         return {**_public(receipt), "output": output, "untrusted_content": True}

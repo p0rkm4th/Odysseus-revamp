@@ -74,6 +74,15 @@ def test_continuation_and_depth_are_structured_not_phrase_specific():
     assert continued.workspace_hint is None
 
 
+def test_continuation_rejects_terminal_lifecycle_even_if_status_is_stale():
+    frame = compile_intent("Continue", continuation=True, run_reference="run-1")
+    resolution = resolve_continuation(frame, {
+        "id": "run-1", "status": "running", "lifecycle_state": "succeeded",
+    })
+    assert resolution.status == "BLOCKED"
+    assert resolution.phase == "TERMINAL"
+
+
 @pytest.mark.parametrize(("query", "view", "action_id"), [
     ("Which hosts are unidentified on my network?", "unidentified", "list_unidentified_hosts"),
     ("Which devices look like servers?", "roles", "infer_role_hypotheses"),

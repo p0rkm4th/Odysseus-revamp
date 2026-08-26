@@ -150,6 +150,41 @@ def test_private_scope_without_ownership_authorization_is_rejected():
     asyncio.run(run())
 
 
+def test_host_operator_reads_emit_canonical_status_for_projection(tmp_path):
+    async def runner(argv, timeout):
+        assert argv == ["uptime"]
+        return 0, " 12:00:00 up 3 days"
+
+    async def run():
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            runner=runner,
+        )
+        result = await ops.execute({"action": "inspect_host"}, owner="alice")
+        assert result["status"] == "SUCCESS_WITH_DATA"
+        assert result["source"] == "host_operator_read"
+        assert result["observation_location"] == "HOST_OPERATOR"
+        assert result["success"] is True
+
+    asyncio.run(run())
+
+
+def test_host_operator_read_failure_is_not_success_shaped(tmp_path):
+    async def runner(argv, timeout):
+        return 127, "uptime: unavailable"
+
+    async def run():
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            runner=runner,
+        )
+        result = await ops.execute({"action": "inspect_host"}, owner="alice")
+        assert result["status"] == "FAILED"
+        assert result["success"] is False
+
+    asyncio.run(run())
+
+
 def test_privileged_broker_network_discovery_is_bounded(monkeypatch):
     import src.privileged_broker as broker
 

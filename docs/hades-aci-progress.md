@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `f18d10dd`, remote
+- Source head: branch `hades-aci-v1`, commit `0e5360ac`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-c0a281f5`, exact runtime source
   `c0a281f5`, branch
@@ -28,6 +28,11 @@ This section supersedes older historical rows below for present-state claims.
 - Durable continuation fix: terminal/blocked durable Run state now transitions
   directly to answer-only completion instead of re-entering bounded Action
   selection; the continuation/intent/loop focused gate is `177 passed`.
+- Latest focused control-plane gate: `186 passed` across infrastructure result
+  normalization, terminal lifecycle continuation, semantic reads, bindings,
+  Work runs, and planner projections. Host-operator reads now emit canonical
+  `SUCCESS_WITH_DATA`/`FAILED` status and explicit observation location;
+  lifecycle `succeeded` is terminal even if a stale Run status says `running`.
 - Current deployed intentional-continuation E5: asset list → first physical
   asset and Review outstanding work → Continue both passed. The asset follow-up
   selected strong canonical `PHYSICAL-001`; Continue resumed with zero tool

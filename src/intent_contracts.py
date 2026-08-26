@@ -596,7 +596,8 @@ def resolve_continuation(frame: IntentFrame, active_run: Mapping[str, Any] | Non
         return ContinuationResolution("BLOCKED", reason="no active Run")
     status = str(active_run.get("status") or "").lower()
     run_id = str(active_run.get("id") or active_run.get("run_id") or "").strip() or None
-    if status in {"completed", "failed", "cancelled"}:
+    lifecycle = str(active_run.get("lifecycle_state") or "").lower()
+    if status in {"completed", "failed", "cancelled"} or lifecycle in {"succeeded", "failed", "cancelled"}:
         return ContinuationResolution("BLOCKED", run_reference=run_id, phase="TERMINAL", reason="Run is terminal")
     state = active_run.get("continuation_state") if isinstance(active_run.get("continuation_state"), Mapping) else {}
     action_id = str(state.get("pending_action_id") or active_run.get("pending_action_id") or "").strip() or None

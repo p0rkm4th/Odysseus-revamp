@@ -18,7 +18,7 @@ gates.
 | Durable Continue terminal-state handling | green | `177` focused tests; live Continue resumed with zero tool calls |
 | General MODEL_FALLBACK | green | focused security/fallback gates; live ordinary-question cases |
 | Conceptual explanation routing | focused green, deployment pending | `17cbbb97`; RAID/backup explanations no longer enter `storage_ops`; direct fallback diagnostics are initialized safely |
-| Infrastructure failure normalization | green | executor/projection focused gates preserve unavailable/invalid status |
+| Infrastructure failure normalization | green | executor/projection focused gates preserve unavailable/invalid status; host-operator reads now expose canonical success/failure status |
 | Exact approvals and policy boundaries | green | security/control-plane suites; live unauthorized-scan case |
 | Deployment provenance and rollback | green | runtime source match `074d240f`; rollback `odysseus:rollback-b471e104-prev` |
 | Automated live Qwen canary | E5 partial/current | prior deployed matrix `53/53`; fresh cookie required to re-run `074d240f` telemetry assertions |
@@ -45,7 +45,7 @@ E6.
 ## Current release state
 
 - Branch: `hades-aci-v1`, synchronized with `origin`.
-- Source head: `f18d10dd` (semantic read-family corrections and safe derived
+- Source head: `0e5360ac` (semantic read-family corrections, safe derived
   runtime facts for MODEL_FALLBACK); deployed runtime remains `c0a281f5`
   until the next storage-approved candidate build.
 - Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
