@@ -46,7 +46,7 @@ E6.
 - Branch: `hades-aci-v1`, synchronized with `origin`.
 - Source head: `aea513aa` (canary harness after deployed runtime source
   `074d240f`).
-- Running image: `odysseus:candidate-074d240f`, source-matched and healthy.
+- Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
 - Full regression: `6424 passed, 3 skipped` on behavior-identical parent
   `8038e227`.
 - Current telemetry/reference gate: `97 passed`.
@@ -67,3 +67,7 @@ E6.
   provider span; one model call; zero tools). Both providers reported 3 output
   tokens, but Hades streamed 144 characters, so usage/stream accounting still
   needs correction before declaring an equivalent benchmark.
+- Deployed fallback hardening at `c0a281f5`: empty model/synthesis responses no
+  longer emit a search-specific false claim; the real-Qwen probe returned a
+  domain-neutral fallback, one model call, zero tools, and
+  `aci_empty_answer_fallback=true`.
