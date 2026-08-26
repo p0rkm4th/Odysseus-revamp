@@ -206,13 +206,12 @@ zero model calls, zero tool calls, and the framework response
 
 ## Final deployed Qwen checkpoint
 
-The current deployed 15-case synthetic Qwen3:8b ACI run scored `0.8667`
-case success and `0.9333` weighted score, versus H0 `0.20` success and
-`0.4333` weighted. All approval, identity, security, grounding, routing, and
-safety cases passed. The two remaining misses are the synthetic
-`requires_recovery` flags for model-switch and provider-reconnect continuity;
-their runs completed without runtime failure but did not exercise the harness
-recovery injection. This is measured synthetic evidence, not owner-live GUI
+The pre-correction 15-case synthetic Qwen3:8b ACI run scored `0.8667` case
+success and `0.9333` weighted score, versus H0 `0.20` success and `0.4333`
+weighted. The two misses were benchmark-driver recovery flags, not runtime
+failures. After correcting the harness, the authoritative rerun scored `1.0`
+case success and `1.0` weighted across all 15 cases and categories, with no
+runtime failures. This remains synthetic evidence, not owner-live GUI
 evidence.
 
 After benchmark-driver correction `05dd1e0d`, both continuity cases exercise a
@@ -220,3 +219,5 @@ deliberate loopback provider failure followed by the configured Ollama endpoint
 and report `recovered=true`, one fallback retry, and no provider failure. This
 changes evaluation validity only; the deployed application candidate remains
 `0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf`.
+
+The authoritative post-fix artifact is `/tmp/hades-final-15-harness-fixed.jsonl`.
