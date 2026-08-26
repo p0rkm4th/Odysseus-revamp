@@ -67,6 +67,11 @@ E6.
   provider span; one model call; zero tools). Both providers reported 3 output
   tokens, but Hades streamed 144 characters, so usage/stream accounting still
   needs correction before declaring an equivalent benchmark.
+- The overhead harness now emits `output_accounting.consistent=false` for this
+  mismatch (`hades_text_token_ratio implausible`) instead of allowing the run
+  to be mistaken for an equivalent benchmark. Latest real-bridge run: raw
+  `3.769s`, Hades `5.860s`, delta `2.091s`, prep `0.211s`, one model call,
+  zero tools.
 - Deployed fallback hardening at `c0a281f5`: empty model/synthesis responses no
   longer emit a search-specific false claim; the real-Qwen probe returned a
   domain-neutral fallback, one model call, zero tools, and

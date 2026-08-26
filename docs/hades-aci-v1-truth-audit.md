@@ -26,6 +26,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Matched local latency | raw `3.596s`; Hades `10.484s`; delta `6.888s`; extra provider inference `6.684s` | benchmark with equal 128-token budget |
 | Current bridge overhead probe | cold raw `0.275s` / Hades `12.850s`; warm raw `3.352s` / Hades `12.600s`; prep `0.235s`/`0.208s`; one model call, zero tools | diagnostic 64-token run; raw emitted 3 tokens, so equivalent-deliverable comparison remains pending |
 | Tight-cap bridge probe | raw `3.486s` / Hades `5.955s`; delta `2.468s`; prep `0.222s`; extra provider span `2.244s`; one model call, zero tools | both report 3 tokens but Hades streamed 144 chars; accounting integrity issue remains |
+| Accounting guard | latest real bridge run reports `output_accounting.consistent=false` / `hades_text_token_ratio implausible`; raw `3.769s`, Hades `5.860s`, delta `2.091s`; one model call, zero tools | benchmark now rejects this as equivalent evidence |
 | Empty-answer fallback hardening | deployed source `c0a281f5`; one model call, zero tools; domain-neutral fallback; `aci_empty_answer_fallback=true` | direct real-Qwen stream probe; no auth/session mutation |
 
 The running process is source-matched through the immutable image marker and
