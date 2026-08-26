@@ -60,6 +60,12 @@ _NETWORK_CONTEXT_DETAIL = re.compile(
     r"network\s+context|subnet|where\s+am\s+i\s+connected)\b",
     re.IGNORECASE,
 )
+_HOST_INSPECTION = re.compile(
+    r"\b(?:inspect|check|show|read)\s+(?:me\s+)?"
+    r"(?:(?:the|this|current|local)\s+){0,2}host\b|"
+    r"\btell\s+me\s+about\s+(?:(?:the|this|current|local)\s+){0,2}host\b",
+    re.IGNORECASE,
+)
 _CURRENT_STATE = re.compile(
     r"\b(?:current(?:ly)?|right\s+now|now|network\s+context|am\s+i\s+on|connected\s+to|"
     r"where\s+am\s+i\s+connected)\b",
@@ -111,6 +117,7 @@ def deterministic_read_concept(text: str) -> str | None:
     if not query or (
         not _READ_REQUEST.search(query)
         and not _INFRASTRUCTURE_STATUS.search(query)
+        and not _HOST_INSPECTION.search(query)
     ):
         return None
     if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
@@ -162,6 +169,10 @@ def deterministic_read_concept(text: str) -> str | None:
         return "WORK"
     if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
         return "TECHNICAL_ASSET"
+    if _HOST_INSPECTION.search(query) and not re.search(
+        r"\b(?:network|lan|subnet|scan|discover|service|daemon)\b", query,
+    ):
+        return "HOMELAB_HOST"
     if (
         re.search(r"\b(?:network|lan|wifi|wi-fi|connection|connected)\b", query)
         or _NETWORK_CONTEXT_DETAIL.search(query)

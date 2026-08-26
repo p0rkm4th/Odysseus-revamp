@@ -625,3 +625,8 @@ source/root-cause checkpoint.
   variants as the existing safe Work overview read. Explicit `Continue` remains
   durable Run continuation rather than a lexical Work read. Focused gate:
   `203 passed`; no deployment was attempted while storage preflight was closed.
+
+- Explicit host-inspection language now resolves to the existing safe
+  `HOMELAB_HOST/inspect_host` contract instead of being shadowed by generic
+  Network routing. The focused host/ACI gate is `166 passed`; no new executor,
+  authority, or discovery capability was introduced.
