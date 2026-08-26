@@ -407,17 +407,21 @@ def test_communications_read_binding_requires_authenticated_owner():
     assert "owner" in result["error"].lower()
 
 
-def test_generic_service_status_read_does_not_require_a_unit_name():
-    calls = []
+def test_generic_service_status_read_uses_runtime_health_not_container_systemd(monkeypatch):
+    async def fake_health():
+        return {
+            "overall": "degraded",
+            "services": [{"name": "chromadb", "status": "ok"}],
+            "timestamp": "2026-08-26T00:00:00+00:00",
+        }
 
-    async def runner(argv, timeout):
-        calls.append(argv)
-        return 0, "odysseus.service loaded active running"
-
-    result = asyncio.run(HomelabOperations(runner=runner).execute({"action": "service_status"}, owner="alice"))
+    monkeypatch.setattr("src.service_health.collect_service_health", fake_health)
+    result = asyncio.run(HomelabOperations().execute({"action": "service_status"}, owner="alice"))
     assert result["success"] is True
-    assert result["target"] == "user-services"
-    assert calls and "list-units" in calls[0]
+    assert result["status"] == "SUCCESS_WITH_DATA"
+    assert result["target"] == "hades-runtime"
+    assert result["source"] == "canonical_service_health"
+    assert result["overall"] == "degraded"
 
 
 def test_osint_read_binding_reuses_owner_scoped_case_store(tmp_path, monkeypatch):

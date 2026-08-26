@@ -46,9 +46,18 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
 - Asset ordinal resolution now prefers server-owned ordered/eligible result
   entities and uses `last` only when no ordered set exists. This is source-level
   focused evidence, not yet deployed evidence.
+- Completed canonical asset reads now expose their ordered/eligible entity set
+  through the owner-scoped session reference projection, so a later ordinal
+  turn can resolve without an active Run or lexical target guessing. The
+  focused reference bridge gate is green (`234 passed` with the executor
+  slice).
 - Homelab binding now maps structured `UNAVAILABLE`, `INVALID_RESULT`, and
   related statuses to failed executor semantics instead of transport success.
   This is source-level focused evidence, not yet deployed evidence.
+- Unqualified `service_status` now projects the existing bounded Hades runtime
+  health collector instead of invoking container-local `systemctl --user`;
+  explicit unit-targeted reads remain on the separate path. This is source-level
+  focused evidence, not yet deployed evidence.
 - Unknown benign ACI reads now bypass generic tool-index retrieval before the
   authority-free MODEL_FALLBACK path. The source-path benchmark reduced tool
   selection from `1.363s` to `0.076s`; focused fallback/intent/benchmark tests

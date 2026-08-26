@@ -74,6 +74,11 @@ This section supersedes older historical rows below for present-state claims.
   the prior explicit developer-style mount until a source-matched image can be
   built safely.
 - Compose/provenance/reference/executor/canary focused slice: `225 passed`.
+- Continuation/reference and infrastructure executor slice: `234 passed`;
+  source now carries ordered session-result references into explicit ordinal
+  turns and uses runtime health for unqualified infrastructure status. These
+  changes remain pending a source-matched image because storage preflight is
+  still closed.
 - A second exact audit removed six obsolete untagged Odysseus candidates
   labeled `a20ade61`, `7f0a8576`, `52cdfd5e`, `121cb6d7`, `8419fea9`, and
   `936fe437`; no active container referenced them. Security/control-plane

@@ -425,7 +425,16 @@ def recent_session_reference_context(owner: str, session_id: str, *, limit: int 
                             refs.append({"ref": ref[:500], "concept": str(item.get("concept") or "").strip()[:80] or None})
             if refs:
                 refs = refs[:max(1, int(limit))]
-                return {"entities": refs, "last": refs[-1], "source_run_id": run.id}
+                # Keep the result ordering explicit: ordinal language refers
+                # to the ordered canonical result, not to an incidental
+                # mixed-domain chat reference bag.
+                return {
+                    "ordered_entities": refs,
+                    "eligible_entities": refs,
+                    "entities": refs,
+                    "last": refs[-1],
+                    "source_run_id": run.id,
+                }
     return None
 
 
