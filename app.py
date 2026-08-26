@@ -1005,7 +1005,7 @@ async def get_version():
         # exact source commit in this small immutable marker instead. This
         # keeps source-match verification truthful without requiring a checkout
         # or a host workspace mount in the production container.
-        for marker in (BASE_DIR / ".odysseus-source-commit", Path("/.odysseus-source-commit")):
+        for marker in (Path(str(BASE_DIR)) / ".odysseus-source-commit", Path("/.odysseus-source-commit")):
             try:
                 candidate = marker.read_text(encoding="utf-8").strip()
             except (OSError, UnicodeError):
