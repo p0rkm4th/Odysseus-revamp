@@ -339,3 +339,95 @@ def characterize_ollama(base_url: str, model_id: str, *, endpoint_id: str = "",
                 return cached
         cache.save(profile)
     return profile
+
+
+def negotiated_decision_protocol(profile: RuntimeCapabilityProfile) -> str:
+    """Choose one model decision transport from fresh runtime evidence.
+
+    This changes presentation only.  It does not grant authority, select an
+    Action, or bypass canonical DecisionContract validation.
+    """
+    if profile.supports("decision_json", fresh_only=True):
+        return "STRICT_DECISION_JSON"
+    if profile.supports("native_tools", fresh_only=True):
+        return "VERIFIED_NATIVE_TOOL_CALL"
+    return "TEXTUAL_JSON_FALLBACK"
+
+
+def probe_ollama_decision_json(base_url: str, model_id: str, *, endpoint_id: str = "",
+                               cache: RuntimeProfileCache | None = None,
+                               force: bool = False,
+                               timeout: float = 30.0) -> RuntimeCapabilityProfile:
+    """Empirically test strict Decision JSON on one configured Ollama model.
+
+    The probe performs one tiny generation with a closed enum and no tools.
+    It stores only status, latency, and a response digest; model output and
+    endpoint credentials are never persisted.  A fresh empirical result is
+    reused unless the caller explicitly forces refresh.
+    """
+    profile = characterize_ollama(
+        base_url,
+        model_id,
+        endpoint_id=endpoint_id,
+        cache=cache,
+        force=force,
+        timeout=min(timeout, 5.0),
+    )
+    current = profile.capabilities.get("decision_json")
+    if (
+        not force
+        and current is not None
+        and current.source == "capability_probe"
+        and profile.is_fresh()
+    ):
+        return profile
+
+    base = _clean(base_url).rstrip("/")
+    from src.url_safety import check_outbound_url
+
+    ok, reason = check_outbound_url(base, block_private=False)
+    if not ok:
+        raise ValueError(f"unsafe Ollama endpoint: {reason}")
+    schema = {
+        "type": "object",
+        "properties": {"decision": {"type": "string", "enum": ["ANSWER"]}},
+        "required": ["decision"],
+        "additionalProperties": False,
+    }
+    payload = {
+        "model": _clean(model_id),
+        "messages": [
+            {"role": "system", "content": "Return only the required machine decision."},
+            {"role": "user", "content": "The correct decision is ANSWER."},
+        ],
+        "stream": False,
+        "format": schema,
+        "think": False,
+        "options": {"temperature": 0, "num_predict": 16},
+    }
+    started = time.monotonic()
+    status = "fail"
+    evidence: dict[str, Any] = {"probe": "strict_decision_json_v1", "side_effects": False}
+    try:
+        response = httpx.post(f"{base}/api/chat", json=payload, timeout=timeout)
+        response.raise_for_status()
+        body = response.json()
+        content = (
+            body.get("message", {}).get("content")
+            if isinstance(body, Mapping) and isinstance(body.get("message"), Mapping)
+            else ""
+        )
+        decision = json.loads(content) if isinstance(content, str) else None
+        valid = isinstance(decision, Mapping) and dict(decision) == {"decision": "ANSWER"}
+        status = "pass" if valid else "fail"
+        evidence["response_digest"] = hashlib.sha256(str(content).encode()).hexdigest()[:16]
+        evidence["valid_contract"] = valid
+    except (httpx.HTTPError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        evidence["error_class"] = type(exc).__name__
+    evidence["latency_ms"] = round((time.monotonic() - started) * 1000, 2)
+    profile = profile.with_probe("decision_json", status, evidence=evidence)
+    if status == "pass":
+        profile = profile.with_probe("structured_json", "pass", evidence=evidence)
+    if cache is not None:
+        cache.save(profile)
+    return profile

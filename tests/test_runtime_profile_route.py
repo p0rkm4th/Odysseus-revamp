@@ -7,3 +7,4 @@ def test_runtime_profile_route_is_owner_scoped_and_sanitized():
     assert "value = owner(request)" in source
     assert '"authority_unchanged": True' in source
     assert "RuntimeProfileCache().all()" in source
+    assert '"negotiated_decision_protocol"' in source
