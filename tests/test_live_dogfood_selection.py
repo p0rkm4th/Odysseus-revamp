@@ -7,7 +7,8 @@ def test_live_selection_is_reproducible_for_rotating_sets():
     first = [case.name for case in select_cases(CASES, suite="rotating", sample=8, seed=17)]
     second = [case.name for case in select_cases(CASES, suite="rotating", sample=8, seed=17)]
     assert first == second
-    assert len(first) == 8
+    assert len(first) >= 8
+    assert first.index("contamination_assets") < first.index("contamination_general")
 
 
 def test_fresh_selection_breaks_declared_continuation_groups():
@@ -21,6 +22,13 @@ def test_declared_selection_preserves_asset_and_continue_groups():
     continuation = [case for case in selected if case.group == "continuation"]
     assert [case.name for case in assets] == ["assets_list", "assets_reference"]
     assert [case.name for case in continuation] == ["continuation_start", "continuation_resume"]
+
+
+def test_sampled_declared_selection_includes_preceding_continuation_prerequisite():
+    selected = select_cases(CASES, suite="core", sample=6, seed=260826)
+    names = [case.name for case in selected]
+    assert names.index("assets_list") < names.index("assets_reference")
+    assert names.index("continuation_start") < names.index("continuation_resume") if "continuation_resume" in names else True
 
 
 def test_security_suite_contains_no_general_answer_cases():
