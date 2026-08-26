@@ -34,6 +34,9 @@
 | CONTINUITY_HARNESS_RECOVERY | `05dd1e0d` | continuity cases now inject a loopback primary failure and verify configured-provider fallback; both recovered with one retry; 6316 full | no rebuild (benchmark-only) | FULL_REGRESSION |
 | STRICT_DECISION_RUNTIME_PROBE | `c0ea2955` | safe qwen3:8b strict-schema probe PASS in 741ms; sanitized digest only; 31 focused | not rebuilt | FOCUSED_TESTED |
 | PARAPHRASE_READ_CONVERGENCE | `ff14c3a0` | 21 metamorphic Memory/Work/Assets/Network utterances converge on canonical harmless reads; exact post-Result reads transition to answer; 67 checkpoint focused; 6366 full | not rebuilt | FULL_REGRESSION |
+| MODEL_FALLBACK | `29427c1a` | one-repair invalid Decision falls to authority-free general answer; 70 focused; 6369 full, 3 skipped | superseded by `936fe437` | FULL_REGRESSION |
+| TOOL_INDEX_BYPASS | `29427c1a` | unique canonical reads bypass generic tool ranking; sanitized live traces recorded | superseded by `936fe437` | PASSIVE_LIVE_VERIFIED |
+| DIRECT_READ_COMPLETION_FIX | `936fe437` | direct fast-path reads remain terminal for Action selection even when low-signal normalization clears `read_explicit`; 109 focused | `odysseus:candidate-936fe43744a5` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
