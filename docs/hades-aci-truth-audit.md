@@ -143,3 +143,21 @@ phrases is therefore `OWNER_DOGFOOD_PENDING`.
 - Storage after deployment: 76% root usage / 22 GiB free. Current candidate,
   rollback tags, live-auth harness, and pinned bundle remain; four obsolete
   non-running Odysseus tags were removed.
+
+## Automated live E5 checkpoint
+
+The source-matched deployed candidate is `121cb6d7b74b3160fe4e6fe05edd981036966926`,
+image `odysseus:candidate-121cb6d7b74b`, digest
+`sha256:bdc4aab4cfef9f8e4fd6a1cad9073dcbf2ce96af1b9025b7a11944343891dbb9`.
+The authenticated production HTTP chat path exercised real qwen3:8b using
+isolated fresh sessions plus intentional continuation sessions. The sanitized
+23-case matrix had 23/23 answer-bearing responses, zero transport errors, zero
+internal tool-name/error leakage, and no unauthorized Action or approval in
+the tested cases. Memory and Work paraphrase families converged on direct
+canonical reads and ANSWER completion. This is `E5 LIVE_VERIFIED_AUTOMATED`;
+owner GUI evidence remains `E6 OWNER_DOGFOODED` pending.
+
+Remaining live failures are recorded rather than hidden: asset ordinal
+continuation needs durable result-reference propagation; infrastructure status
+reads exposed executor failures; and the harmless continuation pair did not
+yet reach completion. These are RC fixes, not owner-authentication blockers.
