@@ -79,6 +79,10 @@ This section supersedes older historical rows below for present-state claims.
   turns and uses runtime health for unqualified infrastructure status. These
   changes remain pending a source-matched image because storage preflight is
   still closed.
+- Live canary now includes a negative asset-ordinal-without-context case, so
+  reference resolution is tested both for correct continuation and for
+  fail-closed absence of a canonical result. Canary/reference gate: `129
+  passed`.
 - A second exact audit removed six obsolete untagged Odysseus candidates
   labeled `a20ade61`, `7f0a8576`, `52cdfd5e`, `121cb6d7`, `8419fea9`, and
   `936fe437`; no active container referenced them. Security/control-plane
