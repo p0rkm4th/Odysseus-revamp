@@ -5441,7 +5441,11 @@ async def stream_agent_loop(
         and not _canonical_binding
         and isinstance(_intent.get("intent_frame"), dict)
         and str(_intent["intent_frame"].get("domain_concept") or "") == "UNKNOWN"
-        and str(_intent["intent_frame"].get("operation_class") or "") == "READ"
+        # Unknown safe/action-like language still belongs on the authority-free
+        # conversational floor.  Asking the generic tool index to interpret it
+        # only exposes unrelated affordances (and can make a harmless request
+        # look executable). Writes remain out of this fast path.
+        and str(_intent["intent_frame"].get("operation_class") or "") in {"UNKNOWN", "READ", "EXECUTE"}
     )
     if _aci_general_fallback_candidate:
         _relevant_tools = set()
