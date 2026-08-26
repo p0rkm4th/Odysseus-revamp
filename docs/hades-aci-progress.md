@@ -296,6 +296,11 @@ source/root-cause checkpoint.
   zero build cache. Retained current candidate, one rollback candidate, the
   active authenticated harness image, and the pinned bundle; obsolete
   non-running Odysseus candidate tags were removed.
+- `dd7c3117` expands the permanent sanitized live harness with qualified
+  ordinal pairs, infrastructure positive/near-miss families, empty
+  continuation, and cross-domain contamination cases. Harness-only changes do
+  not require a production image rebuild. The next broad live rotation should
+  use fresh sessions plus the explicit continuation groups.
 
 - `121cb6d7` broadened compositional Work/infrastructure-read routing and
   added negative near-miss coverage so general VM/container explanations do
