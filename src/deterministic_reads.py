@@ -56,6 +56,8 @@ _INFRASTRUCTURE_STATUS = re.compile(
     r"anything\s+(?:un)?healthy|what(?:'s|\s+is)\s+up|"
     r"what\s+services?\s+(?:(?:are|is)\s+)?(?:up|alive)|"
     r"(?:are|is)\s+(?:my\s+)?services?\s+(?:up|alive)|"
+    r"(?:is|are)\s+(?:everything|the\s+stack)\s+(?:healthy|up|okay|ok|good)|"
+    r"anything\s+(?:wrong|broken)|"
     r"what(?:'s|\s+is)\s+(?:dead|broken|busted))\b",
     re.IGNORECASE,
 )

@@ -101,6 +101,8 @@ def test_outstanding_work_review_is_the_existing_work_read(query):
     "Anything unhealthy right now?",
     "What services are alive?",
     "Are my services alive?",
+    "Is everything healthy?",
+    "Anything broken?",
 ])
 def test_infrastructure_status_paraphrases_use_safe_service_read(query):
     resolved = resolve_intent(compile_intent(query))
