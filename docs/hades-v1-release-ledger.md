@@ -22,7 +22,7 @@ gates.
 | Exact approvals and policy boundaries | green | security/control-plane suites; live unauthorized-scan case |
 | Deployment provenance and rollback | green | runtime source match `074d240f`; rollback `odysseus:rollback-b471e104-prev` |
 | Automated live Qwen canary | E5A core slice green | fresh isolated normal-auth acceptance runtime, synthetic `hades-acceptance`, real qwen3:8b; core `8/8`, no internal leaks |
-| Authenticated automated fuzzing | E5A partial/current | `scripts/hades_live_fuzz.py`; disposable Chroma/state, real login/chat/control plane; full regression `6535 passed, 3 skipped`; broader rotating/security corpus remains |
+| Authenticated automated fuzzing | E5A partial/current | `scripts/hades_live_fuzz.py`; disposable Chroma/state, real login/chat/control plane; core `8/8`, held-out sample `20/22`, full regression `6535 passed, 3 skipped`; remaining failures are Work paraphrase direct-routing and network deep-dive disposition |
 | Developer ACI read path | source-complete, E5 pending | focused developer/sandbox gates; production workspace mount intentionally absent |
 | Provider switching/recovery | focused green, live E5 pending | `137` focused tests; only local Qwen endpoint live-available |
 
