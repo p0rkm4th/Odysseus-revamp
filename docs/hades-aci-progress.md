@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `fce8dc89`, remote
+- Source head: branch `hades-aci-v1`, commit `daa2f6ef`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-3d5a9fd3`, image
   `sha256:cfa080d16454a271c7b70e381bd4a947f48d9bd8b665ffef4a6e6d5543590ca3`,
@@ -13,7 +13,7 @@ This section supersedes older historical rows below for present-state claims.
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
   reports `runtime_source_kind=image_source_marker` and `source_match=true`.
-- Source evidence: current full regression is `6414 passed, 4 skipped, 186
+- Source evidence: current full regression is `6421 passed, 3 skipped, 186
   warnings`; control-plane slice `237 passed`; fallback/read
   slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
   infrastructure semantic family `73 passed`; final focused provenance,
@@ -70,6 +70,13 @@ This section supersedes older historical rows below for present-state claims.
   the ACI prose buffer. New deployed variants `Is everything healthy?` and
   `Anything broken?` also completed through SERVICE reads; a general RAID
   question used authority-free MODEL_FALLBACK with no tools.
+- Canonical read-only Developer ACI is source-complete for the bounded V1 read
+  slice: semantic `DEVELOPER` intent resolves to `search_code`,
+  `view_file_region`, or `show_repo_map` through one `developer_read`
+  Capability → ActionSpec → ToolBinding, adapting existing workspace-confined
+  handlers. Focused Developer/projection/security coverage is `175 passed`;
+  full regression is `6421 passed, 3 skipped`. It is not deployed or live E5
+  verified because production has no selected workspace mount.
 - H0 remains frozen at 15 cases: success `0.20`, weighted `0.4333`.
   Historical ACI comparisons remain synthetic benchmark evidence and are not
   owner-live evidence.
@@ -81,7 +88,9 @@ This section supersedes older historical rows below for present-state claims.
   by the 30 GiB preflight headroom guard.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
-- Remote checkpoint: `origin/hades-aci-v1` is synchronized at `fce8dc89`.
+- Remote checkpoint: `origin/hades-aci-v1` is synchronized through source
+  checkpoint `daa2f6ef`; this documentation commit records that source/deploy
+  distinction without requiring a rebuild.
 - Live canary tooling now supports reproducible family/suite selection,
   seeded samples, and explicit fresh versus intentional-continuation session
   modes; selection tests pass without changing runtime authority or execution.
