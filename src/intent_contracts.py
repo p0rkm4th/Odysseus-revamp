@@ -419,7 +419,7 @@ def compile_intent(
     # canonical read contracts. These are safe general-model questions even
     # when they contain a golden-domain noun.
     if (
-        concept in {"MEMORY", "NETWORK", "WORK"}
+        concept in {"MEMORY", "NETWORK", "WORK", "GOAL", "PROJECT", "TASK", "COMMITMENT", "RUN", "MISSION", "WATCH"}
         and re.search(
             r"\b(?:why|explain|what\s+(?:is|are|does)|how\s+does|"
             r"difference\s+between|versus|what\s+should\s+i|"

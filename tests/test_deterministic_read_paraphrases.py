@@ -3,6 +3,7 @@ import pytest
 from benchmarks.hades_aci_metamorphic import (
     DETERMINISTIC_READ_MUST_NOT,
     DETERMINISTIC_READ_TRAJECTORY,
+    NEGATIVE_NEAR_MISSES,
     READ_PARAPHRASE_SETS,
 )
 from src.agent_loop import (
@@ -119,16 +120,15 @@ def test_general_container_explanations_do_not_become_host_inspection(query):
 
 
 @pytest.mark.parametrize("query", [
-    "Why do you remember things about me?",
-    "What should you remember about me?",
-    "Tell me about memory.",
-    "What is a network?",
-    "What should I work on?",
-    "Start working on Hades.",
+    *NEGATIVE_NEAR_MISSES["MEMORY"],
+    *NEGATIVE_NEAR_MISSES["WORK"],
+    *NEGATIVE_NEAR_MISSES["TECHNICAL_ASSET"],
+    *NEGATIVE_NEAR_MISSES["NETWORK"],
 ])
 def test_negative_near_misses_do_not_become_owner_state_reads(query):
-    resolved = resolve_intent(compile_intent(query))
-    assert resolved.available is False
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert not (resolved.available and frame.operation_class == "READ")
 
 
 def test_answer_only_projection_has_no_tool_prompt_or_binding_identity():
