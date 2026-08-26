@@ -640,3 +640,8 @@ source/root-cause checkpoint.
   prompt injection, owner isolation, exact approvals, network scope,
   Workspace-YOLO boundaries, and chat/tool policy. No security invariant was
   relaxed.
+
+- Runtime characterization, context-budget, fallback attribution, and harness
+  overhead focused gate: `110 passed, 1 warning`. This covers the existing
+  provider/runtime profile and token/context instrumentation without claiming
+  equivalent live latency until the corrected source is deployed.
