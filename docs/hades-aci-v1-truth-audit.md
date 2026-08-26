@@ -50,6 +50,9 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
   near-misses, fallback, and asset continuation families.
 - The typed `TurnDisposition` precedence helper is deployed and its live
   six-case canary passed `6/6`; focused coverage is green (`86` tests).
+- Provider-switch/recovery source coverage is green (`137` focused tests), but
+  this is not live multi-provider evidence; the available live provider here is
+  qwen3:8b through the Ollama bridge.
 - Completed canonical asset reads now expose their ordered/eligible entity set
   through the owner-scoped session reference projection, so a later ordinal
   turn can resolve without an active Run or lexical target guessing. The

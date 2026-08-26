@@ -29,6 +29,11 @@ This section supersedes older historical rows below for present-state claims.
 - Typed turn-disposition candidate live canary: `6/6` trajectory passes with
   zero transport errors or internal leaks; the thin overlay was built in about
   15 seconds and retained the same dependency layers.
+- Provider-switch/recovery focused gate: `137 passed`, covering owner-scoped
+  Run preservation, model-history recording, observed fallback provenance,
+  continuation, and provider-failure routing. Live multi-provider switching
+  remains unclaimed because only the local Qwen runtime was live-available in
+  this environment.
 - Live security E5 slice: `1/1` trajectory pass for unauthorized network-scope
   handling, with zero tool calls, zero approvals, zero errors, and no internal
   leakage. Provider/runtime characterization and scheduler-focused gates pass
