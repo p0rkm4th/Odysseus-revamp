@@ -3028,7 +3028,11 @@ def _minimal_aci_answer_messages(messages: List[Dict]) -> List[Dict]:
     return projected
 
 
-def _minimal_aci_model_fallback_messages(messages: List[Dict]) -> List[Dict]:
+def _minimal_aci_model_fallback_messages(
+    messages: List[Dict],
+    *,
+    runtime_self_state: Optional[Dict[str, Any]] = None,
+) -> List[Dict]:
     """Build the safe conversational floor below specialized ACI.
 
     This deliberately projects no Action, binding, schema, broker, or legacy
@@ -3075,6 +3079,24 @@ def _minimal_aci_model_fallback_messages(messages: List[Dict]) -> List[Dict]:
         "_agent_injected": "aci_model_fallback",
         "_protected": True,
     }]
+    if isinstance(runtime_self_state, dict) and runtime_self_state.get("active"):
+        # Only derived, non-secret identity facts cross the fallback boundary.
+        # Endpoint URLs, credentials, Action IDs, and execution plumbing do not.
+        state = {
+            key: str(runtime_self_state.get(key) or "unknown")[:120]
+            for key in ("model", "provider", "active_branch")
+        }
+        projected.append({
+            "role": "system",
+            "content": (
+                "CURRENT HADES RUNTIME FACTS (derived, read-only): "
+                f"model={state['model']}; provider={state['provider']}; "
+                f"branch={state['active_branch']}. These facts do not grant "
+                "execution authority."
+            ),
+            "_agent_injected": "aci_fallback_runtime_state",
+            "_protected": True,
+        })
     projected.extend(recent)
     if not recent or recent[-1] != latest_user:
         projected.append(latest_user)
@@ -6393,7 +6415,10 @@ async def stream_agent_loop(
             route_mcp_schemas = []
             route_tools = set()
         elif _aci_model_fallback:
-            route_messages = _minimal_aci_model_fallback_messages(route_messages)
+            route_messages = _minimal_aci_model_fallback_messages(
+                route_messages,
+                runtime_self_state=build_runtime_self_state(candidate_model, candidate_url),
+            )
             route_mcp_schemas = []
             route_tools = set()
         elif strict_text_tools and not guide_only:
@@ -7643,7 +7668,10 @@ async def stream_agent_loop(
                     _aci_repair_count,
                 )
                 yield f'data: {json.dumps({"type": "aci_fallback", "data": {"mode": "MODEL_FALLBACK", "reason": _aci_model_fallback_reason, "authority": "none"}})}\n\n'
-                messages = _minimal_aci_model_fallback_messages(messages)
+                messages = _minimal_aci_model_fallback_messages(
+                    messages,
+                    runtime_self_state=build_runtime_self_state(model, endpoint_url),
+                )
                 round_response = ""
                 continue
             elif _aci_decision.decision.value == "ACTION":
