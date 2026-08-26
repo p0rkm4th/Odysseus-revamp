@@ -390,6 +390,16 @@ def test_unqualified_service_restart_requires_target_clarification(query):
     assert resolved.reason == "target_required"
 
 
+@pytest.mark.parametrize(("query", "constraint"), [
+    ("Merge these devices by IP", "strong_identity_required"),
+    ("Scan a public range", "public_scope_requires_authorization"),
+    ("Approve the changed action", "action_revalidation_required"),
+])
+def test_security_boundary_constraints_are_framework_resolvable(query, constraint):
+    frame = compile_intent(query)
+    assert constraint in frame.constraints
+
+
 def test_osint_reads_compile_to_the_existing_case_store_binding():
     resolved = resolve_intent(compile_intent("What investigations do I have?"))
     assert resolved.available is True

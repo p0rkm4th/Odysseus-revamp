@@ -5779,6 +5779,19 @@ async def stream_agent_loop(
                 _aci_clarification_text = "Which service or systemd unit should I restart?"
                 _aci_packet = None
                 _record_aci_framework("clarification_required")
+            _safety_constraints = set((_intent.get("intent_frame") or {}).get("constraints") or ())
+            _safety_clarifications = {
+                "strong_identity_required": "I can't merge or identify assets by IP address alone; I need a strong identity such as a system UUID, serial, or MAC.",
+                "public_scope_requires_authorization": "I can't scan a public or external range without an explicitly authorized target scope.",
+                "action_revalidation_required": "I can't approve or replay a changed or completed Action; it must be freshly revalidated through the normal approval path.",
+            }
+            for _constraint, _message in _safety_clarifications.items():
+                if _constraint in _safety_constraints:
+                    _aci_clarification_only = True
+                    _aci_clarification_text = _message
+                    _aci_packet = None
+                    _record_aci_framework("safety_boundary")
+                    break
             if _aci_answer_only:
                 # An explicit canonical Memory Result was already resolved by
                 # the context plane. Its CompletionContract is now ANSWER;
