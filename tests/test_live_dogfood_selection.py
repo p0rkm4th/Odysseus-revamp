@@ -72,3 +72,20 @@ def test_cookie_file_reader_supports_netscape_and_plain_token(tmp_path):
     plain = tmp_path / "token.txt"
     plain.write_text("owner-token\n")
     assert cookie_from_file(str(plain)) == "owner-token"
+
+
+def test_live_result_exposes_bounded_decision_burden_without_raw_trace():
+    from scripts.hades_live_dogfood import Case, assert_case
+
+    result = {
+        "answer_present": True,
+        "bounded_action_decisions": 0,
+        "internal_leak": False,
+        "internal_error": False,
+        "error": None,
+    }
+    assert assert_case(Case("read", "read", expect_bounded_decisions=0), result) == []
+    result["bounded_action_decisions"] = 1
+    assert "unexpected_bounded_decisions" in assert_case(
+        Case("read", "read", expect_bounded_decisions=0), result,
+    )
