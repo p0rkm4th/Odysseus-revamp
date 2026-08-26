@@ -45,7 +45,7 @@ E6.
 ## Current release state
 
 - Branch: `hades-aci-v1`, synchronized with `origin`.
-- Source head: `c9262717` (semantic read-family corrections, safe derived
+- Source head: `e86345e2` (semantic read-family corrections, safe derived
   runtime facts for MODEL_FALLBACK); deployed runtime remains `c0a281f5`
   until the next storage-approved candidate build.
 - Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
@@ -55,6 +55,9 @@ E6.
   security/authority coverage.
 - Current source-tip full regression: `6511 passed, 3 skipped, 186 warnings`
   in 124 seconds. Deployment and live-E5 claims remain unchanged.
+- Current matched Qwen3:8b probe: raw `3.659s` vs Hades `5.462s` at a
+  16-token cap; delta `1.803s`, including `0.218s` framework preparation and
+  one Hades model call with zero tools/index lookups. Diagnostic only.
 - Current telemetry/reference gate: `97 passed`.
 - Storage: 74% used / 23 GiB free; large replacement builds remain closed by
   the 30 GiB preflight guard. Current, rollback, and live-auth images are
