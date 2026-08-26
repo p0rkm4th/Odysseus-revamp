@@ -12,9 +12,9 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `1f1f8f4d` | `origin/hades-aci-v1` |
-| Deployed source | `1f1f8f4d` | `/api/version`, immutable image marker |
-| Running image | `odysseus:candidate-1f1f8f4d` | Docker inspect |
+| Pushed source | `8038e227` | `origin/hades-aci-v1` |
+| Deployed source | `8038e227` | `/api/version`, immutable image marker |
+| Running image | `odysseus:candidate-8038e227` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
 | API | healthy | `/api/health` |
 | Broker | active; socket present | systemd/socket check |
@@ -88,6 +88,10 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
 - Terminal/blocked durable continuation is now an explicit answer-only
   disposition. It preserves the durable state explanation and prevents a
   completed or unavailable Run from re-entering model Action selection.
+- Live intentional continuation now passes asset list → first physical asset
+  and Review outstanding work → Continue. The asset follow-up preserved strong
+  identity `PHYSICAL-001`; Continue resumed with zero tool calls and no
+  fallback.
 
 ## Required metrics and present evidence
 
