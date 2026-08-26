@@ -12,7 +12,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `4af02d21` | `origin/hades-aci-v1` matches |
+| Pushed source | `72f41428` | `origin/hades-aci-v1` matches |
 | Deployed source | `cfbe6244` | `/api/version`, image labels |
 | Running image | `odysseus:candidate-cfbe6244` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
@@ -23,9 +23,11 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Full regression | `6399 passed, 3 skipped` at the prior runtime gate | progress ledger |
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
 
-The latest source contains reference-projection, homelab executor, and live
-canary changes that are not yet source-matched in the running image. Storage
-preflight blocks a large replacement build at 18 GiB free / 80% used.
+The latest source contains reference-projection, homelab executor, live-canary,
+and auditable storage-preflight changes that are not yet source-matched in the
+running image. A supported dangling-image prune reclaimed 9.067 GiB; storage
+preflight still blocks a large replacement build at 23 GiB free / 74% used
+against its 30 GiB guard.
 
 ## ACI control-plane truth
 
