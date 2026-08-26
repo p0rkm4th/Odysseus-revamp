@@ -53,6 +53,9 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
 - Provider-switch/recovery source coverage is green (`137` focused tests), but
   this is not live multi-provider evidence; the available live provider here is
   qwen3:8b through the Ollama bridge.
+- Developer/sandbox coverage is green (`62` tests) for the existing bounded
+  workspace path. Semantic Developer ACI read Actions remain incomplete and
+  are not promoted to V1-complete evidence.
 - Completed canonical asset reads now expose their ordered/eligible entity set
   through the owner-scoped session reference projection, so a later ordinal
   turn can resolve without an active Run or lexical target guessing. The
