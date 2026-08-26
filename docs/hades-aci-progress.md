@@ -4,15 +4,14 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `cfbe6244` (runtime commit
-  `501529dc`; the later scorer change is not in the image), remote
+- Source head: branch `hades-aci-v1`, commit `cfbe6244`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed runtime: `odysseus:candidate-501529dc3`, image
-  `sha256:5c318011a98c17f581d5d726e86cf2033620b07f5bec4bee359039afefd5e9e`,
-  exact runtime source `501529dc709d565290923b5145e0306b5705ba95`, migration
+- Deployed runtime: `odysseus:candidate-cfbe6244`, image
+  `sha256:43209c7211269e6b4a7268105057122dcd5991526bdee3c6c7373307d7b8f159`,
+  exact runtime source `cfbe6244fd0533dd7550820f3273ddff98a115ca`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
-  source overlay of the fully built `candidate-2bc7ca1163a4`; entrypoint and
-  source hash were independently verified.
+  source overlay of the previously fully built candidate; entrypoint and
+  `deterministic_reads.py` hash were independently verified.
 - Source evidence: final full regression at `dba43815` was `6399 passed, 3
   skipped, 186 warnings`; control-plane slice `237 passed`; fallback/read
   slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
@@ -25,7 +24,9 @@ This section supersedes older historical rows below for present-state claims.
 - Live root-cause evidence: asset ordinal references resolved to strong
   canonical identities; `Are my services alive?` used the SERVICE read fast
   path; direct MODEL_FALLBACK answers were emitted instead of remaining in
-  the ACI prose buffer.
+  the ACI prose buffer. New deployed variants `Is everything healthy?` and
+  `Anything broken?` also completed through SERVICE reads; a general RAID
+  question used authority-free MODEL_FALLBACK with no tools.
 - H0 remains frozen at 15 cases: success `0.20`, weighted `0.4333`.
   Historical ACI comparisons remain synthetic benchmark evidence and are not
   owner-live evidence.
