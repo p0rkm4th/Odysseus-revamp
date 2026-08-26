@@ -9569,6 +9569,15 @@ async def stream_agent_loop(
                              round_reasoning=round_reasoning,
                              tool_result_records=tool_result_records)
 
+        # A successful direct canonical read has already crossed the control
+        # plane's execution boundary.  Rebuild the next route from the small
+        # semantic ResultProjection immediately, rather than allowing saved
+        # conversation residue to remain in the answer prompt.  This preserves
+        # continuity for explicit references while preventing an unrelated old
+        # Work/Memory turn from steering answer synthesis.
+        if _aci_answer_only:
+            messages = _minimal_aci_answer_messages(messages)
+
         # Emit agent_step event
         yield (
             f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
