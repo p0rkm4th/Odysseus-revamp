@@ -17,6 +17,7 @@ gates.
 | Asset ordinal continuation | green | source `8038e227` behavior; canonical `PHYSICAL-001` live trace; telemetry in `074d240f` |
 | Durable Continue terminal-state handling | green | `177` focused tests; live Continue resumed with zero tool calls |
 | General MODEL_FALLBACK | green | focused security/fallback gates; live ordinary-question cases |
+| Conceptual explanation routing | focused green, deployment pending | `17cbbb97`; RAID/backup explanations no longer enter `storage_ops`; direct fallback diagnostics are initialized safely |
 | Infrastructure failure normalization | green | executor/projection focused gates preserve unavailable/invalid status |
 | Exact approvals and policy boundaries | green | security/control-plane suites; live unauthorized-scan case |
 | Deployment provenance and rollback | green | runtime source match `074d240f`; rollback `odysseus:rollback-b471e104-prev` |
@@ -44,8 +45,9 @@ E6.
 ## Current release state
 
 - Branch: `hades-aci-v1`, synchronized with `origin`.
-- Source head: `aea513aa` (canary harness after deployed runtime source
-  `074d240f`).
+- Source head: `17cbbb97` (conceptual fallback routing and configurable
+  equivalent-deliverable benchmark prompts); deployed runtime remains
+  `c0a281f5` until the next storage-approved candidate build.
 - Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
 - Full regression: `6424 passed, 3 skipped` on behavior-identical parent
   `8038e227`.
@@ -80,3 +82,8 @@ E6.
   longer emit a search-specific false claim; the real-Qwen probe returned a
   domain-neutral fallback, one model call, zero tools, and
   `aci_empty_answer_fallback=true`.
+- A matched normal-question probe after `17cbbb97` still produced a framework
+  fallback from Qwen despite one authority-free model call and zero tools;
+  this remains an attribution/ provider-output issue, not equivalent benchmark
+  evidence. The harness now accepts `--prompt` so future matched probes do not
+  depend on the old arithmetic wording.
