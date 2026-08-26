@@ -38,3 +38,11 @@ def test_output_accounting_rejects_implausible_stream_usage_mismatch():
         {"output_tokens": 3, "output_chars": 144},
     )
     assert result == {"consistent": False, "reason": "hades_text_token_ratio implausible"}
+
+
+def test_output_accounting_separates_framework_fallback_text():
+    result = output_accounting(
+        {"output_tokens": 3, "output_chars": 2},
+        {"output_tokens": 3, "output_chars": 99, "aci_empty_answer_fallback": True},
+    )
+    assert result == {"consistent": False, "reason": "hades_framework_generated_fallback"}

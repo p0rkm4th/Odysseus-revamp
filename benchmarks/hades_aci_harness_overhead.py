@@ -144,6 +144,8 @@ async def hades_chat(
         "prefill_tps": metrics.get("prefill_tps"),
         "usage_source": metrics.get("usage_source"),
         "context_envelope": metrics.get("aci_context_envelope"),
+        "aci_model_fallback": bool(metrics.get("aci_model_fallback")),
+        "aci_empty_answer_fallback": bool(metrics.get("aci_empty_answer_fallback")),
         "output_chars": output_chars,
     }
 
@@ -180,6 +182,8 @@ def output_accounting(raw: dict[str, Any], hades: dict[str, Any]) -> dict[str, A
     converted into a fabricated token count.
     """
     result: dict[str, Any] = {"consistent": True, "reason": None}
+    if hades.get("aci_empty_answer_fallback"):
+        return {"consistent": False, "reason": "hades_framework_generated_fallback"}
     for label, item in (("raw", raw), ("hades", hades)):
         tokens = item.get("output_tokens")
         chars = item.get("output_chars")
