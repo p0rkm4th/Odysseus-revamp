@@ -45,6 +45,11 @@ No synthetic result is labeled as live owner evidence. No private runtime data,
 database, backup, log, model blob, or owner Memory was added to the benchmark
 artifacts.
 
+Service-operation contract fix: SOURCE and FOCUSED_TESTED, with FULL_REGRESSION
+green (`6310 passed, 3 skipped, 186 warnings`). The source-side live Qwen probe
+was BLOCKED by host-to-container Ollama namespace reachability; deployed
+owner-live verification remains pending.
+
 ## Owner-live script
 
 1. What do you remember about me?

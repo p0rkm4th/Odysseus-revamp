@@ -154,7 +154,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "homelab_host_observation",
     ),
     "SERVICE": DomainContract(
-        "SERVICE", "homelab.manage", {"READ": "service_status"}, "manage_homelab",
+        "SERVICE", "homelab.manage", {"READ": "service_status", "EXECUTE": "plan_service_restart"}, "manage_homelab",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "service_status_observation",
     ),
@@ -343,7 +343,7 @@ def compile_intent(
         concept = "SECURITY_ENGAGEMENT"
     elif re.search(r"\b(?:security\s+evidence|evidence\s+for\s+security|security\s+artifacts?)\b", q):
         concept = "SECURITY_EVIDENCE"
-    elif re.search(r"\b(?:service(?:s)?|daemon(?:s)?)\b", q) and re.search(r"\b(?:status|running|active|homelab|server)\b", q):
+    elif re.search(r"\b(?:service(?:s)?|daemon(?:s)?)\b", q) and re.search(r"\b(?:status|running|active|homelab|server|restart|recover|logs?|errors?)\b", q):
         concept = "SERVICE"
     elif re.search(r"\b(?:homelab|container(?:s)?|storage|remote host(?:s)?)\b", q):
         concept = "HOMELAB_HOST"

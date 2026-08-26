@@ -363,6 +363,21 @@ def test_existing_domain_read_bindings_are_semantically_exposed(query, concept, 
     assert resolved.action.approval.value == "none"
 
 
+@pytest.mark.parametrize("query", [
+    "Restart the registered service",
+    "Restart the service",
+])
+def test_service_restart_language_resolves_to_safe_canonical_preflight(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "SERVICE"
+    assert resolved.frame.operation_class == "EXECUTE"
+    assert resolved.action_id == "plan_service_restart"
+    assert resolved.binding_name == "manage_homelab"
+    assert resolved.action.approval.value == "none"
+    assert resolved.action.effects == ("read_private",)
+
+
 def test_osint_reads_compile_to_the_existing_case_store_binding():
     resolved = resolve_intent(compile_intent("What investigations do I have?"))
     assert resolved.available is True
