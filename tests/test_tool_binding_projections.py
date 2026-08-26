@@ -136,6 +136,28 @@ def test_registered_dispatch_rejects_malformed_canonical_read_result(monkeypatch
     assert result["status"] == "INVALID_RESULT"
 
 
+def test_homelab_binding_preserves_structured_executor_failure(monkeypatch):
+    class FailingHomelab:
+        async def execute(self, payload, *, owner):
+            assert payload == {"action": "read_network_context"}
+            assert owner == "alice"
+            return {
+                "status": "UNAVAILABLE",
+                "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE",
+                "source": "host_network_broker",
+            }
+
+    monkeypatch.setattr("src.homelab_operations.HomelabOperations", FailingHomelab)
+    block = type("Block", (), {
+        "content": '{"action":"read_network_context"}',
+    })()
+    binding, result = asyncio.run(tool_execution._execute_manage_homelab_binding(block, owner="alice"))
+    assert binding == "manage_homelab"
+    assert result["success"] is False
+    assert result["exit_code"] == 1
+    assert result["data"]["error_code"] == "HOST_NETWORK_CONTEXT_UNAVAILABLE"
+
+
 def test_registered_binding_cannot_bypass_disabled_or_tool_policy(monkeypatch):
     calls = []
 

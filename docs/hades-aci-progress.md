@@ -48,6 +48,9 @@ This section supersedes older historical rows below for present-state claims.
   for ordinal language and uses a recent `last` reference only as a fallback;
   mixed-domain asset ordinal and durable-reference focused coverage is green
   (`150 passed`).
+- The homelab binding now preserves structured executor failure status and
+  non-zero exit semantics for broker/runtime failures such as unavailable host
+  network context; binding/control-plane coverage is green (`45 passed`).
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.
