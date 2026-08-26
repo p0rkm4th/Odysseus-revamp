@@ -5382,6 +5382,29 @@ async def stream_agent_loop(
     )
     _tool_index_bypassed = False
     _tool_index_lookup_attempted = False
+    # A benign unknown READ in ACI has no specialized contract and no
+    # framework-resolved capability.  It is already destined for the
+    # authority-free general-model floor; do not spend embedding/tool-index
+    # latency constructing an empty Action problem.  Explicit tools,
+    # workspace, continuation, domain, and caller-provided routes remain on
+    # their normal paths.
+    _aci_general_fallback_candidate = bool(
+        _aci_enabled
+        and not relevant_tools
+        and not forced_tools
+        and not workspace
+        and not _active_document_relevant
+        and not _intent.get("continuation")
+        and not (_intent.get("domains") or set())
+        and not _canonical_binding
+        and isinstance(_intent.get("intent_frame"), dict)
+        and str(_intent["intent_frame"].get("domain_concept") or "") == "UNKNOWN"
+        and str(_intent["intent_frame"].get("operation_class") or "") == "READ"
+    )
+    if _aci_general_fallback_candidate:
+        _relevant_tools = set()
+        _tool_index_bypassed = True
+        logger.info("[tool-rag] ACI general fallback bypassed generic tool index")
     if not guide_only and not relevant_tools and _canonical_binding and (not _low_signal_turn or _canonical_read_fast):
         from src.tool_index import ALWAYS_AVAILABLE
         _relevant_tools = set(ALWAYS_AVAILABLE) | {_canonical_binding}
@@ -5401,7 +5424,7 @@ async def stream_agent_loop(
         )
     if relevant_tools:
         logger.info(f"[tool-rag] Using caller-provided relevant_tools ({len(_relevant_tools)} tools)")
-    if not guide_only and not _relevant_tools and _low_signal_turn:
+    if not guide_only and not _relevant_tools and _low_signal_turn and not _aci_general_fallback_candidate:
         from src.tool_index import ALWAYS_AVAILABLE
         if workspace:
             # An active workspace IS the file-work signal: a vague "look at the
@@ -5418,7 +5441,7 @@ async def stream_agent_loop(
             # Non-English queries are flagged low_signal by the English-only
             # intent classifier, but fastembed retrieval works across languages.
             logger.info("[tool-rag] Low-signal query; will run RAG retrieval")
-    if not guide_only and not _relevant_tools:
+    if not guide_only and not _relevant_tools and not _aci_general_fallback_candidate:
         _tool_index_lookup_attempted = True
         try:
             from src.tool_index import get_tool_index, ALWAYS_AVAILABLE
@@ -5471,7 +5494,7 @@ async def stream_agent_loop(
 
     # Fallback: if RAG unavailable, use keyword-based tool selection
     # instead of sending ALL tools (which overwhelms the model).
-    if not guide_only and not _relevant_tools and _retrieval_query:
+    if not guide_only and not _relevant_tools and _retrieval_query and not _aci_general_fallback_candidate:
         from src.tool_index import ALWAYS_AVAILABLE, ToolIndex
         _relevant_tools = set(ALWAYS_AVAILABLE)
         ql = _retrieval_query.lower()
