@@ -16,6 +16,18 @@ def test_fresh_selection_breaks_declared_continuation_groups():
     assert all(case.mode == "fresh" and case.group is None for case in selected)
 
 
+def test_fresh_selection_keeps_group_establishers_not_followups():
+    from scripts.hades_live_dogfood import Case
+
+    cases = (
+        Case("list", "list machines", "continuation", "assets", "assets"),
+        Case("first", "first one", "continuation", "assets", "assets"),
+        Case("general", "explain dns"),
+    )
+    selected = select_cases(cases, session_mode="fresh")
+    assert [case.name for case in selected] == ["list", "general"]
+
+
 def test_declared_selection_preserves_asset_and_continue_groups():
     selected = select_cases(CASES, suite="all", session_mode="declared")
     assets = [case for case in selected if case.group == "assets_reference"]

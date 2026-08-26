@@ -164,7 +164,20 @@ def select_cases(
                     selected_names.add(case.name)
             selected.sort(key=lambda item: cases.index(item))
     if session_mode == "fresh":
-        selected = [Case(**{**case.__dict__, "mode": "fresh", "group": None}) for case in selected]
+        # A continuation follow-up is not an independent fresh-session case:
+        # converting it to a fresh session would manufacture a missing-context
+        # failure and mislabel reference resolution. Keep the first turn that
+        # establishes each declared group, and leave the complete trajectory to
+        # declared/continuation session modes.
+        fresh: list[Case] = []
+        seen_groups: set[str] = set()
+        for case in selected:
+            if case.mode == "continuation" and case.group:
+                if case.group in seen_groups:
+                    continue
+                seen_groups.add(case.group)
+            fresh.append(Case(**{**case.__dict__, "mode": "fresh", "group": None}))
+        selected = fresh
     return selected
 
 
