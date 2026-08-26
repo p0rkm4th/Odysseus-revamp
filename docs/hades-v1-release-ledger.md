@@ -72,6 +72,10 @@ E6.
   to be mistaken for an equivalent benchmark. Latest real-bridge run: raw
   `3.769s`, Hades `5.860s`, delta `2.091s`, prep `0.211s`, one model call,
   zero tools.
+- The latest run classifies the discrepancy as
+  `hades_framework_generated_fallback` (not provider token accounting): Qwen
+  reported 3 provider tokens, while Hades emitted 99 characters of its
+  domain-neutral fallback. Equivalent-deliverable latency remains unclaimed.
 - Deployed fallback hardening at `c0a281f5`: empty model/synthesis responses no
   longer emit a search-specific false claim; the real-Qwen probe returned a
   domain-neutral fallback, one model call, zero tools, and
