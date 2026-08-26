@@ -305,7 +305,7 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     if re.search(r"\b(?:delete|remove|retire)\b", q): return "DELETE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
-    if re.search(r"\b(?:restart|execute|run|scan|discover|install|turn on)\b", q): return "EXECUTE"
+    if re.search(r"\b(?:restart|recover|execute|run|scan|discover|install|turn on)\b", q): return "EXECUTE"
     if re.search(r"\b(?:research|investigate|deep dive|look into)\b", q): return "RESEARCH"
     if re.search(r"\b(?:monitor|watch|alert)\b", q): return "MONITOR"
     return "READ"
@@ -417,6 +417,18 @@ def compile_intent(
     match = re.search(r"\b(?:about|for|asset)\s+([A-Za-z0-9_.:-]{2,80})", text, re.IGNORECASE)
     if match:
         target = match.group(1)
+    if concept == "SERVICE" and operation == "EXECUTE" and not target:
+        # A restart preflight is safe, but it is not meaningful without the
+        # exact unit.  Keep the semantic contract available for qualified
+        # requests while making an unqualified imperative clarification-bound.
+        match = re.search(
+            r"\b(?:restart|recover)\s+(?:the\s+)?(?:registered\s+)?(?:service\s+)?"
+            r"([A-Za-z0-9_.:-]{2,80})\b",
+            text,
+            re.IGNORECASE,
+        )
+        if match and match.group(1).casefold() not in {"the", "service", "registered"}:
+            target = match.group(1)
     reference_filters = {}
     if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
         reference_filters["entity_refs"] = list(reference_resolution["refs"])
@@ -527,6 +539,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     contract = DOMAIN_CONTRACTS.get(frame.domain_concept)
     if contract is None:
         return ResolvedContract(frame, None, None, None, None, False, "no_domain_contract")
+    if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:
+        return ResolvedContract(frame, contract, None, None, contract.binding, False, "target_required")
     action_key = frame.operation_class
     if frame.domain_concept == "WORK" and frame.filters.get("view") == "attention":
         action_key = "READ_ATTENTION"
