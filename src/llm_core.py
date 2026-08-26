@@ -765,6 +765,13 @@ def _build_ollama_payload(
         payload["options"] = options
     if tools:
         payload["tools"] = _alias_harmony_tools(tools, model)
+    # Keep the machine/content channels separate for normal Ollama chat too:
+    # Qwen3 otherwise spends a short answer budget in ``message.thinking``
+    # and leaves no user-visible content.  Structured decisions below repeat
+    # this assignment for clarity. Deliberate reasoning modes use their own
+    # provider adapter/request path rather than this ordinary chat builder.
+    if _supports_thinking(model):
+        payload["think"] = False
     if response_format:
         payload["format"] = response_format
         # A strict ACI DecisionContract is a machine channel, not a free-form
@@ -2402,9 +2409,12 @@ async def llm_call_async(
         if max_tokens and max_tokens > 0:
             tok_key = "max_completion_tokens" if _uses_max_completion_tokens(model) else "max_tokens"
             payload[tok_key] = max_tokens
-        # Suppress thinking for qwen3/gemma4 on Ollama /v1 — same as stream_llm.
+        # Ollama's OpenAI-compatible surface may ignore ``think:false`` while
+        # still routing Qwen/Gemma output into reasoning.  This runtime
+        # empirically honors ``reasoning_effort`` for normal answer content.
         if _is_ollama_openai_compat_url(url) and _supports_thinking(model):
             payload["think"] = False
+            payload["reasoning_effort"] = "none"
         if provider == "mistral" and _supports_thinking(model):
             payload["reasoning_effort"] = _MISTRAL_REASONING_EFFORT
         _apply_local_cache_affinity(payload, url, session_id)
@@ -2666,11 +2676,13 @@ async def _stream_llm_inner(url: str, model: str, messages: List[Dict], temperat
         # (high / medium / low / none); default "high".
         if provider == "mistral" and _supports_thinking(model):
             payload["reasoning_effort"] = _MISTRAL_REASONING_EFFORT
-        # For Ollama's OpenAI-compat /v1 endpoint with thinking models (qwen3,
-        # gemma4, etc.), suppress thinking so tool calls aren't swallowed inside
-        # <think> blocks. Ollama /v1 accepts "think": false as a top-level param.
+        # For Ollama's OpenAI-compat /v1 endpoint, send both controls: some
+        # runtimes ignore ``think:false`` but honor ``reasoning_effort:none``.
+        # Keep this provider/runtime-specific rather than changing reasoning
+        # behavior for other backends.
         if _is_ollama_openai_compat_url(url) and _supports_thinking(model):
             payload["think"] = False
+            payload["reasoning_effort"] = "none"
         _apply_local_cache_affinity(payload, url, session_id)
         _apply_local_generation_stability(payload, target_url, model)
         _scrub_openai_chat_tool_reasoning(payload, target_url, model)
