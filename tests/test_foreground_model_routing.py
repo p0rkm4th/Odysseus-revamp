@@ -3027,8 +3027,8 @@ def test_agent_round_ignores_malformed_usage_and_uses_estimate(
         ("Recovered final answer.", "Recovered final answer."),
         (
             "",
-            "I gathered some search results but couldn't pull a clean answer together. "
-            "Want me to try a more specific question, or summarize what I did find?",
+            "I wasn't able to produce a complete answer for that request. "
+            "Please rephrase it and I'll try again.",
         ),
     ],
 )
