@@ -123,6 +123,19 @@ def test_network_context_detail_paraphrases_use_host_context_read(query):
 
 
 @pytest.mark.parametrize("query", [
+    "Can you inspect the host?",
+    "Check this host.",
+    "Show me the current host.",
+])
+def test_explicit_host_inspection_uses_host_read_not_network_observations(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "HOMELAB_HOST"
+    assert resolved.action_id == "inspect_host"
+    assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
     "Remind me what I've got going.",
     "What have I got going on?",
     "What's keeping me busy?",
