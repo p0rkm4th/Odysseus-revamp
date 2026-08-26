@@ -636,3 +636,9 @@ source/root-cause checkpoint.
   endpoint/credential material and retains `Execution authority: NONE`; the
   fallback/control-plane gate is `210 passed`. This is source-tested but not
   yet deployed or live-qwen verified.
+
+- Security/authority regression gate after the fallback SelfState changes:
+  `198 passed, 1 warning`. Coverage includes fallback authority isolation,
+  prompt injection, owner isolation, exact approvals, network scope,
+  Workspace-YOLO boundaries, and chat/tool policy. No security invariant was
+  relaxed.
