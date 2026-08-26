@@ -1,7 +1,7 @@
 from src.aci import (
     ACIProfile, AgentTaskPacket, ActionCard, CompletionContract,
     ContextEnvelope, DecisionMode, ObjectiveSpec, TurnDisposition, WorkingSet,
-    PostResultState, classify_post_result,
+    PostResultState, classify_post_result, resolve_turn_disposition,
     adaptive_shortlist, hard_filter_actions, model_burden,
     parse_decision_json, state_fingerprint,
 )
@@ -101,6 +101,16 @@ def test_post_result_state_does_not_reenter_decision_for_sufficient_canonical_re
 
 def test_model_fallback_is_a_non_authoritative_turn_disposition():
     assert TurnDisposition.MODEL_FALLBACK.value == "MODEL_FALLBACK"
+
+
+def test_typed_turn_disposition_has_one_authoritative_precedence():
+    assert resolve_turn_disposition(model_fallback=True, packet_present=True) is TurnDisposition.MODEL_FALLBACK
+    assert resolve_turn_disposition(clarification_only=True, fast_path=True) is TurnDisposition.CLARIFY
+    assert resolve_turn_disposition(answer_only=True, fast_path=True) is TurnDisposition.ANSWER
+    assert resolve_turn_disposition(completion_satisfied=True) is TurnDisposition.ANSWER
+    assert resolve_turn_disposition(fast_path=True, packet_present=True) is TurnDisposition.EXECUTE_DIRECT
+    assert resolve_turn_disposition(packet_present=True) is TurnDisposition.DECIDE
+    assert resolve_turn_disposition() is None
 
 
 def test_model_fallback_context_excludes_internal_execution_plumbing():
