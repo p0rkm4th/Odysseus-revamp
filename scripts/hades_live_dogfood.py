@@ -37,6 +37,7 @@ class Case:
     expect_fallback: bool | None = None
     max_tools: int | None = None
     split: str = "core"
+    expect_reference: str | None = None
 
 
 CASES = [
@@ -50,11 +51,11 @@ CASES = [
         "Remind me what I've got going.",
     ], 1)),
     Case("assets_list", "What machines have I got?", "continuation", "assets_reference", "assets", True, False, None),
-    Case("assets_reference", "Tell me about the first physical one.", "continuation", "assets_reference", "assets", True, False, None),
+    Case("assets_reference", "Tell me about the first physical one.", "continuation", "assets_reference", "assets", True, False, None, expect_reference="TECHNICAL_ASSET"),
     Case("assets_list_2", "Show me my hardware.", "continuation", "assets_reference_2", "assets", True, False, None),
-    Case("assets_reference_2", "Tell me about the second one.", "continuation", "assets_reference_2", "assets", True, False, None),
+    Case("assets_reference_2", "Tell me about the second one.", "continuation", "assets_reference_2", "assets", True, False, None, expect_reference="TECHNICAL_ASSET"),
     Case("assets_list_3", "What computers do I own?", "continuation", "assets_reference_3", "assets", True, False, None),
-    Case("assets_reference_3", "Which machine is the first one?", "continuation", "assets_reference_3", "assets", True, False, None),
+    Case("assets_reference_3", "Which machine is the first one?", "continuation", "assets_reference_3", "assets", True, False, None, expect_reference="TECHNICAL_ASSET"),
     # A reference without a preceding canonical result must remain a natural
     # clarification/fallback, never a guessed asset identity or tool call.
     Case("assets_reference_without_context", "Tell me about the first physical one.", family="reference", max_tools=0),
@@ -247,6 +248,7 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         "completion_transition": metrics.get("aci_completion_transition"),
         "fallback": bool(metrics.get("aci_model_fallback")),
         "why_no_action": metrics.get("why_no_action"),
+        "reference_resolution": metrics.get("aci_reference_resolution"),
         "latency_seconds": round(time.monotonic() - started, 2),
         "input_tokens": metrics.get("input_tokens"),
         "output_tokens": metrics.get("output_tokens"),
@@ -270,6 +272,12 @@ def assert_case(case: Case, result: dict[str, Any]) -> list[str]:
         failures.append("unexpected_fallback")
     if case.max_tools is not None and int(result.get("tool_calls") or 0) > case.max_tools:
         failures.append("unexpected_tools")
+    if case.expect_reference:
+        reference = result.get("reference_resolution") or {}
+        if reference.get("status") != "RESOLVED":
+            failures.append("reference_not_resolved")
+        if reference.get("concept") != case.expect_reference:
+            failures.append("reference_concept_mismatch")
     return failures
 
 

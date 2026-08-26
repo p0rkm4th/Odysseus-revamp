@@ -4894,6 +4894,8 @@ async def stream_agent_loop(
     _aci_contract_fallback_used = False
     _aci_model_fallback = False
     _aci_model_fallback_reason = None
+    _aci_reference_resolution = None
+    _aci_reference_context_source = "none"
 
     def _record_aci_framework(label: str) -> None:
         if _aci_enabled:
@@ -5013,6 +5015,14 @@ async def stream_agent_loop(
         _record_aci_framework("intent_resolution")
         if _intent_frame.entity_reference or _intent_frame.run_reference or _intent_frame.reference_resolution.get("status") == "RESOLVED":
             _record_aci_framework("reference_resolution")
+        _aci_reference_resolution = dict(_intent_frame.reference_resolution or {})
+        if _intent_frame.reference_resolution.get("status") == "RESOLVED":
+            if _active_reference_entities:
+                _aci_reference_context_source = "ACTIVE_RUN"
+            elif _session_reference_context:
+                _aci_reference_context_source = "RECENT_SESSION_RESULT"
+            else:
+                _aci_reference_context_source = "CURRENT_TURN"
         _intent["intent_frame"] = _intent_frame.as_dict()
         _intent["resolved_contract"] = _resolved_contract.as_dict()
         if _intent_frame.operation_class == "CONTINUE":
@@ -9965,6 +9975,15 @@ async def stream_agent_loop(
     metrics["tool_index_bypass_count"] = 1 if _tool_index_bypassed else 0
     metrics["tool_index_lookup_count"] = 1 if _tool_index_lookup_attempted else 0
     metrics["aci_model_fallback"] = bool(_aci_model_fallback)
+    if isinstance(_aci_reference_resolution, dict):
+        metrics["aci_reference_resolution"] = {
+            "status": str(_aci_reference_resolution.get("status") or "UNKNOWN"),
+            "concept": _aci_reference_resolution.get("concept"),
+            "selection": _aci_reference_resolution.get("selection"),
+            "resolved_count": len(_aci_reference_resolution.get("refs") or []),
+            "candidate_count": len(_aci_reference_resolution.get("candidate_refs") or []),
+            "context_source": _aci_reference_context_source,
+        }
     try:
         from src.aci import resolve_turn_disposition
         _turn_disposition = resolve_turn_disposition(
