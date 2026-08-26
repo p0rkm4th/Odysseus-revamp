@@ -186,6 +186,25 @@ def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()[:16]
 
 
+def cookie_from_file(path: str) -> str:
+    """Read one owner session cookie without logging the credential.
+
+    Supports Netscape cookie exports (the format used by the existing local
+    browser harness) and a plain token file.  The value is returned only to
+    the in-process request caller.
+    """
+    text = open(path, encoding="utf-8").read()
+    for line in text.splitlines():
+        if line and not line.startswith("#"):
+            fields = line.split("\t")
+            if len(fields) >= 7 and fields[5] == "odysseus_session":
+                return fields[6].strip()
+    token = text.strip()
+    if not token or any(ch.isspace() for ch in token):
+        raise ValueError("cookie file has no usable owner session cookie")
+    return token
+
+
 def create_session(base: str, cookie: str, name: str, *, model: str) -> str:
     response = requests.post(
         f"{base}/api/session",
@@ -285,6 +304,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default=os.environ.get("HADES_LIVE_BASE_URL", "http://127.0.0.1:7000"))
     parser.add_argument("--cookie", default=os.environ.get("HADES_LIVE_COOKIE"))
+    parser.add_argument("--cookie-file", default=os.environ.get("HADES_LIVE_COOKIE_FILE"))
     parser.add_argument("--model", default=os.environ.get("HADES_LIVE_MODEL", "qwen3:8b"))
     parser.add_argument("--output", default="/tmp/hades-live-dogfood.json")
     parser.add_argument("--suite", choices=("all", "core", "held_out", "rotating", "security"), default="all")
@@ -293,8 +313,13 @@ def main() -> int:
     parser.add_argument("--fresh-sessions", action="store_true")
     parser.add_argument("--continuation-sessions", action="store_true")
     args = parser.parse_args()
+    if not args.cookie and args.cookie_file:
+        try:
+            args.cookie = cookie_from_file(args.cookie_file)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"unable to read --cookie-file: {exc}") from exc
     if not args.cookie:
-        raise SystemExit("HADES_LIVE_COOKIE or --cookie is required")
+        raise SystemExit("HADES_LIVE_COOKIE, --cookie, or --cookie-file is required")
 
     if args.fresh_sessions and args.continuation_sessions:
         raise SystemExit("choose at most one of --fresh-sessions and --continuation-sessions")
