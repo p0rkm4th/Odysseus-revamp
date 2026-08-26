@@ -62,6 +62,8 @@ def test_invalid_aci_decision_falls_back_without_tool_authority(monkeypatch):
     assert len(provider_calls) == 3
     assert provider_calls[-1]["tools"] in (None, [])
     assert provider_calls[-1]["response_format"] is None
+    metrics = next(event["data"] for event in reversed(events) if event.get("type") == "metrics")
+    assert metrics["aci_turn_disposition"] == "MODEL_FALLBACK"
     fallback_text = " ".join(
         str(message.get("content", "")) for message in provider_calls[-1]["messages"]
     )

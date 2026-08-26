@@ -9838,6 +9838,16 @@ async def stream_agent_loop(
     metrics["tool_index_bypass_count"] = 1 if _tool_index_bypassed else 0
     metrics["tool_index_lookup_count"] = 1 if _tool_index_lookup_attempted else 0
     metrics["aci_model_fallback"] = bool(_aci_model_fallback)
+    if _aci_model_fallback:
+        metrics["aci_turn_disposition"] = "MODEL_FALLBACK"
+    elif _aci_clarification_only:
+        metrics["aci_turn_disposition"] = "CLARIFY"
+    elif _aci_answer_only or _aci_completion_contract_satisfied:
+        metrics["aci_turn_disposition"] = "ANSWER"
+    elif _aci_fast_path_block is not None:
+        metrics["aci_turn_disposition"] = "EXECUTE_DIRECT"
+    elif _aci_packet is not None:
+        metrics["aci_turn_disposition"] = "DECIDE"
     if _aci_model_fallback_reason:
         metrics["aci_model_fallback_reason"] = str(_aci_model_fallback_reason)[:120]
     if _aci_enabled:
