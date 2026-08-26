@@ -7966,7 +7966,16 @@ async def stream_agent_loop(
             logger.info("[agent] deterministic canonical IT-asset read repair action=%s", asset_action)
             if round_response and full_response.endswith(round_response):
                 full_response = full_response[:-len(round_response)]
-            tool_blocks = [ToolBlock("manage_assets", json.dumps(asset_payload))]
+            # Detail reads resolved from a server-owned strong reference are
+            # just as deterministic as collection reads. Mark the block as
+            # the first-round fast path; otherwise the loop still presents a
+            # bounded Action packet to the model, executes the read, and then
+            # asks for a second Action against the now-terminal Run.
+            _aci_fast_path_block = ToolBlock(
+                "manage_assets", json.dumps(asset_payload, sort_keys=True),
+            )
+            _record_aci_framework("deterministic_read_selection")
+            tool_blocks = [_aci_fast_path_block]
             converted_calls = []
             used_native = False
         if (
