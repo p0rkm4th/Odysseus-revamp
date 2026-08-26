@@ -4726,6 +4726,7 @@ async def stream_agent_loop(
     # to the model; they never influence execution or authority.
     _aci_framework_burden = collections.Counter()
     _aci_model_burden = collections.Counter()
+    _aci_contract_fallback_used = False
 
     def _record_aci_framework(label: str) -> None:
         if _aci_enabled:
@@ -7107,9 +7108,94 @@ async def stream_agent_loop(
             converted_calls = []
         elif _aci_enabled and _aci_mode == "aci" and _aci_packet is not None:
             from src.aci import parse_decision_json
+
+            def _safe_contract_fallback_selection():
+                """Return a framework-resolved harmless Action, if one exists."""
+                _resolved_contract = _intent.get("resolved_contract") or {}
+                _binding = str(_resolved_contract.get("binding") or "")
+                _action = str(_resolved_contract.get("action_id") or "")
+                _selected = next(
+                    (
+                        value for value in _aci_choice_map.values()
+                        if value.get("binding") == _binding
+                        and value.get("payload", {}).get("action") == _action
+                    ),
+                    None,
+                )
+                if not _selected or not _binding or not _action:
+                    return None
+                try:
+                    from src.capability_registry import action_for_tool
+                    _spec = action_for_tool(_binding, {"action": _action})
+                    if not (
+                        _spec
+                        and _spec.known
+                        and _spec.approval.value == "none"
+                        and not _spec.writes
+                        and set(_spec.effects).issubset({"read_private"})
+                    ):
+                        return None
+                except Exception:
+                    return None
+                return _selected
+
             _aci_decision, _aci_error = parse_decision_json(round_response, _aci_packet)
             if _aci_decision is None:
-                if _aci_repair_count < getattr(_aci_profile, "max_decision_repairs", 1):
+                # If deterministic contract resolution already identified a
+                # unique harmless planning/read Action, the malformed model
+                # response is not needed to choose it. This is a framework
+                # proposal generated from canonical intent, never acceptance
+                # of the model's invalid JSON; normal policy, scope, approval,
+                # and executor validation still runs below. It prevents a
+                # weak model's prose-only response from losing a safe,
+                # framework-resolvable prerequisite step.
+                _resolved = _intent.get("resolved_contract") or {}
+                _fallback_binding = str(_resolved.get("binding") or "")
+                _fallback_action = str(_resolved.get("action_id") or "")
+                _fallback_selected = next(
+                    (
+                        value for value in _aci_choice_map.values()
+                        if value.get("binding") == _fallback_binding
+                        and value.get("payload", {}).get("action") == _fallback_action
+                    ),
+                    None,
+                )
+                _safe_contract_fallback = False
+                if _fallback_selected and _fallback_binding and _fallback_action:
+                    try:
+                        from src.capability_registry import action_for_tool
+                        _fallback_spec = action_for_tool(
+                            _fallback_binding,
+                            {"action": _fallback_action},
+                        )
+                        _safe_contract_fallback = bool(
+                            _fallback_spec
+                            and _fallback_spec.known
+                            and _fallback_spec.approval.value == "none"
+                            and not _fallback_spec.writes
+                            and set(_fallback_spec.effects).issubset({"read_private"})
+                        )
+                    except Exception:
+                        _safe_contract_fallback = False
+                if _safe_contract_fallback and not _aci_contract_fallback_used:
+                    tool_blocks = [
+                        ToolBlock(
+                            _fallback_selected["binding"],
+                            json.dumps(_fallback_selected["payload"], sort_keys=True),
+                        )
+                    ]
+                    used_native = False
+                    converted_calls = []
+                    round_response = ""
+                    _aci_contract_fallback_used = True
+                    _record_aci_framework("deterministic_contract_fallback")
+                    logger.warning(
+                        "[hades-aci] framework contract fallback binding=%s action=%s invalid_model_decision=%s",
+                        _fallback_binding,
+                        _fallback_action,
+                        _aci_error,
+                    )
+                elif _aci_repair_count < getattr(_aci_profile, "max_decision_repairs", 1):
                     _aci_repair_count += 1
                     logger.warning(
                         "[hades-aci] invalid decision raw=%r expected_fingerprint=%s",
@@ -7138,8 +7224,32 @@ async def stream_agent_loop(
                     round_response = ""
                     logger.info("[hades-aci] accepted choice=%s binding=%s", _aci_decision.choice, selected["binding"])
             else:
-                round_response = (_aci_decision.answer or _aci_decision.rationale or "The current objective is blocked or needs clarification.").strip()
-                full_response += round_response
+                _fallback_selected = (
+                    _safe_contract_fallback_selection()
+                    if _intent_frame.operation_class == "EXECUTE"
+                    else None
+                )
+                if _fallback_selected is not None and not _aci_contract_fallback_used:
+                    tool_blocks = [
+                        ToolBlock(
+                            _fallback_selected["binding"],
+                            json.dumps(_fallback_selected["payload"], sort_keys=True),
+                        )
+                    ]
+                    converted_calls = []
+                    used_native = False
+                    round_response = ""
+                    _aci_contract_fallback_used = True
+                    _record_aci_framework("deterministic_contract_fallback")
+                    logger.info(
+                        "[hades-aci] framework contract fallback after non-action decision binding=%s action=%s decision=%s",
+                        _fallback_selected["binding"],
+                        _fallback_selected["payload"].get("action"),
+                        _aci_decision.decision.value,
+                    )
+                else:
+                    round_response = (_aci_decision.answer or _aci_decision.rationale or "The current objective is blocked or needs clarification.").strip()
+                    full_response += round_response
         if not _skip_model_round:
             _normalized_doc_round = (
                 _normalize_stream_document_fences(

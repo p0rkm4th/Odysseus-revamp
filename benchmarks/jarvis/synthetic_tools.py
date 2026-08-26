@@ -42,6 +42,7 @@ class SyntheticToolExecutor:
             )
         response = dict(fixtures[min(index, len(fixtures) - 1)])
         response.setdefault("exit_code", 0 if not response.get("error") else 1)
+        response.setdefault("success", not bool(response.get("error")))
         return f"{name}: synthetic fixture", response
 
 
@@ -54,7 +55,7 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
         if isinstance(item, Mapping) and item.get("name")
     )
     fixtures = {
-        str(name): [{"output": "Synthetic tool result.", "exit_code": 0}]
+        str(name): [{"output": "Synthetic tool result.", "exit_code": 0, "success": True}]
         for name in names
     }
     if expected.get("requires_recovery"):
