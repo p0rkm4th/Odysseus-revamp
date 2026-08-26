@@ -31,6 +31,10 @@ This section supersedes older historical rows below for present-state claims.
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.
+- Storage maintenance removed only the exact unreferenced
+  `nvidia/cuda:12.4.1-base-ubuntu22.04` image after verifying its layers
+  were absent from all protected images. Docker usage fell from 21.89 GB to
+  21.54 GB; preflight remains correctly blocked at 19 GiB free.
 
 | Milestone | Commit | Focused evidence | Deployment | Evidence level |
 |---|---|---|---|---|
