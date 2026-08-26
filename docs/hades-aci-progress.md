@@ -28,6 +28,7 @@
 | DETERMINISTIC_CONTRACT_FALLBACK | `101910d2` | bounded one-use fallback for safe resolved planning Actions; 6308 full; deployed network probe one Action/no WHY_NO_ACTION | `odysseus:candidate-101910d2b37c` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | FINAL_QWEN_CANARY | `101910d2` | deployed six-case Qwen canary `6/6`, weighted `1.0`, zero retries/provider failures; network fallback one Action | `odysseus:candidate-101910d2b37c` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | SERVICE_CONTRACT_CONVERGENCE | `a61f06c5` | restart language resolves to canonical read-only `plan_service_restart` preflight; 152 focused; 6310 full | `odysseus:candidate-a61f06c5a2d9` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| SERVICE_TARGET_CLARIFICATION | `0cefba69` | unqualified restart is clarification-bound; qualified targets retain safe preflight; 154 focused; 6312 full; deployed Qwen synthetic canary 2/2, zero model/tool calls | `odysseus:candidate-0cefba69f3ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -195,3 +196,8 @@ Previously mutable provenance arguments appeared before expensive system and
 dependency layers. They now apply after source copy, preserving exact labels
 while allowing source-only iterations to reuse the heavy layers. No candidate
 was rebuilt for this documentation or Dockerfile-only checkpoint.
+
+The deployed service-target clarification canary (`generic-shell-fallback` and
+`action-narration`) scored `2/2` against Qwen3:8b with zero provider failures,
+zero model calls, zero tool calls, and the framework response
+`Which service or systemd unit should I restart?`.
