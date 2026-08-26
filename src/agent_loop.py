@@ -4975,6 +4975,25 @@ async def stream_agent_loop(
                 # automatic read-only path below may use it only after the
                 # planner has marked the next Action safe_auto_continue.
                 _intent["continuation_next_step"] = active_run["next_step"]
+            if active_run is None:
+                # A bare continuation with no durable active Run is a
+                # conversational completion/clarification case, not a reason
+                # to ask the model for an Action. Keep authority at zero and
+                # let the answer phase explain that there is nothing active
+                # to resume.
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = True
+                _record_aci_framework("continuation_without_active_run")
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "HADES CONTINUATION STATE: no active durable Objective "
+                        "or Run is available to resume. Answer naturally and "
+                        "do not claim that any Action was executed."
+                    ),
+                    "_agent_injected": "continuation_state",
+                    "_protected": True,
+                })
         _concept_domains = {
             "TECHNICAL_ASSET": "asset_inventory",
             "NETWORK": "network_ops",
