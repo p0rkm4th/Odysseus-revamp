@@ -19,6 +19,10 @@ def test_candidate_image_and_frontend_verification_are_source_attributable():
     assert "org.opencontainers.image.revision" in dockerfile
     assert "node --check" in frontend
     assert '"test:frontend"' in (ROOT / "package.json").read_text()
+    assert ".odysseus-source-commit" in dockerfile
+    overlay = (ROOT / "docker" / "Dockerfile.source-overlay").read_text()
+    assert "ODYSSEUS_BASE_IMAGE" in overlay
+    assert ".odysseus-source-commit" in overlay
 
 
 def test_frontend_html_carries_build_identity_marker():
