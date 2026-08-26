@@ -11,12 +11,12 @@ import re
 
 
 _READ_REQUEST = re.compile(
-    r"^(?:what|which|where|who|show|list|tell|describe|summarize|give|provide|"
+    r"^(?:what|what's|whats|which|where|who|show|list|tell|whatcha|describe|summarize|give|provide|"
     r"review|display|remind|anything|do\s+i|have\s+i|you\s+know)\b",
     re.IGNORECASE,
 )
 _OWNER_SELF = re.compile(
-    r"\b(?:about|on)\s+(?:me|myself)\b|\bwho\s+i\s+am\b|\bmy\s+profile\b",
+    r"\b(?:about|on|bout)\s+(?:me|myself)\b|\bwho\s+i\s+am\b|\bmy\s+profile\b",
     re.IGNORECASE,
 )
 _MEMORY_KNOWLEDGE = re.compile(
@@ -36,12 +36,12 @@ _WORK_OWNER = re.compile(
     re.IGNORECASE,
 )
 _ASSET_SUBJECT = re.compile(
-    r"\b(?:it\s+assets?|assets?|computers?|machines?|hardware|"
+    r"\b(?:it\s+assets?|assets?|computers?|machines?|hardware|boxes?|"
     r"physical\s+(?:machines?|boxes)|equipment|servers?)\b",
     re.IGNORECASE,
 )
 _ASSET_OWNER = re.compile(
-    r"\b(?:my|mine|i\s+own|do\s+i\s+own|do\s+i\s+have|have\s+i|"
+    r"\b(?:my|mine|i\s+(?:actually\s+)?own|do\s+i(?:\s+actually)?\s+own|do\s+i\s+have|have\s+i|"
     r"i(?:'ve)?\s+got|registered)\b",
     re.IGNORECASE,
 )
@@ -104,6 +104,11 @@ def deterministic_read_concept(text: str) -> str | None:
     ):
         return "MEMORY"
     if (
+        _OWNER_SELF.search(query)
+        and (_MEMORY_KNOWLEDGE.search(query) or re.search(r"\bgot\s+on\s+(?:me|myself)\b", query))
+    ):
+        return "MEMORY"
+    if (
         _WORK_SUBJECT.search(query)
         and (_WORK_OWNER.search(query) or re.search(r"\bprojects?\b", query))
         and not re.search(r"\b(?:projects?|tasks?|goals?|commitments?|runs?|missions?|watches?)\b", query)
@@ -119,7 +124,10 @@ def deterministic_read_concept(text: str) -> str | None:
         return "WORK"
     if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
         return "TECHNICAL_ASSET"
-    if _NETWORK_SUBJECT.search(query) and _CURRENT_STATE.search(query):
+    if re.search(r"\b(?:network|lan|wifi|wi-fi|connection|connected)\b", query) and (
+        _CURRENT_STATE.search(query)
+        or re.search(r"\bwhere(?:'s|\s+is)\s+(?:hades|this\s+machine)\s+connected\b", query)
+    ):
         return "NETWORK"
     # Operational status questions share the existing harmless service-status
     # Action.  Keep this narrow enough that ordinary explanations such as
@@ -139,6 +147,8 @@ def deterministic_read_view(text: str, concept: str | None) -> str | None:
     """Return a semantic view over an existing DomainContract, when evident."""
     query = _normalized(text)
     if concept == "NETWORK" and _CURRENT_STATE.search(query):
+        return "context"
+    if concept == "NETWORK" and re.search(r"\bwhere(?:'s|\s+is)\s+(?:hades|this\s+machine)\s+connected\b", query):
         return "context"
     if concept == "WORK" and re.search(r"\b(?:attention|on\s+my\s+plate|needs?\s+attention)\b", query):
         return "attention"
