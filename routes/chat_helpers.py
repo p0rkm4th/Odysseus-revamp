@@ -186,7 +186,7 @@ def ensure_chat_agent_work_run(
             _normalize_homelab_intent,
             _normalize_operational_intent_evidence,
         )
-        from src.intent_contracts import compile_intent, resolve_intent
+        from src.intent_contracts import compile_intent, resolve_intent, resolve_structured_reference
         from src.agent_work_bridge import ensure_agent_run, prepare_action, recent_session_reference_context
         query = str(message or "")
         intent = _classify_agent_request([], query)
@@ -197,7 +197,7 @@ def ensure_chat_agent_work_run(
         # result. This preserves intentional ordinal/pronoun continuity while
         # preventing unrelated new topics from inheriting stale domain state.
         reference_context = None
-        if re.search(r"\b(?:it|that|this|those|them|the\s+(?:first|second|third)\s+one|that\s+one)\b", query, re.IGNORECASE):
+        if resolve_structured_reference(query, {}).get("status") != "NOT_REFERENCE":
             reference_context = recent_session_reference_context(str(owner), str(session_id))
         frame = compile_intent(query, reference_context=reference_context)
         continuation = frame.operation_class == "CONTINUE"
