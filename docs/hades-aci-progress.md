@@ -28,6 +28,9 @@ This section supersedes older historical rows below for present-state claims.
   authenticated harness, pinned bundle, and unrelated protected images.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
+- Latest security/control-plane slice: `305 passed, 1 warning`, covering
+  approvals, exact action scope, verified execution, external-context gating,
+  control-plane safety, security regressions, and outbound URL safety.
 
 | Milestone | Commit | Focused evidence | Deployment | Evidence level |
 |---|---|---|---|---|
