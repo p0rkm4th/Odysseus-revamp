@@ -56,7 +56,10 @@ CASES = [
         "Where am I connected right now?", "What network am I on?",
         "What's my current network?",
     ], 1)),
-    Case("network_deep", "Do a deep dive on my local network.", expect_completion=True, max_tools=0),
+    # A work/VPN-context discovery request should fail closed with a natural
+    # explanation.  It is intentionally not required to satisfy a successful
+    # CompletionContract because BLOCKED is the correct disposition here.
+    Case("network_deep", "Do a deep dive on my local network.", max_tools=0),
     Case("infra_running", "What's running in Odysseus?", expect_completion=True),
     Case("infra_health", "Anything unhealthy right now?", expect_completion=True),
     Case("infra_services", "Are my services alive?", family="infrastructure", expect_completion=True),
