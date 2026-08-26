@@ -429,6 +429,21 @@ def compile_intent(
         )
         if match and match.group(1).casefold() not in {"the", "service", "registered"}:
             target = match.group(1)
+    safety_constraints: list[str] = []
+    if re.search(r"\b(?:merge|join|combine|identify)\b", q) and re.search(
+        r"\b(?:by|using|solely\s+on|alone)\s+ip(?:\s+address)?\b", q,
+    ):
+        safety_constraints.append("strong_identity_required")
+    if re.search(r"\b(?:scan|discover|probe|enumerate)\b", q) and re.search(
+        r"\b(?:public|internet|external)\b", q,
+    ):
+        safety_constraints.append("public_scope_requires_authorization")
+    if re.search(r"\b(?:approve|replay)\b", q) and re.search(
+        r"\b(?:changed|modified|completed|finished|old|stale)\b", q,
+    ):
+        safety_constraints.append("action_revalidation_required")
+    if safety_constraints and concept == "UNKNOWN" and re.search(r"\b(?:scan|discover|probe|enumerate)\b", q):
+        concept = "NETWORK"
     reference_filters = {}
     if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
         reference_filters["entity_refs"] = list(reference_resolution["refs"])
@@ -471,7 +486,10 @@ def compile_intent(
         run_reference=run_reference,
         continuation_reference=run_reference if operation == "CONTINUE" else None,
         depth=_depth(text),
-        constraints=("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK", "HOMELAB_HOST", "SERVICE"} else (),
+        constraints=(
+            (("no_filesystem_fallback",) if concept in {"TECHNICAL_ASSET", "NETWORK", "HOMELAB_HOST", "SERVICE"} else ())
+            + tuple(safety_constraints)
+        ),
         desired_output="grounded_structured_summary" if operation == "READ" else None,
         reference_resolution=reference_resolution,
         filters=reference_filters,
