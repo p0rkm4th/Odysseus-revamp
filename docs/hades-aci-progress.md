@@ -645,3 +645,10 @@ source/root-cause checkpoint.
   overhead focused gate: `110 passed, 1 warning`. This covers the existing
   provider/runtime profile and token/context instrumentation without claiming
   equivalent live latency until the corrected source is deployed.
+
+- Current-source side-effect-free Qwen bridge probe (`qwen3:8b`, 16-token cap,
+  equivalent 3-token accounting): raw `2.760s` versus Hades `5.436s`, total
+  delta `2.676s`. Hades used one model call, zero tools, and zero tool-index
+  lookups. Attribution was `2.420s` extra provider/model time, `0.255s`
+  context preparation, and `0.001s` remaining framework span. This is
+  diagnostic latency evidence, not deployed quality or owner-live E5 evidence.
