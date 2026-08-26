@@ -383,6 +383,13 @@ def test_named_host_signal_requires_computer_action_context():
     assert _looks_like_local_computer_request("Inspect Cerberus on gpu-box.")
 
 
+def test_bare_start_does_not_select_cookbook_domain():
+    from src.agent_loop import _classify_agent_request
+
+    assert "cookbook" not in _classify_agent_request([], "Start working on Hades.")["domains"]
+    assert "cookbook" in _classify_agent_request([], "Start serving the model on gpu-box.")["domains"]
+
+
 def test_explicit_workspace_request_without_workspace_stops(monkeypatch):
     import asyncio
     import src.agent_loop as al
