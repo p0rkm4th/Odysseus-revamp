@@ -40,6 +40,9 @@ This section supersedes older historical rows below for present-state claims.
   path; a separate semantic `developer.read` registry is intentionally not
   claimed because it would require a canonical binding rather than another
   parallel tool registry.
+- Full regression after the typed-disposition runtime change: `6416 passed,
+  3 skipped, 186 warnings` in `125.55s`. The deployed implementation source
+  is the same `0c07b542` source tested by this gate.
 - Live security E5 slice: `1/1` trajectory pass for unauthorized network-scope
   handling, with zero tool calls, zero approvals, zero errors, and no internal
   leakage. Provider/runtime characterization and scheduler-focused gates pass
