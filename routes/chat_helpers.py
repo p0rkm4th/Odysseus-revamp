@@ -258,12 +258,29 @@ def ensure_chat_agent_work_run(
         if run_id and not continuation and frame.operation_class == "READ" and frame.read_explicit:
             resolved = resolve_intent(frame)
             if resolved.available and resolved.binding_name and resolved.action_id:
-                payload = {"action": resolved.action_id}
-                if frame.domain_concept == "MEMORY":
-                    payload["query"] = query
-                if frame.entity_reference and frame.domain_concept == "TECHNICAL_ASSET":
-                    payload = {"action": "get", "asset": frame.entity_reference}
-                prepare_action(str(owner), run_id, resolved.binding_name, payload)
+                # A detail read is only executable when the server has a
+                # strong asset identity.  In particular, do not materialize
+                # ``get`` for an ordinal/pronoun turn before the agent loop
+                # has resolved its reference from the canonical prior result.
+                # The old route-level projection emitted {action: get},
+                # terminalized the Run on the missing ``asset`` argument, and
+                # prevented the later deterministic reference fast path from
+                # running.  Collection reads remain safe to materialize.
+                if (
+                    frame.domain_concept == "TECHNICAL_ASSET"
+                    and resolved.action_id != "list"
+                    and not str(frame.entity_reference or "").strip()
+                ):
+                    logger.info(
+                        "Deferring asset detail read until canonical reference resolution"
+                    )
+                else:
+                    payload = {"action": resolved.action_id}
+                    if frame.domain_concept == "MEMORY":
+                        payload["query"] = query
+                    if frame.entity_reference and frame.domain_concept == "TECHNICAL_ASSET":
+                        payload = {"action": "get", "asset": frame.entity_reference}
+                    prepare_action(str(owner), run_id, resolved.binding_name, payload)
         return run_id
     except Exception:
         logger.warning("Failed to attach actionable chat turn to Work ledger", exc_info=True)

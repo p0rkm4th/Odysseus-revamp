@@ -42,6 +42,38 @@ def test_communications_chat_turn_attaches_to_shared_work_run(monkeypatch):
     assert captured["intent"]["operation_class"] == "READ"
 
 
+def test_asset_detail_read_is_deferred_until_reference_is_resolved(monkeypatch):
+    """The route must not terminalize a Run with an asset-less ``get``."""
+    captured = {}
+
+    frame = SimpleNamespace(
+        domain_concept="TECHNICAL_ASSET",
+        operation_class="READ",
+        read_explicit=True,
+        entity_reference=None,
+        as_dict=lambda: {},
+    )
+    resolved = SimpleNamespace(available=True, binding_name="manage_assets", action_id="get")
+
+    monkeypatch.setattr("src.intent_contracts.compile_intent", lambda *args, **kwargs: frame)
+    monkeypatch.setattr("src.intent_contracts.resolve_intent", lambda _frame: resolved)
+    monkeypatch.setattr(
+        "src.agent_work_bridge.ensure_agent_run",
+        lambda *args, **kwargs: "run-asset-reference",
+    )
+    monkeypatch.setattr(
+        "src.agent_work_bridge.prepare_action",
+        lambda *args, **kwargs: captured.setdefault("prepare", (args, kwargs)),
+    )
+
+    run_id = chat_helpers.ensure_chat_agent_work_run(
+        "alice", "chat-assets", "Tell me about the first one", model_name="qwen3:8b", enabled=True,
+    )
+
+    assert run_id == "run-asset-reference"
+    assert "prepare" not in captured
+
+
 class _AuthManager:
     def __init__(self, privileges):
         self._privileges = privileges
