@@ -205,11 +205,11 @@ def cookie_from_file(path: str) -> str:
     return token
 
 
-def create_session(base: str, cookie: str, name: str, *, model: str) -> str:
+def create_session(base: str, cookie: str, name: str, *, model: str, endpoint_id: str) -> str:
     response = requests.post(
         f"{base}/api/session",
         cookies={"odysseus_session": cookie},
-        data={"name": name, "endpoint_id": "e4e4196b", "model": model, "skip_validation": "true"},
+        data={"name": name, "endpoint_id": endpoint_id, "model": model, "skip_validation": "true"},
         timeout=30,
     )
     response.raise_for_status()
@@ -306,6 +306,7 @@ def main() -> int:
     parser.add_argument("--cookie", default=os.environ.get("HADES_LIVE_COOKIE"))
     parser.add_argument("--cookie-file", default=os.environ.get("HADES_LIVE_COOKIE_FILE"))
     parser.add_argument("--model", default=os.environ.get("HADES_LIVE_MODEL", "qwen3:8b"))
+    parser.add_argument("--endpoint-id", default=os.environ.get("HADES_LIVE_ENDPOINT_ID", "e4e4196b"))
     parser.add_argument("--output", default="/tmp/hades-live-dogfood.json")
     parser.add_argument("--suite", choices=("all", "core", "held_out", "rotating", "security"), default="all")
     parser.add_argument("--sample", type=int)
@@ -331,10 +332,16 @@ def main() -> int:
         if case.mode == "continuation" and case.group:
             session_id = sessions.get(case.group)
             if session_id is None:
-                session_id = create_session(args.base_url, args.cookie, f"ACI live {case.group}", model=args.model)
+                session_id = create_session(
+                    args.base_url, args.cookie, f"ACI live {case.group}",
+                    model=args.model, endpoint_id=args.endpoint_id,
+                )
                 sessions[case.group] = session_id
         else:
-            session_id = create_session(args.base_url, args.cookie, f"ACI live {case.name}", model=args.model)
+            session_id = create_session(
+                args.base_url, args.cookie, f"ACI live {case.name}",
+                model=args.model, endpoint_id=args.endpoint_id,
+            )
         try:
             result = run_case(args.base_url, args.cookie, session_id, case)
             result["assertion_failures"] = assert_case(case, result)
