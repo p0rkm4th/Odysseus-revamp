@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
+from core.models import ChatMessage
 
 import routes.chat_helpers as chat_helpers
 from routes.chat_helpers import (
@@ -407,6 +408,22 @@ def test_save_assistant_response_incognito_does_not_mutate_session_history():
 
     assert saved_id is None
     assert sess.history == []
+
+
+def test_save_assistant_response_is_idempotent_for_one_logical_turn():
+    sess = _FakeSession("selected-model")
+    existing = ChatMessage(
+        "assistant", "hello", metadata={"turn_id": "turn-1", "_db_id": "msg-1"},
+    )
+    sess.history.append(existing)
+
+    saved_id = save_assistant_response(
+        sess, session_manager=None, session_id="s1", full_response="hello",
+        last_metrics={"model": "actual-model"}, turn_id="turn-1",
+    )
+
+    assert saved_id == "msg-1"
+    assert sess.history == [existing]
 
 
 def test_add_user_message_incognito_does_not_mutate_session_history():

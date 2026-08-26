@@ -334,7 +334,7 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
-    if re.search(r"\b(?:restart|recover|execute|run|scan|discover|install|turn on|start|begin)\b", q): return "EXECUTE"
+    if re.search(r"\b(?:restart|recover|execute|run|scan|discover\w*|install|turn on|start|begin)\b", q): return "EXECUTE"
     if re.search(r"\b(?:research|investigate|deep dive|look into)\b", q): return "RESEARCH"
     if re.search(r"\b(?:monitor|watch|alert)\b", q): return "MONITOR"
     return "READ"
@@ -367,7 +367,20 @@ def compile_intent(
     # Interrogative requests about the research store are canonical reads;
     # the noun "research" must not turn "What research history do I have?"
     # into a new research execution request.
-    if read_explicit and operation in {"RESEARCH", "MONITOR", "EXECUTE"}:
+    # A question prefix does not demote an explicit discovery objective to a
+    # harmless observation.  Discovery is still staged and scope-authorized
+    # by the Network ActionSpec; this only preserves its intent class.
+    _network_discovery_language = bool(
+        re.search(r"\b(?:network|lan|subnet|wifi|wi-fi|connection|connected|hosts?|devices?)\b", q)
+        and re.search(
+            r"\b(?:scan\w*|discover\w*|enumerat\w*|probe\w*|map\w*|explore)\b|"
+            r"\bdeep\s+dive\b.*\b(?:discovery|dive|mission)\b|"
+            r"\bdiscovery\s+(?:dive|mission)\b",
+            q,
+            re.IGNORECASE,
+        )
+    )
+    if read_explicit and operation in {"RESEARCH", "MONITOR", "EXECUTE"} and not _network_discovery_language:
         operation = "READ"
     concept = semantic_read_concept or "UNKNOWN"
     target = None
@@ -450,6 +463,25 @@ def compile_intent(
             r"\b(?:sav(?:e|ed|ing)|similar|find|search)\b", q
         ): concept = "JOB_OPPORTUNITY"
         else: concept = "CAREER_PROFILE"
+    if concept == "UNKNOWN" and _network_discovery_language and operation in {"EXECUTE", "RESEARCH"}:
+        concept = "NETWORK"
+    # Safe host inspection is a first-class read even when the user phrases
+    # it as exploration or a hardware scan.  It never selects shell access.
+    if (
+        concept in {"UNKNOWN", "TECHNICAL_ASSET"}
+        and re.search(r"\b(?:hardware|computational\s+assets?|machine|computer|host|system)\b", q)
+        and re.search(r"\b(?:explore|inspect|check|scan)\b", q)
+        and not re.search(r"\b(?:network|lan|subnet|service|daemon)\b", q)
+    ):
+        concept = "HOMELAB_HOST"
+        operation = "READ"
+        read_explicit = True
+    if concept == "NETWORK" and _network_discovery_language:
+        # The question can contain "what" and still be an executable
+        # discovery objective.  A missing CIDR remains unauthorized/clarify-
+        # bound below; current host context is not silently promoted to scope.
+        operation = "EXECUTE"
+        read_explicit = False
     # Keep advice, definitions, and generic explanations off specialized
     # canonical read contracts. These are safe general-model questions even
     # when they contain a golden-domain noun.
@@ -480,6 +512,14 @@ def compile_intent(
     # ambiguous and are handled by the normal caller/UI clarification path.
     if reference_resolution.get("status") == "RESOLVED":
         referenced_concept = str(reference_resolution.get("concept") or "").strip()
+        # A server-owned asset reference disambiguates natural language such
+        # as "the second machine".  Preserve that referent instead of letting
+        # the generic host-inspection vocabulary change a detail read into an
+        # unscoped local-host read.
+        if referenced_concept == "TECHNICAL_ASSET" and concept == "HOMELAB_HOST":
+            concept = referenced_concept
+            operation = "READ"
+            read_explicit = True
         if concept == "UNKNOWN" and referenced_concept:
             concept = referenced_concept
         resolved_refs = list(reference_resolution.get("refs") or [])
@@ -489,7 +529,9 @@ def compile_intent(
     # A resolved opaque reference is stronger than a lexical fragment such as
     # ``about first``. Never replace a server-owned identity with an ordinal.
     if match and not target and match.group(1).casefold() not in {
-        "the", "a", "an", "one", "it", "that", "this", "first", "second", "third",
+        "the", "a", "an", "one", "it", "that", "this", "these", "those",
+        "me", "my", "mah", "mine", "myself", "you", "your", "yours", "us", "our",
+        "ours", "them", "their", "theirs", "first", "second", "third",
     }:
         target = match.group(1)
     if concept == "SERVICE" and operation == "EXECUTE" and not target:
@@ -535,7 +577,7 @@ def compile_intent(
     if (
         concept == "UNKNOWN"
         and operation in {"EXECUTE", "RESEARCH"}
-        and re.search(r"\b(?:scan|discover|probe|enumerate|investigate|research)\b", q)
+        and re.search(r"\b(?:scan\w*|discover\w*|probe\w*|enumerat\w*|investigate|research)\b", q)
         and (
             re.search(r"\b(?:network|lan|subnet|wifi|wi-fi|connection|connected)\b", q)
             or re.search(
@@ -546,6 +588,17 @@ def compile_intent(
         )
     ):
         concept = "NETWORK"
+    if (
+        concept == "NETWORK"
+        and operation in {"EXECUTE", "RESEARCH"}
+        and not re.search(
+            r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
+            r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
+            q,
+        )
+        and "network_scope_requires_authorization" not in safety_constraints
+    ):
+        safety_constraints.append("network_scope_requires_authorization")
     reference_filters = {}
     if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
         reference_filters["entity_refs"] = list(reference_resolution["refs"])
