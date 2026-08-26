@@ -35,6 +35,34 @@ READ_PARAPHRASE_SETS = {
     ),
 }
 
+# Lexically similar requests that must not collapse into harmless canonical
+# reads. Expected operation/domain assertions live in focused tests so this
+# corpus remains an adversarial semantic input, not a production route table.
+NEGATIVE_NEAR_MISSES = {
+    "MEMORY": (
+        "What should you remember about me?",
+        "Why do you remember things about me?",
+        "Tell me about memory.",
+        "Forget what you know about me.",
+    ),
+    "WORK": (
+        "What should I work on?",
+        "Start working on Hades.",
+        "How does project management work?",
+        "What should I prioritize?",
+    ),
+    "TECHNICAL_ASSET": (
+        "What computer should I buy?",
+        "Add this laptop to my inventory.",
+        "Delete that machine.",
+    ),
+    "NETWORK": (
+        "What is a network?",
+        "Scan this network.",
+        "Change my network.",
+    ),
+}
+
 DETERMINISTIC_READ_TRAJECTORY = (
     "INTENT",
     "DETERMINISTIC_READ",
