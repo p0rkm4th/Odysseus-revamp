@@ -14,15 +14,15 @@ gates.
 | Item | Status | Evidence |
 |---|---|---|
 | Deterministic Memory/Work/Assets/Network/Service reads | green | source tests; deployed Qwen E5 matrices |
-| Asset ordinal continuation | focused green, deployed | latest result owns ordered opaque refs; source `7fe090cc`; live deployment `7fe090cc` |
+| Asset ordinal continuation | focused and authenticated live green | route no longer materializes asset `get` without strong identity; source `dcb57621`; live core `assets_list` and ordinal continuation green |
 | Durable Continue terminal-state handling | green | `177` focused tests; live Continue resumed with zero tool calls |
 | General MODEL_FALLBACK | green | focused security/fallback gates; live ordinary-question cases |
 | Conceptual explanation routing | focused green, deployment pending | `17cbbb97`; RAID/backup explanations no longer enter `storage_ops`; direct fallback diagnostics are initialized safely |
 | Infrastructure failure normalization | green | executor/projection focused gates preserve unavailable/invalid status; host-operator reads now expose canonical success/failure status |
 | Exact approvals and policy boundaries | green | security/control-plane suites; live unauthorized-scan case |
 | Deployment provenance and rollback | green | runtime source match `074d240f`; rollback `odysseus:rollback-b471e104-prev` |
-| Automated live Qwen canary | E5 partial/current | prior deployed matrix `53/53`; fresh cookie required to re-run `074d240f` telemetry assertions |
-| Authenticated automated fuzzing | source/test green, E5A pending | `scripts/hades_live_fuzz.py`; normal login plus loopback-only disposable bootstrap; focused gate `38 passed` |
+| Automated live Qwen canary | E5A core slice green | fresh isolated normal-auth acceptance runtime, synthetic `hades-acceptance`, real qwen3:8b; core `8/8`, no internal leaks |
+| Authenticated automated fuzzing | E5A partial/current | `scripts/hades_live_fuzz.py`; disposable Chroma/state, real login/chat/control plane; full regression `6535 passed, 3 skipped`; broader rotating/security corpus remains |
 | Developer ACI read path | source-complete, E5 pending | focused developer/sandbox gates; production workspace mount intentionally absent |
 | Provider switching/recovery | focused green, live E5 pending | `137` focused tests; only local Qwen endpoint live-available |
 
@@ -45,24 +45,25 @@ E6.
 
 ## Current release state
 
-- Branch: `hades-aci-v1`, synchronized with `origin` after pushing four green
-  commits through `bcf25e80`.
-- Source head: `bcf25e80` (documentation-only release-state update); deployed
-  runtime implementation is `7fe090cc`, with the peak-aware build guard in
-  source commit `302ed03f`.
-- Running image: `odysseus:candidate-7fe090cc8a23`, source-matched and healthy.
+- Branch: `hades-aci-v1`, synchronized with `origin` at `dcb57621` after the
+  bounded upstream harvest and asset-reference fix.
+- Source head: `dcb57621`; deployed runtime implementation is source-matched
+  at `dcb576219516`, with the peak-aware build guard retained.
+- Running image: `odysseus:candidate-dcb576219516`, source-matched and healthy.
 - Last full regression before the latest fallback/runtime source slice:
   `6492 passed, 3 skipped, 186 warnings` in 123 seconds. Later focused gates:
   `210 passed` for fallback/control-plane behavior and `198 passed` for
   security/authority coverage.
-- Current source-tip full regression: `6511 passed, 3 skipped, 186 warnings`
-  in 124 seconds. Deployment and live-E5 claims remain unchanged.
+- Current source-tip full regression: `6535 passed, 3 skipped, 186 warnings`
+  in 230.81 seconds. Authenticated core live evidence is E5A; owner E6 remains
+  supplemental.
 - Current matched Qwen3:8b probe: raw `3.659s` vs Hades `5.462s` at a
   16-token cap; delta `1.803s`, including `0.218s` framework preparation and
   one Hades model call with zero tools/index lookups. Diagnostic only.
 - Current agent-loop/provider transport gate: `101 passed`.
 - Current telemetry/reference gate: `97 passed`.
-- Storage: 74% used / 23 GiB free after removing the superseded c0 candidate.
+- Storage: 77% used / 22 GiB free after removing superseded candidates and
+  disposable acceptance containers/volumes.
   The peak-aware preflight reports CAUTION but permits only when projected
   growth preserves a 12 GiB emergency reserve; no further build is currently
   planned.
