@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `83c2cebe`, remote
+- Source head: branch `hades-aci-v1`, commit `f18d10dd`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-c0a281f5`, exact runtime source
   `c0a281f5`, branch
@@ -12,21 +12,19 @@ This section supersedes older historical rows below for present-state claims.
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
   reports `runtime_source_kind=image_source_marker` and `source_match=true`.
-- Source evidence: last full regression on the behavior-identical parent is
-  `6478 passed, 3 skipped, 186 warnings` in 124.60s; the telemetry overlay focused gate is
-  `93 passed`; control-plane slice `237 passed`; fallback/read
-  slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
-  infrastructure semantic family `73 passed`; final focused provenance,
-  intent, reference, executor, fallback, and canary gate `208 passed`.
+- Source evidence: last full regression is `6492 passed, 3 skipped, 186
+  warnings` in 123s on the semantic-family checkpoint; later fallback/runtime
+  changes have focused coverage of `210 passed` and security coverage of `198
+  passed`. These later source changes are not represented in the deployed
+  image.
 - Live E5 evidence: real deployed qwen3:8b core matrix `25/25 answers` and
   `25/25` trajectory passes, zero transport errors, zero internal leaks, and
   zero assertion failures. It covered asset ordinal references, infrastructure
   reads, durable Continue, contamination isolation, fallback, and network
   safety through the authenticated production chat path.
-- Current deployed targeted E5: ordinary "Start working on Hades." now uses
-  one authority-free model answer with zero tool calls, zero tool-index
-  lookups, and no internal leakage. The corrected fresh-session core matrix
-  is recorded below with its sanitized live result.
+- Current deployed targeted E5 is historical evidence for `c0a281f5`; the
+  latest source changes have not received new live E5 because the owner-scoped
+  cookie is invalid and the storage preflight is closed.
 - Durable continuation fix: terminal/blocked durable Run state now transitions
   directly to answer-only completion instead of re-entering bounded Action
   selection; the continuation/intent/loop focused gate is `177 passed`.
