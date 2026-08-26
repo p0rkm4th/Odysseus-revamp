@@ -10,6 +10,7 @@ def test_overhead_report_source_records_model_and_context_attribution():
         "extra_model_inference_seconds", "framework_overhead_seconds",
         "max_tokens", "num_predict",
         "output_accounting", "consistent", "implausible",
+        "--prompt", "args.prompt",
     ):
         assert field in source
 

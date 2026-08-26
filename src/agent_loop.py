@@ -2287,12 +2287,27 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
             "continuation": False,
             "domains": set(),
             "retrieval_query": text,
+            "general_explanatory": bool(re.search(
+                r"\b(?:explain|define|teach\s+me|how\s+does|why)\b", q,
+            )),
         }
 
     domains: Set[str] = set()
 
     def has(*patterns: str) -> bool:
         return any(re.search(p, q) for p in patterns)
+
+    # A conceptual explanation may mention an operational noun (for example,
+    # "Explain why RAID is not a backup").  That is ordinary conversation,
+    # not a request to inspect the host.  Keep the exception semantic: an
+    # explicit owner/current host target still makes the question operational.
+    explanatory_only = (
+        has(r"\b(?:explain|define|teach\s+me|how\s+does|why)\b")
+        and not has(
+            r"\b(?:my|our|your|current|this)\b.{0,36}\b(?:host|machine|system|"
+            r"network|lan|subnet|container|disk|service|storage)\b"
+        )
+    )
 
     # `start` is ordinary conversational language (for example, "start
     # working on Hades"). It is a Cookbook signal only when paired with a
@@ -2403,7 +2418,7 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
     _storage_action = has(
         r"\b(?:inspect|check|diagnose|diagnosis|troubleshoot|investigate|find|show|list|health|usage|capacity|space|full|free|degraded|failed|failing|read-only|mounted|unmounted|missing|slow|why)\b",
     )
-    if _storage_subject and _storage_action:
+    if not explanatory_only and _storage_subject and _storage_action:
         domains.add("storage_ops")
 
     _container_subject = has(
@@ -2479,6 +2494,7 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
         "continuation": continuation,
         "domains": domains,
         "retrieval_query": retrieval_query,
+        "general_explanatory": explanatory_only,
     }
 
 
@@ -5470,7 +5486,7 @@ async def stream_agent_loop(
     # their normal paths.
     _aci_general_fallback_candidate = bool(
         _aci_enabled
-        and not relevant_tools
+        and (not relevant_tools or bool(_intent.get("general_explanatory")))
         and not forced_tools
         and not workspace
         and not _active_document_relevant
@@ -6506,6 +6522,11 @@ async def stream_agent_loop(
     _last_route_request_messages = _initial_route_request_messages
     _last_route_context_length = _initial_route_context_length
     _provider_request_count = 0
+    # These are populated while projecting a canonical read.  Keep the
+    # diagnostics safe on direct MODEL_FALLBACK paths that skip that block.
+    _asset_frame = {}
+    _read_binding = ""
+    _read_action = ""
 
     # Loop-breaker state. Small models (e.g. deepseek-v4-flash) can get
     # stuck firing the same tool call over and over with no text — burns

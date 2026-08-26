@@ -200,7 +200,7 @@ def output_accounting(raw: dict[str, Any], hades: dict[str, Any]) -> dict[str, A
 
 
 async def run(args: argparse.Namespace) -> dict[str, Any]:
-    prompt = "Answer with exactly one short sentence: what is 2 plus 2?"
+    prompt = args.prompt
     raw = await raw_chat(
         args.endpoint, args.model, prompt,
         timeout=args.timeout, max_tokens=args.max_tokens,
@@ -244,6 +244,10 @@ def main() -> int:
     parser.add_argument("--output", required=True)
     parser.add_argument("--timeout", type=float, default=180.0)
     parser.add_argument("--max-tokens", type=int, default=128)
+    parser.add_argument(
+        "--prompt",
+        default="Answer with exactly one short sentence: what is 2 plus 2?",
+    )
     args = parser.parse_args()
     if not _local_endpoint(args.endpoint):
         parser.error("this benchmark only permits explicitly recognized local endpoints")
