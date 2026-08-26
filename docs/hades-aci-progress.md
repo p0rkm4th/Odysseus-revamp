@@ -587,3 +587,12 @@ source/root-cause checkpoint.
   now project to existing safe canonical reads without broadening deletion,
   advice, recommendation, or active-scan near-misses. Focused semantic gate:
   `142 passed`. This source slice is not yet deployed or live-qwen verified.
+
+- The subsequent breadth audit corrected three additional semantic-family
+  boundaries: physical-host inventory is no longer shadowed by network-host
+  language, current network-context questions survive the definition guard,
+  and casual stack-health phrases (`are we good`, `how is the stack`) use the
+  existing safe service-status read. Capability questions are kept out of the
+  Work fallback when no SelfState contract applies. The affected control-plane
+  gate is `214 passed`; source is pushed as `0c4d9ff3` plus this follow-on
+  slice, while deployment remains blocked by storage preflight.

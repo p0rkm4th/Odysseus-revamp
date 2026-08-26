@@ -40,7 +40,7 @@ _WORK_OWNER = re.compile(
 )
 _ASSET_SUBJECT = re.compile(
     r"\b(?:it\s+assets?|assets?|computers?|machines?|hardware|boxes?|gear|"
-    r"physical\s+(?:machines?|boxes)|equipment|servers?)\b",
+    r"physical\s+(?:machines?|boxes|hosts?)|equipment|servers?)\b",
     re.IGNORECASE,
 )
 _ASSET_OWNER = re.compile(
@@ -64,7 +64,9 @@ _INFRASTRUCTURE_STATUS = re.compile(
     r"what(?:'s|s|\s+is)?(?:\s+(?:the|hell|damn|is|actually|currently)){0,4}\s+"
     r"(?:dead|broken|busted|down)|"
     r"(?:how(?:'s|s|\s+is)?)\s+(?:hades|the\s+stack|everything)\s+"
-    r"(?:doing|looking|running|holding\s+up))\b",
+    r"(?:doing|looking|running|holding\s+up)|"
+    r"(?:are|is)\s+(?:we|everything)\s+(?:good|fine|okay|ok)|"
+    r"how(?:'s|s|\s+is)\s+the\s+stack)\b",
     re.IGNORECASE,
 )
 _GENERAL_EXPLANATION = re.compile(
@@ -107,7 +109,7 @@ def deterministic_read_concept(text: str) -> str | None:
     # unless the turn also carries an explicit owner/current-state subject.
     if _GENERAL_EXPLANATION.search(query) and not (
         _OWNER_SELF.search(query)
-        or re.search(r"\b(?:my|mine|i\s+am|i'm|right\s+now|currently)\b", query)
+        or re.search(r"\b(?:my|mine|i\s+am|i'm|right\s+now|current(?:ly)?)\b", query)
         or re.search(r"\bwe\b.{0,20}\bworking\b", query)
     ):
         return None
