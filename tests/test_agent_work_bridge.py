@@ -66,6 +66,42 @@ def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch)
         engine.dispose()
 
 
+def test_latest_canonical_result_owns_ordinal_reference_order(monkeypatch):
+    """Older results must not shift ordinals for the current result."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-ordinal-refresh", "What machines do I have?",
+            intent={"domains": ["asset_inventory"]},
+        )
+        with session_factory() as db:
+            db.add_all([
+                WorkResult(
+                    id="result-old", owner="alice", run_id=run_id,
+                    result_type="read", reference="agent-tool://old",
+                    domain_reference={"canonical_refs": [
+                        {"ref": "asset:stale", "concept": "TECHNICAL_ASSET"},
+                    ]},
+                ),
+                WorkResult(
+                    id="result-new", owner="alice", run_id=run_id,
+                    result_type="read", reference="agent-tool://new",
+                    domain_reference={"canonical_refs": [
+                        {"ref": "asset:current-first", "concept": "TECHNICAL_ASSET"},
+                        {"ref": "asset:current-second", "concept": "TECHNICAL_ASSET"},
+                    ]},
+                ),
+            ])
+            db.commit()
+        context = bridge.recent_session_reference_context("alice", "chat-ordinal-refresh")
+        assert [item["ref"] for item in context["ordered_entities"]] == [
+            "asset:current-first", "asset:current-second",
+        ]
+    finally:
+        engine.dispose()
+
+
 def test_model_swap_preserves_run_and_records_owner_scoped_history(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
