@@ -27,6 +27,7 @@
 | CONTRACT_ACTION_RETENTION | `67106c5e` | resolved planning Action survives operation-class filter; 6308 full; deployed trace records `contract_action_retained` | `odysseus:candidate-67106c5e8e8a` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | DETERMINISTIC_CONTRACT_FALLBACK | `101910d2` | bounded one-use fallback for safe resolved planning Actions; 6308 full; deployed network probe one Action/no WHY_NO_ACTION | `odysseus:candidate-101910d2b37c` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | FINAL_QWEN_CANARY | `101910d2` | deployed six-case Qwen canary `6/6`, weighted `1.0`, zero retries/provider failures; network fallback one Action | `odysseus:candidate-101910d2b37c` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| SERVICE_CONTRACT_CONVERGENCE | `a61f06c5` | restart language resolves to canonical read-only `plan_service_restart` preflight; 152 focused; 6310 full | `odysseus:candidate-a61f06c5a2d9` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -140,16 +141,16 @@ migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
 
 The current implementation candidate is source commit
-`101910d2b37ccb72871df5b63392c5634ad03142`, image
-`odysseus:candidate-101910d2b37c`, image ID
-`sha256:98ee8df7fa4d989d0045f218843603da4f1a5ea568d39b094245a222c4ac2e4a`,
-build ID `101910d2b37ccb72871df5b63392c5634ad03142-2026-08-26T00:14:50Z`,
+`a61f06c5a2d935ab2116252c01c3ac180e36551d`, image
+`odysseus:candidate-a61f06c5a2d9`, image ID
+`sha256:3aaad07faca7cbaf84f33972ff854770bc68d600fc2079d88ffc79de55071a6a`,
+build ID `a61f06c5a2d935ab2116252c01c3ac180e36551d-2026-08-26T00:23:54Z`,
 and frontend ID
-`frontend-101910d2b37ccb72871df5b63392c5634ad03142-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
+`frontend-a61f06c5a2d935ab2116252c01c3ac180e36551d-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
-The exact source gate before deployment is `6305 passed, 3 skipped, 186
+The exact source gate before deployment is `6310 passed, 3 skipped, 186
 warnings` in 123.58 seconds. The touched Memory/ACI focused gate is `90
 passed`. The six-case deployed Qwen canary scored `6/6` with no runtime
 failures; its detailed records contain only synthetic fixtures. The replacement

@@ -32,7 +32,7 @@
 - Ollama: bridge healthy; `qwen3:8b` available.
 - ChromaDB and SearXNG: running; SearXNG healthy.
 - Candidate source/build/frontend provenance: matched.
-- Final candidate: `101910d2b37ccb72871df5b63392c5634ad03142`; image `odysseus:candidate-101910d2b37c`; image ID `sha256:98ee8df7fa4d989d0045f218843603da4f1a5ea568d39b094245a222c4ac2e4a`.
+- Final candidate before service contract convergence: `101910d2b37ccb72871df5b63392c5634ad03142`; image `odysseus:candidate-101910d2b37c`; image ID `sha256:98ee8df7fa4d989d0045f218843603da4f1a5ea568d39b094245a222c4ac2e4a`.
 - Runtime profile route: owner-authenticated; unauthenticated probe returned `401`.
 - Image retention: current candidate and previous `odysseus:candidate-dbaddbdaac7e` retained; no cleanup performed.
 - Final H0-equivalent ACI: 15 cases, `0.4667` success, `0.6667` weighted; 11 clean, 4 timeouts.
@@ -49,6 +49,9 @@ Service-operation contract fix: SOURCE and FOCUSED_TESTED, with FULL_REGRESSION
 green (`6310 passed, 3 skipped, 186 warnings`). The source-side live Qwen probe
 was BLOCKED by host-to-container Ollama namespace reachability; deployed
 owner-live verification remains pending.
+
+The deployed runtime now reports source `a61f06c5a2d935ab2116252c01c3ac180e36551d`,
+image `odysseus:candidate-a61f06c5a2d9`, and matching build/frontend provenance.
 
 ## Owner-live script
 
