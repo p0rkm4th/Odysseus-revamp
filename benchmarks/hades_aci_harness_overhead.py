@@ -109,7 +109,9 @@ async def hades_chat(endpoint: str, model: str, prompt: str, *, timeout: float) 
         "output_tokens": metrics.get("output_tokens"),
         "prompt_tokens": metrics.get("request_context_tokens") or metrics.get("input_tokens"),
         "context_construction_seconds": metrics.get("agent_prep_time"),
-        "model_calls": metrics.get("agent_rounds"),
+        "context_construction_breakdown": metrics.get("agent_prep_breakdown") or {},
+        "model_wait_seconds": metrics.get("agent_model_wait_time"),
+        "model_calls": metrics.get("model_calls"),
         "model_burden": metrics.get("model_burden"),
         "tool_calls": metrics.get("tool_calls", 0),
         "output_chars": output_chars,
@@ -131,6 +133,17 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         "hades": hades,
         "harness_overhead_seconds": round(hades["completion_seconds"] - raw["completion_seconds"], 4),
         "ttft_overhead_seconds": round(hades["ttft_seconds"] - raw["ttft_seconds"], 4),
+        "prompt_token_delta": (
+            hades["prompt_tokens"] - raw["prompt_tokens"]
+            if isinstance(hades.get("prompt_tokens"), int) and isinstance(raw.get("prompt_tokens"), int)
+            else None
+        ),
+        "non_prep_overhead_seconds": round(
+            hades["completion_seconds"]
+            - raw["completion_seconds"]
+            - float(hades.get("context_construction_seconds") or 0),
+            4,
+        ),
     }
 
 

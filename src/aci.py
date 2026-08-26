@@ -22,6 +22,16 @@ class DecisionMode(StrEnum):
     BLOCKED = "BLOCKED"
 
 
+class PostResultState(StrEnum):
+    COMPLETE_AFTER_ANSWER = "COMPLETE_AFTER_ANSWER"
+    CONTINUE_DETERMINISTICALLY = "CONTINUE_DETERMINISTICALLY"
+    NEEDS_BOUNDED_REASONING = "NEEDS_BOUNDED_REASONING"
+    NEEDS_CONTEXT = "NEEDS_CONTEXT"
+    NEEDS_CLARIFICATION = "NEEDS_CLARIFICATION"
+    BLOCKED = "BLOCKED"
+    NEEDS_APPROVAL = "NEEDS_APPROVAL"
+
+
 class RelevanceTier(StrEnum):
     T0 = "T0"
     T1 = "T1"
@@ -338,6 +348,32 @@ def parse_decision_json(value: Any, packet: AgentTaskPacket) -> tuple[DecisionCo
         return None, "invalid_decision_mode"
     valid, reason = decision.validate(packet)
     return (decision, None) if valid else (None, reason)
+
+
+def classify_post_result(result: Any, *, canonical_read: bool = False,
+                         unresolved_required_information: bool = False,
+                         deterministic_next_step: bool = False) -> PostResultState:
+    """Classify the control-plane transition after one canonical Result.
+
+    Success alone never proves arbitrary Objective completion.  The terminal
+    transition is deliberately narrow: an exact resolved canonical read with
+    sufficient evidence needs only answer synthesis, not another Action choice.
+    """
+    if not isinstance(result, Mapping):
+        return PostResultState.BLOCKED
+    if result.get("approval_required"):
+        return PostResultState.NEEDS_APPROVAL
+    if result.get("blocked") or result.get("error") or result.get("success") is False:
+        return PostResultState.BLOCKED
+    if result.get("exit_code") not in (None, 0):
+        return PostResultState.BLOCKED
+    if unresolved_required_information:
+        return PostResultState.NEEDS_CONTEXT
+    if deterministic_next_step:
+        return PostResultState.CONTINUE_DETERMINISTICALLY
+    if canonical_read:
+        return PostResultState.COMPLETE_AFTER_ANSWER
+    return PostResultState.NEEDS_BOUNDED_REASONING
 
 
 def model_burden(*, framework: int, model: int, labels: Mapping[str, str] | None = None) -> dict[str, Any]:

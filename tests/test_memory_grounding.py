@@ -154,6 +154,40 @@ def test_owner_memory_projection_is_bounded_and_reconciles_current_runtime():
     assert "HISTORICAL" in rendered
 
 
+def test_volatile_remembered_branch_is_historical_against_current_deployment():
+    result = {
+        "status": "ok",
+        "query_type": "summary",
+        "memories": [{
+            "id": "branch-memory",
+            "text": "The customized Odysseus checkout is currently on the dev branch.",
+            "category": "project",
+            "source": "user",
+            "stale": False,
+        }, {
+            "id": "current-preference",
+            "text": "Owner prefers concise verified answers.",
+            "category": "preference",
+            "source": "user",
+            "stale": False,
+        }],
+        "diagnostics": {"retrieved_count": 2, "owner_scoped": True},
+    }
+    projection = project_explicit_memory_result(
+        result,
+        current_self_state=build_runtime_self_state(
+            "qwen3:8b",
+            "http://ollama:11434",
+            source_commit="0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf",
+        ),
+    )
+    assert projection["records"][0]["ref"] == "current-preference"
+    historical = next(row for row in projection["records"] if row["ref"] == "branch-memory")
+    assert historical["epistemic_type"] == "HISTORICAL"
+    assert historical["stale"] is True
+    assert "remembered branch state is historical" in projection["contradictions"][0]["reason"]
+
+
 def test_exact_owner_memory_utterance_declares_terminal_read_trajectory():
     from benchmarks.hades_aci_corpus import CORPUS
 

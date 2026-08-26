@@ -14,6 +14,7 @@ from typing import Any, Mapping
 
 from src.capability_registry import ActionSpec, capability_for_id
 from src.tool_bindings import binding_for_tool
+from src.deterministic_reads import deterministic_read_concept, deterministic_read_view
 
 
 OPERATION_CLASSES = frozenset({
@@ -323,11 +324,14 @@ def compile_intent(
     q = text.lower()
     reference_resolution = resolve_structured_reference(text, reference_context)
     operation = _operation(text, continuation=continuation)
+    semantic_read_concept = (
+        deterministic_read_concept(text) if operation == "READ" else None
+    )
     # READ is the safe fallback operation for semantically incomplete text,
     # but canonical read projection must not treat every imperative containing
     # a domain noun as a request to inspect state. Keep this as bounded intent
     # metadata rather than a tool-name/route heuristic.
-    read_explicit = bool(re.match(
+    read_explicit = bool(semantic_read_concept) or bool(re.match(
         r"\s*(?:what(?:'s| is| are)?|which|who|where|when|how many|show|list|"
         r"tell me|do you have|are there|is there|find my|what do you)\b",
         q,
@@ -337,9 +341,11 @@ def compile_intent(
     # into a new research execution request.
     if read_explicit and operation in {"RESEARCH", "MONITOR", "EXECUTE"}:
         operation = "READ"
-    concept = "UNKNOWN"
+    concept = semantic_read_concept or "UNKNOWN"
     target = None
-    if re.search(r"\b(?:security\s+engagement|engagements?)\b", q):
+    if concept != "UNKNOWN":
+        pass
+    elif re.search(r"\b(?:security\s+engagement|engagements?)\b", q):
         concept = "SECURITY_ENGAGEMENT"
     elif re.search(r"\b(?:security\s+evidence|evidence\s+for\s+security|security\s+artifacts?)\b", q):
         concept = "SECURITY_EVIDENCE"
@@ -447,7 +453,11 @@ def compile_intent(
     reference_filters = {}
     if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
         reference_filters["entity_refs"] = list(reference_resolution["refs"])
-    if concept == "WORK" and re.search(r"\b(?:attention|waiting\s+on|pending\s+approvals?)\b", q):
+    semantic_view = deterministic_read_view(text, concept)
+    if concept == "WORK" and (
+        semantic_view == "attention"
+        or re.search(r"\b(?:attention|waiting\s+on|pending\s+approvals?)\b", q)
+    ):
         reference_filters["view"] = "attention"
     elif concept == "INTEGRATION" and re.search(
         r"\bintegrations?\b.*\b(?:degraded|broken|attention|health|connected|working)\b|"
@@ -456,10 +466,11 @@ def compile_intent(
         reference_filters["view"] = "integrations"
     elif concept == "NETWORK" and re.search(r"\b(?:unidentified|unknown|unrecognised|unrecognized)\b", q):
         reference_filters["view"] = "unidentified"
-    elif concept == "NETWORK" and re.search(
+    elif concept == "NETWORK" and (
+        semantic_view == "context" or re.search(
         r"\b(?:what\s+network|which\s+network|network\s+am\s+i|currently\s+connected|current(?:ly)?\s+(?:on|connected))\b",
         q,
-    ):
+    )):
         reference_filters["view"] = "context"
     elif concept == "NETWORK" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
         reference_filters["view"] = "roles"

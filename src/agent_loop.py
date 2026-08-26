@@ -2911,6 +2911,68 @@ def _minimal_odysseus_general_messages(messages: List[Dict], include_memory: boo
     return out
 
 
+def _minimal_aci_answer_messages(messages: List[Dict]) -> List[Dict]:
+    """Project an answer-only turn without Action/tool implementation context."""
+    canonical = next((
+        dict(message) for message in reversed(messages or [])
+        if isinstance(message, dict)
+        and isinstance(message.get("metadata"), dict)
+        and message["metadata"].get("context_kind") == "explicit_memory_result"
+    ), None)
+    recent_result = next((
+        dict(message) for message in reversed(messages or [])
+        if isinstance(message, dict)
+        and (
+            message.get("role") == "tool"
+            or (
+                isinstance(message.get("metadata"), dict)
+                and message["metadata"].get("assistant_tool_result") is True
+            )
+        )
+    ), None)
+    latest_user = next((
+        dict(message) for message in reversed(messages or [])
+        if isinstance(message, dict)
+        and message.get("role") == "user"
+        and not message.get("_agent_injected")
+        and not (
+            isinstance(message.get("metadata"), dict)
+            and message["metadata"].get("trusted") is False
+        )
+    ), {"role": "user", "content": _extract_last_user_message(messages)})
+    projected = [{
+        "role": "system",
+        "content": (
+            "You are Hades. The control plane has already completed the "
+            "owner-scoped canonical read. Answer the owner's request directly "
+            "from the supplied ResultProjection. Distinguish current observed "
+            "state from remembered or historical state. Do not mention internal "
+            "Actions, bindings, schemas, provider transport, or tool names."
+        ),
+        "_agent_injected": "answer_projection",
+        "_protected": True,
+    }]
+    if canonical is not None:
+        canonical["_protected"] = True
+        projected.append(canonical)
+    elif recent_result is not None:
+        projected.append({
+            "role": "user",
+            "content": (
+                "CANONICAL RESULT PROJECTION\n"
+                + _semanticize_internal_action_names(str(recent_result.get("content") or ""))
+            ),
+            "_protected": True,
+            "metadata": {
+                "trusted": False,
+                "context_kind": "canonical_result_projection",
+                "provenance": "current canonical Action Result",
+            },
+        })
+    projected.append(latest_user)
+    return projected
+
+
 _DOC_MODEL_ARTIFACT_RE = re.compile(
     r"(?:\|end\|)+\|?assistan(?:t)?\|?"
     r"|\|assistan(?:t)?\|"
@@ -3081,11 +3143,31 @@ def _successful_deterministic_read_result(result: Any) -> bool:
     return result.get("exit_code") in (None, 0)
 
 
+def _matches_resolved_canonical_read(block: ToolBlock, intent_frame: Any,
+                                     resolved_contract: Any) -> bool:
+    """Bind completion only to the exact framework-resolved read Action."""
+    if not isinstance(intent_frame, dict) or not isinstance(resolved_contract, dict):
+        return False
+    if intent_frame.get("operation_class") != "READ" or intent_frame.get("read_explicit") is not True:
+        return False
+    if block.tool_type != str(resolved_contract.get("binding") or ""):
+        return False
+    try:
+        payload = json.loads(block.content or "{}")
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return False
+    return (
+        isinstance(payload, dict)
+        and str(payload.get("action") or "") == str(resolved_contract.get("action_id") or "")
+    )
+
+
 def _semanticize_internal_action_names(text: str) -> str:
     """Keep transport/Action identifiers in traces, not ordinary chat prose."""
     replacements = {
         "read_network_context": "host network context check",
         "manage_homelab": "infrastructure operation",
+        "manage_memory": "saved memory",
         "read_memory": "saved-memory read",
         "manage_assets": "technical asset operation",
         "read_work": "work overview read",
@@ -3301,6 +3383,11 @@ def _strip_agent_injected_messages(messages: List[Dict]) -> List[Dict]:
             original = message.get("_agent_base_message")
             if isinstance(original, dict):
                 stripped.append(dict(original))
+        elif marker == "hades_aci_packet" and message.get("_protected"):
+            # ACI state is rebuilt once per turn and must survive provider-route
+            # prompt reconstruction. Dropping it made strict Decision JSON rely
+            # on response_format alone and silently erased ANSWER mode.
+            stripped.append(dict(message))
         elif not marker:
             stripped.append(dict(message))
     return stripped
@@ -6044,7 +6131,11 @@ async def stream_agent_loop(
             workspace=workspace,
             intent_domains=_intent_domains,
         )
-        if strict_text_tools and not guide_only:
+        if _aci_answer_only:
+            route_messages = _minimal_aci_answer_messages(route_messages)
+            route_mcp_schemas = []
+            route_tools = set()
+        elif strict_text_tools and not guide_only:
             _prepend_agent_directive(route_messages, 'TOOL TRANSPORT FOR THIS ROUTE: Bare Markdown fenced blocks are display-only and never execute. To invoke a tool, use explicit XML with the documented parameter names. Example for Bash: <invoke name="bash"><parameter name="command">top -b -n 1</parameter></invoke>. Do not invent a generic `arg` parameter. Use one or more documented parameter elements for structured arguments. Do not wrap invoke markup in a code fence.')
         if doc_mode and not plan_mode and not approved_plan and not guide_only:
             route_messages = _minimal_odysseus_doc_messages(
@@ -6185,6 +6276,7 @@ async def stream_agent_loop(
     _pinned_fallback_route = None
     _last_route_request_messages = _initial_route_request_messages
     _last_route_context_length = _initial_route_context_length
+    _provider_request_count = 0
 
     # Loop-breaker state. Small models (e.g. deepseek-v4-flash) can get
     # stuck firing the same tool call over and over with no text — burns
@@ -6661,7 +6753,8 @@ async def stream_agent_loop(
         _candidate_request_states = {0: _active_route_state}
 
         async def _candidate_request(index, candidate_url, candidate_model, candidate_headers):
-            nonlocal _last_route_request_messages, _last_route_context_length
+            nonlocal _last_route_request_messages, _last_route_context_length, _provider_request_count
+            _provider_request_count += 1
             if index == 0:
                 state = _active_route_state
             else:
@@ -8670,15 +8763,26 @@ async def stream_agent_loop(
             # Action portion of this Objective. It must transition to ANSWER
             # generation, never back through the packet's Action decision
             # parser. A failed read remains eligible for bounded recovery.
-            if (
-                _skip_model_round
-                and _successful_deterministic_read_result(result)
-            ):
+            from src.aci import PostResultState, classify_post_result
+            _post_result_state = classify_post_result(
+                result,
+                canonical_read=(
+                    _aci_enabled
+                    and _aci_mode == "aci"
+                    and _matches_resolved_canonical_read(
+                        block,
+                        _intent.get("intent_frame"),
+                        _intent.get("resolved_contract"),
+                    )
+                ),
+            )
+            if _post_result_state is PostResultState.COMPLETE_AFTER_ANSWER:
                 _aci_answer_only = True
                 _aci_packet = None
                 _aci_fast_path_block = None
                 _force_answer = True
                 _aci_completion_contract_satisfied = True
+                _record_aci_framework("post_result_completion")
                 messages.append({
                     "role": "system",
                     "content": (
@@ -9383,6 +9487,8 @@ async def stream_agent_loop(
     # prose. Local finetunes may emit those before the parser catches and
     # executes them; saved history should contain only the user-facing answer.
     full_response = strip_tool_blocks(full_response).strip()
+    if _aci_answer_only:
+        full_response = _semanticize_internal_action_names(full_response)
     if (
         "memory" in set(_intent_domains or set())
         and _SAVED_MEMORY_PROVENANCE_RE.search(full_response or "")
@@ -9560,6 +9666,7 @@ async def stream_agent_loop(
             )
     metrics["requested_endpoint_id"] = requested_endpoint_id
     metrics["requested_endpoint_label"] = requested_endpoint_label
+    metrics["model_calls"] = _provider_request_count
     if _aci_enabled:
         try:
             from src.aci import ContextEnvelope
