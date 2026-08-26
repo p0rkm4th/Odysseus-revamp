@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `8ae04b89`, remote
+- Source head: branch `hades-aci-v1`, commit `a8b0c6ed`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-cfbe6244`, image
   `sha256:43209c7211269e6b4a7268105057122dcd5991526bdee3c6c7373307d7b8f159`,
