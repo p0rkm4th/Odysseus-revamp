@@ -44,6 +44,10 @@ This section supersedes older historical rows below for present-state claims.
 - Live canary tooling now supports reproducible family/suite selection,
   seeded samples, and explicit fresh versus intentional-continuation session
   modes; selection tests pass without changing runtime authority or execution.
+- Reference projection now prefers server-owned ordered/eligible result entities
+  for ordinal language and uses a recent `last` reference only as a fallback;
+  mixed-domain asset ordinal and durable-reference focused coverage is green
+  (`150 passed`).
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.

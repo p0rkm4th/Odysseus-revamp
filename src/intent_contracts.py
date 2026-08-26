@@ -252,16 +252,30 @@ def resolve_structured_reference(
     """
     query = str(text or "").strip().lower()
     supplied = context if isinstance(context, Mapping) else {}
+    # Canonical result projections may provide an explicitly ordered eligible
+    # set.  Prefer it over a broad conversational entity bag: ordinal
+    # references are positions in the result the user just saw, not positions
+    # in whichever mixed-domain references happened to be retained in chat.
+    raw_candidates = (
+        supplied.get("ordered_entities")
+        or supplied.get("eligible_entities")
+        or supplied.get("entities")
+        or supplied.get("references")
+        or []
+    )
     candidates = [
-        item for item in (supplied.get("entities") or supplied.get("references") or [])
-        if isinstance(item, Mapping) and str(item.get("ref") or item.get("id") or "").strip()
+        item for item in raw_candidates
+        if isinstance(item, Mapping)
+        and str(item.get("ref") or item.get("id") or "").strip()
+        and item.get("eligible", True) is not False
     ]
     last = supplied.get("last") if isinstance(supplied.get("last"), Mapping) else None
-    if last is not None and not any(
+    if not candidates and last is not None and not any(
         str(item.get("ref") or item.get("id") or "") == str(last.get("ref") or last.get("id") or "")
         for item in candidates
     ):
-        candidates.insert(0, last)
+        if str(last.get("ref") or last.get("id") or "").strip() and last.get("eligible", True) is not False:
+            candidates.append(last)
 
     plural = bool(re.search(
         r"\b(?:those|them|these|all(?:\s+of)?\s+(?:the\s+)?(?:above|those|them)|"
