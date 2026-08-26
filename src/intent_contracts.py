@@ -226,6 +226,13 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "INTERVIEW", "career.read", {"READ": "interviews"}, "read_career",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "career_interviews",
     ),
+    "DEVELOPER": DomainContract(
+        "DEVELOPER", "developer.read",
+        {"READ": "search_code", "READ_FILE": "view_file_region", "READ_MAP": "show_repo_map"},
+        "developer_read",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "developer_workspace_read",
+    ),
 }
 
 
@@ -361,6 +368,13 @@ def compile_intent(
     target = None
     if concept != "UNKNOWN":
         pass
+    elif not re.search(r"\b(?:explain|define|what\s+is|difference\s+between|how\s+does)\b", q) and re.search(
+        r"\b(?:search|grep|find|look\s+for|inspect|view|show|list|read|open)\b.*\b(?:code|repo|repository|project|file|symbol|function|class|diagnostic|tree|map|diff|changes?)\b|"
+        r"\b(?:code|repo|repository|project|file|symbol|function|class|diagnostic|tree|map|diff|changes?)\b.*\b(?:search|grep|find|inspect|view|show|list|read|open)\b|"
+        r"\b(?:read|open|view|inspect)\b\s+[^\s]+\.(?:py|js|ts|tsx|jsx|go|rs|java|rb|md|yaml|yml|json|toml|ini|cfg)\b",
+        q,
+    ):
+        concept = "DEVELOPER"
     elif re.search(r"\b(?:security\s+engagement|engagements?)\b", q):
         concept = "SECURITY_ENGAGEMENT"
     elif re.search(r"\b(?:security\s+evidence|evidence\s+for\s+security|security\s+artifacts?)\b", q):
@@ -450,6 +464,8 @@ def compile_intent(
         and re.search(r"\b(?:start|begin)\s+working\s+on\b|\bwhat\s+should\s+i\s+work\s+on\b", q)
     ):
         concept = "UNKNOWN"
+    if concept == "DEVELOPER" and operation == "READ":
+        read_explicit = True
     # A resolved opaque reference may supply the semantic subject when the
     # latest turn is intentionally terse (for example, "scan those hosts").
     # It never supplies an ActionSpec or executor.  Conflicting concepts stay
@@ -502,6 +518,13 @@ def compile_intent(
         or re.search(r"\b(?:attention|waiting\s+on|pending\s+approvals?)\b", q)
     ):
         reference_filters["view"] = "attention"
+    elif concept == "DEVELOPER":
+        if re.search(r"\b(?:file|symbol|function|class|line|lines|region|open|view|read)\b", q) or re.search(
+            r"\b[^\s]+\.(?:py|js|ts|tsx|jsx|go|rs|java|rb|md|yaml|yml|json|toml|ini|cfg)\b", q
+        ):
+            reference_filters["view"] = "file"
+        elif re.search(r"\b(?:repo(?:sitory)?\s+map|tree|structure|layout|files?)\b", q):
+            reference_filters["view"] = "map"
     elif concept == "INTEGRATION" and re.search(
         r"\bintegrations?\b.*\b(?:degraded|broken|attention|health|connected|working)\b|"
         r"\b(?:degraded|broken|attention|health)\b.*\bintegrations?\b", q,
@@ -524,7 +547,7 @@ def compile_intent(
         "SERVICE": "infrastructure", "SECURITY_FINDING": "infrastructure", "SECURITY_ENGAGEMENT": "infrastructure",
         "SECURITY_EVIDENCE": "infrastructure", "OSINT_CASE": "research", "RESEARCH": "research",
         "HOUSEHOLD_ITEM": "home", "INTEGRATION": "system",
-        "COMMUNICATIONS": "communications",
+        "COMMUNICATIONS": "communications", "DEVELOPER": "developer",
         "CONTACT": "communications",
     }.get(concept)
     return IntentFrame(
@@ -624,6 +647,10 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_CONTEXT"
     elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "roles":
         action_key = "READ_ROLES"
+    elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "file":
+        action_key = "READ_FILE"
+    elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "map":
+        action_key = "READ_MAP"
     action_id = contract.actions.get(action_key)
     if action_id is None and frame.operation_class == "CONTINUE":
         action_id = contract.actions.get("EXECUTE") or contract.actions.get("READ")
@@ -667,10 +694,12 @@ def validate_contracts() -> list[str]:
                 )
                 if missing_textual:
                     errors.append(f"{concept}: textual contract omits ActionSpec exposure {missing_textual}")
-            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
+            if operation in {"READ", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
-            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and "read_private" not in action.effects:
+            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id != "developer.read" and "read_private" not in action.effects:
                 errors.append(f"{concept}/{action_id}: read lacks read_private effect")
+            if operation in {"READ_FILE", "READ_MAP"} and "read_workspace" not in action.effects:
+                errors.append(f"{concept}/{action_id}: developer read lacks read_workspace effect")
             if not action.executor_key:
                 errors.append(f"{concept}/{action_id}: missing executor")
             if not contract.result_contract:
@@ -755,6 +784,10 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
     """
     binding_name = str(binding_name or "").strip()
     action_id = str(action_id or "").strip()
+    if binding_name == "developer_read":
+        if not isinstance(result, Mapping) or not isinstance(result.get("output"), str):
+            return False, "INVALID_RESULT"
+        return True, "SUCCESS_RESULT"
     for concept, contract in DOMAIN_CONTRACTS.items():
         if contract.binding != binding_name:
             continue

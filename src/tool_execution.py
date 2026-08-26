@@ -1798,6 +1798,71 @@ async def _execute_read_communications_binding(block, owner=None):
         return "read_communications", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_developer_read_binding(block, owner=None):
+    """Adapt canonical Developer read Actions to confined code-nav handlers.
+
+    The adapter intentionally reuses the mature path/workspace guards.  The
+    canonical binding accepts semantic Actions, while the legacy handlers stay
+    an implementation detail and receive no shell or write authority.
+    """
+    try:
+        payload = json.loads(str(getattr(block, "content", "") or "{}"))
+    except (TypeError, ValueError):
+        return "developer_read", {"error": "developer_read requires a JSON object", "exit_code": 1}
+    if not isinstance(payload, dict):
+        return "developer_read", {"error": "developer_read requires a JSON object", "exit_code": 1}
+    action = str(payload.get("action") or "").strip().casefold()
+    workspace = get_active_workspace()
+    if action == "search_code":
+        query = str(payload.get("query") or "").strip()
+        if not query:
+            return "developer_read", {"error": "search_code requires query", "exit_code": 1}
+        try:
+            max_results = min(max(int(payload.get("max_results") or 50), 1), 200)
+        except (TypeError, ValueError):
+            return "developer_read", {"error": "search_code max_results is invalid", "exit_code": 1}
+        args = {
+            "pattern": query,
+            "path": str(payload.get("path") or workspace or ""),
+            "glob": str(payload.get("glob") or ""),
+            "max_results": max_results,
+            "ignore_case": bool(payload.get("ignore_case")),
+        }
+        legacy_tool = "grep"
+    elif action == "view_file_region":
+        path = str(payload.get("path") or "").strip()
+        if not path:
+            return "developer_read", {"error": "view_file_region requires path", "exit_code": 1}
+        try:
+            start = max(int(payload.get("start_line") or 1), 1)
+            end = int(payload.get("end_line") or start + 199)
+        except (TypeError, ValueError):
+            return "developer_read", {"error": "view_file_region line range is invalid", "exit_code": 1}
+        if end < start or end - start > 999:
+            return "developer_read", {"error": "view_file_region line range is invalid or too large", "exit_code": 1}
+        if workspace and not os.path.isabs(path):
+            path = os.path.join(workspace, path)
+        args = {"path": path, "offset": start, "limit": end - start + 1}
+        legacy_tool = "read_file"
+    elif action == "show_repo_map":
+        args = {"pattern": str(payload.get("query") or "**/*"), "path": str(payload.get("path") or workspace or "")}
+        legacy_tool = "glob"
+    else:
+        return "developer_read", {"error": f"unknown Developer read Action: {action or '<missing>'}", "exit_code": 1}
+    result = await _direct_fallback(legacy_tool, json.dumps(args, sort_keys=True), owner=owner)
+    if not isinstance(result, dict):
+        return "developer_read", {"error": "Developer read adapter is unavailable", "exit_code": 1}
+    output = dict(result)
+    output.setdefault("data", {
+        "status": "SUCCESS" if output.get("exit_code", 1) == 0 and not output.get("error") else "FAILED",
+        "action": action,
+        "output": str(output.get("output") or "")[:20000],
+        "workspace_scoped": True,
+    })
+    output.setdefault("success", output.get("exit_code", 1) == 0 and not output.get("error"))
+    return "developer_read", output
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
@@ -1810,6 +1875,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_setup": _execute_read_setup_binding,
     "read_career": _execute_read_career_binding,
     "read_communications": _execute_read_communications_binding,
+    "developer_read": _execute_developer_read_binding,
 }
 
 

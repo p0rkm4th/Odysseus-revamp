@@ -78,6 +78,20 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="developer.workspace_shell", description="Owner-granted workspace developer execution.",
         actions=_actions(ActionSpec(action_id="execute", effects=("write_workspace", "execute_code"), approval=ApprovalMode.EXACT, executor_key="workspace_yolo")),
     ),
+    "developer.read": CapabilitySpec(
+        capability_id="developer.read",
+        description="Read-only, workspace-confined code navigation and repository inspection.",
+        actions=_actions(*(
+            ActionSpec(
+                action_id=action,
+                effects=("read_workspace",),
+                executor_key="developer_read",
+                target_scope="workspace",
+                requires_direct_container_access=False,
+            )
+            for action in ("search_code", "view_file_region", "show_repo_map")
+        )),
+    ),
     "intelligence.route": CapabilitySpec(
         capability_id="intelligence.route", description="Inspect deterministic domain/model routing.",
         actions=_actions(ActionSpec(action_id="read", effects=("read_private",), executor_key="local_intelligence")),
@@ -290,6 +304,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_setup": "setup.read",
     "read_career": "career.read",
     "read_communications": "communications.read",
+    "developer_read": "developer.read",
 })
 
 # Safe overview defaults for multiplexed first-class read bindings. These are

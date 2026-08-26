@@ -45,8 +45,8 @@ def test_native_action_enums_cover_every_registered_action():
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career", "read_communications"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 11
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career", "read_communications", "developer_read"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 12
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
