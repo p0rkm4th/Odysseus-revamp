@@ -28,6 +28,12 @@ This section supersedes older historical rows below for present-state claims.
   slice `12/12` and rotating slice `16/16` trajectory passes, both with zero
   errors and zero internal leaks. Across all three runs: `53/53` trajectory
   passes, `23` canonical tool calls, and `3` tool-index lookups.
+- Matched synthetic local-latency rerun (same prompt/model/endpoint and
+  explicit 128-token budget): raw Qwen `3.596s`; Hades `10.484s`; total delta
+  `6.888s`. Hades context construction was `0.208s`, residual framework
+  overhead approximately `0s` within timing resolution, and extra provider
+  inference `6.684s`. This is diagnostic overhead evidence, not a claim that
+  raw and Hades completed identical durable deliverables.
 - Live root-cause evidence: asset ordinal references resolved to strong
   canonical identities; `Are my services alive?` used the SERVICE read fast
   path; direct MODEL_FALLBACK answers were emitted instead of remaining in

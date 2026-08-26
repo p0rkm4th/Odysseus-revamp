@@ -12,12 +12,20 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+
+# Allow the documented ``python benchmarks/...`` invocation from the repository
+# root to resolve the application package without requiring a shell-specific
+# PYTHONPATH export.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from src.agent_loop import stream_agent_loop
 from src.model_context import estimate_tokens
@@ -28,7 +36,14 @@ def _local_endpoint(endpoint: str) -> bool:
     return host in {"127.0.0.1", "localhost", "::1", "172.18.0.1"}
 
 
-async def raw_chat(endpoint: str, model: str, prompt: str, *, timeout: float) -> dict[str, Any]:
+async def raw_chat(
+    endpoint: str,
+    model: str,
+    prompt: str,
+    *,
+    timeout: float,
+    max_tokens: int,
+) -> dict[str, Any]:
     started = time.perf_counter()
     first_token: float | None = None
     output = []
@@ -42,7 +57,7 @@ async def raw_chat(endpoint: str, model: str, prompt: str, *, timeout: float) ->
                 "messages": [{"role": "user", "content": prompt}],
                 "stream": True,
                 "think": False,
-                "options": {"temperature": 0.0, "num_predict": 128},
+                "options": {"temperature": 0.0, "num_predict": max_tokens},
             },
         ) as response:
             response.raise_for_status()
@@ -68,7 +83,14 @@ async def raw_chat(endpoint: str, model: str, prompt: str, *, timeout: float) ->
     }
 
 
-async def hades_chat(endpoint: str, model: str, prompt: str, *, timeout: float) -> dict[str, Any]:
+async def hades_chat(
+    endpoint: str,
+    model: str,
+    prompt: str,
+    *,
+    timeout: float,
+    max_tokens: int,
+) -> dict[str, Any]:
     started = time.perf_counter()
     first_token: float | None = None
     output_chars = 0
@@ -81,6 +103,7 @@ async def hades_chat(endpoint: str, model: str, prompt: str, *, timeout: float) 
             owner="__hades_aci_overhead_benchmark__",
             session_id="hades-aci-overhead-benchmark",
             aci_mode="aci",
+            max_tokens=max_tokens,
             max_rounds=1,
             max_tool_calls=0,
             context_length=8192,
@@ -150,8 +173,14 @@ def timing_attribution(raw: dict[str, Any], hades: dict[str, Any]) -> dict[str, 
 
 async def run(args: argparse.Namespace) -> dict[str, Any]:
     prompt = "Answer with exactly one short sentence: what is 2 plus 2?"
-    raw = await raw_chat(args.endpoint, args.model, prompt, timeout=args.timeout)
-    hades = await hades_chat(args.endpoint, args.model, prompt, timeout=args.timeout)
+    raw = await raw_chat(
+        args.endpoint, args.model, prompt,
+        timeout=args.timeout, max_tokens=args.max_tokens,
+    )
+    hades = await hades_chat(
+        args.endpoint, args.model, prompt,
+        timeout=args.timeout, max_tokens=args.max_tokens,
+    )
     attribution = timing_attribution(raw, hades)
     return {
         "schema_version": 1,
@@ -185,6 +214,7 @@ def main() -> int:
     parser.add_argument("--model", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--timeout", type=float, default=180.0)
+    parser.add_argument("--max-tokens", type=int, default=128)
     args = parser.parse_args()
     if not _local_endpoint(args.endpoint):
         parser.error("this benchmark only permits explicitly recognized local endpoints")
