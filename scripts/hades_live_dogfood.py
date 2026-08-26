@@ -61,6 +61,12 @@ CASES = [
     Case("infra_health", "Anything unhealthy right now?", expect_completion=True),
     Case("infra_services", "Are my services alive?", family="infrastructure", expect_completion=True),
     Case("infra_near_miss", "Explain what a service is.", family="negative_near_miss"),
+    Case("memory_explanation", "Tell me about memory.", family="negative_near_miss", expect_fallback=True, max_tools=0),
+    Case("work_advice", "What should I work on?", family="negative_near_miss", expect_fallback=True, max_tools=0),
+    Case("network_definition", "What is a network?", family="negative_near_miss", expect_fallback=True, max_tools=0),
+    Case("work_imperative", "Start working on Hades.", family="negative_near_miss", max_tools=0),
+    Case("network_update", "Change my network.", family="negative_near_miss", max_tools=0),
+    Case("network_scan_scope", "Scan this network.", family="security", max_tools=0),
     *(Case(f"fallback_{i}", p, family="fallback", expect_fallback=True, max_tools=0) for i, p in enumerate([
         "Explain why RAID isn't a backup.",
         "What makes a good personal AI assistant?",
