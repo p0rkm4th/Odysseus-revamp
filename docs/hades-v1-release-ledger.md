@@ -60,9 +60,10 @@ E6.
   one Hades model call with zero tools/index lookups. Diagnostic only.
 - Current agent-loop/provider transport gate: `101 passed`.
 - Current telemetry/reference gate: `97 passed`.
-- Storage: 76% used / 21 GiB free after the accepted candidate build. The
-  peak-aware preflight reports CAUTION but permits only when projected growth
-  preserves a 12 GiB emergency reserve; no further build is currently planned.
+- Storage: 74% used / 23 GiB free after removing the superseded c0 candidate.
+  The peak-aware preflight reports CAUTION but permits only when projected
+  growth preserves a 12 GiB emergency reserve; no further build is currently
+  planned.
   Current, rollback, and live-auth images remain retained; no owner data,
   databases, volumes, backups, or model blobs were removed.
 - Live canary accepts `--model`, `--endpoint-id`, and `--cookie-file`; cookie
