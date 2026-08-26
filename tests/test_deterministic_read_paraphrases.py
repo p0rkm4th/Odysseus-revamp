@@ -96,6 +96,24 @@ def test_answer_only_projection_has_no_tool_prompt_or_binding_identity():
     assert projected[-1]["content"] == "Tell me about me."
 
 
+def test_answer_only_projection_discards_unrelated_session_residue():
+    messages = [
+        {"role": "user", "content": "What do you remember about me?"},
+        {"role": "assistant", "content": "Old work answer mentioning a stale project."},
+        {"role": "user", "content": "What's on my plate right now?"},
+        {
+            "role": "tool",
+            "content": '{"status":"SUCCESS_WITH_DATA","output":"current work items"}',
+            "metadata": {"assistant_tool_result": True},
+        },
+    ]
+    projected = _minimal_aci_answer_messages(messages)
+    serialized = "\n".join(str(message.get("content") or "") for message in projected)
+    assert "stale project" not in serialized
+    assert "current work items" in serialized
+    assert projected[-1]["content"] == "What's on my plate right now?"
+
+
 def test_protected_aci_state_survives_provider_route_rebuild():
     packet = {
         "role": "system",
