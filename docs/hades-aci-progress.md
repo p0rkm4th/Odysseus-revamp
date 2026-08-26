@@ -4,23 +4,23 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `a8b0c6ed`, remote
+- Source head: branch `hades-aci-v1`, commit `1aa1c95d`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed runtime: `odysseus:candidate-cfbe6244`, image
-  `sha256:43209c7211269e6b4a7268105057122dcd5991526bdee3c6c7373307d7b8f159`,
-  exact runtime source `cfbe6244fd0533dd7550820f3273ddff98a115ca`, migration
+- Deployed runtime: `odysseus:candidate-1aa1c95d`, image
+  `sha256:0085872b0d8b6d2b87817d008808c138ab4d19754b0da596df2aa656219a9acc`,
+  exact runtime source `1aa1c95de0bb2d262d78ebbfc12d53365a922ff6`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
-  source overlay of the previously fully built candidate; entrypoint and
-  `deterministic_reads.py` hash were independently verified.
+  source overlay of the previously fully built candidate; `/api/version`
+  reports `runtime_source_kind=image_source_marker` and `source_match=true`.
 - Source evidence: current full regression is `6414 passed, 4 skipped, 186
   warnings`; control-plane slice `237 passed`; fallback/read
   slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
   infrastructure semantic family `73 passed`.
-- Live E5 evidence: real deployed qwen3:8b matrix `36/36 answers`, zero
-  transport errors, zero internal leaks, `35/36` old trajectory assertions;
-  the sole old assertion incorrectly required successful completion for a
-  security BLOCKED network request and is now corrected in the harness.
-  Re-run behavior showed `36/36` trajectory passes under the corrected scorer.
+- Live E5 evidence: real deployed qwen3:8b core matrix `25/25 answers` and
+  `25/25` trajectory passes, zero transport errors, zero internal leaks, and
+  zero assertion failures. It covered asset ordinal references, infrastructure
+  reads, durable Continue, contamination isolation, fallback, and network
+  safety through the authenticated production chat path.
 - Live root-cause evidence: asset ordinal references resolved to strong
   canonical identities; `Are my services alive?` used the SERVICE read fast
   path; direct MODEL_FALLBACK answers were emitted instead of remaining in
@@ -30,17 +30,15 @@ This section supersedes older historical rows below for present-state claims.
 - H0 remains frozen at 15 cases: success `0.20`, weighted `0.4333`.
   Historical ACI comparisons remain synthetic benchmark evidence and are not
   owner-live evidence.
-- Storage: root approximately 80% used / 19 GiB free after the one candidate
-  build. Docker build cache is zero. Retained Odysseus runtime images are the
-  running candidate and explicit `rollback-b471e104-prev`; protected active
-  harness/pinned/unrelated images remain. No further large build is authorized
-  in this storage window. Eight exact untagged intermediate images were
-  removed after Docker confirmed they were not referenced by a container;
-  remaining dangling layers are retained where Docker reports dependency
-  conflicts.
+- Storage: root `74%` used / `24 GiB` free after deployment and narrow
+  retention cleanup. Docker build cache is zero. Current, rollback, live auth
+  harness, pinned, and unrelated active images remain; five exact obsolete
+  intermediate candidate tags were removed. No owner data, databases,
+  volumes, backups, or model blobs were touched. Large builds remain blocked
+  by the 30 GiB preflight headroom guard.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
-- Remote checkpoint: `origin/hades-aci-v1` is synchronized at `148f6fee`.
+- Remote checkpoint: `origin/hades-aci-v1` is synchronized at `1aa1c95d`.
 - Live canary tooling now supports reproducible family/suite selection,
   seeded samples, and explicit fresh versus intentional-continuation session
   modes; selection tests pass without changing runtime authority or execution.
@@ -64,8 +62,8 @@ This section supersedes older historical rows below for present-state claims.
 - The live corpus now includes additional asset ordinal, infrastructure health,
   and network-to-general-topic contamination trajectories; these remain
   fixture-only until the next source-matched deployment and live run.
-- The current source head is not yet deployed: the running candidate remains
-  `cfbe6244` while storage preflight blocks a large replacement build.
+- The current source head is deployed through a source-only overlay; no
+  checkout is mounted over `/app` in the production container.
 - Default production and GPU compose files no longer mount the host checkout at
   `/app`; `docker-compose.developer.yml` is now the explicit opt-in workspace
   override and requires `HADES_WORKSPACE`. This prevents silent image/checkout
