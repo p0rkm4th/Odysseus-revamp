@@ -169,6 +169,7 @@ def test_casual_infrastructure_status_paraphrases_use_safe_service_read(query):
     "give me my lore",
     "what's my background",
     "what's my deal",
+    "what do you actually have saved",
 ])
 def test_messy_owner_self_knowledge_stays_on_memory_read_family(query):
     resolved = resolve_intent(compile_intent(query))
