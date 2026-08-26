@@ -27,6 +27,10 @@ from src.tool_security import (
     is_public_blocked_tool,
     owner_is_admin_or_single_user,
 )
+
+_BUILTIN_MCP_SERVER_IDS = frozenset({
+    "image_gen", "memory", "rag", "email", "builtin_browser",
+})
 from src.tool_capabilities import ToolRunSecurityContext, blocked_tool_result
 from src.tool_approvals import ExactToolApproval
 from src.tool_policy import ToolPolicy
@@ -356,7 +360,7 @@ def _mcp_execution_disabled_reason(
         return None
     policy_names = email_tool_policy_names(tool_name)
     if disabled_tools and not policy_names.isdisjoint(disabled_tools):
-        return f"Tool '{tool_name}' is disabled by the current request policy."
+        return f"Tool '{tool_name}' is disabled by user policy."
     parts = tool_name.split("__", 2)
     if len(parts) != 3 or not parts[1] or not parts[2]:
         return "Malformed MCP capability name."
@@ -373,7 +377,9 @@ def _mcp_execution_disabled_reason(
                 # must remain fail-closed.
                 manager = get_mcp_manager()
                 is_builtin = getattr(manager, "is_builtin", None)
-                if callable(is_builtin) and is_builtin(parts[1]):
+                if parts[1] in _BUILTIN_MCP_SERVER_IDS or (
+                    callable(is_builtin) and is_builtin(parts[1])
+                ):
                     return None
                 return "MCP capability is no longer registered."
             if server.is_enabled is False:

@@ -10,6 +10,7 @@ import threading
 import re
 import os
 import math
+import ipaddress
 from contextlib import asynccontextmanager
 from fastapi import HTTPException
 from typing import Optional, Dict, List, Tuple
@@ -571,13 +572,26 @@ def _is_ollama_native_url(url: str) -> bool:
         return True
     if path.startswith("/v1"):
         return False
-    # An explicit native API path is stronger evidence than the hostname.
-    if path == "/api" or (path.startswith("/api/") and not path.startswith("/api/v1")):
+    # An explicit native API path is strong evidence on a local/private
+    # endpoint. On an arbitrary remote host, `/api` is also common for generic
+    # providers; require an Ollama-identifying host or the default port there.
+    local_host = host in {
+        "localhost", "127.0.0.1", "0.0.0.0", "::1", "host.docker.internal",
+    }
+    explicit_native_path = path == "/api" or (
+        path.startswith("/api/") and not path.startswith("/api/v1")
+    )
+    private_host = False
+    try:
+        private_host = ipaddress.ip_address(host).is_private
+    except ValueError:
+        pass
+    if explicit_native_path and (local_host or private_host):
         return True
     # The default Ollama port is a useful convention for local and remote
     # installations.  A pathless arbitrary loopback port is not: LM Studio,
     # llama.cpp, vLLM, and custom OpenAI-compatible servers commonly use one.
-    ollama_named_host = "ollama" in host
+    ollama_named_host = host == "ollama" or host.startswith("ollama.") or host.endswith(".ollama")
     default_port = parsed.port == 11434
     local_default_host = host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} and default_port
     return path == "" and (ollama_named_host or default_port or local_default_host)
