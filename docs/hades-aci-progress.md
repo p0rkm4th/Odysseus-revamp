@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `dba43815` (runtime commit
+- Source head: branch `hades-aci-v1`, commit `cfbe6244` (runtime commit
   `501529dc`; the later scorer change is not in the image), remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-501529dc3`, image
@@ -13,9 +13,10 @@ This section supersedes older historical rows below for present-state claims.
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the fully built `candidate-2bc7ca1163a4`; entrypoint and
   source hash were independently verified.
-- Source evidence: final full regression `6399 passed, 3 skipped, 186
-  warnings`; control-plane slice `237 passed`; fallback/read slice `92
-  passed`.
+- Source evidence: final full regression at `dba43815` was `6399 passed, 3
+  skipped, 186 warnings`; control-plane slice `237 passed`; fallback/read
+  slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
+  infrastructure semantic family `73 passed`.
 - Live E5 evidence: real deployed qwen3:8b matrix `36/36 answers`, zero
   transport errors, zero internal leaks, `35/36` old trajectory assertions;
   the sole old assertion incorrectly required successful completion for a
