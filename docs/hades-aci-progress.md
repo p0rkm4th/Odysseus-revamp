@@ -15,6 +15,16 @@ This section supersedes older historical rows below for present-state claims.
 - Source evidence: last full regression is `6511 passed, 3 skipped, 186
   warnings` in 124s; the deployed runtime includes the runtime implementation
   through `7fe090cc`. Later commits are build-guard/tests/docs only.
+- Authenticated acceptance harness: `scripts/hades_live_fuzz.py` now uses the
+  ordinary `/api/auth/login` flow and verifies the least-privileged synthetic
+  principal `hades-acceptance` before sending chat traffic. Its optional
+  bootstrap uses only normal first-run setup on an explicitly loopback,
+  unconfigured acceptance instance, then creates the non-admin test user via
+  the normal admin route; no token minting, internal header, auth disable, or
+  owner credential is used. Compositional held-out variants remain test data,
+  and reports contain digests/metrics rather than prompts, answers, or Memory.
+  Focused gate: `38 passed`; this is E2 source/test evidence until an isolated
+  acceptance instance is provisioned and run with real qwen3:8b.
 - Current full regression at source tip: `6511 passed, 3 skipped, 186
   warnings` in 124s. This validates the infrastructure result-normalization,
   durable terminal-continuation, and live-canary telemetry changes; it does
