@@ -12,14 +12,14 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `0c07b542` | `origin/hades-aci-v1` |
-| Deployed source | `0c07b542` | `/api/version`, immutable image marker |
-| Running image | `odysseus:candidate-0c07b542` | Docker inspect |
+| Pushed source | `fce8dc89` | `origin/hades-aci-v1` |
+| Deployed source | `3d5a9fd3` | `/api/version`, immutable image marker |
+| Running image | `odysseus:candidate-3d5a9fd3` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
 | API | healthy | `/api/health` |
 | Broker | active; socket present | systemd/socket check |
 | Owner E6 | pending | no owner GUI claim |
-| Automated E5 | current deployed canary verified | 25-case core + 12 held-out + 16 rotating sanitized live cases, 53/53 trajectory passes |
+| Automated E5 | current deployed canary verified | prior 25-case core + 12 held-out + 16 rotating sanitized live cases, plus corrected seeded 7/7 continuation-aware run |
 | Live security E5 | unauthorized network-scope request | 1/1 trajectory pass; zero tool calls/approvals/errors |
 | Full regression | `6416 passed, 3 skipped, 186 warnings` after typed disposition | host virtualenv gate; deployed source matches |
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
