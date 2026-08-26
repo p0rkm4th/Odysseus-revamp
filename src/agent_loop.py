@@ -4894,6 +4894,7 @@ async def stream_agent_loop(
     _aci_contract_fallback_used = False
     _aci_model_fallback = False
     _aci_model_fallback_reason = None
+    _aci_empty_answer_fallback_used = False
     _aci_reference_resolution = None
     _aci_reference_context_source = "none"
 
@@ -8051,9 +8052,16 @@ async def stream_agent_loop(
                     round_response += _synth
                     full_response += _synth
                 else:
-                    _fb = ("I gathered some search results but couldn't pull a clean "
-                           "answer together. Want me to try a more specific question, "
-                           "or summarize what I did find?")
+                    # This is the final language-only safety net after an
+                    # empty model response and failed synthesis. It must not
+                    # invent a domain (the old text falsely claimed that web
+                    # search had happened for ordinary questions).
+                    _aci_empty_answer_fallback_used = True
+                    _record_aci_framework("empty_answer_fallback")
+                    _fb = (
+                        "I wasn't able to produce a complete answer for that "
+                        "request. Please rephrase it and I'll try again."
+                    )
                     yield f'data: {json.dumps({"delta": _fb})}\n\n'
                     round_response += _fb
                     full_response += _fb
@@ -9975,6 +9983,7 @@ async def stream_agent_loop(
     metrics["tool_index_bypass_count"] = 1 if _tool_index_bypassed else 0
     metrics["tool_index_lookup_count"] = 1 if _tool_index_lookup_attempted else 0
     metrics["aci_model_fallback"] = bool(_aci_model_fallback)
+    metrics["aci_empty_answer_fallback"] = bool(_aci_empty_answer_fallback_used)
     if isinstance(_aci_reference_resolution, dict):
         metrics["aci_reference_resolution"] = {
             "status": str(_aci_reference_resolution.get("status") or "UNKNOWN"),
