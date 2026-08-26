@@ -14,7 +14,7 @@ gates.
 | Item | Status | Evidence |
 |---|---|---|
 | Deterministic Memory/Work/Assets/Network/Service reads | green | source tests; deployed Qwen E5 matrices |
-| Asset ordinal continuation | green | source `8038e227` behavior; canonical `PHYSICAL-001` live trace; telemetry in `074d240f` |
+| Asset ordinal continuation | focused green, deployed | latest result owns ordered opaque refs; source `7fe090cc`; live deployment `7fe090cc` |
 | Durable Continue terminal-state handling | green | `177` focused tests; live Continue resumed with zero tool calls |
 | General MODEL_FALLBACK | green | focused security/fallback gates; live ordinary-question cases |
 | Conceptual explanation routing | focused green, deployment pending | `17cbbb97`; RAID/backup explanations no longer enter `storage_ops`; direct fallback diagnostics are initialized safely |
@@ -44,11 +44,11 @@ E6.
 
 ## Current release state
 
-- Branch: `hades-aci-v1`, synchronized with `origin`.
-- Source head: `600f303a` (semantic read-family corrections, safe derived
-  runtime facts for MODEL_FALLBACK); deployed runtime remains `c0a281f5`
-  until the next storage-approved candidate build.
-- Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
+- Branch: `hades-aci-v1`; local source is ahead of `origin` because the current
+  SSH agent socket is unavailable in this process.
+- Source head: `302ed03f` (peak-aware storage guard); deployed runtime is the
+  preceding runtime implementation `7fe090cc`.
+- Running image: `odysseus:candidate-7fe090cc8a23`, source-matched and healthy.
 - Last full regression before the latest fallback/runtime source slice:
   `6492 passed, 3 skipped, 186 warnings` in 123 seconds. Later focused gates:
   `210 passed` for fallback/control-plane behavior and `198 passed` for
@@ -60,10 +60,11 @@ E6.
   one Hades model call with zero tools/index lookups. Diagnostic only.
 - Current agent-loop/provider transport gate: `101 passed`.
 - Current telemetry/reference gate: `97 passed`.
-- Storage: 74% used / 23 GiB free; large replacement builds remain closed by
-  the 30 GiB preflight guard. Current, rollback, and live-auth images are
-  retained; no owner data, databases, volumes, backups, or model blobs were
-  removed.
+- Storage: 76% used / 21 GiB free after the accepted candidate build. The
+  peak-aware preflight reports CAUTION but permits only when projected growth
+  preserves a 12 GiB emergency reserve; no further build is currently planned.
+  Current, rollback, and live-auth images remain retained; no owner data,
+  databases, volumes, backups, or model blobs were removed.
 - Live canary accepts `--model`, `--endpoint-id`, and `--cookie-file`; cookie
   files support the existing Netscape export format without printing
   credentials.

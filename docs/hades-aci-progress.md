@@ -4,10 +4,11 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `600f303a`, remote
-  `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed runtime: `odysseus:candidate-c0a281f5`, exact runtime source
-  `c0a281f5`, branch
+- Source head: branch `hades-aci-v1`, commit `302ed03f`, remote
+  `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`; local commits after
+  `f9661cda` await an authenticated SSH agent for push.
+- Deployed runtime: `odysseus:candidate-7fe090cc8a23`, exact runtime source
+  `7fe090cc8a23`, branch
   `hades-aci-v1`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
