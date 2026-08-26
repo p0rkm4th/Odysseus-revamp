@@ -19,7 +19,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | API | healthy | `/api/health` |
 | Broker | active; socket present | systemd/socket check |
 | Owner E6 | pending | no owner GUI claim |
-| Automated E5 | current deployed canary verified | 25-case sanitized live matrix, 25/25 trajectory passes |
+| Automated E5 | current deployed canary verified | 25-case core + 12 held-out + 16 rotating sanitized live cases, 53/53 trajectory passes |
 | Full regression | `6414 passed, 4 skipped, 186 warnings` after current source slice | container test gate |
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
 
@@ -43,6 +43,9 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
 - Asset ordinal resolution now prefers server-owned ordered/eligible result
   entities and uses `last` only when no ordered set exists; deployed core E5
   verified the list → “first physical one” continuation.
+- The same source-matched image passed seeded held-out (`12/12`) and rotating
+  (`16/16`) live slices, including cross-domain contamination, infrastructure
+  near-misses, fallback, and asset continuation families.
 - Completed canonical asset reads now expose their ordered/eligible entity set
   through the owner-scoped session reference projection, so a later ordinal
   turn can resolve without an active Run or lexical target guessing. The

@@ -15,12 +15,17 @@ This section supersedes older historical rows below for present-state claims.
 - Source evidence: current full regression is `6414 passed, 4 skipped, 186
   warnings`; control-plane slice `237 passed`; fallback/read
   slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
-  infrastructure semantic family `73 passed`.
+  infrastructure semantic family `73 passed`; final focused provenance,
+  intent, reference, executor, fallback, and canary gate `208 passed`.
 - Live E5 evidence: real deployed qwen3:8b core matrix `25/25 answers` and
   `25/25` trajectory passes, zero transport errors, zero internal leaks, and
   zero assertion failures. It covered asset ordinal references, infrastructure
   reads, durable Continue, contamination isolation, fallback, and network
   safety through the authenticated production chat path.
+- Follow-up live E5 evidence on the same source-matched image: seeded held-out
+  slice `12/12` and rotating slice `16/16` trajectory passes, both with zero
+  errors and zero internal leaks. Across all three runs: `53/53` trajectory
+  passes, `23` canonical tool calls, and `3` tool-index lookups.
 - Live root-cause evidence: asset ordinal references resolved to strong
   canonical identities; `Are my services alive?` used the SERVICE read fast
   path; direct MODEL_FALLBACK answers were emitted instead of remaining in
