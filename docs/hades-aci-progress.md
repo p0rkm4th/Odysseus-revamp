@@ -1,5 +1,34 @@
 # Hades ACI V1 progress
 
+## Authoritative current checkpoint — 2026-08-26
+
+This section supersedes older historical rows below for present-state claims.
+
+- Source: branch `hades-aci-v1`, commit `60dd5db5`, synchronized with
+  `origin` at `git@github.com:p0rkm4th/Odysseus-revamp.git`.
+- Deployed runtime: `odysseus:candidate-b471e10455ba`, source
+  `b471e10455ba846373ca89449fc021cea21ace2e`, migration
+  `20260825_002_work_run_completion_v6`. The current source candidate is
+  newer and is not yet deployed.
+- Source evidence: semantic-precision candidate full regression
+  `6390 passed, 3 skipped, 186 warnings`; focused near-miss/domain gate
+  `166 passed`. Static positive read coverage is `21/21`; negative
+  near-miss false READ contracts are `0/14`.
+- Live evidence: prior deployed b471 fallback probe used real qwen3:8b with
+  one model call, zero tools/index lookups, and 312 input tokens. Prior
+  deployed asset, infrastructure, and continuation traces are E5 automated
+  evidence. The newly added semantic-near-miss family is not live-verified
+  until the newer source is deployed.
+- H0 remains frozen at 15 cases: success `0.20`, weighted `0.4333`.
+  Historical ACI comparisons remain synthetic benchmark evidence and are not
+  owner-live evidence.
+- Storage: root 78% used / 19 GiB free; Docker images 21.89 GB; build cache
+  zero. Preflight is fail-closed below the 30 GiB large-build minimum.
+  Retained images are the running candidate, explicit b9 rollback, active
+  authenticated harness, pinned bundle, and unrelated protected images.
+- Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
+  backups, or model blobs were removed.
+
 | Milestone | Commit | Focused evidence | Deployment | Evidence level |
 |---|---|---|---|---|
 | BASELINE_RECOVERY | `dbaddbda` | live candidate inspected | running candidate source `dbaddbda` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
