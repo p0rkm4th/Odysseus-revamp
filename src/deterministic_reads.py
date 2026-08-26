@@ -16,7 +16,7 @@ _READ_REQUEST = re.compile(
     re.IGNORECASE,
 )
 _OWNER_SELF = re.compile(
-    r"\b(?:about|on|bout)\s+(?:me|myself)\b|\bwho\s+i\s+am\b|\bmy\s+profile\b",
+    r"\b(?:about|on|bout)\s+(?:me|myself)\b|\bwho\s+am\s+i(?:\s+to\s+you)?\b|\bmy\s+profile\b",
     re.IGNORECASE,
 )
 _MEMORY_KNOWLEDGE = re.compile(
@@ -27,16 +27,17 @@ _MEMORY_KNOWLEDGE = re.compile(
 _WORK_SUBJECT = re.compile(
     r"\b(?:work|working|workload|"
     r"on\s+my\s+plate|got\s+(?:going|on)|keeping\s+me\s+busy|"
+    r"doing(?:\s+(?:right\s+now|rn))?|"
     r"currently\s+in\s+progress|unfinished|active\s+projects?|"
     r"outstanding\s+work|open\s+work)\b",
     re.IGNORECASE,
 )
 _WORK_OWNER = re.compile(
-    r"\b(?:my|me|i(?:'m|\s+am)?|i\s+have|have\s+i|i(?:'ve)?\s+got)\b",
+    r"\b(?:my|me|we|i(?:'m|\s+am)?|i\s+have|have\s+i|i(?:'ve)?\s+got)\b",
     re.IGNORECASE,
 )
 _ASSET_SUBJECT = re.compile(
-    r"\b(?:it\s+assets?|assets?|computers?|machines?|hardware|boxes?|"
+    r"\b(?:it\s+assets?|assets?|computers?|machines?|hardware|boxes?|gear|"
     r"physical\s+(?:machines?|boxes)|equipment|servers?)\b",
     re.IGNORECASE,
 )
@@ -47,7 +48,7 @@ _ASSET_OWNER = re.compile(
 )
 _NETWORK_SUBJECT = re.compile(r"\b(?:network|lan|connection|connected)\b", re.IGNORECASE)
 _CURRENT_STATE = re.compile(
-    r"\b(?:current(?:ly)?|right\s+now|now|am\s+i\s+on|connected\s+to|"
+    r"\b(?:current(?:ly)?|right\s+now|now|network\s+context|am\s+i\s+on|connected\s+to|"
     r"where\s+am\s+i\s+connected)\b",
     re.IGNORECASE,
 )
@@ -94,6 +95,7 @@ def deterministic_read_concept(text: str) -> str | None:
     if _GENERAL_EXPLANATION.search(query) and not (
         _OWNER_SELF.search(query)
         or re.search(r"\b(?:my|mine|i\s+am|i'm|right\s+now|currently)\b", query)
+        or re.search(r"\bwe\b.{0,20}\bworking\b", query)
     ):
         return None
 
@@ -110,7 +112,11 @@ def deterministic_read_concept(text: str) -> str | None:
         return "MEMORY"
     if (
         _WORK_SUBJECT.search(query)
-        and (_WORK_OWNER.search(query) or re.search(r"\bprojects?\b", query))
+        and (
+            _WORK_OWNER.search(query)
+            or re.search(r"\bprojects?\b", query)
+            or re.search(r"\b(?:currently|right\s+now|in\s+progress)\b", query)
+        )
         and not re.search(r"\b(?:projects?|tasks?|goals?|commitments?|runs?|missions?|watches?)\b", query)
     ):
         return "WORK"
