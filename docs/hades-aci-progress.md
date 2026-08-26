@@ -1,31 +1,38 @@
 # Hades ACI V1 progress
 
-## Authoritative current checkpoint — 2026-08-26
+## Authoritative current checkpoint — 2026-08-26 (updated)
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source: branch `hades-aci-v1`, commit `60dd5db5`, synchronized with
-  `origin` at `git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed runtime: `odysseus:candidate-b471e10455ba`, source
-  `b471e10455ba846373ca89449fc021cea21ace2e`, migration
-  `20260825_002_work_run_completion_v6`. The current source candidate is
-  newer and is not yet deployed.
-- Source evidence: semantic-precision candidate full regression
-  `6390 passed, 3 skipped, 186 warnings`; focused near-miss/domain gate
-  `166 passed`. Static positive read coverage is `21/21`; negative
-  near-miss false READ contracts are `0/14`.
-- Live evidence: prior deployed b471 fallback probe used real qwen3:8b with
-  one model call, zero tools/index lookups, and 312 input tokens. Prior
-  deployed asset, infrastructure, and continuation traces are E5 automated
-  evidence. The newly added semantic-near-miss family is not live-verified
-  until the newer source is deployed.
+- Source head: branch `hades-aci-v1`, commit `dba43815` (runtime commit
+  `501529dc`; the later scorer change is not in the image), remote
+  `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
+- Deployed runtime: `odysseus:candidate-501529dc3`, image
+  `sha256:5c318011a98c17f581d5d726e86cf2033620b07f5bec4bee359039afefd5e9e`,
+  exact runtime source `501529dc709d565290923b5145e0306b5705ba95`, migration
+  `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
+  source overlay of the fully built `candidate-2bc7ca1163a4`; entrypoint and
+  source hash were independently verified.
+- Source evidence: final full regression `6399 passed, 3 skipped, 186
+  warnings`; control-plane slice `237 passed`; fallback/read slice `92
+  passed`.
+- Live E5 evidence: real deployed qwen3:8b matrix `36/36 answers`, zero
+  transport errors, zero internal leaks, `35/36` old trajectory assertions;
+  the sole old assertion incorrectly required successful completion for a
+  security BLOCKED network request and is now corrected in the harness.
+  Re-run behavior showed `36/36` trajectory passes under the corrected scorer.
+- Live root-cause evidence: asset ordinal references resolved to strong
+  canonical identities; `Are my services alive?` used the SERVICE read fast
+  path; direct MODEL_FALLBACK answers were emitted instead of remaining in
+  the ACI prose buffer.
 - H0 remains frozen at 15 cases: success `0.20`, weighted `0.4333`.
   Historical ACI comparisons remain synthetic benchmark evidence and are not
   owner-live evidence.
-- Storage: root 78% used / 19 GiB free; Docker images 21.89 GB; build cache
-  zero. Preflight is fail-closed below the 30 GiB large-build minimum.
-  Retained images are the running candidate, explicit b9 rollback, active
-  authenticated harness, pinned bundle, and unrelated protected images.
+- Storage: root approximately 80% used / 19 GiB free after the one candidate
+  build. Docker build cache is zero. Retained Odysseus runtime images are the
+  running candidate and explicit `rollback-b471e104-prev`; protected active
+  harness/pinned/unrelated images remain. No further large build is authorized
+  in this storage window.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
