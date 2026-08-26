@@ -57,7 +57,7 @@ def test_verdict_prose_flood_is_fast():
 
 @pytest.mark.parametrize("text", [
     "yes", "y", "ok!", "okay ...", "sure!!", "do it", "1", "a", "2.",
-    "the second one", "  yes  ", "continue", "run it!", "third???",
+    "the second one", "  yes  ", "continue", "go on", "run it!", "third???",
 ])
 def test_continuation_accepts_terse_confirmations(text):
     assert _is_explicit_continuation(text)
