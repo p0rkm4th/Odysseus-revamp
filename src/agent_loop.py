@@ -5680,6 +5680,30 @@ async def stream_agent_loop(
                 operation_class=str((_intent.get("intent_frame") or {}).get("operation_class") or "") or None,
             )
             _record_aci_framework("action_hard_filter")
+            # A resolved DomainContract is semantic evidence from the
+            # framework, not a provider-facing suggestion. Some canonical
+            # planning Actions are read-only (`read_private`) even when the
+            # user operation is EXECUTE (for example, plan network discovery
+            # before any scan). Preserve that exact applicable/policy-allowed
+            # contract Action after the generic operation-class filter so the
+            # packet does not silently omit the framework's resolution.
+            if desired_binding and desired_action and not any(
+                item.get("binding") == desired_binding and item.get("action_id") == desired_action
+                for item in filtered
+            ):
+                preferred = next(
+                    (
+                        item for item in raw_actions
+                        if item.get("binding") == desired_binding
+                        and item.get("action_id") == desired_action
+                        and item.get("applicable") is not False
+                        and item.get("policy_allowed") is not False
+                    ),
+                    None,
+                )
+                if preferred is not None:
+                    filtered.insert(0, preferred)
+                    _record_aci_framework("contract_action_retained")
             # A contract-resolved action is always retained when present; the
             # remaining shortlist is deliberately small for weak local models.
             filtered.sort(key=lambda item: 0 if item["binding"] == desired_binding and item["action_id"] == desired_action else 1)
