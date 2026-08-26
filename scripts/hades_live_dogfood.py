@@ -189,6 +189,7 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         "session_mode": case.mode,
         "session_group": case.group,
         "family": case.family,
+        "split": case.split,
         "session_digest": digest(session_id),
         "answer_present": bool(answer.strip()),
         "answer_chars": len(answer),
@@ -293,6 +294,17 @@ def main() -> int:
                 ),
             }
             for family in sorted({str(r.get("family") or "golden") for r in results})
+        },
+        "splits": {
+            split: {
+                "cases": sum(1 for r in results if r.get("split") == split),
+                "answers": sum(bool(r.get("answer_present")) for r in results if r.get("split") == split),
+                "trajectory_pass": sum(
+                    not r.get("assertion_failures")
+                    for r in results if r.get("split") == split
+                ),
+            }
+            for split in sorted({str(r.get("split") or "unknown") for r in results})
         },
     }
     with open(args.output, "w", encoding="utf-8") as handle:
