@@ -5936,6 +5936,14 @@ async def stream_agent_loop(
                 state_fingerprint=state_fingerprint(packet_state),
             )
             _aci_packet = packet
+            if _ody_general_no_tool_mode and not desired_action and not selected:
+                # The route has no specialized capability and no candidate
+                # Action. Do not manufacture an empty bounded-decision task;
+                # the general model is the safe conversational floor.
+                _aci_model_fallback = True
+                _aci_model_fallback_reason = "no_specialized_aci_route"
+                _aci_packet = None
+                _record_aci_framework("general_model_fallback_direct")
             if (
                 (_intent.get("resolved_contract") or {}).get("reason") == "target_required"
                 and (_intent.get("intent_frame") or {}).get("domain_concept") == "SERVICE"
@@ -6008,6 +6016,14 @@ async def stream_agent_loop(
                     "the requested service operation is missing an exact target. "
                     "Ask the owner which service or systemd unit they mean. "
                     "Do not call tools, propose commands, or claim execution."
+                )
+            elif _aci_model_fallback:
+                aci_instruction = (
+                    "HADES GENERAL ASSISTANT MODE. No specialized Hades "
+                    "operation applies to this turn. Answer naturally using "
+                    "the provided context. You have no execution authority, "
+                    "must not invent tools or claim side effects, and may ask "
+                    "a normal clarification if needed."
                 )
             else:
                 aci_instruction = (
