@@ -349,19 +349,13 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
             .order_by(WorkResult.created_at.asc(), WorkResult.id.asc())
             .all()
         )
-        references = []
-        for result in results:
-            data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
-            for item in data.get("canonical_refs", data.get("entity_refs", [])):
-                if isinstance(item, dict) and str(item.get("ref") or item.get("id") or "").strip():
-                    references.append({
-                        "ref": str(item.get("ref") or item.get("id"))[:500],
-                        "concept": str(item.get("concept") or "").strip()[:80] or None,
-                    })
-            if isinstance(data.get("refs"), list):
-                for ref in data["refs"]:
-                    if isinstance(ref, str) and ref.strip():
-                        references.append({"ref": ref.strip()[:500]})
+        # Ordinals belong to the newest canonical result that exposes an
+        # ordered entity set.  Accumulating refs across the whole Run makes
+        # "the first one" point into stale/mixed-domain history after a later
+        # read, even though the current turn has a perfectly valid result
+        # context.  Durable continuation state may still explicitly override
+        # this projection below when it carries a server-owned context.
+        references = _latest_result_references(results)
         projection = {
             "id": run.id,
             "owner": run.owner,
@@ -415,14 +409,7 @@ def recent_session_reference_context(owner: str, session_id: str, *, limit: int 
                 .filter(WorkResult.owner == str(owner), WorkResult.run_id == run.id)
                 .order_by(WorkResult.created_at.asc(), WorkResult.id.asc()).all()
             )
-            refs: list[dict[str, Any]] = []
-            for result in results:
-                data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
-                for item in data.get("canonical_refs", data.get("entity_refs", [])):
-                    if isinstance(item, dict):
-                        ref = str(item.get("ref") or item.get("id") or "").strip()
-                        if ref:
-                            refs.append({"ref": ref[:500], "concept": str(item.get("concept") or "").strip()[:80] or None})
+            refs = _latest_result_references(results)
             if refs:
                 refs = refs[:max(1, int(limit))]
                 # Keep the result ordering explicit: ordinal language refers
@@ -436,6 +423,32 @@ def recent_session_reference_context(owner: str, session_id: str, *, limit: int 
                     "source_run_id": run.id,
                 }
     return None
+
+
+def _latest_result_references(results: list[Any]) -> list[dict[str, Any]]:
+    """Extract the ordered refs from the newest result that exposes them.
+
+    Result order is canonical for ordinal follow-ups.  Older results remain
+    durable evidence, but must not silently change the meaning of a current
+    ``first/second/last`` reference.  The helper accepts ORM rows and keeps
+    only the compact opaque identity needed by the semantic resolver.
+    """
+    for result in reversed(results):
+        data = result.domain_reference if isinstance(getattr(result, "domain_reference", None), dict) else {}
+        raw = data.get("canonical_refs", data.get("entity_refs", []))
+        refs: list[dict[str, Any]] = []
+        if isinstance(raw, list):
+            for item in raw:
+                if not isinstance(item, dict):
+                    continue
+                ref = str(item.get("ref") or item.get("id") or "").strip()
+                if ref:
+                    refs.append({"ref": ref[:500], "concept": str(item.get("concept") or "").strip()[:80] or None})
+        if not refs and isinstance(data.get("refs"), list):
+            refs = [{"ref": ref.strip()[:500]} for ref in data["refs"] if isinstance(ref, str) and ref.strip()]
+        if refs:
+            return refs
+    return []
 
 
 def safe_auto_continuation(
