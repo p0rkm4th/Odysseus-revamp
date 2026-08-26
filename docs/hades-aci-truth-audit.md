@@ -22,7 +22,10 @@
 | Contract Action retention | DEPLOYED/PASSIVE_LIVE_VERIFIED | `67106c5e`; deployed network trace recorded `contract_action_retained`; Qwen prose remained fail-closed |
 | Deterministic contract fallback | DEPLOYED/PASSIVE_LIVE_VERIFIED | `101910d2`; one safe framework fallback Action, no repetition, no `WHY_NO_ACTION`, no provider failure |
 | Current six-case Qwen canary | DEPLOYED/PASSIVE_LIVE_VERIFIED | `101910d2`; 6/6, weighted 1.0, zero retries/provider failures; ambiguous service prose remains fail-closed |
-| Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below; authentication and owner data remain out of automation scope |
+| Owner Memory paraphrase dogfood | PARTIAL | owner: `What do you know about me?` PASS on Qwen/Luna; `Tell me about me` FAIL on both; framework root cause repaired in `ff14c3a0`, redeploy/retest pending |
+| Strict Decision runtime probe | FOCUSED_TESTED | `c0ea2955`; qwen3:8b strict schema PASS through configured bridge, 741ms, no tools or side effects |
+| Deterministic-read paraphrase convergence | FULL_REGRESSION | `ff14c3a0`; 21 metamorphic Memory/Work/Assets/Network cases; 67 checkpoint focused; `6366 passed, 3 skipped, 186 warnings` |
+| Owner GUI dogfood | OWNER_DOGFOOD_PENDING | corrected source is not deployed; owner retest remains required |
 
 ## Final runtime checkpoint
 
@@ -73,6 +76,26 @@ The continuity benchmark harness was corrected in `05dd1e0d` and full-tested
 loopback primary failure, use the configured Ollama endpoint as fallback, and
 both report recovery with one retry. This benchmark-only commit did not change
 the deployed image.
+
+## Sol root-cause evidence
+
+The first divergence between `What do you know about me?` and `Tell me about
+me` occurred in deterministic phrase-sensitive prefetch classification, before
+either model could choose an Action. Both phrases were `UNKNOWN` to the
+canonical intent compiler; only the former was rescued by the legacy Memory
+recognizer. The correction is shared semantic resolution, not an exact-string
+route or prompt retry.
+
+Source and regression evidence now require successful exact owner-safe reads to
+transition from canonical Result to compact ResultProjection, answer synthesis,
+and completion without re-entering bounded Action selection. Answer synthesis
+does not receive native tool schemas or internal binding names. Current runtime
+and deployment evidence supersedes conflicting volatile historical Memory in
+projection while preserving the remembered record as historical/contradicted.
+
+This correction is not yet deployed. The running source remains
+`0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf`; owner confirmation of the repaired
+phrases is therefore `OWNER_DOGFOOD_PENDING`.
 
 ## Owner-live script
 
