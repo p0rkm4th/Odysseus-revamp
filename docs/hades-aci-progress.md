@@ -74,6 +74,9 @@ This section supersedes older historical rows below for present-state claims.
   is now approximately 74% used / 23 GiB free. Remaining Docker images are
   current, rollback, active auth harness, protected milestones, or unrelated
   active services. The 30 GiB build-headroom guard remains closed.
+- `scripts/storage_preflight.sh` now reports running images, candidate tags,
+  rollback tags, and positively identified unreferenced candidates, making
+  retention decisions auditable without performing cleanup.
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.
