@@ -620,3 +620,8 @@ source/root-cause checkpoint.
   recognizes recorded/known-for-me asset inventory language. Focused gate:
   `161 passed`. No new authority or discovery path was introduced; deployment
   remains pending the storage preflight.
+
+- Work-status language now recognizes `where did we leave off` and its natural
+  variants as the existing safe Work overview read. Explicit `Continue` remains
+  durable Run continuation rather than a lexical Work read. Focused gate:
+  `203 passed`; no deployment was attempted while storage preflight was closed.

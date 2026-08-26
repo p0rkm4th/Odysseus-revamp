@@ -36,6 +36,7 @@ _WORK_SUBJECT = re.compile(
     r"on\s+my\s+plate|got\s+(?:going|on)|keeping\s+me\s+busy|"
     r"doing(?:\s+(?:right\s+now|rn))?|"
     r"currently\s+in\s+progress|unfinished|active\s+projects?|"
+    r"where(?:'d|\s+did)\s+(?:we|i)\s+leave\s+off|"
     r"outstanding\s+work|open\s+work)\b",
     re.IGNORECASE,
 )
@@ -144,6 +145,7 @@ def deterministic_read_concept(text: str) -> str | None:
         _WORK_SUBJECT.search(query)
         and (
             _WORK_OWNER.search(query)
+            or re.search(r"\bwhere(?:'d|\s+did)\s+(?:we|i)\s+leave\s+off\b", query)
             or re.search(r"\bprojects?\b", query)
             or re.search(r"\b(?:currently|right\s+now|in\s+progress)\b", query)
         )
