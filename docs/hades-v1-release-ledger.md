@@ -44,7 +44,7 @@ E6.
 ## Current release state
 
 - Branch: `hades-aci-v1`, synchronized with `origin`.
-- Source head: `695183d9` (canary harness after deployed runtime source
+- Source head: `aea513aa` (canary harness after deployed runtime source
   `074d240f`).
 - Running image: `odysseus:candidate-074d240f`, source-matched and healthy.
 - Full regression: `6424 passed, 3 skipped` on behavior-identical parent
@@ -54,5 +54,6 @@ E6.
   the 30 GiB preflight guard. Current, rollback, and live-auth images are
   retained; no owner data, databases, volumes, backups, or model blobs were
   removed.
-- Live canary accepts `--model` and `--cookie-file`; cookie files support the
-  existing Netscape export format without printing credentials.
+- Live canary accepts `--model`, `--endpoint-id`, and `--cookie-file`; cookie
+  files support the existing Netscape export format without printing
+  credentials.
