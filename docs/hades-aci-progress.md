@@ -279,6 +279,11 @@ source/root-cause checkpoint.
   variants. Static semantic evaluation is `21/21` positive contracts
   available and `0/14` negatives incorrectly available as READ contracts.
   Focused near-miss/domain gate: `166 passed`.
+- Retention metadata was corrected without changing image content: the
+  previous known-good b9 image now has the explicit
+  `odysseus:rollback-b9d500f2e567-prev` tag with the same digest. Preflight
+  now reports two candidate images and one rollback image; the build remains
+  blocked at 19 GiB free.
 
 - `fbe5cd66` adds negative near-miss guards to the shared semantic resolver.
   Definitions, explanations, advice, mutations, and imperative work requests
