@@ -115,6 +115,10 @@ LABEL org.opencontainers.image.revision="$ODYSSEUS_SOURCE_COMMIT" \
       org.opencontainers.image.created="$ODYSSEUS_BUILD_TIME" \
       org.odysseus.frontend.revision="$ODYSSEUS_FRONTEND_BUILD_ID"
 
+# Production images omit .git; retain a tiny immutable source marker so the
+# runtime can prove the imported image source matches its declared provenance.
+RUN printf '%s\n' "$ODYSSEUS_SOURCE_COMMIT" > /app/.odysseus-source-commit
+
 # Create data directory (mount a volume here for persistence)
 RUN mkdir -p data logs services/cache/search
 

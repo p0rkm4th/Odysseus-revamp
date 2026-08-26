@@ -1000,6 +1000,20 @@ async def get_version():
             runtime_source_kind = "checkout_tree"
     except (OSError, subprocess.SubprocessError):
         pass
+    if runtime_source_commit is None:
+        # Production images intentionally omit `.git`; the build records the
+        # exact source commit in this small immutable marker instead. This
+        # keeps source-match verification truthful without requiring a checkout
+        # or a host workspace mount in the production container.
+        for marker in (BASE_DIR / ".odysseus-source-commit", Path("/.odysseus-source-commit")):
+            try:
+                candidate = marker.read_text(encoding="utf-8").strip()
+            except (OSError, UnicodeError):
+                continue
+            if candidate:
+                runtime_source_commit = candidate
+                runtime_source_kind = "image_source_marker"
+                break
     try:
         from core.schema_migrations import schema_migration_registry
         migrations = schema_migration_registry.ordered()
