@@ -9,6 +9,7 @@ set -eu
 scripts/storage_preflight.sh
 
 SOURCE_COMMIT="$(git rev-parse --verify HEAD)"
+SOURCE_BRANCH="$(git symbolic-ref --quiet --short HEAD || printf 'detached')"
 BUILD_TIME="${ODYSSEUS_BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 BUILD_ID="${ODYSSEUS_BUILD_ID:-${SOURCE_COMMIT}-${BUILD_TIME}}"
 FRONTEND_HASH="$(git ls-files 'static/*' | sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
@@ -29,6 +30,7 @@ IMAGE_TAG="${ODYSSEUS_IMAGE_TAG:-odysseus:candidate-${SOURCE_SHORT}}"
 
 docker build \
   --build-arg "ODYSSEUS_SOURCE_COMMIT=${SOURCE_COMMIT}" \
+  --build-arg "ODYSSEUS_SOURCE_BRANCH=${SOURCE_BRANCH}" \
   --build-arg "ODYSSEUS_BUILD_ID=${BUILD_ID}" \
   --build-arg "ODYSSEUS_BUILD_TIME=${BUILD_TIME}" \
   --build-arg "ODYSSEUS_FRONTEND_BUILD_ID=${FRONTEND_BUILD_ID}" \
@@ -36,5 +38,5 @@ docker build \
   --tag "${IMAGE_TAG}" .
 
 IMAGE_ID="$(docker image inspect --format '{{.Id}}' "${IMAGE_TAG}")"
-printf 'SOURCE_COMMIT=%s\nBUILD_ID=%s\nBUILD_TIME=%s\nFRONTEND_BUILD_ID=%s\nMIGRATION_HEAD=%s\nIMAGE_TAG=%s\nIMAGE_ID=%s\n' \
-  "$SOURCE_COMMIT" "$BUILD_ID" "$BUILD_TIME" "$FRONTEND_BUILD_ID" "$MIGRATION_HEAD" "$IMAGE_TAG" "$IMAGE_ID"
+printf 'SOURCE_COMMIT=%s\nSOURCE_BRANCH=%s\nBUILD_ID=%s\nBUILD_TIME=%s\nFRONTEND_BUILD_ID=%s\nMIGRATION_HEAD=%s\nIMAGE_TAG=%s\nIMAGE_ID=%s\n' \
+  "$SOURCE_COMMIT" "$SOURCE_BRANCH" "$BUILD_ID" "$BUILD_TIME" "$FRONTEND_BUILD_ID" "$MIGRATION_HEAD" "$IMAGE_TAG" "$IMAGE_ID"
