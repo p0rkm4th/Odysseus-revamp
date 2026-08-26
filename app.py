@@ -1024,6 +1024,7 @@ async def get_version():
     return {
         "version": APP_VERSION,
         "source_commit": declared_source_commit,
+        "source_branch": os.getenv("ODYSSEUS_SOURCE_BRANCH") or "unknown",
         "declared_source_commit": declared_source_commit,
         "runtime_source_commit": runtime_source_commit,
         "runtime_source_kind": runtime_source_kind,

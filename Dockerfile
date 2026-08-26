@@ -101,16 +101,19 @@ COPY . .
 # IDs remain exact and inspectable, while source-only candidates do not rebuild
 # Chromium/Node/system packages merely because identity metadata changed.
 ARG ODYSSEUS_SOURCE_COMMIT=unknown
+ARG ODYSSEUS_SOURCE_BRANCH=unknown
 ARG ODYSSEUS_BUILD_ID=unidentified
 ARG ODYSSEUS_BUILD_TIME=unknown
 ARG ODYSSEUS_FRONTEND_BUILD_ID=unidentified
 ARG ODYSSEUS_MIGRATION_HEAD=unknown
 ENV ODYSSEUS_SOURCE_COMMIT="$ODYSSEUS_SOURCE_COMMIT" \
+    ODYSSEUS_SOURCE_BRANCH="$ODYSSEUS_SOURCE_BRANCH" \
     ODYSSEUS_BUILD_ID="$ODYSSEUS_BUILD_ID" \
     ODYSSEUS_BUILD_TIME="$ODYSSEUS_BUILD_TIME" \
     ODYSSEUS_FRONTEND_BUILD_ID="$ODYSSEUS_FRONTEND_BUILD_ID" \
     ODYSSEUS_MIGRATION_HEAD="$ODYSSEUS_MIGRATION_HEAD"
 LABEL org.opencontainers.image.revision="$ODYSSEUS_SOURCE_COMMIT" \
+      org.odysseus.source.branch="$ODYSSEUS_SOURCE_BRANCH" \
       org.opencontainers.image.version="$ODYSSEUS_BUILD_ID" \
       org.opencontainers.image.created="$ODYSSEUS_BUILD_TIME" \
       org.odysseus.frontend.revision="$ODYSSEUS_FRONTEND_BUILD_ID"
