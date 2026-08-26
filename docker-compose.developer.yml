@@ -1,0 +1,7 @@
+services:
+  odysseus:
+    # Developer source mounting is opt-in. Production/default compose runs the
+    # source baked into the image so provenance cannot silently mix an old
+    # image with a newer checkout. Workspace YOLO remains separately gated.
+    volumes:
+      - ${HADES_WORKSPACE:?HADES_WORKSPACE must name the repo-scoped developer workspace}:/app:z

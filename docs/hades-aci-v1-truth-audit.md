@@ -12,7 +12,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | current provenance slice follows focused gate | remote update follows focused gate |
+| Pushed source | `9304fcf4` | `origin/hades-aci-v1` |
 | Deployed source | `cfbe6244` | `/api/version`, image labels |
 | Running image | `odysseus:candidate-cfbe6244` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
@@ -28,7 +28,8 @@ auditable storage-preflight, general-fallback subtraction, and runtime-tree
 provenance changes that are not yet source-matched in the running process.
 A supported dangling-image prune reclaimed 9.067 GiB; storage
 preflight still blocks a large replacement build at 23 GiB free / 74% used
-against its 30 GiB guard.
+against its 30 GiB guard. Default compose now runs baked image source; the
+developer checkout mount is explicit via `docker-compose.developer.yml`.
 
 ## ACI control-plane truth
 
