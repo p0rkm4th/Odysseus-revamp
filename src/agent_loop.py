@@ -4975,7 +4975,13 @@ async def stream_agent_loop(
     # ordinal/pronoun reference. Resolve that context from the owner-scoped
     # session result store only when the current turn actually contains a
     # structured reference; unrelated turns must not inherit session residue.
-    if not _active_run_context and owner and session_id and re.search(
+    _active_reference_entities = (
+        _active_run_context.get("reference_context", {}).get("entities", [])
+        if isinstance(_active_run_context, dict)
+        and isinstance(_active_run_context.get("reference_context"), dict)
+        else []
+    )
+    if owner and session_id and not _active_reference_entities and re.search(
         r"\b(?:the\s+)?(?:first|second|third)\b|\b(?:it|that|this|those|them)\b",
         str(_last_user or ""),
         re.IGNORECASE,
