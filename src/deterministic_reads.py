@@ -27,7 +27,8 @@ _MEMORY_KNOWLEDGE = re.compile(
 _WORK_SUBJECT = re.compile(
     r"\b(?:work|working|workload|"
     r"on\s+my\s+plate|got\s+(?:going|on)|keeping\s+me\s+busy|"
-    r"currently\s+in\s+progress|unfinished|active\s+projects?)\b",
+    r"currently\s+in\s+progress|unfinished|active\s+projects?|"
+    r"outstanding\s+work|open\s+work)\b",
     re.IGNORECASE,
 )
 _WORK_OWNER = re.compile(
@@ -82,6 +83,8 @@ def deterministic_read_concept(text: str) -> str | None:
         and (_WORK_OWNER.search(query) or re.search(r"\bprojects?\b", query))
         and not re.search(r"\b(?:projects?|tasks?|goals?|commitments?|runs?|missions?|watches?)\b", query)
     ):
+        return "WORK"
+    if re.search(r"\b(?:review|show|list|summarize)\b.*\b(?:outstanding|open|active)\s+work\b", query):
         return "WORK"
     if (
         _WORK_SUBJECT.search(query)
