@@ -572,3 +572,18 @@ source/root-cause checkpoint.
   asset ordinal continuation, infrastructure executor failures, and durable
   Continue completion. This is E5 automated evidence, not E6 owner GUI
   evidence.
+
+- `06e29f18` is the current pushed source checkpoint. It repairs the resolved
+  asset-detail contract so an ordered canonical result plus an ordinal
+  reference projects to `manage_assets/get` with the strong asset identity;
+  focused reference/projection coverage is `160 passed`, the broader ACI/domain
+  gate is `81 passed`, and the last full regression is `6478 passed, 3 skipped`.
+  The deployed candidate remains `c0a281f5` because the storage preflight is
+  closed at 23 GiB free; no safe obsolete candidate was identified.
+
+- The follow-on semantic-family slice adds bounded typo normalization and
+  colloquial owner-self/infrastructure status recognition. `tell me abotu me`,
+  `give me my lore`, `whats running`, `hows Hades doing`, and `anything dead`
+  now project to existing safe canonical reads without broadening deletion,
+  advice, recommendation, or active-scan near-misses. Focused semantic gate:
+  `142 passed`. This source slice is not yet deployed or live-qwen verified.
