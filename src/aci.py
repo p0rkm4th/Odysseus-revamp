@@ -46,6 +46,35 @@ class TurnDisposition(StrEnum):
     MODEL_FALLBACK = "MODEL_FALLBACK"
 
 
+def resolve_turn_disposition(
+    *,
+    model_fallback: bool = False,
+    clarification_only: bool = False,
+    answer_only: bool = False,
+    completion_satisfied: bool = False,
+    fast_path: bool = False,
+    packet_present: bool = False,
+) -> TurnDisposition | None:
+    """Resolve transient loop flags into one semantic turn disposition.
+
+    The flags remain compatibility locals in the existing loop, but their
+    interpretation belongs here so telemetry and future transition code share
+    one precedence rule.  This function is descriptive only: it does not grant
+    authority, execute Actions, or persist state.
+    """
+    if model_fallback:
+        return TurnDisposition.MODEL_FALLBACK
+    if clarification_only:
+        return TurnDisposition.CLARIFY
+    if answer_only or completion_satisfied:
+        return TurnDisposition.ANSWER
+    if fast_path:
+        return TurnDisposition.EXECUTE_DIRECT
+    if packet_present:
+        return TurnDisposition.DECIDE
+    return None
+
+
 class RelevanceTier(StrEnum):
     T0 = "T0"
     T1 = "T1"
