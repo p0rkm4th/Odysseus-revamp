@@ -85,7 +85,28 @@ def test_ollama_characterization_is_metadata_only_and_cacheable(monkeypatch, tmp
     assert first.protocol == "ollama-chat"
     assert first.architecture_max_context == 40960
     assert second.key == first.key
-    assert calls == [("http://127.0.0.1:11434/api/show", {"name": "qwen3:8b"})] * 2
+    assert calls == [("http://127.0.0.1:11434/api/show", {"name": "qwen3:8b"})]
+
+
+def test_runtime_profile_cache_find_fresh_requires_stable_identity(tmp_path):
+    cache = RuntimeProfileCache(tmp_path / "profiles.json")
+    profile = RuntimeCapabilityProfile(
+        endpoint_id="test", protocol="ollama-chat", runtime="ollama",
+        model_id="qwen3:8b", refreshed_at=100, ttl_seconds=20,
+    )
+    cache.save(profile)
+    assert cache.find_fresh(
+        endpoint_id="test", protocol="ollama-chat", runtime="ollama",
+        model_id="qwen3:8b", now=119,
+    ) == profile
+    assert cache.find_fresh(
+        endpoint_id="other", protocol="ollama-chat", runtime="ollama",
+        model_id="qwen3:8b", now=119,
+    ) is None
+    assert cache.find_fresh(
+        endpoint_id="test", protocol="ollama-chat", runtime="ollama",
+        model_id="qwen3:8b", now=121,
+    ) is None
 
 
 def test_probe_record_is_empirical_and_does_not_mutate_original():

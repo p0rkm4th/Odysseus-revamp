@@ -215,6 +215,31 @@ class RuntimeProfileCache:
             if isinstance(item, Mapping)
         )
 
+    def find_fresh(self, *, endpoint_id: str, protocol: str, runtime: str,
+                   model_id: str, now: float | None = None) -> RuntimeCapabilityProfile | None:
+        """Find a fresh profile before metadata lookup discovers its digest.
+
+        The digest and server fingerprint are part of the canonical cache key,
+        but callers commonly need to discover those fields from the runtime.
+        Matching the stable endpoint/runtime/model identity first prevents a
+        metadata request on every turn.  TTL expiry or ``force=True`` remains
+        the explicit recharacterization path.
+        """
+        endpoint_id = _clean(endpoint_id)
+        protocol = _clean(protocol)
+        runtime = _clean(runtime)
+        model_id = _clean(model_id)
+        for profile in self.all():
+            if (
+                profile.endpoint_id == endpoint_id
+                and profile.protocol == protocol
+                and profile.runtime == runtime
+                and profile.model_id == model_id
+                and profile.is_fresh(now)
+            ):
+                return profile
+        return None
+
     def save(self, profile: RuntimeCapabilityProfile) -> None:
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
@@ -242,9 +267,19 @@ def characterize_ollama(base_url: str, model_id: str, *, endpoint_id: str = "",
     ok, reason = check_outbound_url(base, block_private=False)
     if not ok:
         raise ValueError(f"unsafe Ollama endpoint: {reason}")
-    # A cache lookup requires a digest, so metadata is fetched only when the
-    # caller has no already-characterized identity. This endpoint has no
-    # model listing/discovery side effect.
+    endpoint_identity = _clean(endpoint_id) or base
+    if cache is not None and not force:
+        cached = cache.find_fresh(
+            endpoint_id=endpoint_identity,
+            protocol="ollama-chat",
+            runtime="ollama",
+            model_id=_clean(model_id),
+        )
+        if cached is not None:
+            return cached
+    # This endpoint has no model listing/discovery side effect. The optional
+    # /api/tags fallback only fills missing identity fields in the same
+    # explicitly requested model characterization.
     response = httpx.post(
         f"{base}/api/show",
         json={"name": _clean(model_id)},
@@ -285,7 +320,7 @@ def characterize_ollama(base_url: str, model_id: str, *, endpoint_id: str = "",
         if _clean(name)
     }
     profile = RuntimeCapabilityProfile(
-        endpoint_id=_clean(endpoint_id) or base,
+        endpoint_id=endpoint_identity,
         protocol="ollama-chat",
         runtime="ollama",
         model_id=_clean(model_id),
