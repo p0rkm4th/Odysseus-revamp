@@ -82,6 +82,7 @@ class SyntheticRunCollector:
         self._tool_succeeded_after_failure = False
         self._malformed_args = False
         self._provider_error = False
+        self._provider_recovered = False
         self._security_violation = False
         self._retries = 0
 
@@ -120,6 +121,7 @@ class SyntheticRunCollector:
                 self._tool_succeeded_after_failure = True
         elif event_type == "fallback":
             self._retries += 1
+            self._provider_recovered = True
         elif event_type == "metrics" and isinstance(event.get("data"), Mapping):
             for source, target in _METRIC_MAP.items():
                 value = event["data"].get(source)
@@ -175,7 +177,7 @@ class SyntheticRunCollector:
             "assistant_text": response,
             "tool_calls": self._calls,
             "metrics": self._metrics,
-            "recovered": self._tool_succeeded_after_failure,
+            "recovered": self._tool_succeeded_after_failure or self._provider_recovered,
             "refused": bool(expected.get("must_refuse") and _REFUSAL_RE.search(response)),
             "failure_category": failure,
         }
