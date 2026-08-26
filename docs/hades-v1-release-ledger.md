@@ -22,6 +22,7 @@ gates.
 | Exact approvals and policy boundaries | green | security/control-plane suites; live unauthorized-scan case |
 | Deployment provenance and rollback | green | runtime source match `074d240f`; rollback `odysseus:rollback-b471e104-prev` |
 | Automated live Qwen canary | E5 partial/current | prior deployed matrix `53/53`; fresh cookie required to re-run `074d240f` telemetry assertions |
+| Authenticated automated fuzzing | source/test green, E5A pending | `scripts/hades_live_fuzz.py`; normal login plus loopback-only disposable bootstrap; focused gate `38 passed` |
 | Developer ACI read path | source-complete, E5 pending | focused developer/sandbox gates; production workspace mount intentionally absent |
 | Provider switching/recovery | focused green, live E5 pending | `137` focused tests; only local Qwen endpoint live-available |
 
