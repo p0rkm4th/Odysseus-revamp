@@ -268,6 +268,35 @@ source/root-cause checkpoint.
 
 ## Automated live E5 and V1 fast-track checkpoint
 
+## Control-plane failure-class checkpoint — 2026-08-26
+
+- `a0ccc895` fixed the three traced failure classes: completed canonical asset
+  results now retain ordered strong IDs; qualified ordinal references inherit
+  only the current session's server-owned result context and preserve the
+  resolved ID; broad infrastructure status reads no longer send a unit-less
+  `service_status` request into the strict named-unit validator.
+- `7f0a8576` generalized empty continuation handling. `Review outstanding
+  work.` resolves to the existing Work overview read; `Continue.` with no
+  active durable Run is answer-only/authority-free rather than bounded Action
+  selection. No Action is invented or executed.
+- Focused gates: `182 passed`, then `211 passed`, then `152 passed` for the
+  touched control-plane suites. Full regression at `a0ccc895`: `6382 passed,
+  3 skipped`; final full regression at `7f0a8576`: `6384 passed, 3 skipped`.
+- Final deployed candidate is `odysseus:candidate-7f0a857687b4`, source
+  `7f0a857687b43777194f3210ce0045011e449a27`, build
+  `7f0a8576-20260826T060000Z`, image digest
+  `sha256:c0b3c9f41b854a2c3d9f76fe51698849fb6b7639c7dda08a2502e9a385e53a98`.
+  Health, migration head, broker, Ollama bridge, and Chroma were verified.
+- Automated real qwen3:8b E5 targeted matrix: asset list → “first physical
+  one” completed with one Action and zero index lookup; both infrastructure
+  reads completed with one Action; Work review → Continue produced two
+  answer-bearing, complete turns with no second Action or internal leakage.
+  This is E5 automated, not E6 owner GUI evidence.
+- Storage after bounded retention: 76% root usage / 22 GiB free, 14 images,
+  zero build cache. Retained current candidate, one rollback candidate, the
+  active authenticated harness image, and the pinned bundle; obsolete
+  non-running Odysseus candidate tags were removed.
+
 - `121cb6d7` broadened compositional Work/infrastructure-read routing and
   added negative near-miss coverage so general VM/container explanations do
   not become host inspection. Focused routing: `149 passed`; full regression:
