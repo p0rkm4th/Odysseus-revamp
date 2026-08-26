@@ -32,6 +32,8 @@
 | SERVICE_TARGET_CLARIFICATION | `0cefba69` | unqualified restart is clarification-bound; qualified targets retain safe preflight; 154 focused; 6312 full; deployed Qwen synthetic canary 2/2, zero model/tool calls | `odysseus:candidate-0cefba69f3ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | DETERMINISTIC_SAFETY_BOUNDARIES | `0dc6ce15` | IP-only identity, public scope, changed approval, and replay boundaries are framework refusals; 157 focused; 6315 full; deployed four-case canary 4/4 | `odysseus:candidate-0dc6ce153ff5` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | CONTINUITY_HARNESS_RECOVERY | `05dd1e0d` | continuity cases now inject a loopback primary failure and verify configured-provider fallback; both recovered with one retry; 6316 full | no rebuild (benchmark-only) | FULL_REGRESSION |
+| STRICT_DECISION_RUNTIME_PROBE | `c0ea2955` | safe qwen3:8b strict-schema probe PASS in 741ms; sanitized digest only; 31 focused | not rebuilt | FOCUSED_TESTED |
+| PARAPHRASE_READ_CONVERGENCE | `ff14c3a0` | 21 metamorphic Memory/Work/Assets/Network utterances converge on canonical harmless reads; exact post-Result reads transition to answer; 67 checkpoint focused; 6366 full | not rebuilt | FULL_REGRESSION |
 
 ## H0 evidence
 
@@ -222,3 +224,38 @@ changes evaluation validity only; the deployed application candidate remains
 `0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf`.
 
 The authoritative post-fix artifact is `/tmp/hades-final-15-harness-fixed.jsonl`.
+
+## Sol root-cause checkpoint
+
+Owner dogfood showed that `Tell me about me` diverged before model reasoning:
+the chat-prefetch phrase recognizer did not classify it as Memory, while the
+canonical intent compiler classified both that phrase and the previously
+successful `What do you know about me?` as `UNKNOWN`. The latter succeeded only
+through a compatibility rescue. Commit `ff14c3a0` replaces that split behavior
+with a shared compositional deterministic-read resolver used by intent
+contracts and Memory grounding.
+
+The same commit repairs two control-flow defects. Protected ACI packet messages
+now survive provider-route rebuilding, and an exact successful resolved
+canonical read is classified as `COMPLETE_AFTER_ANSWER` independently of which
+execution branch produced the Result. Answer synthesis receives a minimal
+semantic Objective/Result packet with no provider schemas or ToolBinding names.
+
+The separate frozen metamorphic corpus contains 9 Memory, 4 Work, 4 Assets, and
+4 current-Network paraphrases. All 21 source/focused cases resolve to their
+canonical read contract with no approval; the unambiguous Memory cases require
+zero bounded Action-selection calls and no post-Result Action decision. This is
+E2/E3 evidence, not a replacement for owner dogfood.
+
+Current latency instrumentation attributes one local sample as follows: raw
+Qwen completion `0.238s`; Hades completion `8.723s`; context preparation
+`1.432s` (including `1.288s` tool selection/retrieval fallback); provider/model
+wait `4.524s`; remaining structured generation/validation/buffering about
+`2.77s`. Hades sent 1406 prompt tokens versus 31 raw and made one model call,
+so this sample did not contain an unnecessary second inference. The synthetic
+raw and Hades requests are not equivalent deliverables and are retained as
+diagnostic overhead evidence, not a release-quality harness-tax comparison.
+
+The current implementation head is `ff14c3a0`; the deployed implementation
+remains `0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf`. No image was rebuilt for this
+source/root-cause checkpoint.
