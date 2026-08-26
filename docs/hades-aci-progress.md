@@ -25,6 +25,7 @@
 | PACKET_CHOICE_SCHEMA | `2405ca79` | dynamic choice/context enums added; 6307 full; deployed probe confirms downstream rejection remains authoritative | `odysseus:candidate-2405ca79d117` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | INVENTORY_READ_FAST_PATH | `0147c77a` | inventory-state semantic contract, fixture correction, 6308 full; deployed case uses one deterministic read plus answer synthesis | `odysseus:candidate-0147c77a0803` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | CONTRACT_ACTION_RETENTION | `67106c5e` | resolved planning Action survives operation-class filter; 6308 full; deployed trace records `contract_action_retained` | `odysseus:candidate-67106c5e8e8a` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| DETERMINISTIC_CONTRACT_FALLBACK | `101910d2` | bounded one-use fallback for safe resolved planning Actions; 6308 full; deployed network probe one Action/no WHY_NO_ACTION | `odysseus:candidate-101910d2b37c` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -138,12 +139,12 @@ migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
 
 The current implementation candidate is source commit
-`67106c5e8e8ae85db6c3ee9ba6728494de2ea379`, image
-`odysseus:candidate-67106c5e8e8a`, image ID
-`sha256:9314ba07b4d1ff301ffee8908ea3ab060b1310de5ba22044b01889da66763b4a`,
-build ID `67106c5e8e8ae85db6c3ee9ba6728494de2ea379-2026-08-26T00:05:59Z`,
+`101910d2b37ccb72871df5b63392c5634ad03142`, image
+`odysseus:candidate-101910d2b37c`, image ID
+`sha256:98ee8df7fa4d989d0045f218843603da4f1a5ea568d39b094245a222c4ac2e4a`,
+build ID `101910d2b37ccb72871df5b63392c5634ad03142-2026-08-26T00:14:50Z`,
 and frontend ID
-`frontend-67106c5e8e8ae85db6c3ee9ba6728494de2ea379-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
+`frontend-101910d2b37ccb72871df5b63392c5634ad03142-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
@@ -160,6 +161,11 @@ transport failures.
 The deployed network probe now shows the framework retention label, but Qwen
 still returned prose for that operational branch. The Action was not executed
 from prose; the downstream control plane remained fail-closed.
+
+The current deployed fallback probe supersedes that intermediate observation:
+the same prose-only branch produced one framework-owned safe plan Action, no
+repetition, and no `WHY_NO_ACTION` event. Consequential execution and scope
+authorization remain downstream requirements.
 
 ## Build/cache observation
 
