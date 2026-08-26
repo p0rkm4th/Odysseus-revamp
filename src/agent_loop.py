@@ -10121,6 +10121,16 @@ async def stream_agent_loop(
                 "model": dict(_aci_model_burden),
             },
         )
+        # Keep the two control-plane model decisions that matter for live
+        # acceptance directly addressable.  Consumers should not need to
+        # depend on the nested diagnostic label shape to prove that a
+        # deterministic read avoided bounded Action selection.
+        metrics["aci_bounded_action_decision_count"] = int(
+            _aci_model_burden.get("bounded_action_decision", 0)
+        )
+        metrics["aci_answer_synthesis_count"] = int(
+            _aci_model_burden.get("answer_synthesis", 0)
+        )
     yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
 
     # Teacher-escalation: inline takeover visible in the chat stream.

@@ -294,11 +294,11 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         "completion": bool(metrics.get("aci_completion_contract_satisfied")),
         "completion_transition": metrics.get("aci_completion_transition"),
         "fallback": bool(metrics.get("aci_model_fallback")),
-        "bounded_action_decisions": int(
+        "bounded_action_decisions": int(metrics.get(
+            "aci_bounded_action_decision_count",
             ((metrics.get("model_burden") or {}).get("labels") or {})
-            .get("model", {}).get("bounded_action_decision", 0)
-            or 0
-        ),
+            .get("model", {}).get("bounded_action_decision", 0),
+        ) or 0),
         "model_burden": metrics.get("model_burden"),
         "why_no_action": metrics.get("why_no_action"),
         "reference_resolution": metrics.get("aci_reference_resolution"),
