@@ -5,6 +5,7 @@ from src.tool_bindings import TOOL_BINDINGS, binding_for_tool
 import asyncio
 import json
 import src.tool_execution as tool_execution
+from src.homelab_operations import HomelabOperations
 
 
 def _schema(name):
@@ -382,6 +383,19 @@ def test_communications_read_binding_requires_authenticated_owner():
         tool_name="read_communications", payload={"action": "overview"}, owner=None))
     assert result["success"] is False
     assert "owner" in result["error"].lower()
+
+
+def test_generic_service_status_read_does_not_require_a_unit_name():
+    calls = []
+
+    async def runner(argv, timeout):
+        calls.append(argv)
+        return 0, "odysseus.service loaded active running"
+
+    result = asyncio.run(HomelabOperations(runner=runner).execute({"action": "service_status"}, owner="alice"))
+    assert result["success"] is True
+    assert result["target"] == "user-services"
+    assert calls and "list-units" in calls[0]
 
 
 def test_osint_read_binding_reuses_owner_scoped_case_store(tmp_path, monkeypatch):

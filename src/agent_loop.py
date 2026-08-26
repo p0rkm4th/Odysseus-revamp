@@ -7706,6 +7706,9 @@ async def stream_agent_loop(
                 if _compiled_asset_read else ("search" if asset_query else "list")
             )
             asset_payload = {"action": asset_action, "limit": 500}
+            _asset_ref = str(_asset_frame.get("entity_reference") or "").strip()
+            if _asset_ref:
+                asset_payload = {"action": "get", "asset": _asset_ref}
             if asset_query:
                 asset_payload["query"] = asset_query
             logger.info("[agent] deterministic canonical IT-asset read repair action=%s", asset_action)

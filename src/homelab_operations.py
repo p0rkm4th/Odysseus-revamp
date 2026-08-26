@@ -503,12 +503,18 @@ class HomelabOperations:
             return await self._network_discovery(request, owner=owner, action=action)
         if action in {"plan_network_service_enumeration", "execute_network_service_enumeration"}:
             return await self._network_service_enumeration(request, owner=owner, action=action)
-        service = _service(request.get("service"))
         if action == "service_status":
+            raw_service = str(request.get("service") or "").strip()
+            if not raw_service:
+                return await self._read(owner, action, [
+                    "systemctl", "--user", "list-units", "--type=service", "--all", "--no-pager",
+                ], target="user-services")
+            service = _service(raw_service)
             return await self._read(owner, action, [
                 "systemctl", "--user", "show", "--no-pager",
                 "--property=Id,LoadState,ActiveState,SubState,UnitFileState", service,
             ], target=service)
+        service = _service(request.get("service"))
         plan = {
             "action": "execute_service_restart", "target_kind": "local_user_systemd_unit",
             "target": service,
