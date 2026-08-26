@@ -12,7 +12,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `9304fcf4` | `origin/hades-aci-v1` |
+| Pushed source | `8ae04b89` | `origin/hades-aci-v1` |
 | Deployed source | `cfbe6244` | `/api/version`, image labels |
 | Running image | `odysseus:candidate-cfbe6244` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
@@ -20,7 +20,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Broker | active; socket present | systemd/socket check |
 | Owner E6 | pending | no owner GUI claim |
 | Automated E5 | prior deployed canary verified | 36-case sanitized live matrix |
-| Full regression | `6399 passed, 3 skipped` at the prior runtime gate | progress ledger |
+| Full regression | `6414 passed, 4 skipped, 186 warnings` after current source slice | container test gate |
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
 
 The latest source contains reference-projection, homelab executor, live-canary,
