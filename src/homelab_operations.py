@@ -506,9 +506,28 @@ class HomelabOperations:
         if action == "service_status":
             raw_service = str(request.get("service") or "").strip()
             if not raw_service:
-                return await self._read(owner, action, [
-                    "systemctl", "--user", "list-units", "--type=service", "--all", "--no-pager",
-                ], target="user-services")
+                # An unqualified infrastructure-status request describes the
+                # Hades runtime, not an arbitrary host systemd namespace. The
+                # application runs in a container where `systemctl --user`
+                # is commonly unavailable; treating that transport mismatch as
+                # the infrastructure truth caused successful status reads to
+                # become EXECUTION_FAILED. Use the existing bounded service
+                # health collector and keep explicit unit inspection on the
+                # separate, target-qualified path below.
+                from src.service_health import collect_service_health
+                health = await collect_service_health()
+                return {
+                    "status": "SUCCESS_WITH_DATA",
+                    "success": True,
+                    "exit_code": 0,
+                    "action": action,
+                    "target": "hades-runtime",
+                    "source": "canonical_service_health",
+                    "overall": health.get("overall"),
+                    "services": health.get("services", []),
+                    "timestamp": health.get("timestamp"),
+                    "observation_location": "APPLICATION_RUNTIME",
+                }
             service = _service(raw_service)
             return await self._read(owner, action, [
                 "systemctl", "--user", "show", "--no-pager",

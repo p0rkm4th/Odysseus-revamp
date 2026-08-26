@@ -59,6 +59,8 @@ def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch)
             {"id": "asset:first"}, {"id": "asset:second"},
         ]}})
         context = bridge.recent_session_reference_context("alice", "chat-assets")
+        assert [item["ref"] for item in context["ordered_entities"]] == ["asset:first", "asset:second"]
+        assert [item["ref"] for item in context["eligible_entities"]] == ["asset:first", "asset:second"]
         assert [item["ref"] for item in context["entities"]] == ["asset:first", "asset:second"]
     finally:
         engine.dispose()

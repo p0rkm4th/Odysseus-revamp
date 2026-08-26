@@ -4938,6 +4938,7 @@ async def stream_agent_loop(
         else _last_user,
     )
     _active_run_context = None
+    _session_reference_context = None
     if work_run_id and owner:
         try:
             from src.agent_work_bridge import continuation_run_projection
@@ -4946,6 +4947,23 @@ async def stream_agent_loop(
             )
         except Exception:
             logger.debug("durable reference context unavailable", exc_info=True)
+    # A completed canonical read may have no active Run on the next turn, but
+    # its ordered entity set is still the only valid source for an explicit
+    # ordinal/pronoun reference. Resolve that context from the owner-scoped
+    # session result store only when the current turn actually contains a
+    # structured reference; unrelated turns must not inherit session residue.
+    if not _active_run_context and owner and session_id and re.search(
+        r"\b(?:the\s+)?(?:first|second|third)\b|\b(?:it|that|this|those|them)\b",
+        str(_last_user or ""),
+        re.IGNORECASE,
+    ):
+        try:
+            from src.agent_work_bridge import recent_session_reference_context
+            _session_reference_context = await asyncio.to_thread(
+                recent_session_reference_context, owner, str(session_id),
+            )
+        except Exception:
+            logger.debug("session reference context unavailable", exc_info=True)
     # One bounded semantic frame is attached to every turn. Existing domain
     # normalizers remain compatibility evidence, but canonical first-class
     # exposure can now be driven by the frame/contract resolver instead of a
@@ -4959,7 +4977,7 @@ async def stream_agent_loop(
             reference_context=(
                 _active_run_context.get("reference_context")
                 if isinstance(_active_run_context, dict)
-                else None
+                else (_session_reference_context if isinstance(_session_reference_context, dict) else None)
             ),
         )
         _resolved_contract = resolve_intent(_intent_frame)
