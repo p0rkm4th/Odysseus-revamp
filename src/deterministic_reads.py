@@ -75,7 +75,14 @@ def _normalized(text: str) -> str:
 def deterministic_read_concept(text: str) -> str | None:
     """Return an existing DomainContract concept for an unambiguous read."""
     query = _normalized(text)
-    if not query or not _READ_REQUEST.search(query):
+    # Operational health questions also commonly begin with ``are``/``is``
+    # ("Are my services alive?", "Is anything unhealthy?").  Let the
+    # already-composed infrastructure predicate admit those forms without
+    # broadening ordinary ``is ...`` questions into canonical reads.
+    if not query or (
+        not _READ_REQUEST.search(query)
+        and not _INFRASTRUCTURE_STATUS.search(query)
+    ):
         return None
     if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
         return None

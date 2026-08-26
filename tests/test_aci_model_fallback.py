@@ -68,6 +68,8 @@ def test_invalid_aci_decision_falls_back_without_tool_authority(monkeypatch):
         str(message.get("content", "")) for message in provider_calls[-1]["messages"]
     )
     assert "Execution authority: NONE" in fallback_text
+    assert "normal content channel" in fallback_text
+    assert "reasoning-only response" in fallback_text
     assert "I could not produce a valid bounded decision" not in " ".join(
         str(event.get("delta", "")) for event in events
     )
