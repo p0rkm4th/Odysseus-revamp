@@ -38,6 +38,7 @@ class Case:
     max_tools: int | None = None
     split: str = "core"
     expect_reference: str | None = None
+    expect_bounded_decisions: int | None = None
 
 
 CASES = [
@@ -107,7 +108,17 @@ _HELD_OUT_CASES = frozenset({
     "contamination_network", "contamination_network_general",
 })
 CASES = tuple(
-    Case(**{**case.__dict__, "split": "held_out" if case.name in _HELD_OUT_CASES else case.split})
+    Case(**{
+        **case.__dict__,
+        "split": "held_out" if case.name in _HELD_OUT_CASES else case.split,
+        "expect_bounded_decisions": (
+            0 if (
+                case.name.startswith(("memory_", "work_", "network_", "infra_"))
+                or case.name.startswith(("assets_list", "assets_reference"))
+            ) and case.family not in {"negative_near_miss", "security"}
+            else case.expect_bounded_decisions
+        ),
+    })
     for case in CASES
 )
 
@@ -266,6 +277,12 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         "completion": bool(metrics.get("aci_completion_contract_satisfied")),
         "completion_transition": metrics.get("aci_completion_transition"),
         "fallback": bool(metrics.get("aci_model_fallback")),
+        "bounded_action_decisions": int(
+            ((metrics.get("model_burden") or {}).get("labels") or {})
+            .get("model", {}).get("bounded_action_decision", 0)
+            or 0
+        ),
+        "model_burden": metrics.get("model_burden"),
         "why_no_action": metrics.get("why_no_action"),
         "reference_resolution": metrics.get("aci_reference_resolution"),
         "latency_seconds": round(time.monotonic() - started, 2),
@@ -297,6 +314,8 @@ def assert_case(case: Case, result: dict[str, Any]) -> list[str]:
             failures.append("reference_not_resolved")
         if reference.get("concept") != case.expect_reference:
             failures.append("reference_concept_mismatch")
+    if case.expect_bounded_decisions is not None and result.get("bounded_action_decisions") != case.expect_bounded_decisions:
+        failures.append("unexpected_bounded_decisions")
     return failures
 
 
