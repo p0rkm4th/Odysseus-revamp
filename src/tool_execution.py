@@ -1439,7 +1439,22 @@ async def _execute_manage_homelab_binding(block, owner=None):
         from src.execution_profiles import use_execution_profile
         with use_execution_profile("privileged_host"):
             result = await HomelabOperations().execute(payload, owner=str(owner or ""))
-        return "manage_homelab", {"output": _ody_v34_json.dumps(result, indent=2, sort_keys=True), "exit_code": 0, "data": result}
+        # Preserve executor failure semantics at the binding boundary.  Some
+        # canonical read operations report structured UNAVAILABLE/INVALID_RESULT
+        # states rather than raising; treating every returned payload as exit 0
+        # made the control plane record a failed infrastructure read as a
+        # successful Action and obscured the real broker/runtime fault.
+        failure_statuses = {"BLOCKED", "FAILED", "ERROR", "INVALID_RESULT", "UNAVAILABLE"}
+        status = str(result.get("status") or "").upper() if isinstance(result, dict) else ""
+        succeeded = bool(result.get("success", True)) if isinstance(result, dict) else False
+        if status in failure_statuses:
+            succeeded = False
+        return "manage_homelab", {
+            "output": _ody_v34_json.dumps(result, indent=2, sort_keys=True),
+            "exit_code": 0 if succeeded else 1,
+            "success": succeeded,
+            "data": result,
+        }
     except Exception as exc:
         return "manage_homelab", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
