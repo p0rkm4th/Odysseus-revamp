@@ -12,7 +12,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `bb8f5555` plus current unpushed slice | remote update follows focused gate |
+| Pushed source | current provenance slice follows focused gate | remote update follows focused gate |
 | Deployed source | `cfbe6244` | `/api/version`, image labels |
 | Running image | `odysseus:candidate-cfbe6244` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
@@ -24,8 +24,9 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
 
 The latest source contains reference-projection, homelab executor, live-canary,
-and auditable storage-preflight changes that are not yet source-matched in the
-running image. A supported dangling-image prune reclaimed 9.067 GiB; storage
+auditable storage-preflight, general-fallback subtraction, and runtime-tree
+provenance changes that are not yet source-matched in the running process.
+A supported dangling-image prune reclaimed 9.067 GiB; storage
 preflight still blocks a large replacement build at 23 GiB free / 74% used
 against its 30 GiB guard.
 
@@ -51,6 +52,11 @@ against its 30 GiB guard.
   authority-free MODEL_FALLBACK path. The source-path benchmark reduced tool
   selection from `1.363s` to `0.076s`; focused fallback/intent/benchmark tests
   pass (`103 passed`).
+- `/api/version` now distinguishes declared image metadata from the imported
+  runtime tree (`runtime_source_commit`, `runtime_source_kind`, and
+  `source_match`), preventing bind-mounted checkout code from being misreported
+  as the image's declared source. Provenance/root-path focused tests pass
+  (`18 passed`).
 
 ## Required metrics and present evidence
 
