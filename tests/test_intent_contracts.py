@@ -157,6 +157,34 @@ def test_ordinal_reference_keeps_canonical_asset_identity_over_lexical_about_fra
     assert frame.entity_reference == "asset:strong-1"
 
 
+def test_ordinal_reference_uses_ordered_eligible_result_set_over_mixed_chat_refs():
+    context = {
+        "entities": [
+            {"ref": "service:recent", "concept": "SERVICE"},
+            {"ref": "asset:second", "concept": "TECHNICAL_ASSET"},
+        ],
+        "ordered_entities": [
+            {"ref": "asset:first", "concept": "TECHNICAL_ASSET", "eligible": True},
+            {"ref": "asset:second", "concept": "TECHNICAL_ASSET", "eligible": True},
+            {"ref": "asset:hidden", "concept": "TECHNICAL_ASSET", "eligible": False},
+        ],
+        "last": {"ref": "service:recent", "concept": "SERVICE"},
+    }
+    resolution = resolve_structured_reference("tell me about the first physical one", context)
+    assert resolution["status"] == "RESOLVED"
+    assert resolution["refs"] == ["asset:first"]
+    assert resolution["concept"] == "TECHNICAL_ASSET"
+
+
+def test_last_reference_is_fallback_only_when_no_ordered_result_exists():
+    resolution = resolve_structured_reference("tell me about that one", {
+        "ordered_entities": [],
+        "last": {"ref": "asset:last", "concept": "TECHNICAL_ASSET"},
+    })
+    assert resolution["status"] == "RESOLVED"
+    assert resolution["refs"] == ["asset:last"]
+
+
 @pytest.mark.parametrize("query", [
     "continue until the network report is complete",
     "please resume that task",
