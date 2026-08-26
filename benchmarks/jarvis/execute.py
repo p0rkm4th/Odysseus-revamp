@@ -29,10 +29,21 @@ async def execute_case(args, case, model_metadata, hardware, headers):
     collector = SyntheticRunCollector(case, model_metadata, hardware)
     executor = SyntheticToolExecutor(fixtures_for_case(case))
     messages = build_case_messages(case)
+    # Continuity cases must exercise the provider-replacement path. The first
+    # endpoint is deliberately loopback-invalid; the configured endpoint is
+    # the only fallback. This is synthetic harness fault injection and never
+    # touches an owner or work/VPN network.
+    primary_endpoint = args.endpoint
+    fallbacks = None
+    fallback_statuses = None
+    if case.get("expected", {}).get("requires_recovery"):
+        primary_endpoint = "http://127.0.0.1:1/v1"
+        fallbacks = [(args.endpoint, args.model, headers or {})]
+        fallback_statuses = {502, 503, 504}
     try:
         async with asyncio.timeout(args.case_timeout):
             async for chunk in stream_agent_loop(
-                endpoint_url=args.endpoint,
+                endpoint_url=primary_endpoint,
                 model=args.model,
                 messages=messages,
                 headers=headers,
@@ -43,6 +54,8 @@ async def execute_case(args, case, model_metadata, hardware, headers):
                 max_tool_calls=args.max_tool_calls,
                 owner="__jarvis_synthetic_benchmark__",
                 workload="benchmark",
+                fallbacks=fallbacks,
+                fallback_statuses=fallback_statuses,
                 external_untrusted_context_seen=bool(
                     case.get("external_untrusted_context", False)
                 ),
