@@ -35,6 +35,10 @@ This section supersedes older historical rows below for present-state claims.
   `nvidia/cuda:12.4.1-base-ubuntu22.04` image after verifying its layers
   were absent from all protected images. Docker usage fell from 21.89 GB to
   21.54 GB; preflight remains correctly blocked at 19 GiB free.
+- Host tmpfs hygiene removed `7,952` closed, transient `/tmp/tmp*.db`
+  SQLite test fixtures (`14.53` GiB). Persistent repository/runtime stores
+  were not touched; `/tmp` fell from 15 GiB used to 282 MiB. Root storage is
+  a separate Btrfs filesystem and remains at 19 GiB free.
 
 | Milestone | Commit | Focused evidence | Deployment | Evidence level |
 |---|---|---|---|---|
