@@ -53,6 +53,8 @@ CASES = [
     Case("assets_reference", "Tell me about the first physical one.", "continuation", "assets_reference", "assets", True, False, None),
     Case("assets_list_2", "Show me my hardware.", "continuation", "assets_reference_2", "assets", True, False, None),
     Case("assets_reference_2", "Tell me about the second one.", "continuation", "assets_reference_2", "assets", True, False, None),
+    Case("assets_list_3", "What computers do I own?", "continuation", "assets_reference_3", "assets", True, False, None),
+    Case("assets_reference_3", "Which machine is the first one?", "continuation", "assets_reference_3", "assets", True, False, None),
     *(Case(f"network_{i}", p, expect_completion=True) for i, p in enumerate([
         "Where am I connected right now?", "What network am I on?",
         "What's my current network?",
@@ -64,6 +66,8 @@ CASES = [
     Case("infra_running", "What's running in Odysseus?", expect_completion=True),
     Case("infra_health", "Anything unhealthy right now?", expect_completion=True),
     Case("infra_services", "Are my services alive?", family="infrastructure", expect_completion=True),
+    Case("infra_healthy", "Is everything healthy?", family="infrastructure", expect_completion=True),
+    Case("infra_broken", "Anything broken?", family="infrastructure", expect_completion=True),
     Case("infra_near_miss", "Explain what a service is.", family="negative_near_miss"),
     Case("memory_explanation", "Tell me about memory.", family="negative_near_miss", expect_fallback=True, max_tools=0),
     Case("work_advice", "What should I work on?", family="negative_near_miss", expect_fallback=True, max_tools=0),
@@ -83,6 +87,8 @@ CASES = [
     Case("continuation_resume", "Continue.", "continuation", "continuation", "continuation", True, False, 0),
     Case("contamination_assets", "What machines do I own?", "continuation", "contamination", "contamination"),
     Case("contamination_general", "Why do cats knock things off tables?", "continuation", "contamination", "contamination"),
+    Case("contamination_network", "What network am I on?", "continuation", "contamination_network", "contamination"),
+    Case("contamination_network_general", "Explain DNS like I'm technical but rusty.", "continuation", "contamination_network", "contamination", expect_fallback=True, max_tools=0),
 ]
 
 # Fixture metadata, deliberately separate from production routing.  The
@@ -93,6 +99,8 @@ _HELD_OUT_CASES = frozenset({
     "memory_4", "memory_5", "work_3", "network_3", "infra_health",
     "infra_services", "infra_near_miss", "memory_explanation", "work_advice",
     "network_definition", "unknown_action", "contamination_general",
+    "assets_list_3", "assets_reference_3", "infra_healthy", "infra_broken",
+    "contamination_network", "contamination_network_general",
 })
 CASES = tuple(
     Case(**{**case.__dict__, "split": "held_out" if case.name in _HELD_OUT_CASES else case.split})
