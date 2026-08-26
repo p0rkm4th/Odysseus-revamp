@@ -116,6 +116,7 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
                     WorkRun.owner == owner,
                     WorkRun.session_id == str(sess.id),
                     WorkRun.status.in_(("queued", "running", "awaiting_approval", "awaiting_input", "suspended")),
+                    ~WorkRun.lifecycle_state.in_(("succeeded", "failed", "cancelled")),
                 )
                 .order_by(WorkRun.updated_at.desc())
                 .first()
