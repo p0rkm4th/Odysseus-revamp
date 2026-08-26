@@ -646,6 +646,11 @@ source/root-cause checkpoint.
   provider/runtime profile and token/context instrumentation without claiming
   equivalent live latency until the corrected source is deployed.
 
+- Core agent-loop and provider-transport regression gate: `107 passed, 1
+  warning`. This covers streaming, sanitization, Ollama thinking/structured
+  transport, fallback attribution, and the main loop after the recent
+  continuation/runtime-context changes.
+
 - Current-source side-effect-free Qwen bridge probe (`qwen3:8b`, 16-token cap,
   equivalent 3-token accounting): raw `2.760s` versus Hades `5.436s`, total
   delta `2.676s`. Hades used one model call, zero tools, and zero tool-index
