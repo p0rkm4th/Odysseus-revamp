@@ -171,6 +171,30 @@ def timing_attribution(raw: dict[str, Any], hades: dict[str, Any]) -> dict[str, 
     }
 
 
+def output_accounting(raw: dict[str, Any], hades: dict[str, Any]) -> dict[str, Any]:
+    """Flag provider-usage versus streamed-text inconsistencies.
+
+    Usage counts are provider metadata, while streamed character counts are
+    observed at the Hades boundary.  A large ratio is evidence that a report
+    is not suitable for equivalent-deliverable comparison; it is not silently
+    converted into a fabricated token count.
+    """
+    result: dict[str, Any] = {"consistent": True, "reason": None}
+    for label, item in (("raw", raw), ("hades", hades)):
+        tokens = item.get("output_tokens")
+        chars = item.get("output_chars")
+        if not isinstance(tokens, int) or not isinstance(chars, int):
+            result.update(consistent=False, reason=f"{label}_usage_missing")
+            return result
+        if tokens == 0 and chars > 0:
+            result.update(consistent=False, reason=f"{label}_tokens_zero_with_text")
+            return result
+        if tokens > 0 and chars > tokens * 16:
+            result.update(consistent=False, reason=f"{label}_text_token_ratio implausible")
+            return result
+    return result
+
+
 async def run(args: argparse.Namespace) -> dict[str, Any]:
     prompt = "Answer with exactly one short sentence: what is 2 plus 2?"
     raw = await raw_chat(
@@ -191,6 +215,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         "prompt_tokens_baseline": estimate_tokens([{"role": "user", "content": prompt}]),
         "raw": raw,
         "hades": hades,
+        "output_accounting": output_accounting(raw, hades),
         "harness_overhead_seconds": round(hades["completion_seconds"] - raw["completion_seconds"], 4),
         **attribution,
         "ttft_overhead_seconds": round(hades["ttft_seconds"] - raw["ttft_seconds"], 4),

@@ -1,4 +1,4 @@
-from benchmarks.hades_aci_harness_overhead import _local_endpoint, timing_attribution
+from benchmarks.hades_aci_harness_overhead import _local_endpoint, output_accounting, timing_attribution
 
 
 def test_overhead_report_source_records_model_and_context_attribution():
@@ -9,6 +9,7 @@ def test_overhead_report_source_records_model_and_context_attribution():
         "prompt_token_delta", "non_prep_overhead_seconds",
         "extra_model_inference_seconds", "framework_overhead_seconds",
         "max_tokens", "num_predict",
+        "output_accounting", "consistent", "implausible",
     ):
         assert field in source
 
@@ -29,3 +30,11 @@ def test_harness_overhead_benchmark_only_accepts_recognized_local_endpoints():
     assert _local_endpoint("http://127.0.0.1:11434") is True
     assert _local_endpoint("http://172.18.0.1:11434") is True
     assert _local_endpoint("https://example.invalid") is False
+
+
+def test_output_accounting_rejects_implausible_stream_usage_mismatch():
+    result = output_accounting(
+        {"output_tokens": 3, "output_chars": 2},
+        {"output_tokens": 3, "output_chars": 144},
+    )
+    assert result == {"consistent": False, "reason": "hades_text_token_ratio implausible"}
