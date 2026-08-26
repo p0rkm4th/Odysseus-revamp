@@ -607,3 +607,10 @@ source/root-cause checkpoint.
   wording such as `what do you actually have saved` while excluding file,
   document, and secret targets. The affected gate is `215 passed`; this
   source-only checkpoint remains awaiting deployment and automated live E5.
+
+- The continuation-language family now includes natural `go on` phrasing in
+  both the IntentFrame compiler and the agent-loop recognizer. This changes
+  classification only; durable Objective/Run state remains authoritative for
+  resolution and execution. Continuation/control-plane gate: `202 passed`.
+  The source checkpoint is not yet deployed because storage preflight remains
+  closed.

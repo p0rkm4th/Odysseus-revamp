@@ -199,6 +199,11 @@ def test_unknown_selfstate_capability_question_does_not_become_work_read():
     assert resolve_intent(frame).available is False
 
 
+@pytest.mark.parametrize("query", ["go on", "please go on", "keep going"])
+def test_natural_resume_language_is_classified_as_continuation(query):
+    assert compile_intent(query).operation_class == "CONTINUE"
+
+
 @pytest.mark.parametrize("query", [
     "What's the difference between a VM and a container?",
     "Explain containers versus virtual machines.",
