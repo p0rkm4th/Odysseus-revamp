@@ -8,6 +8,7 @@ def test_overhead_report_source_records_model_and_context_attribution():
         "model_calls", "model_wait_seconds", "context_construction_breakdown",
         "prompt_token_delta", "non_prep_overhead_seconds",
         "extra_model_inference_seconds", "framework_overhead_seconds",
+        "max_tokens", "num_predict",
     ):
         assert field in source
 

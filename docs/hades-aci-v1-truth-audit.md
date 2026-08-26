@@ -22,6 +22,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Automated E5 | current deployed canary verified | 25-case core + 12 held-out + 16 rotating sanitized live cases, 53/53 trajectory passes |
 | Full regression | `6414 passed, 4 skipped, 186 warnings` after current source slice | container test gate |
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
+| Matched local latency | raw `3.596s`; Hades `10.484s`; delta `6.888s`; extra provider inference `6.684s` | benchmark with equal 128-token budget |
 
 The running process is source-matched through the immutable image marker.
 Storage preflight still blocks a large replacement build at 24 GiB free / 74%
