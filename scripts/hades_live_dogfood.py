@@ -32,6 +32,7 @@ class Case:
     prompt: str
     mode: str = "fresh"
     group: str | None = None
+    family: str = "golden"
 
 
 CASES = [
@@ -44,8 +45,10 @@ CASES = [
         "What's on my plate right now?", "What projects am I working on?",
         "Remind me what I've got going.",
     ], 1)),
-    Case("assets_list", "What machines have I got?", "continuation", "assets_reference"),
-    Case("assets_reference", "Tell me about the first physical one.", "continuation", "assets_reference"),
+    Case("assets_list", "What machines have I got?", "continuation", "assets_reference", "assets"),
+    Case("assets_reference", "Tell me about the first physical one.", "continuation", "assets_reference", "assets"),
+    Case("assets_list_2", "Show me my hardware.", "continuation", "assets_reference_2", "assets"),
+    Case("assets_reference_2", "Tell me about the second one.", "continuation", "assets_reference_2", "assets"),
     *(Case(f"network_{i}", p) for i, p in enumerate([
         "Where am I connected right now?", "What network am I on?",
         "What's my current network?",
@@ -53,6 +56,8 @@ CASES = [
     Case("network_deep", "Do a deep dive on my local network."),
     Case("infra_running", "What's running in Odysseus?"),
     Case("infra_health", "Anything unhealthy right now?"),
+    Case("infra_services", "Are my services alive?", family="infrastructure"),
+    Case("infra_near_miss", "Explain what a service is.", family="negative_near_miss"),
     *(Case(f"fallback_{i}", p) for i, p in enumerate([
         "Explain why RAID isn't a backup.",
         "What makes a good personal AI assistant?",
@@ -60,8 +65,11 @@ CASES = [
     ], 1)),
     Case("ambiguity_restart", "Restart it."),
     Case("unknown_action", "Make Cerberus stop being weird."),
+    Case("continuation_no_active", "Continue.", family="continuation_empty"),
     Case("continuation_start", "Review outstanding work.", "continuation", "continuation"),
     Case("continuation_resume", "Continue.", "continuation", "continuation"),
+    Case("contamination_assets", "What machines do I own?", "continuation", "contamination", "contamination"),
+    Case("contamination_general", "Why do cats knock things off tables?", "continuation", "contamination", "contamination"),
 ]
 
 
@@ -115,6 +123,7 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         "prompt_digest": digest(case.prompt),
         "session_mode": case.mode,
         "session_group": case.group,
+        "family": case.family,
         "session_digest": digest(session_id),
         "answer_present": bool(answer.strip()),
         "answer_chars": len(answer),
@@ -173,6 +182,14 @@ def main() -> int:
         "errors": sum(bool(r.get("error")) for r in results),
         "tool_index_lookups": sum(int(r.get("tool_index_lookup") or 0) for r in results),
         "total_tool_calls": sum(int(r.get("tool_calls") or 0) for r in results),
+        "families": {
+            family: {
+                "cases": sum(1 for r in results if r.get("family") == family),
+                "answers": sum(bool(r.get("answer_present")) for r in results if r.get("family") == family),
+                "internal_leaks": sum(bool(r.get("internal_leak")) for r in results if r.get("family") == family),
+            }
+            for family in sorted({str(r.get("family") or "golden") for r in results})
+        },
     }
     with open(args.output, "w", encoding="utf-8") as handle:
         json.dump({"summary": summary, "results": results}, handle, indent=2, sort_keys=True)
