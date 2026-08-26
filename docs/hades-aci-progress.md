@@ -4,11 +4,12 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `0c07b542`, remote
+- Source head: branch `hades-aci-v1`, commit `fce8dc89`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed runtime: `odysseus:candidate-0c07b542`, image
-  `sha256:9b231716907ecf07a1e169a94dc46aaa91125311fab4fe055b2ba478034a7f48`,
-  exact runtime source `0c07b542abaf7dbb71fcc7aa782635a8c8192cb5`, migration
+- Deployed runtime: `odysseus:candidate-3d5a9fd3`, image
+  `sha256:cfa080d16454a271c7b70e381bd4a947f48d9bd8b665ffef4a6e6d5543590ca3`,
+  exact runtime source `3d5a9fd3246aa387ec08d7e2389ce1eaf72e408c`, branch
+  `hades-aci-v1`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
   reports `runtime_source_kind=image_source_marker` and `source_match=true`.
@@ -29,6 +30,16 @@ This section supersedes older historical rows below for present-state claims.
 - Typed turn-disposition candidate live canary: `6/6` trajectory passes with
   zero transport errors or internal leaks; the thin overlay was built in about
   15 seconds and retained the same dependency layers.
+- The seeded live canary sampler initially exposed a harness defect: sampling
+  a continuation turn without its prerequisite made a valid asset reference
+  appear to fail. The sampler now includes required preceding turns for a
+  declared continuation group. The corrected seeded run executed
+  `assets_list -> assets_reference` and passed `7/7` trajectories, including
+  fallback, contamination, and continuation cases.
+- Focused live follow-up on the deployed image passed infrastructure reads
+  (`infra_running`, `infra_health`) and durable continuation
+  (`continuation_start -> continuation_resume`) with completion on every turn;
+  the resume turn used zero tool calls and no fallback.
 - Provider-switch/recovery focused gate: `137 passed`, covering owner-scoped
   Run preservation, model-history recording, observed fallback provenance,
   continuation, and provider-failure routing. Live multi-provider switching
@@ -70,7 +81,7 @@ This section supersedes older historical rows below for present-state claims.
   by the 30 GiB preflight headroom guard.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
-- Remote checkpoint: `origin/hades-aci-v1` is synchronized at `1aa1c95d`.
+- Remote checkpoint: `origin/hades-aci-v1` is synchronized at `fce8dc89`.
 - Live canary tooling now supports reproducible family/suite selection,
   seeded samples, and explicit fresh versus intentional-continuation session
   modes; selection tests pass without changing runtime authority or execution.
