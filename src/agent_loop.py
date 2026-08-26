@@ -915,6 +915,22 @@ def _canonical_asset_read_payload(frame: dict | None) -> dict:
         return {"action": "get", "asset": reference}
     return {"action": "list", "limit": 500}
 
+
+def _canonical_read_fast_path_payload(
+    binding: str,
+    action: str,
+    frame: dict | None,
+    *,
+    query: str = "",
+) -> dict:
+    """Build the complete payload for a framework-selected safe read."""
+    if binding == "manage_assets" and action == "get":
+        return _canonical_asset_read_payload(frame)
+    payload = {"action": action}
+    if action == "summarize_owner_memory":
+        payload["query"] = query
+    return payload
+
 def _normalize_operational_intent_evidence(intent, query: str):
     # Fuse operational intent from action + object + scope evidence.
     # Existing classifier domains remain evidence, but do not erase adjacent
@@ -6208,9 +6224,15 @@ async def stream_agent_loop(
                     and read_spec.approval.value == "none"
                     and not set(read_spec.effects) & {"write_private", "admin_change", "external_side_effect", "external_network"}
                 ):
-                    fast_payload = {"action": desired_action}
-                    if desired_action == "summarize_owner_memory":
-                        fast_payload["query"] = str(_intent.get("retrieval_query") or _last_user)
+                    # Detail reads carry a server-resolved strong identity;
+                    # do not reduce them to an action-only payload before the
+                    # canonical asset projection attaches that identity.
+                    fast_payload = _canonical_read_fast_path_payload(
+                        desired_binding,
+                        desired_action,
+                        _intent.get("intent_frame"),
+                        query=str(_intent.get("retrieval_query") or _last_user),
+                    )
                     _aci_fast_path_block = ToolBlock(desired_binding, json.dumps(fast_payload, sort_keys=True))
                     _record_aci_framework("deterministic_read_selection")
                     logger.info("[hades-aci] deterministic read fast path binding=%s action=%s", desired_binding, desired_action)
