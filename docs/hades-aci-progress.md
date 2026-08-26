@@ -4,8 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `9304fcf4` before this compose
-  provenance slice, remote
+- Source head: branch `hades-aci-v1`, commit `8ae04b89`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-cfbe6244`, image
   `sha256:43209c7211269e6b4a7268105057122dcd5991526bdee3c6c7373307d7b8f159`,
@@ -13,8 +12,8 @@ This section supersedes older historical rows below for present-state claims.
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; entrypoint and
   `deterministic_reads.py` hash were independently verified.
-- Source evidence: final full regression at `dba43815` was `6399 passed, 3
-  skipped, 186 warnings`; control-plane slice `237 passed`; fallback/read
+- Source evidence: current full regression is `6414 passed, 4 skipped, 186
+  warnings`; control-plane slice `237 passed`; fallback/read
   slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
   infrastructure semantic family `73 passed`.
 - Live E5 evidence: real deployed qwen3:8b matrix `36/36 answers`, zero
@@ -83,6 +82,10 @@ This section supersedes older historical rows below for present-state claims.
   reference resolution is tested both for correct continuation and for
   fail-closed absence of a canonical result. Canary/reference gate: `129
   passed`.
+- Full regression after the reference, infrastructure, compose, and canary
+  changes: `6414 passed, 4 skipped, 186 warnings` in 5:08. No deployment build
+  was attempted because storage preflight remains below the 30 GiB headroom
+  guard.
 - A second exact audit removed six obsolete untagged Odysseus candidates
   labeled `a20ade61`, `7f0a8576`, `52cdfd5e`, `121cb6d7`, `8419fea9`, and
   `936fe437`; no active container referenced them. Security/control-plane
