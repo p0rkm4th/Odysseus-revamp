@@ -16,7 +16,9 @@ _READ_REQUEST = re.compile(
     re.IGNORECASE,
 )
 _OWNER_SELF = re.compile(
-    r"\b(?:about|on|bout)\s+(?:me|myself)\b|\bwho\s+am\s+i(?:\s+to\s+you)?\b|\bmy\s+profile\b",
+    r"\b(?:about|on|bout)\s+(?:me|myself)\b|"
+    r"\bwho\s+am\s+i(?:\s+to\s+you)?\b|"
+    r"\bmy\s+(?:profile|lore|background|deal|story)\b",
     re.IGNORECASE,
 )
 _MEMORY_KNOWLEDGE = re.compile(
@@ -53,13 +55,16 @@ _CURRENT_STATE = re.compile(
     re.IGNORECASE,
 )
 _INFRASTRUCTURE_STATUS = re.compile(
-    r"\b(?:what(?:'s|\s+is)?\s+running(?:\s+in\s+\w+)?|"
+    r"\b(?:(?:what(?:'s|s|\s+is)?)\s+running(?:\s+in\s+\w+)?|"
     r"anything\s+(?:un)?healthy|what(?:'s|\s+is)\s+up|"
     r"what\s+services?\s+(?:(?:are|is)\s+)?(?:up|alive)|"
     r"(?:are|is)\s+(?:my\s+)?services?\s+(?:up|alive)|"
     r"(?:is|are)\s+(?:everything|the\s+stack)\s+(?:healthy|up|okay|ok|good)|"
-    r"anything\s+(?:wrong|broken)|"
-    r"what(?:'s|\s+is)\s+(?:dead|broken|busted))\b",
+    r"anything\s+(?:wrong|broken|dead|down|unhealthy|failing)|"
+    r"what(?:'s|s|\s+is)?(?:\s+(?:the|hell|damn|is|actually|currently)){0,4}\s+"
+    r"(?:dead|broken|busted|down)|"
+    r"(?:how(?:'s|s|\s+is)?)\s+(?:hades|the\s+stack|everything)\s+"
+    r"(?:doing|looking|running|holding\s+up))\b",
     re.IGNORECASE,
 )
 _GENERAL_EXPLANATION = re.compile(
@@ -72,6 +77,14 @@ _GENERAL_EXPLANATION = re.compile(
 
 def _normalized(text: str) -> str:
     value = str(text or "").strip().casefold().replace("’", "'")
+    # Small, domain-neutral spelling normalization keeps ordinary keyboard
+    # slips from changing the semantic class.  This is intentionally a token
+    # normalization layer, not a list of benchmark sentences.
+    tokens = {
+        "abotu": "about", "abt": "about", "bout": "about",
+        "yuo": "you", "teh": "the", "wht": "what",
+    }
+    value = re.sub(r"\b[^\s]+\b", lambda match: tokens.get(match.group(0), match.group(0)), value)
     return re.sub(r"\s+", " ", value).strip(" .?!")
 
 

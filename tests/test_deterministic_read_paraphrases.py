@@ -148,6 +148,35 @@ def test_infrastructure_status_paraphrases_use_safe_service_read(query):
 
 
 @pytest.mark.parametrize("query", [
+    "whats running",
+    "hows Hades doing",
+    "anything dead",
+    "anything down right now",
+    "what the hell is busted",
+])
+def test_casual_infrastructure_status_paraphrases_use_safe_service_read(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "SERVICE"
+    assert resolved.action_id == "service_status"
+    assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
+    "tell me abotu me",
+    "give me my lore",
+    "what's my background",
+    "what's my deal",
+])
+def test_messy_owner_self_knowledge_stays_on_memory_read_family(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "MEMORY"
+    assert resolved.action_id == "summarize_owner_memory"
+    assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
     "What's the difference between a VM and a container?",
     "Explain containers versus virtual machines.",
 ])
