@@ -33,7 +33,10 @@ This section supersedes older historical rows below for present-state claims.
   build. Docker build cache is zero. Retained Odysseus runtime images are the
   running candidate and explicit `rollback-b471e104-prev`; protected active
   harness/pinned/unrelated images remain. No further large build is authorized
-  in this storage window.
+  in this storage window. Eight exact untagged intermediate images were
+  removed after Docker confirmed they were not referenced by a container;
+  remaining dangling layers are retained where Docker reports dependency
+  conflicts.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
