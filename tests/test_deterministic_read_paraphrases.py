@@ -8,6 +8,7 @@ from benchmarks.hades_aci_metamorphic import (
 )
 from src.agent_loop import (
     _canonical_asset_read_payload,
+    _canonical_read_fast_path_payload,
     _canonical_read_action,
     _classify_agent_request,
     _minimal_aci_answer_messages,
@@ -74,7 +75,9 @@ def test_resolved_asset_reference_projects_get_instead_of_relisting(query):
             {"ref": "PHYSICAL-002", "concept": "TECHNICAL_ASSET"},
         ],
     })
-    payload = _canonical_asset_read_payload(frame.as_dict())
+    payload = _canonical_read_fast_path_payload(
+        "manage_assets", "get", frame.as_dict(),
+    )
     assert payload["action"] == "get"
     assert payload["asset"] in {"PHYSICAL-001", "PHYSICAL-002"}
     resolved = resolve_intent(frame)
@@ -83,6 +86,18 @@ def test_resolved_asset_reference_projects_get_instead_of_relisting(query):
         "TECHNICAL_ASSET", frame.filters,
         entity_reference=frame.entity_reference,
     ) == "get"
+
+
+def test_resolved_asset_fast_path_preserves_strong_identity():
+    frame = compile_intent("Tell me about the first physical one.", reference_context={
+        "ordered_entities": [
+            {"ref": "PHYSICAL-001", "concept": "TECHNICAL_ASSET"},
+        ],
+    })
+    # The ACI fast path must pass the same canonical payload as the
+    # asset-specific repair path; an action-only ``get`` cannot execute.
+    payload = _canonical_asset_read_payload(frame.as_dict())
+    assert payload == {"action": "get", "asset": "PHYSICAL-001"}
 
 
 def test_ambiguous_asset_pronoun_does_not_become_lexical_target():
