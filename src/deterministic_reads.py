@@ -59,6 +59,12 @@ _INFRASTRUCTURE_STATUS = re.compile(
     r"what(?:'s|\s+is)\s+(?:dead|broken|busted))\b",
     re.IGNORECASE,
 )
+_GENERAL_EXPLANATION = re.compile(
+    r"\b(?:why|explain|what\s+(?:is|are|does)|how\s+does|"
+    r"difference\s+between|versus|tell\s+me\s+about\s+(?:the\s+)?"
+    r"(?:memory|network))\b",
+    re.IGNORECASE,
+)
 
 
 def _normalized(text: str) -> str:
@@ -70,6 +76,16 @@ def deterministic_read_concept(text: str) -> str | None:
     """Return an existing DomainContract concept for an unambiguous read."""
     query = _normalized(text)
     if not query or not _READ_REQUEST.search(query):
+        return None
+    if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
+        return None
+    # A noun such as "memory" or "network" is not by itself an owner-state
+    # read. Explanations and definitions belong on the general-model floor
+    # unless the turn also carries an explicit owner/current-state subject.
+    if _GENERAL_EXPLANATION.search(query) and not (
+        _OWNER_SELF.search(query)
+        or re.search(r"\b(?:my|mine|i\s+am|i'm|right\s+now|currently)\b", query)
+    ):
         return None
 
     # Explicit owner-knowledge predicates outrank narrower nouns: "what do

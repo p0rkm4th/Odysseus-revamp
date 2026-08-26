@@ -305,10 +305,10 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     q = text.lower().strip()
     if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
-    if re.search(r"\b(?:delete|remove|retire)\b", q): return "DELETE"
+    if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
-    if re.search(r"\b(?:restart|recover|execute|run|scan|discover|install|turn on)\b", q): return "EXECUTE"
+    if re.search(r"\b(?:restart|recover|execute|run|scan|discover|install|turn on|start|begin)\b", q): return "EXECUTE"
     if re.search(r"\b(?:research|investigate|deep dive|look into)\b", q): return "RESEARCH"
     if re.search(r"\b(?:monitor|watch|alert)\b", q): return "MONITOR"
     return "READ"
@@ -415,6 +415,27 @@ def compile_intent(
             r"\b(?:sav(?:e|ed|ing)|similar|find|search)\b", q
         ): concept = "JOB_OPPORTUNITY"
         else: concept = "CAREER_PROFILE"
+    # Keep advice, definitions, and generic explanations off specialized
+    # canonical read contracts. These are safe general-model questions even
+    # when they contain a golden-domain noun.
+    if (
+        concept in {"MEMORY", "NETWORK", "WORK"}
+        and re.search(
+            r"\b(?:why|explain|what\s+(?:is|are|does)|how\s+does|"
+            r"difference\s+between|versus|what\s+should\s+i|"
+            r"what\s+should\s+(?:you|i)\s+remember|"
+            r"tell\s+me\s+about\s+(?:the\s+)?(?:memory|network))\b",
+            q,
+        )
+        and not re.search(r"\b(?:my|mine|right\s+now|currently|on\s+my\s+plate)\b", q)
+        and not re.search(r"\b(?:hades|waiting\s+on|needs?\s+attention|pending\s+approvals?)\b", q)
+    ):
+        concept = "UNKNOWN"
+    if (
+        concept == "WORK"
+        and re.search(r"\b(?:start|begin)\s+working\s+on\b|\bwhat\s+should\s+i\s+work\s+on\b", q)
+    ):
+        concept = "UNKNOWN"
     # A resolved opaque reference may supply the semantic subject when the
     # latest turn is intentionally terse (for example, "scan those hosts").
     # It never supplies an ActionSpec or executor.  Conflicting concepts stay
