@@ -4,17 +4,17 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `8038e227`, remote
+- Source head: branch `hades-aci-v1`, commit `074d240f`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed runtime: `odysseus:candidate-8038e227`, source-only overlay based on
-  `sha256:cfa080d16454a271c7b70e381bd4a947f48d9bd8b665ffef4a6e6d5543590ca3`,
-  exact runtime source `8038e227`, branch
+- Deployed runtime: `odysseus:candidate-074d240f`, source-only overlay based on
+  the prior validated candidate, exact runtime source `074d240f`, branch
   `hades-aci-v1`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
   reports `runtime_source_kind=image_source_marker` and `source_match=true`.
-- Source evidence: current full regression is `6424 passed, 3 skipped, 186
-  warnings`; control-plane slice `237 passed`; fallback/read
+- Source evidence: last full regression on the behavior-identical parent is
+  `6424 passed, 3 skipped, 186 warnings`; the telemetry overlay focused gate is
+  `93 passed`; control-plane slice `237 passed`; fallback/read
   slice `92 passed`; post-checkpoint direct-fallback regression `2 passed` and
   infrastructure semantic family `73 passed`; final focused provenance,
   intent, reference, executor, fallback, and canary gate `208 passed`.
@@ -37,6 +37,9 @@ This section supersedes older historical rows below for present-state claims.
 - Fresh-session core E5 on the deployed Qwen runtime: `22/22` trajectory
   passes, `22/22` answers, zero transport errors, zero internal leaks; the
   corrected canary sampler excludes continuation follow-ups from fresh mode.
+- Live canaries now expose sanitized reference disposition telemetry (status,
+  semantic concept, selection, count, and context source); asset ordinal cases
+  assert `RESOLVED` / `TECHNICAL_ASSET` rather than relying only on prose.
 - Follow-up live E5 evidence on the same source-matched image: seeded held-out
   slice `12/12` and rotating slice `16/16` trajectory passes, both with zero
   errors and zero internal leaks. Across all three runs: `53/53` trajectory
