@@ -8,6 +8,7 @@ from benchmarks.hades_aci_metamorphic import (
 )
 from src.agent_loop import (
     _canonical_asset_read_payload,
+    _canonical_read_action,
     _classify_agent_request,
     _minimal_aci_answer_messages,
     _matches_resolved_canonical_read,
@@ -76,6 +77,12 @@ def test_resolved_asset_reference_projects_get_instead_of_relisting(query):
     payload = _canonical_asset_read_payload(frame.as_dict())
     assert payload["action"] == "get"
     assert payload["asset"] in {"PHYSICAL-001", "PHYSICAL-002"}
+    resolved = resolve_intent(frame)
+    assert resolved.action_id == "get"
+    assert _canonical_read_action(
+        "TECHNICAL_ASSET", frame.filters,
+        entity_reference=frame.entity_reference,
+    ) == "get"
 
 
 def test_ambiguous_asset_pronoun_does_not_become_lexical_target():
