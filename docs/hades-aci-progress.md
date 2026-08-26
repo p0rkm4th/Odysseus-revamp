@@ -4,20 +4,17 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `302ed03f`, remote
-  `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`; local commits after
-  `f9661cda` await an authenticated SSH agent for push.
+- Source head: branch `hades-aci-v1`, commit `bcf25e80`, synchronized with
+  `origin=git@github.com:p0rkm4th/Odysseus-revamp.git` after four green commits.
 - Deployed runtime: `odysseus:candidate-7fe090cc8a23`, exact runtime source
   `7fe090cc8a23`, branch
   `hades-aci-v1`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
   reports `runtime_source_kind=image_source_marker` and `source_match=true`.
-- Source evidence: last full regression is `6492 passed, 3 skipped, 186
-  warnings` in 123s on the semantic-family checkpoint; later fallback/runtime
-  changes have focused coverage of `210 passed` and security coverage of `198
-  passed`. These later source changes are not represented in the deployed
-  image.
+- Source evidence: last full regression is `6511 passed, 3 skipped, 186
+  warnings` in 124s; the deployed runtime includes the runtime implementation
+  through `7fe090cc`. Later commits are build-guard/tests/docs only.
 - Current full regression at source tip: `6511 passed, 3 skipped, 186
   warnings` in 124s. This validates the infrastructure result-normalization,
   durable terminal-continuation, and live-canary telemetry changes; it does

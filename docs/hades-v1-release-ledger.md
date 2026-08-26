@@ -44,10 +44,11 @@ E6.
 
 ## Current release state
 
-- Branch: `hades-aci-v1`; local source is ahead of `origin` because the current
-  SSH agent socket is unavailable in this process.
-- Source head: `302ed03f` (peak-aware storage guard); deployed runtime is the
-  preceding runtime implementation `7fe090cc`.
+- Branch: `hades-aci-v1`, synchronized with `origin` after pushing four green
+  commits through `bcf25e80`.
+- Source head: `bcf25e80` (documentation-only release-state update); deployed
+  runtime implementation is `7fe090cc`, with the peak-aware build guard in
+  source commit `302ed03f`.
 - Running image: `odysseus:candidate-7fe090cc8a23`, source-matched and healthy.
 - Last full regression before the latest fallback/runtime source slice:
   `6492 passed, 3 skipped, 186 warnings` in 123 seconds. Later focused gates:
