@@ -139,6 +139,7 @@ class TestThinkSuppression:
             monkeypatch, "http://127.0.0.1:11434/v1/chat/completions", "qwen3:14b"
         )
         assert payload.get("think") is False
+        assert payload.get("reasoning_effort") == "none"
 
     def test_no_think_for_ollama_v1_non_thinking_model(self, monkeypatch):
         """think must NOT be set for a plain (non-thinking) model on Ollama /v1."""
@@ -163,6 +164,7 @@ class TestThinkSuppression:
             monkeypatch, "http://127.0.0.1:11435/v1/chat/completions", "qwen3:14b"
         )
         assert payload.get("think") is False
+        assert payload.get("reasoning_effort") == "none"
 
     def test_native_ollama_structured_output_disables_thinking(self):
         """Strict ACI JSON must not be emitted only in message.thinking."""
