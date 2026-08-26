@@ -186,11 +186,11 @@ def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()[:16]
 
 
-def create_session(base: str, cookie: str, name: str) -> str:
+def create_session(base: str, cookie: str, name: str, *, model: str) -> str:
     response = requests.post(
         f"{base}/api/session",
         cookies={"odysseus_session": cookie},
-        data={"name": name, "endpoint_id": "e4e4196b", "model": "qwen3:8b", "skip_validation": "true"},
+        data={"name": name, "endpoint_id": "e4e4196b", "model": model, "skip_validation": "true"},
         timeout=30,
     )
     response.raise_for_status()
@@ -285,6 +285,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default=os.environ.get("HADES_LIVE_BASE_URL", "http://127.0.0.1:7000"))
     parser.add_argument("--cookie", default=os.environ.get("HADES_LIVE_COOKIE"))
+    parser.add_argument("--model", default=os.environ.get("HADES_LIVE_MODEL", "qwen3:8b"))
     parser.add_argument("--output", default="/tmp/hades-live-dogfood.json")
     parser.add_argument("--suite", choices=("all", "core", "held_out", "rotating", "security"), default="all")
     parser.add_argument("--sample", type=int)
@@ -305,10 +306,10 @@ def main() -> int:
         if case.mode == "continuation" and case.group:
             session_id = sessions.get(case.group)
             if session_id is None:
-                session_id = create_session(args.base_url, args.cookie, f"ACI live {case.group}")
+                session_id = create_session(args.base_url, args.cookie, f"ACI live {case.group}", model=args.model)
                 sessions[case.group] = session_id
         else:
-            session_id = create_session(args.base_url, args.cookie, f"ACI live {case.name}")
+            session_id = create_session(args.base_url, args.cookie, f"ACI live {case.name}", model=args.model)
         try:
             result = run_case(args.base_url, args.cookie, session_id, case)
             result["assertion_failures"] = assert_case(case, result)
