@@ -274,6 +274,12 @@ source/root-cause checkpoint.
 
 ## Semantic precision checkpoint — 2026-08-26
 
+- `44c5537d` centralizes a negative near-miss corpus: 21 positive
+  deterministic-read variants and 14 adversarial Memory/Work/Asset/Network
+  variants. Static semantic evaluation is `21/21` positive contracts
+  available and `0/14` negatives incorrectly available as READ contracts.
+  Focused near-miss/domain gate: `166 passed`.
+
 - `fbe5cd66` adds negative near-miss guards to the shared semantic resolver.
   Definitions, explanations, advice, mutations, and imperative work requests
   no longer collapse into owner-state reads merely because they contain
