@@ -3,6 +3,11 @@
 # The script does not deploy, stop, or replace a running service.
 set -eu
 
+# Fail closed before Docker can create another multi-gigabyte candidate on a
+# nearly full root filesystem. The preflight reports, but never performs,
+# cleanup; retention decisions remain explicit and recoverable.
+scripts/storage_preflight.sh
+
 SOURCE_COMMIT="$(git rev-parse --verify HEAD)"
 BUILD_TIME="${ODYSSEUS_BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 BUILD_ID="${ODYSSEUS_BUILD_ID:-${SOURCE_COMMIT}-${BUILD_TIME}}"
