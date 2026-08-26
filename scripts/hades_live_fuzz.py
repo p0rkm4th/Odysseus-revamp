@@ -23,6 +23,7 @@ import os
 import random
 import secrets
 import sys
+import subprocess
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -180,7 +181,12 @@ def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
 
 
-def seed_acceptance_state(session: requests.Session, base_url: str) -> dict[str, int]:
+def seed_acceptance_state(
+    session: requests.Session,
+    base_url: str,
+    *,
+    canonical_asset_db: str | None = None,
+) -> dict[str, int]:
     """Seed synthetic state through owner-scoped product APIs."""
     counts = {"memory": 0, "projects": 0, "assets": 0}
     for text, category in (
@@ -232,6 +238,35 @@ def seed_acceptance_state(session: requests.Session, base_url: str) -> dict[str,
         )
         _json(detail, expected=(200, 201))
         counts["assets"] += 1
+    if canonical_asset_db:
+        # The live manage_assets binding reads the owner-scoped canonical CMDB
+        # (src.asset_inventory), not the newer SQL inventory application API.
+        # Seed that exact store only when the disposable acceptance provisioner
+        # supplies an explicit path; never guess a production database path.
+        db_path = Path(canonical_asset_db).expanduser().resolve()
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        for index, (name, model, gpu) in enumerate((
+            ("Acceptance workstation", "Fixture Pro", "RTX Fixture 4090"),
+            ("Acceptance server", "Fixture Rack 2U", "None"),
+            ("Acceptance laptop", "Fixture Air", "Integrated"),
+            ("Acceptance backup host", "Fixture Mini", "None"),
+        ), 1):
+            completed = subprocess.run(
+                [
+                    sys.executable, "-m", "src.asset_inventory", "add",
+                    "--id", f"acceptance-asset-{index}", "--name", name,
+                    "--type", "computer", "--status", "deployed",
+                    "--manufacturer", "Acceptance Labs", "--model", model,
+                    "--hostname", name.lower().replace(" ", "-"),
+                    "--source", "acceptance-fixture", "--owner", ACCEPTANCE_USER,
+                    "--attributes", json.dumps({"gpu": gpu, "fixture": True}, sort_keys=True),
+                ],
+                env={**os.environ, "ODY_ASSET_DB": str(db_path)},
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+            if completed.returncode != 0:
+                raise RuntimeError("canonical acceptance CMDB seed failed")
+        counts["canonical_assets"] = 4
     return counts
 
 
@@ -310,6 +345,7 @@ def run(
     bootstrap: bool,
     bootstrap_admin_password: str | None,
     model_endpoint_url: str | None,
+    canonical_asset_db: str | None,
     seed_state: bool,
     suite: str,
     sample: int | None,
@@ -326,7 +362,7 @@ def run(
     endpoint_id = provisioned_endpoint_id or endpoint_id
     cookie = _cookie(http)
     if bootstrap and seed_state:
-        seeded = seed_acceptance_state(http, base_url)
+        seeded = seed_acceptance_state(http, base_url, canonical_asset_db=canonical_asset_db)
         print(json.dumps({"acceptance_state_seeded": seeded}, sort_keys=True), flush=True)
     cases = list(CASES) + list(compositional_variants(seed))
     selected = select_cases(cases, suite=suite, sample=sample, seed=seed)
@@ -387,6 +423,7 @@ def main() -> int:
     parser.add_argument("--bootstrap", action="store_true", help="use normal first-run setup on an isolated unconfigured loopback instance")
     parser.add_argument("--bootstrap-admin-password", default=os.environ.get("HADES_ACCEPTANCE_BOOTSTRAP_PASSWORD"), help=argparse.SUPPRESS)
     parser.add_argument("--no-seed-state", action="store_true", help="skip synthetic state setup during --bootstrap")
+    parser.add_argument("--canonical-asset-db", default=os.environ.get("HADES_ACCEPTANCE_ASSET_DB"), help="explicit disposable CMDB path used only for acceptance seeding")
     parser.add_argument("--suite", choices=("all", "core", "held_out", "rotating", "security"), default="all")
     parser.add_argument("--sample", type=int)
     parser.add_argument("--seed", type=int, default=0)
@@ -402,6 +439,7 @@ def main() -> int:
             bootstrap=args.bootstrap,
             bootstrap_admin_password=args.bootstrap_admin_password,
             model_endpoint_url=args.model_endpoint_url,
+            canonical_asset_db=args.canonical_asset_db,
             seed_state=not args.no_seed_state,
             suite=args.suite,
             sample=args.sample,
