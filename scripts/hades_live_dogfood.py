@@ -55,6 +55,9 @@ CASES = [
     Case("assets_reference_2", "Tell me about the second one.", "continuation", "assets_reference_2", "assets", True, False, None),
     Case("assets_list_3", "What computers do I own?", "continuation", "assets_reference_3", "assets", True, False, None),
     Case("assets_reference_3", "Which machine is the first one?", "continuation", "assets_reference_3", "assets", True, False, None),
+    # A reference without a preceding canonical result must remain a natural
+    # clarification/fallback, never a guessed asset identity or tool call.
+    Case("assets_reference_without_context", "Tell me about the first physical one.", family="reference", max_tools=0),
     *(Case(f"network_{i}", p, expect_completion=True) for i, p in enumerate([
         "Where am I connected right now?", "What network am I on?",
         "What's my current network?",
