@@ -6398,7 +6398,12 @@ async def stream_agent_loop(
     # backstop. Counting identical repeats — not distinct same-tool calls —
     # lets a legit batch (e.g. 18 calendar events at once) through.
     _call_freq: collections.Counter = collections.Counter()
-    _force_answer = bool(_aci_answer_only or _aci_clarification_only)  # framework-resolved answer/clarification mode
+    # ACI buffers prose while machine decisions are possible.  Fallback is
+    # also a framework-resolved prose disposition, so its answer must be
+    # released through the same answer-only boundary before the loop exits.
+    _force_answer = bool(
+        _aci_answer_only or _aci_clarification_only or _aci_model_fallback
+    )
     # Supervisor: how many times we've nudged the model after it announced
     # an action without emitting the tool call. Capped to prevent a model
     # that *can't* call the tool from looping forever.
