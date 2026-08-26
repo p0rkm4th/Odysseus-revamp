@@ -34,6 +34,12 @@ This section supersedes older historical rows below for present-state claims.
   continuation, and provider-failure routing. Live multi-provider switching
   remains unclaimed because only the local Qwen runtime was live-available in
   this environment.
+- Developer/sandbox gate: `62 passed`, covering workspace-confined read/edit
+  tools, explicit expiring YOLO leases, approval/admin boundaries, patch
+  controls, and Docker hardening. V1 currently has a bounded generic developer
+  path; a separate semantic `developer.read` registry is intentionally not
+  claimed because it would require a canonical binding rather than another
+  parallel tool registry.
 - Live security E5 slice: `1/1` trajectory pass for unauthorized network-scope
   handling, with zero tool calls, zero approvals, zero errors, and no internal
   leakage. Provider/runtime characterization and scheduler-focused gates pass
