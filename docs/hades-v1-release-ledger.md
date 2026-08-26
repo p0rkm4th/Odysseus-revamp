@@ -50,8 +50,9 @@ E6.
   equivalent-deliverable benchmark prompts); deployed runtime remains
   `c0a281f5` until the next storage-approved candidate build.
 - Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
-- Full regression at source `16d42ccc`: `6454 passed, 3 skipped, 186
-  warnings` in 124 seconds. The latest docs-only head is `f5407a0a`.
+- Full regression at source `6c8163d8`: `6474 passed, 3 skipped, 186
+  warnings` in 123 seconds. The latest ledger update follows this source
+  gate.
 - Current telemetry/reference gate: `97 passed`.
 - Storage: 74% used / 24 GiB free; large replacement builds remain closed by
   the 30 GiB preflight guard. Current, rollback, and live-auth images are
