@@ -4,7 +4,8 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `2c336155`, remote
+- Source head: branch `hades-aci-v1`, commit `9304fcf4` before this compose
+  provenance slice, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-cfbe6244`, image
   `sha256:43209c7211269e6b4a7268105057122dcd5991526bdee3c6c7373307d7b8f159`,
@@ -66,6 +67,13 @@ This section supersedes older historical rows below for present-state claims.
   fixture-only until the next source-matched deployment and live run.
 - The current source head is not yet deployed: the running candidate remains
   `cfbe6244` while storage preflight blocks a large replacement build.
+- Default production and GPU compose files no longer mount the host checkout at
+  `/app`; `docker-compose.developer.yml` is now the explicit opt-in workspace
+  override and requires `HADES_WORKSPACE`. This prevents silent image/checkout
+  source mixing on future deployments. The current running service remains on
+  the prior explicit developer-style mount until a source-matched image can be
+  built safely.
+- Compose/provenance/reference/executor/canary focused slice: `225 passed`.
 - A second exact audit removed six obsolete untagged Odysseus candidates
   labeled `a20ade61`, `7f0a8576`, `52cdfd5e`, `121cb6d7`, `8419fea9`, and
   `936fe437`; no active container referenced them. Security/control-plane
