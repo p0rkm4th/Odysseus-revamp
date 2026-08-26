@@ -25,8 +25,9 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
 | Matched local latency | raw `3.596s`; Hades `10.484s`; delta `6.888s`; extra provider inference `6.684s` | benchmark with equal 128-token budget |
 
-The running process is source-matched through the immutable image marker.
-Storage preflight still blocks a large replacement build at 24 GiB free / 74%
+The running process is source-matched through the immutable image marker and
+reports branch `hades-aci-v1`.
+Storage preflight still blocks a large replacement build at 23 GiB free / 74%
 used against its 30 GiB guard. Default compose runs baked image source; the
 developer checkout mount is explicit via `docker-compose.developer.yml`.
 

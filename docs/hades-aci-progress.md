@@ -73,7 +73,7 @@ This section supersedes older historical rows below for present-state claims.
 - H0 remains frozen at 15 cases: success `0.20`, weighted `0.4333`.
   Historical ACI comparisons remain synthetic benchmark evidence and are not
   owner-live evidence.
-- Storage: root `74%` used / `24 GiB` free after deployment and narrow
+- Storage: root `74%` used / `23 GiB` free after deployment and narrow
   retention cleanup. Docker build cache is zero. Current, rollback, live auth
   harness, pinned, and unrelated active images remain; six exact obsolete
   intermediate candidate tags were removed. No owner data, databases,
