@@ -12,9 +12,9 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `a38f1c4d` | `origin/hades-aci-v1` |
-| Deployed source | `1aa1c95d` | `/api/version`, immutable image marker |
-| Running image | `odysseus:candidate-1aa1c95d` | Docker inspect |
+| Pushed source | `0c07b542` | `origin/hades-aci-v1` |
+| Deployed source | `0c07b542` | `/api/version`, immutable image marker |
+| Running image | `odysseus:candidate-0c07b542` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
 | API | healthy | `/api/health` |
 | Broker | active; socket present | systemd/socket check |
@@ -48,6 +48,8 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
 - The same source-matched image passed seeded held-out (`12/12`) and rotating
   (`16/16`) live slices, including cross-domain contamination, infrastructure
   near-misses, fallback, and asset continuation families.
+- The typed `TurnDisposition` precedence helper is deployed and its live
+  six-case canary passed `6/6`; focused coverage is green (`86` tests).
 - Completed canonical asset reads now expose their ordered/eligible entity set
   through the owner-scoped session reference projection, so a later ordinal
   turn can resolve without an active Run or lexical target guessing. The

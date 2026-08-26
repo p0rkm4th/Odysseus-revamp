@@ -4,13 +4,11 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `a38f1c4d`, remote
+- Source head: branch `hades-aci-v1`, commit `0c07b542`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed implementation source remains `1aa1c95d`; the newer source HEAD is
-  documentation-only and does not require a rebuild.
-- Deployed runtime: `odysseus:candidate-1aa1c95d`, image
-  `sha256:0085872b0d8b6d2b87817d008808c138ab4d19754b0da596df2aa656219a9acc`,
-  exact runtime source `1aa1c95de0bb2d262d78ebbfc12d53365a922ff6`, migration
+- Deployed runtime: `odysseus:candidate-0c07b542`, image
+  `sha256:9b231716907ecf07a1e169a94dc46aaa91125311fab4fe055b2ba478034a7f48`,
+  exact runtime source `0c07b542abaf7dbb71fcc7aa782635a8c8192cb5`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
   reports `runtime_source_kind=image_source_marker` and `source_match=true`.
@@ -28,6 +26,9 @@ This section supersedes older historical rows below for present-state claims.
   slice `12/12` and rotating slice `16/16` trajectory passes, both with zero
   errors and zero internal leaks. Across all three runs: `53/53` trajectory
   passes, `23` canonical tool calls, and `3` tool-index lookups.
+- Typed turn-disposition candidate live canary: `6/6` trajectory passes with
+  zero transport errors or internal leaks; the thin overlay was built in about
+  15 seconds and retained the same dependency layers.
 - Live security E5 slice: `1/1` trajectory pass for unauthorized network-scope
   handling, with zero tool calls, zero approvals, zero errors, and no internal
   leakage. Provider/runtime characterization and scheduler-focused gates pass
@@ -49,7 +50,7 @@ This section supersedes older historical rows below for present-state claims.
   owner-live evidence.
 - Storage: root `74%` used / `24 GiB` free after deployment and narrow
   retention cleanup. Docker build cache is zero. Current, rollback, live auth
-  harness, pinned, and unrelated active images remain; five exact obsolete
+  harness, pinned, and unrelated active images remain; six exact obsolete
   intermediate candidate tags were removed. No owner data, databases,
   volumes, backups, or model blobs were touched. Large builds remain blocked
   by the 30 GiB preflight headroom guard.
