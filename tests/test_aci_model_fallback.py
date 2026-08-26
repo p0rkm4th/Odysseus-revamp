@@ -35,6 +35,7 @@ def test_invalid_aci_decision_falls_back_without_tool_authority(monkeypatch):
         provider_calls.append({
             "messages": messages,
             "tools": kwargs.get("tools"),
+            "response_format": kwargs.get("response_format"),
         })
         yield f'data: {json.dumps({"delta": next(responses)})}\n\n'
         yield "data: [DONE]\n\n"
@@ -60,6 +61,7 @@ def test_invalid_aci_decision_falls_back_without_tool_authority(monkeypatch):
     assert executed == []
     assert len(provider_calls) == 3
     assert provider_calls[-1]["tools"] in (None, [])
+    assert provider_calls[-1]["response_format"] is None
     fallback_text = " ".join(
         str(message.get("content", "")) for message in provider_calls[-1]["messages"]
     )
