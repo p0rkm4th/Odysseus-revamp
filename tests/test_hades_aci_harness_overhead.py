@@ -1,4 +1,4 @@
-from benchmarks.hades_aci_harness_overhead import _local_endpoint
+from benchmarks.hades_aci_harness_overhead import _local_endpoint, timing_attribution
 
 
 def test_overhead_report_source_records_model_and_context_attribution():
@@ -7,8 +7,21 @@ def test_overhead_report_source_records_model_and_context_attribution():
     for field in (
         "model_calls", "model_wait_seconds", "context_construction_breakdown",
         "prompt_token_delta", "non_prep_overhead_seconds",
+        "extra_model_inference_seconds", "framework_overhead_seconds",
     ):
         assert field in source
+
+
+def test_timing_attribution_separates_provider_inference_from_framework():
+    result = timing_attribution(
+        {"completion_seconds": 0.23},
+        {"completion_seconds": 5.28, "context_construction_seconds": 1.50, "response_time_seconds": 3.78},
+    )
+    assert result == {
+        "total_harness_overhead_seconds": 5.05,
+        "extra_model_inference_seconds": 3.55,
+        "framework_overhead_seconds": 0.0,
+    }
 
 
 def test_harness_overhead_benchmark_only_accepts_recognized_local_endpoints():

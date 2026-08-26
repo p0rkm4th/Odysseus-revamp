@@ -114,7 +114,37 @@ async def hades_chat(endpoint: str, model: str, prompt: str, *, timeout: float) 
         "model_calls": metrics.get("model_calls"),
         "model_burden": metrics.get("model_burden"),
         "tool_calls": metrics.get("tool_calls", 0),
+        "response_time_seconds": metrics.get("response_time"),
+        "reported_ttft_seconds": metrics.get("time_to_first_token"),
+        "tokens_per_second": metrics.get("tokens_per_second"),
+        "tps_source": metrics.get("tps_source"),
+        "prefill_tps": metrics.get("prefill_tps"),
+        "usage_source": metrics.get("usage_source"),
+        "context_envelope": metrics.get("aci_context_envelope"),
         "output_chars": output_chars,
+    }
+
+
+def timing_attribution(raw: dict[str, Any], hades: dict[str, Any]) -> dict[str, float | None]:
+    """Separate framework work from additional provider inference.
+
+    ``completion_seconds`` includes all Hades work.  The internal
+    ``response_time_seconds`` is the provider/round span after Hades prep;
+    therefore subtracting prep from the total alone is not framework overhead
+    and was previously mislabeled as such.
+    """
+    raw_total = float(raw.get("completion_seconds") or 0)
+    hades_total = float(hades.get("completion_seconds") or 0)
+    prep = float(hades.get("context_construction_seconds") or 0)
+    provider = hades.get("response_time_seconds")
+    if provider is None:
+        provider = max(hades_total - prep, 0)
+    provider = float(provider)
+    return {
+        "total_harness_overhead_seconds": round(hades_total - raw_total, 4),
+        "extra_model_inference_seconds": round(provider - raw_total, 4),
+        # Small negative values are clock/stream-event ordering noise.
+        "framework_overhead_seconds": round(max(hades_total - prep - provider, 0), 4),
     }
 
 
@@ -122,6 +152,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
     prompt = "Answer with exactly one short sentence: what is 2 plus 2?"
     raw = await raw_chat(args.endpoint, args.model, prompt, timeout=args.timeout)
     hades = await hades_chat(args.endpoint, args.model, prompt, timeout=args.timeout)
+    attribution = timing_attribution(raw, hades)
     return {
         "schema_version": 1,
         "synthetic": True,
@@ -132,6 +163,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         "raw": raw,
         "hades": hades,
         "harness_overhead_seconds": round(hades["completion_seconds"] - raw["completion_seconds"], 4),
+        **attribution,
         "ttft_overhead_seconds": round(hades["ttft_seconds"] - raw["ttft_seconds"], 4),
         "prompt_token_delta": (
             hades["prompt_tokens"] - raw["prompt_tokens"]
