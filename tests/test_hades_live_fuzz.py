@@ -62,7 +62,7 @@ def test_authenticate_uses_normal_login_and_checks_synthetic_principal():
         username=ACCEPTANCE_USER,
         password="synthetic-password",
         bootstrap=False,
-    ) == ACCEPTANCE_USER
+    )[0] == ACCEPTANCE_USER
     assert [method for method, _, _ in session.calls] == ["POST", "GET"]
     assert session.calls[0][1].endswith("/api/auth/login")
 
