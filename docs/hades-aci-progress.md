@@ -272,6 +272,20 @@ source/root-cause checkpoint.
 
 ## Direct fallback subtraction checkpoint — 2026-08-26
 
+## Semantic precision checkpoint — 2026-08-26
+
+- `fbe5cd66` adds negative near-miss guards to the shared semantic resolver.
+  Definitions, explanations, advice, mutations, and imperative work requests
+  no longer collapse into owner-state reads merely because they contain
+  Memory/Network/Work nouns. Valid owner/current-state reads remain on their
+  existing contracts. Focused gate: `159 passed`; full regression:
+  `6390 passed, 3 skipped, 186 warnings`.
+- The candidate is pushed but not deployed. Storage preflight is correctly
+  fail-closed: root is 78% used with 19 GiB reported free versus the
+  configured 30 GiB large-build minimum. Protected current/rollback/harness/
+  pinned images remain; no further safe Odysseus candidate cleanup was
+  identified without removing protected or unrelated images.
+
 - `a51e9297` makes the sanitized live canary assert trajectory classes rather
   than only transport success: read families require completion, general
   fallback requires fallback/no tools, and clarification/security families
