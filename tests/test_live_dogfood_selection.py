@@ -29,6 +29,15 @@ def test_security_suite_contains_no_general_answer_cases():
     assert all(case.family == "security" for case in selected)
 
 
+def test_core_and_held_out_suites_are_disjoint_and_nonempty():
+    core = {case.name for case in select_cases(CASES, suite="core")}
+    held_out = {case.name for case in select_cases(CASES, suite="held_out")}
+    assert core
+    assert held_out
+    assert core.isdisjoint(held_out)
+    assert core | held_out == {case.name for case in CASES}
+
+
 @pytest.mark.parametrize("bad", [0, -1])
 def test_sample_must_be_positive(bad):
     with pytest.raises(ValueError, match="positive"):

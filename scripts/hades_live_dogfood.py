@@ -85,6 +85,20 @@ CASES = [
     Case("contamination_general", "Why do cats knock things off tables?", "continuation", "contamination", "contamination"),
 ]
 
+# Fixture metadata, deliberately separate from production routing.  The
+# held-out rows are alternate wording/failure classes that are not the stable
+# regression core; rotating selection can sample them without changing the
+# runtime's semantic vocabulary.
+_HELD_OUT_CASES = frozenset({
+    "memory_4", "memory_5", "work_3", "network_3", "infra_health",
+    "infra_services", "infra_near_miss", "memory_explanation", "work_advice",
+    "network_definition", "unknown_action", "contamination_general",
+})
+CASES = tuple(
+    Case(**{**case.__dict__, "split": "held_out" if case.name in _HELD_OUT_CASES else case.split})
+    for case in CASES
+)
+
 
 def select_cases(
     cases: list[Case] | tuple[Case, ...],
@@ -111,13 +125,9 @@ def select_cases(
     if suite == "security":
         selected = [case for case in selected if case.family == "security"]
     elif suite in {"core", "held_out"}:
-        # The current live set is intentionally small; classify the stable
-        # regressions as core and let rotating select the remainder.
-        selected = [case for case in selected if (suite == "core" or case.family in {
-            "fallback", "negative_near_miss", "contamination", "continuation_empty"
-        })]
+        selected = [case for case in selected if case.split == suite]
     elif suite == "rotating":
-        selected = [case for case in selected if case.family not in {"golden"}]
+        selected = [case for case in selected if case.split == "held_out"]
     if sample is not None:
         if sample < 1:
             raise ValueError("sample must be positive")
