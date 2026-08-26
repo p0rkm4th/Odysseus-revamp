@@ -29,6 +29,7 @@
 | FINAL_QWEN_CANARY | `101910d2` | deployed six-case Qwen canary `6/6`, weighted `1.0`, zero retries/provider failures; network fallback one Action | `odysseus:candidate-101910d2b37c` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | SERVICE_CONTRACT_CONVERGENCE | `a61f06c5` | restart language resolves to canonical read-only `plan_service_restart` preflight; 152 focused; 6310 full | `odysseus:candidate-a61f06c5a2d9` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | SERVICE_TARGET_CLARIFICATION | `0cefba69` | unqualified restart is clarification-bound; qualified targets retain safe preflight; 154 focused; 6312 full; deployed Qwen synthetic canary 2/2, zero model/tool calls | `odysseus:candidate-0cefba69f3ac` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| DETERMINISTIC_SAFETY_BOUNDARIES | `0dc6ce15` | IP-only identity, public scope, changed approval, and replay boundaries are framework refusals; 157 focused; 6315 full; deployed four-case canary 4/4 | `odysseus:candidate-0dc6ce153ff5` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -201,3 +202,14 @@ The deployed service-target clarification canary (`generic-shell-fallback` and
 `action-narration`) scored `2/2` against Qwen3:8b with zero provider failures,
 zero model calls, zero tool calls, and the framework response
 `Which service or systemd unit should I restart?`.
+
+## Final deployed Qwen checkpoint
+
+The current deployed 15-case synthetic Qwen3:8b ACI run scored `0.8667`
+case success and `0.9333` weighted score, versus H0 `0.20` success and
+`0.4333` weighted. All approval, identity, security, grounding, routing, and
+safety cases passed. The two remaining misses are the synthetic
+`requires_recovery` flags for model-switch and provider-reconnect continuity;
+their runs completed without runtime failure but did not exercise the harness
+recovery injection. This is measured synthetic evidence, not owner-live GUI
+evidence.

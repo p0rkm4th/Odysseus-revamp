@@ -59,6 +59,14 @@ Current deployed runtime supersedes that candidate with source
 The deployed Qwen3:8b synthetic service-ambiguity canary passed `2/2`, with
 zero model calls and zero tool calls; owner GUI verification remains pending.
 
+The current deployed source is `0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf`,
+image `odysseus:candidate-0dc6ce153ff5`, with matching build/frontend
+provenance. Its 15-case Qwen3:8b ACI checkpoint scored `0.8667` case success
+and `0.9333` weighted versus H0 `0.20` and `0.4333` weighted. All
+security/approval/identity cases pass; only the two synthetic continuity
+recovery flags remain incomplete. This is synthetic evidence; owner GUI
+verification remains pending.
+
 ## Owner-live script
 
 1. What do you remember about me?
