@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `c9262717`, remote
+- Source head: branch `hades-aci-v1`, commit `e86345e2`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-c0a281f5`, exact runtime source
   `c0a281f5`, branch
@@ -21,6 +21,10 @@ This section supersedes older historical rows below for present-state claims.
   warnings` in 124s. This validates the infrastructure result-normalization,
   durable terminal-continuation, and live-canary telemetry changes; it does
   not change deployed-source or live-E5 claims.
+- Current matched Qwen3:8b bridge probe (16-token cap, side-effect-free): raw
+  `3.659s` vs Hades `5.462s`, total delta `1.803s`; framework preparation
+  `0.218s`, residual non-preparation/model delta `1.585s`, one model call,
+  zero tool calls and zero tool-index lookups. Diagnostic only.
 - Live E5 evidence: real deployed qwen3:8b core matrix `25/25 answers` and
   `25/25` trajectory passes, zero transport errors, zero internal leaks, and
   zero assertion failures. It covered asset ordinal references, infrastructure
