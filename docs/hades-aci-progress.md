@@ -686,3 +686,21 @@ source/root-cause checkpoint.
   action-intent gate: `94 passed, 1 warning`. This confirms the read/patch
   authority boundary remains covered while the newer semantic/fallback source
   is awaiting deployment.
+## Selective upstream harvest (2026-08-26)
+
+Bounded audit of `upstream/dev` and the requested commits. Hades semantics and
+authority remain canonical; no upstream high-level orchestration was merged.
+
+| Upstream | Classification | Result |
+|---|---|---|
+| `d0d8edf5` MLX caller-selected model | PORT | Applied at the MLX image server boundary: generation and edit requests now use only the startup-pinned model. Added local-path execution regression coverage. The reachable path was release-blocking. |
+| `adfe3ab3` Harmony tool collisions | ALREADY PRESENT | Hades already aliases `python`/`bash`/`browser` only in `llm_core` transport and reverse-maps responses; canonical Action/policy names remain unchanged. |
+| `b4d12932` empty approval replay turn | TEST-HARVEST | Hades already skips provider-visible assistant turns with neither prose nor reasoning and has replay-shape tests. No duplicate loop patch imported. |
+| `85297cee` atomic temp cleanup | ALREADY PRESENT | `core.atomic_io` already performs unconditional conservative temp cleanup in `finally`, preserving replace errors and unrelated files. |
+| `98165235` approved-task continuation | TEST-HARVEST | Existing Hades-native approval scope, durable Run continuation, and focused approval tests cover the behavior. Upstream duplicate authority/UI was rejected. |
+
+Relevant newer upstream security, auth, MCP, provider, parsing, persistence,
+and model changes through `upstream/dev` were already ancestors of Hades,
+including provider detection, session discovery, callback handling,
+Hermes/Qwen parsing, strict model routing, and external-context gates. Harvest
+focused gate: `34 passed`.

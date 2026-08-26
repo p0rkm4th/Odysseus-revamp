@@ -25,10 +25,18 @@ import secrets
 import sys
 import time
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import requests
+
+# Support both ``python -m scripts.hades_live_fuzz`` and the documented direct
+# script invocation.  The latter otherwise puts only ``scripts/`` on
+# sys.path, making the existing production-path canary module unimportable.
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 from scripts.hades_live_dogfood import (
     CASES,
@@ -76,18 +84,37 @@ def login(session: requests.Session, base_url: str, username: str, password: str
         raise RuntimeError("normal login did not establish a session")
 
 
-def bootstrap_acceptance_user(session: requests.Session, base_url: str) -> tuple[str, str]:
-    """Create an isolated non-admin acceptance user through normal auth APIs."""
+def bootstrap_acceptance_user(
+    session: requests.Session,
+    base_url: str,
+    *,
+    bootstrap_admin_password: str | None = None,
+    model_endpoint_url: str | None = None,
+) -> tuple[str, str, str]:
+    """Create an isolated non-admin acceptance user through normal auth APIs.
+
+    A container entrypoint may have already completed first-run setup using a
+    supplied admin password.  In that case ``--bootstrap-admin-password``
+    authenticates that ordinary bootstrap account; it never reads auth files
+    or manufactures a token.
+    """
     if not _is_loopback_url(base_url):
         raise RuntimeError("--bootstrap is permitted only for loopback acceptance deployments")
-    admin_password = _password()
+    admin_password = bootstrap_admin_password or _password()
     acceptance_password = _password()
-    setup = session.post(
-        f"{base_url}/api/auth/setup",
-        json={"username": BOOTSTRAP_ADMIN, "password": admin_password},
-        timeout=30,
-    )
-    _json(setup)
+    status_response = session.get(f"{base_url}/api/auth/status", timeout=30)
+    status = _json(status_response)
+    if not status.get("configured"):
+        setup = session.post(
+            f"{base_url}/api/auth/setup",
+            json={"username": BOOTSTRAP_ADMIN, "password": admin_password},
+            timeout=30,
+        )
+        _json(setup)
+    elif not bootstrap_admin_password:
+        raise RuntimeError(
+            "acceptance instance is already configured; provide --bootstrap-admin-password"
+        )
     # Setup does not issue a token; authenticate the bootstrap controller using
     # the same public login flow a real operator uses.
     login(session, base_url, BOOTSTRAP_ADMIN, admin_password)
@@ -97,10 +124,27 @@ def bootstrap_acceptance_user(session: requests.Session, base_url: str) -> tuple
         timeout=30,
     )
     _json(created)
+    endpoint_id = ""
+    if model_endpoint_url:
+        endpoint = session.post(
+            f"{base_url}/api/model-endpoints",
+            data={
+                "name": "Acceptance Ollama",
+                "base_url": model_endpoint_url,
+                "endpoint_kind": "auto",
+                "require_models": "true",
+                "shared": "true",
+            },
+            timeout=60,
+        )
+        endpoint_body = _json(endpoint, expected=(200, 201))
+        endpoint_id = str(endpoint_body.get("id") or "")
+        if not endpoint_id:
+            raise RuntimeError("acceptance model endpoint was not created")
     # Use only the least-privileged synthetic identity for the actual run.
     session.cookies.clear()
     login(session, base_url, ACCEPTANCE_USER, acceptance_password)
-    return ACCEPTANCE_USER, acceptance_password
+    return ACCEPTANCE_USER, acceptance_password, endpoint_id
 
 
 def authenticate(
@@ -110,11 +154,18 @@ def authenticate(
     username: str,
     password: str | None,
     bootstrap: bool,
-) -> str:
+    bootstrap_admin_password: str | None = None,
+    model_endpoint_url: str | None = None,
+) -> tuple[str, str | None]:
+    endpoint_id: str | None = None
     if username != ACCEPTANCE_USER:
         raise RuntimeError(f"live fuzz principal must be {ACCEPTANCE_USER!r}")
     if bootstrap:
-        username, _ = bootstrap_acceptance_user(session, base_url)
+        username, _, endpoint_id = bootstrap_acceptance_user(
+            session, base_url,
+            bootstrap_admin_password=bootstrap_admin_password,
+            model_endpoint_url=model_endpoint_url,
+        )
     else:
         if not password:
             raise RuntimeError("--password or HADES_ACCEPTANCE_PASSWORD is required without --bootstrap")
@@ -122,11 +173,66 @@ def authenticate(
     status = _json(session.get(f"{base_url}/api/auth/status", timeout=30))
     if status.get("authenticated") is not True or status.get("username") != ACCEPTANCE_USER:
         raise RuntimeError("authenticated principal is not the isolated acceptance user")
-    return username
+    return username, endpoint_id
 
 
 def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+
+def seed_acceptance_state(session: requests.Session, base_url: str) -> dict[str, int]:
+    """Seed synthetic state through owner-scoped product APIs."""
+    counts = {"memory": 0, "projects": 0, "assets": 0}
+    for text, category in (
+        ("The acceptance operator prefers concise technical explanations.", "preference"),
+        ("The acceptance operator previously used the dev branch for the project.", "history"),
+        ("The acceptance operator currently tests Hades ACI on hades-aci-v1.", "current"),
+    ):
+        response = session.post(
+            f"{base_url}/api/memory/add",
+            json={"text": text, "category": category, "source": "acceptance-fixture"},
+            timeout=30,
+        )
+        _json(response, expected=(200, 201))
+        counts["memory"] += 1
+    for title, status in (
+        ("Hades ACI acceptance", "active"),
+        ("Synthetic infrastructure review", "active"),
+        ("Archived acceptance fixture", "completed"),
+    ):
+        response = session.post(
+            f"{base_url}/api/work/projects",
+            json={"title": title, "description": "Synthetic acceptance state", "status": status, "domain": "software"},
+            timeout=30,
+        )
+        _json(response, expected=(200, 201))
+        counts["projects"] += 1
+    for name, model, gpu in (
+        ("Acceptance workstation", "Fixture Pro", "RTX Fixture 4090"),
+        ("Acceptance server", "Fixture Rack 2U", "None"),
+        ("Acceptance laptop", "Fixture Air", "Integrated"),
+        ("Acceptance backup host", "Fixture Mini", "None"),
+    ):
+        response = session.post(
+            f"{base_url}/api/inventory/items",
+            json={"name": name, "domain": "it", "item_kind": "asset", "default_unit": "each",
+                  "description": "Synthetic Hades acceptance asset", "manufacturer": "Acceptance Labs", "model": model},
+            timeout=30,
+        )
+        body = _json(response, expected=(200, 201))
+        item = body.get("item") if isinstance(body.get("item"), dict) else body
+        item_id = str((item or {}).get("id") or "")
+        if not item_id:
+            raise RuntimeError("acceptance asset creation returned no item ID")
+        detail = session.put(
+            f"{base_url}/api/inventory/assets/{item_id}",
+            json={"status": "deployed", "condition": "good", "hostname": name.lower().replace(" ", "-"),
+                  "specs": {"gpu": gpu, "fixture": True}},
+            timeout=30,
+        )
+        _json(detail, expected=(200, 201))
+        counts["assets"] += 1
+    return counts
 
 
 def compositional_variants(seed: int = 0) -> tuple[Case, ...]:
@@ -202,6 +308,9 @@ def run(
     username: str,
     password: str | None,
     bootstrap: bool,
+    bootstrap_admin_password: str | None,
+    model_endpoint_url: str | None,
+    seed_state: bool,
     suite: str,
     sample: int | None,
     seed: int,
@@ -209,8 +318,16 @@ def run(
 ) -> int:
     base_url = base_url.rstrip("/")
     http = requests.Session()
-    authenticate(http, base_url, username=username, password=password, bootstrap=bootstrap)
+    _, provisioned_endpoint_id = authenticate(
+        http, base_url, username=username, password=password, bootstrap=bootstrap,
+        bootstrap_admin_password=bootstrap_admin_password,
+        model_endpoint_url=model_endpoint_url,
+    )
+    endpoint_id = provisioned_endpoint_id or endpoint_id
     cookie = _cookie(http)
+    if bootstrap and seed_state:
+        seeded = seed_acceptance_state(http, base_url)
+        print(json.dumps({"acceptance_state_seeded": seeded}, sort_keys=True), flush=True)
     cases = list(CASES) + list(compositional_variants(seed))
     selected = select_cases(cases, suite=suite, sample=sample, seed=seed)
     results: list[dict[str, Any]] = []
@@ -264,9 +381,12 @@ def main() -> int:
     parser.add_argument("--base-url", default=os.environ.get("HADES_LIVE_BASE_URL", "http://127.0.0.1:7000"))
     parser.add_argument("--model", default=os.environ.get("HADES_LIVE_MODEL", "qwen3:8b"))
     parser.add_argument("--endpoint-id", default=os.environ.get("HADES_LIVE_ENDPOINT_ID", "e4e4196b"))
+    parser.add_argument("--model-endpoint-url", default=os.environ.get("HADES_ACCEPTANCE_MODEL_ENDPOINT", "http://host.docker.internal:11434"), help=argparse.SUPPRESS)
     parser.add_argument("--username", default=ACCEPTANCE_USER)
     parser.add_argument("--password", default=os.environ.get("HADES_ACCEPTANCE_PASSWORD"))
     parser.add_argument("--bootstrap", action="store_true", help="use normal first-run setup on an isolated unconfigured loopback instance")
+    parser.add_argument("--bootstrap-admin-password", default=os.environ.get("HADES_ACCEPTANCE_BOOTSTRAP_PASSWORD"), help=argparse.SUPPRESS)
+    parser.add_argument("--no-seed-state", action="store_true", help="skip synthetic state setup during --bootstrap")
     parser.add_argument("--suite", choices=("all", "core", "held_out", "rotating", "security"), default="all")
     parser.add_argument("--sample", type=int)
     parser.add_argument("--seed", type=int, default=0)
@@ -280,6 +400,9 @@ def main() -> int:
             username=args.username,
             password=args.password,
             bootstrap=args.bootstrap,
+            bootstrap_admin_password=args.bootstrap_admin_password,
+            model_endpoint_url=args.model_endpoint_url,
+            seed_state=not args.no_seed_state,
             suite=args.suite,
             sample=args.sample,
             seed=args.seed,
