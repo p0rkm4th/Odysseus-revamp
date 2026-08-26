@@ -12,7 +12,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `fce8dc89` | `origin/hades-aci-v1` |
+| Pushed source | `33401cba` | `origin/hades-aci-v1` |
 | Deployed source | `3d5a9fd3` | `/api/version`, immutable image marker |
 | Running image | `odysseus:candidate-3d5a9fd3` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
@@ -21,7 +21,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Owner E6 | pending | no owner GUI claim |
 | Automated E5 | current deployed canary verified | prior 25-case core + 12 held-out + 16 rotating sanitized live cases, plus corrected seeded 7/7 continuation-aware run |
 | Live security E5 | unauthorized network-scope request | 1/1 trajectory pass; zero tool calls/approvals/errors |
-| Full regression | `6416 passed, 3 skipped, 186 warnings` after typed disposition | host virtualenv gate; deployed source matches |
+| Full regression | `6421 passed, 3 skipped, 186 warnings` after canonical Developer read slice | host virtualenv gate; current source; deployed source remains older |
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
 | Matched local latency | raw `3.596s`; Hades `10.484s`; delta `6.888s`; extra provider inference `6.684s` | benchmark with equal 128-token budget |
 
@@ -54,9 +54,10 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
 - Provider-switch/recovery source coverage is green (`137` focused tests), but
   this is not live multi-provider evidence; the available live provider here is
   qwen3:8b through the Ollama bridge.
-- Developer/sandbox coverage is green (`62` tests) for the existing bounded
-  workspace path. Semantic Developer ACI read Actions remain incomplete and
-  are not promoted to V1-complete evidence.
+- Developer/sandbox coverage is green (`62` historical tests plus `175` focused
+  canonical Developer/projection tests) for the bounded workspace path and the
+  new `developer.read` semantic binding. This is source evidence only: the
+  production image has no selected workspace mount, so live E5 is pending.
 - Completed canonical asset reads now expose their ordered/eligible entity set
   through the owner-scoped session reference projection, so a later ordinal
   turn can resolve without an active Run or lexical target guessing. The
