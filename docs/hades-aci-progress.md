@@ -26,6 +26,7 @@
 | INVENTORY_READ_FAST_PATH | `0147c77a` | inventory-state semantic contract, fixture correction, 6308 full; deployed case uses one deterministic read plus answer synthesis | `odysseus:candidate-0147c77a0803` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | CONTRACT_ACTION_RETENTION | `67106c5e` | resolved planning Action survives operation-class filter; 6308 full; deployed trace records `contract_action_retained` | `odysseus:candidate-67106c5e8e8a` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | DETERMINISTIC_CONTRACT_FALLBACK | `101910d2` | bounded one-use fallback for safe resolved planning Actions; 6308 full; deployed network probe one Action/no WHY_NO_ACTION | `odysseus:candidate-101910d2b37c` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| FINAL_QWEN_CANARY | `101910d2` | deployed six-case Qwen canary `6/6`, weighted `1.0`, zero retries/provider failures; network fallback one Action | `odysseus:candidate-101910d2b37c` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -166,6 +167,13 @@ The current deployed fallback probe supersedes that intermediate observation:
 the same prose-only branch produced one framework-owned safe plan Action, no
 repetition, and no `WHY_NO_ACTION` event. Consequential execution and scope
 authorization remain downstream requirements.
+
+The current six-case deployed canary scored `6/6` with weighted score `1.0`:
+canonical grounding, network routing, shell-fallback safety, action-narration
+grounding, referent selection, and duplicate-read-loop control. It made zero
+retries and had no provider failures. Two broad service-operation cases still
+emit `WHY_NO_ACTION=MODEL_PROSE_ONLY` and remain explicit follow-up evidence;
+they produced no unsafe tool calls.
 
 ## Build/cache observation
 

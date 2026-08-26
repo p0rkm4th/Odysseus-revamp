@@ -21,6 +21,7 @@
 | Inventory read fast path | DEPLOYED/PASSIVE_LIVE_VERIFIED | `0147c77a`; deployed synthetic case completed with one deterministic `manage_assets` read and one answer-synthesis call; no runtime failure |
 | Contract Action retention | DEPLOYED/PASSIVE_LIVE_VERIFIED | `67106c5e`; deployed network trace recorded `contract_action_retained`; Qwen prose remained fail-closed |
 | Deterministic contract fallback | DEPLOYED/PASSIVE_LIVE_VERIFIED | `101910d2`; one safe framework fallback Action, no repetition, no `WHY_NO_ACTION`, no provider failure |
+| Current six-case Qwen canary | DEPLOYED/PASSIVE_LIVE_VERIFIED | `101910d2`; 6/6, weighted 1.0, zero retries/provider failures; ambiguous service prose remains fail-closed |
 | Owner GUI dogfood | OWNER_DOGFOOD_PENDING | owner-live script below; authentication and owner data remain out of automation scope |
 
 ## Final runtime checkpoint
