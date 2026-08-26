@@ -5936,7 +5936,12 @@ async def stream_agent_loop(
                 state_fingerprint=state_fingerprint(packet_state),
             )
             _aci_packet = packet
-            if _ody_general_no_tool_mode and not desired_action and not selected:
+            if (
+                not desired_action
+                and not selected
+                and str(_intent_frame_for_filter.get("domain_concept") or "") == "UNKNOWN"
+                and str(_intent_frame_for_filter.get("operation_class") or "") == "READ"
+            ):
                 # The route has no specialized capability and no candidate
                 # Action. Do not manufacture an empty bounded-decision task;
                 # the general model is the safe conversational floor.
