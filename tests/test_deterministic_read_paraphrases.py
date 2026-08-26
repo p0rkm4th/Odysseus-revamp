@@ -7,6 +7,7 @@ from benchmarks.hades_aci_metamorphic import (
     READ_PARAPHRASE_SETS,
 )
 from src.agent_loop import (
+    _canonical_asset_read_payload,
     _classify_agent_request,
     _minimal_aci_answer_messages,
     _matches_resolved_canonical_read,
@@ -59,6 +60,33 @@ def test_asset_paraphrases_converge_on_owner_safe_asset_read(query):
     assert resolved.action_id == "list"
     assert resolved.action.approval.value == "none"
     assert resolved.frame.read_explicit is True
+
+
+@pytest.mark.parametrize("query", [
+    "Tell me about the first physical one.",
+    "Tell me about the second machine.",
+])
+def test_resolved_asset_reference_projects_get_instead_of_relisting(query):
+    frame = compile_intent(query, reference_context={
+        "ordered_entities": [
+            {"ref": "PHYSICAL-001", "concept": "TECHNICAL_ASSET"},
+            {"ref": "PHYSICAL-002", "concept": "TECHNICAL_ASSET"},
+        ],
+    })
+    payload = _canonical_asset_read_payload(frame.as_dict())
+    assert payload["action"] == "get"
+    assert payload["asset"] in {"PHYSICAL-001", "PHYSICAL-002"}
+
+
+def test_ambiguous_asset_pronoun_does_not_become_lexical_target():
+    frame = compile_intent("what about that one", reference_context={
+        "ordered_entities": [
+            {"ref": "PHYSICAL-001", "concept": "TECHNICAL_ASSET"},
+            {"ref": "PHYSICAL-002", "concept": "TECHNICAL_ASSET"},
+        ],
+    })
+    assert frame.reference_resolution["status"] == "AMBIGUOUS"
+    assert frame.entity_reference is None
 
 
 @pytest.mark.parametrize("query", READ_PARAPHRASE_SETS["NETWORK_CONTEXT"])
