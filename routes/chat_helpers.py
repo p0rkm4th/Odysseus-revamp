@@ -187,13 +187,19 @@ def ensure_chat_agent_work_run(
             _normalize_operational_intent_evidence,
         )
         from src.intent_contracts import compile_intent, resolve_intent
-        from src.agent_work_bridge import ensure_agent_run, prepare_action
+        from src.agent_work_bridge import ensure_agent_run, prepare_action, recent_session_reference_context
         query = str(message or "")
         intent = _classify_agent_request([], query)
         intent = _normalize_homelab_intent(intent, query)
         intent = _normalize_operational_intent_evidence(intent, query)
         domains = set(intent.get("domains") or ())
-        frame = compile_intent(query)
+        # Only structured current-turn references may inherit a completed
+        # result. This preserves intentional ordinal/pronoun continuity while
+        # preventing unrelated new topics from inheriting stale domain state.
+        reference_context = None
+        if re.search(r"\b(?:it|that|this|those|them|the\s+(?:first|second|third)\s+one|that\s+one)\b", query, re.IGNORECASE):
+            reference_context = recent_session_reference_context(str(owner), str(session_id))
+        frame = compile_intent(query, reference_context=reference_context)
         continuation = frame.operation_class == "CONTINUE"
         canonical_domains = {
             "TECHNICAL_ASSET": "asset_inventory", "NETWORK": "network_ops",
@@ -237,11 +243,12 @@ def ensure_chat_agent_work_run(
                 "objective": query[:4000],
                 "deliverable": (
                     "verified network discovery and grounded report"
-                    if "network_ops" in domains else "verified homelab result"
+                    if "network_ops" in domains else "canonical read result"
                 ),
-                "completion_mode": "verified_run_terminal_state",
+                "completion_mode": "single_verified_read" if frame.operation_class == "READ" else "verified_run_terminal_state",
                 "intent_frame": frame.as_dict(),
             } if not continuation else None,
+            reference_context=reference_context,
         )
         # Materialize a deterministic read before contacting the model. A
         # provider/stream failure therefore leaves the semantic operation
@@ -253,6 +260,8 @@ def ensure_chat_agent_work_run(
                 payload = {"action": resolved.action_id}
                 if frame.domain_concept == "MEMORY":
                     payload["query"] = query
+                if frame.entity_reference and frame.domain_concept == "TECHNICAL_ASSET":
+                    payload = {"action": "get", "asset": frame.entity_reference}
                 prepare_action(str(owner), run_id, resolved.binding_name, payload)
         return run_id
     except Exception:

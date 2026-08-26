@@ -148,6 +148,15 @@ def test_structured_reference_ordinal_is_bounded_and_durable():
     assert resolve_structured_reference("show the third one", context)["status"] == "UNRESOLVED"
 
 
+def test_ordinal_reference_keeps_canonical_asset_identity_over_lexical_about_fragment():
+    frame = compile_intent(
+        "Tell me about the first physical one",
+        reference_context={"entities": [{"ref": "asset:strong-1", "concept": "TECHNICAL_ASSET"}]},
+    )
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.entity_reference == "asset:strong-1"
+
+
 @pytest.mark.parametrize("query", [
     "continue until the network report is complete",
     "please resume that task",

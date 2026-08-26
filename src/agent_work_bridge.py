@@ -105,6 +105,7 @@ def ensure_agent_run(
     intent: dict[str, Any] | None = None,
     continuation: bool = False,
     completion_criteria: dict[str, Any] | None = None,
+    reference_context: dict[str, Any] | None = None,
 ) -> str | None:
     """Return or create the active owner/session Run for bridged agent work."""
     owner = str(owner or "").strip()
@@ -227,6 +228,7 @@ def ensure_agent_run(
                     "model_name": model_name,
                     "model_endpoint": model_endpoint,
                 } if model_name or model_endpoint else {},
+                **({"reference_context": reference_context} if isinstance(reference_context, dict) else {}),
             },
         })
         work.transition_run(owner, run["id"], "planning", {"current_step": "intent routed to canonical capability"})
@@ -375,6 +377,9 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
                 for action in actions
             ],
         }
+        carried = (run.continuation_state or {}).get("reference_context")
+        if isinstance(carried, dict):
+            projection["reference_context"] = carried
         # Reuse the canonical durable planner for continuation decisions.  It
         # is observational here: no Action is materialized, approved, or
         # executed.  If a malformed/incomplete Run cannot be projected, keep
@@ -389,6 +394,39 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
                 "error_class": type(exc).__name__,
             }
         return projection
+
+
+def recent_session_reference_context(owner: str, session_id: str, *, limit: int = 100) -> dict[str, Any] | None:
+    """Return ordered canonical refs from the latest result in this session.
+
+    Callers must gate this projection on a structured current-turn reference;
+    this helper never infers continuity from prose or crosses owner/session
+    boundaries.
+    """
+    with SessionLocal() as db:
+        runs = (
+            db.query(WorkRun)
+            .filter(WorkRun.owner == str(owner), WorkRun.session_id == str(session_id))
+            .order_by(WorkRun.updated_at.desc()).limit(20).all()
+        )
+        for run in runs:
+            results = (
+                db.query(WorkResult)
+                .filter(WorkResult.owner == str(owner), WorkResult.run_id == run.id)
+                .order_by(WorkResult.created_at.asc(), WorkResult.id.asc()).all()
+            )
+            refs: list[dict[str, Any]] = []
+            for result in results:
+                data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
+                for item in data.get("canonical_refs", data.get("entity_refs", [])):
+                    if isinstance(item, dict):
+                        ref = str(item.get("ref") or item.get("id") or "").strip()
+                        if ref:
+                            refs.append({"ref": ref[:500], "concept": str(item.get("concept") or "").strip()[:80] or None})
+            if refs:
+                refs = refs[:max(1, int(limit))]
+                return {"entities": refs, "last": refs[-1], "source_run_id": run.id}
+    return None
 
 
 def safe_auto_continuation(
@@ -642,6 +680,16 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
             safe_data = json.loads(encoded[:100000]) if len(encoded) <= 100000 else {"truncated": True}
         except (TypeError, ValueError):
             safe_data = None
+        if isinstance(safe_data, dict) and isinstance(safe_data.get("assets"), list):
+            refs = []
+            for item in safe_data["assets"][:500]:
+                if not isinstance(item, dict):
+                    continue
+                ref = str(item.get("id") or item.get("asset_id") or "").strip()
+                if ref:
+                    refs.append({"ref": ref[:500], "concept": "TECHNICAL_ASSET"})
+            if refs:
+                safe_data = {**safe_data, "canonical_refs": refs}
         completed = work.complete_action(owner, action.id, {
             "result_reference": f"agent-tool://{action.id}",
             "result": {

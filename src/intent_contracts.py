@@ -267,7 +267,9 @@ def resolve_structured_reference(
         r"\b(?:those|them|these|all(?:\s+of)?\s+(?:the\s+)?(?:above|those|them)|"
         r"all\s+of\s+them|everything)\b", query,
     ))
-    ordinal_match = re.search(r"\b(?:the\s+)?(first|second|third)\s+one\b", query)
+    # Allow natural qualifiers ("first physical one", "second server").
+    # The ordinal remains bounded by the supplied ordered entity set.
+    ordinal_match = re.search(r"\b(?:the\s+)?(first|second|third)(?:\s+[a-z0-9_-]+){0,2}\s+one\b", query)
     singular = bool(re.search(r"\b(?:it|that|this|that\s+one)\b", query)) or bool(ordinal_match)
     if not plural and not singular:
         return {"status": "NOT_REFERENCE", "refs": [], "reason": "no structured reference phrase"}
@@ -425,7 +427,9 @@ def compile_intent(
         if len(resolved_refs) == 1 and not target:
             target = resolved_refs[0]
     match = re.search(r"\b(?:about|for|asset)\s+([A-Za-z0-9_.:-]{2,80})", text, re.IGNORECASE)
-    if match:
+    # A resolved opaque reference is stronger than a lexical fragment such as
+    # ``about first``. Never replace a server-owned identity with an ordinal.
+    if match and not target:
         target = match.group(1)
     if concept == "SERVICE" and operation == "EXECUTE" and not target:
         # A restart preflight is safe, but it is not meaningful without the

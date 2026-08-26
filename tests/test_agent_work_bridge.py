@@ -45,6 +45,25 @@ def test_agent_network_intent_creates_one_owner_session_run_and_reuses_it(monkey
         engine.dispose()
 
 
+def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-assets", "What machines do I have?",
+            intent={"domains": ["asset_inventory"], "domain_concept": "TECHNICAL_ASSET", "operation_class": "READ"},
+            completion_criteria={"completion_mode": "single_verified_read", "objective": "asset read"},
+        )
+        action_id = bridge.prepare_action("alice", run_id, "manage_assets", {"action": "list"})
+        bridge.record_result("alice", action_id, {"data": {"status": "SUCCESS", "assets": [
+            {"id": "asset:first"}, {"id": "asset:second"},
+        ]}})
+        context = bridge.recent_session_reference_context("alice", "chat-assets")
+        assert [item["ref"] for item in context["entities"]] == ["asset:first", "asset:second"]
+    finally:
+        engine.dispose()
+
+
 def test_model_swap_preserves_run_and_records_owner_scoped_history(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
