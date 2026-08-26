@@ -11,7 +11,7 @@ completion.
 | ContextEnvelope | PARTIALLY_FIXED | canonical `ContextEnvelope.from_runtime_profile` and per-ACI metrics now distinguish runtime allocation from architecture maximum; provider discovery wiring remains |
 | Token accounting incl. schemas | PARTIALLY_FIXED | nested native schema JSON is now counted by the shared estimator; runtime tokenizer calibration and provider-reported error tracking remain |
 | Output reservation | PARTIALLY_FIXED | reserve exists in compactor; requested-output coupling needs provider-aware integration |
-| Endpoint metadata cache | PARTIALLY_FIXED | cached model lists/dead-host cooldown exist; fingerprint+TTL runtime characterization remains |
+| Endpoint metadata cache | PARTIALLY_FIXED | fresh endpoint/runtime/model characterization now reuses persisted profiles before metadata calls; fingerprint refresh and active capability probes remain |
 | Global local inference lock | STILL_PRESENT | `_LOCAL_MODEL_LOCK` in `src/llm_core.py`; safe single-GPU serialization is preserved, resource scheduler deferred |
 | Multiple tool protocols | PARTIALLY_FIXED | synthetic Ollama probes show strict Decision JSON PASS and native tools PASS; runtime selection wiring and broader A/B matrix remain |
 | Reasoning/transport separation | PARTIALLY_FIXED | Decision JSON transport is isolated from free-form text and synthetic probes pass; broader negotiated runtime selection remains |
