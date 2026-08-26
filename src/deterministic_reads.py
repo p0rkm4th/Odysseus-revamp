@@ -45,12 +45,13 @@ _WORK_OWNER = re.compile(
     re.IGNORECASE,
 )
 _ASSET_SUBJECT = re.compile(
-    r"\b(?:it\s+assets?|assets?|computers?|machines?|hardware|boxes?|gear|"
+    r"\b(?:it\s+assets?|assets?|tech(?:nical)?|computers?|machines?|hardware|"
+    r"computational\s+(?:assets?|hardware)|boxes?|gear|"
     r"physical\s+(?:machines?|boxes|hosts?)|equipment|servers?)\b",
     re.IGNORECASE,
 )
 _ASSET_OWNER = re.compile(
-    r"\b(?:my|mine|i\s+(?:actually\s+)?own|do\s+i(?:\s+actually)?\s+own|do\s+i\s+have|have\s+i|"
+    r"\b(?:my|mah|mine|i\s+(?:actually\s+)?own|do\s+i(?:\s+actually)?\s+own|do\s+i\s+have|have\s+i|"
     r"i(?:'ve)?\s+got|registered|recorded\s+for\s+me|known\s+to\s+me)\b",
     re.IGNORECASE,
 )
@@ -61,9 +62,11 @@ _NETWORK_CONTEXT_DETAIL = re.compile(
     re.IGNORECASE,
 )
 _HOST_INSPECTION = re.compile(
-    r"\b(?:inspect|check|show|read)\s+(?:me\s+)?"
-    r"(?:(?:the|this|current|local)\s+){0,2}host\b|"
-    r"\btell\s+me\s+about\s+(?:(?:the|this|current|local)\s+){0,2}host\b",
+    r"\b(?:inspect|check|show|read|explore|scan)\s+(?:me\s+)?"
+    r"(?:(?:the|this|current|local|my|your)\s+){0,2}"
+    r"(?:host|system|hardware|computational\s+assets?)\b|"
+    r"\btell\s+me\s+about\s+(?:(?:the|this|current|local|my|your)\s+){0,2}"
+    r"(?:host|system|hardware|computational\s+assets?)\b",
     re.IGNORECASE,
 )
 _CURRENT_STATE = re.compile(
@@ -128,6 +131,10 @@ def deterministic_read_concept(text: str) -> str | None:
         not _READ_REQUEST.search(query)
         and not _INFRASTRUCTURE_STATUS.search(query)
         and not _HOST_INSPECTION.search(query)
+        and not (
+            _NETWORK_SUBJECT.search(query)
+            and re.search(r"\b(?:current(?:ly)?|now|figure\s+it\s+out|explore)\b", query)
+        )
     ):
         return None
     if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
@@ -177,6 +184,16 @@ def deterministic_read_concept(text: str) -> str | None:
         and re.search(r"\b(?:current(?:ly)?|active|progress|going|have|got)\b", query)
     ):
         return "WORK"
+    # A hardware exploration request is a bounded host observation, not an
+    # arbitrary scan or shell request.  Keep this ahead of the asset catalog
+    # projection so "scan your hardware" reaches inspect_host.
+    if _HOST_INSPECTION.search(query) and re.search(
+        r"\b(?:hardware|computational\s+assets?|system|host)\b",
+        query,
+    ) and re.search(r"\b(?:explore|inspect|check|scan|tell\s+me\s+about)\b", query) and not re.search(
+        r"\b(?:network|lan|subnet|service|daemon)\b", query,
+    ):
+        return "HOMELAB_HOST"
     if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
         return "TECHNICAL_ASSET"
     if _HOST_INSPECTION.search(query) and not re.search(
@@ -190,6 +207,7 @@ def deterministic_read_concept(text: str) -> str | None:
         _CURRENT_STATE.search(query)
         or re.search(r"\bwhere(?:'s|\s+is)\s+(?:hades|this\s+machine)\s+connected\b", query)
         or _NETWORK_CONTEXT_DETAIL.search(query)
+        or re.search(r"\b(?:figure\s+it\s+out|explore)\b", query)
     ):
         return "NETWORK"
     # Operational status questions share the existing harmless service-status

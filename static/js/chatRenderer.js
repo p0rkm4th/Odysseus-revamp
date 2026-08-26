@@ -2564,6 +2564,17 @@ export function addMessage(role, content, modelName, metadata) {
     const box = document.getElementById('chat-history');
     if (!box) { console.error('Chat history element not found'); return; }
 
+    // Stable database identity is the authoritative message key. History
+    // replay, reconnect finalization, and a live optimistic render can all
+    // converge here; never insert the same logical assistant result twice.
+    const stableDbId = metadata?._db_id;
+    if (stableDbId) {
+      const existing = Array.from(box.querySelectorAll('[data-db-id]')).find(
+        node => String(node.dataset.dbId || '') === String(stableDbId),
+      );
+      if (existing) return existing;
+    }
+
     // Loading a later user message means any earlier ask_user card was
     // answered.  This also removes the live card as soon as a manual reply is
     // appended, even when the user did not click one of its buttons.

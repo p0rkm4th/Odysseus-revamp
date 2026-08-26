@@ -967,15 +967,15 @@ def _normalize_operational_intent_evidence(intent, query: str):
     action = phrase(
         r"\b(?:discover|discovery|inspect|check|scan|map|inventory|enumerate|"
         r"diagnose|troubleshoot|debug|audit|probe|test|verify|measure|monitor|"
-        r"find|identify|determine|investigate|analyze|analyse|deep\s+dive|"
-        r"figure\s+out|look\s+into|run|execute|install|collect|show|list)\b"
+        r"find|identify|determine|investigate|analyze|analyse|deep\s+dive|explore|"
+        r"figure(?:\s+it)?\s+out|look\s+into|run|execute|install|collect|show|list)\b"
     ) or fuzzy({
         "discover", "discovery", "inspect", "scan", "inventory", "enumerate",
         "diagnose", "troubleshoot", "investigate", "analyze", "identify",
     })
 
     current_state_ask = phrase(
-        r"\b(?:what(?:'s|\s+is)|show\s+me|tell\s+me)\b.{0,40}"
+        r"\b(?:what(?:'s|\s+is)?|show\s+me|tell\s+me)\b.{0,40}"
         r"\b(?:my|our|your|current|this)\b"
     )
 
@@ -1000,6 +1000,7 @@ def _normalize_operational_intent_evidence(intent, query: str):
         r"\b(?:local|internal|private|home|homelab)\s+(?:network|lan|subnet)\b",
         r"\b(?:our|my|your|current|this)\s+(?:network|lan|subnet)\b",
         r"\bdirectly\s+connected\b",
+        r"\b(?:network|lan|subnet)\b.{0,32}\b(?:current(?:ly)?|right\s+now|now)\b",
         r"\bcontainer\s+(?:network|subnet|environment)\b",
         r"\bdocker\s+(?:network|bridge|subnet)\b",
         r"\b(?:lan|vlan|rfc1918)\b",
@@ -1032,7 +1033,7 @@ def _normalize_operational_intent_evidence(intent, query: str):
         not explanatory_only
         and network_actionable
         and network_specific
-        and net_score >= 7
+        and net_score >= 6
         and not public_target_only
         and (local_scope or net_core or ("network_ops" in domains))
     ):
@@ -1147,8 +1148,8 @@ def _asset_read_request(query: str) -> bool:
     if re.search(r"\b(?:add|update|remove|delete|retire|merge|record|move|change)\b", q):
         return False
     return bool(
-        re.search(r"\b(?:asset(?:s)?|cmdb|hardware|server(?:s)?|network devices?|unidentified devices?|know about)\b", q)
-        and re.search(r"\b(?:what|show|list|explain|know|have|inventory|recent(?:ly)? discovered|where)\b", q)
+        re.search(r"\b(?:asset(?:s)?|cmdb|tech(?:nical)?|hardware|computational\s+assets?|server(?:s)?|network devices?|unidentified devices?|know about)\b", q)
+        and re.search(r"\b(?:what|show|list|explain|know|have|inventory|recent(?:ly)? discovered|where|tell\s+me\s+about)\b", q)
     )
 
 
@@ -2511,9 +2512,21 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
     if _security_subject and _security_action:
         domains.add("security_audit")
 
-    if has(
+    # Topic discussion is not an execution request.  Keep pentest capability
+    # retrieval for an explicitly targeted/actionable engagement, while
+    # allowing the selected model to answer general questions about the topic
+    # according to its own provider policy.
+    _pentest_topic = has(
         r"\b(?:pentest|pen test|penetration test|vulnerability scan|security assessment|authorized security test|authorized scan|enumerate services?|service enumeration|port scan|nmap scan)\b",
-    ):
+    )
+    _pentest_target = has(
+        r"\b(?:this|that|my|our|your|the)\s+(?:host|machine|system|network|lan|server|site|target)\b",
+        r"\b(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))(?:\.\d{1,3}){2}\b",
+    )
+    _pentest_action = has(
+        r"\b(?:run|perform|execute|start|begin|launch|test|scan|enumerate|assess|probe|pentest)\b",
+    )
+    if _pentest_topic and _pentest_target and _pentest_action:
         domains.add("pentest_ops")
 
     if has(
@@ -2527,7 +2540,7 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
         r"\b(?:cpu|memory|ram|swap|load average|processes?|kernel|boot|system logs?|journal|hardware|temperature|thermal|uptime|performance)\b",
     )
     _system_action = has(
-        r"\b(?:inspect|check|diagnose|diagnosis|troubleshoot|investigate|find|show|review|health|usage|pressure|slow|high|errors?|failed|failing|why)\b",
+        r"\b(?:inspect|check|explore|scan|diagnose|diagnosis|troubleshoot|investigate|find|show|review|health|usage|pressure|slow|high|errors?|failed|failing|why)\b",
     )
     if _system_subject and _system_action:
         domains.add("system_ops")
@@ -3389,6 +3402,44 @@ def ground_action_completion(text: str, *, intent_domains, tool_events, stored_e
         return (
             "No action completed: I did not receive a valid execution Action or "
             "verified Result. A plan alone does not mean scanning is active."
+        )
+    # Current-state certainty is a separate epistemic contract from generic
+    # command success. A successful plan/approval event does not establish
+    # that a network is healthy, reachable, stable, or free of alerts. Only a
+    # compatible observation (or explicitly marked durable canonical evidence)
+    # may support those claims.
+    current_state_claim = bool(re.search(
+        r"\b(?:observed|currently|current|verified|healthy|online|reachable|"
+        r"stable|no\s+(?:active\s+)?alerts?|no\s+anomal(?:y|ies)|running)\b",
+        str(text or ""), re.IGNORECASE,
+    ))
+    observational_actions = {
+        "read_network_context", "read_network_observations", "inspect_host",
+        "service_status", "discovery_status", "list_unidentified_hosts",
+        "infer_role_hypotheses", "summarize_owner_memory", "list", "get",
+    }
+    observed_result = bool(stored_evidence) or any(
+        action in observational_actions
+        and any(
+            isinstance(event, dict)
+            and not event.get("ask_user")
+            and (event.get("verified") is True or event.get("success") is True or event.get("exit_code") == 0)
+            for event in (tool_events or [])
+        )
+        for action in executed_actions
+    )
+    if (
+        current_state_claim
+        and set(intent_domains or set()) & {
+            "network_ops", "homelab", "system_ops", "storage_ops",
+            "container_ops", "asset_inventory",
+        }
+        and not observed_result
+        and not (active_execution_claim and any(action.startswith("execute_") for action in executed_actions))
+    ):
+        return (
+            "I don't have a verified current observation for that claim yet. "
+            "I can perform the bounded read or report the fact as unknown."
         )
     evidence_prose = bool(re.search(
         r"\b(?:current|latest|inventory|asset|report|updated|physical|virtual|"

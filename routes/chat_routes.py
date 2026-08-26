@@ -6,6 +6,7 @@ import os
 import re
 import time
 import logging
+import uuid
 from datetime import datetime
 from typing import Dict, Any, AsyncGenerator, List, Optional
 
@@ -956,6 +957,12 @@ def setup_chat_routes(
             or (body or {}).get("selected_endpoint_id")
             or ""
         ).strip()
+        turn_id = str(
+            request.headers.get("X-Odysseus-Turn-Id")
+            or form_data.get("turn_id")
+            or (body or {}).get("turn_id")
+            or uuid.uuid4().hex
+        ).strip()[:128]
         # Issue #3229: API callers send JSON, not FormData.  Read from the
         # JSON body as fallback so callers who send {"allow_bash": true}
         # actually get bash enabled.
@@ -1054,6 +1061,30 @@ def setup_chat_routes(
                 _tool_intent.category,
                 _tool_intent.reason,
             )
+        # Owner capability reads are also agent turns when the composer is in
+        # plain chat mode.  The semantic compiler selects only the bounded
+        # existing binding (manage_assets/manage_homelab); this does not expose
+        # arbitrary shell access or turn a sensitive topic into an action.
+        if chat_mode == "chat" and isinstance(message, str):
+            try:
+                from src.intent_contracts import compile_intent
+                _owner_frame = compile_intent(message)
+                if (
+                    _owner_frame.domain_concept in {"TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK"}
+                    and (
+                        _owner_frame.read_explicit
+                        or _owner_frame.operation_class in {"EXECUTE", "RESEARCH"}
+                    )
+                ):
+                    chat_mode = "agent"
+                    auto_escalated = True
+                    logger.info(
+                        "chat→agent auto-escalation: bounded owner capability concept=%s operation=%s",
+                        _owner_frame.domain_concept,
+                        _owner_frame.operation_class,
+                    )
+            except Exception:
+                logger.debug("owner capability auto-escalation unavailable", exc_info=True)
         elif chat_mode == "chat" and _search_enabled:
             chat_mode = "agent"
             auto_escalated = True
@@ -1638,7 +1669,7 @@ def setup_chat_routes(
             web_sources = ctx.web_sources
 
             # Register active stream for partial-save safety net
-            _active_streams[session] = {"status": "streaming", "partial": "", "query": message, "is_research": effective_do_research, "mode": _effective_mode}
+            _active_streams[session] = {"status": "streaming", "partial": "", "query": message, "is_research": effective_do_research, "mode": _effective_mode, "turn_id": turn_id}
 
             # The client sent a workspace the server refused to bind (deleted
             # folder, file path, sensitive dir, filesystem root). Tell it up
@@ -2198,6 +2229,7 @@ def setup_chat_routes(
                                     _terminal_metrics,
                                     character_name=ctx.preset.character_name,
                                     incognito=incognito,
+                                    turn_id=turn_id,
                                 )
                                 accumulate_token_usage(session, _terminal_metrics)
                                 _chat_terminal_saved = True
@@ -2270,6 +2302,7 @@ def setup_chat_routes(
                                     used_memories=ctx.used_memories,
                                     do_research=effective_do_research,
                                     incognito=incognito,
+                                    turn_id=turn_id,
                                 )
                                 if _saved_id:
                                     yield f'data: {json.dumps({"type": "message_saved", "id": _saved_id})}\n\n'
@@ -2498,6 +2531,7 @@ def setup_chat_routes(
                                             rag_sources=ctx.rag_sources,
                                             used_memories=ctx.used_memories,
                                             incognito=incognito,
+                                            turn_id=turn_id,
                                         )
                                         _terminal_saved = True
                                         accumulate_token_usage(session, terminal_metadata)
@@ -2546,6 +2580,7 @@ def setup_chat_routes(
                                     rag_sources=ctx.rag_sources,
                                     used_memories=ctx.used_memories,
                                     incognito=incognito,
+                                    turn_id=turn_id,
                                 )
                                 if _saved_id:
                                     yield f'data: {json.dumps({"type": "message_saved", "id": _saved_id})}\n\n'

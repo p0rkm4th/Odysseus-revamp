@@ -1428,6 +1428,7 @@ def save_assistant_response(
     do_research: bool = False,
     tool_events: list = None,
     incognito: bool = False,
+    turn_id: str | None = None,
 ):
     """Add assistant response to session history.
 
@@ -1436,6 +1437,9 @@ def save_assistant_response(
     private enough.
     """
     md = dict(last_metrics) if last_metrics else {}
+    logical_turn_id = str(turn_id or md.get("turn_id") or "").strip()
+    if logical_turn_id:
+        md["turn_id"] = logical_turn_id
     def _model_value(value) -> str:
         if value is None:
             return ""
@@ -1477,6 +1481,19 @@ def save_assistant_response(
     if incognito:
         _append_incognito_message(session_id, "assistant", _content, md)
         return None
+    if logical_turn_id:
+        for existing in reversed(getattr(sess, "history", []) or []):
+            existing_md = getattr(existing, "metadata", None)
+            if (
+                getattr(existing, "role", None) == "assistant"
+                and isinstance(existing_md, dict)
+                and str(existing_md.get("turn_id") or "").strip() == logical_turn_id
+            ):
+                logger.warning(
+                    "Suppressing duplicate assistant persistence turn_id=%s session=%s",
+                    logical_turn_id[:16], session_id,
+                )
+                return existing_md.get("_db_id")
     sess.add_message(ChatMessage("assistant", _content, metadata=md))
 
     from core.database import update_session_last_accessed

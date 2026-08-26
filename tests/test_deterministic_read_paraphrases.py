@@ -22,6 +22,66 @@ from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
 
+@pytest.mark.parametrize("query", [
+    "tell me about my hardware",
+    "Please explore my current hardware",
+    "i need you to like, scan your hardware",
+])
+def test_owner_hardware_language_projects_to_bounded_host_inspection(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.frame.domain_concept == "HOMELAB_HOST"
+    assert resolved.frame.operation_class == "READ"
+    assert resolved.action_id == "inspect_host"
+    assert resolved.binding_name == "manage_homelab"
+    assert resolved.action.approval.value == "none"
+    assert resolved.frame.target is None
+
+
+def test_owner_technical_asset_language_is_not_a_host_identifier():
+    for query in (
+        "tell me about my tech",
+        "what about mah hardware? what kinda computational assets do i have?",
+    ):
+        frame = compile_intent(query)
+        assert frame.domain_concept == "TECHNICAL_ASSET"
+        assert frame.target is None
+        assert resolve_intent(frame).action_id == "list"
+
+
+@pytest.mark.parametrize("query", [
+    "What all is on my network? do a discovery dive?",
+    "tell me about the network, do a deep dive discovery mission to tell me whats going on",
+    "map the devices on our current network",
+])
+def test_owner_discovery_language_creates_bounded_network_objective(query):
+    frame = compile_intent(query)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "EXECUTE"
+    assert frame.target is None
+    assert resolve_intent(frame).action_id == "plan_network_discovery"
+    assert "network_scope_requires_authorization" in frame.constraints
+
+
+def test_current_network_figure_it_out_is_context_read_not_discovery():
+    frame = compile_intent("the network we're currently on, figure it out")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "READ"
+    assert frame.read_explicit is True
+    assert frame.filters["view"] == "context"
+    assert resolved.action_id == "read_network_context"
+
+
+def test_content_topic_does_not_create_hades_pentest_action_without_target():
+    from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence
+    for query in ("Explain pentesting", "can you help me pentest?"):
+        intent = _classify_agent_request([], query)
+        intent = _normalize_operational_intent_evidence(intent, query)
+        assert "pentest_ops" not in intent["domains"]
+    targeted = _classify_agent_request([], "Pentest this host; it is mine")
+    assert "pentest_ops" in targeted["domains"]
+
+
 @pytest.mark.parametrize("query", READ_PARAPHRASE_SETS["MEMORY"])
 def test_owner_memory_paraphrases_converge_before_model_selection(query):
     frame = compile_intent(query)
