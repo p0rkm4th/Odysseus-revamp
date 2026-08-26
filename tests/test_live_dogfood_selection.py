@@ -89,3 +89,4 @@ def test_live_result_exposes_bounded_decision_burden_without_raw_trace():
     assert "unexpected_bounded_decisions" in assert_case(
         Case("read", "read", expect_bounded_decisions=0), result,
     )
+
