@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import re
 import json
+import os
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from src.memory import MemoryStoreUnreadable
+from src.deterministic_reads import deterministic_read_concept
 
 
 _EXPLICIT_MEMORY_RE = re.compile(
@@ -34,7 +36,11 @@ _WORK_RE = re.compile(r"\b(?:work|job|career|professional|employment|homelab)\b"
 
 def is_explicit_memory_query(text: str) -> bool:
     """Return true only for an owner asking to inspect stored memory."""
-    return bool(_EXPLICIT_MEMORY_RE.search(str(text or "").strip()))
+    query = str(text or "").strip()
+    return bool(
+        _EXPLICIT_MEMORY_RE.search(query)
+        or deterministic_read_concept(query) == "MEMORY"
+    )
 
 
 def memory_query_kind(text: str) -> str:
@@ -123,7 +129,8 @@ def build_explicit_memory_result(memory_manager: Any, owner: Optional[str], quer
     }
 
 
-def build_runtime_self_state(model: str = "", endpoint: str = "") -> Dict[str, Any]:
+def build_runtime_self_state(model: str = "", endpoint: str = "", *,
+                             source_commit: str = "", active_branch: str = "") -> Dict[str, Any]:
     """Return a small derived runtime fact set for Memory reconciliation.
 
     This is not a second truth store.  It describes the provider/model that is
@@ -132,6 +139,8 @@ def build_runtime_self_state(model: str = "", endpoint: str = "") -> Dict[str, A
     """
     model_name = str(model or "").strip()
     endpoint_name = str(endpoint or "").strip()
+    source = str(source_commit or os.getenv("ODYSSEUS_SOURCE_COMMIT") or "").strip()
+    branch = str(active_branch or os.getenv("ODYSSEUS_SOURCE_BRANCH") or "").strip()
     endpoint_lower = endpoint_name.lower()
     if "ollama" in endpoint_lower or ":11434" in endpoint_lower:
         provider = "ollama"
@@ -142,9 +151,11 @@ def build_runtime_self_state(model: str = "", endpoint: str = "") -> Dict[str, A
     else:
         provider = "unknown"
     return {
-        "active": bool(model_name or endpoint_name),
+        "active": bool(model_name or endpoint_name or source or branch),
         "model": model_name or "unknown",
         "provider": provider,
+        "source_commit": source,
+        "active_branch": branch,
         "source": "current_runtime",
     }
 
@@ -184,6 +195,18 @@ def project_explicit_memory_result(
             reason = f"current runtime is actively serving model {model_name}"
         elif state.get("active") and "chatgpt subscription backend" in lowered and provider == "ollama":
             reason = "current runtime provider is Ollama"
+        elif state.get("active") and re.search(
+            r"\b(?:current(?:ly)?\s+)?(?:on|using|working\s+from)\s+(?:the\s+)?"
+            r"[a-z0-9._/-]+\s+branch\b|\bcurrent\s+(?:branch|commit|head)\b",
+            lowered,
+        ) and (state.get("active_branch") or state.get("source_commit")):
+            if state.get("active_branch"):
+                reason = f"current canonical branch is {state['active_branch']}"
+            else:
+                reason = (
+                    "current deployment source is "
+                    f"{str(state.get('source_commit'))[:12]}; remembered branch state is historical"
+                )
         record = {
             "ref": str(row.get("id") or ""),
             "category": str(row.get("category") or "fact"),
@@ -191,13 +214,31 @@ def project_explicit_memory_result(
             "text": text,
             "epistemic_type": "HISTORICAL" if reason else "REMEMBERED",
             "stale": bool(row.get("stale", False)) or bool(reason),
+            "pinned": bool(row.get("pinned", False)),
+            "contradicted": bool(reason),
         }
         records.append(record)
         if reason:
             contradictions.append({"ref": record["ref"], "reason": reason})
 
-    # Keep pinned/current-looking records first, then preserve canonical order.
-    records.sort(key=lambda row: (not bool(row.get("stale")), row.get("category") != "preference"))
+    # Current evidence leads the answer, but a contradiction is T0 state and
+    # must not disappear merely because many current records consume the L1
+    # budget. Keep a small current lead, then contradicted history, followed by
+    # the remaining current and ordinary historical records.
+    current_records = [row for row in records if not row.get("stale")]
+    current_records.sort(key=lambda row: (
+        not bool(row.get("pinned")),
+        row.get("category") != "preference",
+    ))
+    contradicted_records = [row for row in records if row.get("stale") and row.get("contradicted")]
+    historical_records = [row for row in records if row.get("stale") and not row.get("contradicted")]
+    current_lead = min(8, len(current_records))
+    records = (
+        current_records[:current_lead]
+        + contradicted_records
+        + current_records[current_lead:]
+        + historical_records
+    )
     budget = max(1000, int(max_chars or 7000))
     bounded: list[dict[str, Any]] = []
     used = 0
@@ -259,6 +300,12 @@ def render_memory_result_projection(
             f"provider={state.get('provider', 'unknown')}; model={state.get('model', 'unknown')} "
             "(current runtime evidence supersedes contradictory historical claims)."
         )
+        if state.get("active_branch") or state.get("source_commit"):
+            lines.append(
+                "CURRENT DEPLOYMENT STATE: "
+                f"branch={state.get('active_branch') or 'not projected'}; "
+                f"source_commit={str(state.get('source_commit') or 'unknown')[:12]}."
+            )
     contradictions = projection.get("contradictions") or []
     if contradictions:
         lines.append(

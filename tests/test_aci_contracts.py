@@ -1,6 +1,7 @@
 from src.aci import (
     ACIProfile, AgentTaskPacket, ActionCard, CompletionContract,
     ContextEnvelope, DecisionMode, ObjectiveSpec, WorkingSet,
+    PostResultState, classify_post_result,
     adaptive_shortlist, hard_filter_actions, model_burden,
     parse_decision_json, state_fingerprint,
 )
@@ -79,3 +80,19 @@ def test_objective_and_burden_are_machine_state_not_prose():
     metrics = model_burden(framework=7, model=2, labels={"reference": "FRAMEWORK"})
     assert metrics["model_ratio"] == 0.2222
     assert state_fingerprint({"x": 1}) == state_fingerprint({"x": 1})
+
+
+def test_post_result_state_does_not_reenter_decision_for_sufficient_canonical_read():
+    assert classify_post_result(
+        {"status": "SUCCESS_WITH_DATA", "exit_code": 0}, canonical_read=True,
+    ) is PostResultState.COMPLETE_AFTER_ANSWER
+    assert classify_post_result(
+        {"status": "SUCCESS_WITH_DATA", "exit_code": 0},
+        canonical_read=True, unresolved_required_information=True,
+    ) is PostResultState.NEEDS_CONTEXT
+    assert classify_post_result(
+        {"status": "SUCCESS", "exit_code": 0}, canonical_read=False,
+    ) is PostResultState.NEEDS_BOUNDED_REASONING
+    assert classify_post_result(
+        {"approval_required": True}, canonical_read=True,
+    ) is PostResultState.NEEDS_APPROVAL
