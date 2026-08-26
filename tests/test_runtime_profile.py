@@ -8,6 +8,8 @@ from src.runtime_profile import (
     runtime_profile_key,
     select_evidence,
     characterize_ollama,
+    negotiated_decision_protocol,
+    probe_ollama_decision_json,
 )
 
 
@@ -115,6 +117,62 @@ def test_probe_record_is_empirical_and_does_not_mutate_original():
     assert "decision_json" not in profile.capabilities
     assert updated.supports("decision_json")
     assert updated.capabilities["decision_json"].source == "capability_probe"
+
+
+def test_negotiated_decision_protocol_requires_fresh_empirical_support():
+    now = __import__("time").time()
+    unknown = RuntimeCapabilityProfile("e", "ollama-chat", "ollama", "qwen3:8b")
+    native = RuntimeCapabilityProfile(
+        "e", "ollama-chat", "ollama", "qwen3:8b", refreshed_at=now,
+        capabilities={"native_tools": CapabilityEvidence("pass", "capability_probe", now)},
+    )
+    strict = native.with_probe("decision_json", "pass")
+    assert negotiated_decision_protocol(unknown) == "TEXTUAL_JSON_FALLBACK"
+    assert negotiated_decision_protocol(native) == "VERIFIED_NATIVE_TOOL_CALL"
+    assert negotiated_decision_protocol(strict) == "STRICT_DECISION_JSON"
+
+
+def test_ollama_decision_probe_is_bounded_sanitized_and_cached(monkeypatch, tmp_path):
+    class Response:
+        headers = {"x-ollama-version": "0.11-test"}
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {
+                "digest": "digest-1",
+                "capabilities": ["completion"],
+                "details": {"context_length": 40960},
+            }
+
+    class ProbeResponse(Response):
+        def json(self):
+            return {"message": {"content": '{"decision":"ANSWER"}'}}
+
+    calls = []
+    def fake_post(url, **kwargs):
+        calls.append((url, kwargs.get("json")))
+        return ProbeResponse() if url.endswith("/api/chat") else Response()
+
+    monkeypatch.setattr("src.runtime_profile.httpx.post", fake_post)
+    cache = RuntimeProfileCache(tmp_path / "profiles.json")
+    first = probe_ollama_decision_json(
+        "http://127.0.0.1:11434", "qwen3:8b", endpoint_id="test", cache=cache,
+    )
+    second = probe_ollama_decision_json(
+        "http://127.0.0.1:11434", "qwen3:8b", endpoint_id="test", cache=cache,
+    )
+    assert negotiated_decision_protocol(first) == "STRICT_DECISION_JSON"
+    assert second.key == first.key
+    assert [url for url, _ in calls].count("http://127.0.0.1:11434/api/chat") == 1
+    probe_payload = next(payload for url, payload in calls if url.endswith("/api/chat"))
+    assert probe_payload["think"] is False
+    assert probe_payload["stream"] is False
+    assert probe_payload["options"]["num_predict"] == 16
+    stored = cache.load(first.key)
+    assert stored is not None
+    evidence = stored.capabilities["decision_json"].evidence
+    assert evidence["side_effects"] is False
+    assert "content" not in evidence
 
 
 def test_sanitized_protocol_probe_fixture_has_no_execution_authority():

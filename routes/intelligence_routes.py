@@ -144,7 +144,7 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
     async def hades_runtime_profile(request: Request):
         """Return sanitized runtime/model evidence for Control Center diagnostics."""
         value = owner(request)
-        from src.runtime_profile import RuntimeProfileCache
+        from src.runtime_profile import RuntimeProfileCache, negotiated_decision_protocol
         profiles = []
         for profile in RuntimeProfileCache().all():
             profiles.append({
@@ -164,6 +164,7 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
                 "capabilities": {
                     name: evidence.to_dict() for name, evidence in profile.capabilities.items()
                 },
+                "negotiated_decision_protocol": negotiated_decision_protocol(profile),
                 "fresh": profile.is_fresh(),
                 "refreshed_at": profile.refreshed_at,
             })
