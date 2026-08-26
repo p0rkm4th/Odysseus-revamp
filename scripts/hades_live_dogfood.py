@@ -36,6 +36,7 @@ class Case:
     expect_completion: bool | None = None
     expect_fallback: bool | None = None
     max_tools: int | None = None
+    split: str = "core"
 
 
 CASES = [
@@ -83,6 +84,48 @@ CASES = [
     Case("contamination_assets", "What machines do I own?", "continuation", "contamination", "contamination"),
     Case("contamination_general", "Why do cats knock things off tables?", "continuation", "contamination", "contamination"),
 ]
+
+
+def select_cases(
+    cases: list[Case] | tuple[Case, ...],
+    *,
+    suite: str = "all",
+    sample: int | None = None,
+    seed: int = 0,
+    session_mode: str = "declared",
+) -> list[Case]:
+    """Select a reproducible live set without changing case semantics.
+
+    ``declared`` preserves intentional continuation groups.  ``fresh`` forces
+    every case into its own session, which is useful for contamination checks;
+    ``continuation`` preserves groups and rejects no cases.  Selection is
+    deterministic so a failing rotating set can be replayed by seed.
+    """
+    import random
+
+    if session_mode not in {"declared", "fresh", "continuation"}:
+        raise ValueError(f"unknown session mode: {session_mode}")
+    selected = list(cases)
+    if suite not in {"all", "core", "held_out", "rotating", "security"}:
+        raise ValueError(f"unknown suite: {suite}")
+    if suite == "security":
+        selected = [case for case in selected if case.family == "security"]
+    elif suite in {"core", "held_out"}:
+        # The current live set is intentionally small; classify the stable
+        # regressions as core and let rotating select the remainder.
+        selected = [case for case in selected if (suite == "core" or case.family in {
+            "fallback", "negative_near_miss", "contamination", "continuation_empty"
+        })]
+    elif suite == "rotating":
+        selected = [case for case in selected if case.family not in {"golden"}]
+    if sample is not None:
+        if sample < 1:
+            raise ValueError("sample must be positive")
+        random.Random(seed).shuffle(selected)
+        selected = selected[:sample]
+    if session_mode == "fresh":
+        selected = [Case(**{**case.__dict__, "mode": "fresh", "group": None}) for case in selected]
+    return selected
 
 
 def digest(value: str) -> str:
@@ -181,13 +224,22 @@ def main() -> int:
     parser.add_argument("--base-url", default=os.environ.get("HADES_LIVE_BASE_URL", "http://127.0.0.1:7000"))
     parser.add_argument("--cookie", default=os.environ.get("HADES_LIVE_COOKIE"))
     parser.add_argument("--output", default="/tmp/hades-live-dogfood.json")
+    parser.add_argument("--suite", choices=("all", "core", "held_out", "rotating", "security"), default="all")
+    parser.add_argument("--sample", type=int)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--fresh-sessions", action="store_true")
+    parser.add_argument("--continuation-sessions", action="store_true")
     args = parser.parse_args()
     if not args.cookie:
         raise SystemExit("HADES_LIVE_COOKIE or --cookie is required")
 
+    if args.fresh_sessions and args.continuation_sessions:
+        raise SystemExit("choose at most one of --fresh-sessions and --continuation-sessions")
+    session_mode = "fresh" if args.fresh_sessions else ("continuation" if args.continuation_sessions else "declared")
+    selected_cases = select_cases(CASES, suite=args.suite, sample=args.sample, seed=args.seed, session_mode=session_mode)
     results: list[dict[str, Any]] = []
     sessions: dict[str, str] = {}
-    for case in CASES:
+    for case in selected_cases:
         if case.mode == "continuation" and case.group:
             session_id = sessions.get(case.group)
             if session_id is None:
@@ -211,6 +263,9 @@ def main() -> int:
 
     summary = {
         "case_count": len(results),
+        "suite": args.suite,
+        "seed": args.seed,
+        "session_mode": session_mode,
         "answer_success": sum(bool(r.get("answer_present")) for r in results),
         "trajectory_pass": sum(not r.get("assertion_failures") for r in results),
         "internal_leaks": sum(bool(r.get("internal_leak")) for r in results),

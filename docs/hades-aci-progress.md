@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `cfbe6244`, remote
+- Source head: branch `hades-aci-v1`, commit `148f6fee`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-cfbe6244`, image
   `sha256:43209c7211269e6b4a7268105057122dcd5991526bdee3c6c7373307d7b8f159`,
@@ -40,6 +40,10 @@ This section supersedes older historical rows below for present-state claims.
   conflicts.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
+- Remote checkpoint: `origin/hades-aci-v1` is synchronized at `148f6fee`.
+- Live canary tooling now supports reproducible family/suite selection,
+  seeded samples, and explicit fresh versus intentional-continuation session
+  modes; selection tests pass without changing runtime authority or execution.
 - Latest security/control-plane slice: `305 passed, 1 warning`, covering
   approvals, exact action scope, verified execution, external-context gating,
   control-plane safety, security regressions, and outbound URL safety.
