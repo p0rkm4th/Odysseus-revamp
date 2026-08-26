@@ -93,6 +93,15 @@ _GENERAL_EXPLANATION = re.compile(
     re.IGNORECASE,
 )
 
+# Discourse markers are semantic noise, not routing vocabulary.  Normalize a
+# bounded prefix so ordinary conversation ("alright, what am I working on?")
+# reaches the same predicates as the terse form without adding sentence-specific
+# routes.
+_DISCOURSE_PREFIX = re.compile(
+    r"^(?:(?:okay|ok|alright|so|like|uh|um|well|anyway|hey)\b[\s,]*)+",
+    re.IGNORECASE,
+)
+
 
 def _normalized(text: str) -> str:
     value = str(text or "").strip().casefold().replace("’", "'")
@@ -104,7 +113,8 @@ def _normalized(text: str) -> str:
         "yuo": "you", "teh": "the", "wht": "what",
     }
     value = re.sub(r"\b[^\s]+\b", lambda match: tokens.get(match.group(0), match.group(0)), value)
-    return re.sub(r"\s+", " ", value).strip(" .?!")
+    value = re.sub(r"\s+", " ", value).strip(" .?!")
+    return _DISCOURSE_PREFIX.sub("", value).strip(" .?!")
 
 
 def deterministic_read_concept(text: str) -> str | None:
