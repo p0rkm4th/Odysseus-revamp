@@ -109,6 +109,20 @@ def test_current_network_paraphrases_converge_on_context_read_not_discovery(quer
 
 
 @pytest.mark.parametrize("query", [
+    "What is my default route?",
+    "What interface is carrying traffic?",
+    "What is the current network context?",
+    "What subnet am I on?",
+])
+def test_network_context_detail_paraphrases_use_host_context_read(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "NETWORK"
+    assert resolved.frame.filters["view"] == "context"
+    assert resolved.action_id == "read_network_context"
+
+
+@pytest.mark.parametrize("query", [
     "Remind me what I've got going.",
     "What have I got going on?",
     "What's keeping me busy?",

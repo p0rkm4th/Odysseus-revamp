@@ -614,3 +614,9 @@ source/root-cause checkpoint.
   resolution and execution. Continuation/control-plane gate: `202 passed`.
   The source checkpoint is not yet deployed because storage preflight remains
   closed.
+
+- The next semantic-family slice routes default-route, interface, subnet, and
+  current-context wording through the existing host-network-context read, and
+  recognizes recorded/known-for-me asset inventory language. Focused gate:
+  `161 passed`. No new authority or discovery path was introduced; deployment
+  remains pending the storage preflight.

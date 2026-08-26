@@ -50,10 +50,15 @@ _ASSET_SUBJECT = re.compile(
 )
 _ASSET_OWNER = re.compile(
     r"\b(?:my|mine|i\s+(?:actually\s+)?own|do\s+i(?:\s+actually)?\s+own|do\s+i\s+have|have\s+i|"
-    r"i(?:'ve)?\s+got|registered)\b",
+    r"i(?:'ve)?\s+got|registered|recorded\s+for\s+me|known\s+to\s+me)\b",
     re.IGNORECASE,
 )
 _NETWORK_SUBJECT = re.compile(r"\b(?:network|lan|connection|connected)\b", re.IGNORECASE)
+_NETWORK_CONTEXT_DETAIL = re.compile(
+    r"\b(?:default\s+route|interface\s+(?:carrying|has|is)|"
+    r"network\s+context|subnet|where\s+am\s+i\s+connected)\b",
+    re.IGNORECASE,
+)
 _CURRENT_STATE = re.compile(
     r"\b(?:current(?:ly)?|right\s+now|now|network\s+context|am\s+i\s+on|connected\s+to|"
     r"where\s+am\s+i\s+connected)\b",
@@ -155,9 +160,13 @@ def deterministic_read_concept(text: str) -> str | None:
         return "WORK"
     if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
         return "TECHNICAL_ASSET"
-    if re.search(r"\b(?:network|lan|wifi|wi-fi|connection|connected)\b", query) and (
+    if (
+        re.search(r"\b(?:network|lan|wifi|wi-fi|connection|connected)\b", query)
+        or _NETWORK_CONTEXT_DETAIL.search(query)
+    ) and (
         _CURRENT_STATE.search(query)
         or re.search(r"\bwhere(?:'s|\s+is)\s+(?:hades|this\s+machine)\s+connected\b", query)
+        or _NETWORK_CONTEXT_DETAIL.search(query)
     ):
         return "NETWORK"
     # Operational status questions share the existing harmless service-status
@@ -178,6 +187,8 @@ def deterministic_read_view(text: str, concept: str | None) -> str | None:
     """Return a semantic view over an existing DomainContract, when evident."""
     query = _normalized(text)
     if concept == "NETWORK" and _CURRENT_STATE.search(query):
+        return "context"
+    if concept == "NETWORK" and _NETWORK_CONTEXT_DETAIL.search(query):
         return "context"
     if concept == "NETWORK" and re.search(r"\bwhere(?:'s|\s+is)\s+(?:hades|this\s+machine)\s+connected\b", query):
         return "context"
