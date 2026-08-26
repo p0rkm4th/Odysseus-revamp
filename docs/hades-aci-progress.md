@@ -4,11 +4,11 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `702c34e8`, remote
+- Source head: branch `hades-aci-v1`, commit `1f1f8f4d`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed runtime: `odysseus:candidate-702c34e8`, source-only overlay based on
+- Deployed runtime: `odysseus:candidate-1f1f8f4d`, source-only overlay based on
   `sha256:cfa080d16454a271c7b70e381bd4a947f48d9bd8b665ffef4a6e6d5543590ca3`,
-  exact runtime source `702c34e8`, branch
+  exact runtime source `1f1f8f4d`, branch
   `hades-aci-v1`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
@@ -27,6 +27,9 @@ This section supersedes older historical rows below for present-state claims.
   one authority-free model answer with zero tool calls, zero tool-index
   lookups, and no internal leakage. A fresh-session replacement core matrix
   is in progress and will be recorded only after its sanitized report ends.
+- Durable continuation fix: terminal/blocked durable Run state now transitions
+  directly to answer-only completion instead of re-entering bounded Action
+  selection; the continuation/intent/loop focused gate is `177 passed`.
 - Follow-up live E5 evidence on the same source-matched image: seeded held-out
   slice `12/12` and rotating slice `16/16` trajectory passes, both with zero
   errors and zero internal leaks. Across all three runs: `53/53` trajectory
@@ -93,7 +96,7 @@ This section supersedes older historical rows below for present-state claims.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
 - Remote checkpoint: `origin/hades-aci-v1` is synchronized through source
-  checkpoint `702c34e8`; this documentation commit records that source/deploy
+  checkpoint `1f1f8f4d`; this documentation commit records that source/deploy
   distinction without requiring a rebuild.
 - Live canary tooling now supports reproducible family/suite selection,
   seeded samples, and explicit fresh versus intentional-continuation session

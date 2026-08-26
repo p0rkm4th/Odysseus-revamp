@@ -12,9 +12,9 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `702c34e8` | `origin/hades-aci-v1` |
-| Deployed source | `702c34e8` | `/api/version`, immutable image marker |
-| Running image | `odysseus:candidate-702c34e8` | Docker inspect |
+| Pushed source | `1f1f8f4d` | `origin/hades-aci-v1` |
+| Deployed source | `1f1f8f4d` | `/api/version`, immutable image marker |
+| Running image | `odysseus:candidate-1f1f8f4d` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
 | API | healthy | `/api/health` |
 | Broker | active; socket present | systemd/socket check |
@@ -22,7 +22,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Automated E5 | current deployed canary verified | prior 25-case core + 12 held-out + 16 rotating sanitized live cases, plus corrected seeded 7/7 continuation-aware run |
 | Live security E5 | unauthorized network-scope request | 1/1 trajectory pass; zero tool calls/approvals/errors |
 | Full regression | `6422 passed, 3 skipped, 186 warnings` | host virtualenv gate; source before the final fallback guard |
-| Current focused gate | `122 passed` continuation/infrastructure/reference; `82 passed` fallback/workspace seam | pytest logs |
+| Current focused gate | `177 passed` continuation/intent/loop; `122 passed` infrastructure/reference; `82 passed` fallback/workspace seam | pytest logs |
 | Matched local latency | raw `3.596s`; Hades `10.484s`; delta `6.888s`; extra provider inference `6.684s` | benchmark with equal 128-token budget |
 
 The running process is source-matched through the immutable image marker and
@@ -85,6 +85,9 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
   false Cookbook/developer route for ordinary imperatives; focused coverage is
   green (`82 passed`), and the deployed targeted live check used zero tools and
   zero index lookups.
+- Terminal/blocked durable continuation is now an explicit answer-only
+  disposition. It preserves the durable state explanation and prevents a
+  completed or unavailable Run from re-entering model Action selection.
 
 ## Required metrics and present evidence
 
