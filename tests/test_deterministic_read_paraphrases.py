@@ -118,6 +118,19 @@ def test_general_container_explanations_do_not_become_host_inspection(query):
     assert resolve_intent(frame).available is False
 
 
+@pytest.mark.parametrize("query", [
+    "Why do you remember things about me?",
+    "What should you remember about me?",
+    "Tell me about memory.",
+    "What is a network?",
+    "What should I work on?",
+    "Start working on Hades.",
+])
+def test_negative_near_misses_do_not_become_owner_state_reads(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is False
+
+
 def test_answer_only_projection_has_no_tool_prompt_or_binding_identity():
     messages = [
         {"role": "system", "content": "Use manage_memory and read_memory schemas."},
