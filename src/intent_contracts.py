@@ -456,6 +456,7 @@ def compile_intent(
             q,
         )
         and not re.search(r"\b(?:my|mine|right\s+now|currently|on\s+my\s+plate)\b", q)
+        and not re.search(r"\bwe\b.{0,20}\bworking\b", q)
         and not re.search(r"\b(?:hades|waiting\s+on|needs?\s+attention|pending\s+approvals?)\b", q)
     ):
         concept = "UNKNOWN"

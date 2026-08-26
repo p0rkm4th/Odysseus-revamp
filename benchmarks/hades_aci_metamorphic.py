@@ -18,6 +18,9 @@ READ_PARAPHRASE_SETS = {
         "whatcha know about me",
         "tell me bout me",
         "What have you got on me?",
+        "what u got on me",
+        "who am i to you",
+        "what have i told you about myself",
     ),
     "WORK": (
         "What am I working on?",
@@ -27,6 +30,9 @@ READ_PARAPHRASE_SETS = {
         "whats on my plate rn",
         "what projects i got",
         "What the hell am I working on again?",
+        "what am i doing rn",
+        "what are we working on",
+        "what's currently in progress",
     ),
     "TECHNICAL_ASSET": (
         "What computers do I own?",
@@ -36,6 +42,8 @@ READ_PARAPHRASE_SETS = {
         "what machines have i got",
         "list my computers",
         "what boxes do i actually own",
+        "what physical computers have i got",
+        "what gear have i got",
     ),
     "NETWORK_CONTEXT": (
         "What network am I currently connected to?",
@@ -45,6 +53,8 @@ READ_PARAPHRASE_SETS = {
         "where am i connected",
         "what wifi am i on",
         "where's hades connected",
+        "what subnet am i on",
+        "what's the network context",
     ),
 }
 
