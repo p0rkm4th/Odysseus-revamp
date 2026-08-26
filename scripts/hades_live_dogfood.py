@@ -144,6 +144,25 @@ def select_cases(
             raise ValueError("sample must be positive")
         random.Random(seed).shuffle(selected)
         selected = selected[:sample]
+        if session_mode == "declared":
+            # Sampling must not select a continuation turn without the
+            # earlier turn that establishes its durable reference/objective.
+            # Treat preceding members of the same declared group as fixture
+            # prerequisites; do not append later turns or silently create a
+            # contaminated session.  This keeps the sample reproducible while
+            # making every selected continuation trajectory executable.
+            selected_names = {case.name for case in selected}
+            for index, case in enumerate(cases):
+                if not case.group or case.name in selected_names:
+                    continue
+                if any(
+                    chosen.group == case.group
+                    and cases.index(chosen) > index
+                    for chosen in selected
+                ):
+                    selected.append(case)
+                    selected_names.add(case.name)
+            selected.sort(key=lambda item: cases.index(item))
     if session_mode == "fresh":
         selected = [Case(**{**case.__dict__, "mode": "fresh", "group": None}) for case in selected]
     return selected
