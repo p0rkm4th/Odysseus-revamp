@@ -65,6 +65,25 @@ def _password() -> str:
     return secrets.token_urlsafe(24)
 
 
+def _acceptance_password() -> str:
+    """Return a disposable acceptance password without persisting a secret.
+
+    A caller may provide ``HADES_ACCEPTANCE_PASSWORD`` when several suites
+    should share one disposable environment.  It is deliberately an
+    environment-only test credential; production-owner credentials are never
+    accepted by this runner.  The default remains an in-memory random value
+    for one-shot bootstrap runs.
+    """
+    configured = os.environ.get("HADES_ACCEPTANCE_PASSWORD")
+    if configured:
+        if len(configured) < MIN_PASSWORD_LENGTH:
+            raise ValueError(
+                f"HADES_ACCEPTANCE_PASSWORD must be at least {MIN_PASSWORD_LENGTH} characters"
+            )
+        return configured
+    return _password()
+
+
 def _json(response: requests.Response, expected: tuple[int, ...] = (200,)) -> dict[str, Any]:
     if response.status_code not in expected:
         raise RuntimeError(f"HTTP {response.status_code} from {response.request.method} {response.request.url}")
@@ -102,7 +121,7 @@ def bootstrap_acceptance_user(
     if not _is_loopback_url(base_url):
         raise RuntimeError("--bootstrap is permitted only for loopback acceptance deployments")
     admin_password = bootstrap_admin_password or _password()
-    acceptance_password = _password()
+    acceptance_password = _acceptance_password()
     status_response = session.get(f"{base_url}/api/auth/status", timeout=30)
     status = _json(status_response)
     if not status.get("configured"):

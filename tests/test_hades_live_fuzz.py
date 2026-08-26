@@ -3,6 +3,7 @@ import pytest
 from scripts.hades_live_fuzz import (
     ACCEPTANCE_USER,
     _is_loopback_url,
+    _acceptance_password,
     authenticate,
     compositional_variants,
 )
@@ -12,6 +13,17 @@ def test_bootstrap_is_loopback_only():
     assert _is_loopback_url("http://127.0.0.1:7000")
     assert _is_loopback_url("http://localhost:7000")
     assert not _is_loopback_url("https://hades.example.test")
+
+
+def test_bootstrap_acceptance_password_can_be_reused_from_test_environment(monkeypatch):
+    monkeypatch.setenv("HADES_ACCEPTANCE_PASSWORD", "synthetic-acceptance-password")
+    assert _acceptance_password() == "synthetic-acceptance-password"
+
+
+def test_bootstrap_acceptance_password_rejects_short_configured_secret(monkeypatch):
+    monkeypatch.setenv("HADES_ACCEPTANCE_PASSWORD", "too-short")
+    with pytest.raises(ValueError, match="at least"):
+        _acceptance_password()
 
 
 def test_compositional_variants_are_test_data_not_duplicate_runtime_cases():
