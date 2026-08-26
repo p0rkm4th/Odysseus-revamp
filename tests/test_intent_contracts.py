@@ -364,10 +364,10 @@ def test_existing_domain_read_bindings_are_semantically_exposed(query, concept, 
 
 
 @pytest.mark.parametrize("query", [
-    "Restart the registered service",
-    "Restart the service",
+    "Restart nginx service",
+    "Recover postgres service",
 ])
-def test_service_restart_language_resolves_to_safe_canonical_preflight(query):
+def test_qualified_service_restart_language_resolves_to_safe_canonical_preflight(query):
     resolved = resolve_intent(compile_intent(query))
     assert resolved.available is True
     assert resolved.frame.domain_concept == "SERVICE"
@@ -376,6 +376,18 @@ def test_service_restart_language_resolves_to_safe_canonical_preflight(query):
     assert resolved.binding_name == "manage_homelab"
     assert resolved.action.approval.value == "none"
     assert resolved.action.effects == ("read_private",)
+
+
+@pytest.mark.parametrize("query", [
+    "Restart the registered service",
+    "Restart the service",
+])
+def test_unqualified_service_restart_requires_target_clarification(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.frame.domain_concept == "SERVICE"
+    assert resolved.frame.operation_class == "EXECUTE"
+    assert resolved.available is False
+    assert resolved.reason == "target_required"
 
 
 def test_osint_reads_compile_to_the_existing_case_store_binding():

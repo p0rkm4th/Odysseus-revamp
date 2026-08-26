@@ -4719,6 +4719,8 @@ async def stream_agent_loop(
     # the control plane must go directly to answer generation; it must not
     # execute a duplicate Action or ask the model to choose one.
     _aci_answer_only = False
+    _aci_clarification_only = False
+    _aci_clarification_text = ""
     _aci_completion_contract_satisfied = False
     _aci_repair_count = 0
     # Sanitized responsibility accounting for ACI evaluation. These counters
@@ -5680,6 +5682,19 @@ async def stream_agent_loop(
                 raw_actions,
                 operation_class=str((_intent.get("intent_frame") or {}).get("operation_class") or "") or None,
             )
+            # A service restart/preflight cannot be selected without an exact
+            # unit target.  The semantic resolver reports target_required;
+            # keep the packet clarification-bound instead of exposing a raw
+            # restart Action for the weak model to guess at.
+            _intent_frame_for_filter = _intent.get("intent_frame") or {}
+            if (
+                _intent_frame_for_filter.get("domain_concept") == "SERVICE"
+                and _intent_frame_for_filter.get("operation_class") == "EXECUTE"
+                and not _intent_frame_for_filter.get("target")
+                and (_intent.get("resolved_contract") or {}).get("reason") == "target_required"
+            ):
+                filtered = []
+                _record_aci_framework("action_target_clarification")
             _record_aci_framework("action_hard_filter")
             # A resolved DomainContract is semantic evidence from the
             # framework, not a provider-facing suggestion. Some canonical
@@ -5752,6 +5767,18 @@ async def stream_agent_loop(
                 state_fingerprint=state_fingerprint(packet_state),
             )
             _aci_packet = packet
+            if (
+                (_intent.get("resolved_contract") or {}).get("reason") == "target_required"
+                and (_intent.get("intent_frame") or {}).get("domain_concept") == "SERVICE"
+            ):
+                # The framework already knows why execution cannot proceed:
+                # an exact service target is missing.  Do not spend a weak
+                # model decision round choosing from an empty/irrelevant
+                # Action set; let the model render one concise clarification.
+                _aci_clarification_only = True
+                _aci_clarification_text = "Which service or systemd unit should I restart?"
+                _aci_packet = None
+                _record_aci_framework("clarification_required")
             if _aci_answer_only:
                 # An explicit canonical Memory Result was already resolved by
                 # the context plane. Its CompletionContract is now ANSWER;
@@ -5792,6 +5819,13 @@ async def stream_agent_loop(
                     "human answer directly from that ResultProjection. Distinguish "
                     "REMEMBERED, HISTORICAL, and CURRENT DERIVED HADES STATE facts; "
                     "do not invent personal facts."
+                )
+            elif _aci_clarification_only:
+                aci_instruction = (
+                    "HADES ACI CLARIFICATION MODE. The framework resolved that "
+                    "the requested service operation is missing an exact target. "
+                    "Ask the owner which service or systemd unit they mean. "
+                    "Do not call tools, propose commands, or claim execution."
                 )
             else:
                 aci_instruction = (
@@ -6149,7 +6183,7 @@ async def stream_agent_loop(
     # backstop. Counting identical repeats — not distinct same-tool calls —
     # lets a legit batch (e.g. 18 calendar events at once) through.
     _call_freq: collections.Counter = collections.Counter()
-    _force_answer = bool(_aci_answer_only)  # completed canonical read → answer-only
+    _force_answer = bool(_aci_answer_only or _aci_clarification_only)  # framework-resolved answer/clarification mode
     # Supervisor: how many times we've nudged the model after it announced
     # an action without emitting the tool call. Capped to prevent a model
     # that *can't* call the tool from looping forever.
@@ -6783,11 +6817,15 @@ async def stream_agent_loop(
         except Exception:
             logger.debug("Provider context trace unavailable", exc_info=True)
         async def _round_stream():
+            if _aci_clarification_only:
+                yield "data: " + json.dumps({"delta": _aci_clarification_text}) + "\n\n"
+                yield "data: [DONE]\n\n"
+                return
             if _skip_model_round:
                 yield "data: [DONE]\n\n"
                 return
             if _aci_enabled and _aci_mode == "aci":
-                if _force_answer:
+                if _force_answer and not _aci_clarification_only:
                     _record_aci_model("answer_synthesis")
                 elif _aci_packet is not None:
                     _record_aci_model("bounded_action_decision")
@@ -9350,9 +9388,13 @@ async def stream_agent_loop(
     _expected_canonical_action = bool(
         (
             not _aci_answer_only
+            and not _aci_clarification_only
             and (_asset_frame.get("read_explicit") and _read_binding and _read_action)
         )
-        or _intent_frame.operation_class in {"EXECUTE", "RESEARCH", "MONITOR"}
+        or (
+            not _aci_clarification_only
+            and _intent_frame.operation_class in {"EXECUTE", "RESEARCH", "MONITOR"}
+        )
     )
     _successful_action_event = any(
         isinstance(event, dict)
@@ -9393,11 +9435,15 @@ async def stream_agent_loop(
     # Action-grounding boundary: prose is never evidence of an external
     # operation. Only persisted tool events/results authorize completion
     # language. This applies to every model, including local Qwen routes.
-    _grounded_response = ground_action_completion(
-        full_response,
-        intent_domains=_intent_domains,
-        tool_events=tool_events,
-        stored_evidence=_has_stored_canonical_evidence(messages),
+    _grounded_response = (
+        full_response
+        if _aci_clarification_only
+        else ground_action_completion(
+            full_response,
+            intent_domains=_intent_domains,
+            tool_events=tool_events,
+            stored_evidence=_has_stored_canonical_evidence(messages),
+        )
     )
     if _grounded_response != full_response:
         logger.warning(
