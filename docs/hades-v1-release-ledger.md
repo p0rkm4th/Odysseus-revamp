@@ -57,3 +57,8 @@ E6.
 - Live canary accepts `--model`, `--endpoint-id`, and `--cookie-file`; cookie
   files support the existing Netscape export format without printing
   credentials.
+- Real bridge overhead probe (Qwen3:8b, 172.18.0.1:11434, 64-token cap):
+  cold raw `0.275s` vs Hades `12.850s`; warm raw `3.352s` vs Hades `12.600s`.
+  Hades preparation was `0.235s`/`0.208s`, with one model call and zero tool
+  calls. This is diagnostic only: raw stopped at 3 output tokens while Hades
+  consumed 64, so it is not an equivalent-deliverable quality comparison.
