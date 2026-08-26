@@ -72,6 +72,43 @@ def test_current_network_paraphrases_converge_on_context_read_not_discovery(quer
     assert resolved.frame.operation_class == "READ"
 
 
+@pytest.mark.parametrize("query", [
+    "Remind me what I've got going.",
+    "What have I got going on?",
+    "What's keeping me busy?",
+    "What projects are currently in progress?",
+])
+def test_work_status_paraphrases_are_canonical_reads(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "WORK"
+    assert resolved.action_id == "overview"
+    assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
+    "What's running in Odysseus?",
+    "Anything unhealthy right now?",
+    "What services are alive?",
+])
+def test_infrastructure_status_paraphrases_use_safe_service_read(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "SERVICE"
+    assert resolved.action_id == "service_status"
+    assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
+    "What's the difference between a VM and a container?",
+    "Explain containers versus virtual machines.",
+])
+def test_general_container_explanations_do_not_become_host_inspection(query):
+    frame = compile_intent(query)
+    assert frame.domain_concept == "UNKNOWN"
+    assert resolve_intent(frame).available is False
+
+
 def test_answer_only_projection_has_no_tool_prompt_or_binding_identity():
     messages = [
         {"role": "system", "content": "Use manage_memory and read_memory schemas."},
