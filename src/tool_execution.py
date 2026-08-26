@@ -338,6 +338,58 @@ def _owner_is_admin(owner: Optional[str]) -> bool:
     """Mirror route-level admin behavior for agent tool execution."""
     return owner_is_admin_or_single_user(owner)
 
+
+def _mcp_execution_disabled_reason(
+    tool_name: Any,
+    disabled_tools: Optional[set] = None,
+) -> Optional[str]:
+    """Revalidate dynamic MCP enablement at the execution boundary.
+
+    Discovery/schema filtering is advisory: a stale Action, prompt injection,
+    or a provider replay can still supply a qualified name after the server
+    configuration changed.  Read the current owner-controlled MCP registry at
+    dispatch time and fail closed if it cannot be evaluated.  This is only a
+    capability gate; ActionSpec, policy, approval, and the MCP adapter remain
+    authoritative for their respective concerns.
+    """
+    if not isinstance(tool_name, str) or not tool_name.startswith("mcp__"):
+        return None
+    policy_names = email_tool_policy_names(tool_name)
+    if disabled_tools and not policy_names.isdisjoint(disabled_tools):
+        return f"Tool '{tool_name}' is disabled by the current request policy."
+    parts = tool_name.split("__", 2)
+    if len(parts) != 3 or not parts[1] or not parts[2]:
+        return "Malformed MCP capability name."
+    try:
+        from core.database import McpServer, SessionLocal
+
+        db = SessionLocal()
+        try:
+            server = db.query(McpServer).filter(McpServer.id == parts[1]).first()
+            if server is None:
+                # Built-in MCP servers are registered in-process and may not
+                # have a user-configured McpServer row.  Their manager-side
+                # identity is still authoritative; an unknown dynamic server
+                # must remain fail-closed.
+                manager = get_mcp_manager()
+                is_builtin = getattr(manager, "is_builtin", None)
+                if callable(is_builtin) and is_builtin(parts[1]):
+                    return None
+                return "MCP capability is no longer registered."
+            if server.is_enabled is False:
+                return "MCP server is disabled."
+            raw_disabled = json.loads(server.disabled_tools) if server.disabled_tools else []
+            if not isinstance(raw_disabled, list):
+                return "MCP capability policy is invalid."
+            if parts[2] in {str(name) for name in raw_disabled}:
+                return f"MCP tool '{parts[2]}' is disabled by server policy."
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.warning("Unable to revalidate MCP execution policy for %s: %s", tool_name, exc)
+        return "MCP capability policy could not be revalidated."
+    return None
+
 # ---------------------------------------------------------------------------
 # MCP-backed tool helpers
 # ---------------------------------------------------------------------------
@@ -624,6 +676,26 @@ async def execute_tool_block(
         raise TypeError(
             "security_context must be a ToolRunSecurityContext or "
             "NO_TOOL_SECURITY_CONTEXT"
+        )
+
+    # MCP discovery is not authorization. Recheck the live server/tool state
+    # before exact approval is claimed or the provider adapter is invoked.
+    _mcp_block_reason = _mcp_execution_disabled_reason(
+        getattr(block, "tool_type", None), disabled_tools,
+    )
+    if _mcp_block_reason:
+        logger.warning(
+            "MCP execution denied at dispatcher boundary tool=%r reason=%s",
+            getattr(block, "tool_type", None), _mcp_block_reason,
+        )
+        return (
+            f"{getattr(block, 'tool_type', None)}: BLOCKED",
+            {
+                "error": _mcp_block_reason,
+                "exit_code": 1,
+                "blocked": True,
+                "policy": "mcp_execution_capability",
+            },
         )
 
     approval_claimed = False

@@ -476,6 +476,11 @@ class McpManager:
         server_id = parts[1]
         tool_name = parts[2]
 
+        execution_block = self._execution_policy_reason(server_id, tool_name)
+        if execution_block:
+            logger.warning("Blocked MCP call at manager boundary: %s (%s)", qualified_name, execution_block)
+            return {"error": execution_block, "exit_code": 1, "blocked": True}
+
         session = self._sessions.get(server_id)
         if not session:
             return {"error": f"MCP server not connected: {server_id}", "exit_code": 1}
@@ -505,6 +510,38 @@ class McpManager:
                 return {"error": str(e), "exit_code": 1}
 
         return result
+
+    def _execution_policy_reason(self, server_id: str, tool_name: str) -> Optional[str]:
+        """Revalidate MCP enablement immediately before an adapter call.
+
+        Prompt/schema filtering is only discovery.  This manager boundary is
+        also reachable by stale Actions and internal callers, so consult the
+        current persisted server policy here. Built-in servers are registered
+        in-process and may legitimately have no ``McpServer`` row; unknown
+        dynamic servers fail closed.
+        """
+        db = SessionLocal()
+        try:
+            server = db.query(McpServer).filter(McpServer.id == server_id).first()
+            if server is None:
+                return None if self.is_builtin(server_id) else "MCP capability is no longer registered."
+            if server.is_enabled is False:
+                return "MCP server is disabled."
+            if server.disabled_tools:
+                try:
+                    disabled = json.loads(server.disabled_tools)
+                except (TypeError, json.JSONDecodeError):
+                    return "MCP capability policy is invalid."
+                if not isinstance(disabled, list):
+                    return "MCP capability policy is invalid."
+                if tool_name in {str(name) for name in disabled}:
+                    return f"MCP tool '{tool_name}' is disabled by server policy."
+            return None
+        except Exception as exc:
+            logger.warning("Unable to revalidate MCP policy for %s: %s", server_id, exc)
+            return "MCP capability policy could not be revalidated."
+        finally:
+            db.close()
 
     async def _do_call(self, session, tool_name: str, arguments: Dict) -> Dict:
         """Execute a single MCP tool call and return result dict."""

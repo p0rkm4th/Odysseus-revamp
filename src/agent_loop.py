@@ -1650,6 +1650,37 @@ def _is_local_openai_compat_url(endpoint_url: str) -> bool:
     return False
 
 
+def _select_local_mcp_schemas(
+    schemas: List[Dict],
+    relevant_tools: Optional[Set[str]],
+    user_text: str,
+) -> List[Dict]:
+    """Project semantically selected MCP schemas onto local-model routes.
+
+    The tool index is the discovery mechanism for external capabilities.  The
+    old local route gate only looked at a fixed keyword list, which made an
+    arbitrary connected server invisible even when semantic retrieval had
+    already selected its qualified tool. Preserve the small static hints for
+    compatibility, but let selected qualified names win without teaching this
+    module vendor/server names.
+    """
+    if not schemas:
+        return []
+    relevant = set(relevant_tools or ())
+    selected_dynamic = {
+        name for name in relevant
+        if isinstance(name, str) and name.startswith("mcp__")
+    }
+    if selected_dynamic:
+        return [
+            schema for schema in schemas
+            if schema.get("function", {}).get("name") in selected_dynamic
+        ]
+    if any(keyword in (user_text or "").lower() for keyword in _MCP_KEYWORDS):
+        return list(schemas)
+    return []
+
+
 def _endpoint_lookup_keys(endpoint_url: str) -> List[str]:
     """Candidate ModelEndpoint.base_url keys for a runtime chat URL."""
     raw = (endpoint_url or "").strip()
@@ -6683,8 +6714,11 @@ async def stream_agent_loop(
             )
             return schemas
 
-        wants_mcp = any(keyword in _last_user.lower() for keyword in _MCP_KEYWORDS)
-        schemas = route_mcp_schemas if wants_mcp and route_mcp_schemas else []
+        schemas = _select_local_mcp_schemas(
+            route_mcp_schemas,
+            route_relevant_tools,
+            _last_user,
+        )
         schemas = _filter_route_tool_schemas(schemas)
         logger.info(
             "[hades-tool-projection] model=%s trace=%s",

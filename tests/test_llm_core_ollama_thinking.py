@@ -91,12 +91,12 @@ class TestIsOllamaOpenAICompatUrl:
         # IPv6 addresses in URLs require square brackets per RFC 3986
         assert llm_core._is_ollama_openai_compat_url("http://[::1]:11434/v1")
 
-    def test_any_local_non_default_port(self):
-        """Localhost on a non-default port (custom OLLAMA_HOST) must also match."""
-        assert llm_core._is_ollama_openai_compat_url("http://127.0.0.1:11435/v1")
+    def test_localhost_non_default_port_is_generic(self):
+        """An arbitrary local OpenAI-compatible server is not Ollama by URL alone."""
+        assert not llm_core._is_ollama_openai_compat_url("http://127.0.0.1:11435/v1")
 
-    def test_localhost_non_default_port(self):
-        assert llm_core._is_ollama_openai_compat_url("http://localhost:8080/v1/chat/completions")
+    def test_localhost_openai_compat_port_is_generic(self):
+        assert not llm_core._is_ollama_openai_compat_url("http://localhost:8080/v1/chat/completions")
 
     def test_zero_dot_zero_host(self):
         assert llm_core._is_ollama_openai_compat_url("http://0.0.0.0:11434/v1")
@@ -156,15 +156,13 @@ class TestThinkSuppression:
         )
         assert "think" not in payload
 
-    def test_think_false_for_non_default_port_thinking_model(self, monkeypatch):
-        """Custom-port localhost Ollama (e.g. OLLAMA_HOST=0.0.0.0:11435) must
-        also receive think:false — this is the regression guarded by the
-        host-set check added in this fix."""
+    def test_arbitrary_local_non_default_port_is_not_assumed_ollama(self, monkeypatch):
+        """A pathless/custom-port local endpoint is not Ollama by URL alone."""
         payload = _capture_payload(
             monkeypatch, "http://127.0.0.1:11435/v1/chat/completions", "qwen3:14b"
         )
-        assert payload.get("think") is False
-        assert payload.get("reasoning_effort") == "none"
+        assert payload.get("think") is None
+        assert payload.get("reasoning_effort") is None
 
     def test_native_ollama_structured_output_disables_thinking(self):
         """Strict ACI JSON must not be emitted only in message.thinking."""

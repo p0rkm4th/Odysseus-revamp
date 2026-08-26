@@ -688,8 +688,8 @@ source/root-cause checkpoint.
   is awaiting deployment.
 ## Selective upstream harvest (2026-08-26)
 
-Bounded audit of `upstream/dev` and the requested commits. Hades semantics and
-authority remain canonical; no upstream high-level orchestration was merged.
+Bounded audit of the requested fork deltas. Hades semantics and authority
+remain canonical; no upstream high-level orchestration was merged.
 
 | Upstream | Classification | Result |
 |---|---|---|
@@ -698,9 +698,15 @@ authority remain canonical; no upstream high-level orchestration was merged.
 | `b4d12932` empty approval replay turn | TEST-HARVEST | Hades already skips provider-visible assistant turns with neither prose nor reasoning and has replay-shape tests. No duplicate loop patch imported. |
 | `85297cee` atomic temp cleanup | ALREADY PRESENT | `core.atomic_io` already performs unconditional conservative temp cleanup in `finally`, preserving replace errors and unrelated files. |
 | `98165235` approved-task continuation | TEST-HARVEST | Existing Hades-native approval scope, durable Run continuation, and focused approval tests cover the behavior. Upstream duplicate authority/UI was rejected. |
+| `e2e7c4cf` disabled MCP call-time enforcement | ADAPT | Added fail-closed revalidation at both the Hades dispatcher and `McpManager.call_tool`, including server disablement, per-tool disablement, stale registrations, and built-in-server handling. |
+| `cb3e9aee` pathless local endpoint detection | ADAPT | Arbitrary loopback ports remain generic; Ollama requires its conventional port, an Ollama host, or an explicit native API path. `/v1` remains OpenAI-compatible. |
+| `c0f34f07` arbitrary MCP discoverability | ADAPT | Reused Hades semantic tool-index selection and fixed local schema projection to retain selected qualified MCP names, without vendor-name keywords or a second registry. |
+| Diogenes runtime/external-agent/context-worker patterns | DESIGN-HARVEST / DEFER V1.1+ | Useful isolation and composition patterns; no v1 runtime, agent, or retrieval subsystem added. |
 
 Relevant newer upstream security, auth, MCP, provider, parsing, persistence,
 and model changes through `upstream/dev` were already ancestors of Hades,
 including provider detection, session discovery, callback handling,
 Hermes/Qwen parsing, strict model routing, and external-context gates. Harvest
-focused gate: `34 passed`.
+focused gate: `295 passed` after the execution-boundary, endpoint, and
+semantic-MCP adaptations. Runtime changes remain pending the single full
+regression/deployment gate.

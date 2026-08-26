@@ -43,6 +43,7 @@ try:
         _prefetched_explicit_memory_result,
         _successful_deterministic_read_result,
         _MCP_KEYWORDS,
+        _select_local_mcp_schemas,
     )
     _IMPORTED_AGENT_LOOP = sys.modules.get("src.agent_loop")
 finally:
@@ -64,6 +65,29 @@ def test_import_stubs_do_not_leak_into_later_tests():
 
 def test_mcp_keyword_gate_matches_literal_mcp_requests():
     assert "mcp" in _MCP_KEYWORDS
+
+
+def test_local_mcp_projection_uses_semantic_selected_qualified_tool():
+    schemas = [
+        {"function": {"name": "mcp__arbitrary_notes__create_page"}},
+        {"function": {"name": "mcp__unrelated__send_message"}},
+    ]
+
+    selected = _select_local_mcp_schemas(
+        schemas,
+        {"ask_user", "mcp__arbitrary_notes__create_page"},
+        "add this to my notes",
+    )
+
+    assert [item["function"]["name"] for item in selected] == [
+        "mcp__arbitrary_notes__create_page"
+    ]
+
+
+def test_local_mcp_projection_does_not_expose_arbitrary_server_without_relevance():
+    schemas = [{"function": {"name": "mcp__unrelated__send_message"}}]
+
+    assert _select_local_mcp_schemas(schemas, {"ask_user"}, "explain RAID") == []
 
 
 def test_polish_internet_search_request_classifies_as_web():

@@ -758,6 +758,244 @@ async def test_dispatcher_requires_explicit_security_context():
 
 
 @pytest.mark.asyncio
+async def test_disabled_qualified_mcp_tool_is_blocked_before_adapter_or_approval():
+    import src.tool_execution as tool_execution
+
+    called = []
+
+    class FakeMcp:
+        async def call_tool(self, name, arguments):
+            called.append((name, arguments))
+            return {"exit_code": 0}
+
+    monkeypatch = pytest.MonkeyPatch()
+    try:
+        monkeypatch.setattr(tool_execution, "get_mcp_manager", lambda: FakeMcp())
+        monkeypatch.setattr(
+            tool_execution,
+            "_mcp_execution_disabled_reason",
+            lambda name, disabled_tools=None: "MCP tool is disabled by server policy.",
+        )
+        desc, result = await tool_execution.execute_tool_block(
+            ToolBlock("mcp__notion__create_page", "{}"),
+            disabled_tools=set(),
+            security_context=tool_execution.NO_TOOL_SECURITY_CONTEXT,
+        )
+    finally:
+        monkeypatch.undo()
+
+    assert desc == "mcp__notion__create_page: BLOCKED"
+    assert result["blocked"] is True
+    assert result["policy"] == "mcp_execution_capability"
+    assert called == []
+
+
+def test_mcp_dispatch_revalidates_server_disabled_tools(monkeypatch):
+    import src.tool_execution as tool_execution
+    import core.database as database
+
+    class FakeServer:
+        is_enabled = True
+        disabled_tools = json.dumps(["create_page"])
+
+    class FakeQuery:
+        def filter(self, *_args):
+            return self
+
+        def first(self):
+            return FakeServer()
+
+    class FakeDb:
+        def query(self, *_args):
+            return FakeQuery()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(database, "SessionLocal", lambda: FakeDb())
+    monkeypatch.setattr(tool_execution, "get_mcp_manager", lambda: None)
+
+    reason = tool_execution._mcp_execution_disabled_reason(
+        "mcp__notion__create_page", set()
+    )
+
+    assert reason == "MCP tool 'create_page' is disabled by server policy."
+
+
+def test_mcp_dispatch_allows_enabled_registered_tool(monkeypatch):
+    import src.tool_execution as tool_execution
+    import core.database as database
+
+    class FakeServer:
+        is_enabled = True
+        disabled_tools = json.dumps([])
+
+    class FakeQuery:
+        def filter(self, *_args):
+            return self
+
+        def first(self):
+            return FakeServer()
+
+    class FakeDb:
+        def query(self, *_args):
+            return FakeQuery()
+
+        def close(self):
+            pass
+
+    class FakeMcp:
+        def is_builtin(self, _server_id):
+            return False
+
+    monkeypatch.setattr(database, "SessionLocal", lambda: FakeDb())
+    monkeypatch.setattr(tool_execution, "get_mcp_manager", lambda: FakeMcp())
+
+    assert tool_execution._mcp_execution_disabled_reason(
+        "mcp__notion__create_page", set()
+    ) is None
+
+
+def test_unknown_dynamic_mcp_server_fails_closed(monkeypatch):
+    import src.tool_execution as tool_execution
+    import core.database as database
+
+    class FakeQuery:
+        def filter(self, *_args):
+            return self
+
+        def first(self):
+            return None
+
+    class FakeDb:
+        def query(self, *_args):
+            return FakeQuery()
+
+        def close(self):
+            pass
+
+    class FakeMcp:
+        def is_builtin(self, _server_id):
+            return False
+
+    monkeypatch.setattr(database, "SessionLocal", lambda: FakeDb())
+    monkeypatch.setattr(tool_execution, "get_mcp_manager", lambda: FakeMcp())
+
+    assert tool_execution._mcp_execution_disabled_reason(
+        "mcp__stale_server__read", set()
+    ) == "MCP capability is no longer registered."
+
+
+@pytest.mark.asyncio
+async def test_mcp_manager_rechecks_disabled_tool_before_adapter(monkeypatch):
+    from src import mcp_manager
+
+    class FakeServer:
+        id = "notion"
+        is_enabled = True
+        disabled_tools = json.dumps(["create_page"])
+
+    class FakeQuery:
+        def filter(self, *_args):
+            return self
+
+        def first(self):
+            return FakeServer()
+
+    class FakeDb:
+        def query(self, *_args):
+            return FakeQuery()
+
+        def close(self):
+            pass
+
+    manager = mcp_manager.McpManager()
+    manager._sessions["notion"] = object()
+    called = []
+
+    async def fake_do_call(*_args):
+        called.append(True)
+        return {"exit_code": 0}
+
+    monkeypatch.setattr(mcp_manager, "SessionLocal", lambda: FakeDb())
+    monkeypatch.setattr(manager, "_do_call", fake_do_call)
+
+    result = await manager.call_tool("mcp__notion__create_page", {})
+
+    assert result["blocked"] is True
+    assert called == []
+
+
+@pytest.mark.asyncio
+async def test_mcp_manager_allows_enabled_tool_at_execution_boundary(monkeypatch):
+    from src import mcp_manager
+
+    class FakeServer:
+        id = "notion"
+        is_enabled = True
+        disabled_tools = json.dumps([])
+
+    class FakeQuery:
+        def filter(self, *_args):
+            return self
+
+        def first(self):
+            return FakeServer()
+
+    class FakeDb:
+        def query(self, *_args):
+            return FakeQuery()
+
+        def close(self):
+            pass
+
+    manager = mcp_manager.McpManager()
+    manager._sessions["notion"] = object()
+    called = []
+
+    async def fake_do_call(*_args):
+        called.append(True)
+        return {"exit_code": 0}
+
+    monkeypatch.setattr(mcp_manager, "SessionLocal", lambda: FakeDb())
+    monkeypatch.setattr(manager, "_do_call", fake_do_call)
+
+    result = await manager.call_tool("mcp__notion__create_page", {})
+
+    assert result == {"exit_code": 0}
+    assert called == [True]
+
+
+@pytest.mark.asyncio
+async def test_disabled_mcp_name_from_stale_provider_state_is_blocked_at_dispatch():
+    import src.tool_execution as tool_execution
+
+    called = []
+
+    async def fake_call_tool(name, arguments):
+        called.append(name)
+        return {"exit_code": 0}
+
+    class FakeMcp:
+        call_tool = fake_call_tool
+
+    monkeypatch = pytest.MonkeyPatch()
+    try:
+        monkeypatch.setattr(tool_execution, "get_mcp_manager", lambda: FakeMcp())
+        desc, result = await tool_execution.execute_tool_block(
+            ToolBlock("mcp__notion__create_page", "{}"),
+            disabled_tools={"mcp__notion__create_page"},
+            security_context=tool_execution.NO_TOOL_SECURITY_CONTEXT,
+        )
+    finally:
+        monkeypatch.undo()
+
+    assert desc == "mcp__notion__create_page: BLOCKED"
+    assert result["blocked"] is True
+    assert called == []
+
+
+@pytest.mark.asyncio
 async def test_dispatcher_updates_context_from_external_result(monkeypatch):
     import src.tool_execution as tool_execution
 
