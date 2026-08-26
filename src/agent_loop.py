@@ -5014,6 +5014,27 @@ async def stream_agent_loop(
             active_run = _active_run_context
             _continuation_result = resolve_continuation(_intent_frame, active_run)
             _intent["continuation_resolution"] = _continuation_result.as_dict()
+            if _continuation_result.status == "BLOCKED":
+                # A durable Continue that resolves to a terminal, blocked, or
+                # otherwise unavailable Run is already a framework decision.
+                # Do not send the same state back through bounded Action
+                # selection; the answer phase can explain the durable state
+                # without inventing a retry or claiming execution.
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = True
+                _record_aci_framework("continuation_terminal_or_blocked")
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "HADES CONTINUATION STATE: the durable Objective/Run "
+                        "cannot advance automatically because it is terminal, "
+                        "blocked, awaiting input, or unavailable. Answer "
+                        "naturally from canonical state; do not invent an "
+                        "Action or claim that continuation executed."
+                    ),
+                    "_agent_injected": "continuation_state",
+                    "_protected": True,
+                })
             if isinstance(active_run, dict) and isinstance(active_run.get("next_step"), dict):
                 # Keep the planner projection server-owned and compact.  The
                 # automatic read-only path below may use it only after the
