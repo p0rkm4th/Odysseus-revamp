@@ -109,3 +109,17 @@ phrases is therefore `OWNER_DOGFOOD_PENDING`.
 8. Start a harmless persistent task, then say Continue.
 9. Switch Qwen -> Luna -> Sol -> Qwen during that Run and continue.
 10. Diagnose/fix a safe synthetic repository defect under Workspace YOLO, if enabled.
+
+## Overnight checkpoint
+
+- Safe general-model fallback: FULL_REGRESSION at `29427c1a`; one repair is
+  followed by an authority-free general answer, with no internal bounded-
+  decision error exposed to the owner.
+- Direct-read completion boundary: DEPLOYED/PASSIVE_LIVE_VERIFIED at
+  `936fe437`; the exact fast-path proof now prevents low-signal Work reads from
+  re-entering bounded Action selection.
+- Current candidate: `odysseus:candidate-936fe43744a5`, source
+  `936fe43744a5c409009df3d07a8a23609d396a78`, build
+  `936fe43744a5c409009df3d07a8a23609d396a78-2026-08-26T02:18:50Z`.
+- Health, broker-facing container, Ollama bridge, Chroma, and migration head
+  were verified. Owner GUI/E6 verification remains pending.
