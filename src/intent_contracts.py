@@ -430,7 +430,9 @@ def compile_intent(
         concept = "HOUSEHOLD_ITEM"
     elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
         concept = "WORK"
-    elif re.search(r"\b(?:work|working|project|task|goal|commitment)\b", q):
+    elif re.search(r"\b(?:work|working|project|task|goal|commitment)\b", q) and not re.search(
+        r"\bcapabilit(?:y|ies)\b", q,
+    ):
         concept = "WORK"
     elif re.search(r"\b(?:communications?|email accounts?|calendars?|calendar events?)\b", q):
         concept = "COMMUNICATIONS"
@@ -460,7 +462,7 @@ def compile_intent(
             r"tell\s+me\s+about\s+(?:the\s+)?(?:memory|network))\b",
             q,
         )
-        and not re.search(r"\b(?:my|mine|right\s+now|currently|on\s+my\s+plate)\b", q)
+        and not re.search(r"\b(?:my|mine|right\s+now|current(?:ly)?|on\s+my\s+plate)\b", q)
         and not re.search(r"\bwe\b.{0,20}\bworking\b", q)
         and not re.search(r"\b(?:hades|waiting\s+on|needs?\s+attention|pending\s+approvals?)\b", q)
     ):

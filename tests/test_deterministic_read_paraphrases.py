@@ -153,6 +153,8 @@ def test_infrastructure_status_paraphrases_use_safe_service_read(query):
     "anything dead",
     "anything down right now",
     "what the hell is busted",
+    "are we good",
+    "how is the stack",
 ])
 def test_casual_infrastructure_status_paraphrases_use_safe_service_read(query):
     resolved = resolve_intent(compile_intent(query))
@@ -174,6 +176,26 @@ def test_messy_owner_self_knowledge_stays_on_memory_read_family(query):
     assert resolved.frame.domain_concept == "MEMORY"
     assert resolved.action_id == "summarize_owner_memory"
     assert resolved.action.approval.value == "none"
+
+
+def test_physical_host_inventory_is_not_shadowed_by_network_host_language():
+    resolved = resolve_intent(compile_intent("What physical hosts do I own?"))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "TECHNICAL_ASSET"
+    assert resolved.action_id == "list"
+
+
+def test_current_network_context_is_not_filtered_as_a_definition():
+    resolved = resolve_intent(compile_intent("What is the current network context?"))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "NETWORK"
+    assert resolved.action_id == "read_network_context"
+
+
+def test_unknown_selfstate_capability_question_does_not_become_work_read():
+    frame = compile_intent("What capabilities are working?")
+    assert frame.domain_concept == "UNKNOWN"
+    assert resolve_intent(frame).available is False
 
 
 @pytest.mark.parametrize("query", [
