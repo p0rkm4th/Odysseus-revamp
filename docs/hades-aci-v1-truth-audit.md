@@ -12,23 +12,20 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `a8b0c6ed` | `origin/hades-aci-v1` |
-| Deployed source | `cfbe6244` | `/api/version`, image labels |
-| Running image | `odysseus:candidate-cfbe6244` | Docker inspect |
+| Pushed source | `1aa1c95d` | `origin/hades-aci-v1` |
+| Deployed source | `1aa1c95d` | `/api/version`, immutable image marker |
+| Running image | `odysseus:candidate-1aa1c95d` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
 | API | healthy | `/api/health` |
 | Broker | active; socket present | systemd/socket check |
 | Owner E6 | pending | no owner GUI claim |
-| Automated E5 | prior deployed canary verified | 36-case sanitized live matrix |
+| Automated E5 | current deployed canary verified | 25-case sanitized live matrix, 25/25 trajectory passes |
 | Full regression | `6414 passed, 4 skipped, 186 warnings` after current source slice | container test gate |
 | Current focused gate | `181 passed` security/control-plane; `204 passed` latest ACI/reference slice | pytest logs |
 
-The latest source contains reference-projection, homelab executor, live-canary,
-auditable storage-preflight, general-fallback subtraction, and runtime-tree
-provenance changes that are not yet source-matched in the running process.
-A supported dangling-image prune reclaimed 9.067 GiB; storage
-preflight still blocks a large replacement build at 23 GiB free / 74% used
-against its 30 GiB guard. Default compose now runs baked image source; the
+The running process is source-matched through the immutable image marker.
+Storage preflight still blocks a large replacement build at 24 GiB free / 74%
+used against its 30 GiB guard. Default compose runs baked image source; the
 developer checkout mount is explicit via `docker-compose.developer.yml`.
 
 ## ACI control-plane truth
@@ -44,16 +41,16 @@ developer checkout mount is explicit via `docker-compose.developer.yml`.
 - Successful deterministic reads do not re-enter bounded Action selection in
   the covered paths.
 - Asset ordinal resolution now prefers server-owned ordered/eligible result
-  entities and uses `last` only when no ordered set exists. This is source-level
-  focused evidence, not yet deployed evidence.
+  entities and uses `last` only when no ordered set exists; deployed core E5
+  verified the list → “first physical one” continuation.
 - Completed canonical asset reads now expose their ordered/eligible entity set
   through the owner-scoped session reference projection, so a later ordinal
   turn can resolve without an active Run or lexical target guessing. The
   focused reference bridge gate is green (`234 passed` with the executor
   slice).
-- Homelab binding now maps structured `UNAVAILABLE`, `INVALID_RESULT`, and
-  related statuses to failed executor semantics instead of transport success.
-  This is source-level focused evidence, not yet deployed evidence.
+- Homelab binding maps structured `UNAVAILABLE`, `INVALID_RESULT`, and related
+  statuses to failed executor semantics instead of transport success; deployed
+  infrastructure reads completed in the core E5 matrix.
 - Unqualified `service_status` now projects the existing bounded Hades runtime
   health collector instead of invoking container-local `systemctl --user`;
   explicit unit-targeted reads remain on the separate path. This is source-level
@@ -95,7 +92,8 @@ authority. No current evidence authorizes weakening any of these.
 ## Continuity and epistemics
 
 - Intentional asset ordinal continuation and durable Continue behavior have
-  focused and prior live evidence.
+  focused and current deployed E5 evidence (`assets_list` → `assets_reference`,
+  and `continuation_start` → `continuation_resume`).
 - Fresh-session versus intentional-continuation selection is now explicit in
   the live harness; seeded core/held-out/rotating selection is reproducible.
 - Current canonical/observed operational state is intended to supersede stale
@@ -108,7 +106,7 @@ authority. No current evidence authorizes weakening any of these.
 - Exact unreferenced obsolete Odysseus candidate images were removed; no broad
   `docker system prune -a` was used and no containerd storage was manually
   deleted.
-- Root Btrfs is at approximately 74% used with 23 GiB free. The storage
+- Root Btrfs is at approximately 74% used with 24 GiB free. The storage
   preflight correctly fails closed below its 30 GiB build-headroom target.
 - The next deployment must preserve the current candidate and rollback, build
   once after a passing preflight, verify exact source/image/migration
@@ -116,12 +114,11 @@ authority. No current evidence authorizes weakening any of these.
 
 ## Open requirements before claiming V1 complete
 
-1. Deploy and source-match the latest runtime fixes.
-2. Rerun the expanded live Qwen core/held-out/rotating matrix on that image.
-3. Produce a fresh raw-vs-Hades latency attribution with equivalent
+1. Rerun the expanded live Qwen held-out/rotating matrix on the source-matched image.
+2. Produce a fresh raw-vs-Hades latency attribution with equivalent
    deliverables and model-call counts.
-4. Complete the broad truth reconciliation audit, including provider/runtime
+3. Complete the broad truth reconciliation audit, including provider/runtime
    characterization and answer-phase leakage checks on the final image.
-5. Perform owner GUI dogfood for E6; automated E5 cannot replace it.
+4. Perform owner GUI dogfood for E6; automated E5 cannot replace it.
 
 Until these are verified, this remains an active V1 engineering checkpoint.
