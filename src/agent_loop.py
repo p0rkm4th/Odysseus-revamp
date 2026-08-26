@@ -1852,7 +1852,16 @@ _EXPLICIT_WORKSPACE_REFERENCE_RE = re.compile(
 _LOCAL_COMPUTER_REFERENCE_RE = re.compile(
     r"\b(?:on|from|in|using|with)\s+(?:this|my|the)\s+(?:computer|machine|pc|laptop|device|system)\b"
     r"|\b(?:local|host)\s+(?:computer|machine|files?|system)\b"
-    r"|\b(?:on|from)\s+(?!this\b|my\b|the\b|a\b|an\b)(?:[a-z][a-z0-9_.-]{1,31})\b",
+    ,
+    re.IGNORECASE,
+)
+_NAMED_COMPUTER_REFERENCE_RE = re.compile(
+    r"\b(?:on|from)\s+(?!this\b|my\b|the\b|a\b|an\b)(?:[a-z][a-z0-9_.-]{1,31})\b",
+    re.IGNORECASE,
+)
+_COMPUTER_ACTION_CONTEXT_RE = re.compile(
+    r"\b(?:run|execute|inspect|check|connect|ssh|scan|probe|ping|reach|"
+    r"host|server|machine|computer|network|service|status|logs?)\b",
     re.IGNORECASE,
 )
 
@@ -1874,7 +1883,14 @@ def _looks_like_workspace_coding_request(text: str) -> bool:
 
 def _looks_like_local_computer_request(text: str) -> bool:
     text = str(text or "")
-    return bool(text.strip() and _LOCAL_COMPUTER_REFERENCE_RE.search(text))
+    if not text.strip():
+        return False
+    if _LOCAL_COMPUTER_REFERENCE_RE.search(text):
+        return True
+    return bool(
+        _NAMED_COMPUTER_REFERENCE_RE.search(text)
+        and _COMPUTER_ACTION_CONTEXT_RE.search(text)
+    )
 
 
 def _explicitly_references_missing_workspace(text: str, workspace: Optional[str]) -> bool:
