@@ -148,6 +148,16 @@ phrases is therefore `OWNER_DOGFOOD_PENDING`.
 
 ## Current deployed truth — 2026-08-26
 
+## Current deployed truth update — 2026-08-26
+
+`b471e10455ba846373ca89449fc021cea21ace2e` is deployed as
+`odysseus:candidate-b471e10455ba`. A benign unknown read-style request with no
+specialized contract now bypasses the empty bounded-decision packet and uses
+authority-free general-model fallback directly. Live qwen3:8b evidence shows
+one model call, zero tools/index lookups, 312 input tokens, and no internal
+leakage, versus the previous three-call/8423-token path. This is a model-burden
+and latency subtraction; it does not grant fallback execution authority.
+
 The deployed source is `7f0a857687b43777194f3210ce0045011e449a27` in
 `odysseus:candidate-7f0a857687b4`. The final control-plane fixes are deployed
 and verified by focused/full tests plus a real qwen3:8b targeted matrix:

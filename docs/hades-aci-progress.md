@@ -270,6 +270,31 @@ source/root-cause checkpoint.
 
 ## Control-plane failure-class checkpoint — 2026-08-26
 
+## Direct fallback subtraction checkpoint — 2026-08-26
+
+- `b471e104` removes the empty bounded-decision round for benign unknown
+  read-style questions. When no specialized contract exists and the semantic
+  frame is `UNKNOWN`/`READ`, Hades now enters authority-free
+  `MODEL_FALLBACK` directly instead of constructing an empty Action packet,
+  invoking Decision repair, and falling back afterward.
+- Focused ACI/fallback gate: `67 passed`; the earlier full gate at
+  `b9d500f2` was `6384 passed, 3 skipped, 186 warnings`.
+- Real deployed qwen3:8b evidence for “Explain why RAID is not a backup.”:
+  one model call, zero tool calls, zero tool-index lookups, `312` input tokens,
+  no internal error/tool leakage. The prior path made three model calls and
+  consumed `8423` input tokens. General fallback has no durable read
+  CompletionContract; answer presence and authority-free completion are the
+  acceptance criteria for this category.
+- Current deployed candidate is `odysseus:candidate-b471e10455ba`, source
+  `b471e10455ba846373ca89449fc021cea21ace2e`, build
+  `b471e104-20260826T080000Z`, digest
+  `sha256:5dfda0f9517c8ccdac1a0f66e8bc27d695289fb6cc5204d2829749bd41d7ecd0`.
+- Retention cleanup removed nine exact untagged build leftovers and the
+  redundant non-running `rollback-d77e0622-prev` tag. Current, one prior
+  rollback (`candidate-b9d500f2e567`), the live auth harness, and the pinned
+  bundle remain. No owner data, databases, volumes, or model blobs were
+  touched; storage remains caution-level and is not a build authorization.
+
 - `a0ccc895` fixed the three traced failure classes: completed canonical asset
   results now retain ordered strong IDs; qualified ordinal references inherit
   only the current session's server-owned result context and preserve the
