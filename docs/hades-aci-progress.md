@@ -37,6 +37,9 @@
 | MODEL_FALLBACK | `29427c1a` | one-repair invalid Decision falls to authority-free general answer; 70 focused; 6369 full, 3 skipped | superseded by `936fe437` | FULL_REGRESSION |
 | TOOL_INDEX_BYPASS | `29427c1a` | unique canonical reads bypass generic tool ranking; sanitized live traces recorded | superseded by `936fe437` | PASSIVE_LIVE_VERIFIED |
 | DIRECT_READ_COMPLETION_FIX | `936fe437` | direct fast-path reads remain terminal for Action selection even when low-signal normalization clears `read_explicit`; 109 focused | `odysseus:candidate-936fe43744a5` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| STORAGE_PREFLIGHT | `99b8787f` | conservative build guard reports disk/Docker/candidate/rollback state and blocks below configured headroom; continuity slice 63 focused | not rebuilt | FOCUSED_TESTED |
+| ANSWER_SESSION_ISOLATION | `8419fea9` | successful direct reads rebuild answer route from ResultProjection; 6370 full, 3 skipped; 165 routing/continuity focused | `odysseus:candidate-8419fea9d94c` | FULL_REGRESSION |
+| ANSWER_CHANNEL_PROTOCOL | `d77e0622` | answer/fallback calls omit Decision response schema; 56 focused; clean Work trace 111-token answer route | `odysseus:candidate-d77e06229504` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 

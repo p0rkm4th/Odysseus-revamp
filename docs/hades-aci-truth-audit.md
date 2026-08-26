@@ -123,3 +123,23 @@ phrases is therefore `OWNER_DOGFOOD_PENDING`.
   `936fe43744a5c409009df3d07a8a23609d396a78-2026-08-26T02:18:50Z`.
 - Health, broker-facing container, Ollama bridge, Chroma, and migration head
   were verified. Owner GUI/E6 verification remains pending.
+
+## Deep autonomy sprint checkpoint
+
+- Storage preflight: FOCUSED_TESTED at `99b8787f`; the candidate build now
+  fails closed below configured headroom and performs no cleanup.
+- Session-residue answer isolation: FULL_REGRESSION at `8419fea9`; `6370
+  passed, 3 skipped`; successful direct reads rebuild answer prompts from the
+  projected Result and current user turn.
+- Answer transport isolation: DEPLOYED/PASSIVE_LIVE_VERIFIED at `d77e0622`;
+  answer and fallback routes omit Decision response schemas as well as tools.
+  Clean Work tracing showed one direct read, zero tool-index lookups, and a
+  111-token answer route. Qwen emitted no machine Action envelope; its visible
+  prose was empty in this probe, so owner acceptance remains pending.
+- Current runtime: source `d77e062295044c17aa9eef7521fb7043d796c64f`, image
+  `odysseus:candidate-d77e06229504`, build
+  `d77e062295044c17aa9eef7521fb7043d796c64f-2026-08-26T02:53:12Z`, migration
+  `20260825_002_work_run_completion_v6`.
+- Storage after deployment: 76% root usage / 22 GiB free. Current candidate,
+  rollback tags, live-auth harness, and pinned bundle remain; four obsolete
+  non-running Odysseus tags were removed.
