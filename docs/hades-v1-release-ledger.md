@@ -45,16 +45,16 @@ E6.
 ## Current release state
 
 - Branch: `hades-aci-v1`, synchronized with `origin`.
-- Source head: `16d42ccc` (Ollama/Qwen ordinary-chat thinking suppression,
-  conceptual fallback routing, and configurable
-  equivalent-deliverable benchmark prompts); deployed runtime remains
-  `c0a281f5` until the next storage-approved candidate build.
+- Source head: `f18d10dd` (semantic read-family corrections and safe derived
+  runtime facts for MODEL_FALLBACK); deployed runtime remains `c0a281f5`
+  until the next storage-approved candidate build.
 - Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
-- Full regression at source `6c8163d8`: `6474 passed, 3 skipped, 186
-  warnings` in 123 seconds. The latest ledger update follows this source
-  gate.
+- Last full regression before the latest fallback/runtime source slice:
+  `6492 passed, 3 skipped, 186 warnings` in 123 seconds. Later focused gates:
+  `210 passed` for fallback/control-plane behavior and `198 passed` for
+  security/authority coverage.
 - Current telemetry/reference gate: `97 passed`.
-- Storage: 74% used / 24 GiB free; large replacement builds remain closed by
+- Storage: 74% used / 23 GiB free; large replacement builds remain closed by
   the 30 GiB preflight guard. Current, rollback, and live-auth images are
   retained; no owner data, databases, volumes, backups, or model blobs were
   removed.
