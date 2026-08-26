@@ -23,6 +23,7 @@
 | BENCHMARK_BURDEN_RECORDS | `c425f020` | Jarvis collector retains sanitized model-burden totals/labels; 4 focused | not rebuilt | FOCUSED_TESTED |
 | NATIVE_DECISION_TRANSPORT | `16748fe8` | native Ollama structured ACI transport disables thinking; 45 focused; 6307 full | `odysseus:candidate-16748fe8cccd` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | PACKET_CHOICE_SCHEMA | `2405ca79` | dynamic choice/context enums added; 6307 full; deployed probe confirms downstream rejection remains authoritative | `odysseus:candidate-2405ca79d117` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| INVENTORY_READ_FAST_PATH | `0147c77a` | inventory-state semantic contract, fixture correction, 6308 full; deployed case uses one deterministic read plus answer synthesis | `odysseus:candidate-0147c77a0803` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -136,17 +137,17 @@ migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
 
 The current implementation candidate is source commit
-`2405ca79d1171425fc7d9a746c1d17a5fbcc1bbd`, image
-`odysseus:candidate-2405ca79d117`, image ID
-`sha256:e3c190d51e6f0eb428ccbcb1505d7f695e4a5b2cb634eef75e4f2de09d7407a8`,
-build ID `2405ca79d1171425fc7d9a746c1d17a5fbcc1bbd-2026-08-25T23:52:57Z`,
+`0147c77a08031cb04aae851f186ecfcfb48a70c7`, image
+`odysseus:candidate-0147c77a0803`, image ID
+`sha256:5ff66e85d9608370f08434f055e5a5d0c3509005786e38190d65ceac9278b850`,
+build ID `0147c77a08031cb04aae851f186ecfcfb48a70c7-2026-08-25T23:59:19Z`,
 and frontend ID
-`frontend-2405ca79d1171425fc7d9a746c1d17a5fbcc1bbd-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
+`frontend-0147c77a08031cb04aae851f186ecfcfb48a70c7-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
 The exact source gate before deployment is `6305 passed, 3 skipped, 186
-warnings` in 125.81 seconds. The touched Memory/ACI focused gate is `76
+warnings` in 123.58 seconds. The touched Memory/ACI focused gate is `90
 passed`. The six-case deployed Qwen canary scored `6/6` with no runtime
 failures; its detailed records contain only synthetic fixtures. The replacement
 deployed three-case native-transport probe had zero provider failures and no
