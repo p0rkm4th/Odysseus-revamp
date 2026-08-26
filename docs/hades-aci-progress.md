@@ -596,3 +596,9 @@ source/root-cause checkpoint.
   Work fallback when no SelfState contract applies. The affected control-plane
   gate is `214 passed`; source is pushed as `0c4d9ff3` plus this follow-on
   slice, while deployment remains blocked by storage preflight.
+
+- Full regression after the semantic-family corrections: `6492 passed, 3
+  skipped, 186 warnings` in 123 seconds. This confirms the shared resolver
+  changes do not regress the broader repository suite; deployment and live E5
+  for this source remain pending the storage preflight and a valid owner-scoped
+  session cookie.
