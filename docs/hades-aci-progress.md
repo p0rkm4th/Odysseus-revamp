@@ -4,7 +4,7 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `bad74576`, remote
+- Source head: branch `hades-aci-v1`, commit `83c2cebe`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
 - Deployed runtime: `odysseus:candidate-c0a281f5`, exact runtime source
   `c0a281f5`, branch
@@ -113,6 +113,9 @@ This section supersedes older historical rows below for present-state claims.
   consumed by the collection `list` fast path; ambiguous pronouns remain
   unresolved. The focused reference/control-plane gate is `291 passed`.
   Deployment is intentionally pending the storage preflight headroom guard.
+- Follow-up contract-consistency gate: the shared canonical read-action helper
+  now accepts the resolved entity reference, keeping `get` consistent across
+  semantic resolution, projection, and execution; focused gate `271 passed`.
 - Remote checkpoint: `origin/hades-aci-v1` is synchronized through source
   checkpoint `8038e227`; this documentation commit records that source/deploy
   distinction without requiring a rebuild.

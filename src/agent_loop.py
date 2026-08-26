@@ -869,7 +869,12 @@ def _network_service_enumeration_request(query: str) -> bool:
     )
 
 
-def _canonical_read_action(domain_concept: str, filters: dict | None = None) -> str | None:
+def _canonical_read_action(
+    domain_concept: str,
+    filters: dict | None = None,
+    *,
+    entity_reference: str | None = None,
+) -> str | None:
     """Project a semantic read through the authoritative DomainContract.
 
     The agent loop must not maintain a second concept-to-ActionSpec registry.
@@ -887,7 +892,7 @@ def _canonical_read_action(domain_concept: str, filters: dict | None = None) -> 
         return None
     view = dict(filters or {}).get("view")
     operation = "READ"
-    if concept == "TECHNICAL_ASSET" and str((filters or {}).get("entity_reference") or "").strip():
+    if concept == "TECHNICAL_ASSET" and str(entity_reference or "").strip():
         operation = "READ_DETAIL"
     elif concept == "WORK" and view == "attention":
         operation = "READ_ATTENTION"
@@ -7830,7 +7835,9 @@ async def stream_agent_loop(
         # The resolved contract is authoritative; the helper is retained as
         # a defensive consistency check for callers that only carry a frame.
         _read_action = str(_resolved_read.get("action_id") or "").strip() or _canonical_read_action(
-            _read_concept, _asset_frame.get("filters")
+            _read_concept,
+            _asset_frame.get("filters"),
+            entity_reference=_asset_frame.get("entity_reference"),
         )
         # Implicit current/local-network execution cannot resolve a safe target
         # from historical CMDB or the application namespace. Perform the
