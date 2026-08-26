@@ -265,3 +265,24 @@ diagnostic overhead evidence, not a release-quality harness-tax comparison.
 The current implementation head is `ff14c3a0`; the deployed implementation
 remains `0dc6ce153ff5d7e1bb359fe8fd7a94e89de95dbf`. No image was rebuilt for this
 source/root-cause checkpoint.
+
+## Automated live E5 and V1 fast-track checkpoint
+
+- `121cb6d7` broadened compositional Work/infrastructure-read routing and
+  added negative near-miss coverage so general VM/container explanations do
+  not become host inspection. Focused routing: `149 passed`; full regression:
+  `6379 passed, 3 skipped, 186 warnings`.
+- `scripts/hades_live_dogfood.py` is the reusable sanitized production-path
+  runner. It uses owner-scoped temporary sessions, fresh sessions for unrelated
+  cases, and explicit continuation sessions for references/Continue.
+- Candidate `odysseus:candidate-121cb6d7b74b` is source-matched to
+  `121cb6d7b74b3160fe4e6fe05edd981036966926`; build
+  `121cb6d7-20260826T033209Z`; image digest
+  `sha256:bdc4aab4cfef9f8e4fd6a1cad9073dcbf2ce96af1b9025b7a11944343891dbb9`.
+- Real authenticated HTTP chat with real qwen3:8b produced answers for all
+  `23/23` live cases, with zero transport errors and zero internal tool/error
+  leakage. Memory was `5/5` direct/complete; Work was `3/3` direct/complete;
+  current Network was `3/3` direct/complete. Remaining live failures are the
+  asset ordinal continuation, infrastructure executor failures, and durable
+  Continue completion. This is E5 automated evidence, not E6 owner GUI
+  evidence.
