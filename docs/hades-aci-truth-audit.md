@@ -67,6 +67,12 @@ security/approval/identity cases pass; only the two synthetic continuity
 recovery flags remain incomplete. This is synthetic evidence; owner GUI
 verification remains pending.
 
+The continuity benchmark harness was corrected in `05dd1e0d` and full-tested
+(`6316 passed, 3 skipped, 186 warnings`). Its two recovery cases now inject a
+loopback primary failure, use the configured Ollama endpoint as fallback, and
+both report recovery with one retry. This benchmark-only commit did not change
+the deployed image.
+
 ## Owner-live script
 
 1. What do you remember about me?
