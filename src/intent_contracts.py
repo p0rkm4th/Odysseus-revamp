@@ -125,7 +125,7 @@ class ContinuationResolution:
 # replaced with a shell or database path.
 DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     "TECHNICAL_ASSET": DomainContract(
-        "TECHNICAL_ASSET", "inventory.manage", {"READ": "list"}, "manage_assets",
+        "TECHNICAL_ASSET", "inventory.manage", {"READ": "list", "READ_DETAIL": "get"}, "manage_assets",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "technical_asset_list",
     ),
@@ -290,7 +290,12 @@ def resolve_structured_reference(
     ))
     # Allow natural qualifiers ("first physical one", "second server").
     # The ordinal remains bounded by the supplied ordered entity set.
-    ordinal_match = re.search(r"\b(?:the\s+)?(first|second|third)(?:\s+[a-z0-9_-]+){0,2}\s+one\b", query)
+    ordinal_match = re.search(
+        r"\b(?:the\s+)?(first|second|third)"
+        r"(?:\s+[a-z0-9_-]+){0,2}\s+"
+        r"(?:one|machine|computer|server|host|box|device)\b",
+        query,
+    )
     singular = bool(re.search(r"\b(?:it|that|this|that\s+one)\b", query)) or bool(ordinal_match)
     if not plural and not singular:
         return {"status": "NOT_REFERENCE", "refs": [], "reason": "no structured reference phrase"}
@@ -481,7 +486,9 @@ def compile_intent(
     match = re.search(r"\b(?:about|for|asset)\s+([A-Za-z0-9_.:-]{2,80})", text, re.IGNORECASE)
     # A resolved opaque reference is stronger than a lexical fragment such as
     # ``about first``. Never replace a server-owned identity with an ordinal.
-    if match and not target:
+    if match and not target and match.group(1).casefold() not in {
+        "the", "a", "an", "one", "it", "that", "this", "first", "second", "third",
+    }:
         target = match.group(1)
     if concept == "SERVICE" and operation == "EXECUTE" and not target:
         # A restart preflight is safe, but it is not meaningful without the
@@ -638,6 +645,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:
         return ResolvedContract(frame, contract, None, None, contract.binding, False, "target_required")
     action_key = frame.operation_class
+    if frame.domain_concept == "TECHNICAL_ASSET" and frame.operation_class == "READ" and frame.entity_reference:
+        action_key = "READ_DETAIL"
     if frame.domain_concept == "WORK" and frame.filters.get("view") == "attention":
         action_key = "READ_ATTENTION"
     elif frame.domain_concept == "INTEGRATION" and frame.filters.get("view") == "integrations":
@@ -695,9 +704,9 @@ def validate_contracts() -> list[str]:
                 )
                 if missing_textual:
                     errors.append(f"{concept}: textual contract omits ActionSpec exposure {missing_textual}")
-            if operation in {"READ", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
+            if operation in {"READ", "READ_DETAIL", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
-            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id != "developer.read" and "read_private" not in action.effects:
+            if operation in {"READ", "READ_DETAIL", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id != "developer.read" and "read_private" not in action.effects:
                 errors.append(f"{concept}/{action_id}: read lacks read_private effect")
             if operation in {"READ_FILE", "READ_MAP"} and "read_workspace" not in action.effects:
                 errors.append(f"{concept}/{action_id}: developer read lacks read_workspace effect")

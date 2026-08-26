@@ -13,7 +13,8 @@ from typing import Any
 from src.capability_registry import ActionSpec, ApprovalMode, capability_for_id
 from src.tool_bindings import binding_for_tool
 from core.work_models import WorkAction, WorkGoal, WorkLock, WorkRun
-from src.work_engine import WorkEngine, WorkError, serialize
+import src.work_engine as work_engine_module
+from src.work_engine import WorkError, serialize
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -106,7 +107,11 @@ def _execution_path(spec: ActionSpec, action: dict[str, Any]) -> dict[str, Any]:
 class RunPlanner:
     def __init__(self, db):
         self.db = db
-        self.work = WorkEngine(db)
+        # Resolve the facade at construction time from its owning module.
+        # Besides keeping the projection coupled to the canonical WorkEngine,
+        # this prevents a temporary test/provider facade from becoming a
+        # stale module-level dependency across independently ordered runs.
+        self.work = work_engine_module.WorkEngine(db)
 
     def _run(self, owner: str, run_id: str) -> WorkRun:
         return self.db.query(WorkRun).filter_by(owner=owner, id=run_id).one_or_none() or (_ for _ in ()).throw(WorkError("run not found"))

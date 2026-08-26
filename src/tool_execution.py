@@ -1388,6 +1388,17 @@ async def _execute_manage_assets_binding(block, owner=None):
                 "source": "canonical_it_asset_cmdb",
                 "owner_scope": str(owner or "authenticated_owner"),
             }
+        elif action == "get" and isinstance(parsed, dict):
+            # Keep the asset read Result contract collection-shaped so the
+            # same projection/grounding path can represent both a list and a
+            # server-resolved detail read without exposing a second schema.
+            data = {
+                "status": "SUCCESS",
+                "assets": [parsed],
+                "asset_count": 1,
+                "source": "canonical_it_asset_cmdb",
+                "owner_scope": str(owner or "authenticated_owner"),
+            }
         elif action == "summary" and isinstance(parsed, dict):
             data = {
                 "status": "SUCCESS",

@@ -887,7 +887,9 @@ def _canonical_read_action(domain_concept: str, filters: dict | None = None) -> 
         return None
     view = dict(filters or {}).get("view")
     operation = "READ"
-    if concept == "WORK" and view == "attention":
+    if concept == "TECHNICAL_ASSET" and str((filters or {}).get("entity_reference") or "").strip():
+        operation = "READ_DETAIL"
+    elif concept == "WORK" and view == "attention":
         operation = "READ_ATTENTION"
     elif concept == "INTEGRATION" and view == "integrations":
         operation = "READ_INTEGRATIONS"
@@ -898,6 +900,15 @@ def _canonical_read_action(domain_concept: str, filters: dict | None = None) -> 
     elif concept == "NETWORK" and view == "roles":
         operation = "READ_ROLES"
     return contract.actions.get(operation)
+
+
+def _canonical_asset_read_payload(frame: dict | None) -> dict:
+    """Project a collection or resolved asset reference onto a safe read."""
+    frame = frame if isinstance(frame, dict) else {}
+    reference = str(frame.get("entity_reference") or "").strip()
+    if reference:
+        return {"action": "get", "asset": reference}
+    return {"action": "list", "limit": 500}
 
 def _normalize_operational_intent_evidence(intent, query: str):
     # Fuse operational intent from action + object + scope evidence.
@@ -7850,6 +7861,16 @@ async def stream_agent_loop(
             and not _force_answer
             and _asset_frame.get("operation_class") == "READ"
             and _asset_frame.get("read_explicit") is True
+            # A resolved asset reference has a narrower canonical projection
+            # below.  Let that branch emit `get` with the server-owned strong
+            # identity; the domain contract's list action is only the
+            # collection-read default.  If this guard is omitted, the generic
+            # read projection consumes the turn first and silently drops the
+            # ordinal/pronoun target by issuing another unqualified list.
+            and not (
+                _asset_frame.get("domain_concept") == "TECHNICAL_ASSET"
+                and str(_asset_frame.get("entity_reference") or "").strip()
+            )
             and _read_binding
             and _read_action
             and not tool_blocks
@@ -7900,14 +7921,11 @@ async def stream_agent_loop(
             if re.search(r"\b(?:cerberus|what do we know about)\b", _last_user, re.IGNORECASE):
                 match = re.search(r"\b(?:about|asset)\s+([A-Za-z0-9_.:-]{2,80})", _last_user, re.IGNORECASE)
                 asset_query = match.group(1) if match else None
-            asset_action = (
-                str((_intent.get("resolved_contract") or {}).get("action_id") or "list")
-                if _compiled_asset_read else ("search" if asset_query else "list")
-            )
-            asset_payload = {"action": asset_action, "limit": 500}
-            _asset_ref = str(_asset_frame.get("entity_reference") or "").strip()
-            if _asset_ref:
-                asset_payload = {"action": "get", "asset": _asset_ref}
+            asset_payload = _canonical_asset_read_payload(_asset_frame)
+            asset_action = str(asset_payload.get("action") or "list")
+            if asset_action == "list" and asset_query:
+                asset_payload["action"] = "search"
+                asset_payload["query"] = asset_query
             if asset_query:
                 asset_payload["query"] = asset_query
             logger.info("[agent] deterministic canonical IT-asset read repair action=%s", asset_action)

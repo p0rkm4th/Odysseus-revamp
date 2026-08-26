@@ -117,6 +117,28 @@ def test_trusted_work_adapter_reuses_registered_binding(monkeypatch):
     assert result["success"] is True
 
 
+def test_asset_detail_binding_preserves_collection_result_contract(monkeypatch):
+    class Completed:
+        returncode = 0
+        stdout = json.dumps({"id": "PHYSICAL-001", "name": "Cerberus"})
+        stderr = ""
+
+    calls = []
+    monkeypatch.setattr(
+        tool_execution._ody_v34_subprocess,
+        "run",
+        lambda argv, **kwargs: (calls.append(argv) or Completed()),
+    )
+    binding, result = asyncio.run(tool_execution._execute_manage_assets_binding(
+        type("Block", (), {"content": '{"action":"get","asset":"PHYSICAL-001"}'})(),
+        owner="alice",
+    ))
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["data"]["assets"] == [{"id": "PHYSICAL-001", "name": "Cerberus"}]
+    assert calls and calls[0][-1] == "PHYSICAL-001"
+
+
 def test_registered_dispatch_rejects_malformed_canonical_read_result(monkeypatch):
     async def fake_executor(block, owner=None):
         return "manage_homelab", {

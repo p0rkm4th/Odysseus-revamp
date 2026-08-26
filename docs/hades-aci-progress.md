@@ -4,10 +4,10 @@
 
 This section supersedes older historical rows below for present-state claims.
 
-- Source head: branch `hades-aci-v1`, commit `aea513aa`, remote
+- Source head: branch `hades-aci-v1`, commit `30d14939`, remote
   `origin=git@github.com:p0rkm4th/Odysseus-revamp.git`.
-- Deployed runtime: `odysseus:candidate-074d240f`, source-only overlay based on
-  the prior validated candidate, exact runtime source `074d240f`, branch
+- Deployed runtime: `odysseus:candidate-c0a281f5`, exact runtime source
+  `c0a281f5`, branch
   `hades-aci-v1`, migration
   `20260825_002_work_run_completion_v6`. This is a storage-constrained thin
   source overlay of the previously fully built candidate; `/api/version`
@@ -108,6 +108,11 @@ This section supersedes older historical rows below for present-state claims.
   by the 30 GiB preflight headroom guard.
 - Owner GUI evidence remains E6 pending. No owner data, databases, volumes,
   backups, or model blobs were removed.
+- Pending source fix after the deployed candidate: resolved asset ordinal and
+  pronoun references now select the canonical detail `get` ActionSpec instead
+  of being consumed by the collection `list` fast path; ambiguous pronouns
+  remain unresolved. The focused reference/control-plane gate is `291 passed`.
+  Deployment is intentionally pending the storage preflight headroom guard.
 - Remote checkpoint: `origin/hades-aci-v1` is synchronized through source
   checkpoint `8038e227`; this documentation commit records that source/deploy
   distinction without requiring a rebuild.
