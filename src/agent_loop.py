@@ -8869,10 +8869,26 @@ async def stream_agent_loop(
                 canonical_read=(
                     _aci_enabled
                     and _aci_mode == "aci"
-                    and _matches_resolved_canonical_read(
-                        block,
-                        _intent.get("intent_frame"),
-                        _intent.get("resolved_contract"),
+                    and (
+                        _matches_resolved_canonical_read(
+                            block,
+                            _intent.get("intent_frame"),
+                            _intent.get("resolved_contract"),
+                        )
+                        # The fast path itself is a stronger proof than the
+                        # paraphrase classifier's `read_explicit` bit.  Some
+                        # harmless golden reads (notably Work overview) are
+                        # intentionally low-signal after normalization, yet
+                        # the framework has already selected the exact safe
+                        # Action and skipped model selection.  Do not let
+                        # that successful direct read re-enter bounded
+                        # reasoning merely because the classifier used a
+                        # different semantic confidence label.
+                        or (
+                            _aci_fast_path_block is not None
+                            and block.tool_type == _aci_fast_path_block.tool_type
+                            and block.content == _aci_fast_path_block.content
+                        )
                     )
                 ),
             )
