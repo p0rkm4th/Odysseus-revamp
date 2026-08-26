@@ -62,3 +62,8 @@ E6.
   Hades preparation was `0.235s`/`0.208s`, with one model call and zero tool
   calls. This is diagnostic only: raw stopped at 3 output tokens while Hades
   consumed 64, so it is not an equivalent-deliverable quality comparison.
+- Tight-cap diagnostic rerun at 3 tokens measured raw `3.486s` vs Hades
+  `5.955s` (`2.468s` total delta; `0.222s` preparation; `2.244s` extra
+  provider span; one model call; zero tools). Both providers reported 3 output
+  tokens, but Hades streamed 144 characters, so usage/stream accounting still
+  needs correction before declaring an equivalent benchmark.
