@@ -1,4 +1,10 @@
-# Hades ACI truth audit
+# Hades ACI truth audit (historical)
+
+> **Historical record.** This document preserves earlier ACI checkpoints and
+> is not the current deployment truth. For present-state source, deployment,
+> evidence levels, and owner-live status, use
+> [`hades-aci-v1-truth-audit.md`](hades-aci-v1-truth-audit.md) and the concise
+> [`hades-v1-release-ledger.md`](hades-v1-release-ledger.md).
 
 | Claim | State | Evidence |
 |---|---|---|
