@@ -26,6 +26,11 @@ _MEMORY_KNOWLEDGE = re.compile(
     r"information|profile|rundown)\b",
     re.IGNORECASE,
 )
+_MEMORY_STORE_QUERY = re.compile(
+    r"\b(?:what\s+(?:do|have)\s+you|anything\s+you|show\s+(?:me\s+)?what\s+you)\b"
+    r".*\b(?:saved|stored|retained|kept)\b",
+    re.IGNORECASE,
+)
 _WORK_SUBJECT = re.compile(
     r"\b(?:work|working|workload|"
     r"on\s+my\s+plate|got\s+(?:going|on)|keeping\s+me\s+busy|"
@@ -104,6 +109,11 @@ def deterministic_read_concept(text: str) -> str | None:
         return None
     if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
         return None
+    if _MEMORY_STORE_QUERY.search(query) and not re.search(
+        r"\b(?:file|files|document|documents|secret|secrets|password|passwords)\b",
+        query,
+    ):
+        return "MEMORY"
     # A noun such as "memory" or "network" is not by itself an owner-state
     # read. Explanations and definitions belong on the general-model floor
     # unless the turn also carries an explicit owner/current-state subject.

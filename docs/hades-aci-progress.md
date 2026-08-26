@@ -602,3 +602,8 @@ source/root-cause checkpoint.
   changes do not regress the broader repository suite; deployment and live E5
   for this source remain pending the storage preflight and a valid owner-scoped
   session cookie.
+
+- A follow-up Memory-family correction recognizes compositional stored-memory
+  wording such as `what do you actually have saved` while excluding file,
+  document, and secret targets. The affected gate is `215 passed`; this
+  source-only checkpoint remains awaiting deployment and automated live E5.
