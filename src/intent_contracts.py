@@ -517,7 +517,34 @@ def compile_intent(
         r"\b(?:changed|modified|completed|finished|old|stale)\b", q,
     ):
         safety_constraints.append("action_revalidation_required")
-    if safety_constraints and concept == "UNKNOWN" and re.search(r"\b(?:scan|discover|probe|enumerate)\b", q):
+    # Active network observation is never authorized by a vague reference to
+    # "my/local network" or by historical/current host context.  An explicit
+    # bounded CIDR remains on the normal plan/approval/policy path; an
+    # unscoped research/deep-dive request is a framework-owned clarification
+    # instead of an empty bounded decision problem.
+    if (
+        concept == "NETWORK"
+        and operation in {"EXECUTE", "RESEARCH"}
+        and not re.search(
+            r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
+            r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
+            q,
+        )
+    ):
+        safety_constraints.append("network_scope_requires_authorization")
+    if (
+        concept == "UNKNOWN"
+        and operation in {"EXECUTE", "RESEARCH"}
+        and re.search(r"\b(?:scan|discover|probe|enumerate|investigate|research)\b", q)
+        and (
+            re.search(r"\b(?:network|lan|subnet|wifi|wi-fi|connection|connected)\b", q)
+            or re.search(
+                r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
+                r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
+                q,
+            )
+        )
+    ):
         concept = "NETWORK"
     reference_filters = {}
     if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
@@ -540,15 +567,15 @@ def compile_intent(
         r"\b(?:degraded|broken|attention|health)\b.*\bintegrations?\b", q,
     ):
         reference_filters["view"] = "integrations"
-    elif concept == "NETWORK" and re.search(r"\b(?:unidentified|unknown|unrecognised|unrecognized)\b", q):
+    elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:unidentified|unknown|unrecognised|unrecognized)\b", q):
         reference_filters["view"] = "unidentified"
-    elif concept == "NETWORK" and (
+    elif concept == "NETWORK" and operation == "READ" and (
         semantic_view == "context" or re.search(
         r"\b(?:what\s+network|which\s+network|network\s+am\s+i|currently\s+connected|current(?:ly)?\s+(?:on|connected))\b",
         q,
     )):
         reference_filters["view"] = "context"
-    elif concept == "NETWORK" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
+    elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
         reference_filters["view"] = "roles"
     workspace = {
         "MEMORY": "hades", "WORK": "work", "GOAL": "work", "PROJECT": "work", "TASK": "work", "RUN": "work", "COMMITMENT": "work", "MISSION": "work", "WATCH": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",

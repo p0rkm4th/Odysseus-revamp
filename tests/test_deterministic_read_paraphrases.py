@@ -140,6 +140,8 @@ def test_explicit_host_inspection_uses_host_read_not_network_observations(query)
     "What have I got going on?",
     "What's keeping me busy?",
     "What projects are currently in progress?",
+    "alright what am i working on again",
+    "okay so what am i working on",
 ])
 def test_work_status_paraphrases_are_canonical_reads(query):
     resolved = resolve_intent(compile_intent(query))
@@ -147,6 +149,27 @@ def test_work_status_paraphrases_are_canonical_reads(query):
     assert resolved.frame.domain_concept == "WORK"
     assert resolved.action_id == "overview"
     assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
+    "Do a deep dive on my local network.",
+    "Investigate my network.",
+    "Look into the current LAN.",
+])
+def test_unscoped_network_deep_dive_requires_explicit_authorized_scope(query):
+    frame = compile_intent(query)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "RESEARCH"
+    assert "network_scope_requires_authorization" in frame.constraints
+    assert resolve_intent(frame).available is False
+
+
+def test_explicit_bounded_network_scope_keeps_normal_plan_contract():
+    frame = compile_intent("Scan the network 192.168.1.0/24")
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "EXECUTE"
+    assert "network_scope_requires_authorization" not in frame.constraints
+    assert resolve_intent(frame).action_id == "plan_network_discovery"
 
 
 @pytest.mark.parametrize("query", ["Where did we leave off?", "Where'd I leave off?"])

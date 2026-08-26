@@ -6141,6 +6141,7 @@ async def stream_agent_loop(
             _safety_clarifications = {
                 "strong_identity_required": "I can't merge or identify assets by IP address alone; I need a strong identity such as a system UUID, serial, or MAC.",
                 "public_scope_requires_authorization": "I can't scan a public or external range without an explicitly authorized target scope.",
+                "network_scope_requires_authorization": "I can't start an active network deep dive without an explicitly authorized target scope, such as a bounded CIDR. I can report the current host network context without scanning.",
                 "action_revalidation_required": "I can't approve or replay a changed or completed Action; it must be freshly revalidated through the normal approval path.",
             }
             for _constraint, _message in _safety_clarifications.items():
@@ -6194,9 +6195,11 @@ async def stream_agent_loop(
             elif _aci_clarification_only:
                 aci_instruction = (
                     "HADES ACI CLARIFICATION MODE. The framework resolved that "
-                    "the requested service operation is missing an exact target. "
-                    "Ask the owner which service or systemd unit they mean. "
-                    "Do not call tools, propose commands, or claim execution."
+                    "the request needs a missing target, scope, or other owner-"
+                    "resolvable detail. Respond with one concise natural "
+                    "clarification or safety explanation using the supplied "
+                    "framework message. Do not call tools, propose commands, "
+                    "or claim execution."
                 )
             elif _aci_model_fallback:
                 aci_instruction = (
