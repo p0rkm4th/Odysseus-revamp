@@ -21,7 +21,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Owner E6 | pending | no owner GUI claim |
 | Automated E5 | current deployed canary verified | prior 25-case core + 12 held-out + 16 rotating sanitized live cases, plus corrected seeded 7/7 continuation-aware run |
 | Live security E5 | unauthorized network-scope request | 1/1 trajectory pass; zero tool calls/approvals/errors |
-| Full regression | `6422 passed, 3 skipped, 186 warnings` | host virtualenv gate; source before the final fallback guard |
+| Full regression | `6424 passed, 3 skipped, 186 warnings` | host virtualenv gate; source `8038e227` |
 | Current focused gate | `177 passed` continuation/intent/loop; `122 passed` infrastructure/reference; `82 passed` fallback/workspace seam | pytest logs |
 | Matched local latency | raw `3.596s`; Hades `10.484s`; delta `6.888s`; extra provider inference `6.684s` | benchmark with equal 128-token budget |
 
