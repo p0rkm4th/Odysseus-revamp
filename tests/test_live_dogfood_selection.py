@@ -58,6 +58,22 @@ def test_core_and_held_out_suites_are_disjoint_and_nonempty():
     assert core | held_out == {case.name for case in CASES}
 
 
+@pytest.mark.parametrize(
+    "prefix",
+    ("memory_", "work_", "network_", "infra_", "assets_list", "assets_reference"),
+)
+def test_deterministic_cases_require_no_bounded_decision_index_or_approval(prefix):
+    cases = [
+        case for case in CASES
+        if case.name.startswith(prefix)
+        and case.family not in {"negative_near_miss", "security"}
+    ]
+    assert cases
+    assert all(case.expect_bounded_decisions == 0 for case in cases)
+    assert all(case.expect_tool_index_lookups == 0 for case in cases)
+    assert all(case.expect_approvals == 0 for case in cases)
+
+
 @pytest.mark.parametrize("bad", [0, -1])
 def test_sample_must_be_positive(bad):
     with pytest.raises(ValueError, match="positive"):
@@ -89,4 +105,3 @@ def test_live_result_exposes_bounded_decision_burden_without_raw_trace():
     assert "unexpected_bounded_decisions" in assert_case(
         Case("read", "read", expect_bounded_decisions=0), result,
     )
-
