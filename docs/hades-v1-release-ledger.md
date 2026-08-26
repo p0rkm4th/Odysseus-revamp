@@ -45,7 +45,7 @@ E6.
 ## Current release state
 
 - Branch: `hades-aci-v1`, synchronized with `origin`.
-- Source head: `0e5360ac` (semantic read-family corrections, safe derived
+- Source head: `c9262717` (semantic read-family corrections, safe derived
   runtime facts for MODEL_FALLBACK); deployed runtime remains `c0a281f5`
   until the next storage-approved candidate build.
 - Running image: `odysseus:candidate-c0a281f5`, source-matched and healthy.
