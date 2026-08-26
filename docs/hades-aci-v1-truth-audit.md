@@ -12,9 +12,9 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Item | Current truth | Evidence |
 |---|---|---|
 | Branch | `hades-aci-v1` | clean checkout |
-| Pushed source | `8038e227` | `origin/hades-aci-v1` |
-| Deployed source | `8038e227` | `/api/version`, immutable image marker |
-| Running image | `odysseus:candidate-8038e227` | Docker inspect |
+| Pushed source | `074d240f` | `origin/hades-aci-v1` |
+| Deployed source | `074d240f` | `/api/version`, immutable image marker |
+| Running image | `odysseus:candidate-074d240f` | Docker inspect |
 | Rollback | `odysseus:rollback-b471e104-prev` | Docker inspect |
 | API | healthy | `/api/health` |
 | Broker | active; socket present | systemd/socket check |
@@ -22,7 +22,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Automated E5 | current deployed canary verified | prior 25-case core + 12 held-out + 16 rotating sanitized live cases, plus corrected seeded 7/7 continuation-aware run |
 | Live security E5 | unauthorized network-scope request | 1/1 trajectory pass; zero tool calls/approvals/errors |
 | Full regression | `6424 passed, 3 skipped, 186 warnings` | host virtualenv gate; source `8038e227` |
-| Current focused gate | `177 passed` continuation/intent/loop; `122 passed` infrastructure/reference; `82 passed` fallback/workspace seam | pytest logs |
+| Current focused gate | `93 passed` reference telemetry/canary/ACI; prior `177 passed` continuation/intent/loop; `122 passed` infrastructure/reference; `82 passed` fallback/workspace seam | pytest logs |
 | Matched local latency | raw `3.596s`; Hades `10.484s`; delta `6.888s`; extra provider inference `6.684s` | benchmark with equal 128-token budget |
 
 The running process is source-matched through the immutable image marker and
