@@ -24,6 +24,7 @@
 | NATIVE_DECISION_TRANSPORT | `16748fe8` | native Ollama structured ACI transport disables thinking; 45 focused; 6307 full | `odysseus:candidate-16748fe8cccd` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | PACKET_CHOICE_SCHEMA | `2405ca79` | dynamic choice/context enums added; 6307 full; deployed probe confirms downstream rejection remains authoritative | `odysseus:candidate-2405ca79d117` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 | INVENTORY_READ_FAST_PATH | `0147c77a` | inventory-state semantic contract, fixture correction, 6308 full; deployed case uses one deterministic read plus answer synthesis | `odysseus:candidate-0147c77a0803` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
+| CONTRACT_ACTION_RETENTION | `67106c5e` | resolved planning Action survives operation-class filter; 6308 full; deployed trace records `contract_action_retained` | `odysseus:candidate-67106c5e8e8a` | DEPLOYED/PASSIVE_LIVE_VERIFIED |
 
 ## H0 evidence
 
@@ -137,12 +138,12 @@ migration head `20260825_002_work_run_completion_v6`. The documentation commit
 that records this evidence is intentionally later than the deployed image.
 
 The current implementation candidate is source commit
-`0147c77a08031cb04aae851f186ecfcfb48a70c7`, image
-`odysseus:candidate-0147c77a0803`, image ID
-`sha256:5ff66e85d9608370f08434f055e5a5d0c3509005786e38190d65ceac9278b850`,
-build ID `0147c77a08031cb04aae851f186ecfcfb48a70c7-2026-08-25T23:59:19Z`,
+`67106c5e8e8ae85db6c3ee9ba6728494de2ea379`, image
+`odysseus:candidate-67106c5e8e8a`, image ID
+`sha256:9314ba07b4d1ff301ffee8908ea3ab060b1310de5ba22044b01889da66763b4a`,
+build ID `67106c5e8e8ae85db6c3ee9ba6728494de2ea379-2026-08-26T00:05:59Z`,
 and frontend ID
-`frontend-0147c77a08031cb04aae851f186ecfcfb48a70c7-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
+`frontend-67106c5e8e8ae85db6c3ee9ba6728494de2ea379-ed62c6f38298daf5f815194c51b60b485beb10ecbfd02ca287ab6978c80ba0fe`.
 
 ## Full regression gate
 
@@ -155,6 +156,10 @@ empty bounded-decision payloads. It still exposed an invalid model choice on
 the broad synthetic inventory prompt and one `MODEL_PROSE_ONLY` network
 diagnostic; those remain action-exposure/routing evidence rather than
 transport failures.
+
+The deployed network probe now shows the framework retention label, but Qwen
+still returned prose for that operational branch. The Action was not executed
+from prose; the downstream control plane remained fail-closed.
 
 ## Build/cache observation
 
