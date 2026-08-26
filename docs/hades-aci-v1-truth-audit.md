@@ -24,6 +24,7 @@ live evidence, and automated E5 does not promote a behavior to owner E6.
 | Full regression | `6424 passed, 3 skipped, 186 warnings` | host virtualenv gate; source `8038e227` |
 | Current focused gate | `93 passed` reference telemetry/canary/ACI; prior `177 passed` continuation/intent/loop; `122 passed` infrastructure/reference; `82 passed` fallback/workspace seam | pytest logs |
 | Matched local latency | raw `3.596s`; Hades `10.484s`; delta `6.888s`; extra provider inference `6.684s` | benchmark with equal 128-token budget |
+| Current bridge overhead probe | cold raw `0.275s` / Hades `12.850s`; warm raw `3.352s` / Hades `12.600s`; prep `0.235s`/`0.208s`; one model call, zero tools | diagnostic 64-token run; raw emitted 3 tokens, so equivalent-deliverable comparison remains pending |
 
 The running process is source-matched through the immutable image marker and
 reports branch `hades-aci-v1`.
