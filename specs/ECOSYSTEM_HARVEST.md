@@ -9,10 +9,13 @@ may supply commodity mechanics or test design only.
 
 - Date opened: 2026-08-27
 - Checkout: `hades-aci-v1`
-- Source under development: `1356224279883559658e9adb2fbff1495c5a134c`
-- Current hotfix status: intentional, uncommitted, not deployed
-- Current release blockers: owner-session grounding failures and exact-once
-  stream evidence; these take priority over speculative integrations.
+- Source under development at ledger creation: `1356224279883559658e9adb2fbff1495c5a134c`
+- Checkpoint source: `c55501290b73994b9651b5802295fa41661cc2cf`
+- Checkpoint status: committed, pushed, explicitly built and deployed as
+  `odysseus:candidate-c5550129b73`; running source matches the checkpoint.
+- Current release blockers: live owner-authenticated Qwen acceptance is
+  unverified because its credential is unavailable; broad operator slices
+  remain incomplete.
 - Evidence rule: an entry remains `REFERENCE` or `REJECT` until its exact
   upstream revision, license, security review, and measured Hades delta are
   recorded.
@@ -82,7 +85,15 @@ below must be populated only after a focused characterization and dogfood run.
 |---|---:|---:|---:|---:|---:|---|
 | SWE-style Developer ACI result normalization | existing adapter | 56 | 0 (existing adapter extended) | +56 source lines, pending deletion candidate | 39 focused adapter/security tests; 68 hotfix/adapter tests | no live Qwen run yet; deterministic burden unchanged |
 | Grounding/tool-summary replacement event | existing stream path | small | replaces full-answer-as-delta behavior | pending | focused route/JS/ACI tests | pending live owner replay |
-| Response replacement / owner hotfix | existing ACI/stream path | 337 cumulative hotfix lines | pending source checkpoint | pending | 68 focused; 197 broader focused; prior full 6710 pass | live owner regressions not yet replayed |
+| Response replacement / owner hotfix | existing ACI/stream path | 337 cumulative hotfix lines | 0 additional legacy lines measured | deployed checkpoint | 68 focused; 197 broader focused; full 6,713 pass | live owner regressions remain unverified |
+
+## Deployment checkpoint
+
+- `LOCAL_HEAD = REMOTE_HEAD = RUNNING_SOURCE = c55501290b73994b9651b5802295fa41661cc2cf`
+- Candidate: `odysseus:candidate-c5550129b73`
+- Rollback: `odysseus:rollback-b471e104-prev`
+- Worktree at checkpoint: clean
+- Live authenticated Qwen acceptance: UNVERIFIED (credential unavailable)
 
 ## License and notice policy
 
