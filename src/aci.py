@@ -349,6 +349,108 @@ def build_base_prompt(
     )
 
 
+def finalize_prompt_messages(
+    messages: Sequence[Mapping[str, Any]],
+    agent_prompt: str,
+    context_messages: Sequence[Optional[Mapping[str, Any]]] = (),
+) -> list[dict[str, Any]]:
+    """Assemble the bounded prompt and supplemental context messages.
+
+    User-editable and externally sourced context stays outside the trusted
+    system role. This helper only orders/merges messages; it grants no
+    capability, policy, execution, or persistence authority.
+    """
+    source = [dict(message) for message in (messages or ())]
+    agent_message = {
+        "role": "system",
+        "content": agent_prompt,
+        "_agent_injected": "prompt",
+    }
+    insert_index = 0
+    for index, message in enumerate(source):
+        if message.get("role") == "system":
+            insert_index = index + 1
+        else:
+            break
+    source[insert_index:insert_index] = [agent_message]
+
+    merged: list[dict[str, Any]] = []
+    for message in source:
+        if (
+            message.get("_agent_injected") == "prompt"
+            and merged
+            and merged[-1].get("role") == "system"
+            and not merged[-1].get("_protected")
+            and not merged[-1].get("_agent_injected")
+        ):
+            base = dict(merged[-1])
+            merged[-1] = {
+                "role": "system",
+                "content": base.get("content", "") + "\n\n" + message["content"],
+                "_agent_injected": "merged_prompt",
+                "_agent_base_message": base,
+            }
+        elif (
+            message.get("role") == "system"
+            and not message.get("_protected")
+            and not message.get("_agent_injected")
+            and merged
+            and merged[-1].get("role") == "system"
+            and not merged[-1].get("_protected")
+            and not merged[-1].get("_agent_injected")
+        ):
+            merged[-1] = {
+                "role": "system",
+                "content": merged[-1]["content"] + "\n\n" + message["content"],
+            }
+        else:
+            merged.append(message)
+
+    last_user_index = len(merged) - 1
+    for index in range(len(merged) - 1, -1, -1):
+        if merged[index].get("role") == "user":
+            last_user_index = index
+            break
+    supplements = []
+    for message in context_messages or ():
+        if not message:
+            continue
+        item = dict(message)
+        item["_agent_injected"] = "context"
+        supplements.append(item)
+        merged.insert(last_user_index, item)
+        last_user_index += 1
+
+    supplement_indexes = [
+        index for index, message in enumerate(merged)
+        if (
+            not message.get("_protected")
+            and (
+                message.get("_agent_injected") == "context"
+                or message.get("_context_supplement")
+                or (message.get("metadata") or {}).get("context_kind") == "supplement"
+            )
+        )
+    ]
+    if supplement_indexes:
+        index_set = set(supplement_indexes)
+        ordered_supplements = [merged[index] for index in supplement_indexes]
+        remaining = [message for index, message in enumerate(merged) if index not in index_set]
+        tail_start = None
+        for index in range(len(remaining) - 1, -1, -1):
+            if remaining[index].get("role") == "assistant":
+                tail_start = index
+                break
+        if tail_start is None:
+            for index in range(len(remaining) - 1, -1, -1):
+                if remaining[index].get("role") == "user":
+                    tail_start = index
+                    break
+        if tail_start is not None:
+            merged = remaining[:tail_start] + ordered_supplements + remaining[tail_start:]
+    return merged
+
+
 def resolve_turn_intent(
     messages: Sequence[Mapping[str, Any]],
     last_user: str,
