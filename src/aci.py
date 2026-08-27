@@ -3005,6 +3005,28 @@ def canonical_result_answer(
     return None
 
 
+def project_final_answer(
+    full_response: str,
+    tool_events: Sequence[Mapping[str, Any]],
+    *,
+    intent_domains: Sequence[str] = (),
+    stored_evidence: bool = False,
+    clarification_only: bool = False,
+) -> tuple[str, CanonicalAnswer | None]:
+    """Select the authoritative answer before the transport emits it."""
+    canonical = canonical_result_answer(tool_events)
+    if canonical is not None:
+        return canonical.content, canonical
+    if clarification_only:
+        return str(full_response or ""), None
+    return ground_action_completion(
+        full_response,
+        intent_domains=set(intent_domains or ()),
+        tool_events=tool_events,
+        stored_evidence=stored_evidence,
+    ), None
+
+
 def project_capability_palette(
     capability_ids: Sequence[str] | None = None,
     *,

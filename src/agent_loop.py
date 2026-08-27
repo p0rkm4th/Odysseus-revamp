@@ -101,6 +101,7 @@ from src.aci import (
     detect_runaway_call,
     canonical_asset_read_payload,
     canonical_result_answer,
+    project_final_answer,
     canonical_read_fast_path_payload,
     deterministic_reference_acknowledgement,
     assistant_requested_followup,
@@ -6634,35 +6635,6 @@ async def stream_agent_loop(
                 "model": actual_model,
             },
         }) + "\n\n"
-    # Action-grounding boundary: prose is never evidence of an external
-    # operation. Only persisted tool events/results authorize completion
-    # language. This applies to every model, including local Qwen routes.
-    # Select the canonical owner-state answer before emitting any correction.
-    # When present, it suppresses intermediate model/legacy summaries so the
-    # transport receives one authoritative replacement only.
-    _canonical_answer = canonical_result_answer(tool_events)
-    _grounded_response = (
-        full_response
-        if _aci_clarification_only
-        else ground_action_completion(
-            full_response,
-            intent_domains=_intent_domains,
-            tool_events=tool_events,
-            stored_evidence=_has_stored_canonical_evidence(messages),
-        )
-    )
-    if _grounded_response != full_response and _canonical_answer is None:
-        logger.warning(
-            "[agent-grounding] suppressed ungrounded completion claim domains=%s text=%r",
-            sorted(_intent_domains), full_response[:240],
-        )
-        full_response = _grounded_response
-        # This is a replacement of already-streamed model prose, not a new
-        # delta.  Emitting the full corrected answer as ``delta`` makes the
-        # browser append it to the hallucinated answer (the owner-visible
-        # duplicate/failure-disclaimer bug).  The replacement event preserves
-        # one logical answer while keeping the grounded value authoritative.
-        yield "data: " + json.dumps({"type": "response_replace", "content": full_response}) + "\n\n"
     if _ody_qwen_finetune_model:
         full_response = _normalize_ody_qwen_text_artifacts(full_response)
         if (
@@ -6710,28 +6682,29 @@ async def stream_agent_loop(
                     full_response = _email_summary
                 break
 
-    if (
-        tool_events
-        and _canonical_answer is None
-        and full_response.strip()
-        and full_response.strip() != (_response_before_tool_summary or "").strip()
-        and full_response.strip() not in (_response_before_tool_summary or "")
-    ):
-        # Deterministic summaries replace model prose already emitted during
-        # the round.  They must not be streamed as a second full delta.
-        yield f"data: {json.dumps({'type': 'response_replace', 'content': full_response.strip()})}\n\n"
-
-    # ACI owns final deterministic answer selection.  The renderer returns
-    # one authoritative source/provenance record, so this loop emits at most
-    # one canonical replacement for owner-state reads and writes.
-    if _canonical_answer and _canonical_answer.content != full_response.strip():
-        full_response = _canonical_answer.content
-        yield "data: " + json.dumps({
-            "type": "response_replace",
-            "content": full_response,
-            "answer_source": _canonical_answer.source.value,
-            "provenance": _canonical_answer.provenance,
-        }) + "\n\n"
+    # ACI owns final answer selection after legacy summaries. The loop emits
+    # at most one replacement event for the complete turn.
+    _projected_response, _canonical_answer = project_final_answer(
+        full_response,
+        tool_events,
+        intent_domains=_intent_domains,
+        stored_evidence=_has_stored_canonical_evidence(messages),
+        clarification_only=_aci_clarification_only,
+    )
+    if _projected_response.strip() != full_response.strip():
+        if _canonical_answer is None:
+            logger.warning(
+                "[agent-grounding] suppressed ungrounded completion claim domains=%s text=%r",
+                sorted(_intent_domains), full_response[:240],
+            )
+        full_response = _projected_response
+        replacement = {"type": "response_replace", "content": full_response}
+        if _canonical_answer is not None:
+            replacement.update({
+                "answer_source": _canonical_answer.source.value,
+                "provenance": _canonical_answer.provenance,
+            })
+        yield "data: " + json.dumps(replacement) + "\n\n"
 
     # --- Final metrics ---
     total_duration = time.time() - total_start

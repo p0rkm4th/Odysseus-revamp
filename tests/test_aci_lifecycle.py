@@ -13,6 +13,7 @@ from src.aci import (
     canonical_network_read_answer,
     canonical_inventory_mutation_answer,
     canonical_result_answer,
+    project_final_answer,
     AnswerSource,
     assistant_requested_followup,
     classify_action_escalation,
@@ -159,6 +160,24 @@ def test_canonical_answer_suppresses_intermediate_untrusted_summary():
     assert answer is not None
     assert answer.source is AnswerSource.DETERMINISTIC_RESULT
     assert answer.content == "Current host network context (observed):\n- enp1s0 (PHYSICAL_LAN)\nNo default route was observed."
+
+
+def test_project_final_answer_prefers_canonical_result_over_model_prose():
+    response, answer = project_final_answer(
+        "The network has a Kubernetes cluster with four nodes.",
+        [{
+            "tool": "manage_homelab", "exit_code": 0,
+            "output": json.dumps({
+                "status": "SUCCESS_WITH_DATA", "action": "read_network_context",
+                "interfaces": [], "default_routes": [],
+            }),
+        }],
+        intent_domains=("network_ops",),
+    )
+    assert answer is not None
+    assert answer.source is AnswerSource.DETERMINISTIC_RESULT
+    assert "Kubernetes" not in response
+    assert response == "No current host network interfaces were observed."
 
 
 def test_canonical_network_read_answer_uses_structured_host_context():
