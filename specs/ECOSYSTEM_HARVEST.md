@@ -10,9 +10,10 @@ may supply commodity mechanics or test design only.
 - Date opened: 2026-08-27
 - Checkout: `hades-aci-v1`
 - Source under development at ledger creation: `1356224279883559658e9adb2fbff1495c5a134c`
-- Checkpoint source: `c55501290b73994b9651b5802295fa41661cc2cf`
+- Current checkpoint source: `3e7b66124c4cff877f4fb9d9f2b6bde7d5f22953`
 - Checkpoint status: committed, pushed, explicitly built and deployed as
-  `odysseus:candidate-c5550129b73`; running source matches the checkpoint.
+  `odysseus:candidate-3e7b66124c4c` (Compose service tag resolves to the same
+  image ID); running source matches the checkpoint.
 - Current release blockers: live owner-authenticated Qwen acceptance is
   unverified because its credential is unavailable; broad operator slices
   remain incomplete.
@@ -89,10 +90,12 @@ below must be populated only after a focused characterization and dogfood run.
 
 ## Deployment checkpoint
 
-- `LOCAL_HEAD = REMOTE_HEAD = RUNNING_SOURCE = c55501290b73994b9651b5802295fa41661cc2cf`
-- Candidate: `odysseus:candidate-c5550129b73`
+- `LOCAL_HEAD = REMOTE_HEAD = RUNNING_SOURCE = 3e7b66124c4cff877f4fb9d9f2b6bde7d5f22953`
+- Candidate: `odysseus:candidate-3e7b66124c4c`
+- Image ID: `sha256:b14f6f35a683b83916d6d29b88e552b28e806d84e05f8a9ae8fda5dd2d303298`
 - Rollback: `odysseus:rollback-b471e104-prev`
 - Worktree at checkpoint: clean
+- `/api/health`: healthy; app restart count: 0; Chroma and SearXNG healthy
 - Live authenticated Qwen acceptance: UNVERIFIED (credential unavailable)
 
 ## License and notice policy

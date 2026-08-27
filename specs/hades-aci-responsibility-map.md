@@ -10,16 +10,16 @@ that the legacy loop has already been removed.
 |---|---|
 | Repository | `/home/scootz/Odysseus/odysseus` |
 | Branch | `hades-aci-v1` |
-| Local HEAD | `4d20cd947015f7b8d4b8e5d600a6040c5f222610` |
-| Origin HEAD | `dbaddbdaac7ebb8586628e36dad62b397942cb67` (`origin/HEAD`) |
-| Divergence | 217 local commits ahead, 0 behind (verified with `git rev-list --left-right --count HEAD...origin/HEAD`) |
-| Worktree | 54 tracked files modified; 20 evaluator/spec/test artifacts untracked; no changes discarded |
-| Deployed image | `odysseus:candidate-d90bfbf9d05a` |
-| Deployed source | `d90bfbf9d05a22acc87411b8cbdc264cf4cd14fd` |
-| Production health | `/api/health` healthy at reconciliation |
+| Local HEAD | `3e7b66124c4cff877f4fb9d9f2b6bde7d5f22953` |
+| Origin HEAD | `3e7b66124c4cff877f4fb9d9f2b6bde7d5f22953` (`origin/hades-aci-v1`) |
+| Divergence | 0 ahead, 0 behind (verified with `git rev-list --left-right --count origin/hades-aci-v1...HEAD`) |
+| Worktree | clean at checkpoint; no intentional changes discarded |
+| Deployed image | `odysseus:candidate-3e7b66124c4c` (Compose service tag points to same image ID) |
+| Deployed source | `3e7b66124c4cff877f4fb9d9f2b6bde7d5f22953` |
+| Production health | `/api/health` healthy; app restart count 0 |
 | Rollback image | `odysseus:rollback-b471e104-prev` |
 | Storage | GREEN; 59 GiB root free, 251 GiB bulk free |
-| `src/agent_loop.py` | 9,282 LOC in the current worktree after moving decision interpretation/recovery and related projections behind ACI (10,233 at the recorded origin baseline; prior measured worktree values were 10,284, 10,296, and 10,259) |
+| `src/agent_loop.py` | 6,897 LOC in the current checkpoint worktree; remaining implementation is behind the ACI entrypoint, with compatibility-only callers outside the production path |
 
 The uncommitted evaluator and RC2 files are preserved as existing work. The
 deployed image is intentionally source-matched to the origin commit, not to
