@@ -1529,3 +1529,10 @@ Exactly-once dogfood evidence: extended the existing normalizer and live
 protocol observer with lifecycle-based response replacement and stale-delta
 checks, preserving event identity rather than deduplicating prose. Focused
 dogfood/live-selection coverage passed `51 passed, 1 warning`.
+
+Current-head checkpoint: the CI branch-trigger regression test now matches the
+intentional `main, dev, hades-aci-v1` push trigger. Source
+`e4e80c03ae0acb380fa44b8272dc0d7f98df7fb5` was explicitly deployed with
+matching image/source evidence; focused validation passed `102`, and the seven
+affected full-regression tests passed `8` in a writable fixture. The remaining
+read-only full-regression failures are documented environment evidence.
