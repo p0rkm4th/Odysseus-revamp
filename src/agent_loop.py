@@ -150,6 +150,7 @@ from src.aci import (
     hard_turn_capability_directive,
     domain_tools_for_projection,
     assemble_prompt,
+    skill_index_prompt,
 )
 from src.intent_contracts import (
     EXPLICIT_CONTINUATION_PHRASE_RE as _EXPLICIT_CONTINUATION_PHRASE_RE,
@@ -1753,61 +1754,15 @@ def _build_base_prompt(
         elif compact:
             agent_prompt = _assemble_prompt(set(TOOL_SECTIONS.keys()), disabled, compact=True, intent_domains=intent_domains)
 
-    # Inject the Level-0 skill index — one line per skill so the agent
-    # knows what canonical procedures exist. Includes published skills
-    # plus teacher-escalation drafts (auto-written when the student
-    # fails a task; appear here on the very next turn so the student
-    # can apply them immediately). Full SKILL.md fetched on demand via
-    # `manage_skills view name=...`. Gating mirrors index_for: platform
-    # + requires_toolsets + fallback_for_toolsets.
-    #
-    # SECURITY: skill `name` and `description` are user-editable, so the
-    # index block is returned SEPARATELY (not appended to agent_prompt).
-    # The caller wraps it in untrusted_context_message and ships it as a
-    # user-role message — same treatment as the matched-skills block.
-    skill_index_block = ""
-    if not suppress_local_context and not suppress_skills:
-        try:
-            from services.memory.skills import SkillsManager
-            from src.constants import DATA_DIR
-            _prefs = {}
-            try:
-                from routes.prefs_routes import _load_for_user as _load_prefs
-                _prefs = _load_prefs(owner) or {}
-            except Exception:
-                pass
-            _sm = SkillsManager(DATA_DIR)
-            active_tools = list(set(TOOL_SECTIONS.keys()) - set(disabled or []))
-            _allow_idx_drafts = bool(_prefs.get("auto_approve_skills", True))
-            try:
-                _idx_min_conf = float(_prefs.get(
-                    "skill_min_confidence",
-                    get_setting("skill_autosave_min_confidence", 0.85)))
-            except (TypeError, ValueError):
-                _idx_min_conf = 0.85
-            skill_idx = _sm.index_for(
-                owner=owner,
-                active_toolsets=active_tools,
-                allow_teacher_drafts=_allow_idx_drafts,
-                min_confidence=_idx_min_conf,
-            )
-            if skill_idx:
-                lines = [
-                    "## Available skills",
-                    "Catalogue of reusable procedures. Relevant full procedures, when matched, are injected separately and should be followed directly. Do not browse or fetch Skills automatically. Use `manage_skills` only when the user explicitly asks to inspect or manage the Skill registry, or when a referenced Skill resource is required.",
-                ]
-                by_cat: dict[str, list] = {}
-                for s in skill_idx:
-                    by_cat.setdefault(s["category"], []).append(s)
-                for cat in sorted(by_cat):
-                    lines.append(f"\n**{cat}**")
-                    for s in by_cat[cat]:
-                        badge = " *(draft)*" if s.get("status") == "draft" else ""
-                        lines.append(f"- `{s['name']}` — {s['description']}{badge}")
-                skill_index_block = "\n\n" + "\n".join(lines)
-        except Exception as _e:
-            # Skill index is a soft enhancement — never fail prompt assembly on it.
-            logger.debug(f"Skill-index injection skipped: {_e}")
+    # The Skill catalogue is a separate untrusted projection.  Its manager
+    # remains the storage/registration owner; it cannot grant authority.
+    skill_index_block = skill_index_prompt(
+        tool_names=set(TOOL_SECTIONS),
+        disabled_tools=disabled,
+        owner=owner,
+        suppress_local_context=suppress_local_context,
+        suppress_skills=suppress_skills,
+    )
 
     return agent_prompt, skill_index_block
 
