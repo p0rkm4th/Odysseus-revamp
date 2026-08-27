@@ -2733,6 +2733,64 @@ def canonical_read_fast_path_payload(
     return payload
 
 
+def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render a bounded owner-facing answer from a canonical Asset Result.
+
+    This is deliberately narrower than general answer synthesis: only a
+    structured successful ``manage_assets`` result is eligible, and every
+    state-bearing value in the answer comes from that Result. Empty and
+    unavailable reads are stated as such rather than handed to the model to
+    fill in. Mutations and non-Asset tools are never summarized here.
+    """
+    event = next(
+        (
+            item for item in reversed(tuple(tool_events or ()))
+            if isinstance(item, Mapping)
+            and str(item.get("tool") or "").strip() == "manage_assets"
+        ),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    status = str(payload.get("status") or "").strip().upper()
+    if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
+        return None
+    assets = payload.get("assets")
+    if not isinstance(assets, list):
+        return None
+    if not assets:
+        return "No canonical IT assets are recorded for this owner."
+
+    def _label(asset: Mapping[str, Any]) -> str:
+        name = str(asset.get("name") or asset.get("id") or "Unnamed asset").strip()
+        attributes = asset.get("attributes")
+        attributes = attributes if isinstance(attributes, Mapping) else {}
+        details: list[str] = []
+        for key in (
+            "role", "hostname", "os", "platform", "manufacturer", "model",
+            "cpu", "ram", "gpu", "storage", "motherboard",
+        ):
+            value = asset.get(key)
+            if value in (None, "", [], {}):
+                value = attributes.get(key)
+            if value not in (None, "", [], {}):
+                details.append(f"{key}={value}")
+        return f"- {name}" + (f" ({', '.join(details)})" if details else "")
+
+    count = len(assets)
+    lines = [f"I found {count} canonical IT asset{'s' if count != 1 else ''}:"]
+    lines.extend(_label(asset) for asset in assets[:50] if isinstance(asset, Mapping))
+    if count > 50:
+        lines.append(f"- …and {count - 50} more")
+    return "\n".join(lines)
+
+
 def project_capability_palette(
     capability_ids: Sequence[str] | None = None,
     *,
