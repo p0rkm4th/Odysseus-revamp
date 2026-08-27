@@ -2805,6 +2805,64 @@ def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str
     return "\n".join(lines)
 
 
+def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render Household/ kitchen reads from the canonical inventory Result.
+
+    Household state is owner data, so a successful empty read must not be
+    handed to unconstrained model prose. Mutations intentionally do not use
+    this helper; their Action Result and any later readback remain distinct.
+    """
+    event = next(
+        (
+            item for item in reversed(tuple(tool_events or ()))
+            if isinstance(item, Mapping)
+            and str(item.get("tool") or "").strip() == "read_household"
+        ),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if str(payload.get("status") or "").strip().upper() in {
+        "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
+    }:
+        return None
+
+    items = payload.get("items")
+    if not isinstance(items, list):
+        item = payload.get("item")
+        items = [item] if isinstance(item, Mapping) else None
+    if items is None:
+        return None
+    if not items:
+        return "No kitchen or household inventory is recorded for this owner."
+
+    lines = [f"I found {len(items)} kitchen/household item{'s' if len(items) != 1 else ''}:"]
+    for item in items[:100]:
+        if not isinstance(item, Mapping):
+            continue
+        name = str(item.get("name") or item.get("id") or "Unnamed item").strip()
+        details: list[str] = []
+        domain = item.get("domain")
+        quantity = item.get("stock_quantity", item.get("quantity"))
+        unit = item.get("default_unit", item.get("unit"))
+        if domain not in (None, ""):
+            details.append(f"domain={domain}")
+        if quantity not in (None, ""):
+            details.append(f"quantity={quantity}")
+            if unit not in (None, ""):
+                details[-1] += f" {unit}"
+        lines.append(f"- {name}" + (f" ({', '.join(details)})" if details else ""))
+    if len(items) > 100:
+        lines.append(f"- …and {len(items) - 100} more")
+    return "\n".join(lines)
+
+
 def project_capability_palette(
     capability_ids: Sequence[str] | None = None,
     *,

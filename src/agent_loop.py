@@ -101,6 +101,7 @@ from src.aci import (
     detect_runaway_call,
     canonical_asset_read_payload,
     canonical_asset_read_answer,
+    canonical_household_read_answer,
     canonical_read_fast_path_payload,
     deterministic_reference_acknowledgement,
     assistant_requested_followup,
@@ -6722,6 +6723,13 @@ async def stream_agent_loop(
     _canonical_asset_answer = canonical_asset_read_answer(tool_events)
     if _canonical_asset_answer and _canonical_asset_answer != full_response.strip():
         full_response = _canonical_asset_answer
+        yield "data: " + json.dumps({
+            "type": "response_replace", "content": full_response,
+        }) + "\n\n"
+
+    _canonical_household_answer = canonical_household_read_answer(tool_events)
+    if _canonical_household_answer and _canonical_household_answer != full_response.strip():
+        full_response = _canonical_household_answer
         yield "data: " + json.dumps({
             "type": "response_replace", "content": full_response,
         }) + "\n\n"
