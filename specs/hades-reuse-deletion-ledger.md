@@ -1543,3 +1543,9 @@ This eliminates the remaining foreground redirection path without adding a
 new owner. Focused cutover/lifecycle/routing/dogfood validation passed `204
 tests`; the AST audit found zero direct legacy stream callers in production
 runtime packages.
+
+Current exact-head reconciliation: source/runtime documentation was corrected
+to distinguish historical checkpoints from the active `8e2737847812` source.
+The current candidate image and embedded source match exactly, focused
+cutover/resource/ACI/dogfood validation passed `136`, and live Qwen remains
+unverified because Ollama is unavailable.
