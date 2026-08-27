@@ -1629,3 +1629,9 @@ Direct canonical trace calls: replaced the loop-only aliases for ACI
 canonical calls and migrated the runaway tests to `src.aci`. No authority or
 execution path changed; fresh focused lifecycle/runaway coverage passed `56
 passed, 2 warnings`.
+
+Hadolint CI noise closure: consolidated the adjacent Dockerfile provenance and
+directory-creation layers and set the pinned action's failure threshold to
+`warning`, preserving blocking warning/error findings while making INFO/style
+findings advisory. The pushed `6e9fed64` Container scan run completed SUCCESS
+in 17 seconds. No runtime deployment was performed for this CI-only change.

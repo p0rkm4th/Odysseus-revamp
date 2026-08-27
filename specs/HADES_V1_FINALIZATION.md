@@ -312,3 +312,13 @@ The loop now calls the canonical ACI `action_trace`, `project_aci_trace`, and
 `detect_runaway_call` functions directly. Their loop-only compatibility aliases
 were removed; no policy, execution, or completion authority changed. Fresh
 focused lifecycle and runaway coverage passed `56 passed, 2 warnings`.
+
+## Hadolint CI noise closure (`6e9fed64`)
+
+Consolidated the source-marker and data-directory Dockerfile `RUN` steps to
+remove DL3059, and configured the pinned Hadolint action with
+`failure-threshold: warning`. Warnings and errors remain blocking; INFO/style
+findings remain visible but do not fail the workflow. The pushed `Container
+scan` run for `6e9fed64c3d6f867a72597496af56f998e298b85` completed SUCCESS (17
+seconds). This Dockerfile-only checkpoint was not deployed; the running
+application remains attributed to its previously recorded candidate.
