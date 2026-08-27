@@ -280,6 +280,41 @@ def select_prompt_tools(
     return disabled, all_names - management_tools, False
 
 
+def resolve_turn_intent(
+    messages: Sequence[Mapping[str, Any]],
+    last_user: str,
+    *,
+    aci_enabled: bool,
+    provisional_resolver: Callable[[Sequence[Mapping[str, Any]], str], tuple[Any, bool]],
+    compatibility_classifier: Callable[[Sequence[Mapping[str, Any]], str], dict],
+    compatibility_normalizers: Sequence[Callable[[dict, str], dict]] = (),
+    record_framework: Optional[Callable[[str], None]] = None,
+) -> tuple[dict, bool]:
+    """Resolve the turn's intent through one ACI-first projection boundary.
+
+    Compatibility classifiers/normalizers are injected adapters for concepts
+    not yet migrated. They cannot override an ACI-owned contract.
+    """
+    intent = None
+    contract_owned = False
+    if aci_enabled:
+        try:
+            intent, contract_owned = provisional_resolver(messages, last_user)
+            if contract_owned and record_framework:
+                record_framework("provisional_contract_resolution")
+        except Exception:
+            logger.debug("ACI provisional intent resolution unavailable", exc_info=True)
+    if intent is None:
+        intent = compatibility_classifier(messages, last_user)
+    if not isinstance(intent, dict):
+        intent = dict(intent or {})
+    if not (aci_enabled and contract_owned):
+        query = str(intent.get("retrieval_query") or last_user)
+        for normalizer in compatibility_normalizers:
+            intent = normalizer(intent, query)
+    return intent, contract_owned
+
+
 _HARD_ACTION_HINTS = {
     "shell_exec": "Invoke bash with the exact non-interactive command the user requested.",
     "operations": "Begin with a real read-only status/log/configuration inspection using bash or the available read tools.",

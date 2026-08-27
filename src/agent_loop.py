@@ -152,6 +152,7 @@ from src.aci import (
     assemble_prompt,
     skill_index_prompt,
     select_prompt_tools,
+    resolve_turn_intent,
 )
 from src.intent_contracts import (
     EXPLICIT_CONTINUATION_PHRASE_RE as _EXPLICIT_CONTINUATION_PHRASE_RE,
@@ -1968,19 +1969,19 @@ async def stream_agent_loop(
     # that have not yet crossed the ACI seam (documents, email, UI, etc.).
     # This is a strangler boundary: the provisional frame is a semantic hint
     # and the fully referenced frame below remains the final authority.
-    _intent = None
-    _aci_contract_owned = False
-    if _aci_enabled:
-        try:
-            _intent, _aci_contract_owned = _provisional_intent_projection(
-                messages, _last_user,
-            )
-            if _aci_contract_owned:
-                _record_aci_framework("provisional_contract_resolution")
-        except Exception:
-            logger.debug("ACI provisional intent resolution unavailable", exc_info=True)
-    if _intent is None:
-        _intent = _classify_agent_request(messages, _last_user)
+    _intent, _aci_contract_owned = resolve_turn_intent(
+        messages,
+        _last_user,
+        aci_enabled=_aci_enabled,
+        provisional_resolver=_provisional_intent_projection,
+        compatibility_classifier=_classify_agent_request,
+        compatibility_normalizers=(
+            _normalize_asset_inventory_intent,
+            _normalize_homelab_intent,
+            _normalize_operational_intent_evidence,
+        ),
+        record_framework=_record_aci_framework,
+    )
     _reference_hint = _recent_reference_resolution_hint(messages, _last_user)
     _reference_ack = None
     if _reference_hint:
@@ -1998,29 +1999,6 @@ async def stream_agent_loop(
             },
         )
         logger.info("[hades-continuity] immediate reference hint applied")
-    # Supported ACI turns already have a canonical IntentFrame/DomainContract.
-    # Running the legacy keyword normalizers after that frame would create a
-    # second domain-decision path. Keep the normalizers only for compatibility
-    # concepts that have not crossed the ACI seam yet.
-    if not (
-        _aci_enabled
-        and _aci_contract_owned
-    ):
-        _intent = _normalize_asset_inventory_intent(
-            _intent,
-            str(_intent.get("retrieval_query") or _last_user) if isinstance(_intent, dict) else _last_user,
-        )
-        _intent = _normalize_homelab_intent(
-            _intent,
-            str(_intent.get("retrieval_query") or _last_user)
-            if isinstance(_intent, dict) else _last_user,
-        )
-        _intent = _normalize_operational_intent_evidence(
-            _intent,
-            str(_intent.get("retrieval_query") or _last_user)
-            if isinstance(_intent, dict)
-            else _last_user,
-        )
     _active_run_context = None
     _session_reference_context = None
     if work_run_id and owner:
