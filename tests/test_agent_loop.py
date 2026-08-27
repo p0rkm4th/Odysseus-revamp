@@ -39,7 +39,6 @@ try:
         _classify_agent_request,
         _compute_final_metrics,
         _append_tool_results,
-        _insert_before_latest_user,
         _prefetched_explicit_memory_result,
         _MCP_KEYWORDS,
         _select_local_mcp_schemas,
@@ -51,7 +50,7 @@ finally:
     for _mod, _stub in _INJECTED_IMPORT_STUBS.items():
         _drop_module_if_same(_mod, _stub)
 
-from src.aci import successful_deterministic_read_result
+from src.aci import insert_before_latest_user, successful_deterministic_read_result
 
 
 def test_import_stubs_do_not_leak_into_later_tests():
@@ -109,7 +108,7 @@ def test_insert_before_latest_user_places_context_before_last_user_turn():
     ]
     context = {"role": "system", "content": "context"}
 
-    out = _insert_before_latest_user(messages, context)
+    out = insert_before_latest_user(messages, context)
 
     assert out == [
         {"role": "user", "content": "first"},
@@ -128,7 +127,7 @@ def test_insert_before_latest_user_appends_when_no_user_message_exists():
     messages = [{"role": "assistant", "content": "reply"}]
     context = {"role": "system", "content": "context"}
 
-    assert _insert_before_latest_user(messages, context) == [messages[0], context]
+    assert insert_before_latest_user(messages, context) == [messages[0], context]
 
 
 def test_completed_owner_memory_read_is_answer_terminal_not_action_reentry():

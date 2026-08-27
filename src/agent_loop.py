@@ -193,7 +193,6 @@ from src.intent_contracts import (
 # Temporary import compatibility for callers/tests that still reference the
 # retired loop-local names. These are aliases, not independent implementations
 # or authorities; all semantics live in ACI and intent contracts.
-_insert_before_latest_user = insert_before_latest_user
 _recent_reference_resolution_hint = reference_resolution_hint
 _deterministic_reference_acknowledgement = deterministic_reference_acknowledgement
 _is_contextual_retry_continuation = is_contextual_retry_continuation
@@ -1737,7 +1736,7 @@ async def stream_agent_loop(
     uploaded_files = uploaded_files or []
     _upload_msg = _uploaded_files_context_message(uploaded_files)
     if _upload_msg:
-        messages = _insert_before_latest_user(messages, _upload_msg)
+        messages = insert_before_latest_user(messages, _upload_msg)
 
     _t0 = time.time()
     _needs_admin = _detect_admin_intent(messages)
@@ -1838,7 +1837,7 @@ async def stream_agent_loop(
     _reference_ack = None
     if _reference_hint:
         _reference_ack = _deterministic_reference_acknowledgement(_reference_hint)
-        messages = _insert_before_latest_user(
+        messages = insert_before_latest_user(
             messages,
             {
                 "role": "system",
@@ -2903,7 +2902,7 @@ async def stream_agent_loop(
                 aci_instruction = projection.instruction
             else:
                 aci_instruction = projection.instruction
-            messages = _insert_before_latest_user(messages, {
+            messages = insert_before_latest_user(messages, {
                 "role": "system", "content": aci_instruction,
                 "_agent_injected": "hades_aci_packet", "_protected": True,
             })
