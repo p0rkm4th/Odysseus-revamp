@@ -151,6 +151,7 @@ from src.aci import (
     domain_tools_for_projection,
     assemble_prompt,
     skill_index_prompt,
+    select_prompt_tools,
 )
 from src.intent_contracts import (
     EXPLICIT_CONTINUATION_PHRASE_RE as _EXPLICIT_CONTINUATION_PHRASE_RE,
@@ -1716,9 +1717,15 @@ def _build_base_prompt(
     """
     from src.tool_index import ALWAYS_AVAILABLE
 
-    disabled = set(disabled_tools or [])
-    if not get_setting("image_gen_enabled", False):
-        disabled.add("generate_image")
+    disabled, selected_tools, static_full_prompt = select_prompt_tools(
+        all_tool_names=set(TOOL_SECTIONS),
+        always_available=ALWAYS_AVAILABLE,
+        admin_tools=_ADMIN_TOOLS,
+        disabled_tools=disabled_tools,
+        relevant_tools=relevant_tools,
+        needs_admin=needs_admin,
+        image_gen_enabled=get_setting("image_gen_enabled", False),
+    )
 
     if relevant_tools is not None:
         # RAG mode: trust the relevant_tools set as already-composed.
@@ -1728,29 +1735,19 @@ def _build_base_prompt(
         # ALWAYS_AVAILABLE back in here used to silently undo those
         # drops. Only force-include the irreducible loop primitives
         # (ask_user, update_plan) as belt-and-suspenders.
-        tool_names = set(relevant_tools) | {"ask_user", "update_plan"}
-        if needs_admin:
-            tool_names |= _ADMIN_TOOLS
-        agent_prompt = _assemble_prompt(tool_names, disabled, compact=compact, intent_domains=intent_domains)
+        agent_prompt = _assemble_prompt(selected_tools, disabled, compact=compact, intent_domains=intent_domains)
     else:
         # Fallback: full prompt (RAG unavailable)
         agent_prompt = (
             AGENT_SYSTEM_PROMPT
-            if intent_domains is None
+            if static_full_prompt and intent_domains is None and not compact
             else _assemble_prompt(
                 set(TOOL_SECTIONS.keys()), disabled, compact=compact,
                 intent_domains=intent_domains,
             )
         )
         if not needs_admin:
-            # At least strip the management section
-            mgmt_tools = set(TOOL_SECTIONS.keys()) - set(ALWAYS_AVAILABLE) - {
-                "generate_image", "suggest_document",
-                "chat_with_model", "ask_teacher", "list_models",
-            }
-            agent_prompt = _assemble_prompt(
-                set(TOOL_SECTIONS.keys()) - mgmt_tools, disabled, compact=compact, intent_domains=intent_domains
-            )
+            agent_prompt = _assemble_prompt(selected_tools, disabled, compact=compact, intent_domains=intent_domains)
         elif compact:
             agent_prompt = _assemble_prompt(set(TOOL_SECTIONS.keys()), disabled, compact=True, intent_domains=intent_domains)
 

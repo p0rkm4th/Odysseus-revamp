@@ -1240,3 +1240,14 @@ the projection is explicitly untrusted and grants no authority. Focused ACI,
 lifecycle, cutover, Skill-injection, prompt-security, and first-class tool
 coverage passed 102 tests with 2 warnings. `agent_loop.py` is now 7,073 LOC;
 this local slice has not been built or deployed.
+
+Prompt tool-selection ownership: moved bounded prompt inclusion/disablement
+selection from `agent_loop.py` into existing `src/aci.py` as
+`select_prompt_tools`, with the registry, always-available set, and admin set
+injected by the compatibility adapter. Static full-prompt cache behavior is
+preserved; selected names remain projection metadata and do not grant
+execution authority. Lifecycle/ACI/cutover coverage passed 99 tests in
+isolation and Skill-index injection passed 3 tests in isolation. A combined
+run that loaded the Skill test's import stubs first was discarded as test-order
+contamination, not product evidence. `agent_loop.py` is now 7,070 LOC; this
+local slice has not been built or deployed.
