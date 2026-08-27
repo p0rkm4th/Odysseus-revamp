@@ -1086,15 +1086,11 @@ def setup_chat_routes(
         # arbitrary shell access or turn a sensitive topic into an action.
         if chat_mode == "chat" and isinstance(message, str):
             try:
-                from src.intent_contracts import compile_intent
+                from src.intent_contracts import (
+                    compile_intent, is_bounded_owner_capability_turn,
+                )
                 _owner_frame = compile_intent(message)
-                if (
-                    _owner_frame.domain_concept in {"TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK"}
-                    and (
-                        _owner_frame.read_explicit
-                        or _owner_frame.operation_class in {"EXECUTE", "RESEARCH"}
-                    )
-                ):
+                if is_bounded_owner_capability_turn(_owner_frame):
                     chat_mode = "agent"
                     auto_escalated = True
                     logger.info(

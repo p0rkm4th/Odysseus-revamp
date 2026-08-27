@@ -142,6 +142,25 @@ def test_inventory_state_is_a_canonical_asset_read_but_household_inventory_is_no
     assert household.domain_concept == "HOUSEHOLD_ITEM"
 
 
+@pytest.mark.parametrize("query", [
+    "Show me what's in the kitchen.",
+    "Add angel hair pasta to my kitchen inventory.",
+])
+def test_household_owner_turn_enters_bounded_aci_capability_path(query):
+    from src.intent_contracts import is_bounded_owner_capability_turn
+
+    assert is_bounded_owner_capability_turn(compile_intent(query)) is True
+
+
+def test_general_household_explanation_never_resolves_to_mutation():
+    from src.intent_contracts import is_bounded_owner_capability_turn
+
+    frame = compile_intent("What is the difference between a pantry and a kitchen?")
+    assert is_bounded_owner_capability_turn(frame) is True
+    assert resolve_intent(frame).action_id == "overview"
+    assert resolve_intent(frame).contract.capability_id == "household.read"
+
+
 def test_continuation_and_depth_are_structured_not_phrase_specific():
     frame = compile_intent(
         "perform a deep scan of all discovered hosts",

@@ -743,6 +743,27 @@ class IntentFrame:
         return result
 
 
+_BOUNDED_OWNER_CAPABILITY_CONCEPTS = frozenset({
+    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM",
+})
+
+
+def is_bounded_owner_capability_turn(frame: IntentFrame | None) -> bool:
+    """Tell transport adapters when plain chat must enter canonical ACI.
+
+    This is semantic eligibility only. It does not select an Action, grant
+    authority, or bypass policy; the resolved contract and normal ACI path do
+    those things downstream. Keeping the predicate beside ``IntentFrame``
+    prevents each UI/transport from growing its own routing heuristic.
+    """
+    if frame is None or frame.domain_concept not in _BOUNDED_OWNER_CAPABILITY_CONCEPTS:
+        return False
+    return bool(
+        frame.read_explicit
+        or frame.operation_class in {"CREATE", "UPDATE", "EXECUTE", "RESEARCH"}
+    )
+
+
 @dataclass(frozen=True)
 class DomainContract:
     concept: str

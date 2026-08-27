@@ -1414,3 +1414,12 @@ preserves only that bounded metadata alongside filtered canonical rows, and
 prose-derived inventory. No new service, registry, store, or execution path
 was introduced. Focused ACI/Asset regression passed 84 tests. Local changes
 are not yet committed or deployed; live Qwen verification remains unavailable.
+
+Household capability entry: moved the plain-chat auto-escalation eligibility
+predicate into `intent_contracts.is_bounded_owner_capability_turn` and reused
+it from the chat transport. The existing Household/Inventory contracts now
+enter canonical ACI for reads and mutations from chat, while the resolved
+contract still distinguishes read-only explanation from mutation. No new
+executor, store, registry, or authority path was added. Focused intent,
+inventory, and chat-policy coverage passed 198 tests with 1 skipped. Live
+Qwen verification remains unavailable.
