@@ -233,3 +233,11 @@ Focused dogfood/ACI/reference coverage passed `261 passed, 1 warning`. This
 change is evaluator-only and is not yet represented by the deployed image;
 the deployed source remains `fb7a43ea` until a new explicit candidate is
 built.
+
+## Exact candidate verification (`176e7aa5`)
+
+The evaluator checkpoint was explicitly built and deployed. Image label,
+embedded source, and running container matched `176e7aa5`; health was green
+with zero restarts. The corrected storage-fixture full regression passed
+`6761 passed, 5 skipped, 149 warnings`. Live Qwen/Ollama remains unavailable,
+so live-model evidence is unverified.

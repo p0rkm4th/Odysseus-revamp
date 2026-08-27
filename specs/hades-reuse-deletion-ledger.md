@@ -1573,3 +1573,9 @@ longer pass as fluent prose. Imported/frozen cases retain their existing
 contract. Focused dogfood/ACI/reference coverage passed `261 passed, 1
 warning`. No production runtime behavior, registry, store, or authority path
 was added.
+
+Exact candidate verification: source `176e7aa5` was explicitly built and
+deployed with matching embedded source and image label; the corrected
+storage-fixture full regression passed `6761 passed, 5 skipped, 149 warnings`.
+Container health was green with zero restarts. Live Qwen/Ollama remains
+unverified because the provider is unavailable.
