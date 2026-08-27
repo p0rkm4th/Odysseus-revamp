@@ -8,6 +8,7 @@ from src.aci import (
     CompositeStep,
     SelectionMode,
     canonical_read_fast_path_payload,
+    canonical_asset_read_answer,
     assistant_requested_followup,
     classify_action_escalation,
     classify_post_result,
@@ -54,6 +55,33 @@ def test_production_aci_stream_entrypoint_forces_canonical_mode(monkeypatch):
     monkeypatch.setattr(legacy, "stream_agent_loop", fake_stream)
     assert stream_aci_turn("endpoint", aci_mode="legacy") == "canonical-stream"
     assert captured["aci_mode"] == "aci"
+
+
+def test_canonical_asset_read_answer_uses_only_structured_result():
+    answer = canonical_asset_read_answer([
+        {
+            "tool": "manage_assets",
+            "exit_code": 0,
+            "output": json.dumps({
+                "status": "SUCCESS",
+                "assets": [{"id": "a-1", "name": "Thanatos", "role": "server", "gpu": "RTX 2080"}],
+                "asset_count": 1,
+            }),
+        },
+    ])
+    assert answer == "I found 1 canonical IT asset:\n- Thanatos (role=server, gpu=RTX 2080)"
+
+
+def test_canonical_asset_read_answer_preserves_empty_and_rejects_failed_results():
+    empty = canonical_asset_read_answer([{
+        "tool": "manage_assets", "exit_code": 0,
+        "output": '{"status":"SUCCESS_EMPTY","assets":[]}',
+    }])
+    assert empty == "No canonical IT assets are recorded for this owner."
+    assert canonical_asset_read_answer([{
+        "tool": "manage_assets", "exit_code": 1,
+        "output": '{"status":"FAILED","assets":[]}',
+    }]) is None
 
 
 def _collect_stream_events(generator):

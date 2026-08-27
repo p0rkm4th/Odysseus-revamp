@@ -1394,3 +1394,13 @@ regressions for complete, abrupt, and duplicate-terminal streams. Focused
 dogfood/live-harness coverage passed 48 tests; no owner credential or live
 Qwen run was available. This is a development slice pending full regression
 and candidate promotion.
+
+Canonical Asset read grounding: added `src.aci.canonical_asset_read_answer` as
+a bounded ResultProjection for successful `manage_assets` reads. Asset
+collection/detail answers now derive names and present structured fields from
+the canonical Result only; empty collections are explicit and failed or
+non-Asset results are not synthesized. The loop emits a `response_replace`
+event rather than a second answer delta. Focused ACI, inventory, deterministic
+read, and dogfood coverage passed 276 tests. This prevents fabricated hardware
+and inventory rows without changing policy, execution, or persistence
+authority; full regression and live Qwen verification remain pending.
