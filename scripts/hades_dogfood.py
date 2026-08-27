@@ -21,6 +21,16 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+
+def configured_model_endpoint() -> str:
+    """Return the evaluator's canonical model endpoint.
+
+    The same runner is used both on a developer host and inside the Hades
+    image.  Production/container configuration must win when present; the
+    loopback default keeps standalone local use backwards compatible.
+    """
+    return os.environ.get("HADES_OLLAMA_ENDPOINT", "http://127.0.0.1:11434")
+
 from benchmarks.hades_dogfood import (
     append_history,
     capture_failure_regressions,
@@ -282,7 +292,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--suite", choices=("baseline", "all", "security", "held_out"), default="baseline")
     parser.add_argument("--tier", choices=("quick", "core", "full", "rc", "soak"), help="named tier over the same evaluator")
     parser.add_argument("--mode", choices=("synthetic", "live"), default="synthetic")
-    parser.add_argument("--endpoint", default="http://127.0.0.1:11434")
+    # Match the production model endpoint when the evaluator runs inside the
+    # Hades image.  Keep localhost as the standalone fallback, but do not
+    # silently bypass a configured container-to-host Ollama route.
+    parser.add_argument("--endpoint", default=configured_model_endpoint())
     parser.add_argument("--base-url", default="http://127.0.0.1:7000")
     parser.add_argument("--cookie")
     parser.add_argument("--cookie-file")
