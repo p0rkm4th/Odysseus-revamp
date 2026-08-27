@@ -33,6 +33,7 @@ def configured_model_endpoint() -> str:
 
 from benchmarks.hades_dogfood import (
     append_history,
+    authoritative_answer_text,
     capture_failure_regressions,
     coverage_audit,
     expand_cases,
@@ -194,7 +195,7 @@ async def run_synthetic(
     # answer text is kept transiently here so synthetic journey turns can
     # exercise real conversational continuity without making the evaluator a
     # second persistence store or leaking owner data into artifacts.
-    assistant_text = "".join(str(event.get("delta") or "") for event in events)
+    assistant_text = authoritative_answer_text(events)
     return record, assistant_text
 
 

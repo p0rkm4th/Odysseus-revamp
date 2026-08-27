@@ -1649,11 +1649,30 @@ def delivery_observation(events: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def authoritative_answer_text(events: Iterable[Mapping[str, Any]]) -> str:
+    """Render the evaluator's view of one answer using lifecycle semantics.
+
+    ``response_replace`` is a server-authorized replacement of previously
+    streamed model deltas, not an additional answer.  Prefer its latest
+    content when present; otherwise concatenate ordinary deltas.  This is
+    delivery-state handling, deliberately not arbitrary text de-duplication.
+    """
+    values = [dict(event) for event in events]
+    replacements = [
+        event for event in values
+        if event.get("type") == "response_replace"
+        and isinstance(event.get("content"), str)
+    ]
+    if replacements:
+        return str(replacements[-1].get("content") or "")
+    return "".join(str(event.get("delta") or "") for event in values)
+
+
 def normalize_events(events: Iterable[Mapping[str, Any]], case: Mapping[str, Any], *, elapsed: float = 0) -> dict[str, Any]:
     events = [dict(event) for event in events]
     metrics = next((event.get("data", {}) for event in reversed(events)
                     if event.get("type") == "metrics" and isinstance(event.get("data"), Mapping)), {})
-    text = "".join(str(event.get("delta") or "") for event in events)
+    text = authoritative_answer_text(events)
     tool_events = [event for event in events if event.get("type") == "tool_start"]
     tool_outputs = [event for event in events if event.get("type") == "tool_output"]
     tool_names = [str(event.get("tool") or "") for event in tool_events]
