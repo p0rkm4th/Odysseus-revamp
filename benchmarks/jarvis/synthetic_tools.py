@@ -105,6 +105,21 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
                 }, sort_keys=True),
                 "exit_code": 0, "success": True,
             }]
+        elif tool == "manage_homelab":
+            fixtures[tool] = [{
+                "output": json.dumps({"status": "SUCCESS_EMPTY", "services": []}, sort_keys=True),
+                "exit_code": 0, "success": True,
+            }]
+        elif tool == "manage_security_assessment":
+            fixtures[tool] = [{
+                "output": json.dumps({"status": "SUCCESS_EMPTY", "findings": []}, sort_keys=True),
+                "exit_code": 0, "success": True,
+            }]
+        elif tool == "developer_read":
+            fixtures[tool] = [{
+                "output": json.dumps({"status": "SUCCESS_EMPTY", "matches": [], "files": []}, sort_keys=True),
+                "exit_code": 0, "success": True,
+            }]
         else:
             fixtures[tool] = [{
                 "output": "Synthetic tool result.", "exit_code": 0, "success": True,
