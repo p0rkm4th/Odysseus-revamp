@@ -120,10 +120,11 @@ LABEL org.opencontainers.image.revision="$ODYSSEUS_SOURCE_COMMIT" \
 
 # Production images omit .git; retain a tiny immutable source marker so the
 # runtime can prove the imported image source matches its declared provenance.
-RUN printf '%s\n' "$ODYSSEUS_SOURCE_COMMIT" > /app/.odysseus-source-commit
-
-# Create data directory (mount a volume here for persistence)
-RUN mkdir -p data logs services/cache/search
+# Retain the immutable source marker and create mount points in one layer.
+# (The marker is used for runtime provenance; these directories are mounted
+# persistently by Compose.)
+RUN printf '%s\n' "$ODYSSEUS_SOURCE_COMMIT" > /app/.odysseus-source-commit \
+    && mkdir -p data logs services/cache/search
 
 # Entrypoint that drops to PUID/PGID (default 1000:1000) and repairs
 # ownership on the bind-mounted /app/data and /app/logs. Without this,
