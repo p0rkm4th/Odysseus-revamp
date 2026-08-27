@@ -206,3 +206,11 @@ ACI seam with `aci_mode="aci"`; tests replace that canonical seam directly.
 The cutover, lifecycle, foreground routing, dogfood, and live-protocol suites
 passed `204 passed, 2 warnings`. No production direct legacy stream callers
 were found by the AST audit.
+
+## Full regression evidence (`8ea00f81`)
+
+The complete suite ran with the project fixture writable and only the host
+Docker storage path mounted read-only: `6760 passed, 5 skipped, 149 warnings`.
+The storage-preflight tests passed `6/6` under the corrected fixture; the six
+prior failures were mount artifacts. No current-head full-regression failure
+was observed in this run.
