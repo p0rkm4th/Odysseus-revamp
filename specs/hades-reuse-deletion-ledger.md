@@ -1465,3 +1465,12 @@ prevents canonical hardware/network values from being invented by answer
 synthesis and records the owner-session failure as a semantic regression
 family. Focused intent/lifecycle coverage passed 132 tests with 1 skipped;
 the complete owner-facing stream still requires live Qwen verification.
+
+Owner computer-language normalization and NetworkState rendering: extended the
+existing `deterministic_reads` semantic predicates for `got`/`yo`/terse
+computer collection variants and added `aci.canonical_network_read_answer` to
+the same canonical Result renderer selection. Network context and persisted
+observations are now presented only from structured `manage_homelab` results;
+there is no network-specific model or executor path. Focused post-fix coverage
+passed 252 tests with 1 skipped. Live Qwen owner verification remains
+unavailable.
