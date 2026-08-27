@@ -18,6 +18,7 @@ from benchmarks.hades_dogfood import (
     _CROSS_DOMAIN_PAIRS,
     _FAILURE_TAXONOMY,
 )
+from scripts.hades_dogfood import _live_protocol_observation
 
 
 def test_dogfood_contract_expands_frozen_sources_and_journeys():
@@ -63,6 +64,26 @@ def test_dogfood_normalization_is_sanitized_and_projects_runtime_metrics():
     assert record["trajectory"]["duplicate_delivery"] == 1
     assert record["trajectory"]["failed_actions"] == 1
     assert record["metrics"]["decision_calls"] == 1
+
+
+def test_live_protocol_requires_one_terminal_done_marker():
+    events = [{"event_id": "evt-1", "delta": "partial"}]
+    complete = _live_protocol_observation(events, done_count=1, abrupt_eof=False)
+    assert complete["transport_completion"] is True
+    assert complete["terminal_event_count"] == 1
+    assert complete["duplicate_event_id"] is False
+
+    incomplete = _live_protocol_observation(events, done_count=0, abrupt_eof=True)
+    assert incomplete["transport_completion"] is False
+    assert incomplete["terminal_event_count"] == 0
+    assert incomplete["abrupt_eof"] is True
+
+
+def test_live_protocol_duplicate_done_marker_is_not_completion():
+    result = _live_protocol_observation([], done_count=2, abrupt_eof=False)
+    assert result["done_seen"] is True
+    assert result["terminal_event_count"] == 2
+    assert result["transport_completion"] is False
 
 
 def test_architectural_fail_is_distinct_from_functional_pass():
