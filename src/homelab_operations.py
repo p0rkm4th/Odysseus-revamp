@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import threading
 from typing import Any, Awaitable, Callable
 import xml.etree.ElementTree as ET
@@ -19,6 +20,7 @@ import xml.etree.ElementTree as ET
 from src.constants import DATA_DIR
 from src.execution_profiles import active_execution_profile
 from src.capability_dependencies import dependency_manager
+from core.platform_compat import run_ssh_command
 
 
 class HomelabOperationError(ValueError):
@@ -26,8 +28,10 @@ class HomelabOperationError(ValueError):
 
 
 _SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.@:-]{0,127}$")
+_SSH_TARGET = re.compile(r"^(?:[A-Za-z0-9][A-Za-z0-9._-]*@)?[A-Za-z0-9][A-Za-z0-9._-]*$")
 _ACTIONS = frozenset({
     "inspect_host", "service_status", "plan_service_restart", "execute_service_restart",
+    "ssh_connect_test", "remote_host_inspect",
     "discovery_status", "read_network_context", "read_network_observations", "list_unidentified_hosts", "infer_role_hypotheses",
     "plan_network_discovery", "execute_network_discovery",
     "plan_network_service_enumeration", "execute_network_service_enumeration",
@@ -346,6 +350,71 @@ class HomelabOperations:
             "network_map_reconciled": True,
         }
 
+    def _remote_asset_target(self, asset_ref: Any, *, owner: str) -> dict[str, Any]:
+        """Resolve an SSH endpoint from the authenticated owner's Asset.
+
+        The request carries only an Asset reference. Host/user/port metadata
+        comes from the canonical owner-scoped CMDB record, so the model cannot
+        turn this read into arbitrary SSH access. Credentials remain outside
+        the Asset projection and are resolved by the existing SSH environment.
+        """
+        reference = str(asset_ref or "").strip()
+        if not reference:
+            raise HomelabOperationError("an owner Asset reference is required")
+        from src.asset_inventory import db, resolve, view
+        connection = db()
+        try:
+            record = resolve(connection, reference, owner=owner)
+            if record is None:
+                raise HomelabOperationError("the requested owner Asset was not found")
+            asset = view(connection, record, owner=owner) or {}
+        finally:
+            connection.close()
+        attributes = asset.get("attributes") if isinstance(asset.get("attributes"), dict) else {}
+        host = str(attributes.get("ssh_host") or asset.get("hostname") or "").strip()
+        user = str(attributes.get("ssh_user") or "").strip()
+        port = attributes.get("ssh_port") or "22"
+        if not host:
+            raise HomelabOperationError("the Asset has no configured SSH target")
+        if not _SSH_TARGET.fullmatch(f"{user}@{host}" if user else host):
+            raise HomelabOperationError("the Asset SSH target is invalid")
+        if not str(port).isdigit() or not 1 <= int(port) <= 65535:
+            raise HomelabOperationError("the Asset SSH port is invalid")
+        remote = f"{user}@{host}" if user else host
+        return {
+            "asset_id": asset.get("id"), "asset_name": asset.get("name"),
+            "remote": remote, "ssh_port": str(port),
+            "target_identity": "canonical_owner_asset",
+        }
+
+    async def _remote_inspect(self, request: dict[str, Any], *, owner: str, action: str) -> dict[str, Any]:
+        target = self._remote_asset_target(request.get("asset"), owner=owner)
+        command = "true" if action == "ssh_connect_test" else (
+            "printf 'hostname='; hostname; printf '\\nos='; uname -srm; "
+            "printf '\\nuptime='; uptime"
+        )
+        try:
+            completed = await asyncio.to_thread(
+                run_ssh_command, target["remote"], target["ssh_port"], command,
+                timeout=20, connect_timeout=5, strict_host_key_checking=True,
+            )
+        except (TimeoutError, subprocess.TimeoutExpired):
+            return {"status": "FAILED", "success": False, "action": action,
+                    "asset_id": target["asset_id"], "target_identity": target["target_identity"],
+                    "error_code": "SSH_TIMEOUT", "error": "the Asset SSH connection timed out"}
+        except Exception as exc:
+            return {"status": "FAILED", "success": False, "action": action,
+                    "asset_id": target["asset_id"], "target_identity": target["target_identity"],
+                    "error_code": "SSH_TRANSPORT_FAILURE", "error": str(exc)[:240]}
+        stdout = completed.stdout if isinstance(completed.stdout, str) else completed.stdout.decode("utf-8", errors="replace")
+        stderr = completed.stderr if isinstance(completed.stderr, str) else completed.stderr.decode("utf-8", errors="replace")
+        success = completed.returncode == 0
+        return {"status": "SUCCESS_WITH_DATA" if success else "FAILED", "success": success,
+                "action": action, "asset_id": target["asset_id"], "asset_name": target["asset_name"],
+                "target_identity": target["target_identity"], "execution_location": "REMOTE_SSH",
+                "stdout": stdout[:12000], "stderr": stderr[:4000],
+                "exit_code": int(completed.returncode), "verification": "ssh_transport_exit_zero"}
+
     async def execute(self, request: dict[str, Any], *, owner: str) -> dict[str, Any]:
         owner = str(owner or "").strip()
         if not owner:
@@ -353,6 +422,8 @@ class HomelabOperations:
         action = str(request.get("action") or "").strip()
         if action not in _ACTIONS:
             raise HomelabOperationError("unsupported homelab action")
+        if action in {"ssh_connect_test", "remote_host_inspect"}:
+            return await self._remote_inspect(request, owner=owner, action=action)
         if action == "inspect_host":
             return await self._read(owner, action, ["uptime"])
         if action == "discovery_status":
