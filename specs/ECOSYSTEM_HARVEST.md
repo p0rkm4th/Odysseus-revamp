@@ -96,7 +96,11 @@ below must be populated only after a focused characterization and dogfood run.
 - Rollback: `odysseus:rollback-b471e104-prev`
 - Worktree at checkpoint: clean
 - `/api/health`: healthy; app restart count: 0; Chroma and SearXNG healthy
-- Live authenticated Qwen acceptance: UNVERIFIED (credential unavailable)
+- Ollama/Qwen runtime: INTEGRATION VERIFIED from the deployed container on
+  2026-08-27 (`qwen3:8b`, digest
+  `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`; direct
+  inference returned HTTP 200). Live authenticated Hades HTTP/SSE acceptance:
+  UNVERIFIED because the synthetic-owner session credential is unavailable.
 
 ## License and notice policy
 
