@@ -281,3 +281,11 @@ canonical ACI helper directly, and the alias/import were removed from
 `agent_loop.py`. The affected network, continuity/dependency, and ACI suite
 passed `68 passed, 1 warning`. This removes compatibility surface without
 changing the grounding owner.
+
+## Dead canonical-read alias removal (`working tree`)
+
+The next alias audit found `_canonical_asset_read_payload` and
+`_canonical_read_fast_path_payload` had no production consumers. Test callers
+now import the canonical ACI helpers directly, and both aliases were removed
+from `agent_loop.py`. Focused canonical-read/ACI coverage passed `275 passed,
+1 warning`; no semantic owner or execution path changed.

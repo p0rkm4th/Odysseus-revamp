@@ -7,8 +7,6 @@ from benchmarks.hades_aci_metamorphic import (
     READ_PARAPHRASE_SETS,
 )
 from src.agent_loop import (
-    _canonical_asset_read_payload,
-    _canonical_read_fast_path_payload,
     _canonical_read_action,
     _classify_agent_request,
     _minimal_aci_answer_messages,
@@ -16,6 +14,7 @@ from src.agent_loop import (
     _prefetched_explicit_memory_result,
     _strip_agent_injected_messages,
 )
+from src.aci import canonical_asset_read_payload, canonical_read_fast_path_payload
 from src.deterministic_reads import deterministic_read_concept
 from src.intent_contracts import compile_intent, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
@@ -164,7 +163,7 @@ def test_resolved_asset_reference_projects_get_instead_of_relisting(query):
             {"ref": "PHYSICAL-002", "concept": "TECHNICAL_ASSET"},
         ],
     })
-    payload = _canonical_read_fast_path_payload(
+    payload = canonical_read_fast_path_payload(
         "manage_assets", "get", frame.as_dict(),
     )
     assert payload["action"] == "get"
@@ -185,7 +184,7 @@ def test_resolved_asset_fast_path_preserves_strong_identity():
     })
     # The ACI fast path must pass the same canonical payload as the
     # asset-specific repair path; an action-only ``get`` cannot execute.
-    payload = _canonical_asset_read_payload(frame.as_dict())
+    payload = canonical_asset_read_payload(frame.as_dict())
     assert payload == {"action": "get", "asset": "PHYSICAL-001"}
 
 
