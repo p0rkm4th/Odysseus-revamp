@@ -23,6 +23,7 @@ from benchmarks.hades_dogfood import (
     authoritative_answer_text,
 )
 from scripts.hades_dogfood import _live_protocol_observation, configured_model_endpoint
+from benchmarks.jarvis.synthetic_tools import fixtures_for_case
 
 
 def test_dogfood_contract_expands_frozen_sources_and_journeys():
@@ -91,6 +92,14 @@ def test_dogfood_uses_configured_container_model_endpoint(monkeypatch):
 def test_dogfood_keeps_standalone_loopback_default(monkeypatch):
     monkeypatch.delenv("HADES_OLLAMA_ENDPOINT", raising=False)
     assert configured_model_endpoint() == "http://127.0.0.1:11434"
+
+
+def test_synthetic_owner_reads_use_typed_empty_results():
+    case = {"expected": {"required_tools": ["read_memory", "read_work", "manage_assets"]}}
+    fixtures = fixtures_for_case(case)
+    assert fixtures["read_memory"][0]["data"]["status"] == "zero_result"
+    assert fixtures["read_work"][0]["data"]["status"] == "SUCCESS_EMPTY"
+    assert '"assets": []' in fixtures["manage_assets"][0]["output"]
 
 
 def test_live_protocol_duplicate_done_marker_is_not_completion():
