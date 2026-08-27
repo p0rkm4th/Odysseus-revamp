@@ -1502,3 +1502,11 @@ loop's separate replacement-emission branches. This reduces duplicate answer
 authority without adding a store, planner, registry, or executor. Focused
 ACI/cutover/resource-contract coverage passed `263 passed, 1 skipped` before
 the source checkpoint; live Qwen remains unavailable.
+
+Model-decision projection: extended the existing ACI owner with
+`project_model_decision` for parsing, bounded invalid-decision recovery, and
+choice/outcome projection; the loop keeps only transport retry/fallback and
+execution handoff. Added direct contract coverage; focused suites passed `264
+passed, 1 warning`. Source `76c64ce0e593f2d4a626fcf9384e5e6542629487` was
+explicitly built and deployed with matching embedded source and healthy
+runtime. No new authority, registry, store, or executor was introduced.
