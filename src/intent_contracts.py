@@ -1096,7 +1096,12 @@ def resolve_structured_reference(
         query,
     )) and bool(re.search(r"\b(?:tell|show|what|which|give|list|describe)\b", query))
     other = bool(re.search(r"\b(?:the\s+)?other\s+one\b", query))
-    pronoun = bool(re.search(r"\b(?:it|its|that|this|that\s+one|their)\b", query))
+    # ``it assets`` is the common lower-case/voice-transcription spelling of
+    # ``IT assets``. It is an owner-scope noun phrase, not a pronoun referring
+    # to the last Asset, so an active referent must not narrow the collection
+    # read to one record.
+    it_assets = bool(re.search(r"\bit\s+assets?\b", query))
+    pronoun = bool(re.search(r"\b(?:it|its|that|this|that\s+one|their)\b", query)) and not it_assets
     singular = pronoun or bool(ordinal_match) or other or implicit_detail
     if not plural and not singular:
         return {"status": "NOT_REFERENCE", "refs": [], "reason": "no structured reference phrase"}

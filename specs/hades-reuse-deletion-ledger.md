@@ -1611,3 +1611,9 @@ Dead canonical-read alias removal: removed the two unreferenced
 `agent_loop.py` exports `_canonical_asset_read_payload` and
 `_canonical_read_fast_path_payload`; tests now use `src.aci` directly. Focused
 coverage passed `275 passed, 1 warning`.
+
+Owner-scope reference correction: extended the existing structured reference
+resolver so lower-case/ASR `it assets` is recognized as the `IT assets`
+collection noun phrase, not the pronoun `it`. This prevents an active Asset
+referent from narrowing an owner inventory list; focused container-backed
+coverage passed `276 passed, 2 warnings`.

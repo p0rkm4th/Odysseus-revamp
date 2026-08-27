@@ -289,3 +289,11 @@ The next alias audit found `_canonical_asset_read_payload` and
 now import the canonical ACI helpers directly, and both aliases were removed
 from `agent_loop.py`. Focused canonical-read/ACI coverage passed `275 passed,
 1 warning`; no semantic owner or execution path changed.
+
+## Owner-scope reference correction (`working tree`)
+
+The structured reference resolver now treats the common lower-case/ASR form
+`it assets` as the owner-scoped `IT assets` noun phrase, rather than consuming
+an active Asset referent as the pronoun `it`. The owner collection query stays
+on the canonical `manage_assets.list` Action even when a prior Asset is
+active. Container-backed focused coverage passed `276 passed, 2 warnings`.

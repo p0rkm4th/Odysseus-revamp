@@ -76,6 +76,22 @@ def test_owner_technical_asset_language_is_not_a_host_identifier():
         assert resolve_intent(frame).action_id == "list"
 
 
+def test_it_assets_collection_read_does_not_consume_active_asset_referent():
+    context = {
+        "ordered_entities": [
+            {"ref": "asset-1", "concept": "TECHNICAL_ASSET"},
+            {"ref": "asset-2", "concept": "TECHNICAL_ASSET"},
+        ],
+        "last": {"ref": "asset-1", "concept": "TECHNICAL_ASSET"},
+    }
+    frame = compile_intent("what it assets do we have", reference_context=context)
+    resolved = resolve_intent(frame)
+    assert frame.reference_resolution["status"] == "NOT_REFERENCE"
+    assert frame.entity_reference is None
+    assert resolved.action_id == "list"
+    assert resolved.binding_name == "manage_assets"
+
+
 @pytest.mark.parametrize("query", [
     "What all is on my network? do a discovery dive?",
     "tell me about the network, do a deep dive discovery mission to tell me whats going on",
