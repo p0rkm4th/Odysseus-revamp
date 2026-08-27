@@ -2882,6 +2882,69 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     return "\n".join(lines)
 
 
+def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render network observations/context without model-invented topology."""
+    event = next(
+        (
+            item for item in reversed(tuple(tool_events or ()))
+            if isinstance(item, Mapping)
+            and str(item.get("tool") or "").strip() == "manage_homelab"
+        ),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, Mapping) or str(payload.get("status") or "").upper() in {
+        "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
+    }:
+        return None
+    action = str(payload.get("action") or "").strip()
+    if action == "read_network_context":
+        interfaces = payload.get("interfaces")
+        routes = payload.get("default_routes")
+        if not isinstance(interfaces, list) or not isinstance(routes, list):
+            return None
+        if not interfaces:
+            return "No current host network interfaces were observed."
+        lines = ["Current host network context (observed):"]
+        for interface in interfaces[:32]:
+            if not isinstance(interface, Mapping):
+                continue
+            name = str(interface.get("name") or "unknown").strip()
+            addresses = interface.get("addresses") if isinstance(interface.get("addresses"), list) else []
+            rendered = [str(item.get("address")) for item in addresses[:8] if isinstance(item, Mapping) and item.get("address")]
+            suffix = f" addresses={', '.join(rendered)}" if rendered else ""
+            lines.append(f"- {name} ({interface.get('kind') or 'unknown'}){suffix}")
+        if routes:
+            gateways = [str(route.get("gateway")) for route in routes[:8] if isinstance(route, Mapping) and route.get("gateway")]
+            lines.append(f"Default route gateway: {', '.join(gateways)}." if gateways else "A default route was observed; gateway details are unavailable.")
+        else:
+            lines.append("No default route was observed.")
+        return "\n".join(lines)
+    if action == "read_network_observations":
+        nodes = payload.get("nodes")
+        edges = payload.get("edges")
+        if not isinstance(nodes, list) or not isinstance(edges, list):
+            return None
+        if not nodes:
+            return "No persisted network observations are recorded for this owner."
+        lines = [f"I found {len(nodes)} persisted network observation{'s' if len(nodes) != 1 else ''}:"]
+        for node in nodes[:50]:
+            if not isinstance(node, Mapping):
+                continue
+            attrs = node.get("attributes") if isinstance(node.get("attributes"), Mapping) else {}
+            label = node.get("name") or attrs.get("hostname") or attrs.get("observed_ip") or node.get("id") or "Unnamed node"
+            lines.append(f"- {label}")
+        if len(nodes) > 50:
+            lines.append(f"- …and {len(nodes) - 50} more")
+        return "\n".join(lines)
+    return None
+
+
 def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the terminal inventory mutation from its structured Result."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
@@ -2928,6 +2991,7 @@ def canonical_result_answer(
     """
     candidates = (
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
+        (canonical_network_read_answer(tool_events), "canonical Network Result"),
         (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
         (canonical_household_read_answer(tool_events), "canonical Household Result"),
     )

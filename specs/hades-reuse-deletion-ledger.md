@@ -1448,3 +1448,20 @@ structured outcome and distinguishes verified readback from incomplete
 verification or failure. No new store/executor was introduced. Focused
 ACI/inventory/intent/binding coverage passed 246 tests with 1 skipped. Live
 Qwen verification remains unavailable.
+
+Canonical final answer selection: consolidated Asset, Household, and Inventory
+mutation replacement selection behind `aci.canonical_result_answer`, returning
+an explicit `AnswerSource` and provenance. The compatibility loop now emits at
+most one deterministic canonical replacement for these owner-state results;
+the structured Result remains authoritative and no new persistence or
+execution path was introduced. Focused lifecycle/routing coverage passed 250
+tests with 1 skipped. Live Qwen verification remains unavailable.
+
+Owner hardware/network regression family: expanded the existing deterministic
+read compiler for conversational owner computer queries (including `got`,
+terse collection language, and discourse prefixes) and added a structured
+Network Result renderer for current context and persisted observations. This
+prevents canonical hardware/network values from being invented by answer
+synthesis and records the owner-session failure as a semantic regression
+family. Focused intent/lifecycle coverage passed 132 tests with 1 skipped;
+the complete owner-facing stream still requires live Qwen verification.
