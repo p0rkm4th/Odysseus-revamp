@@ -1423,3 +1423,11 @@ contract still distinguishes read-only explanation from mutation. No new
 executor, store, registry, or authority path was added. Focused intent,
 inventory, and chat-policy coverage passed 198 tests with 1 skipped. Live
 Qwen verification remains unavailable.
+
+Canonical Household read projection: extended `src.aci` with a bounded
+`canonical_household_read_answer` over the existing `read_household` Result
+and wired it into the existing final `response_replace` path. Empty and
+populated kitchen/household reads now render only structured inventory values;
+mutations remain owned by the existing Inventory service adapter. No second
+store or executor was added. Focused ACI/inventory/intent/binding coverage
+passed 243 tests with 1 skipped. Live Qwen verification remains unavailable.

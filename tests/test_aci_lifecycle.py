@@ -9,6 +9,7 @@ from src.aci import (
     SelectionMode,
     canonical_read_fast_path_payload,
     canonical_asset_read_answer,
+    canonical_household_read_answer,
     assistant_requested_followup,
     classify_action_escalation,
     classify_post_result,
@@ -98,6 +99,21 @@ def test_canonical_asset_read_answer_counts_only_structured_filtered_rows():
         }),
     }])
     assert answer == "I found 2 canonical IT assets matching '2080'."
+
+
+def test_canonical_household_read_answer_uses_only_inventory_result():
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA",
+            "items": [{"id": "i-1", "name": "Angel hair pasta", "domain": "kitchen", "stock_quantity": "2", "default_unit": "box"}],
+        }),
+    }])
+    assert answer == "I found 1 kitchen/household item:\n- Angel hair pasta (domain=kitchen, quantity=2 box)"
+    assert canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": '{"status":"SUCCESS_EMPTY","items":[]}',
+    }]) == "No kitchen or household inventory is recorded for this owner."
 
 
 def _collect_stream_events(generator):
