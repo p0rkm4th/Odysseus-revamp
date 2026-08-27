@@ -297,3 +297,11 @@ The structured reference resolver now treats the common lower-case/ASR form
 an active Asset referent as the pronoun `it`. The owner collection query stays
 on the canonical `manage_assets.list` Action even when a prior Asset is
 active. Container-backed focused coverage passed `276 passed, 2 warnings`.
+
+## Dead loop export cleanup (`0c0326c4`)
+
+The loop-local `_canonical_read_action` export had no internal or production
+consumer. Test consumers now import the canonical `intent_contracts` owner;
+compatibility delegates still used by the loop remain intact. The focused
+ACI, memory-grounding, lifecycle, and cutover suite passed `131 passed, 2
+warnings` after fresh-process verification.
