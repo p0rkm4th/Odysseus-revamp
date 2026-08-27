@@ -270,6 +270,14 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     assert work.source.value == "DETERMINISTIC_RESULT"
     assert "No outstanding work" in work.content
 
+    empty_service = canonical_result_answer([{
+        "tool": "manage_homelab", "exit_code": 0,
+        "output": '{"services": [], "status": "SUCCESS_EMPTY"}',
+    }])
+    assert empty_service is not None
+    assert empty_service.source.value == "DETERMINISTIC_RESULT"
+    assert "No homelab state records" in empty_service.content
+
 
 def _collect_stream_events(generator):
     async def _collect():
