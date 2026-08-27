@@ -1328,3 +1328,11 @@ role. Focused ACI, injection, workspace, lifecycle, cutover, and inventory
 coverage passed 148 tests; full regression is pending for this working slice.
 `agent_loop.py` is now 6,897 LOC (102 ACI lines added, 117 loop lines
 removed). Production remains pinned to the deployed `c555012…` checkpoint.
+
+Network/Asset vertical-slice evidence: added a permanent regression for DHCP
+address changes. Two owner-scoped observations with the same MAC but different
+IP addresses resolve to one Asset, retain both temporal observations, and
+create no IP identity. Network owner-scope, intent, and workspace-surface
+coverage passed 22 tests. This confirms the existing `asset_inventory` and
+`network_projection` owners satisfy the identity boundary without adding a
+second NetworkState store.

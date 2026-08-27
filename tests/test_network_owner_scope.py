@@ -223,3 +223,41 @@ def test_network_cmdb_uses_bounded_sqlite_writer_lock(tmp_path, monkeypatch):
         assert check.execute(
             "SELECT count(*) FROM observations WHERE owner='alice'"
         ).fetchone()[0] == 1
+
+
+def test_strong_identity_survives_dhcp_address_change_without_ip_identity(tmp_path, monkeypatch):
+    path = tmp_path / "assets.db"
+    monkeypatch.setattr(asset_inventory, "DB_PATH", path)
+    monkeypatch.setenv("ODY_ASSET_DB", str(path))
+    mac = "aa:bb:cc:dd:ee:42"
+
+    asset_inventory.record_net(
+        {"hosts": [{"ip": "192.168.10.42", "mac": mac, "hostname": "morpheus"}]},
+        owner="alice",
+    )
+    asset_inventory.record_net(
+        {"hosts": [{"ip": "192.168.10.142", "mac": mac, "hostname": "morpheus"}]},
+        owner="alice",
+    )
+
+    with asset_inventory.db() as connection:
+        assets = connection.execute(
+            "SELECT id FROM assets WHERE owner='alice'"
+        ).fetchall()
+        assert len(assets) == 1
+        asset_id = assets[0]["id"]
+        observations = connection.execute(
+            "SELECT asset_id,data_json FROM observations WHERE owner='alice' ORDER BY id"
+        ).fetchall()
+        assert [row["asset_id"] for row in observations] == [asset_id, asset_id]
+        assert {json.loads(row["data_json"])["ip"] for row in observations} == {
+            "192.168.10.42", "192.168.10.142",
+        }
+        assert connection.execute(
+            "SELECT count(*) FROM identifiers WHERE asset_id=? AND kind='mac'",
+            (asset_id,),
+        ).fetchone()[0] == 1
+        assert connection.execute(
+            "SELECT count(*) FROM identifiers WHERE asset_id=? AND kind='ip'",
+            (asset_id,),
+        ).fetchone()[0] == 0
