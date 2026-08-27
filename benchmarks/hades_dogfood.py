@@ -986,6 +986,43 @@ def generate_chaos_journeys(*, seed: int = 0, count: int = 50, split: str = "gen
         state_mutation = _STATE_MUTATIONS[journey_index % len(_STATE_MUTATIONS)]
         for turn_index, (prompt, domain, intent, reference_type) in enumerate(turns, 1):
             result = "FAILURE" if "fail" in prompt or prompt == "fix it" else "SUCCESS"
+            # A journey turn is an oracle in its own right.  Keep the
+            # conversational template as a projection, but attach the same
+            # semantic frame used by single-turn generation so reference,
+            # epistemic, mutation, and completion assertions can be graded at
+            # trace level rather than inferred from prompt text.
+            frame_entity = {
+                "MEMORY": "PERSON", "TECHNICAL_ASSET": "ASSET",
+                "NETWORK": "NETWORK", "SERVICE": "SERVICE",
+                "MODEL_RUNTIME": "MODEL", "HOMELAB_HOST": "HOST",
+                "WORK": "PROJECT", "SELFSTATE": "INTEGRATION",
+            }.get(domain, "ASSET")
+            frame_intent = intent if intent in _SEMANTIC_INTENTS else "READ"
+            frame = ScenarioFrame(
+                entity_type=frame_entity,
+                entity_id=_semantic_entity_id(frame_entity, journey_index),
+                related_entities=(),
+                intent=frame_intent,
+                requested_property="current_state",
+                relation="ASSOCIATED_WITH",
+                relation_depth=0,
+                temporal_scope="CURRENT" if turn_index == 1 else "LATEST_OBSERVED",
+                epistemic_state="OBSERVED" if turn_index > 1 else "UNKNOWN",
+                expected_domain=domain,
+                secondary_domains=(),
+                expected_reference_resolution=reference_type.upper(),
+                expected_authority="APPROVAL_REQUIRED" if intent in {"EXECUTE", "REPAIR"} else "READ_ALLOWED",
+                expected_action_class=intent,
+                execution_required=intent in {"EXECUTE", "REPAIR"},
+                approval_state="REQUIRED" if intent in {"EXECUTE", "REPAIR"} else "NONE",
+                initial_world_state={
+                    "condition": "FAILED" if result == "FAILURE" else "CHANGING",
+                    "mutation": state_mutation if turn_index > 1 else "NONE",
+                },
+                expected_result_state=result,
+                expected_completion_state="BLOCKED" if result == "FAILURE" else "COMPLETE_AFTER_ANSWER",
+                expected_grounding="CURRENT_ACTION_RESULT" if result == "SUCCESS" else "CANONICAL_CONTEXT",
+            )
             scenario = {
                 "intent": intent, "domain": domain, "target_type": "reference" if reference_type != "none" else "none",
                 "state": "FAILED" if result == "FAILURE" else "CHANGING",
@@ -995,9 +1032,12 @@ def generate_chaos_journeys(*, seed: int = 0, count: int = 50, split: str = "gen
                 "failure_class": "EXECUTION_FAILURE" if result == "FAILURE" else "",
                 "state_mutation": state_mutation if turn_index > 1 else "NONE",
                 "mutation_boundary": "BEFORE_TURN" if turn_index > 1 and state_mutation != "NONE" else "NONE",
+                "conversation_state": "FRESH" if turn_index == 1 else "CONTINUING",
+                "scenario_frame": frame.to_dict(),
                 "semantic_oracle": {
                     "expected_domain": domain, "expected_action_class": intent,
                     "expected_reference_type": reference_type,
+                    "scenario_frame": frame.to_dict(),
                 },
             }
             expected = {
@@ -1005,6 +1045,12 @@ def generate_chaos_journeys(*, seed: int = 0, count: int = 50, split: str = "gen
                 "semantic_case": True, "journey_turn": turn_index,
                 "max_tool_index_lookups": 0,
                 "state_mutation": state_mutation if turn_index > 1 else "NONE",
+                "semantic_oracle": {
+                    "expected_domain": domain,
+                    "expected_action_class": intent,
+                    "expected_reference_type": reference_type,
+                    "scenario_frame": frame.to_dict(),
+                },
             }
             if intent in {"READ", "CLARIFY"}:
                 expected["max_decision_calls"] = 1
