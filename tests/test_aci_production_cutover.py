@@ -61,3 +61,39 @@ def test_every_production_aci_stream_call_explicitly_selects_aci_mode():
         if selected.get("aci_mode") != "aci":
             missing.append(f"{path}:{node.lineno}")
     assert missing == []
+
+
+def test_foreground_chat_route_has_no_legacy_stream_injection_seam():
+    """The owner-facing route cannot be redirected around the ACI seam."""
+    repo = Path(__file__).parents[1]
+    path = repo / "routes" / "chat_routes.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+
+    legacy_bindings = []
+    aci_entrypoint_calls = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if isinstance(node, ast.AugAssign):
+                targets = [node.target]
+            for target in targets:
+                if isinstance(target, ast.Name) and target.id == "stream_agent_loop":
+                    legacy_bindings.append(node.lineno)
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            names = node.names
+            if any(alias.name == "stream_agent_loop" for alias in names):
+                legacy_bindings.append(node.lineno)
+        if isinstance(node, ast.Call):
+            function = node.func
+            name = (
+                function.id
+                if isinstance(function, ast.Name)
+                else function.attr
+                if isinstance(function, ast.Attribute)
+                else ""
+            )
+            if name == "stream_aci_turn":
+                aci_entrypoint_calls.append(node.lineno)
+
+    assert legacy_bindings == []
+    assert aci_entrypoint_calls, "foreground route must call the canonical ACI stream"
