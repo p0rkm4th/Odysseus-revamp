@@ -2,7 +2,8 @@
 
 import json
 
-from src.agent_loop import _append_tool_results, _is_explicit_continuation
+from src.agent_loop import _append_tool_results
+from src.intent_contracts import is_explicit_continuation
 from src.tool_capabilities import capabilities_for_action
 
 
@@ -22,7 +23,7 @@ def test_explicit_continuation_phrases_inherit_context():
         "do all of the above",
         "resume",
     ):
-        assert _is_explicit_continuation(text), text
+        assert is_explicit_continuation(text), text
 
 
 def test_substantive_request_does_not_inherit_context():
@@ -32,7 +33,7 @@ def test_substantive_request_does_not_inherit_context():
         "yes, search the web for X",
         "search the web for current package versions",
     ):
-        assert not _is_explicit_continuation(text), text
+        assert not is_explicit_continuation(text), text
 
 
 def test_privileged_status_is_system_read_only():

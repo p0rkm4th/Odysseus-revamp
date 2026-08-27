@@ -194,16 +194,12 @@ from src.intent_contracts import (
 # retired loop-local names. These are aliases, not independent implementations
 # or authorities; all semantics live in ACI and intent contracts.
 _extract_last_user_message = last_user_message
-_user_turn_count = user_turn_count
 _insert_before_latest_user = insert_before_latest_user
 _network_discovery_cidr = explicit_private_discovery_cidr
-_explicitly_allows_diagnostic_install = explicitly_allows_diagnostic_install
 _network_discovery_request_cidr = network_discovery_request_cidr
 _network_prerequisite_request = is_network_prerequisite_request
 _explicit_network_discovery_request = is_explicit_network_discovery_request
-_network_service_enumeration_request = is_network_service_enumeration_request
 _network_substantive_fallback_command = network_substantive_fallback_command
-_is_explicit_continuation = is_explicit_continuation
 _recent_reference_resolution_hint = reference_resolution_hint
 _deterministic_reference_acknowledgement = deterministic_reference_acknowledgement
 _is_contextual_retry_continuation = is_contextual_retry_continuation
@@ -1003,7 +999,7 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
         explicit_memory_query=is_explicit_memory_query,
         contextual_retry_continuation=_is_contextual_retry_continuation,
         contextual_reference_followup=is_contextual_reference_followup,
-        explicit_continuation=_is_explicit_continuation,
+        explicit_continuation=is_explicit_continuation,
         assistant_requested_followup=_assistant_requested_followup,
         specialized_operational_domains=_SPECIALIZED_OPERATIONAL_DOMAINS,
     )
@@ -1965,7 +1961,7 @@ async def stream_agent_loop(
     _low_signal_turn = bool(_intent.get("low_signal"))
     _suppress_auto_skills = _suppress_automatic_skills(_last_user, _intent)
     _casual_low_signal_turn = _is_casual_low_signal(_last_user)
-    _existing_conversation = _user_turn_count(messages) > 1
+    _existing_conversation = user_turn_count(messages) > 1
     _active_document_relevant = _turn_targets_active_document(_intent, _last_user, active_document)
     _active_email_draft_relevant = _active_document_relevant and _is_email_document_obj(active_document)
     if _active_email_draft_relevant:
@@ -4405,7 +4401,7 @@ async def stream_agent_loop(
         # plan so the existing resolver, broker policy, and verification path
         # remain authoritative.
         _network_request_cidr = _network_discovery_request_cidr(_last_user)
-        _network_service_request = _network_service_enumeration_request(_last_user)
+        _network_service_request = is_network_service_enumeration_request(_last_user)
         if not _aci_canonical_tool_projection and (
             not tool_blocks
             and bool(_intent.get("continuation"))
@@ -5062,7 +5058,7 @@ async def stream_agent_loop(
                 logger.info(
                     "[agent] repair budget exhausted; injecting substantive network fallback in current round domains=%s install_authorized=%s",
                     sorted(set(_intent_domains or set()) & _HARD_TOOL_DOMAINS),
-                    _explicitly_allows_diagnostic_install(_retrieval_query),
+                    explicitly_allows_diagnostic_install(_retrieval_query),
                 )
                 _hard_action_substantive_attempted = True
                 if round_response and full_response.endswith(round_response):

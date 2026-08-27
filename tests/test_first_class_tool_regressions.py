@@ -9,10 +9,9 @@ from src import asset_inventory as inventory
 from src.agent_loop import (
     _assemble_prompt,
     _asset_read_request,
-    _is_explicit_continuation,
     _privileged_action_requires_exact_approval,
 )
-from src.intent_contracts import canonical_read_action
+from src.intent_contracts import canonical_read_action, is_explicit_continuation
 
 
 def test_canonical_read_projection_preserves_setup_integration_view():
@@ -386,7 +385,7 @@ async def test_manage_assets_read_failure_is_not_zero_inventory(monkeypatch):
     ],
 )
 def test_general_continuation_phrases(text):
-    assert _is_explicit_continuation(text)
+    assert is_explicit_continuation(text)
 
 
 @pytest.mark.parametrize(
@@ -399,4 +398,4 @@ def test_general_continuation_phrases(text):
     ],
 )
 def test_substantive_requests_do_not_inherit_stale_context(text):
-    assert not _is_explicit_continuation(text)
+    assert not is_explicit_continuation(text)

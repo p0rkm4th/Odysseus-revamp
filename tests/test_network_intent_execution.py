@@ -5,6 +5,7 @@ import json
 
 import src.agent_loop as agent_loop
 from src.aci import ground_action_completion
+from src.intent_contracts import is_network_service_enumeration_request
 
 
 def _collect(generator):
@@ -87,10 +88,10 @@ def test_unscoped_network_deep_dive_does_not_enter_bounded_selection(monkeypatch
 
 
 def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_active_scan():
-    assert agent_loop._network_service_enumeration_request(
+    assert is_network_service_enumeration_request(
         "perform a deeper service scan on all discovered hosts"
     ) is True
-    assert agent_loop._network_service_enumeration_request(
+    assert is_network_service_enumeration_request(
         "show the network discovery status"
     ) is False
     response = ground_action_completion(
