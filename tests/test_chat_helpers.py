@@ -43,6 +43,22 @@ def test_communications_chat_turn_attaches_to_shared_work_run(monkeypatch):
     assert captured["intent"]["operation_class"] == "READ"
 
 
+def test_work_run_projection_does_not_invoke_legacy_agent_classifier(monkeypatch):
+    monkeypatch.setattr(
+        "src.agent_loop._classify_agent_request",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("legacy classifier must not route Work-run creation")
+        ),
+    )
+    monkeypatch.setattr(
+        "src.agent_work_bridge.ensure_agent_run",
+        lambda *args, **kwargs: "run-aci-owned",
+    )
+    assert chat_helpers.ensure_chat_agent_work_run(
+        "alice", "chat-aci", "What communications are configured?", enabled=True,
+    ) == "run-aci-owned"
+
+
 def test_asset_detail_read_is_deferred_until_reference_is_resolved(monkeypatch):
     """The route must not terminalize a Run with an asset-less ``get``."""
     captured = {}

@@ -184,9 +184,16 @@ def deterministic_read_concept(text: str) -> str | None:
         and re.search(r"\b(?:current(?:ly)?|active|progress|going|have|got)\b", query)
     ):
         return "WORK"
+    # Owner-scoped collection language refers to the canonical asset catalog;
+    # it must win over the broader host-observation vocabulary.  Explicit
+    # owner hardware requests such as "tell me about my hardware" therefore
+    # remain asset reads, while a later host-inspection branch still handles
+    # "inspect this host" and "scan the current system".
+    if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
+        return "TECHNICAL_ASSET"
     # A hardware exploration request is a bounded host observation, not an
-    # arbitrary scan or shell request.  Keep this ahead of the asset catalog
-    # projection so "scan your hardware" reaches inspect_host.
+    # arbitrary scan or shell request.  Keep this ahead of the remaining
+    # generic asset fallback so "scan your hardware" reaches inspect_host.
     if _HOST_INSPECTION.search(query) and re.search(
         r"\b(?:hardware|computational\s+assets?|system|host)\b",
         query,
@@ -194,8 +201,6 @@ def deterministic_read_concept(text: str) -> str | None:
         r"\b(?:network|lan|subnet|service|daemon)\b", query,
     ):
         return "HOMELAB_HOST"
-    if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
-        return "TECHNICAL_ASSET"
     if _HOST_INSPECTION.search(query) and not re.search(
         r"\b(?:network|lan|subnet|scan|discover|service|daemon)\b", query,
     ):

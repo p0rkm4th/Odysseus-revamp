@@ -460,9 +460,11 @@ class TestSshBaseArgv:
         assert _ssh_base_argv("user@example.com", None) == [
             "ssh",
             "-o",
+            "BatchMode=yes",
+            "-o",
             "ConnectTimeout=6",
             "-o",
-            "StrictHostKeyChecking=no",
+            "StrictHostKeyChecking=yes",
             "user@example.com",
         ]
 

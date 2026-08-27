@@ -21,7 +21,8 @@ MAX_RESPONSE = 65536
 ALLOWED_PACKAGES = frozenset({
     "nmap", "iproute2", "iputils-ping", "dnsutils", "bind", "bind9", "ethtool",
     "pciutils", "usbutils", "smartmontools", "nvme-cli", "dmidecode", "traceroute",
-    "lsof", "procps", "util-linux", "jq",
+    "lsof", "procps", "util-linux", "jq", "cmake", "build-essential", "g++",
+    "gcc", "git", "tmux", "make",
 })
 ALLOWED_EXECUTABLES = frozenset({"ip", "ss", "nmap", "dig", "host", "nslookup", "traceroute"})
 PKG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9+._:-]{0,79}$")

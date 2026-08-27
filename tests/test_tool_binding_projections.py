@@ -28,8 +28,12 @@ def test_tags_contracts_domains_and_executors_are_projected():
         assert f'<invoke name="{name}"' in binding.textual_contract
         assert binding.executor_key == name
         capability = capability_for_tool(name)
-        assert all(action.executor_key == binding.executor_key
-                   for action in capability.actions.values())
+        if name in {"web_search", "web_fetch"}:
+            action_id = {"web_search": "search", "web_fetch": "fetch"}[name]
+            assert capability.actions[action_id].executor_key == binding.executor_key
+        else:
+            assert all(action.executor_key == binding.executor_key
+                       for action in capability.actions.values())
         for domain in binding.domains:
             assert name in _DOMAIN_TOOL_MAP[domain]
 
@@ -38,15 +42,27 @@ def test_native_action_enums_cover_every_registered_action():
     """Native providers must not silently lose a canonical ActionSpec."""
     for name, binding in TOOL_BINDINGS.items():
         capability = capability_for_tool(name)
-        schema_actions = set(
-            binding.native_schema["function"]["parameters"]["properties"]["action"].get("enum", ())
-        )
-        assert set(capability.actions) <= schema_actions, (name, set(capability.actions) - schema_actions)
+        properties = binding.native_schema["function"]["parameters"]["properties"]
+        if "action" in properties:
+            schema_actions = set(properties["action"].get("enum", ()))
+            if name in {"web_search", "web_fetch"}:
+                # These are intentionally single-purpose bindings over the
+                # shared web.evidence capability.
+                expected = {"web_search": "search", "web_fetch": "fetch"}[name]
+                assert schema_actions == {expected}
+            else:
+                assert set(capability.actions) <= schema_actions, (name, set(capability.actions) - schema_actions)
+        else:
+            # Single-purpose bindings expose their ActionSpec through the
+            # binding identity rather than a multiplexed action enum.
+            assert name in {"web_search", "web_fetch"}
+            action_id = {"web_search": "search", "web_fetch": "fetch"}[name]
+            assert capability.actions[action_id].executor_key == name
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career", "read_communications", "developer_read"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 12
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career", "read_communications", "developer_read", "web_search", "web_fetch"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 13
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()

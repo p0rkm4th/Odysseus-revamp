@@ -1,9 +1,9 @@
-"""Durable Work projections for first-class agent binding execution.
+"""Durable Work projections for first-class ACI binding execution.
 
-The chat agent still owns its streaming loop and legacy tool transport. This
-module is the compatibility seam that gives registered ActionSpec/ToolBinding
-operations a durable owner/session Work trajectory without duplicating their
-executor. It never grants authority or accepts model-supplied executors.
+The temporary stream implementation remains behind the ACI compatibility seam.
+This module gives registered ActionSpec/ToolBinding operations a durable
+owner/session Work trajectory without duplicating their executor. It never
+grants authority or accepts model-supplied executors.
 """
 
 from __future__ import annotations

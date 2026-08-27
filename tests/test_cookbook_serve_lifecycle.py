@@ -1,8 +1,37 @@
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from src import cookbook_serve_lifecycle as lifecycle
+
+
+@pytest.mark.asyncio
+async def test_remote_stop_fails_closed_on_unknown_host_key(monkeypatch):
+    requests = []
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, **kwargs):
+            requests.append(kwargs["json"])
+            return SimpleNamespace(
+                status_code=200,
+                content=b"{}",
+                json=lambda: {"exit_code": 0},
+            )
+
+    monkeypatch.setattr(lifecycle.httpx, "AsyncClient", lambda **_kwargs: _Client())
+
+    assert await lifecycle._stop_serve("serve-1", "user@lab-host", "2222")
+    command = requests[0]["command"]
+    assert "BatchMode=yes" in command
+    assert "StrictHostKeyChecking=yes" in command
+    assert "StrictHostKeyChecking=no" not in command
 
 
 @pytest.mark.asyncio

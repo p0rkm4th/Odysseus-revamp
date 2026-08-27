@@ -1,4 +1,5 @@
 import socket
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -9,6 +10,16 @@ from starlette.requests import Request
 import routes.cookbook_routes as cookbook_routes
 from routes.cookbook_helpers import ServeRequest, _validate_serve_cmd
 from src.host_docker_access import HOST_DOCKER_ACCESS_HINT
+
+
+def test_remote_cookbook_setup_uses_shared_verified_ssh_transport():
+    source = (Path(__file__).resolve().parents[1] / "routes" / "cookbook_routes.py").read_text(encoding="utf-8")
+    start = source.index("async def server_setup")
+    end = source.index("# ── GPU availability probe ──", start)
+    setup = source[start:end]
+    assert setup.count("run_ssh_command_async(") >= 3
+    assert "create_subprocess_shell" not in setup
+    assert "strict_host_key_checking=True" in setup
 
 
 def _model_serve_endpoint():
@@ -118,6 +129,27 @@ async def test_remote_docker_still_uses_ssh_probe(monkeypatch):
         "docker",
         windows=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_remote_binary_probe_requires_existing_ssh_host_key(monkeypatch):
+    captured = {}
+
+    class _Process:
+        returncode = 0
+
+        async def communicate(self):
+            return b"", b""
+
+    async def fake_exec(*args, **kwargs):
+        captured["args"] = list(args)
+        return _Process()
+
+    monkeypatch.setattr(cookbook_routes.asyncio, "create_subprocess_exec", fake_exec)
+    assert await cookbook_routes._remote_binary_available("gpu-server", "2222", "tmux") is True
+    assert "BatchMode=yes" in captured["args"]
+    assert "StrictHostKeyChecking=yes" in captured["args"]
+    assert "StrictHostKeyChecking=no" not in captured["args"]
 
 
 @pytest.mark.asyncio

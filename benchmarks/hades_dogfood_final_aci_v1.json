@@ -1,0 +1,47 @@
+{
+  "contract": "hades-dogfood-v1",
+  "suite": "baseline",
+  "mode": "synthetic",
+  "captured_at": "2026-08-26",
+  "source_provenance": {
+    "runtime": "local worktree after ACI projection, bounded composition, capability-gap, and web AUTO slices",
+    "local_head": "4d20cd947015f7b8d4b8e5d600a6040c5f222610",
+    "deployed_reference": "odysseus:candidate-d90bfbf9d05a",
+    "model_endpoint": "http://172.18.0.1:11434",
+    "model": "qwen3:8b",
+    "raw_artifact": "/tmp/hades-dogfood-final2-aci-v1.json"
+  },
+  "metrics": {
+    "scenario_count": 62,
+    "functional_success": 22,
+    "functional_rate": 0.3548,
+    "architectural_success": 32,
+    "architectural_rate": 0.5161,
+    "security_success": 62,
+    "security_rate": 1.0,
+    "domain_reference_accuracy": 0.7419,
+    "reference_resolution_accuracy": 0.0,
+    "duplicate_rate": 0.0,
+    "model_calls_per_task": 2.0645,
+    "decision_calls_per_task": 1.8226,
+    "failed_actions_per_task": 2.3871,
+    "tool_index_lookups_per_task": 0.0806,
+    "prompt_tokens_per_task": 5341.9194,
+    "completion_tokens_per_task": 33.1935,
+    "context_hydrations_per_task": 0.0,
+    "fallbacks_per_task": null,
+    "continuation_rounds_per_task": 0.0,
+    "median_latency_seconds": 6.4843,
+    "p95_latency_seconds": 7.8406
+  },
+  "top_failure_clusters": {
+    "answer_present": 37,
+    "decision_budget": 30,
+    "failed_action_budget": 10,
+    "concept": 6,
+    "model_budget": 2,
+    "recovery": 2,
+    "required_tools": 1
+  },
+  "note": "Comparison artifact. Security improved to 100%, but functional and burden regressions mean this candidate is not foundation-ready for deployment."
+}

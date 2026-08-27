@@ -80,6 +80,19 @@ def test_broker_accepts_allowlisted_packages_and_rejects_shell_inputs():
             validate_packages(value)
 
 
+def test_legacy_network_discovery_installer_is_only_a_dependency_projection(monkeypatch):
+    monkeypatch.setattr(inventory.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(inventory, "run", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("legacy installer must not execute")))
+    denied = inventory.maybe_install(False)
+    assert denied["attempted"] is False
+    assert denied["reason"] == "not_authorized"
+    planned = inventory.maybe_install(True)
+    assert planned["attempted"] is False
+    assert planned["installed"] is False
+    assert planned["reason"] == "remediation_requires_canonical_broker_and_approval"
+    assert planned["dependency_plan"]["action"] in {"host_or_remote_package_install", "blocked"}
+
+
 def test_broker_peer_boundary_requires_pid_uid_and_gid():
     assert peer_is_allowed(1, 1000, 1000, 1, 1000, 1000)
     assert not peer_is_allowed(2, 1000, 1000, 1, 1000, 1000)

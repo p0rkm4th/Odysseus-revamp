@@ -42,6 +42,68 @@ _MCP_PARAM_MAX = 12   # max params rendered per tool
 _MCP_TOKEN_MAX = 40   # max chars per rendered name / type token
 _MCP_HINT_MAX = 300   # total-length backstop for the whole hint
 
+# Compatibility-only natural-language hints for local schema visibility.
+# Semantic selection remains the preferred input; these hints do not grant
+# authority or bypass disabled-tool checks.
+MCP_KEYWORDS = frozenset({
+    "mcp", "browse", "browser", "website", "calendar", "event", "email",
+    "gmail", "screenshot", "navigate", "click", "miniflux", "rss", "feed",
+})
+
+
+def load_mcp_disabled_map() -> Dict[str, set]:
+    """Load per-server disabled tool sets from the canonical MCP store.
+
+    This is a projection of server policy only.  It does not authorize an MCP
+    tool; execution still re-checks the server's disabled set at the boundary.
+    Keeping the read here prevents the orchestration stream from owning MCP
+    persistence semantics.
+    """
+    from core.database import McpServer as CoreMcpServer, SessionLocal as core_session_factory
+
+    disabled_map: Dict[str, set] = {}
+    db = core_session_factory()
+    try:
+        for server in db.query(CoreMcpServer).all():
+            if not server.disabled_tools:
+                continue
+            try:
+                names = json.loads(server.disabled_tools)
+            except (json.JSONDecodeError, TypeError):
+                continue
+            if names:
+                disabled_map[server.id] = set(names)
+    finally:
+        db.close()
+    return disabled_map
+
+
+def select_local_mcp_schemas(
+    schemas: List[Dict],
+    relevant_tools: Optional[Set[str]],
+    user_text: str,
+) -> List[Dict]:
+    """Project selected MCP schemas for a local-model route.
+
+    Qualified semantic selections win. The keyword fallback is retained only
+    for compatibility routes that have no selected dynamic MCP binding.
+    """
+    if not schemas:
+        return []
+    relevant = set(relevant_tools or ())
+    selected_dynamic = {
+        name for name in relevant
+        if isinstance(name, str) and name.startswith("mcp__")
+    }
+    if selected_dynamic:
+        return [
+            schema for schema in schemas
+            if schema.get("function", {}).get("name") in selected_dynamic
+        ]
+    if any(keyword in (user_text or "").lower() for keyword in MCP_KEYWORDS):
+        return list(schemas)
+    return []
+
 
 def _sanitize_schema_token(value: Any, limit: int = _MCP_TOKEN_MAX) -> str:
     """Make an untrusted JSON-Schema token safe to splice into the prompt.
@@ -656,6 +718,25 @@ class McpManager:
                     "is_disabled": tool["name"] in disabled,
                 })
         return result
+
+    def qualified_tools_for_server(
+        self, server_id: str, *, include_disabled: bool = False,
+    ) -> Set[str]:
+        """Return discovered qualified bindings for one connected server.
+
+        Tool discovery stays owned by the MCP manager. Callers receive
+        transport names only; discovery does not grant execution authority.
+        """
+        requested = str(server_id or "").strip()
+        if not requested:
+            return set()
+        return {
+            str(tool.get("qualified_name") or "")
+            for tool in self.get_all_tools()
+            if tool.get("server_id") == requested
+            and (include_disabled or not tool.get("is_disabled"))
+            and tool.get("qualified_name")
+        }
 
     def plan_mode_blocked_mcp(self) -> Tuple[Dict[str, Set[str]], Set[str]]:
         """Plan mode: block every MCP tool that isn't clearly read-only.

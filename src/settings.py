@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # must stay in ``DEFAULT_SETTINGS`` so old files continue to load without data
 # loss; callers that present or mutate settings should use this set as a
 # tombstone boundary.
-RETIRED_SETTING_KEYS = frozenset({"default_model_fallbacks"})
+RETIRED_SETTING_KEYS = frozenset({"default_model_fallbacks", "hades_aci_mode"})
 
 # Tiny TTL cache for settings/features. get_setting() is called on hot paths
 # (every chat, every preprocess); without this it re-parses the JSON each call.
@@ -36,8 +36,9 @@ def _invalidate_caches():
 # ── Default values ──
 
 DEFAULT_SETTINGS = {
-    # Explicit rollout control for the canonical Hades weak/local-model
-    # interface. This is deliberately not inferred from model-family names.
+    # Retained for loading old settings files without data loss. Foreground
+    # production chat is now unconditionally ACI-owned; this key is a
+    # tombstoned compatibility value, not a runtime control plane.
     "hades_aci_mode": "aci",
     # Agent email safety: when True, the MCP send_email / reply_to_email
     # tools don't SMTP directly. They stage the composed message into the
