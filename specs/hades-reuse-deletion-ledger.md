@@ -1623,3 +1623,9 @@ compatibility export and moved its test consumers to the canonical
 `intent_contracts` owner. Delegates still referenced by active loop mechanics
 were deliberately retained. Fresh-process focused coverage passed `131
 passed, 2 warnings`.
+
+Direct canonical trace calls: replaced the loop-only aliases for ACI
+`action_trace`, `project_aci_trace`, and `detect_runaway_call` with direct
+canonical calls and migrated the runaway tests to `src.aci`. No authority or
+execution path changed; fresh focused lifecycle/runaway coverage passed `56
+passed, 2 warnings`.

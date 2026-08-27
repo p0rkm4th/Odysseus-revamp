@@ -305,3 +305,10 @@ consumer. Test consumers now import the canonical `intent_contracts` owner;
 compatibility delegates still used by the loop remain intact. The focused
 ACI, memory-grounding, lifecycle, and cutover suite passed `131 passed, 2
 warnings` after fresh-process verification.
+
+## Direct canonical trace calls (`working tree`)
+
+The loop now calls the canonical ACI `action_trace`, `project_aci_trace`, and
+`detect_runaway_call` functions directly. Their loop-only compatibility aliases
+were removed; no policy, execution, or completion authority changed. Fresh
+focused lifecycle and runaway coverage passed `56 passed, 2 warnings`.

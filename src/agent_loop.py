@@ -192,9 +192,6 @@ from src.intent_contracts import (
 # Temporary import compatibility for callers/tests that still reference the
 # retired loop-local names. These are aliases, not independent implementations
 # or authorities; all semantics live in ACI and intent contracts.
-_aci_action_trace = action_trace
-_project_aci_trace = project_aci_trace
-_detect_runaway_call = detect_runaway_call
 _extract_last_user_message = last_user_message
 _user_turn_count = user_turn_count
 _insert_before_latest_user = insert_before_latest_user
@@ -2871,7 +2868,7 @@ async def stream_agent_loop(
             _aci_action_candidates = [
                 trace
                 for choice, selected in sorted(_aci_choice_map.items())
-                if (trace := _aci_action_trace(choice, selected)) is not None
+                if (trace := action_trace(choice, selected)) is not None
             ]
             if projection.fast_path and _aci_mode == "aci" and not _aci_answer_only:
                 _fast_binding = str(
@@ -4290,7 +4287,7 @@ async def stream_agent_loop(
                     converted_calls = []
                     round_response = ""
                     _aci_contract_fallback_used = True
-                    _aci_selected_action = _aci_action_trace(
+                    _aci_selected_action = action_trace(
                         "CONTRACT_FALLBACK", _fallback_selected
                     )
                     _record_aci_framework("deterministic_contract_fallback")
@@ -4351,7 +4348,7 @@ async def stream_agent_loop(
                 ):
                     if _decision_outcome.used_contract_fallback:
                         _aci_contract_fallback_used = True
-                        _aci_selected_action = _aci_action_trace(
+                        _aci_selected_action = action_trace(
                             "CONTRACT_FALLBACK", selected
                         )
                         _record_aci_framework("deterministic_contract_fallback")
@@ -4362,7 +4359,7 @@ async def stream_agent_loop(
                             _aci_decision.decision.value,
                         )
                     else:
-                        _aci_selected_action = _aci_action_trace(
+                        _aci_selected_action = action_trace(
                             _aci_decision.choice, selected
                         )
                         logger.info(
@@ -5282,7 +5279,7 @@ async def stream_agent_loop(
         # Runaway = the SAME exact call repeated an absurd number of times.
         # Distinct calls to one tool (a real batch) are legitimate work, so we
         # count identical call signatures, not raw per-tool-type totals.
-        _runaway = _detect_runaway_call(_call_freq)
+        _runaway = detect_runaway_call(_call_freq)
         if _stuck_rounds >= 4 or _runaway:
             reason = (f"calling {_runaway} with identical arguments over and over" if _runaway
                       else "repeating the same tool calls without new progress")
@@ -6764,7 +6761,7 @@ async def stream_agent_loop(
             "candidate_count": len(_aci_reference_resolution.get("candidate_refs") or []),
             "context_source": _aci_reference_context_source,
         }
-    metrics["aci_trace"] = _project_aci_trace(
+    metrics["aci_trace"] = project_aci_trace(
         intent=_intent,
         run_id=work_run_id,
         action_id=(_aci_selected_action or {}).get("action_id"),
