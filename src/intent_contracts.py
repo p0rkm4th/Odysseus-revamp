@@ -1087,7 +1087,17 @@ def resolve_structured_reference(
         r"(?:one|machine|computer|server|host|box|device)\b",
         query,
     )
-    singular = bool(re.search(r"\b(?:it|that|this|that\s+one)\b", query)) or bool(ordinal_match)
+    # Detail follow-ups can omit the noun entirely ("tell me the specs") or
+    # use a possessive pronoun ("what about its RAM"). They are references
+    # only when prior canonical context can provide the identity.
+    implicit_detail = bool(re.search(
+        r"\b(?:specs?|specifications?|hardware|cpus?|processors?|ram|memory|gpus?|"
+        r"graphics\s+cards?|storage|motherboard|os|operating\s+system)\b",
+        query,
+    )) and bool(re.search(r"\b(?:tell|show|what|which|give|list|describe)\b", query))
+    other = bool(re.search(r"\b(?:the\s+)?other\s+one\b", query))
+    pronoun = bool(re.search(r"\b(?:it|its|that|this|that\s+one|their)\b", query))
+    singular = pronoun or bool(ordinal_match) or other or implicit_detail
     if not plural and not singular:
         return {"status": "NOT_REFERENCE", "refs": [], "reason": "no structured reference phrase"}
     if not candidates:
@@ -1097,8 +1107,30 @@ def resolve_structured_reference(
         if index >= len(candidates):
             return {"status": "UNRESOLVED", "refs": [], "reason": "ordinal reference is out of range"}
         selected = [candidates[index]]
+    elif other:
+        last_ref = str(last.get("ref") or last.get("id") or "") if last else ""
+        alternatives = [
+            item for item in candidates
+            if str(item.get("ref") or item.get("id") or "") != last_ref
+        ]
+        if len(alternatives) != 1:
+            return {
+                "status": "AMBIGUOUS", "refs": [],
+                "candidate_refs": [
+                    str(item.get("ref") or item.get("id"))
+                    for item in alternatives or candidates
+                ],
+                "reason": "other reference does not identify exactly one candidate",
+            }
+        selected = alternatives
     elif plural:
         selected = candidates
+    elif (pronoun or implicit_detail) and last:
+        last_ref = str(last.get("ref") or last.get("id") or "")
+        selected = [
+            item for item in candidates
+            if str(item.get("ref") or item.get("id") or "") == last_ref
+        ] or [last]
     elif len(candidates) == 1:
         selected = candidates
     else:
@@ -1497,6 +1529,19 @@ def compile_intent(
             if component:
                 reference_filters["asset_query"] = component
                 reference_filters["asset_projection"] = "count"
+        property_match = re.search(
+            r"\b(specs?|specifications?|cpus?|processors?|ram|memory|gpus?|graphics\s+cards?|"
+            r"storage|motherboard|os|operating\s+system)\b", q,
+        )
+        if property_match and (
+            target or reference_resolution.get("status") == "RESOLVED"
+        ):
+            property_name = property_match.group(1).replace(" ", "_")
+            reference_filters["asset_property"] = {
+                "cpus": "cpu", "processors": "processor", "gpus": "gpu",
+                "graphics_cards": "gpu", "specification": "specs",
+                "specifications": "specs",
+            }.get(property_name, property_name)
     workspace = {
         "MEMORY": "hades", "WORK": "work", "GOAL": "work", "PROJECT": "work", "TASK": "work", "RUN": "work", "COMMITMENT": "work", "MISSION": "work", "WATCH": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
         "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",

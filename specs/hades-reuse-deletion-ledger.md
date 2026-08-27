@@ -1485,3 +1485,13 @@ recorded 6,729 passed, 5 skipped, and 7 failures: one near-miss fixed here and
 six storage-preflight failures caused by the intentionally minimal test
 container lacking `/home/.docker-data`; those six remain environment evidence,
 not converted passes. Live Qwen verification remains unavailable.
+
+Owner-state closure follow-up: extended the existing structured reference
+resolver to carry active Asset identity through nounless detail questions,
+possessives, and “other one” references, and added bounded property filters to
+the existing `IntentFrame`. Extended canonical answer selection so a structured
+owner Result suppresses intermediate model/legacy replacement summaries; added
+per-stream duplicate terminal-marker suppression in the existing chat route.
+No store, registry, planner, or execution path was added. Affected integration
+suites passed `401 passed, 1 skipped`; current closure edits remain pending
+explicit commit/build/deploy verification.
