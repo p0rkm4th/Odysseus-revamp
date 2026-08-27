@@ -197,6 +197,15 @@ def test_imported_live_cases_declare_fixture_world_outside_expected_oracle():
         assert fixtures_for_case(case) == fixtures_for_case(altered)
 
 
+def test_generated_cases_declare_fixture_world_from_capability_not_oracle():
+    cases = generate_semantic_cases(seed=17, count=80)
+    cases = [case for case in cases if case.get("environment")]
+    assert cases
+    for case in cases:
+        altered = {**case, "expected": {"concept": "WRONG_ORACLE", "required_tools": []}}
+        assert fixtures_for_case(case) == fixtures_for_case(altered)
+
+
 def test_live_protocol_duplicate_done_marker_is_not_completion():
     result = _live_protocol_observation([], done_count=2, abrupt_eof=False)
     assert result["done_seen"] is True

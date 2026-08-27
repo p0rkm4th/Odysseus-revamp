@@ -210,6 +210,37 @@ _CAPABILITY_FOR_FAMILY = {
     "setup": ("setup.read", "state"), "background": ("work.run.read", "list"),
 }
 
+_SYNTHETIC_TOOL_FOR_CAPABILITY = {
+    "inventory.manage": "manage_assets",
+    "homelab.manage": "manage_homelab",
+    "memory.read": "read_memory",
+    "work.read": "read_work",
+    "work.goal.read": "read_work",
+    "work.project.read": "read_work",
+    "work.task.read": "read_work",
+    "work.run.read": "read_work",
+    "work.commitment.read": "read_work",
+    "household.read": "read_household",
+    "setup.read": "read_setup",
+    "capability.registry": "read_setup",
+    "research.public_sources": "manage_osint",
+    "security.assessment.read": "manage_security_assessment",
+    "developer.read": "developer_read",
+}
+
+
+def _generated_fixture_environment(scenario: Mapping[str, Any]) -> dict[str, Any]:
+    """Project only the simulated external world for a generated case.
+
+    Capability identity is part of the generated semantic frame.  It is not
+    an evaluator expectation, so this projection keeps fixture availability
+    independent of the answer key and prevents oracle metadata from shaping
+    the product trajectory.
+    """
+    capability = str(scenario.get("capability_id") or "").strip()
+    tool = _SYNTHETIC_TOOL_FOR_CAPABILITY.get(capability)
+    return {"fixture_profile": {"tools": [tool]}} if tool else {}
+
 _CAPABILITY_DOMAIN_HINTS = {
     "developer.workspace_shell": "DEVELOPER", "developer.read": "DEVELOPER",
     "inventory.manage": "TECHNICAL_ASSET", "memory.read": "MEMORY",
@@ -752,6 +783,7 @@ def generate_semantic_cases(*, seed: int = 0, count: int = 1000, split: str = "g
             family=archetype["family"], source="generated_semantic", split=split,
             expected=expected, scenario=scenario,
             fixture_id=f"fixture-{int(seed)}-{index:05d}",
+            environment=_generated_fixture_environment(scenario),
         ) | {"seed": int(seed), "variant_id": f"variant-{index:05d}"})
     return result
 
