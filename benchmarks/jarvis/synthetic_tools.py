@@ -130,6 +130,16 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
                 }, sort_keys=True),
                 "exit_code": 0, "success": True,
             }]
+        elif tool == "read_household":
+            fixtures[tool] = [{
+                "output": json.dumps({"status": "SUCCESS_EMPTY", "items": []}, sort_keys=True),
+                "exit_code": 0, "success": True,
+            }]
+        elif tool == "manage_osint":
+            fixtures[tool] = [{
+                "output": json.dumps({"status": "SUCCESS_EMPTY", "evidence": []}, sort_keys=True),
+                "exit_code": 0, "success": True,
+            }]
         elif tool == "developer_read":
             fixtures[tool] = [{
                 "output": json.dumps({"status": "SUCCESS_EMPTY", "matches": [], "files": []}, sort_keys=True),

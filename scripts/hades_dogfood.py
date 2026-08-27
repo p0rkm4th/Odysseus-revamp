@@ -371,7 +371,7 @@ def main(argv: list[str] | None = None) -> int:
             "contract_summary": {"scenario_count": len(cases), "shard_index": args.shard_index, "shard_count": args.shard_count},
             "coverage": coverage_audit(cases), "cases": [
                 {
-                    **{key: case.get(key) for key in ("id", "family", "source", "split", "expected", "scenario", "fixture_id", "seed", "variant_id", "run_id")},
+                    **{key: case.get(key) for key in ("id", "family", "source", "split", "expected", "scenario", "environment", "fixture_id", "seed", "variant_id", "run_id")},
                     "run_metadata": dict(case.get("run_metadata") or {}),
                 }
                 for case in cases
