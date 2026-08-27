@@ -106,7 +106,6 @@ from src.aci import (
     canonical_read_fast_path_payload,
     deterministic_reference_acknowledgement,
     assistant_requested_followup,
-    ground_action_completion as aci_ground_action_completion,
     has_canonical_memory_evidence,
     has_stored_canonical_evidence,
     is_contextual_retry_continuation,
@@ -214,7 +213,6 @@ _recent_reference_resolution_hint = reference_resolution_hint
 _deterministic_reference_acknowledgement = deterministic_reference_acknowledgement
 _is_contextual_retry_continuation = is_contextual_retry_continuation
 _assistant_requested_followup = assistant_requested_followup
-ground_action_completion = aci_ground_action_completion
 _looks_like_success_claim = looks_like_success_claim
 _has_canonical_memory_evidence = has_canonical_memory_evidence
 _has_stored_canonical_evidence = has_stored_canonical_evidence

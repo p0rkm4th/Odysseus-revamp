@@ -272,3 +272,12 @@ warnings`. The exact source was built as `odysseus:candidate-959b5eab8826`,
 deployed, and verified by embedded source label, image digest, healthy
 `/api/health`, and zero restarts. Full current-head regression passed `6763
 passed, 5 skipped, 149 warnings`.
+
+## Dead grounding alias removal (`working tree`)
+
+`agent_loop.ground_action_completion` had no production consumers; its only
+remaining references were compatibility tests. Those tests now import the
+canonical ACI helper directly, and the alias/import were removed from
+`agent_loop.py`. The affected network, continuity/dependency, and ACI suite
+passed `68 passed, 1 warning`. This removes compatibility surface without
+changing the grounding owner.

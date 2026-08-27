@@ -1601,3 +1601,8 @@ dogfood, chat-metrics, and stream coverage passed `189 passed, 2 warnings`.
 The exact source was built and deployed as `odysseus:candidate-959b5eab8826`;
 embedded source, image digest, health, and zero restarts were verified. Full
 regression passed `6763 passed, 5 skipped, 149 warnings`.
+
+Dead grounding alias removal: deleted the unreferenced
+`agent_loop.ground_action_completion` compatibility alias and moved its test
+consumers to `src.aci.ground_action_completion`. Affected coverage passed `68
+passed, 1 warning`; no production semantic owner or execution path changed.
