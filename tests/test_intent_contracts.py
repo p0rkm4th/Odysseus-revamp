@@ -636,16 +636,16 @@ def test_generated_parity_rows_have_explicit_transport_applicability():
 @pytest.mark.parametrize("concept", sorted(DOMAIN_CONTRACTS))
 def test_every_contract_read_has_a_canonical_projection_action(concept):
     """The loop's generic read projection cannot drift from contract metadata."""
-    from src.agent_loop import _canonical_read_action
+    from src.intent_contracts import canonical_read_action
 
     contract = DOMAIN_CONTRACTS[concept]
     if "READ" not in contract.actions:
         pytest.skip(f"{concept} has no ordinary READ operation")
-    assert _canonical_read_action(concept) == contract.actions["READ"]
+    assert canonical_read_action(concept) == contract.actions["READ"]
 
 
 def test_specialized_read_views_use_contract_operations():
-    from src.agent_loop import _canonical_read_action
+    from src.intent_contracts import canonical_read_action
 
-    assert _canonical_read_action("WORK", {"view": "attention"}) == DOMAIN_CONTRACTS["WORK"].actions["READ_ATTENTION"]
-    assert _canonical_read_action("INTEGRATION", {"view": "integrations"}) == DOMAIN_CONTRACTS["INTEGRATION"].actions["READ_INTEGRATIONS"]
+    assert canonical_read_action("WORK", {"view": "attention"}) == DOMAIN_CONTRACTS["WORK"].actions["READ_ATTENTION"]
+    assert canonical_read_action("INTEGRATION", {"view": "integrations"}) == DOMAIN_CONTRACTS["INTEGRATION"].actions["READ_INTEGRATIONS"]

@@ -7,7 +7,6 @@ from benchmarks.hades_aci_metamorphic import (
     READ_PARAPHRASE_SETS,
 )
 from src.agent_loop import (
-    _canonical_read_action,
     _classify_agent_request,
     _minimal_aci_answer_messages,
     _matches_resolved_canonical_read,
@@ -16,7 +15,7 @@ from src.agent_loop import (
 )
 from src.aci import canonical_asset_read_payload, canonical_read_fast_path_payload
 from src.deterministic_reads import deterministic_read_concept
-from src.intent_contracts import compile_intent, resolve_intent
+from src.intent_contracts import canonical_read_action, compile_intent, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
@@ -186,7 +185,7 @@ def test_resolved_asset_reference_projects_get_instead_of_relisting(query):
     assert payload["asset"] in {"PHYSICAL-001", "PHYSICAL-002"}
     resolved = resolve_intent(frame)
     assert resolved.action_id == "get"
-    assert _canonical_read_action(
+    assert canonical_read_action(
         "TECHNICAL_ASSET", frame.filters,
         entity_reference=frame.entity_reference,
     ) == "get"

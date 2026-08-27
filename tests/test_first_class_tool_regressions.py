@@ -9,16 +9,16 @@ from src import asset_inventory as inventory
 from src.agent_loop import (
     _assemble_prompt,
     _asset_read_request,
-    _canonical_read_action,
     _is_explicit_continuation,
     _privileged_action_requires_exact_approval,
 )
+from src.intent_contracts import canonical_read_action
 
 
 def test_canonical_read_projection_preserves_setup_integration_view():
-    assert _canonical_read_action("INTEGRATION", {"view": "integrations"}) == "integrations"
-    assert _canonical_read_action("INTEGRATION", {}) == "state"
-    assert _canonical_read_action("WORK", {"view": "attention"}) == "attention"
+    assert canonical_read_action("INTEGRATION", {"view": "integrations"}) == "integrations"
+    assert canonical_read_action("INTEGRATION", {}) == "state"
+    assert canonical_read_action("WORK", {"view": "attention"}) == "attention"
 from src.privileged_broker import (
     peer_is_allowed,
     validate_packages,
