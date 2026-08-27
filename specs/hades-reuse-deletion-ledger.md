@@ -1336,3 +1336,20 @@ create no IP identity. Network owner-scope, intent, and workspace-surface
 coverage passed 22 tests. This confirms the existing `asset_inventory` and
 `network_projection` owners satisfy the identity boundary without adding a
 second NetworkState store.
+
+Remote homelab ownership audit: the existing `HomelabOperations` and
+`manage_homelab` ActionSpec/ToolBinding remain the canonical local operator
+path. Cookbook already exposes reusable strict SSH transport mechanics through
+`core.platform_compat._ssh_exec_argv` and
+`routes.cookbook_helpers.run_ssh_command_async`; those helpers enforce
+`BatchMode=yes`, `StrictHostKeyChecking=yes`, bounded connection/process
+timeouts, and captured results. Cookbook route handlers and the legacy
+`builtin_actions` SSH wrapper remain compatibility/projection paths and are not
+canonical remote-homelab authority. No remote ActionSpec was added in this
+audit because the current canonical Asset schema has no reviewed SSH target
+reference/credential binding. The next remote slice must extend the existing
+Asset/Homelab contract with an opaque target reference and then delegate to
+the strict transport; it must not accept a model-supplied host or import a
+Cookbook route as an executor. No code was copied or moved and no production
+caller changed. Focused SSH transport characterization remains the gate before
+implementation.
