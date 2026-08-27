@@ -1752,12 +1752,15 @@ def score_case(case: Mapping[str, Any], record: Mapping[str, Any]) -> dict[str, 
             checks["semantic_action"] = bool(selected) and actual_action_spec == oracle_action_spec
         oracle_grounding = str(oracle.get("expected_grounding") or "").strip()
         actual_grounding = str(trace.get("grounding") or "").strip()
-        if oracle_grounding and actual_grounding:
-            checks["semantic_grounding"] = actual_grounding == oracle_grounding
+        if oracle_grounding:
+            # Missing grounding metadata is missing evidence, not an implicit
+            # pass. This prevents prose-only records from satisfying a frame
+            # that explicitly requires a canonical Result or qualified state.
+            checks["semantic_grounding"] = bool(actual_grounding) and actual_grounding == oracle_grounding
         oracle_completion = str(oracle.get("expected_completion") or "").strip()
         actual_completion = str(trace.get("completion_state") or trajectory.get("completion_state") or "").strip()
-        if oracle_completion and actual_completion:
-            checks["semantic_completion"] = actual_completion in {oracle_completion, "COMPLETE" if oracle_completion == "COMPLETE_AFTER_ANSWER" else oracle_completion}
+        if oracle_completion:
+            checks["semantic_completion"] = bool(actual_completion) and actual_completion in {oracle_completion, "COMPLETE" if oracle_completion == "COMPLETE_AFTER_ANSWER" else oracle_completion}
     # Imported/frozen cases without a ScenarioFrame retain their established
     # scoring contract; semantic checks are opt-in per case.
     for semantic_key in (

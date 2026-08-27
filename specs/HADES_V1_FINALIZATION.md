@@ -241,3 +241,11 @@ embedded source, and running container matched `176e7aa5`; health was green
 with zero restarts. The corrected storage-fixture full regression passed
 `6761 passed, 5 skipped, 149 warnings`. Live Qwen/Ollama remains unavailable,
 so live-model evidence is unverified.
+
+## Semantic evidence strictness (working tree)
+
+ScenarioFrame scoring now treats absent required grounding/completion trace
+fields as failures. This keeps fluent or incomplete records from passing a
+semantic oracle without evidence. Focused dogfood scorer coverage passed `32
+passed, 1 warning`; the deployed source remains `972015ad` until the next
+explicit candidate is built.

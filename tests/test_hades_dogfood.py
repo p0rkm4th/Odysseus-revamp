@@ -160,6 +160,10 @@ def test_semantic_oracle_rejects_fluent_answer_without_canonical_action():
     assert score["functional_pass"] is False
     assert "semantic_action" in score["failures"]
     assert "GROUNDING_FAILURE" not in score["failure_classes"]
+    record["trajectory"]["aci_trace"] = {}
+    missing_evidence = score_case(case, record)
+    assert "semantic_grounding" in missing_evidence["failures"]
+    assert "semantic_completion" in missing_evidence["failures"]
 
 
 def test_dogfood_corpus_view_alias_uses_canonical_runtime_concept():
