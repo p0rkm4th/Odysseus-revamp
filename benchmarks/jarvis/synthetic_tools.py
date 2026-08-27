@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping
+import json
 from typing import Any
 
 
@@ -54,10 +55,44 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
         item.get("name") for item in expected.get("tool_args", [])
         if isinstance(item, Mapping) and item.get("name")
     )
-    fixtures = {
-        str(name): [{"output": "Synthetic tool result.", "exit_code": 0, "success": True}]
-        for name in names
-    }
+    fixtures: dict[str, list[dict[str, Any]]] = {}
+    for name in names:
+        tool = str(name)
+        # Canonical owner reads must exercise the same structured-result
+        # contract as production. A prose placeholder would make the real
+        # renderer (correctly) reject the fixture and turn a valid empty read
+        # into a misleading completion failure.
+        if tool == "read_memory":
+            fixtures[tool] = [{
+                "data": {
+                    "status": "zero_result", "query_type": "summary",
+                    "records": [], "retrieved_count": 0,
+                },
+                "output": "{}", "exit_code": 0, "success": True,
+            }]
+        elif tool == "read_work":
+            fixtures[tool] = [{
+                "data": {
+                    "status": "SUCCESS_EMPTY", "goals": [], "projects": [],
+                    "tasks": [], "runs": [], "commitments": [],
+                },
+                "output": json.dumps({
+                    "status": "SUCCESS_EMPTY", "goals": [], "projects": [],
+                    "tasks": [], "runs": [], "commitments": [],
+                }, sort_keys=True),
+                "exit_code": 0, "success": True,
+            }]
+        elif tool == "manage_assets":
+            fixtures[tool] = [{
+                "output": json.dumps({
+                    "status": "OK", "assets": [],
+                }, sort_keys=True),
+                "exit_code": 0, "success": True,
+            }]
+        else:
+            fixtures[tool] = [{
+                "output": "Synthetic tool result.", "exit_code": 0, "success": True,
+            }]
     if expected.get("requires_recovery"):
         # Recovery cases may select different read tools. The suite driver must
         # explicitly name its fixture tool instead of gaining broad authority.
