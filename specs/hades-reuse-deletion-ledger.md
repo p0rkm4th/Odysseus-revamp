@@ -1251,3 +1251,12 @@ isolation and Skill-index injection passed 3 tests in isolation. A combined
 run that loaded the Skill test's import stubs first was discarded as test-order
 contamination, not product evidence. `agent_loop.py` is now 7,070 LOC; this
 local slice has not been built or deployed.
+
+Intent preparation ownership: moved ACI-first provisional intent selection and
+compatibility-normalizer gating from `agent_loop.py` into existing
+`src/aci.py` as `resolve_turn_intent`. Legacy classification and normalizers
+are injected adapters and cannot override an ACI-owned contract. Durable Run
+hydration, reference persistence, continuation, policy, and execution remain
+outside this projection helper. Focused intent/ACI/lifecycle/cutover tests
+passed 212 tests with 2 warnings. `agent_loop.py` is now 7,048 LOC; this local
+slice has not been built or deployed.
