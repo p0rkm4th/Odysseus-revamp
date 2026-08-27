@@ -4,6 +4,7 @@ import asyncio
 import json
 
 import src.agent_loop as agent_loop
+from src.aci import ground_action_completion
 
 
 def _collect(generator):
@@ -92,7 +93,7 @@ def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_ac
     assert agent_loop._network_service_enumeration_request(
         "show the network discovery status"
     ) is False
-    response = agent_loop.ground_action_completion(
+    response = ground_action_completion(
         "The service scan is actively probing all hosts now.",
         intent_domains={"network_ops"},
         tool_events=[{
@@ -104,7 +105,7 @@ def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_ac
 
 
 def test_service_result_action_supports_grounded_active_execution_language():
-    response = agent_loop.ground_action_completion(
+    response = ground_action_completion(
         "The bounded service scan is running now.",
         intent_domains={"network_ops"},
         tool_events=[{
@@ -116,7 +117,7 @@ def test_service_result_action_supports_grounded_active_execution_language():
 
 
 def test_stored_canonical_evidence_supports_truthful_followup_without_new_action():
-    response = agent_loop.ground_action_completion(
+    response = ground_action_completion(
         "The containers currently recorded for Odysseus are healthy.",
         intent_domains={"homelab"},
         tool_events=[],
