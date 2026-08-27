@@ -42,6 +42,27 @@ def test_production_runtime_has_no_direct_legacy_stream_callers():
     assert _runtime_calls("stream_agent_loop") == []
 
 
+def test_production_runtime_does_not_import_legacy_stream_function():
+    repo = Path(__file__).parents[1]
+    imports = []
+    for root_name in ("routes", "src", "core", "services"):
+        root = repo / root_name
+        for path in root.rglob("*.py"):
+            if path.name in {"agent_loop.py", "aci.py"}:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and any(
+                    alias.name == "stream_agent_loop" for alias in node.names
+                ):
+                    imports.append(f"{path.relative_to(repo)}:{node.lineno}")
+                if isinstance(node, ast.Import) and any(
+                    alias.name.endswith(".stream_agent_loop") for alias in node.names
+                ):
+                    imports.append(f"{path.relative_to(repo)}:{node.lineno}")
+    assert imports == []
+
+
 def test_production_runtime_has_canonical_aci_stream_callers():
     calls = _runtime_calls("stream_aci_turn")
     assert len(calls) >= 6, calls
