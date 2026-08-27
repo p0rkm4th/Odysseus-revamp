@@ -95,6 +95,35 @@ def _case(case_id: str, prompt: str, *, family: str, source: str, split: str = "
     }
 
 
+def _live_case_fixture_environment(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Declare synthetic live-case tools without consulting scoring fields."""
+    family = str(data.get("family") or "").casefold()
+    name = str(data.get("name") or "").casefold()
+    prompt = str(data.get("prompt") or "").casefold()
+    if family == "golden":
+        if name.startswith("memory"):
+            family = "memory"
+        elif name.startswith("work"):
+            family = "work"
+        elif name.startswith("assets"):
+            family = "assets"
+        elif name.startswith(("network", "infra")):
+            family = "infrastructure"
+    if family == "memory":
+        tool = "manage_memory" if any(word in prompt for word in ("forget", "save")) else "read_memory"
+    elif family == "work":
+        tool = "read_work"
+    elif family == "assets":
+        tool = "manage_assets"
+    elif family in {"golden", "infrastructure", "network"} and not any(
+        word in name for word in ("definition", "update", "scan", "near_miss")
+    ):
+        tool = "manage_homelab"
+    else:
+        return {}
+    return {"fixture_profile": {"tools": [tool]}}
+
+
 # These are semantic scenario generators, not production routing rules.  The
 # generated prompt is merely an adversarial rendering of the structured case;
 # the expected contract remains the source of truth.
@@ -1207,7 +1236,8 @@ def expand_cases(
                                              "max_decision_calls": data.get("expect_bounded_decisions"),
                                              "max_tool_index_lookups": data.get("expect_tool_index_lookups"),
                                              "completion": data.get("expect_completion"),
-                                             "fallback": data.get("expect_fallback")}))
+                                             "fallback": data.get("expect_fallback")},
+                                   environment=_live_case_fixture_environment(data)))
     if suite != "held_out":
         for journey in contract["journeys"]:
             for index, turn in enumerate(journey["turns"], 1):

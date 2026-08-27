@@ -157,6 +157,21 @@ def test_aci_corpus_declares_fixture_world_outside_expected_oracle():
         assert fixtures_for_case(case) == fixtures_for_case(altered)
 
 
+def test_imported_live_cases_declare_fixture_world_outside_expected_oracle():
+    cases = {
+        case["id"]: case
+        for case in expand_cases(load_contract(), suite="all")
+        if case["id"] in {"live-memory_1", "live-work_1", "live-network_1", "live-assets_list"}
+    }
+    assert set(fixtures_for_case(cases["live-memory_1"])) == {"read_memory"}
+    assert set(fixtures_for_case(cases["live-work_1"])) == {"read_work"}
+    assert set(fixtures_for_case(cases["live-network_1"])) == {"manage_homelab"}
+    assert set(fixtures_for_case(cases["live-assets_list"])) == {"manage_assets"}
+    for case in cases.values():
+        altered = {**case, "expected": {"concept": "WRONG_ORACLE", "required_tools": []}}
+        assert fixtures_for_case(case) == fixtures_for_case(altered)
+
+
 def test_live_protocol_duplicate_done_marker_is_not_completion():
     result = _live_protocol_observation([], done_count=2, abrupt_eof=False)
     assert result["done_seen"] is True
