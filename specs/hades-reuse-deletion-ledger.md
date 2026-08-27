@@ -1634,4 +1634,6 @@ Hadolint CI noise closure: consolidated the adjacent Dockerfile provenance and
 directory-creation layers and set the pinned action's failure threshold to
 `warning`, preserving blocking warning/error findings while making INFO/style
 findings advisory. The pushed `6e9fed64` Container scan run completed SUCCESS
-in 17 seconds. No runtime deployment was performed for this CI-only change.
+in 17 seconds. The follow-up source `c84514f` was explicitly built and
+deployed as `odysseus:candidate-c84514f29574`; embedded source and health
+matched, with image digest `sha256:895ca25c66be688132604720a696f21be4c934bc8bc528d992601ae6a26ae0cb`.
