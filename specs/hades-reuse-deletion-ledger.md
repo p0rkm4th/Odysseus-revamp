@@ -975,6 +975,15 @@ passed 6,703 tests with 4 skips and 150 warnings in 275.44s. Current
 `agent_loop.py` is 8,442 LOC and `context_compactor.py` is 781 LOC. No image
 was built or deployed.
 
+Operational domain contract ownership: moved hard/deterministic/specialized
+operational-domain metadata from `agent_loop.py` into existing
+`src/intent_contracts.py` constants. The loop retains import-compatible aliases
+only; these flags describe projection/cognition requirements and do not own
+policy or execution authority. Syntax and diff checks passed; focused intent,
+ACI lifecycle, production-cutover, and first-class tool tests passed 200 tests
+with 2 warnings. The deployed candidate remains the prior source checkpoint;
+this local slice has not been built or deployed.
+
 Approval projection deduplication: removed the redundant
 `_privileged_action_requires_exact_approval` wrapper from `agent_loop.py` and
 bound its compatibility name directly to the existing
@@ -1214,3 +1223,12 @@ parser, prompt-security, and cutover coverage passed 99 tests with 2 warnings.
 Syntax and diff checks passed. `agent_loop.py` is now 7,176 LOC, a 111-line
 reduction for this slice. The latest full regression remains pending; no image
 was built or deployed.
+
+Prompt assembly authority: moved the generic selected-tool prompt formatter
+from `agent_loop.py` into `src/aci.py` as `assemble_prompt`, with tool sections,
+rules, and override adapters injected by the compatibility wrapper. Formatting
+is now an ACI projection; capability identity, policy, execution, and Result
+truth remain canonical elsewhere. Focused ACI, lifecycle, cutover, prompt
+security, and first-class tool coverage passed 99 tests with 2 warnings.
+`agent_loop.py` is now 7,118 LOC; this local slice has not been built or
+deployed.
