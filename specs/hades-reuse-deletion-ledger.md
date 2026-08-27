@@ -1291,13 +1291,18 @@ ToolBinding to `inventory_service`/`inventory_tools`; no second registry,
 binding, or execution engine was introduced. The live dogfood harness now
 records and asserts `[DONE]`, terminal count, abrupt EOF, event/delta identity,
 and duplicate-finalization telemetry. Focused inventory, binding, ACI, and
-live-harness coverage passed 88 tests with 2 warnings. Current local changes
-are not deployed; production remains source `8f33fb231d7a` until this hotfix
-passes the broader checkpoint gates.
+live-harness coverage passed 88 tests with 2 warnings. Checkpoint deployment
+then committed and pushed source
+`c55501290b73994b9651b5802295fa41661cc2cf`, built it as
+`odysseus:candidate-c5550129b73`, and deployed it explicitly. The running
+source marker and `/api/version` match that SHA. The prior known-good rollback
+image remains `odysseus:rollback-b471e104-prev` (source
+`b471e10455ba846373ca89449fc021cea21ace2e`).
 
-Checkpoint verification: current source-mounted full regression passed `6,713
-passed, 5 skipped, 150 warnings` in approximately 305 seconds. Python compile
-and diff checks passed. No live owner-authenticated Qwen acceptance was run in
-this checkpoint because the required acceptance credential was unavailable;
-that evidence remains explicitly UNVERIFIED and the candidate is not yet
-deployed.
+Checkpoint verification: source-mounted full regression passed `6,713 passed,
+5 skipped, 150 warnings` in approximately 305 seconds. Python compile and diff
+checks passed. Focused suites passed. The deployed candidate is healthy with
+zero restarts; Chroma, broker, scheduler, and readiness checks were verified.
+Live owner-authenticated Qwen acceptance was not run because the required
+acceptance credential was unavailable; that evidence remains explicitly
+UNVERIFIED.
