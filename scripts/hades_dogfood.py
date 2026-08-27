@@ -46,6 +46,39 @@ def _event(value: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _live_protocol_observation(
+    events: list[dict[str, Any]],
+    *,
+    done_count: int,
+    abrupt_eof: bool,
+) -> dict[str, Any]:
+    """Return transport-level evidence for an authenticated SSE run.
+
+    The semantic scorer must not treat a partial answer as a completed live
+    turn.  ``[DONE]`` is the protocol terminal marker; message/event identity
+    is retained as digests or IDs so this remains safe for owner data.
+    """
+    event_ids = [str(item.get("event_id") or item.get("id")) for item in events
+                 if item.get("event_id") is not None or item.get("id") is not None]
+    terminal_events = [item for item in events
+                       if item.get("type") in {"agent_terminal", "chat_terminal"}]
+    duplicate_event_id = bool(event_ids and len(event_ids) != len(set(event_ids)))
+    return {
+        "done_seen": done_count > 0,
+        "terminal_event_count": int(done_count),
+        "abrupt_eof": bool(abrupt_eof),
+        "first_error_event": next(
+            (str(item.get("error"))[:160] for item in events if item.get("error")),
+            None,
+        ),
+        "delta_count": sum("delta" in item for item in events),
+        "event_id_count": len(event_ids),
+        "duplicate_event_id": duplicate_event_id,
+        "terminal_payload_count": len(terminal_events),
+        "transport_completion": done_count == 1 and not abrupt_eof,
+    }
+
+
 def _source_reference() -> str:
     configured = os.environ.get("HADES_SOURCE_REFERENCE")
     if configured:
@@ -198,6 +231,8 @@ def run_live_cases(args: argparse.Namespace, cases: list[dict[str, Any]]) -> lis
             if group:
                 sessions[str(group)] = session_id
         events: list[dict[str, Any]] = []
+        done_count = 0
+        abrupt_eof = False
         started = time.perf_counter()
         try:
             response = requests.post(
@@ -208,14 +243,25 @@ def run_live_cases(args: argparse.Namespace, cases: list[dict[str, Any]]) -> lis
             )
             response.raise_for_status()
             for line in response.iter_lines(decode_unicode=True):
+                if line and line.strip() == "data: [DONE]":
+                    done_count += 1
+                    continue
                 item = _event(line) if line else None
                 if item is not None:
                     events.append(item)
             record = normalize_events(events, case, elapsed=time.perf_counter() - started)
+        except (requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError) as exc:
+            abrupt_eof = True
+            record = normalize_events(events, case, elapsed=time.perf_counter() - started)
+            record["failure"] = type(exc).__name__
         except Exception as exc:  # retain only an exception class in artifacts
             record = normalize_events([{"error": type(exc).__name__}], case,
                                       elapsed=time.perf_counter() - started)
             record["failure"] = type(exc).__name__
+        record["transport"] = _live_protocol_observation(
+            events, done_count=done_count, abrupt_eof=abrupt_eof,
+        )
+        record["trajectory"]["transport"] = dict(record["transport"])
         records.append(record)
         print(json.dumps({"case_id": case["id"], "functional": record["assistant_answer"]["present"],
                           "model_calls": record["metrics"]["model_calls"]}, sort_keys=True), flush=True)

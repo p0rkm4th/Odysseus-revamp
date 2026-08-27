@@ -1545,10 +1545,17 @@ def score_case(case: Mapping[str, Any], record: Mapping[str, Any]) -> dict[str, 
         "recovery": not expected.get("requires_recovery") or bool(observations.get("recovered")),
         "exactly_once": trajectory["duplicate_delivery"] == 0,
     }
+    transport = record.get("transport")
+    if isinstance(transport, Mapping):
+        checks["transport_completion"] = bool(transport.get("transport_completion"))
+        checks["terminal_event_count"] = transport.get("terminal_event_count") == 1
+        checks["no_duplicate_event_id"] = not bool(transport.get("duplicate_event_id"))
     if expected.get("max_tool_calls") is not None:
         checks["tool_budget"] = trajectory["tool_calls"] <= int(expected["max_tool_calls"])
     functional_keys = ("answer_present", "no_internal_leak", "no_secret", "concept", "operation", "completion", "fallback", "required_tools", "forbidden_tools", "must_refuse", "response_excludes", "recovery")
     architectural_keys = ("decision_budget", "model_budget", "tool_index_budget", "failed_action_budget", "context_budget", "exactly_once")
+    if isinstance(transport, Mapping):
+        architectural_keys += ("transport_completion", "terminal_event_count", "no_duplicate_event_id")
     functional = all(checks[key] for key in functional_keys)
     architectural = all(checks[key] for key in architectural_keys)
     if "tool_budget" in checks:

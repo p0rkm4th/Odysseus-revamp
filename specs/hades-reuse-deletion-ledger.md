@@ -1384,3 +1384,13 @@ The evaluator suite passed 26 tests. A seeded core generation produced 1,693
 cases and reduced reported coverage gaps from 204 to 202; this is generation
 coverage only, not live-model success. The generated artifact was kept outside
 the repository and contains no raw prompts or answers.
+
+Live protocol completion coverage: extended the authoritative
+`scripts/hades_dogfood.py --mode live` path to retain sanitized SSE terminal
+evidence (`done_seen`, terminal count, abrupt EOF, event identity, and
+transport completion). Missing or duplicate `[DONE]` markers now fail the
+architectural score instead of being silently discarded. Added deterministic
+regressions for complete, abrupt, and duplicate-terminal streams. Focused
+dogfood/live-harness coverage passed 48 tests; no owner credential or live
+Qwen run was available. This is a development slice pending full regression
+and candidate promotion.
