@@ -85,11 +85,13 @@ def load_contract(path: str | Path = CONTRACT_PATH) -> dict[str, Any]:
 
 def _case(case_id: str, prompt: str, *, family: str, source: str, split: str = "development",
           expected: Mapping[str, Any] | None = None, journey: str | None = None,
-          scenario: Mapping[str, Any] | None = None, fixture_id: str | None = None) -> dict[str, Any]:
+          scenario: Mapping[str, Any] | None = None, fixture_id: str | None = None,
+          environment: Mapping[str, Any] | None = None) -> dict[str, Any]:
     return {
         "id": case_id, "prompt": prompt, "family": family, "source": source,
         "split": split, "expected": dict(expected or {}), "journey": journey,
         "scenario": dict(scenario or {}), "fixture_id": fixture_id,
+        "environment": dict(environment or {}),
     }
 
 
@@ -1182,7 +1184,8 @@ def expand_cases(
             for item in values:
                 cases.append(_case(f"aci-{item['id']}", item["prompt"], family=item["category"],
                                    source=spec["id"], split=item.get("split", "development"),
-                                   expected={"trajectory": item.get("expected_trajectory", {})}))
+                                   expected={"trajectory": item.get("expected_trajectory", {})},
+                                   environment=item.get("environment")))
         elif adapter == "jarvis":
             for item in values:
                 cases.append(_case(f"jarvis-{item['id']}", item["prompt"], family=item["category"],

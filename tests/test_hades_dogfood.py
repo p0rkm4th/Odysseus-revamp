@@ -140,6 +140,23 @@ def test_explicit_environment_fixture_is_independent_of_expected_oracle():
     assert set(fixtures_for_case(altered)) == {"manage_assets"}
 
 
+def test_aci_corpus_declares_fixture_world_outside_expected_oracle():
+    cases = {
+        case["id"]: case
+        for case in expand_cases(load_contract(), suite="all")
+        if case["id"] in {"aci-canonical_reads-04", "aci-canonical_reads-09"}
+    }
+    assert cases["aci-canonical_reads-04"]["environment"] == {
+        "fixture_profile": {"tools": ["read_work"]}
+    }
+    assert cases["aci-canonical_reads-09"]["environment"] == {
+        "fixture_profile": {"tools": ["manage_security_assessment"]}
+    }
+    for case in cases.values():
+        altered = {**case, "expected": {"concept": "WRONG_ORACLE", "required_tools": []}}
+        assert fixtures_for_case(case) == fixtures_for_case(altered)
+
+
 def test_live_protocol_duplicate_done_marker_is_not_completion():
     result = _live_protocol_observation([], done_count=2, abrupt_eof=False)
     assert result["done_seen"] is True
