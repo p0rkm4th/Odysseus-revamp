@@ -102,6 +102,7 @@ from src.aci import (
     canonical_asset_read_payload,
     canonical_asset_read_answer,
     canonical_household_read_answer,
+    canonical_inventory_mutation_answer,
     canonical_read_fast_path_payload,
     deterministic_reference_acknowledgement,
     assistant_requested_followup,
@@ -6730,6 +6731,13 @@ async def stream_agent_loop(
     _canonical_household_answer = canonical_household_read_answer(tool_events)
     if _canonical_household_answer and _canonical_household_answer != full_response.strip():
         full_response = _canonical_household_answer
+        yield "data: " + json.dumps({
+            "type": "response_replace", "content": full_response,
+        }) + "\n\n"
+
+    _canonical_inventory_mutation = canonical_inventory_mutation_answer(tool_events)
+    if _canonical_inventory_mutation and _canonical_inventory_mutation != full_response.strip():
+        full_response = _canonical_inventory_mutation
         yield "data: " + json.dumps({
             "type": "response_replace", "content": full_response,
         }) + "\n\n"

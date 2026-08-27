@@ -1449,6 +1449,36 @@ async def _execute_manage_assets_binding(block, owner=None):
             result.setdefault("success", result.get("exit_code", 1) == 0 and not result.get("error"))
             result["canonical_store"] = "inventory_service"
             result["provenance"] = "USER_ASSERTED" if payload.get("action") in {"add_item", "add_stock", "update_asset"} else "CANONICAL_INVENTORY"
+            if result.get("success"):
+                # Verify the write through the same transactional service
+                # before final delivery. The readback is evidence metadata,
+                # never a second persistence path.
+                try:
+                    from src.inventory_service import get_inventory_service
+                    service = get_inventory_service()
+                    item = result.get("item") or result.get("asset") or {}
+                    item_id = item.get("id") if isinstance(item, dict) else None
+                    if not item_id:
+                        lot = result.get("lot")
+                        item_id = lot.get("item_id") if isinstance(lot, dict) else None
+                    if not item_id:
+                        movements = result.get("movements") or []
+                        first = movements[0] if movements and isinstance(movements[0], dict) else {}
+                        item_id = first.get("item_id")
+                    if item_id:
+                        result["verification"] = {
+                            "status": "VERIFIED",
+                            "readback": {
+                                "item": service.get_item(owner, str(item_id)),
+                                "lots": service.list_lots(owner, str(item_id)),
+                            },
+                        }
+                    else:
+                        result["verification"] = {"status": "INCOMPLETE", "reason": "no affected inventory item reference"}
+                except Exception:
+                    # The write Result remains durable, but no unsupported
+                    # current-state claim may be made without readback.
+                    result["verification"] = {"status": "INCOMPLETE", "reason": "inventory readback unavailable"}
             return "manage_assets", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), **result}
         argv = _ody_v34_asset_argv(payload, owner=owner)
 

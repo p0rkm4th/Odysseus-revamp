@@ -1439,3 +1439,12 @@ now resolve to the existing canonical binding instead of
 `operation_not_registered`; policy, owner scope, and execution remain
 downstream authorities. Focused intent/ACI regressions passed 215 tests with 1
 skipped. Live Qwen verification remains unavailable.
+
+Canonical inventory write verification: extended the existing
+`manage_assets` → `ManageInventoryTool` adapter to read back the affected
+item/lots through `inventory_service` after a successful mutation. Added
+`canonical_inventory_mutation_answer` in ACI so final delivery reports one
+structured outcome and distinguishes verified readback from incomplete
+verification or failure. No new store/executor was introduced. Focused
+ACI/inventory/intent/binding coverage passed 246 tests with 1 skipped. Live
+Qwen verification remains unavailable.
