@@ -195,18 +195,11 @@ from src.intent_contracts import (
 # or authorities; all semantics live in ACI and intent contracts.
 _recent_reference_resolution_hint = reference_resolution_hint
 _deterministic_reference_acknowledgement = deterministic_reference_acknowledgement
-_is_contextual_retry_continuation = is_contextual_retry_continuation
-_assistant_requested_followup = assistant_requested_followup
 _looks_like_success_claim = looks_like_success_claim
-_has_canonical_memory_evidence = has_canonical_memory_evidence
-_has_stored_canonical_evidence = has_stored_canonical_evidence
 _prefetched_explicit_memory_result = prefetched_explicit_memory_result
-_provisional_intent_projection = provisional_intent_projection
 _recent_context_for_retrieval = recent_context_for_retrieval
-_resolved_tool_event_name = resolved_tool_event_name
 _minimal_aci_answer_messages = minimal_aci_answer_messages
 _minimal_aci_model_fallback_messages = minimal_aci_model_fallback_messages
-_semanticize_internal_action_names = semanticize_internal_action_names
 _matches_resolved_canonical_read = matches_resolved_canonical_read
 _normalize_asset_inventory_intent = normalize_asset_inventory_intent
 _asset_read_request = asset_read_request
@@ -990,15 +983,14 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
         last_user,
         recent_context_for_retrieval=_recent_context_for_retrieval,
         explicit_memory_query=is_explicit_memory_query,
-        contextual_retry_continuation=_is_contextual_retry_continuation,
+        contextual_retry_continuation=is_contextual_retry_continuation,
         contextual_reference_followup=is_contextual_reference_followup,
         explicit_continuation=is_explicit_continuation,
-        assistant_requested_followup=_assistant_requested_followup,
+        assistant_requested_followup=assistant_requested_followup,
         specialized_operational_domains=_SPECIALIZED_OPERATIONAL_DOMAINS,
     )
 
 
-_looks_like_destructive_request = looks_like_destructive_request
 
 
 _SAVED_MEMORY_PROVENANCE_RE = re.compile(
@@ -1824,7 +1816,7 @@ async def stream_agent_loop(
         messages,
         _last_user,
         aci_enabled=_aci_enabled,
-        provisional_resolver=_provisional_intent_projection,
+        provisional_resolver=provisional_intent_projection,
         compatibility_classifier=_classify_agent_request,
         compatibility_normalizers=(
             _normalize_asset_inventory_intent,
@@ -6381,7 +6373,7 @@ async def stream_agent_loop(
                 "model": _round_actual_model,
                 "endpoint_id": _round_actual_endpoint_id,
                 "endpoint_label": _round_actual_endpoint_label,
-                "tool": _resolved_tool_event_name({
+                "tool": resolved_tool_event_name({
                     "tool": block.tool_type,
                     "desc": desc,
                     "command": cmd_display,
@@ -6556,11 +6548,11 @@ async def stream_agent_loop(
     # executes them; saved history should contain only the user-facing answer.
     full_response = strip_tool_blocks(full_response).strip()
     if _aci_answer_only:
-        full_response = _semanticize_internal_action_names(full_response)
+        full_response = semanticize_internal_action_names(full_response)
     if (
         "memory" in set(_intent_domains or set())
         and _SAVED_MEMORY_PROVENANCE_RE.search(full_response or "")
-        and not _has_canonical_memory_evidence(messages, tool_events)
+        and not has_canonical_memory_evidence(messages, tool_events)
     ):
         logger.warning("[memory-grounding] suppressed unsupported saved-memory provenance")
         full_response = (
@@ -6623,14 +6615,14 @@ async def stream_agent_loop(
         full_response = _normalize_ody_qwen_text_artifacts(full_response)
         if (
             not tool_events
-            and _looks_like_destructive_request(_last_user)
+            and looks_like_destructive_request(_last_user)
             and _looks_like_success_claim(full_response)
         ):
             full_response = "I couldn't make that change because no matching tool action completed."
     _response_before_tool_summary = full_response
     if tool_events:
         for _ev in reversed(tool_events):
-            _tool_name = _resolved_tool_event_name(_ev)
+            _tool_name = resolved_tool_event_name(_ev)
             _tool_action = ""
             try:
                 _cmd_args = json.loads(_ev.get("command") or "{}")
@@ -6672,7 +6664,7 @@ async def stream_agent_loop(
         full_response,
         tool_events,
         intent_domains=_intent_domains,
-        stored_evidence=_has_stored_canonical_evidence(messages),
+        stored_evidence=has_stored_canonical_evidence(messages),
         clarification_only=_aci_clarification_only,
     )
     if _projected_response.strip() != full_response.strip():
