@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from src.agent_loop import _classify_agent_request, _minimal_saved_memory_message
+from src.agent_loop import _classify_agent_request
+from src.memory_grounding import minimal_saved_memory_message
 from src.memory import MemoryManager
 from src.memory_grounding import (
     build_explicit_memory_result,
@@ -81,7 +82,7 @@ def test_canonical_result_survives_qwen_compact_projection_and_skill_separation(
         ),
         "metadata": {"source": "saved memory: explicit canonical result"},
     }
-    compact = _minimal_saved_memory_message([message])
+    compact = minimal_saved_memory_message([message])
     assert compact is not None
     assert "IT systems administrator" in compact["content"]
     assert "Skills are procedural" not in compact["content"]

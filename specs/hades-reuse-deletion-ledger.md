@@ -1617,3 +1617,9 @@ resolver so lower-case/ASR `it assets` is recognized as the `IT assets`
 collection noun phrase, not the pronoun `it`. This prevents an active Asset
 referent from narrowing an owner inventory list; focused container-backed
 coverage passed `276 passed, 2 warnings`.
+
+Dead loop export cleanup: removed the unreferenced `_canonical_read_action`
+compatibility export and moved its test consumers to the canonical
+`intent_contracts` owner. Delegates still referenced by active loop mechanics
+were deliberately retained. Fresh-process focused coverage passed `131
+passed, 2 warnings`.

@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from src.agent_loop import _classify_agent_request, _minimal_saved_memory_message, _suppress_automatic_skills
+from src.agent_loop import _classify_agent_request, _suppress_automatic_skills
+from src.memory_grounding import minimal_saved_memory_message
 from src.memory_grounding import is_explicit_memory_query
 from src.context_compactor import context_trace, tool_projection_trace
 
@@ -24,7 +25,7 @@ def test_qwen_compact_projection_preserves_explicit_zero_and_failure_status():
             "content": f"CANONICAL MEMORY RESULT\nSTATUS: {status}\nDo not invent personal facts.",
             "metadata": {"source": "saved memory: explicit canonical result", "context_kind": "explicit_memory_result"},
         }
-        compact = _minimal_saved_memory_message([message])
+        compact = minimal_saved_memory_message([message])
         assert compact is not None
         assert status in compact["content"]
 

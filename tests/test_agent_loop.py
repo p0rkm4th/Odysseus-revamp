@@ -41,7 +41,6 @@ try:
         _append_tool_results,
         _insert_before_latest_user,
         _prefetched_explicit_memory_result,
-        _successful_deterministic_read_result,
         _MCP_KEYWORDS,
         _select_local_mcp_schemas,
     )
@@ -51,6 +50,8 @@ finally:
         _drop_module_if_same("src.agent_loop", _IMPORTED_AGENT_LOOP)
     for _mod, _stub in _INJECTED_IMPORT_STUBS.items():
         _drop_module_if_same(_mod, _stub)
+
+from src.aci import successful_deterministic_read_result
 
 
 def test_import_stubs_do_not_leak_into_later_tests():
@@ -137,12 +138,12 @@ def test_completed_owner_memory_read_is_answer_terminal_not_action_reentry():
         "metadata": {"context_kind": "explicit_memory_result"},
     }]
     assert _prefetched_explicit_memory_result(messages) is True
-    assert _successful_deterministic_read_result({
+    assert successful_deterministic_read_result({
         "data": {"status": "ok", "memories": [{"id": "m1"}]},
         "success": True,
         "exit_code": 0,
     }) is True
-    assert _successful_deterministic_read_result({
+    assert successful_deterministic_read_result({
         "data": {"status": "retrieval_failed"},
         "success": False,
         "exit_code": 1,
