@@ -149,11 +149,16 @@ from src.aci import (
     hard_action_followup_hint,
     hard_turn_capability_directive,
     domain_tools_for_projection,
+    assemble_prompt,
 )
 from src.intent_contracts import (
     EXPLICIT_CONTINUATION_PHRASE_RE as _EXPLICIT_CONTINUATION_PHRASE_RE,
     EXPLICIT_CONTINUATION_RE as _EXPLICIT_CONTINUATION_RE,
     canonical_read_action,
+    DOMAIN_POLICIES,
+    HARD_TOOL_DOMAINS,
+    DETERMINISTIC_TOOL_DOMAINS,
+    SPECIALIZED_OPERATIONAL_DOMAINS,
     explicit_private_discovery_cidr,
     explicitly_allows_diagnostic_install,
     is_explicit_continuation,
@@ -685,36 +690,10 @@ def _domain_tools_for_projection(domain: str, *, canonical: bool = False) -> set
         canonical_tools_for_domains=_canonical_tools_for_domains,
     )
 
-_DOMAIN_POLICIES = {
-    "shell_exec": {"hard": True, "action_required": True},
-    "operations": {"hard": True, "action_required": True},
-    "network_ops": {"hard": True, "action_required": True},
-    "storage_ops": {"hard": True, "action_required": True},
-    "system_ops": {"hard": True, "action_required": True},
-    "container_ops": {"hard": True, "action_required": True},
-    "remote_ops": {"hard": True, "action_required": True},
-    "security_audit": {"hard": True, "action_required": True},
-    "pentest_ops": {"hard": True, "action_required": True},
-    "osint": {"hard": False, "action_required": False},
-    "asset_inventory": {"hard": False, "action_required": False},
-    "homelab": {"hard": True, "action_required": True},
-}
-
-_HARD_TOOL_DOMAINS = frozenset(
-    name for name, policy in _DOMAIN_POLICIES.items()
-    if policy.get("hard")
-)
-
-_DETERMINISTIC_TOOL_DOMAINS = _HARD_TOOL_DOMAINS | frozenset({"osint", "asset_inventory"})
-_SPECIALIZED_OPERATIONAL_DOMAINS = frozenset({
-    "network_ops",
-    "storage_ops",
-    "system_ops",
-    "container_ops",
-    "remote_ops",
-    "security_audit",
-    "pentest_ops",
-})
+_DOMAIN_POLICIES = DOMAIN_POLICIES
+_HARD_TOOL_DOMAINS = HARD_TOOL_DOMAINS
+_DETERMINISTIC_TOOL_DOMAINS = DETERMINISTIC_TOOL_DOMAINS
+_SPECIALIZED_OPERATIONAL_DOMAINS = SPECIALIZED_OPERATIONAL_DOMAINS
 
 _intent_requires_action = intent_requires_action
 _usage_bucket = usage_bucket
@@ -981,7 +960,7 @@ for _binding in _capability_v1_bindings.values():
     TOOL_SECTIONS[_binding.transport_name] = _binding.textual_contract
 
 def _assemble_prompt(tool_names: set, disabled_tools: set = None, compact: bool = False, intent_domains: Optional[Set[str]] = None) -> str:
-    """Build the system prompt with only the specified tools included."""
+    """Compatibility adapter into the canonical ACI prompt renderer."""
     disabled = disabled_tools or set()
     included = tool_names - disabled
     domain_rules = (
@@ -990,51 +969,16 @@ def _assemble_prompt(tool_names: set, disabled_tools: set = None, compact: bool 
         else _domain_rules_for_tools(included)
     )
 
-    if compact:
-        tool_lines = []
-        for name, _default_section in TOOL_SECTIONS.items():
-            if name in included:
-                tool_lines.append(f"- `{name}`")
-        parts = [
-            "You are an AI assistant with native tool/function calling. "
-            "Only the tool schemas provided by the API are available for this turn. "
-            "Use native tool calls when action is needed; do not write tool syntax or tool instructions in chat.",
-            "## Available tools\n" + ("\n".join(tool_lines) if tool_lines else "none"),
-            _API_AGENT_RULES,
-        ]
-        parts.extend(domain_rules)
-        return "\n\n".join(parts)
-
-    parts = [_AGENT_PREAMBLE]
-
-    # Collect full-block tool sections (with examples)
-    full_blocks = []
-    # Collect one-liner tool sections
-    one_liners = []
-
-    for name, _default_section in TOOL_SECTIONS.items():
-        if name not in included:
-            continue
-        section = _section_text(name, _default_section)
-        # _ODY_V362_TEXT_TOOL_RENDERER
-        # _section_text() returns the textual contract for a selected tool.
-        # Any non-empty contract is renderable. Only '- ' contracts use the
-        # compact Additional-tools list; everything else is a full block.
-        if section.strip():
-            if section.startswith("- "):
-                one_liners.append(section)
-            else:
-                full_blocks.append(section)
-
-    if full_blocks:
-        parts.append("\n\n".join(full_blocks))
-
-    if one_liners:
-        parts.append("## Additional tools\n" + "\n".join(one_liners))
-
-    parts.append(_AGENT_RULES)
-    parts.extend(domain_rules)
-    return "\n\n".join(parts)
+    return assemble_prompt(
+        included,
+        tool_sections=TOOL_SECTIONS,
+        api_rules=_API_AGENT_RULES,
+        agent_preamble=_AGENT_PREAMBLE,
+        agent_rules=_AGENT_RULES,
+        domain_rules=domain_rules,
+        section_for_tool=_section_text,
+        compact=compact,
+    )
 
 
 # Legacy: full prompt with all tools (fallback when RAG unavailable)

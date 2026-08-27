@@ -21,6 +21,33 @@ from src.deterministic_reads import deterministic_read_concept, deterministic_re
 logger = logging.getLogger(__name__)
 
 
+# Operational domain metadata used by prompt/capability projections.  These
+# flags describe cognition requirements only; policy and execution remain
+# owned by the canonical Action path.
+DOMAIN_POLICIES = {
+    "shell_exec": {"hard": True, "action_required": True},
+    "operations": {"hard": True, "action_required": True},
+    "network_ops": {"hard": True, "action_required": True},
+    "storage_ops": {"hard": True, "action_required": True},
+    "system_ops": {"hard": True, "action_required": True},
+    "container_ops": {"hard": True, "action_required": True},
+    "remote_ops": {"hard": True, "action_required": True},
+    "security_audit": {"hard": True, "action_required": True},
+    "pentest_ops": {"hard": True, "action_required": True},
+    "osint": {"hard": False, "action_required": False},
+    "asset_inventory": {"hard": False, "action_required": False},
+    "homelab": {"hard": True, "action_required": True},
+}
+HARD_TOOL_DOMAINS = frozenset(
+    name for name, policy in DOMAIN_POLICIES.items() if policy.get("hard")
+)
+DETERMINISTIC_TOOL_DOMAINS = HARD_TOOL_DOMAINS | frozenset({"osint", "asset_inventory"})
+SPECIALIZED_OPERATIONAL_DOMAINS = frozenset({
+    "network_ops", "storage_ops", "system_ops", "container_ops", "remote_ops",
+    "security_audit", "pentest_ops",
+})
+
+
 _ADMIN_INTENT_KEYWORDS = (
     "session", "sessions", "chat", "chats", "conversation", "conversations",
     "delete", "fork", "truncate", "archive", "rename", "endpoint", "endpoints",

@@ -135,6 +135,59 @@ def domain_tools_for_projection(
     return set((legacy_map or {}).get(name, set()))
 
 
+def assemble_prompt(
+    tool_names: set,
+    *,
+    tool_sections: Mapping[str, str],
+    api_rules: str,
+    agent_preamble: str,
+    agent_rules: str,
+    domain_rules: Sequence[str],
+    section_for_tool: Callable[[str, str], str],
+    disabled_tools: Optional[set] = None,
+    compact: bool = False,
+) -> str:
+    """Render a bounded provider prompt from injected compatibility registries.
+
+    This owns formatting only. Tool identity, capability authority, policy,
+    execution, and result truth remain in their canonical subsystems.
+    """
+    disabled = disabled_tools or set()
+    included = set(tool_names or set()) - set(disabled)
+    if compact:
+        tool_lines = [f"- `{name}`" for name in tool_sections if name in included]
+        parts = [
+            "You are an AI assistant with native tool/function calling. "
+            "Only the tool schemas provided by the API are available for this turn. "
+            "Use native tool calls when action is needed; do not write tool syntax or tool instructions in chat.",
+            "## Available tools\n" + ("\n".join(tool_lines) if tool_lines else "none"),
+            api_rules,
+        ]
+        parts.extend(domain_rules)
+        return "\n\n".join(parts)
+
+    full_blocks: list[str] = []
+    one_liners: list[str] = []
+    for name, default_section in tool_sections.items():
+        if name not in included:
+            continue
+        section = section_for_tool(name, default_section)
+        if not section.strip():
+            continue
+        if section.startswith("- "):
+            one_liners.append(section)
+        else:
+            full_blocks.append(section)
+    parts = [agent_preamble]
+    if full_blocks:
+        parts.append("\n\n".join(full_blocks))
+    if one_liners:
+        parts.append("## Additional tools\n" + "\n".join(one_liners))
+    parts.append(agent_rules)
+    parts.extend(domain_rules)
+    return "\n\n".join(parts)
+
+
 _HARD_ACTION_HINTS = {
     "shell_exec": "Invoke bash with the exact non-interactive command the user requested.",
     "operations": "Begin with a real read-only status/log/configuration inspection using bash or the available read tools.",
