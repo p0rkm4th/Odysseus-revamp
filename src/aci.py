@@ -1439,6 +1439,25 @@ class SelectionMode(StrEnum):
     BLOCKED = "BLOCKED"
 
 
+class AnswerSource(StrEnum):
+    """The sole semantic source of a logical final answer."""
+
+    DETERMINISTIC_RESULT = "DETERMINISTIC_RESULT"
+    MODEL_SYNTHESIS = "MODEL_SYNTHESIS"
+    CLARIFICATION = "CLARIFICATION"
+    BLOCKED = "BLOCKED"
+    ERROR = "ERROR"
+
+
+@dataclass(frozen=True)
+class CanonicalAnswer:
+    """An answer selected by ACI, with explicit source provenance."""
+
+    content: str
+    source: AnswerSource
+    provenance: str
+
+
 class CapabilityGapStage(StrEnum):
     """Developer-ACI stages for a proposed primitive; never model trust."""
 
@@ -2895,6 +2914,31 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     if verified:
         return f"{verb} {label}; the canonical inventory readback is verified."
     return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."
+
+
+def canonical_result_answer(
+    tool_events: Sequence[Mapping[str, Any]],
+) -> CanonicalAnswer | None:
+    """Select one deterministic owner-state answer for a completed turn.
+
+    The individual renderers remain small resource projections, but final
+    answer selection belongs here.  Returning provenance with the content
+    prevents transport code from having to infer whether a replacement is
+    authoritative or merely another piece of model prose.
+    """
+    candidates = (
+        (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
+        (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
+        (canonical_household_read_answer(tool_events), "canonical Household Result"),
+    )
+    for content, provenance in candidates:
+        if content:
+            return CanonicalAnswer(
+                content=content,
+                source=AnswerSource.DETERMINISTIC_RESULT,
+                provenance=provenance,
+            )
+    return None
 
 
 def project_capability_palette(
