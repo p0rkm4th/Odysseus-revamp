@@ -1510,3 +1510,11 @@ execution handoff. Added direct contract coverage; focused suites passed `264
 passed, 1 warning`. Source `76c64ce0e593f2d4a626fcf9384e5e6542629487` was
 explicitly built and deployed with matching embedded source and healthy
 runtime. No new authority, registry, store, or executor was introduced.
+
+Semantic dogfood expansion: extended the existing `benchmarks.hades_dogfood`
+generator with structured minimal-pair oracles and explicit chaos-journal
+state-mutation metadata; extended the existing CLI tier defaults and dogfood
+tests. The core generation smoke produced `1,793` reproducible cases from seed
+`20260827`, including `100` minimal-pair cases. Also enabled push CI/security
+workflow triggers for `hades-aci-v1`. No evaluator, routing, state, or
+execution subsystem was added.

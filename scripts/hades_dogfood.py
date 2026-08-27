@@ -111,6 +111,7 @@ def _run_metadata(args: argparse.Namespace) -> dict[str, Any]:
         "shard_count": args.shard_count, "context_length": args.context_length,
         "max_tokens": args.max_tokens, "max_rounds": args.max_rounds,
         "max_tool_calls": args.max_tool_calls,
+        "minimal_pair_count": args.minimal_pair_count,
     }
     return {
         "run_id": f"dogfood-{uuid.uuid4().hex}",
@@ -285,6 +286,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--generated-count", type=int, default=None, help="add this many reproducible semantic scenarios")
     parser.add_argument("--metamorphic-count", type=int, default=None, help="add equivalent-phrasing semantic variants")
     parser.add_argument("--negative-count", type=int, default=None, help="add informational near-misses that must not execute")
+    parser.add_argument("--minimal-pair-count", type=int, default=None, help="add semantic conceptual/operational minimal pairs")
     parser.add_argument("--chaos-journeys", type=int, default=None, help="add generated multi-turn journeys")
     parser.add_argument("--shard-index", type=int, default=0)
     parser.add_argument("--shard-count", type=int, default=1)
@@ -300,14 +302,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--case-timeout", type=float, default=180.0)
     args = parser.parse_args(argv)
     tier_defaults = {
-        "quick": ("baseline", 0, 0, 0, 0),
-        "core": ("all", 1000, 100, 100, 50),
-        "full": ("all", 5000, 400, 400, 100),
-        "rc": ("all", 1000, 250, 250, 100),
-        "soak": ("all", 250, 50, 50, 25),
+        "quick": ("baseline", 0, 0, 0, 0, 0),
+        "core": ("all", 1000, 100, 100, 50, 50),
+        "full": ("all", 5000, 400, 400, 100, 200),
+        "rc": ("all", 1000, 250, 250, 100, 100),
+        "soak": ("all", 250, 50, 50, 25, 25),
     }
     if args.tier:
-        args.suite, tier_count, tier_metamorphic, tier_negative, tier_chaos = tier_defaults[args.tier]
+        args.suite, tier_count, tier_metamorphic, tier_negative, tier_chaos, tier_pairs = tier_defaults[args.tier]
         if args.generated_count is None:
             args.generated_count = tier_count
         if args.metamorphic_count is None:
@@ -316,6 +318,8 @@ def main(argv: list[str] | None = None) -> int:
             args.negative_count = tier_negative
         if args.chaos_journeys is None:
             args.chaos_journeys = tier_chaos
+        if args.minimal_pair_count is None:
+            args.minimal_pair_count = tier_pairs
     if args.generated_count is None:
         args.generated_count = 0
     if args.metamorphic_count is None:
@@ -324,12 +328,15 @@ def main(argv: list[str] | None = None) -> int:
         args.negative_count = 0
     if args.chaos_journeys is None:
         args.chaos_journeys = 0
+    if args.minimal_pair_count is None:
+        args.minimal_pair_count = 0
     contract = load_contract(args.contract)
     cases = expand_cases(
         contract, suite=args.suite, generated_count=args.generated_count,
         seed=args.seed, shard_index=args.shard_index, shard_count=args.shard_count,
         regressions_path=args.regressions, metamorphic_count=args.metamorphic_count,
         negative_count=args.negative_count, chaos_journey_count=args.chaos_journeys,
+        minimal_pair_count=args.minimal_pair_count,
     )
     run_metadata = _run_metadata(args)
     for case in cases:

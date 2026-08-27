@@ -145,3 +145,14 @@ grounding and emits at most one replacement event; the compatibility loop no
 longer owns separate grounding and tool-summary replacement decisions. The
 same change retains provider fallback behavior and existing persistence.
 Focused ACI/cutover/resource-contract tests passed `263 passed, 1 warning`.
+
+## Semantic dogfood expansion (working tree)
+
+The existing evaluator now generates explicit conceptual/operational minimal
+pairs from `ScenarioFrame` oracles and records state-mutation boundaries in
+generated chaos journeys. The existing CLI tiers expose the pair count without
+introducing a second evaluator. A reproducible core-tier generation smoke with
+seed `20260827` expanded `1,793` cases, including `100` minimal-pair cases;
+the dogfood test suite passed `29 passed, 1 warning` after the mutation
+coverage assertion. Push-triggered CI, CodeQL, container scans, secret scan,
+and workflow security now include `hades-aci-v1`.

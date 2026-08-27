@@ -8,6 +8,7 @@ from benchmarks.hades_dogfood import (
     generate_semantic_cases,
     generate_metamorphic_cases,
     generate_negative_near_miss_cases,
+    generate_minimal_pair_cases,
     generate_chaos_journeys,
     load_regression_cases,
     load_contract,
@@ -258,6 +259,17 @@ def test_negative_near_misses_are_semantic_non_execution_cases():
     assert all(case["expected"]["max_decision_calls"] == 0 for case in cases)
 
 
+def test_minimal_pairs_preserve_explicit_conceptual_vs_operational_oracles():
+    cases = generate_minimal_pair_cases(seed=21, count=9)
+    assert len(cases) == 18
+    for pair_id in {case["scenario"]["pair_id"] for case in cases}:
+        pair = [case for case in cases if case["scenario"]["pair_id"] == pair_id]
+        assert {case["scenario"]["pair_side"] for case in pair} == {"conceptual", "operational"}
+        conceptual = next(case for case in pair if case["scenario"]["pair_side"] == "conceptual")
+        assert conceptual["scenario"]["must_not_execute"] is True
+        assert conceptual["expected"]["max_tool_calls"] == 0
+
+
 def test_chaos_journey_generator_is_reproducible_and_multiturn():
     first = generate_chaos_journeys(seed=14, count=12)
     second = generate_chaos_journeys(seed=14, count=12)
@@ -265,6 +277,11 @@ def test_chaos_journey_generator_is_reproducible_and_multiturn():
     assert len({case["journey"] for case in first}) == 12
     assert max(case["scenario"]["journey_length"] for case in first) >= 4
     assert any(case["scenario"]["reference_type"] == "pronoun" for case in first)
+    assert any(
+        case["scenario"].get("mutation_boundary") == "BEFORE_TURN"
+        and case["scenario"].get("state_mutation") != "NONE"
+        for case in first
+    )
 
 
 def test_expand_cases_can_add_all_adversarial_layers_to_the_same_evaluator():
