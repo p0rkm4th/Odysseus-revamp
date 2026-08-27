@@ -50,27 +50,34 @@ class SyntheticToolExecutor:
 def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]]:
     """Build the minimum allowlisted fixture set declared by a suite case."""
     expected = case.get("expected", {})
-    names = set(expected.get("required_tools", []))
-    names.update(
-        item.get("name") for item in expected.get("tool_args", [])
-        if isinstance(item, Mapping) and item.get("name")
-    )
-    # Older imported ACI/metamorphic cases describe the semantic owner in
-    # ``family``/``concept`` rather than carrying an explicit tool fixture.
-    # Keep that legacy contract equivalent to the newer typed fixture shape:
-    # a canonical Work read gets a structured, empty Work Result instead of
-    # falling through to the unknown-tool failure fixture.  This is evaluator
-    # plumbing only; production Action selection and policy remain unchanged.
-    concept = str(expected.get("concept") or "").strip().upper()
-    family = str(case.get("family") or "").strip().casefold()
-    if concept == "WORK" or family == "work":
-        names.add("read_work")
-    if concept in {"SERVICE", "HOMELAB_HOST"} or family in {"service", "remote_host"}:
-        names.add("manage_homelab")
-    if concept in {"SECURITY", "SECURITY_FINDING"} or family in {"security", "security_audit"}:
-        names.add("manage_security_assessment")
-    if concept == "DEVELOPER" or family == "developer":
-        names.add("developer_read")
+    environment = case.get("environment")
+    profile = environment.get("fixture_profile") if isinstance(environment, Mapping) else None
+    if isinstance(profile, Mapping):
+        # Environment is the simulated external world. It is independent of
+        # expected/oracle data, so changing an answer key cannot change the
+        # tools visible to, or selected by, the product under test.
+        names = set(profile.get("tools", []))
+    else:
+        # Compatibility for the pre-environment corpus. New cases must use an
+        # explicit fixture_profile; this branch remains until that corpus is
+        # migrated and is evaluator plumbing only.
+        names = set(expected.get("required_tools", []))
+        names.update(
+            item.get("name") for item in expected.get("tool_args", [])
+            if isinstance(item, Mapping) and item.get("name")
+        )
+        # Older imported ACI/metamorphic cases describe the semantic owner in
+        # ``family``/``concept`` rather than carrying an explicit tool fixture.
+        concept = str(expected.get("concept") or "").strip().upper()
+        family = str(case.get("family") or "").strip().casefold()
+        if concept == "WORK" or family == "work":
+            names.add("read_work")
+        if concept in {"SERVICE", "HOMELAB_HOST"} or family in {"service", "remote_host"}:
+            names.add("manage_homelab")
+        if concept in {"SECURITY", "SECURITY_FINDING"} or family in {"security", "security_audit"}:
+            names.add("manage_security_assessment")
+        if concept == "DEVELOPER" or family == "developer":
+            names.add("developer_read")
     fixtures: dict[str, list[dict[str, Any]]] = {}
     for name in names:
         tool = str(name)

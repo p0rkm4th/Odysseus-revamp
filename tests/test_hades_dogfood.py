@@ -121,6 +121,25 @@ def test_legacy_owner_cases_receive_semantic_tool_fixtures():
         assert tool in fixtures_for_case(case)
 
 
+def test_explicit_environment_fixture_is_independent_of_expected_oracle():
+    base = {
+        "prompt": "show my machines",
+        "family": "unrelated",
+        "environment": {"fixture_profile": {"tools": ["manage_assets"]}},
+        "expected": {"concept": "TECHNICAL_ASSET", "required_tools": ["manage_assets"]},
+    }
+    altered = {
+        **base,
+        "expected": {
+            "concept": "NETWORK",
+            "required_tools": ["manage_homelab"],
+            "tool_args": [{"name": "manage_homelab"}],
+        },
+    }
+    assert fixtures_for_case(base) == fixtures_for_case(altered)
+    assert set(fixtures_for_case(altered)) == {"manage_assets"}
+
+
 def test_live_protocol_duplicate_done_marker_is_not_completion():
     result = _live_protocol_observation([], done_count=2, abrupt_eof=False)
     assert result["done_seen"] is True

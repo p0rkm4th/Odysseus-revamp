@@ -49,7 +49,9 @@ from scripts.hades_live_dogfood import (
 )
 
 
-ACCEPTANCE_USER = "hades-acceptance"
+from core.auth import ACCEPTANCE_USERNAME
+
+ACCEPTANCE_USER = ACCEPTANCE_USERNAME
 BOOTSTRAP_ADMIN = "hades-acceptance-bootstrap"
 MIN_PASSWORD_LENGTH = 12
 
