@@ -1795,6 +1795,10 @@ async def stream_agent_loop(
     _aci_model_fallback = False
     _aci_model_fallback_reason = None
     _aci_empty_answer_fallback_used = False
+    # A successful or failed canonical read is terminal for this turn: the
+    # Result renderer owns the answer, so do not spend another model round
+    # producing prose that would later be replaced.
+    _aci_terminal_canonical_read = False
     _aci_reference_resolution = None
     _aci_reference_context_source = "none"
 
@@ -5796,29 +5800,21 @@ async def stream_agent_loop(
                 and block.tool_type == _aci_selected_action.get("binding")
                 and _block_action_id == _aci_selected_action.get("action_id")
             )
+            _was_aci_canonical_read = bool(
+                _aci_enabled
+                and _aci_mode == "aci"
+                and (
+                    _matches_resolved_canonical_read(
+                        block,
+                        _intent.get("intent_frame"),
+                        _intent.get("resolved_contract"),
+                    )
+                    or _was_deterministic_fast_path
+                )
+            )
             _post_result_transition = project_post_result_transition(
                 result,
-                canonical_read=(
-                    _aci_enabled
-                    and _aci_mode == "aci"
-                    and (
-                        _matches_resolved_canonical_read(
-                            block,
-                            _intent.get("intent_frame"),
-                            _intent.get("resolved_contract"),
-                        )
-                        # The fast path itself is a stronger proof than the
-                        # paraphrase classifier's `read_explicit` bit.  Some
-                        # harmless golden reads (notably Work overview) are
-                        # intentionally low-signal after normalization, yet
-                        # the framework has already selected the exact safe
-                        # Action and skipped model selection.  Do not let
-                        # that successful direct read re-enter bounded
-                        # reasoning merely because the classifier used a
-                        # different semantic confidence label.
-                        or _was_deterministic_fast_path
-                    )
-                ),
+                canonical_read=_was_aci_canonical_read,
                 deterministic_fast_path=_was_deterministic_fast_path,
                 selected_action=(
                     _aci_selected_action
@@ -5863,6 +5859,8 @@ async def stream_agent_loop(
                         "_agent_injected": _agent_injected,
                         "_protected": True,
                     })
+                if _was_aci_canonical_read:
+                    _aci_terminal_canonical_read = True
 
             if (
                 _work_action_id
@@ -5905,7 +5903,9 @@ async def stream_agent_loop(
                     # no approval, and an explicit per-turn budget.  The
                     # appended block still traverses normal policy, owner,
                     # ActionSpec, and executor checks below.
-                    if should_project_safe_auto_continuation(
+                    if (
+                        not _aci_terminal_canonical_read
+                        and should_project_safe_auto_continuation(
                         persisted_work_result=persisted_work_result,
                         result=result,
                         work_run_id=work_run_id,
@@ -5914,6 +5914,7 @@ async def stream_agent_loop(
                         initial_tool_block_count=_initial_tool_block_count,
                         current_tool_index=i,
                         tool_block_count=len(tool_blocks),
+                        )
                     ):
                         from src.agent_work_bridge import safe_auto_continuation
                         _auto_projection = await asyncio.to_thread(
@@ -6481,6 +6482,11 @@ async def stream_agent_loop(
         # arrives as the next message and the agent resumes from there. The
         # question text is already in the streamed response, so it persists.
         if _awaiting_user:
+            break
+
+        if _aci_terminal_canonical_read:
+            # The completed Result is rendered below by project_final_answer;
+            # another model round would only create replace/append ambiguity.
             break
 
         if _doc_stream_create_completed:

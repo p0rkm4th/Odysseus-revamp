@@ -1591,3 +1591,10 @@ bounded `AnswerSource.ERROR` result rather than unconstrained model prose.
 Added Network and Asset grounding regressions; focused ACI/reference/dogfood
 coverage passed `263 passed, 1 warning`. No new store, registry, executor, or
 authority path was introduced.
+
+Canonical-read delivery closure: the existing ACI-compatible stream now
+terminates a canonical read turn after Result persistence so the deterministic
+Result renderer is the only final answer producer. This removes the
+model-prose-then-replacement path for canonical reads; no text-based
+deduplication or parallel answer owner was introduced. Focused ACI/routing,
+dogfood, chat-metrics, and stream coverage passed `189 passed, 2 warnings`.

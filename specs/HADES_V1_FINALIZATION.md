@@ -259,3 +259,13 @@ model synthesis. Added regressions cover broker-unavailable Network reads and
 malformed Asset results; focused ACI/reference/dogfood coverage passed `263
 passed, 1 warning`. This change is not deployed until its exact source SHA is
 built and verified.
+
+## Canonical-read delivery closure (working tree)
+
+The existing production compatibility loop now stops after a canonical ACI
+read Result is persisted, including deterministic read failures. It no longer
+asks the model for a prose round that is subsequently replaced by the
+canonical renderer. This reduces the duplicate-delta/final-replacement path
+without adding text deduplication or a second answer owner. ACI, routing,
+dogfood, chat-metrics, and foreground-stream tests passed `189 passed, 2
+warnings`; this change is pending its exact-SHA deployment.
