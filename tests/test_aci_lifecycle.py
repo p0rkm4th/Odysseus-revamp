@@ -10,6 +10,7 @@ from src.aci import (
     canonical_read_fast_path_payload,
     canonical_asset_read_answer,
     canonical_household_read_answer,
+    canonical_inventory_mutation_answer,
     assistant_requested_followup,
     classify_action_escalation,
     classify_post_result,
@@ -114,6 +115,24 @@ def test_canonical_household_read_answer_uses_only_inventory_result():
         "tool": "read_household", "exit_code": 0,
         "output": '{"status":"SUCCESS_EMPTY","items":[]}',
     }]) == "No kitchen or household inventory is recorded for this owner."
+
+
+def test_canonical_inventory_mutation_answer_requires_structured_result_and_readback():
+    event = {
+        "tool": "manage_assets", "exit_code": 0,
+        "command": '{"action":"add_item","domain":"kitchen","name":"pasta"}',
+        "output": json.dumps({
+            "success": True, "item": {"id": "i-1", "name": "pasta"},
+            "verification": {"status": "VERIFIED", "readback": {"item": {"id": "i-1"}}},
+        }),
+    }
+    assert canonical_inventory_mutation_answer([event]) == (
+        "Recorded pasta; the canonical inventory readback is verified."
+    )
+    event["output"] = '{"success":true,"item":{"name":"pasta"},"verification":{"status":"INCOMPLETE"}}'
+    assert "verification is incomplete" in canonical_inventory_mutation_answer([event])
+    event["exit_code"] = 1
+    assert "not completed" in canonical_inventory_mutation_answer([event])
 
 
 def _collect_stream_events(generator):
