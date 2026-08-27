@@ -10,8 +10,8 @@ that the legacy loop has already been removed.
 |---|---|
 | Repository | `/home/scootz/Odysseus/odysseus` |
 | Branch | `hades-aci-v1` |
-| Local HEAD | `3e7b66124c4cff877f4fb9d9f2b6bde7d5f22953` |
-| Origin HEAD | `3e7b66124c4cff877f4fb9d9f2b6bde7d5f22953` (`origin/hades-aci-v1`) |
+| Local HEAD | `1c7bdb6d00d856e739f715c0ec976a440f16df28` |
+| Origin HEAD | `1c7bdb6d00d856e739f715c0ec976a440f16df28` (`origin/hades-aci-v1`) |
 | Divergence | 0 ahead, 0 behind (verified with `git rev-list --left-right --count origin/hades-aci-v1...HEAD`) |
 | Worktree | clean at checkpoint; no intentional changes discarded |
 | Deployed image | `odysseus:candidate-3e7b66124c4c` (Compose service tag points to same image ID) |
