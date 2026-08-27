@@ -10,6 +10,7 @@ from src.aci import (
     canonical_read_fast_path_payload,
     canonical_asset_read_answer,
     canonical_household_read_answer,
+    canonical_network_read_answer,
     canonical_inventory_mutation_answer,
     canonical_result_answer,
     AnswerSource,
@@ -45,6 +46,21 @@ from src.intent_contracts import canonical_domain_projection, compile_intent, re
 from src.capability_registry import action_for_tool, capability_for_tool
 from src.tool_capabilities import ToolEffect, capabilities_for_action
 from src.tool_policy import web_access_mode
+
+
+def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():
+    for query in (
+        "yo what computers do i got",
+        "what kinda computers?",
+        "what it assets do we have",
+        "I do got a computer, tell me about it",
+    ):
+        frame = compile_intent(query)
+        resolved = resolve_intent(frame)
+        assert frame.domain_concept == "TECHNICAL_ASSET", query
+        assert frame.operation_class == "READ", query
+        assert resolved.action_id == "list", query
+        assert resolved.binding_name == "manage_assets", query
 
 
 def test_production_aci_stream_entrypoint_forces_canonical_mode(monkeypatch):
@@ -128,6 +144,23 @@ def test_canonical_result_answer_selects_one_authoritative_source():
     assert answer.source is AnswerSource.DETERMINISTIC_RESULT
     assert answer.provenance == "canonical Asset Result"
     assert answer.content == "I found 1 canonical IT asset:\n- Thanatos"
+
+
+def test_canonical_network_read_answer_uses_structured_host_context():
+    answer = canonical_network_read_answer([{
+        "tool": "manage_homelab", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA", "action": "read_network_context",
+            "interfaces": [{"name": "enp1s0", "kind": "PHYSICAL_LAN", "addresses": [{"address": "192.168.1.10"}]}],
+            "default_routes": [{"gateway": "192.168.1.1"}],
+        }),
+    }])
+    assert answer == (
+        "Current host network context (observed):\n"
+        "- enp1s0 (PHYSICAL_LAN) addresses=192.168.1.10\n"
+        "Default route gateway: 192.168.1.1."
+    )
+    assert "2001:db8" not in answer
 
 
 def test_canonical_inventory_mutation_answer_requires_structured_result_and_readback():

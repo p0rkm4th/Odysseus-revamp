@@ -8,16 +8,16 @@ is an engineering status record, not a readiness declaration.
 | Field | Current evidence |
 |---|---|
 | Branch | `hades-aci-v1` |
-| Local HEAD | `ede16601b15f4279e5068e42b0683ee7db2a213a` |
-| Remote HEAD | `ede16601b15f4279e5068e42b0683ee7db2a213a` |
+| Local HEAD | `e4c13b3864097394df24f1c023e43080fb4f4afd` |
+| Remote HEAD | `e4c13b3864097394df24f1c023e43080fb4f4afd` |
 | Worktree | clean; tracking `origin/hades-aci-v1` |
 | Running container | `odysseus-odysseus-1` |
-| Running image reference | `odysseus-odysseus` (Compose-managed name) |
-| Running image digest | `sha256:6f307b673a1f3c0b0aeae69664b422ed05df1f0fb3f37a90a306ec84cbf1c767` |
-| Embedded source label | `ede16601b15f4279e5068e42b0683ee7db2a213a` |
+| Running image reference | `odysseus-odysseus` (Compose-managed name; candidate tag retained locally) |
+| Running image digest | `sha256:f988fe192c0e4b4070bcc295c60d315ec119923ed3c57341d6cf64554f523d00` |
+| Embedded source label | `e4c13b3864097394df24f1c023e43080fb4f4afd` |
 | Runtime status | running, restart count 0 |
 | Health | `GET /api/health` returns `healthy` |
-| Last known-good source | `ede16601b15f4279e5068e42b0683ee7db2a213a` |
+| Last known-good source | `e4c13b3864097394df24f1c023e43080fb4f4afd` |
 | Rollback images | preserved locally, including `odysseus:rollback-b471e104-prev` |
 
 The running image's source label matches both local and remote HEAD. The
@@ -45,7 +45,7 @@ against the current source rather than copied forward as assumptions.
 
 ## Current measurable baseline
 
-- Latest focused checkpoint: `246 passed, 1 skipped` across ACI lifecycle,
+- Latest focused checkpoint: `250 passed, 1 skipped` across ACI lifecycle,
   first-class regressions, intent contracts, household projection, and tool
   binding projection tests.
 - Latest recorded full regression on the writable test setup: `6720 passed,

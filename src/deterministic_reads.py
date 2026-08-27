@@ -53,8 +53,8 @@ _ASSET_SUBJECT = re.compile(
     re.IGNORECASE,
 )
 _ASSET_OWNER = re.compile(
-    r"\b(?:my|mah|mine|i\s+(?:actually\s+)?own|do\s+i(?:\s+actually)?\s+own|do\s+i\s+have|have\s+i|"
-    r"i(?:'ve)?\s+got|registered|recorded\s+for\s+me|known\s+to\s+me)\b",
+    r"\b(?:my|mah|mine|i\s+(?:actually\s+)?own|do\s+i(?:\s+actually)?\s+own|do\s+i\s+(?:have|got)|have\s+i|"
+    r"i(?:'ve|\s+do)?\s+got|registered|recorded\s+for\s+me|known\s+to\s+me)\b",
     re.IGNORECASE,
 )
 _NETWORK_SUBJECT = re.compile(r"\b(?:network|lan|connection|connected)\b", re.IGNORECASE)
@@ -103,7 +103,7 @@ _GENERAL_EXPLANATION = re.compile(
 # reaches the same predicates as the terse form without adding sentence-specific
 # routes.
 _DISCOURSE_PREFIX = re.compile(
-    r"^(?:(?:okay|ok|alright|so|like|uh|um|well|anyway|hey)\b[\s,]*)+",
+    r"^(?:(?:okay|ok|alright|so|like|uh|um|well|anyway|hey|yo)\b[\s,]*)+",
     re.IGNORECASE,
 )
 
@@ -136,6 +136,11 @@ def deterministic_read_concept(text: str) -> str | None:
         and not (
             _NETWORK_SUBJECT.search(query)
             and re.search(r"\b(?:current(?:ly)?|now|figure\s+it\s+out|explore)\b", query)
+        )
+        and not (
+            _ASSET_SUBJECT.search(query)
+            and _ASSET_OWNER.search(query)
+            and re.search(r"\b(?:tell\s+me|what|which|where|show|how\s+many)\b", query)
         )
     ):
         return None
@@ -192,6 +197,22 @@ def deterministic_read_concept(text: str) -> str | None:
     # remain asset reads, while a later host-inspection branch still handles
     # "inspect this host" and "scan the current system".
     if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
+        return "TECHNICAL_ASSET"
+    if (
+        _ASSET_SUBJECT.search(query)
+        and _ASSET_OWNER.search(query)
+        and re.search(r"\b(?:tell\s+me|what|which|where|show|how\s+many)\b", query)
+    ):
+        return "TECHNICAL_ASSET"
+    # Conversational collection questions can omit the possessive after an
+    # owner context (for example, "what kinda computers?"). This is still a
+    # read-only projection and never selects a host or grants execution.
+    if (
+        _ASSET_SUBJECT.search(query)
+        and _READ_REQUEST.search(query)
+        and not re.search(r"\b(?:network|lan|devices?\s+look|look\s+like\s+servers?)\b", query)
+        and not re.search(r"\b(?:how\s+do|what\s+is|define|explain)\b", query)
+    ):
         return "TECHNICAL_ASSET"
     # A hardware exploration request is a bounded host observation, not an
     # arbitrary scan or shell request.  Keep this ahead of the remaining
