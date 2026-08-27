@@ -246,6 +246,40 @@ def skill_index_prompt(
         return ""
 
 
+def select_prompt_tools(
+    *,
+    all_tool_names: set,
+    always_available: set,
+    admin_tools: set,
+    disabled_tools: Optional[set] = None,
+    relevant_tools: Optional[set] = None,
+    needs_admin: bool = False,
+    image_gen_enabled: bool = False,
+) -> tuple[set, set, bool]:
+    """Select a bounded prompt tool projection.
+
+    Returns ``(disabled, included, can_use_static_full_prompt)``. This is a
+    projection decision only; the selected names do not grant execution
+    authority and are rechecked by policy at execution time.
+    """
+    disabled = set(disabled_tools or set())
+    if not image_gen_enabled:
+        disabled.add("generate_image")
+    all_names = set(all_tool_names)
+    if relevant_tools is not None:
+        included = set(relevant_tools) | {"ask_user", "update_plan"}
+        if needs_admin:
+            included |= set(admin_tools)
+        return disabled, included, False
+    if needs_admin:
+        return disabled, all_names, True
+    management_tools = all_names - set(always_available) - {
+        "generate_image", "suggest_document", "chat_with_model",
+        "ask_teacher", "list_models",
+    }
+    return disabled, all_names - management_tools, False
+
+
 _HARD_ACTION_HINTS = {
     "shell_exec": "Invoke bash with the exact non-interactive command the user requested.",
     "operations": "Begin with a real read-only status/log/configuration inspection using bash or the available read tools.",
