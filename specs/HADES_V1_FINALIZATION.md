@@ -168,3 +168,15 @@ duplicate finalization, stale deltas after replacement, and a delivery identity
 derived from event IDs. The live runner uses these lifecycle signals without
 answer-text deduplication. Focused dogfood/live-selection coverage passed `51
 passed, 1 warning`.
+
+## Current-head cutover checkpoint (`e4e80c03`)
+
+- Local HEAD and `origin/hades-aci-v1`: `e4e80c03ae0acb380fa44b8272dc0d7f98df7fb5`
+- Worktree: clean after checkpoint commit
+- Candidate image ID: `sha256:f292defb418c7d935601e93a295e9ac3eeec3bab0df2deb7c4c52a8d0bcb5780`
+- Running source label and `/app/.odysseus-source-commit`: exact `e4e80c03ae0acb380fa44b8272dc0d7f98df7fb5`
+- Running container: `odysseus-odysseus-1`, running; `/api/health`: healthy
+- Focused cutover/ACI/dogfood/live protocol suite: `102 passed, 1 warning`
+- Full regression with intentionally read-only `/home` fixture: `6751 passed, 5 skipped, 5 failed, 2 errors`; failures/errors were writable-fixture failures except one stale CI assertion.
+- Writable rerun of the seven affected tests, including the corrected CI assertion: `8 passed, 2 warnings`.
+- Live Ollama/Qwen remains unavailable; live owner-model verification is **UNVERIFIED**.
