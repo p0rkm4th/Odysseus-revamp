@@ -78,6 +78,19 @@ logger = logging.getLogger(__name__)
 _active_streams: Dict[str, dict] = {}
 
 
+def _run_post_response_tasks_safely(*args, **kwargs) -> None:
+    """Keep optional post-response work outside terminal SSE correctness.
+
+    The assistant answer has already been persisted when this runs. Memory
+    extraction, webhooks, naming, and similar follow-up work may degrade, but
+    must never turn a completed response into an abrupt EOF before [DONE].
+    """
+    try:
+        run_post_response_tasks(*args, **kwargs)
+    except Exception:
+        logger.exception("Post-response tasks failed after answer persistence")
+
+
 def _chat_stream_entrypoint(*args, **kwargs):
     """Return the canonical foreground ACI stream.
 
@@ -919,7 +932,7 @@ def setup_chat_routes(
         session_manager.save_sessions()
 
         # Background tasks (memory, webhook, auto-name)
-        run_post_response_tasks(
+        _run_post_response_tasks_safely(
             sess, session_manager, session, message, reply, None,
             ctx.uprefs, memory_manager, memory_vector, webhook_manager,
             character_name=ctx.preset.character_name,
@@ -2330,7 +2343,7 @@ def setup_chat_routes(
                                 )
                                 if _saved_id:
                                     yield f'data: {json.dumps({"type": "message_saved", "id": _saved_id})}\n\n'
-                                run_post_response_tasks(
+                                _run_post_response_tasks_safely(
                                     sess, session_manager, session, message, full_response,
                                     _metrics_to_save, ctx.uprefs, memory_manager, memory_vector, webhook_manager,
                                     incognito=incognito, compare_mode=compare_mode,
@@ -2614,7 +2627,7 @@ def setup_chat_routes(
                                 )
                                 if _saved_id:
                                     yield f'data: {json.dumps({"type": "message_saved", "id": _saved_id})}\n\n'
-                                run_post_response_tasks(
+                                _run_post_response_tasks_safely(
                                     sess, session_manager, session, message, _response_to_save,
                                     _metrics_to_save, ctx.uprefs, memory_manager, memory_vector, webhook_manager,
                                     incognito=incognito, compare_mode=compare_mode,

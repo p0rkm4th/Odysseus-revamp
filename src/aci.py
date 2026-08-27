@@ -2944,10 +2944,12 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     )
     if event is None or event.get("exit_code") not in (None, 0):
         return None
-    try:
-        payload = json.loads(str(event.get("output") or ""))
-    except (TypeError, ValueError):
-        return None
+    payload = event.get("result_projection")
+    if not isinstance(payload, Mapping):
+        try:
+            payload = json.loads(str(event.get("output") or ""))
+        except (TypeError, ValueError):
+            return None
     if not isinstance(payload, Mapping) or str(payload.get("status") or "").upper() in {
         "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
     }:
@@ -2992,6 +2994,105 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         if len(nodes) > 50:
             lines.append(f"- …and {len(nodes) - 50} more")
         return "\n".join(lines)
+    return None
+
+
+def canonical_homelab_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render bounded host inspection evidence from the canonical Result."""
+    event = next(
+        (
+            item for item in reversed(tuple(tool_events or ()))
+            if isinstance(item, Mapping)
+            and str(item.get("tool") or "").strip() == "manage_homelab"
+        ),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    payload = event.get("result_projection")
+    if not isinstance(payload, Mapping):
+        try:
+            payload = json.loads(str(event.get("output") or ""))
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(payload, Mapping):
+        return None
+    status = str(payload.get("status") or "").strip().upper()
+    if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
+        return None
+    if str(payload.get("action") or "").strip() != "inspect_host":
+        return None
+    output = str(payload.get("output") or "").strip()
+    target = str(payload.get("target") or "local_host").strip()
+    source = str(payload.get("observation_location") or "HOST_OPERATOR").strip()
+    if not output:
+        return f"The {target} inspection completed, but it returned no host details."
+    return f"Host inspection for {target} (observed via {source}):\n{output[:2000]}"
+
+
+def canonical_tool_result_projection(
+    tool_name: str,
+    result: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    """Project large canonical Results before UI/history output truncation.
+
+    Tool output remains bounded for the browser and model, while deterministic
+    answer renderers retain the small structured fields needed to describe the
+    completed read. This projection is evidence, not another state store.
+    """
+    if str(tool_name or "").strip() != "manage_homelab" or not isinstance(result, Mapping):
+        return None
+    raw = result.get("output")
+    if isinstance(raw, Mapping):
+        payload = raw
+    else:
+        try:
+            payload = json.loads(str(raw or ""))
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(payload, Mapping):
+        return None
+    action = str(payload.get("action") or "").strip()
+    common = {
+        "action": action,
+        "status": payload.get("status"),
+        "kind": payload.get("kind"),
+        "target": payload.get("target"),
+        "observation_location": payload.get("observation_location"),
+        "freshness": payload.get("freshness"),
+    }
+    if action == "read_network_context":
+        interfaces = payload.get("interfaces")
+        routes = payload.get("default_routes")
+        common["interfaces"] = list(interfaces[:32]) if isinstance(interfaces, list) else []
+        common["default_routes"] = list(routes[:8]) if isinstance(routes, list) else []
+        return common
+    if action == "read_network_observations":
+        nodes = []
+        raw_nodes = payload.get("nodes")
+        for node in (raw_nodes[:50] if isinstance(raw_nodes, list) else []):
+            if not isinstance(node, Mapping):
+                continue
+            attrs = node.get("attributes") if isinstance(node.get("attributes"), Mapping) else {}
+            nodes.append({
+                "id": node.get("id"),
+                "name": node.get("name"),
+                "attributes": {
+                    key: attrs.get(key)
+                    for key in ("hostname", "observed_ip") if attrs.get(key) not in (None, "")
+                },
+            })
+        raw_edges = payload.get("edges")
+        common.update({
+            "nodes": nodes,
+            "edges": list(raw_edges[:50]) if isinstance(raw_edges, list) else [],
+            "node_count": payload.get("node_count"),
+            "edge_count": payload.get("edge_count"),
+        })
+        return common
+    if action == "inspect_host":
+        common["output"] = str(payload.get("output") or "")[:2000]
+        return common
     return None
 
 
@@ -3181,6 +3282,7 @@ def canonical_result_answer(
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
+        (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
         (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
         (canonical_household_read_answer(tool_events), "canonical Household Result"),
         (canonical_structured_empty_read_answer(tool_events), "canonical structured empty Result"),
