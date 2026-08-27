@@ -49,7 +49,7 @@ def test_serve_launch_preflights_use_selected_target_and_port():
     assert "const _probeHost = (launchTarget.host || '').trim();" in SERVE
     assert "if (launchTarget.port) _probeParams.set('ssh_port', launchTarget.port);" in SERVE
     assert "const _portHost = (launchTarget.host || '').trim();" in SERVE
-    assert "StrictHostKeyChecking=no ${_sshPrefix(launchTarget.port)}${_portHost}" in SERVE
+    assert "BatchMode=yes -o ConnectTimeout=4 -o StrictHostKeyChecking=yes ${_sshPrefix(launchTarget.port)}${_portHost}" in SERVE
     assert "const serveHost = launchTarget.host || '';" in SERVE
     assert SERVE.index(launch_target) < SERVE.index("const _runningMod = await import('./cookbookRunning.js');")
 

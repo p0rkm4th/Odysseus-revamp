@@ -67,7 +67,7 @@ async def test_run_ssh_command_executes_with_stdin_and_returns_output(monkeypatc
         "python -",
         timeout=5,
         connect_timeout=4,
-        strict_host_key_checking=False,
+        strict_host_key_checking=True,
         stdin_data=b"python -m pip install vllm",
     )
 
@@ -77,9 +77,11 @@ async def test_run_ssh_command_executes_with_stdin_and_returns_output(monkeypatc
     assert captured["args"] == [
         "ssh",
         "-o",
-        "ConnectTimeout=4",
+        "BatchMode=yes",
         "-o",
-        "StrictHostKeyChecking=no",
+        "StrictHostKeyChecking=yes",
+        "-o",
+        "ConnectTimeout=4",
         "-p",
         "2222",
         "alice@gpu-box",

@@ -9,7 +9,8 @@ from src.owner_identity import effective_storage_owner
 from src import local_intelligence
 from src import developer_mode
 from src.network_projection import map_projection
-from src.capability_dependencies import capability_health, supported_capabilities
+from src import asset_inventory
+from src.capability_dependencies import dependency_manager, supported_capabilities
 from src.persistent_agent import PersistentAgent
 from src.integrations import execute_api_call, load_integrations
 from core.persistent_agent_models import Episode, Lesson, Monitor, Notification
@@ -122,7 +123,7 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         value = owner(request)
         return {
             "owner": value,
-            "capabilities": [capability_health(name) for name in supported_capabilities()],
+            "capabilities": [dependency_manager.inspect_operation(name) for name in supported_capabilities()],
             "registry": "bounded_first_class_only",
         }
     @router.get("/api/hades/status")
@@ -292,6 +293,21 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
     async def network_map(request: Request):
         value = owner(request)
         return await asyncio.to_thread(map_projection, owner=value)
+
+    @router.post("/api/network/assets/reconcile")
+    async def reconcile_network_asset(request: Request, payload: dict = Body(...)):
+        value = owner(request)
+        try:
+            return await asyncio.to_thread(
+                asset_inventory.reconcile_candidate,
+                value,
+                payload.get("candidate"),
+                payload.get("decision"),
+                name=payload.get("name"),
+                asset_type=payload.get("type", "network_device"),
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
     @router.get("/api/home-assistant/overview")
     async def home_assistant_overview(request: Request):
         owner(request)

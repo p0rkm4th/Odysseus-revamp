@@ -19,6 +19,23 @@ GUIDE_ONLY_DIRECTIVE = (
 WEB_TOOL_NAMES = frozenset({"web_search", "web_fetch"})
 
 
+def web_access_mode(allow_web_search: object, use_web: object = None) -> str:
+    """Resolve web evidence policy independently from ACI capability choice.
+
+    ``AUTO`` is the normal state: ACI may project public evidence primitives
+    when the objective needs them. An explicit false value remains a hard
+    privacy policy and wins over any other request. ``ON`` is retained for
+    callers that explicitly pre-authorize web evidence.
+    """
+    if is_web_search_explicitly_denied(allow_web_search):
+        return "OFF"
+    if tool_toggle_explicitly_denied(use_web):
+        return "OFF"
+    if tool_toggle_enabled(allow_web_search) or tool_toggle_enabled(use_web):
+        return "ON"
+    return "AUTO"
+
+
 def tool_toggle_enabled(value: object) -> bool:
     """Return true only for explicit true-like tool toggle values."""
 
@@ -38,7 +55,7 @@ def is_web_search_explicitly_denied(allow_web_search: object) -> bool:
 
 
 def web_search_enabled_for_turn(allow_web_search: object, use_web: object = None) -> bool:
-    """Return true only when this request explicitly enables web search.
+    """Return true when this request explicitly enables web search.
 
     Agent mode sends ``allow_web_search``; chat-mode pre-search sends
     ``use_web``. If both are present, an explicit ``allow_web_search=false``
@@ -186,12 +203,6 @@ def known_tool_names() -> Set[str]:
             name = (schema.get("function") or {}).get("name") or schema.get("name")
             if name:
                 names.add(name)
-    except Exception:
-        pass
-    try:
-        from src.agent_loop import TOOL_SECTIONS
-
-        names.update(TOOL_SECTIONS.keys())
     except Exception:
         pass
     try:

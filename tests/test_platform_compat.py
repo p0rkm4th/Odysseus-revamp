@@ -5,6 +5,8 @@ import io
 import sys
 from pathlib import Path
 
+import pytest
+
 
 _MODULE_PATH = Path(__file__).resolve().parents[1] / "core" / "platform_compat.py"
 _SPEC = importlib.util.spec_from_file_location("platform_compat_under_test", _MODULE_PATH)
@@ -256,7 +258,10 @@ def test_run_wsl_windows_powershell_calls_subprocess_with_expected_argv(monkeypa
 
 def test_ssh_exec_argv_builds_default_command():
     argv = platform_compat._ssh_exec_argv("alice@gpu-box", None, remote_cmd="echo ok")
-    assert argv == ["ssh", "alice@gpu-box", "echo ok"]
+    assert argv == [
+        "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+        "alice@gpu-box", "echo ok",
+    ]
 
 
 def test_ssh_exec_argv_includes_port_and_options():
@@ -265,19 +270,29 @@ def test_ssh_exec_argv_includes_port_and_options():
         "2222",
         remote_cmd="tmux ls",
         connect_timeout=6,
-        strict_host_key_checking=False,
+        strict_host_key_checking=True,
     )
     assert argv == [
         "ssh",
         "-o",
-        "ConnectTimeout=6",
+        "BatchMode=yes",
         "-o",
-        "StrictHostKeyChecking=no",
+        "StrictHostKeyChecking=yes",
+        "-o",
+        "ConnectTimeout=6",
         "-p",
         "2222",
         "alice@gpu-box",
         "tmux ls",
     ]
+
+
+def test_ssh_exec_argv_rejects_permissive_host_key_mode():
+    with pytest.raises(ValueError, match="permissive SSH"):
+        platform_compat._ssh_exec_argv(
+            "alice@gpu-box", None, remote_cmd="echo ok",
+            strict_host_key_checking=False,
+        )
 
 
 def test_run_ssh_command_uses_built_argv(monkeypatch):
@@ -309,9 +324,11 @@ def test_run_ssh_command_uses_built_argv(monkeypatch):
     assert captured["args"] == [
         "ssh",
         "-o",
-        "ConnectTimeout=3",
+        "BatchMode=yes",
         "-o",
         "StrictHostKeyChecking=yes",
+        "-o",
+        "ConnectTimeout=3",
         "-p",
         "2200",
         "alice@gpu-box",

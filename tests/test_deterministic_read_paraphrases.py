@@ -22,17 +22,17 @@ from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
 
-@pytest.mark.parametrize("query", [
-    "tell me about my hardware",
-    "Please explore my current hardware",
-    "i need you to like, scan your hardware",
+@pytest.mark.parametrize(("query", "concept", "action", "binding"), [
+    ("tell me about my hardware", "TECHNICAL_ASSET", "list", "manage_assets"),
+    ("Please explore my current hardware", "HOMELAB_HOST", "inspect_host", "manage_homelab"),
+    ("i need you to like, scan your hardware", "HOMELAB_HOST", "inspect_host", "manage_homelab"),
 ])
-def test_owner_hardware_language_projects_to_bounded_host_inspection(query):
+def test_hardware_language_selects_asset_or_host_from_semantic_scope(query, concept, action, binding):
     resolved = resolve_intent(compile_intent(query))
-    assert resolved.frame.domain_concept == "HOMELAB_HOST"
+    assert resolved.frame.domain_concept == concept
     assert resolved.frame.operation_class == "READ"
-    assert resolved.action_id == "inspect_host"
-    assert resolved.binding_name == "manage_homelab"
+    assert resolved.action_id == action
+    assert resolved.binding_name == binding
     assert resolved.action.approval.value == "none"
     assert resolved.frame.target is None
 

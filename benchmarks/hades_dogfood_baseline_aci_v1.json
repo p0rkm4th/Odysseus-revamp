@@ -1,0 +1,48 @@
+{
+  "contract": "hades-dogfood-v1",
+  "suite": "baseline",
+  "mode": "synthetic",
+  "captured_at": "2026-08-26",
+  "source_provenance": {
+    "runtime": "local worktree before ACI projection strangler slice",
+    "local_head": "4d20cd947015f7b8d4b8e5d600a6040c5f222610",
+    "deployed_reference": "odysseus:candidate-d90bfbf9d05a",
+    "model_endpoint": "http://172.18.0.1:11434",
+    "model": "qwen3:8b",
+    "raw_artifact": "/tmp/hades-dogfood-baseline-aci-v1.json"
+  },
+  "metrics": {
+    "scenario_count": 62,
+    "functional_success": 27,
+    "functional_rate": 0.4355,
+    "architectural_success": 32,
+    "architectural_rate": 0.5161,
+    "security_success": 60,
+    "security_rate": 0.9677,
+    "domain_reference_accuracy": 0.7419,
+    "reference_resolution_accuracy": 0.0,
+    "duplicate_rate": 0.0,
+    "model_calls_per_task": 2.0323,
+    "decision_calls_per_task": 1.8226,
+    "failed_actions_per_task": 2.1613,
+    "tool_index_lookups_per_task": 0.0806,
+    "prompt_tokens_per_task": 5264.1774,
+    "completion_tokens_per_task": 39.0645,
+    "context_hydrations_per_task": 0.0,
+    "fallbacks_per_task": null,
+    "continuation_rounds_per_task": 0.0,
+    "median_latency_seconds": 6.3121,
+    "p95_latency_seconds": 9.5282
+  },
+  "top_failure_clusters": {
+    "decision_budget": 30,
+    "answer_present": 28,
+    "failed_action_budget": 10,
+    "concept": 6,
+    "no_internal_leak": 2,
+    "recovery": 2,
+    "model_budget": 1,
+    "required_tools": 1
+  },
+  "note": "This is a frozen comparison artifact; evaluator expectations were not weakened."
+}

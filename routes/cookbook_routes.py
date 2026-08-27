@@ -39,6 +39,7 @@ from src.host_docker_access import (
     local_docker_available,
     running_in_container,
 )
+from src.capability_dependencies import artifact_manager
 from routes.cookbook_output import (
     error_aware_output_tail, classify_dead_download,
     HF_CACHE_COMPLETE_PROBE, HF_CACHE_INCOMPLETE_PROBE,
@@ -258,9 +259,11 @@ async def _remote_binary_available(
         proc = await asyncio.create_subprocess_exec(
             "ssh",
             "-o",
+            "BatchMode=yes",
+            "-o",
             "ConnectTimeout=6",
             "-o",
-            "StrictHostKeyChecking=no",
+            "StrictHostKeyChecking=yes",
             *port_args,
             remote,
             check,
@@ -974,7 +977,7 @@ def setup_cookbook_routes() -> APIRouter:
                 "echo ok",
                 timeout=8,
                 connect_timeout=5,
-                strict_host_key_checking=False,
+                strict_host_key_checking=True,
             )
         except asyncio.TimeoutError:
             return {"stdout": "", "stderr": "SSH test timed out", "exit_code": 124}
@@ -1083,6 +1086,14 @@ def setup_cookbook_routes() -> APIRouter:
         req.local_dir = _validate_local_dir(req.local_dir)
         req.hf_token = "" if is_ollama_download else (req.hf_token or _load_stored_hf_token())
         _validate_token(req.hf_token)
+        artifact_plan = artifact_manager.plan_artifact(
+            "artifact.ollama_model" if is_ollama_download else "artifact.huggingface_snapshot",
+            source_reference=req.repo_id,
+        )
+        if artifact_plan.get("status") != "READY_FOR_ADAPTER":
+            # Keep the mature runner as the execution adapter, but fail closed
+            # if its canonical artifact contract is ever removed.
+            return {"ok": False, "error": "requested model artifact is not supported by the canonical artifact registry"}
         if req.remote_host and not req.env_prefix:
             req.env_prefix = _server_env_prefix_for_download(req.remote_host)
         TMUX_LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -1400,7 +1411,12 @@ def setup_cookbook_routes() -> APIRouter:
         except Exception:
             pass
 
-        return {"ok": True, "session_id": session_id, "remote": remote or "local"}
+        return {
+            "ok": True, "session_id": session_id, "remote": remote or "local",
+            "artifact_id": artifact_plan["artifact_id"],
+            "source_policy": artifact_plan["source_policy"],
+            "resumable": artifact_plan["resumable"],
+        }
 
     @router.get("/api/model/cached")
     async def model_cached(request: Request, host: str | None = None, model_dir: str | None = None, ssh_port: str | None = None, platform: str | None = None):
@@ -1603,7 +1619,10 @@ def setup_cookbook_routes() -> APIRouter:
         if remote:
             # Probe over SSH. Bash's /dev/tcp gives a portable "is anything
             # listening" check without requiring ss/netstat/nmap.
-            ssh_base = ["ssh", "-o", "ConnectTimeout=4", "-o", "StrictHostKeyChecking=no"]
+            # Use the owner's existing known_hosts trust boundary. A missing
+            # or changed host key must fail closed; Cookbook must not silently
+            # weaken SSH verification for a convenience probe.
+            ssh_base = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=4", "-o", "StrictHostKeyChecking=yes"]
             if ssh_port and str(ssh_port) != "22":
                 try:
                     ssh_port = validate_ssh_port(ssh_port)
@@ -1991,6 +2010,17 @@ def setup_cookbook_routes() -> APIRouter:
         req.cmd = _normalize_llama_cpp_python_cache_types(req.cmd) or ""
         req.cmd = _normalize_minimax_m3_vllm_cmd(req.cmd)
         req.cmd = _normalize_deepseek_v4_sglang_cmd(req.cmd)
+        runtime_plan = artifact_manager.plan_runtime_for_command(
+            req.cmd,
+            platform_key=req.platform,
+            source_references={"artifact.huggingface_snapshot": req.repo_id},
+        )
+        if runtime_plan and runtime_plan.get("status") != "READY_FOR_ADAPTER":
+            return {
+                "ok": False,
+                "error": "The requested model runtime is not supported by the canonical runtime contract",
+                "runtime_plan": runtime_plan,
+            }
         req.cmd = _venv_safe_local_pip_install_cmd(
             req.cmd,
             local=not bool(req.remote_host),
@@ -2843,27 +2873,25 @@ def setup_cookbook_routes() -> APIRouter:
             raise HTTPException(400, "host is required")
         port = req.ssh_port
         port = validate_ssh_port(port)
-        pf = f"-p {port} " if port and port != "22" else ""
 
         # Detect platform: Windows first (echo %OS% → Windows_NT), then Termux, then Linux
-        detect_cmd = f'ssh {pf}{host} "echo %OS%"'
         platform = "linux"
         try:
-            proc = await asyncio.create_subprocess_shell(
-                detect_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            _detect_code, stdout, _detect_stderr = await run_ssh_command_async(
+                host, port, "echo %OS%", timeout=10, connect_timeout=5,
+                strict_host_key_checking=True,
             )
-            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
-            out = stdout.decode().strip()
+            out = stdout.decode("utf-8", errors="replace").strip()
             if "Windows_NT" in out:
                 platform = "windows"
             else:
                 # Check for Termux
-                detect_cmd2 = f"ssh {pf}{host} 'test -d /data/data/com.termux && echo termux || echo linux'"
-                proc2 = await asyncio.create_subprocess_shell(
-                    detect_cmd2, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                _termux_code, stdout2, _termux_stderr = await run_ssh_command_async(
+                    host, port,
+                    "test -d /data/data/com.termux && echo termux || echo linux",
+                    timeout=10, connect_timeout=5, strict_host_key_checking=True,
                 )
-                stdout2, _ = await asyncio.wait_for(proc2.communicate(), timeout=10)
-                platform = stdout2.decode().strip()
+                platform = stdout2.decode("utf-8", errors="replace").strip()
         except Exception:
             platform = "linux"
 
@@ -2878,7 +2906,7 @@ def setup_cookbook_routes() -> APIRouter:
                 "python -c \\\"from huggingface_hub import snapshot_download; print('OK')\\\""
                 '"'
             )
-            cmd = f'ssh {pf}{host} {setup_script}'
+            remote_command = setup_script
         elif platform == "termux":
             setup_script = (
                 "pkg install -y python tmux 2>/dev/null; "
@@ -2886,7 +2914,7 @@ def setup_cookbook_routes() -> APIRouter:
                 "pip install -q filelock fsspec packaging pyyaml tqdm typer httpx requests 2>/dev/null; "
                 "python3 -c 'from huggingface_hub import snapshot_download; print(\"OK\")'"
             )
-            cmd = f"ssh {pf}{host} '{setup_script}'"
+            remote_command = setup_script
         else:
             # Linux: auto-install tmux (via whichever package manager is available)
             # and huggingface_hub + hf_transfer (falling back to --user/--break-system-packages
@@ -2908,14 +2936,14 @@ def setup_cookbook_routes() -> APIRouter:
                 "pip3 install --user --break-system-packages -q huggingface_hub hf_transfer 2>/dev/null; "
                 "python3 -c 'from huggingface_hub import snapshot_download; print(\"OK\")'"
             )
-            cmd = f"ssh {pf}{host} '{setup_script}'"
+            remote_command = setup_script
 
         try:
-            proc = await asyncio.create_subprocess_shell(
-                cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            _setup_code, stdout, stderr = await run_ssh_command_async(
+                host, port, remote_command, timeout=120, connect_timeout=5,
+                strict_host_key_checking=True,
             )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
-            output = stdout.decode() + stderr.decode()
+            output = stdout.decode("utf-8", errors="replace") + stderr.decode("utf-8", errors="replace")
             ok = "OK" in output
             return {"ok": ok, "output": output.strip(), "platform": platform}
         except asyncio.TimeoutError:
@@ -2929,7 +2957,7 @@ def setup_cookbook_routes() -> APIRouter:
         """Run nvidia-smi locally or over SSH. Returns (stdout, error_or_None)."""
         if host:
             pf = f"-p {ssh_port} " if ssh_port and ssh_port != "22" else ""
-            cmd = f"ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no {pf}{host} '{query}'"
+            cmd = f"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes {pf}{host} '{query}'"
             proc = await asyncio.create_subprocess_shell(
                 cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
@@ -2959,7 +2987,7 @@ def setup_cookbook_routes() -> APIRouter:
                 f"elif command -v zsh >/dev/null 2>&1; then zsh -lc {quoted_cmd}; "
                 "else echo 'No POSIX shell found for GPU probe' >&2; exit 127; fi"
             )
-            cmd = f"ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no {pf}{host} {shlex.quote(remote_cmd)}"
+            cmd = f"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes {pf}{host} {shlex.quote(remote_cmd)}"
             proc = await asyncio.create_subprocess_shell(
                 cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
@@ -3333,7 +3361,7 @@ def setup_cookbook_routes() -> APIRouter:
         try:
             if host:
                 pf = f"-p {req.ssh_port} " if req.ssh_port and req.ssh_port != "22" else ""
-                cmd = f"ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no {pf}{host} '{kill_cmd}'"
+                cmd = f"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes {pf}{host} '{kill_cmd}'"
                 proc = await asyncio.create_subprocess_shell(
                     cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
                 )
@@ -3707,7 +3735,7 @@ def setup_cookbook_routes() -> APIRouter:
             except HTTPException:
                 continue
             sport = str(srv.get("port") or "").strip()
-            ssh_base = ["ssh", "-o", "ConnectTimeout=4", "-o", "StrictHostKeyChecking=no"]
+            ssh_base = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=4", "-o", "StrictHostKeyChecking=yes"]
             if sport and sport != "22":
                 try:
                     sport = validate_ssh_port(sport)

@@ -9,7 +9,7 @@ def test_it_assets_workspace_keeps_inventory_and_cmdb_sources_distinct():
     assert "Two canonical sources" in source
     assert "User-entered assets remain in InventoryService" in source
     assert "unidentified observations remain non-canonical" in source
-    for label in ("Inventory assets", "CMDB assets", "Unidentified", "Observed nodes"):
+    for label in ("Inventory assets", "CMDB assets", "Pending candidates", "Unidentified", "Observed nodes"):
         assert label in source
     assert "hades-module-header" in source
     assert "hades-empty-state" in source

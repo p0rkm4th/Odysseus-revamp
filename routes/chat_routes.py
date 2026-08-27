@@ -23,7 +23,7 @@ from src.llm_core import (
     stream_llm,
     stream_llm_with_fallback,
 )
-from src.agent_loop import stream_agent_loop
+from src.aci import stream_aci_turn
 from src import agent_runs
 from src.model_context import estimate_tokens
 from src.context_compactor import (
@@ -67,15 +67,31 @@ from src.image_model_ids import looks_like_image_generation_model
 from src.tool_policy import (
     WEB_TOOL_NAMES,
     build_effective_tool_policy,
-    is_web_search_explicitly_denied,
+    web_access_mode,
     web_search_enabled_for_turn,
 )
 from src.tool_approvals import tool_approval_store
 
 logger = logging.getLogger(__name__)
 
+# Test/compatibility seam only. It is intentionally unset in production;
+# `_chat_stream_entrypoint` below always defaults to the canonical ACI stream.
+# Keeping the inert name lets older route tests and external harnesses replace
+# the stream without making the retired loop an owner-facing authority.
+stream_agent_loop = None
+
 # Track active streams for partial-save safety net
 _active_streams: Dict[str, dict] = {}
+
+
+def _chat_stream_entrypoint(*args, **kwargs):
+    """Return the canonical foreground stream, with an inert test hook."""
+    hook = stream_agent_loop
+    if callable(hook):
+        return hook(*args, **kwargs)
+    kwargs = dict(kwargs)
+    kwargs.pop("aci_mode", None)
+    return stream_aci_turn(*args, aci_mode="aci", **kwargs)
 
 
 def _stream_failure_status(chunk: str) -> Optional[int]:
@@ -1007,6 +1023,7 @@ def setup_chat_routes(
         # not chats we quietly promoted for a notes/calendar intent.
         user_requested_agent = (chat_mode == "agent")
         _search_enabled = web_search_enabled_for_turn(allow_web_search, use_web)
+        _web_access_mode = web_access_mode(allow_web_search, use_web)
         _explicit_web_intent = False
         _explicit_browser_intent = False
         if isinstance(message, str):
@@ -1025,6 +1042,8 @@ def setup_chat_routes(
                 r"\b(?:look\s*up|lookup)\b.{0,24}\b(?:online|web|internet)\b|"
                 r"\b(?:news|weather|forecast)\b|"
                 r"\bexchange\s+rate\b|"
+                r"\b(?:latest|newest|current)\b.{0,40}\b(?:driver|release|version|price|news|research|docs?)\b|"
+                r"\bresearch\s+(?:this|that|it|the\s+(?:topic|domain))\b|"
                 r"https?://|www\."
                 r")",
                 _msg_l,
@@ -1513,9 +1532,9 @@ def setup_chat_routes(
         disabled_tools = set()
         # Only disable bash when the caller *explicitly* set it to a falsy
         # value. When unset (None), defer to per-user privilege checks below.
-        # Web search is per-turn opt-in: either the chat pre-search setting
-        # (`use_web=true`) or agent web toggle (`allow_web_search=true`) must
-        # explicitly enable it.
+        # Web is an ACI evidence capability. With no explicit policy it is
+        # AUTO and may be projected when the objective needs public/current
+        # evidence; an explicit false value remains a hard privacy OFF gate.
         if allow_bash is not None and str(allow_bash).lower() != "true":
             disabled_tools.add("bash")
         # Explicit web intent is a security/capability boundary, not a semantic
@@ -1528,7 +1547,7 @@ def setup_chat_routes(
                 "[tool-policy] semantic web intent ignored for explicit-web clamp: %r",
                 message[:160],
             )
-        if is_web_search_explicitly_denied(allow_web_search) or not _search_enabled:
+        if _web_access_mode == "OFF":
             disabled_tools.update(WEB_TOOL_NAMES)
         if _explicit_web_intent:
             # A direct lookup/search request should not drift into personal
@@ -1543,12 +1562,8 @@ def setup_chat_routes(
                 "manage_notes", "manage_calendar", "manage_tasks",
                 "api_call",
             })
-            if _search_enabled:
-                disabled_tools.difference_update(WEB_TOOL_NAMES)
-            else:
+            if _web_access_mode == "OFF":
                 disabled_tools.update(WEB_TOOL_NAMES)
-        elif _search_enabled:
-            disabled_tools.difference_update(WEB_TOOL_NAMES)
 
         # Nobody/incognito mode: deny tools that would expose the user's
         # persistent memory, past chats, or other identity-linked data.
@@ -2370,19 +2385,18 @@ def setup_chat_routes(
                     except (TypeError, ValueError):
                         _max_rounds = _DEFAULT_ROUNDS
                     _max_rounds = max(1, min(_max_rounds, 200))
-                    _hades_aci_mode = str(get_setting("hades_aci_mode", "aci") or "aci").strip().lower()
-                    if _hades_aci_mode not in {"legacy", "shadow", "aci"}:
-                        _hades_aci_mode = "aci"
+                    # Foreground chat is the production ACI control plane.
+                    # Keep the stream helper's legacy default only for narrow
+                    # compatibility callers; a user setting must not select a
+                    # second authoritative orchestration path.
+                    # Web is an ACI evidence capability, not a manual routing
+                    # mode. AUTO leaves the bounded web bindings available to
+                    # canonical projection; the semantic frame or normal
+                    # retrieval decides whether they are relevant. Browser
+                    # actions remain an explicit MCP request.
+                    _forced_tools = set(_BROWSER_MCP_TOOLS) if _explicit_browser_intent else None
 
-                    _forced_tools = None
-                    if _search_enabled:
-                        _forced_tools = set(WEB_TOOL_NAMES)
-                        if _explicit_browser_intent:
-                            _forced_tools |= set(_BROWSER_MCP_TOOLS)
-                    elif _explicit_browser_intent:
-                        _forced_tools = set(_BROWSER_MCP_TOOLS)
-
-                    async for chunk in stream_agent_loop(
+                    async for chunk in _chat_stream_entrypoint(
                         sess.endpoint_url,
                         sess.model,
                         messages,
@@ -2420,7 +2434,7 @@ def setup_chat_routes(
                         external_untrusted_context_seen=external_untrusted_context_seen,
                         exact_approval=exact_tool_approval,
                         work_run_id=_work_run_id,
-                        aci_mode=_hades_aci_mode,
+                        aci_mode="aci",
                     ):
                         if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
                             try:

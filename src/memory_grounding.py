@@ -12,10 +12,14 @@ from __future__ import annotations
 import re
 import json
 import os
+import logging
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from src.memory import MemoryStoreUnreadable
 from src.deterministic_reads import deterministic_read_concept
+from src.prompt_security import untrusted_context_message
+
+logger = logging.getLogger(__name__)
 
 
 _EXPLICIT_MEMORY_RE = re.compile(
@@ -50,6 +54,75 @@ def memory_query_kind(text: str) -> str:
     if re.search(r"\b(?:check|show|inspect|search)\b", query, re.IGNORECASE):
         return "inspect"
     return "summary"
+
+
+def minimal_saved_memory_message(messages: List[Dict]) -> Optional[Dict]:
+    """Project only bounded saved-memory facts into a model context."""
+    facts: List[str] = []
+    seen = set()
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        metadata = message.get("metadata")
+        source = str((metadata or {}).get("source") or "")
+        if not source.startswith("saved memory:"):
+            continue
+        content = str(message.get("content") or "")
+        # Explicit canonical results retain their status even when they have
+        # no facts, so the model cannot infer a false zero-result answer.
+        if (metadata or {}).get("context_kind") == "explicit_memory_result":
+            return untrusted_context_message(
+                "saved memory: explicit canonical result",
+                content[:20000],
+            )
+        content = re.sub(r"(?m)^\s*Source:\s*saved memory:[^\n]*\n?", "", content)
+        content = content.replace("Core facts about the user:", "")
+        content = re.sub(
+            r"Memory context\. Do not reference unless the user asks about these topics\.\s*",
+            "",
+            content,
+        )
+        for line in content.splitlines():
+            line = line.strip()
+            if not line.startswith("- "):
+                continue
+            fact = line[2:].strip()
+            if not fact or fact in seen:
+                continue
+            seen.add(fact)
+            facts.append(fact)
+            if len(facts) >= 5:
+                break
+        if len(facts) >= 5:
+            break
+    if not facts:
+        return None
+    logger.info("[agent-intent] odysseus doc minimal memory facts=%s", len(facts))
+    return untrusted_context_message(
+        "saved memory: minimal context",
+        (
+            "Saved user memory facts from Odysseus Brain. These are the same "
+            "user facts available in the normal prompt path. Use them when "
+            "the user asks for personalization, identity, background, "
+            "preferences, or anything about \"me\" or \"my\":\n"
+            + "\n".join(f"- {fact}" for fact in facts)
+        ),
+    )
+
+
+def looks_like_memory_identity_turn(text: str) -> bool:
+    """Recognize identity/personal-memory questions as memory evidence."""
+    query = re.sub(r"[^a-z0-9\s'?]", " ", (text or "").lower())
+    query = re.sub(r"\bhwho\b", "who", query)
+    return bool(re.search(
+        r"\b("
+        r"who am i|who i am|what'?s my name|what is my name|where do i live|"
+        r"what do you know about me|about me|relate to me|use what you know|"
+        r"remember\b|forget\b|my preference|my preferences|i prefer|"
+        r"my memory|memories about me"
+        r")\b",
+        query,
+    ))
 
 
 def _read_owner_entries(memory_manager: Any, owner: Optional[str]) -> List[Dict[str, Any]]:
@@ -201,7 +274,10 @@ def project_explicit_memory_result(
             lowered,
         ) and (state.get("active_branch") or state.get("source_commit")):
             if state.get("active_branch"):
-                reason = f"current canonical branch is {state['active_branch']}"
+                reason = (
+                    f"current canonical branch is {state['active_branch']}; "
+                    "remembered branch state is historical"
+                )
             else:
                 reason = (
                     "current deployment source is "

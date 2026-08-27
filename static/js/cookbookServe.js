@@ -3601,7 +3601,7 @@ function _rerenderCachedModels() {
             const _portHost = (launchTarget.host || '').trim();
             const _checkInner = `ss -tlnp 2>/dev/null | awk '$4 ~ /:${_port}$/ {print; exit}' || netstat -tlnp 2>/dev/null | awk '$4 ~ /:${_port}$/ {print; exit}'`;
             const _cmd = _portHost
-              ? `ssh -o ConnectTimeout=4 -o StrictHostKeyChecking=no ${_sshPrefix(launchTarget.port)}${_portHost} ${JSON.stringify(_checkInner)}`
+              ? `ssh -o BatchMode=yes -o ConnectTimeout=4 -o StrictHostKeyChecking=yes ${_sshPrefix(launchTarget.port)}${_portHost} ${JSON.stringify(_checkInner)}`
               : _checkInner;
             const _res = await fetch('/api/shell/exec', {
               method: 'POST', credentials: 'same-origin',

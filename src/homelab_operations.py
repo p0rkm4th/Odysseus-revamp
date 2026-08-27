@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 
 from src.constants import DATA_DIR
 from src.execution_profiles import active_execution_profile
-from src.capability_dependencies import capability_health, remediation_handoff
+from src.capability_dependencies import dependency_manager
 
 
 class HomelabOperationError(ValueError):
@@ -356,7 +356,7 @@ class HomelabOperations:
         if action == "inspect_host":
             return await self._read(owner, action, ["uptime"])
         if action == "discovery_status":
-            health = capability_health("network_discovery")
+            health = dependency_manager.inspect_operation("network_discovery")
             broker_scanner = False
             try:
                 from src.privileged_broker import client_request
@@ -615,7 +615,14 @@ class HomelabOperations:
                 broker_scanner = bool((await asyncio.to_thread(client_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
             except Exception:
                 pass
-        health = capability_health("network_discovery", available=(["nmap"] if scanner or broker_scanner else []))
+        health = dependency_manager.inspect_operation(
+            "network_discovery",
+            available=["nmap"] if scanner or broker_scanner else [],
+        )
+        health["canonical_dependency"] = dependency_manager.inspect(
+            "network.discover_hosts",
+            available_executables=(["nmap"] if scanner or broker_scanner else []),
+        )
         if action == "plan_network_discovery":
             receipt = {
                 "kind": "plan", "owner": owner, "created_at": _now().isoformat(),
@@ -648,7 +655,7 @@ class HomelabOperations:
             handoff = None
             if request.get("run_id") and request.get("action_id"):
                 try:
-                    handoff = remediation_handoff(
+                    handoff = dependency_manager.resume_receipt(
                         "network_discovery", run_id=str(request["run_id"]),
                         action_id=str(request["action_id"]),
                         approval_reference=request.get("approval_reference"),
@@ -768,7 +775,10 @@ class HomelabOperations:
 
         try:
             capability = str(request.get("capability") or "").strip()
-            dependency = capability_health(capability, available=[]) if capability else None
+            dependency = (
+                dependency_manager.inspect_operation(capability, available=[])
+                if capability else None
+            )
             if capability:
                 if not dependency.get("remediation_available"):
                     raise ValueError("capability has no deterministic approved prerequisite remediation")
@@ -786,7 +796,7 @@ class HomelabOperations:
         handoff = None
         if capability and request.get("run_id") and request.get("action_id"):
             try:
-                handoff = remediation_handoff(
+                handoff = dependency_manager.resume_receipt(
                     capability, run_id=str(request["run_id"]),
                     action_id=str(request["action_id"]),
                     approval_reference=request.get("approval_reference"),

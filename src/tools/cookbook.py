@@ -941,7 +941,7 @@ async def _cookbook_kill_session(session_id: str, *, remote_host: str = "",
             return {"error": str(getattr(e, "detail", e)), "exit_code": 1}
         _pf = f"-p {shlex.quote(str(sport))} " if sport and str(sport) != "22" else ""
         cmd = (
-            f"ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "
+            f"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes "
             f"{_pf}{shlex.quote(remote)} 'tmux kill-session -t {shlex.quote(session_id)}'"
         )
         target_label = f"{session_id} on {remote}"
@@ -1075,7 +1075,7 @@ async def do_tail_serve_output(content: str, owner: Optional[str] = None) -> Dic
     if remote:
         _pf = f"-p {shlex.quote(str(sport))} " if sport and str(sport) != "22" else ""
         cmd = (
-            f"ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "
+            f"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes "
             f"{_pf}{shlex.quote(remote)} {shlex.quote(inner)}"
         )
         host_label = remote
@@ -1269,7 +1269,7 @@ async def do_adopt_served_model(content: str, owner: Optional[str] = None) -> Di
 
     headers = _internal_headers()
     if host:
-        check = f"ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no {shlex.quote(host)} 'tmux has-session -t {shlex.quote(sess)} 2>&1'"
+        check = f"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes {shlex.quote(host)} 'tmux has-session -t {shlex.quote(sess)} 2>&1'"
     else:
         check = f"tmux has-session -t {shlex.quote(sess)} 2>&1"
     try:
@@ -1285,7 +1285,14 @@ async def do_adopt_served_model(content: str, owner: Optional[str] = None) -> Di
 
     # Best-effort health check — does port respond to /v1/models?
     if host:
-        health_cmd = f"ssh -o ConnectTimeout=5 {shlex.quote(host)} 'curl -s -m 3 http://localhost:{int(port)}/v1/models'"
+        # Keep this compatibility probe on the same fail-closed SSH boundary
+        # as session verification.  A health check must never silently accept
+        # an unknown or changed host key, nor prompt an unattended process.
+        health_cmd = (
+            f"ssh -o BatchMode=yes -o ConnectTimeout=5 "
+            f"-o StrictHostKeyChecking=yes {shlex.quote(host)} "
+            f"'curl -s -m 3 http://localhost:{int(port)}/v1/models'"
+        )
     else:
         health_cmd = f"curl -s -m 3 http://localhost:{int(port)}/v1/models"
     server_up = False

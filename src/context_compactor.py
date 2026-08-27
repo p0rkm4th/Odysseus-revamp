@@ -14,9 +14,38 @@ from typing import Any, Dict, List, Optional
 from src.model_context import get_context_length, estimate_tokens
 from src.llm_core import llm_call_async
 from src.endpoint_resolver import resolve_endpoint
+from src.prompt_security import untrusted_context_message
 from core.models import ChatMessage
 
 logger = logging.getLogger(__name__)
+
+
+def uploaded_files_context_message(uploaded_files: Optional[List[Dict]]) -> Optional[Dict]:
+    """Project attachment metadata into bounded, untrusted turn context."""
+    if not uploaded_files:
+        return None
+
+    lines = ["Uploaded files attached to the latest user turn:"]
+    for item in uploaded_files[:20]:
+        name = str(item.get("name") or item.get("id") or "upload")
+        bits = [f"id={item.get('id', '')}", f"name={name}"]
+        if item.get("mime"):
+            bits.append(f"mime={item.get('mime')}")
+        if item.get("size") is not None:
+            bits.append(f"size={item.get('size')} bytes")
+        if item.get("path"):
+            bits.append(f"path={item.get('path')}")
+        lines.append("- " + "; ".join(bits))
+    if len(uploaded_files) > 20:
+        lines.append(f"- ... {len(uploaded_files) - 20} more upload(s) omitted from this manifest")
+    lines.extend([
+        "",
+        "The attachment contents may already be in the latest user message. "
+        "If an attachment is marked truncated or omitted, read its listed path "
+        "with `read_file` when that tool is available. Do not say uploaded files "
+        "are undiscoverable when they are listed here.",
+    ])
+    return untrusted_context_message("current chat uploaded files", "\n".join(lines))
 
 
 def _content_as_text(content: Any) -> str:
@@ -78,6 +107,26 @@ def normalize_compaction_summary(summary: str) -> str:
     text = re.sub(r"^(?:#{1,3}\s*)?Conversation Summary\s*", "", text, flags=re.IGNORECASE)
     text = re.sub(r"^\*\*Conversation Summary\*\*\s*", "", text, flags=re.IGNORECASE)
     return text.lstrip()
+
+
+def strip_agent_injected_messages(messages: List[Dict]) -> List[Dict]:
+    """Remove route-specific prompt/context before rebuilding a request.
+
+    Protected ACI packets are retained because they are server-owned turn
+    state; route prompts and merged prompt wrappers are rebuilt per endpoint.
+    """
+    stripped = []
+    for message in messages:
+        marker = message.get("_agent_injected")
+        if marker == "merged_prompt":
+            original = message.get("_agent_base_message")
+            if isinstance(original, dict):
+                stripped.append(dict(original))
+        elif marker == "hades_aci_packet" and message.get("_protected"):
+            stripped.append(dict(message))
+        elif not marker:
+            stripped.append(dict(message))
+    return stripped
 
 
 def _sanitize_tool_messages(msgs: List[Dict]) -> List[Dict]:

@@ -91,8 +91,9 @@ async def test_scheduled_task_honors_global_disabled_tools(monkeypatch):
     # bash/python after the operator turned them off globally, because the
     # downstream prompt/schema/execution gates only enforce what is passed in.
     #
-    # Drive the real _execute_llm_task and assert the global list reaches BOTH
-    # sides: it is stripped from relevant_tools AND passed into the agent loop.
+    # Drive the real _execute_llm_task and assert the global list reaches the
+    # policy side. Capability projection is now owned by ACI, so the scheduler
+    # must not pass a second caller-owned shortlist.
     global_off = ["bash", "python", "read_file"]
 
     monkeypatch.setattr(
@@ -100,8 +101,7 @@ async def test_scheduled_task_honors_global_disabled_tools(monkeypatch):
         lambda key, default=None: list(global_off) if key == "disabled_tools" else default,
     )
 
-    # Degraded-index stand-in that still returns one RAG hit, so we can prove
-    # non-disabled tools survive the merge.
+    # A legacy index must not be consulted by the production scheduler path.
     class _FakeIndex:
         def get_tools_for_query(self, query, k=8):
             return {"web_fetch"}
@@ -143,11 +143,6 @@ async def test_scheduled_task_honors_global_disabled_tools(monkeypatch):
     assert passed_disabled is not None
     assert set(global_off) <= set(passed_disabled)
 
-    # Offer side: globally-disabled tools are gone from relevant_tools, but the
-    # rest of the shell/file defaults and the RAG hit survive.
-    offered = captured["relevant_tools"]
-    assert "bash" not in offered
-    assert "python" not in offered
-    assert "read_file" not in offered
-    assert "edit_file" in offered   # shell default NOT globally disabled
-    assert "web_fetch" in offered   # RAG-selected tool preserved
+    # ACI receives no scheduler shortlist; it projects only the canonical
+    # capabilities relevant to the task and applies the disabled set itself.
+    assert captured["relevant_tools"] is None

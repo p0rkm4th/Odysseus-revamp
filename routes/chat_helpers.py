@@ -182,18 +182,21 @@ def ensure_chat_agent_work_run(
     if not enabled or not owner or not session_id:
         return None
     try:
-        from src.agent_loop import (
-            _classify_agent_request,
-            _normalize_homelab_intent,
-            _normalize_operational_intent_evidence,
+        from src.aci import provisional_intent_projection
+        from src.intent_contracts import (
+            canonical_domain_projection,
+            compile_intent,
+            resolve_intent,
+            resolve_structured_reference,
         )
-        from src.intent_contracts import compile_intent, resolve_intent, resolve_structured_reference
         from src.agent_work_bridge import ensure_agent_run, prepare_action, recent_session_reference_context
         query = str(message or "")
-        intent = _classify_agent_request([], query)
-        intent = _normalize_homelab_intent(intent, query)
-        intent = _normalize_operational_intent_evidence(intent, query)
-        domains = set(intent.get("domains") or ())
+        # Work-run creation is an ACI projection, not a second pre-router. The
+        # provisional frame only answers whether this concept has a canonical
+        # contract; the final reference-aware frame below remains authoritative.
+        _, aci_owned = provisional_intent_projection([], query)
+        if not aci_owned:
+            return None
         # Only structured current-turn references may inherit a completed
         # result. This preserves intentional ordinal/pronoun continuity while
         # preventing unrelated new topics from inheriting stale domain state.
@@ -202,21 +205,7 @@ def ensure_chat_agent_work_run(
             reference_context = recent_session_reference_context(str(owner), str(session_id))
         frame = compile_intent(query, reference_context=reference_context)
         continuation = frame.operation_class == "CONTINUE"
-        canonical_domains = {
-            "TECHNICAL_ASSET": "asset_inventory", "NETWORK": "network_ops",
-            "HOMELAB_HOST": "homelab", "SERVICE": "homelab",
-            "SECURITY_FINDING": "security_audit", "OSINT_CASE": "osint",
-            "SECURITY_ENGAGEMENT": "security_audit", "SECURITY_EVIDENCE": "security_audit",
-            "RESEARCH": "osint",
-            "MEMORY": "memory", "WORK": "work", "HOUSEHOLD_ITEM": "household",
-            "INTEGRATION": "setup", "CAREER_PROFILE": "career",
-            "JOB_SEARCH": "career", "JOB_OPPORTUNITY": "career",
-            "APPLICATION": "career", "INTERVIEW": "career",
-            "COMMUNICATIONS": "communications",
-            "CONTACT": "communications",
-        }
-        if frame.domain_concept in canonical_domains:
-            domains.add(canonical_domains[frame.domain_concept])
+        domains = set(canonical_domain_projection(frame))
         if not domains.intersection({
             "homelab", "network_ops", "asset_inventory", "security_audit", "osint",
             "memory", "work", "household", "setup", "career",
@@ -970,7 +959,11 @@ async def build_chat_context(
     _preface_kwargs = dict(
         message=_ctx_msg,
         session=sess,
-        use_web=use_web and not skip_web,
+        # Agent/ACI turns select web.evidence through the canonical capability
+        # projection. The legacy context prefetch remains only for plain chat
+        # compatibility callers, so an agent turn cannot pay for a second
+        # query-extraction model call and an unplanned web search.
+        use_web=use_web and not skip_web and not agent_mode,
         use_memory=mem_enabled,
         time_filter=time_filter,
         preset_system_prompt=preset.system_prompt,

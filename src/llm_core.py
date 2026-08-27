@@ -13,11 +13,83 @@ import math
 import ipaddress
 from contextlib import asynccontextmanager
 from fastapi import HTTPException
-from typing import Optional, Dict, List, Tuple
+from typing import Any, Optional, Dict, List, Tuple
 from src.model_context import get_context_length, DEFAULT_CONTEXT, is_local_endpoint
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+def strip_think_blocks(text: str):
+    """Strip closed provider reasoning blocks in one forward-only pass."""
+    if not text:
+        return text
+    lowered = text.lower()
+    parts = []
+    pos = 0
+    while True:
+        start = lowered.find("<think>", pos)
+        if start == -1:
+            parts.append(text[pos:])
+            break
+        end = lowered.find("</think>", start + 7)
+        if end == -1:
+            parts.append(text[pos:])
+            break
+        parts.append(text[pos:start])
+        pos = end + 8
+    return "".join(parts)
+
+
+def empty_response_fallback(full_response: str, round_reasoning: str, tool_events: list) -> tuple:
+    """Return the safe final response for empty provider content."""
+    if full_response.strip() or tool_events:
+        return full_response, None
+    if round_reasoning.strip():
+        return round_reasoning, None
+    error_msg = "The model returned an empty response. Please try again or switch to a different model."
+    return error_msg, f'data: {json.dumps({"delta": error_msg})}\n\n'
+
+
+_ODY_QWEN_TEXT_FIXES = (
+    (re.compile(r"\bassistan\b", re.IGNORECASE), "assistant"),
+    (re.compile(r"\bdon'\b", re.IGNORECASE), "don't"),
+    (re.compile(r"\bcan'\b", re.IGNORECASE), "can't"),
+    (re.compile(r"\bwon'\b", re.IGNORECASE), "won't"),
+    (re.compile(r"\blates\b", re.IGNORECASE), "latest"),
+    (re.compile(r"\baccoun\b", re.IGNORECASE), "account"),
+    (re.compile(r"\bconten\b", re.IGNORECASE), "content"),
+    (re.compile(r"\bdocumen\b", re.IGNORECASE), "document"),
+    (re.compile(r"\breques\b", re.IGNORECASE), "request"),
+    (re.compile(r"\bnex\b", re.IGNORECASE), "next"),
+    (re.compile(r"\btex\b", re.IGNORECASE), "text"),
+    (re.compile(r"\bsen\b", re.IGNORECASE), "sent"),
+    (re.compile(r"\bsecre\b", re.IGNORECASE), "secret"),
+    (re.compile(r"\bAnalys\b"), "Analyst"),
+    (re.compile(r"\bAugus\b"), "August"),
+    (re.compile(r"\bbu\b", re.IGNORECASE), "but"),
+    (re.compile(r"\bmigh\b", re.IGNORECASE), "might"),
+    (re.compile(r"\bdifferen\b", re.IGNORECASE), "different"),
+    (re.compile(r"\bpoin\b", re.IGNORECASE), "point"),
+    (re.compile(r"\bmos\b", re.IGNORECASE), "most"),
+    (re.compile(r"\bjus\b", re.IGNORECASE), "just"),
+    (re.compile(r"\bBes\b"), "Best"),
+    (re.compile(r"\bstar\b", re.IGNORECASE), "start"),
+    (re.compile(r"\bge\b", re.IGNORECASE), "get"),
+    (re.compile(r"\ble\b", re.IGNORECASE), "let"),
+    (re.compile(r"\bwha\b", re.IGNORECASE), "what"),
+    (re.compile(r"\btha\b", re.IGNORECASE), "that"),
+)
+
+
+def normalize_ody_qwen_text_artifacts(text: str):
+    """Repair high-confidence dropped-letter artifacts from the Odysseus LoRA."""
+    if not text:
+        return text
+    fixed = text
+    for pattern, replacement in _ODY_QWEN_TEXT_FIXES:
+        fixed = pattern.sub(replacement, fixed)
+    return fixed
 
 _LOCAL_MODEL_LOCK = asyncio.Lock()
 _LOCAL_MODEL_WAITING_FOREGROUND = 0
@@ -1130,6 +1202,19 @@ def _apply_local_generation_stability(payload: Dict, url: str, model: str) -> No
     # endpoints. Keep simple chats from running forever when the model loops.
     if not payload.get("max_tokens") and not payload.get("max_completion_tokens"):
         payload["max_tokens"] = 2048
+
+
+def is_odysseus_qwen_model(model: str) -> bool:
+    """Identify the Odysseus Qwen finetune for transport-specific handling."""
+    return str(model or "").lower().startswith("odysseus-qwen3")
+
+
+def odysseus_qwen_temperature_cap(temperature: Any) -> float:
+    """Apply the finetune's conservative sampling ceiling."""
+    try:
+        return min(float(temperature if temperature is not None else 0.2), 0.2)
+    except (TypeError, ValueError):
+        return 0.2
 
 
 def _provider_headers(provider: str, headers: Optional[Dict] = None) -> Dict[str, str]:

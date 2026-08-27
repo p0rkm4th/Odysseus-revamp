@@ -372,18 +372,15 @@ def _ssh_exec_argv(
     remote_host = remote_value.rsplit("@", 1)[-1]
     if not remote_value or remote_value.startswith("-") or not remote_host or remote_host.startswith("-"):
         raise ValueError("Invalid SSH remote host")
-    argv = ["ssh"]
+    if strict_host_key_checking is False:
+        raise ValueError("permissive SSH host-key checking is disabled")
+    # Remote execution must be unattended and must fail closed for unknown or
+    # changed host keys. Callers cannot turn either invariant off.
+    argv = [
+        "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+    ]
     if connect_timeout is not None:
         argv.extend(["-o", f"ConnectTimeout={int(connect_timeout)}"])
-    if strict_host_key_checking is not None:
-        argv.extend(
-            [
-                "-o",
-                "StrictHostKeyChecking=yes"
-                if strict_host_key_checking
-                else "StrictHostKeyChecking=no",
-            ]
-        )
     if ssh_port and ssh_port != "22":
         argv.extend(["-p", str(ssh_port)])
     argv.append(remote)

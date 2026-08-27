@@ -5,7 +5,8 @@ API callers (Content-Type: application/json) always had bash disabled.
 
 Fix: (1) Read from JSON body as fallback.
      (2) Keep bash on the privilege fallback when unset.
-     (3) Require an explicit per-turn web setting before exposing web tools.
+     (3) Keep web available under the default AUTO evidence policy; explicit
+         OFF remains a hard deny.
 """
 
 import ast
@@ -88,17 +89,18 @@ def test_browser_form_followups_include_approval_and_send_phrases():
     assert "submit(?:\\s+it)?" in source
 
 
-def test_agent_loop_expands_browser_mcp_tools_from_connected_server():
-    """Browser intent must not depend on stale hardcoded Playwright tool names."""
-    source = (Path(__file__).resolve().parent.parent / "src" / "agent_loop.py").read_text(encoding="utf-8")
-    assert "def _expand_browser_mcp_tools" in source
-    assert "server_id\") == \"builtin_browser\"" in source
-    assert "_relevant_tools = _expand_browser_mcp_tools(_relevant_tools, mcp_mgr)" in source
+def test_browser_tool_projection_is_owned_by_mcp_manager():
+    """Browser intent must use discovered names without a loop-local owner."""
+    root = Path(__file__).resolve().parent.parent
+    loop_source = (root / "src" / "agent_loop.py").read_text(encoding="utf-8")
+    manager_source = (root / "src" / "mcp_manager.py").read_text(encoding="utf-8")
+    assert "def _expand_browser_mcp_tools" not in loop_source
+    assert "qualified_tools_for_server(\"builtin_browser\")" in loop_source
+    assert "def qualified_tools_for_server" in manager_source
 
 
 def test_disabled_tools_respects_missing_vs_explicit_toggles():
-    """Bash still defers to privileges, but web is an explicit per-turn opt-in.
-    """
+    """Bash defers to privileges and web follows the canonical AUTO/OFF policy."""
     source = _CHAT_ROUTES.read_text(encoding="utf-8")
 
     # The fix changes:
@@ -108,14 +110,14 @@ def test_disabled_tools_respects_missing_vs_explicit_toggles():
     assert "allow_bash is not None" in source, (
         "disabled_tools check must guard against allow_bash being None"
     )
-    assert "web_search_enabled_for_turn(allow_web_search, use_web)" in source, (
-        "web tools must be gated through the explicit per-turn web setting"
+    assert "_web_access_mode == \"OFF\"" in source, (
+        "web tools must be gated through the canonical AUTO/OFF policy"
     )
     assert "disabled_tools.update(WEB_TOOL_NAMES)" in source, (
         "disabled_tools must add web_search/web_fetch when web is not explicitly enabled"
     )
-    assert "_forced_tools = set(WEB_TOOL_NAMES)" in source, (
-        "web tools should only be forced visible from the explicit web setting"
+    assert "_forced_tools = set(WEB_TOOL_NAMES)" not in source, (
+        "web tools must not be a manual forced-routing mode"
     )
 
 
@@ -149,7 +151,10 @@ def _build_disabled_tools(
     if allow_bash is not None and str(allow_bash).lower() != "true":
         disabled_tools.add("bash")
     search_enabled = web_search_enabled_for_turn(allow_web_search, use_web)
-    if is_web_search_explicitly_denied(allow_web_search) or not search_enabled:
+    access_mode = "OFF" if is_web_search_explicitly_denied(allow_web_search) else (
+        "ON" if search_enabled else "AUTO"
+    )
+    if access_mode == "OFF":
         disabled_tools.update(WEB_TOOL_NAMES)
     if explicit_web_intent:
         disabled_tools.update({
@@ -161,12 +166,8 @@ def _build_disabled_tools(
             "manage_notes", "manage_calendar", "manage_tasks",
             "api_call", "builtin_browser",
         })
-        if search_enabled:
-            disabled_tools.difference_update(WEB_TOOL_NAMES)
-        else:
+        if access_mode == "OFF":
             disabled_tools.update(WEB_TOOL_NAMES)
-    elif search_enabled:
-        disabled_tools.difference_update(WEB_TOOL_NAMES)
 
     # Enforce per-user privileges
     if not can_use_bash:
@@ -242,8 +243,8 @@ def test_explicit_false_disables_web_despite_prompt_web_intent(message):
     assert "web_fetch" in disabled
 
 
-def test_prompt_web_intent_does_not_enable_web_without_setting():
-    """Prompt-derived web intent alone must not expose web tools."""
+def test_prompt_web_intent_enables_auto_web_without_setting():
+    """Natural-language external-evidence intent works under AUTO."""
     intent = classify_tool_intent("look up the latest docs")
     assert intent is not None
     assert intent.category == "web"
@@ -253,8 +254,8 @@ def test_prompt_web_intent_does_not_enable_web_without_setting():
         use_web=None,
         explicit_web_intent=True,
     )
-    assert "web_search" in disabled
-    assert "web_fetch" in disabled
+    assert "web_search" not in disabled
+    assert "web_fetch" not in disabled
 
 
 def test_admin_user_gets_bash_enabled_by_default():
@@ -265,11 +266,20 @@ def test_admin_user_gets_bash_enabled_by_default():
     assert "bash" not in disabled
 
 
-def test_web_search_disabled_by_default_without_explicit_turn_setting():
-    """Missing web settings must not expose web tools by default."""
+def test_web_search_available_by_default_under_auto_policy():
+    """Missing web settings resolve to AUTO, not a hidden manual mode."""
     disabled = _build_disabled_tools(allow_web_search=None)
-    assert "web_search" in disabled
-    assert "web_fetch" in disabled
+    assert "web_search" not in disabled
+    assert "web_fetch" not in disabled
+
+
+def test_chat_request_omitted_web_policy_is_auto_not_off():
+    from src.request_models import ChatRequest
+    from src.tool_policy import web_access_mode
+
+    request = ChatRequest(message="what is the latest release?", session="s-1")
+    assert request.use_web is None
+    assert web_access_mode(None, request.use_web) == "AUTO"
 
 
 def test_non_privileged_user_without_explicit_flag_still_disabled():

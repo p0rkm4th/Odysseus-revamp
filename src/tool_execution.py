@@ -2078,3 +2078,45 @@ async def execute_tool_block(block, *args, **kwargs):
         *args,
         **kwargs,
     )
+
+
+async def stream_tool_execution(
+    block: Any,
+    *,
+    executor: Optional[Callable[..., Awaitable[Tuple[str, Dict]]]] = None,
+    **kwargs: Any,
+):
+    """Run one canonical tool execution while yielding bounded progress.
+
+    The helper owns only async task/progress plumbing. The selected executor
+    remains `execute_tool_block` (or an explicitly injected test/compatibility
+    executor), so security, approval, policy, and ActionSpec validation stay
+    on the canonical dispatcher path.
+    """
+    progress_queue: asyncio.Queue = asyncio.Queue()
+
+    async def push_progress(payload: Dict):
+        await progress_queue.put(payload)
+
+    async def run():
+        try:
+            selected = executor or execute_tool_block
+            return await selected(block, progress_cb=push_progress, **kwargs)
+        finally:
+            await progress_queue.put(None)
+
+    task = asyncio.create_task(run())
+    try:
+        while True:
+            event = await progress_queue.get()
+            if event is None:
+                break
+            yield "progress", event
+        yield "result", await task
+    finally:
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass

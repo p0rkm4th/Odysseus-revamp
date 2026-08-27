@@ -1,0 +1,185 @@
+{
+  "runs": [
+    {
+      "commit": "working-tree",
+      "coverage_gap_count": 284,
+      "mode": "synthetic_runtime",
+      "model": "qwen3:8b",
+      "seed": 0,
+      "summary": {
+        "architectural_rate": 0.8226,
+        "architectural_success": 51,
+        "completion_tokens_per_task": 52.6935,
+        "context_hydrations_per_task": 0.0,
+        "continuation_rounds_per_task": 0.0,
+        "coverage_gap_count": 284,
+        "decision_calls_per_task": 0.129,
+        "domain_reference_accuracy": 0.7419,
+        "duplicate_rate": 0.0,
+        "failed_actions_per_task": 0.6935,
+        "functional_rate": 0.8226,
+        "functional_success": 51,
+        "median_latency_seconds": 2.8525,
+        "model_calls_per_task": 0.9355,
+        "p95_latency_seconds": 6.8872,
+        "prompt_tokens_per_task": 1905.1452,
+        "reference_resolution_accuracy": 0.0,
+        "repair_controls": {
+          "auto_apply": false,
+          "candidates": [
+            {
+              "architecture_layer": "action_authority",
+              "auto_apply": false,
+              "failure": "failed_action_budget",
+              "requires_owner_approval": true
+            },
+            {
+              "architecture_layer": "semantic_routing",
+              "auto_apply": false,
+              "failure": "concept",
+              "requires_owner_approval": true
+            },
+            {
+              "architecture_layer": "runtime_completion",
+              "auto_apply": false,
+              "failure": "answer_present",
+              "requires_owner_approval": true
+            },
+            {
+              "architecture_layer": "bounded_decision",
+              "auto_apply": false,
+              "failure": "decision_budget",
+              "requires_owner_approval": true
+            },
+            {
+              "architecture_layer": "evaluation_contract",
+              "auto_apply": false,
+              "failure": "recovery",
+              "requires_owner_approval": true
+            },
+            {
+              "architecture_layer": "model_burden",
+              "auto_apply": false,
+              "failure": "model_budget",
+              "requires_owner_approval": true
+            },
+            {
+              "architecture_layer": "evaluation_contract",
+              "auto_apply": false,
+              "failure": "response_excludes",
+              "requires_owner_approval": true
+            },
+            {
+              "architecture_layer": "evaluation_contract",
+              "auto_apply": false,
+              "failure": "required_tools",
+              "requires_owner_approval": true
+            }
+          ],
+          "enabled": true,
+          "requires_owner_approval": true
+        },
+        "scenario_count": 62,
+        "security_rate": 1.0,
+        "security_success": 62,
+        "tool_index_lookups_per_task": 0.0806,
+        "top_failure_clusters": [
+          [
+            "failed_action_budget",
+            10
+          ],
+          [
+            "concept",
+            6
+          ],
+          [
+            "answer_present",
+            2
+          ],
+          [
+            "decision_budget",
+            2
+          ],
+          [
+            "recovery",
+            2
+          ],
+          [
+            "model_budget",
+            1
+          ],
+          [
+            "response_excludes",
+            1
+          ],
+          [
+            "required_tools",
+            1
+          ]
+        ]
+      },
+      "timestamp": 1787782501.974771
+    },
+    {
+      "commit": "4d20cd947015f7b8d4b8e5d600a6040c5f222610",
+      "coverage_gap_count": 312,
+      "mode": "synthetic_runtime",
+      "model": "qwen3:8b",
+      "seed": 0,
+      "summary": {
+        "architectural_rate": 1.0,
+        "architectural_success": 62,
+        "completion_tokens_per_task": 65.4032,
+        "context_hydrations_per_task": 0.0,
+        "continuation_rounds_per_task": 0.0,
+        "coverage_gap_count": 312,
+        "decision_calls_per_task": 0.0161,
+        "domain_reference_accuracy": 0.7419,
+        "duplicate_rate": 0.0,
+        "failed_actions_per_task": 0.4355,
+        "functional_rate": 0.9516,
+        "functional_success": 59,
+        "median_latency_seconds": 3.3148,
+        "model_calls_per_task": 0.8548,
+        "p95_latency_seconds": 8.9918,
+        "prompt_tokens_per_task": 1409.5968,
+        "reference_resolution_accuracy": 0.0,
+        "repair_controls": {
+          "auto_apply": false,
+          "candidates": [
+            {
+              "architecture_layer": "evaluation_contract",
+              "auto_apply": false,
+              "failure": "CONTINUATION_FAILURE",
+              "requires_owner_approval": true
+            },
+            {
+              "architecture_layer": "evaluation_contract",
+              "auto_apply": false,
+              "failure": "DOMAIN_ROUTING_FAILURE",
+              "requires_owner_approval": true
+            }
+          ],
+          "enabled": true,
+          "requires_owner_approval": true
+        },
+        "scenario_count": 62,
+        "security_rate": 1.0,
+        "security_success": 62,
+        "tool_index_lookups_per_task": 0.0806,
+        "top_failure_clusters": [
+          [
+            "CONTINUATION_FAILURE",
+            2
+          ],
+          [
+            "DOMAIN_ROUTING_FAILURE",
+            1
+          ]
+        ]
+      },
+      "timestamp": 1787788565.603747
+    }
+  ],
+  "schema_version": 1
+}
