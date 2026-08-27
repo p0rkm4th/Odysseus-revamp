@@ -84,6 +84,19 @@ against the current source rather than copied forward as assumptions.
 This document must be updated whenever the source, deployment, or release
 evidence changes.
 
+## Model-decision projection checkpoint (`76c64ce0e593f2d4a626fcf9384e5e6542629487`)
+
+The existing ACI seam now owns model-decision parsing, bounded invalid-decision
+recovery, and action/answer selection projection via `project_model_decision`.
+`agent_loop.py` retains only the transport-side retry/fallback and execution
+handoff behavior. Focused ACI/cutover/resource-contract tests passed `264
+passed, 1 warning`. The exact source was pushed and deployed as
+`odysseus:candidate-76c64ce0e593`; the running image digest is
+`sha256:5d5feaa95fd1405b566b4dd39711c7ae87b1227916434df113aad2a806e80e64`,
+the embedded source label matches the commit, restart count is `0`, and
+`/api/health` is healthy. Live Ollama/Qwen remains unavailable and therefore
+unverified.
+
 ## Owner-state closure checkpoint (working tree after `299ef9ee`)
 
 The exact reconciled baseline before this closure slice was:
