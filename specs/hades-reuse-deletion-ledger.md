@@ -1560,3 +1560,8 @@ Dead compatibility residue: removed three unreferenced aliases from
 `_normalize_truncated_document_tool_fences`, and `_DOMAIN_POLICIES`). No source
 or test consumer existed; focused ACI/cutover/resource/agent-loop/dogfood
 coverage passed `173 tests`. This is a measured deletion, not a semantic move.
+
+Latest cleanup checkpoint: source `e0a88d0d` retains the same semantic path;
+focused coverage passed `173`, and the prior full regression remains
+applicable at `6760 passed, 5 skipped, 149 warnings`. Live Qwen remains
+unverified because Ollama is unavailable.
