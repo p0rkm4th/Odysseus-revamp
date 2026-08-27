@@ -287,6 +287,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--metamorphic-count", type=int, default=None, help="add equivalent-phrasing semantic variants")
     parser.add_argument("--negative-count", type=int, default=None, help="add informational near-misses that must not execute")
     parser.add_argument("--minimal-pair-count", type=int, default=None, help="add semantic conceptual/operational minimal pairs")
+    parser.add_argument("--hidden-holdout-count", type=int, default=0, help="add seeded holdout cases; reports retain no literal prompts")
     parser.add_argument("--chaos-journeys", type=int, default=None, help="add generated multi-turn journeys")
     parser.add_argument("--shard-index", type=int, default=0)
     parser.add_argument("--shard-count", type=int, default=1)
@@ -337,6 +338,7 @@ def main(argv: list[str] | None = None) -> int:
         regressions_path=args.regressions, metamorphic_count=args.metamorphic_count,
         negative_count=args.negative_count, chaos_journey_count=args.chaos_journeys,
         minimal_pair_count=args.minimal_pair_count,
+        hidden_holdout_count=args.hidden_holdout_count,
     )
     run_metadata = _run_metadata(args)
     for case in cases:

@@ -852,6 +852,49 @@ def generate_metamorphic_cases(*, seed: int = 0, count: int = 250, split: str = 
     return variants
 
 
+def generate_hidden_holdout_cases(*, seed: int = 0, count: int = 500) -> list[dict[str, Any]]:
+    """Generate oracle-bearing holdout cases without retaining literal prompts.
+
+    The case is executable through the normal runner, but the resulting report
+    contains only the prompt digest and ScenarioFrame metadata. A fixed seed
+    reproduces the same hidden wording for an authorized replay without making
+    the holdout a visible phrase corpus.
+    """
+    bases = generate_semantic_cases(seed=seed + 104729, count=count, split="held_out")
+    rng = random.Random(int(seed) + 161803)
+    cases: list[dict[str, Any]] = []
+    for index, base in enumerate(bases):
+        transform_names = rng.sample(
+            list(_METAMORPHIC_TRANSFORMS),
+            k=2,
+        )
+        prompt = str(base["prompt"])
+        for _name, transform in transform_names:
+            prompt = transform(prompt)
+        case = dict(base)
+        case.update({
+            "id": f"hidden-holdout-{int(seed)}-{index:05d}",
+            "prompt": prompt,
+            "source": "generated_hidden_holdout",
+            "split": "held_out",
+            "variant_id": f"hidden-{index:05d}",
+        })
+        scenario = dict(base.get("scenario") or {})
+        scenario.update({
+            "hidden_holdout": True,
+            "metamorphic_transform": "+".join(name for name, _ in transform_names),
+            "language_transform_chain": list(scenario.get("language_transform_chain") or ()) + [
+                name.casefold() for name, _ in transform_names
+            ],
+        })
+        case["scenario"] = scenario
+        expected = dict(base.get("expected") or {})
+        expected["hidden_holdout"] = True
+        case["expected"] = expected
+        cases.append(case)
+    return cases
+
+
 def generate_negative_near_miss_cases(*, seed: int = 0, count: int = 250, split: str = "generated") -> list[dict[str, Any]]:
     """Generate informational near-misses that must not execute a capability."""
     bases = generate_semantic_cases(seed=seed + 7919, count=count, split=split)
@@ -1051,6 +1094,7 @@ def expand_cases(
     regressions_path: str | Path | None = None,
     metamorphic_count: int = 0, negative_count: int = 0,
     chaos_journey_count: int = 0, minimal_pair_count: int = 0,
+    hidden_holdout_count: int = 0,
 ) -> list[dict[str, Any]]:
     """Expand all selected sources into one stable scenario list."""
     if suite not in {"baseline", "all", "security", "held_out"}:
@@ -1130,6 +1174,8 @@ def expand_cases(
             seed=seed, count=minimal_pair_count,
             split="held_out" if suite == "held_out" else "generated",
         ))
+    if hidden_holdout_count and suite != "security":
+        cases.extend(generate_hidden_holdout_cases(seed=seed, count=hidden_holdout_count))
     if regressions_path and suite != "held_out":
         cases.extend(load_regression_cases(regressions_path))
     if suite == "held_out":

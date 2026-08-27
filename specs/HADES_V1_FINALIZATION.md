@@ -156,3 +156,9 @@ seed `20260827` expanded `1,793` cases, including `100` minimal-pair cases;
 the dogfood test suite passed `29 passed, 1 warning` after the mutation
 coverage assertion. Push-triggered CI, CodeQL, container scans, secret scan,
 and workflow security now include `hades-aci-v1`.
+
+The existing dogfood runner also supports seeded hidden holdouts through
+`--hidden-holdout-count`. Holdout prompts are generated from semantic cases
+with deterministic transform chains and are not serialized into coverage
+reports; only digests and semantic metadata remain. A seed `20260827` smoke
+produced `500/500` unique held-out cases.
