@@ -1518,3 +1518,9 @@ tests. The core generation smoke produced `1,793` reproducible cases from seed
 `20260827`, including `100` minimal-pair cases. Also enabled push CI/security
 workflow triggers for `hades-aci-v1`. No evaluator, routing, state, or
 execution subsystem was added.
+
+Hidden holdout expansion: extended the same dogfood generator/runner with
+seeded `generated_hidden_holdout` cases and a CLI count option. Reports retain
+oracle metadata and prompt digests but no literal holdout prompts. A 500-case
+smoke produced `500` unique held-out cases; evaluator coverage passed `30
+tests`. No second evaluator or runtime authority was introduced.

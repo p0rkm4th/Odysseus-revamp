@@ -9,6 +9,7 @@ from benchmarks.hades_dogfood import (
     generate_metamorphic_cases,
     generate_negative_near_miss_cases,
     generate_minimal_pair_cases,
+    generate_hidden_holdout_cases,
     generate_chaos_journeys,
     load_regression_cases,
     load_contract,
@@ -268,6 +269,16 @@ def test_minimal_pairs_preserve_explicit_conceptual_vs_operational_oracles():
         conceptual = next(case for case in pair if case["scenario"]["pair_side"] == "conceptual")
         assert conceptual["scenario"]["must_not_execute"] is True
         assert conceptual["expected"]["max_tool_calls"] == 0
+
+
+def test_hidden_holdout_is_seeded_and_keeps_the_semantic_oracle():
+    first = generate_hidden_holdout_cases(seed=22, count=12)
+    second = generate_hidden_holdout_cases(seed=22, count=12)
+    assert [(case["prompt"], case["scenario"]) for case in first] == [(case["prompt"], case["scenario"]) for case in second]
+    assert all(case["split"] == "held_out" for case in first)
+    assert all(case["source"] == "generated_hidden_holdout" for case in first)
+    assert all(case["expected"]["hidden_holdout"] is True for case in first)
+    assert all(case["scenario"]["scenario_frame"] for case in first)
 
 
 def test_chaos_journey_generator_is_reproducible_and_multiturn():
