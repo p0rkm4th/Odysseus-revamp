@@ -253,7 +253,7 @@ def test_owner_asset_reads_are_canonical_and_aggregation_is_bounded(query):
     if "2080" in query:
         assert canonical_read_fast_path_payload(
             "manage_assets", "list", frame.as_dict(),
-        ) == {"action": "list", "query": "2080"}
+        ) == {"action": "list", "query": "2080", "result_projection": "count"}
 
 
 def test_kitchen_mutation_resolves_to_existing_inventory_service_action():

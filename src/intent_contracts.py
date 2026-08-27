@@ -1473,6 +1473,7 @@ def compile_intent(
             component = re.sub(r"\s+", " ", component).strip(" ?.,")
             if component:
                 reference_filters["asset_query"] = component
+                reference_filters["asset_projection"] = "count"
     workspace = {
         "MEMORY": "hades", "WORK": "work", "GOAL": "work", "PROJECT": "work", "TASK": "work", "RUN": "work", "COMMITMENT": "work", "MISSION": "work", "WATCH": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
         "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",
