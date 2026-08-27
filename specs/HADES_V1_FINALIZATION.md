@@ -123,3 +123,12 @@ required.
 
 The documentation-only follow-up that records this deployment must itself be
 included in the next source/image match if the tree changes again.
+
+## Final-answer owner migration
+
+The next source checkpoint moves final answer projection into the existing ACI
+module. It selects a canonical structured Result before transport-level
+grounding and emits at most one replacement event; the compatibility loop no
+longer owns separate grounding and tool-summary replacement decisions. The
+same change retains provider fallback behavior and existing persistence.
+Focused ACI/cutover/resource-contract tests passed `263 passed, 1 warning`.

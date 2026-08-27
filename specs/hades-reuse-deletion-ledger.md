@@ -1495,3 +1495,10 @@ per-stream duplicate terminal-marker suppression in the existing chat route.
 No store, registry, planner, or execution path was added. Affected integration
 suites passed `401 passed, 1 skipped`; current closure edits remain pending
 explicit commit/build/deploy verification.
+
+Final-answer owner migration: reused the existing ACI canonical Result and
+grounding owners through `project_final_answer`, removing the compatibility
+loop's separate replacement-emission branches. This reduces duplicate answer
+authority without adding a store, planner, registry, or executor. Focused
+ACI/cutover/resource-contract coverage passed `263 passed, 1 skipped` before
+the source checkpoint; live Qwen remains unavailable.
