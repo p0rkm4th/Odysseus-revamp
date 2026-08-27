@@ -998,6 +998,17 @@ def generate_chaos_journeys(*, seed: int = 0, count: int = 50, split: str = "gen
                 "WORK": "PROJECT", "SELFSTATE": "INTEGRATION",
             }.get(domain, "ASSET")
             frame_intent = intent if intent in _SEMANTIC_INTENTS else "READ"
+            reference_strategy = {
+                "none": "DEICTIC",
+                "named": "EXACT_NAME",
+                "pronoun": "PRONOUN",
+                "ordinal": "ORDINAL",
+                "conversational": "RECENT_REFERENT",
+                "self_correction": "SELF_CORRECTION",
+                "stale": "OLDER_REFERENT",
+                "ambiguous": "MULTIPLE_MATCHES",
+                "conflicting": "MULTIPLE_MATCHES",
+            }.get(reference_type, "EXACT_NAME")
             frame = ScenarioFrame(
                 entity_type=frame_entity,
                 entity_id=_semantic_entity_id(frame_entity, journey_index),
@@ -1010,7 +1021,7 @@ def generate_chaos_journeys(*, seed: int = 0, count: int = 50, split: str = "gen
                 epistemic_state="OBSERVED" if turn_index > 1 else "UNKNOWN",
                 expected_domain=domain,
                 secondary_domains=(),
-                expected_reference_resolution=reference_type.upper(),
+                expected_reference_resolution=reference_strategy,
                 expected_authority="APPROVAL_REQUIRED" if intent in {"EXECUTE", "REPAIR"} else "READ_ALLOWED",
                 expected_action_class=intent,
                 execution_required=intent in {"EXECUTE", "REPAIR"},

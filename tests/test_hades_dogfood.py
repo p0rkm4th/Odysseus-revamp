@@ -366,6 +366,14 @@ def test_chaos_turns_carry_replayable_semantic_frames():
         == case["scenario"]["state_mutation"]
         for case in cases
     )
+    assert all(
+        case["scenario"]["scenario_frame"]["expected_reference_resolution"]
+        in {
+            "EXACT_NAME", "DEICTIC", "PRONOUN", "ORDINAL", "RECENT_REFERENT",
+            "SELF_CORRECTION", "OLDER_REFERENT", "MULTIPLE_MATCHES",
+        }
+        for case in cases
+    )
 
 
 def test_expand_cases_can_add_all_adversarial_layers_to_the_same_evaluator():
