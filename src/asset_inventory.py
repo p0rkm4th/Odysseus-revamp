@@ -134,8 +134,12 @@ def cmd_list(a):
     if a.type: sql+=" AND type=?"; p.append(a.type)
     if a.status: sql+=" AND status=?"; p.append(a.status)
     if a.query:
-        sql+=" AND (lower(name) LIKE lower(?) OR lower(coalesce(hostname,'')) LIKE lower(?) OR lower(coalesce(model,'')) LIKE lower(?))"
-        q="%"+a.query+"%"; p += [q,q,q]
+        # Component/model facts may live in the canonical structured
+        # attributes projection (for example ``gpu: RTX 2080``), so asset
+        # aggregation queries must search that projection too.  This remains
+        # an owner-scoped SQL read; it does not infer inventory from prose.
+        sql+=" AND (lower(name) LIKE lower(?) OR lower(coalesce(hostname,'')) LIKE lower(?) OR lower(coalesce(model,'')) LIKE lower(?) OR lower(coalesce(attributes_json,'')) LIKE lower(?))"
+        q="%"+a.query+"%"; p += [q,q,q,q]
     sql+=" ORDER BY updated_at DESC LIMIT ?"; p.append(a.limit)
     print(json.dumps([view(c,r, owner) for r in c.execute(sql,p)],indent=2,sort_keys=True))
 

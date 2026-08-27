@@ -2064,6 +2064,16 @@ def setup_chat_routes(
                                         full_response += data["delta"]
                                         _stream_set(session, partial=full_response)
                                     yield chunk
+                                elif data.get("type") == "response_replace":
+                                    # Grounding and deterministic summaries can
+                                    # correct prose that was already streamed.
+                                    # Preserve replacement semantics through the
+                                    # HTTP boundary; forwarding it as a delta
+                                    # would duplicate the prior answer in the
+                                    # client and in any replay subscriber.
+                                    full_response = str(data.get("content") or "")
+                                    _stream_set(session, partial=full_response)
+                                    yield chunk
                                 elif data.get("type") == "fallback":
                                     # Selected model failed; a fallback answered.
                                     # Forward the notice and remember the real model.
@@ -2479,6 +2489,10 @@ def setup_chat_routes(
                                         )
                                     elif data.get("type") == "tool_start":
                                         _agent_tool_calls += 1
+                                    yield chunk
+                                elif data.get("type") == "response_replace":
+                                    full_response = str(data.get("content") or "")
+                                    _stream_set(session, partial=full_response)
                                     yield chunk
                                 elif data.get("type") == "fallback":
                                     # Selected model failed; a fallback answered.

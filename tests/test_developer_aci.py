@@ -57,3 +57,28 @@ def test_developer_read_adapter_is_workspace_confined(tmp_path, monkeypatch):
     _, blocked = asyncio.run(run({"action": "view_file_region", "path": "/etc/hosts"}))
     assert blocked["exit_code"] == 1
     assert "outside the allowed roots" in blocked["error"] or "outside the workspace" in blocked["error"]
+
+
+def test_developer_read_returns_explicit_bounded_status_and_line_numbers(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.tool_execution.owner_is_admin_or_single_user", lambda owner: True)
+    source = tmp_path / "app.py"
+    source.write_text("\n".join(f"line_{i}" for i in range(1, 130)), encoding="utf-8")
+
+    async def run(payload):
+        return await execute_tool_block(
+            _block(payload), owner="admin", workspace=str(tmp_path),
+            security_context=NO_TOOL_SECURITY_CONTEXT,
+        )
+
+    _, view = asyncio.run(run({"action": "view_file_region", "path": "app.py"}))
+    assert view["success"] is True
+    assert view["data"]["status"] == "SUCCESS_WITH_OUTPUT"
+    assert view["data"]["start_line"] == 1
+    assert "     1\tline_1" in view["output"]
+    assert "   100\tline_100" in view["output"]
+    assert "line_101" not in view["output"]
+
+    _, empty = asyncio.run(run({"action": "search_code", "query": "does_not_exist"}))
+    assert empty["success"] is True
+    assert empty["data"]["status"] == "SUCCESS_WITH_OUTPUT"
+    assert "No matches" in empty["output"]

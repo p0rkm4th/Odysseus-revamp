@@ -1435,6 +1435,21 @@ async def _execute_manage_assets_binding(block, owner=None):
         if not owner:
             raise PermissionError("authenticated IT asset owner is required")
         payload = _ody_v34_json.loads(block.content or "{}")
+        # Kitchen/household inventory actions share the canonical inventory
+        # capability and transport with IT assets. Delegate their persistence
+        # to the existing transactional service rather than creating a second
+        # binding or installer-like subsystem.
+        if isinstance(payload, dict) and payload.get("action") in {
+            "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+        }:
+            from src.agent_tools.inventory_tools import ManageInventoryTool
+            result = dict(await ManageInventoryTool().execute(
+                _ody_v34_json.dumps(payload, sort_keys=True), {"owner": owner},
+            ))
+            result.setdefault("success", result.get("exit_code", 1) == 0 and not result.get("error"))
+            result["canonical_store"] = "inventory_service"
+            result["provenance"] = "USER_ASSERTED" if payload.get("action") in {"add_item", "add_stock", "update_asset"} else "CANONICAL_INVENTORY"
+            return "manage_assets", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), **result}
         argv = _ody_v34_asset_argv(payload, owner=owner)
 
         def _run():
@@ -1760,7 +1775,6 @@ async def _execute_read_household_binding(block, owner=None):
     except Exception as exc:
         return "read_household", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
-
 async def _execute_read_setup_binding(block, owner=None):
     """Adapt Setup Center's secret-free owner projection to a read binding."""
     try:
@@ -1924,10 +1938,14 @@ async def _execute_developer_read_binding(block, owner=None):
             return "developer_read", {"error": "view_file_region requires path", "exit_code": 1}
         try:
             start = max(int(payload.get("start_line") or 1), 1)
-            end = int(payload.get("end_line") or start + 199)
+            # Keep the default view small enough for a weak local model to
+            # request another precise window instead of receiving a whole
+            # source file.  The legacy reader remains the implementation
+            # owner; this adapter only defines the canonical semantic bound.
+            end = int(payload.get("end_line") or start + 99)
         except (TypeError, ValueError):
             return "developer_read", {"error": "view_file_region line range is invalid", "exit_code": 1}
-        if end < start or end - start > 999:
+        if end < start or end - start > 199:
             return "developer_read", {"error": "view_file_region line range is invalid or too large", "exit_code": 1}
         if workspace and not os.path.isabs(path):
             path = os.path.join(workspace, path)
@@ -1942,13 +1960,36 @@ async def _execute_developer_read_binding(block, owner=None):
     if not isinstance(result, dict):
         return "developer_read", {"error": "Developer read adapter is unavailable", "exit_code": 1}
     output = dict(result)
-    output.setdefault("data", {
-        "status": "SUCCESS" if output.get("exit_code", 1) == 0 and not output.get("error") else "FAILED",
+    raw_output = str(output.get("output") or "")
+    # View results carry stable source line numbers.  This is presentation
+    # metadata, not a second file reader: the confined ReadFileTool has
+    # already selected the exact requested region.
+    if action == "view_file_region" and raw_output:
+        numbered = []
+        for index, line in enumerate(raw_output.splitlines(), start=start):
+            if line.startswith("... [truncated") or line.startswith("... ["):
+                numbered.append(line)
+            else:
+                numbered.append(f"{index:>6}\t{line}")
+        raw_output = "\n".join(numbered)
+        output["output"] = raw_output[:20000]
+    exit_code = output.get("exit_code", 1)
+    success = exit_code == 0 and not output.get("error")
+    status = "FAILURE" if not success else ("SUCCESS_WITH_OUTPUT" if raw_output.strip() else "SUCCESS_EMPTY")
+    data = output.get("data") if isinstance(output.get("data"), dict) else {}
+    data.update({
+        "status": status,
         "action": action,
-        "output": str(output.get("output") or "")[:20000],
+        "output": raw_output[:20000],
         "workspace_scoped": True,
+        "truncated": "truncated" in raw_output.lower(),
     })
-    output.setdefault("success", output.get("exit_code", 1) == 0 and not output.get("error"))
+    if action == "view_file_region":
+        data.update({"path": path, "start_line": start, "end_line": end})
+    elif action == "search_code":
+        data.update({"query": query, "max_results": max_results})
+    output["data"] = data
+    output["success"] = success
     return "developer_read", output
 
 

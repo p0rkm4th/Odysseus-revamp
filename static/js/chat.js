@@ -3094,6 +3094,24 @@ import { loadPanel } from './panels.js';
                   // Feed streaming TTS with accumulated text
                   if (streamingTTS) window.aiTTSManager.streamingUpdate(roundText);
                 }
+              } else if (json.type === 'response_replace') {
+                // A server-side grounding/summary correction replaces prose
+                // that may already have streamed.  It is not another delta.
+                // Keep one logical answer and render the authoritative text.
+                const replacement = String(json.content || '');
+                accumulated = replacement;
+                currentAccumulated = replacement;
+                roundText = replacement;
+                roundReplyText = null;
+                _roundDisplayProjector.reset();
+                _replyDisplayProjector.reset();
+                if (!_isBg) {
+                  _ensureVisibleRoundForDelta();
+                  _renderStream({ knownNormal: true, displayText: _streamDisplayText(replacement) });
+                } else {
+                  const bgReplace = _backgroundStreams.get(streamSessionId);
+                  if (bgReplace) bgReplace.accumulated = replacement;
+                }
               } else if (json.type === 'research_progress') {
                 if (_isBg) continue; // Skip DOM updates in background
                 _researchingStreamIds.add(streamSessionId);

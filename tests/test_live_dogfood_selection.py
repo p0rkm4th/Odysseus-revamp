@@ -105,3 +105,67 @@ def test_live_result_exposes_bounded_decision_burden_without_raw_trace():
     assert "unexpected_bounded_decisions" in assert_case(
         Case("read", "read", expect_bounded_decisions=0), result,
     )
+
+
+def test_live_case_requires_exactly_one_sse_done_marker(monkeypatch):
+    import scripts.hades_live_dogfood as live
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def iter_lines(self, decode_unicode=True):
+            return iter((
+                'data: {"delta":"canonical answer"}',
+                "data: [DONE]",
+            ))
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(live.requests, "post", lambda *args, **kwargs: Response())
+    result = live.run_case("http://test", "cookie", "session", live.Case("done", "read"))
+    assert result["done_seen"] is True
+    assert result["abrupt_eof"] is False
+    assert result["terminal_event_count"] == 1
+
+
+def test_live_answer_projection_treats_response_replace_as_replacement():
+    """A corrected full answer must not be concatenated with stale streamed prose."""
+    from scripts.hades_live_dogfood import digest
+
+    events = [
+        {"delta": "invented hardware"},
+        {"type": "response_replace", "content": "No hardware is recorded."},
+        {"delta": ""},
+    ]
+    answer = ""
+    replacements = []
+    for event in events:
+        if event.get("delta") is not None:
+            answer += str(event["delta"])
+        if event.get("type") == "response_replace":
+            answer = str(event.get("content") or "")
+            replacements.append(digest(answer))
+    assert answer == "No hardware is recorded."
+    assert replacements == [digest("No hardware is recorded.")]
+
+
+def test_live_case_fails_on_clean_eof_without_done_marker(monkeypatch):
+    import scripts.hades_live_dogfood as live
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def iter_lines(self, decode_unicode=True):
+            return iter(('data: {"delta":"partial answer"}',))
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(live.requests, "post", lambda *args, **kwargs: Response())
+    result = live.run_case("http://test", "cookie", "session", live.Case("eof", "read"))
+    assert result["done_seen"] is False
+    assert result["abrupt_eof"] is False
+    assert "transport_completion_failure" in live.assert_case(live.Case("eof", "read"), result)
