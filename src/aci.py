@@ -2598,6 +2598,56 @@ def resolve_decision_outcome(
     )
 
 
+def project_model_decision(
+    raw_response: str,
+    packet: AgentTaskPacket,
+    *,
+    choice_map: Mapping[str, Mapping[str, Any]],
+    intent_operation_class: str = "",
+    intent: Mapping[str, Any] | None = None,
+    contract_fallback_used: bool = False,
+    repair_count: int = 0,
+    max_repairs: int = 1,
+) -> tuple[
+    DecisionContract | None,
+    str | None,
+    InvalidDecisionResolution | None,
+    DecisionOutcome | None,
+]:
+    """Project one model response into the existing ACI decision contracts.
+
+    Parsing, invalid-output recovery, and choice resolution are one semantic
+    boundary. The caller applies the returned disposition; this function does
+    not execute Actions, alter approvals, or persist state.
+    """
+    decision, error = parse_decision_json(raw_response, packet)
+    if decision is None:
+        return (
+            None,
+            error,
+            resolve_invalid_decision(
+                error,
+                intent=intent or {},
+                choice_map=choice_map,
+                contract_fallback_used=contract_fallback_used,
+                repair_count=repair_count,
+                max_repairs=max_repairs,
+            ),
+            None,
+        )
+    return (
+        decision,
+        None,
+        None,
+        resolve_decision_outcome(
+            decision,
+            choice_map,
+            intent_operation_class=intent_operation_class,
+            intent=intent,
+        ),
+    )
+
+
 @dataclass(frozen=True)
 class ResultProjection:
     status: str

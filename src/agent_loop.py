@@ -102,6 +102,7 @@ from src.aci import (
     canonical_asset_read_payload,
     canonical_result_answer,
     project_final_answer,
+    project_model_decision,
     canonical_read_fast_path_payload,
     deterministic_reference_acknowledgement,
     assistant_requested_followup,
@@ -127,8 +128,6 @@ from src.aci import (
     reference_resolution_hint,
     recent_context_for_retrieval,
     resolved_tool_event_name,
-    resolve_decision_outcome,
-    resolve_invalid_decision,
     semanticize_internal_action_names,
     successful_deterministic_read_result,
     user_turn_count,
@@ -4258,9 +4257,21 @@ async def stream_agent_loop(
             used_native = False
             converted_calls = []
         elif _aci_enabled and _aci_mode == "aci" and _aci_packet is not None:
-            from src.aci import parse_decision_json
-
-            _aci_decision, _aci_error = parse_decision_json(round_response, _aci_packet)
+            (
+                _aci_decision,
+                _aci_error,
+                _invalid_resolution,
+                _decision_outcome,
+            ) = project_model_decision(
+                round_response,
+                _aci_packet,
+                choice_map=_aci_choice_map,
+                intent_operation_class=_intent_frame.operation_class,
+                intent=_intent,
+                contract_fallback_used=_aci_contract_fallback_used,
+                repair_count=_aci_repair_count,
+                max_repairs=getattr(_aci_profile, "max_decision_repairs", 1),
+            )
             if _aci_decision is None:
                 # If deterministic contract resolution already identified a
                 # unique harmless planning/read Action, the malformed model
@@ -4270,14 +4281,6 @@ async def stream_agent_loop(
                 # and executor validation still runs below. It prevents a
                 # weak model's prose-only response from losing a safe,
                 # framework-resolvable prerequisite step.
-                _invalid_resolution = resolve_invalid_decision(
-                    _aci_error,
-                    intent=_intent,
-                    choice_map=_aci_choice_map,
-                    contract_fallback_used=_aci_contract_fallback_used,
-                    repair_count=_aci_repair_count,
-                    max_repairs=getattr(_aci_profile, "max_decision_repairs", 1),
-                )
                 if _invalid_resolution.mode == "CONTRACT_FALLBACK":
                     _fallback_selected = _invalid_resolution.action
                     _resolved = _intent.get("resolved_contract") or {}
@@ -4344,12 +4347,6 @@ async def stream_agent_loop(
                 round_response = ""
                 continue
             else:
-                _decision_outcome = resolve_decision_outcome(
-                    _aci_decision,
-                    _aci_choice_map,
-                    intent_operation_class=_intent_frame.operation_class,
-                    intent=_intent,
-                )
                 selected = _decision_outcome.action
                 if _decision_outcome.invalid_action:
                     round_response = "I could not validate the selected operation."

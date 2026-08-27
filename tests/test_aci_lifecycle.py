@@ -14,6 +14,7 @@ from src.aci import (
     canonical_inventory_mutation_answer,
     canonical_result_answer,
     project_final_answer,
+    project_model_decision,
     AnswerSource,
     assistant_requested_followup,
     classify_action_escalation,
@@ -527,6 +528,46 @@ def test_invalid_decision_resolution_converges_fallback_repair_and_model_modes()
     )
     assert fallback.mode == "MODEL_FALLBACK"
     assert fallback.action is None
+
+
+def test_project_model_decision_keeps_parse_recovery_and_selection_in_aci():
+    from src.aci import ActionCard, AgentTaskPacket, DecisionMode
+
+    packet = AgentTaskPacket(
+        task_type="read",
+        objective={},
+        progress={},
+        entities=(),
+        current_state={},
+        evidence=(),
+        knowns=(),
+        unknowns=(),
+        decisions=(),
+        action_cards=(ActionCard("A", "list", "List", "List assets"),),
+        constraints=(),
+        completion={},
+        output_contract="json",
+        state_fingerprint="fp-1",
+    )
+    decision, error, recovery, outcome = project_model_decision(
+        '{"decision":"ACTION","choice":"A","state_fingerprint":"fp-1"}',
+        packet,
+        choice_map={"A": {"binding": "manage_assets", "action_id": "list"}},
+    )
+    assert decision is not None and decision.decision is DecisionMode.ACTION
+    assert error is None and recovery is None
+    assert outcome is not None and outcome.action["action_id"] == "list"
+
+    decision, error, recovery, outcome = project_model_decision(
+        "not json",
+        packet,
+        choice_map={},
+        repair_count=0,
+        max_repairs=1,
+    )
+    assert decision is None and error == "malformed_json"
+    assert recovery is not None and recovery.mode == "REPAIR"
+    assert outcome is None
 
 
 def test_safe_contract_fallback_reuses_only_the_resolved_private_read():
