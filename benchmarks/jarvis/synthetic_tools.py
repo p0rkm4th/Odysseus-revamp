@@ -55,6 +55,16 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
         item.get("name") for item in expected.get("tool_args", [])
         if isinstance(item, Mapping) and item.get("name")
     )
+    # Older imported ACI/metamorphic cases describe the semantic owner in
+    # ``family``/``concept`` rather than carrying an explicit tool fixture.
+    # Keep that legacy contract equivalent to the newer typed fixture shape:
+    # a canonical Work read gets a structured, empty Work Result instead of
+    # falling through to the unknown-tool failure fixture.  This is evaluator
+    # plumbing only; production Action selection and policy remain unchanged.
+    concept = str(expected.get("concept") or "").strip().upper()
+    family = str(case.get("family") or "").strip().casefold()
+    if concept == "WORK" or family == "work":
+        names.add("read_work")
     fixtures: dict[str, list[dict[str, Any]]] = {}
     for name in names:
         tool = str(name)

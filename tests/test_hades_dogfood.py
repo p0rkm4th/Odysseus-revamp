@@ -102,6 +102,15 @@ def test_synthetic_owner_reads_use_typed_empty_results():
     assert '"assets": []' in fixtures["manage_assets"][0]["output"]
 
 
+def test_legacy_work_cases_receive_typed_fixture_from_semantic_owner():
+    for case in (
+        {"family": "work", "expected": {}},
+        {"family": "metamorphic", "expected": {"concept": "WORK"}},
+    ):
+        fixtures = fixtures_for_case(case)
+        assert fixtures["read_work"][0]["data"]["status"] == "SUCCESS_EMPTY"
+
+
 def test_live_protocol_duplicate_done_marker_is_not_completion():
     result = _live_protocol_observation([], done_count=2, abrupt_eof=False)
     assert result["done_seen"] is True
