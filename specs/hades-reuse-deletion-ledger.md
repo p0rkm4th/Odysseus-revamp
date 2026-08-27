@@ -1306,3 +1306,14 @@ zero restarts; Chroma, broker, scheduler, and readiness checks were verified.
 Live owner-authenticated Qwen acceptance was not run because the required
 acceptance credential was unavailable; that evidence remains explicitly
 UNVERIFIED.
+
+ACI prompt-base projection: moved the pure bounded tool-selection, prompt
+rendering, static-prompt fallback, and untrusted Skill-index assembly from
+`agent_loop.py` into `src/aci.py.build_base_prompt`. The loop retains only a
+compatibility adapter supplying its historical registries and preserving
+existing test/import seams. No capability, policy, execution, or durable
+state authority moved into the prompt projection. Focused ACI, cutover, and
+prompt-injection coverage passed 25 tests; `py_compile` and diff checks pass.
+`agent_loop.py` is now 6,985 LOC (45 lines removed). This development slice
+has not been deployed; production remains the last-green checkpoint source
+`c55501290b73994b9651b5802295fa41661cc2cf`.

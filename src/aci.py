@@ -280,6 +280,75 @@ def select_prompt_tools(
     return disabled, all_names - management_tools, False
 
 
+def build_base_prompt(
+    *,
+    tool_sections: Mapping[str, str],
+    agent_system_prompt: str,
+    disabled_tools: Optional[set],
+    mcp_mgr: Any,
+    needs_admin: bool,
+    relevant_tools: Optional[set] = None,
+    mcp_disabled_map: Optional[Mapping[str, set]] = None,
+    compact: bool = False,
+    owner: Optional[str] = None,
+    suppress_local_context: bool = False,
+    suppress_skills: bool = False,
+    intent_domains: Optional[set[str]] = None,
+    admin_tools: Optional[set[str]] = None,
+    always_available: Optional[set[str]] = None,
+    image_gen_enabled: bool = False,
+    assemble: Optional[Callable[..., str]] = None,
+) -> tuple[str, str]:
+    """Build the bounded base prompt and untrusted Skill projection.
+
+    This is prompt projection only. Capability identity, policy, execution,
+    and Result truth remain owned by their canonical subsystems. The legacy
+    loop supplies registries through its compatibility adapter while callers
+    migrate away from it.
+    """
+    del mcp_mgr, mcp_disabled_map
+    render = assemble or assemble_prompt
+    disabled, selected_tools, static_full_prompt = select_prompt_tools(
+        all_tool_names=set(tool_sections),
+        always_available=set(always_available or set()),
+        admin_tools=set(admin_tools or set()),
+        disabled_tools=disabled_tools,
+        relevant_tools=relevant_tools,
+        needs_admin=needs_admin,
+        image_gen_enabled=image_gen_enabled,
+    )
+    if relevant_tools is not None:
+        prompt = render(
+            selected_tools, disabled_tools=disabled, compact=compact,
+            intent_domains=intent_domains,
+        )
+    else:
+        if static_full_prompt and intent_domains is None and not compact:
+            prompt = agent_system_prompt
+        else:
+            prompt = render(
+                set(tool_sections), disabled_tools=disabled, compact=compact,
+                intent_domains=intent_domains,
+            )
+        if not needs_admin:
+            prompt = render(
+                selected_tools, disabled_tools=disabled, compact=compact,
+                intent_domains=intent_domains,
+            )
+        elif compact:
+            prompt = render(
+                set(tool_sections), disabled_tools=disabled, compact=True,
+                intent_domains=intent_domains,
+            )
+    return prompt, skill_index_prompt(
+        tool_names=set(tool_sections),
+        disabled_tools=disabled,
+        owner=owner,
+        suppress_local_context=suppress_local_context,
+        suppress_skills=suppress_skills,
+    )
+
+
 def resolve_turn_intent(
     messages: Sequence[Mapping[str, Any]],
     last_user: str,
