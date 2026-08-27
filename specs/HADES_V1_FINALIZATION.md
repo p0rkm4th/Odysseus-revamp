@@ -320,5 +320,7 @@ remove DL3059, and configured the pinned Hadolint action with
 `failure-threshold: warning`. Warnings and errors remain blocking; INFO/style
 findings remain visible but do not fail the workflow. The pushed `Container
 scan` run for `6e9fed64c3d6f867a72597496af56f998e298b85` completed SUCCESS (17
-seconds). This Dockerfile-only checkpoint was not deployed; the running
-application remains attributed to its previously recorded candidate.
+seconds). The follow-up exact source `c84514f29574266b93fd95981ff2cf7677c5e9d9`
+was built as `odysseus:candidate-c84514f29574` (image
+`sha256:895ca25c66be688132604720a696f21be4c934bc8bc528d992601ae6a26ae0cb`),
+deployed explicitly, and verified healthy with matching embedded source.
