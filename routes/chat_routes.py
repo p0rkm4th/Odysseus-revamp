@@ -74,21 +74,17 @@ from src.tool_approvals import tool_approval_store
 
 logger = logging.getLogger(__name__)
 
-# Test/compatibility seam only. It is intentionally unset in production;
-# `_chat_stream_entrypoint` below always defaults to the canonical ACI stream.
-# Keeping the inert name lets older route tests and external harnesses replace
-# the stream without making the retired loop an owner-facing authority.
-stream_agent_loop = None
-
 # Track active streams for partial-save safety net
 _active_streams: Dict[str, dict] = {}
 
 
 def _chat_stream_entrypoint(*args, **kwargs):
-    """Return the canonical foreground stream, with an inert test hook."""
-    hook = stream_agent_loop
-    if callable(hook):
-        return hook(*args, **kwargs)
+    """Return the canonical foreground ACI stream.
+
+    The route has no legacy stream hook: tests replace ``stream_aci_turn`` at
+    this module boundary, while production cannot be redirected to the retired
+    orchestration loop by mutating a route-level symbol.
+    """
     kwargs = dict(kwargs)
     kwargs.pop("aci_mode", None)
     return stream_aci_turn(*args, aci_mode="aci", **kwargs)
