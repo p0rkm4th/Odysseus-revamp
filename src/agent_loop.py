@@ -194,7 +194,6 @@ from src.intent_contracts import (
 # retired loop-local names. These are aliases, not independent implementations
 # or authorities; all semantics live in ACI and intent contracts.
 _canonical_asset_read_payload = canonical_asset_read_payload
-_canonical_result_answer = canonical_result_answer
 _aci_action_trace = action_trace
 _project_aci_trace = project_aci_trace
 _detect_runaway_call = detect_runaway_call
@@ -325,7 +324,6 @@ from src.tool_parsing import (
     resolve_tool_blocks,
 )
 _strip_doc_model_artifacts = strip_doc_model_artifacts
-_normalize_truncated_document_tool_fences = normalize_truncated_document_tool_fences
 _normalize_stream_document_fences = normalize_stream_document_fences
 _resolve_tool_blocks = resolve_tool_blocks
 _append_tool_results = append_tool_results
@@ -698,7 +696,6 @@ def _domain_tools_for_projection(domain: str, *, canonical: bool = False) -> set
         canonical_tools_for_domains=_canonical_tools_for_domains,
     )
 
-_DOMAIN_POLICIES = DOMAIN_POLICIES
 _HARD_TOOL_DOMAINS = HARD_TOOL_DOMAINS
 _DETERMINISTIC_TOOL_DOMAINS = DETERMINISTIC_TOOL_DOMAINS
 _SPECIALIZED_OPERATIONAL_DOMAINS = SPECIALIZED_OPERATIONAL_DOMAINS

@@ -1554,3 +1554,9 @@ Full current-head regression evidence: `6760 passed, 5 skipped, 149 warnings`
 against source `8ea00f81`, using a writable project fixture and a read-only
 mount of the host Docker storage path. Storage-preflight coverage passed `6/6`
 under that corrected fixture; the earlier six failures were mount artifacts.
+
+Dead compatibility residue: removed three unreferenced aliases from
+`src/agent_loop.py` (`_canonical_result_answer`,
+`_normalize_truncated_document_tool_fences`, and `_DOMAIN_POLICIES`). No source
+or test consumer existed; focused ACI/cutover/resource/agent-loop/dogfood
+coverage passed `173 tests`. This is a measured deletion, not a semantic move.
