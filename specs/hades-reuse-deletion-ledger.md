@@ -1637,3 +1637,6 @@ findings advisory. The pushed `6e9fed64` Container scan run completed SUCCESS
 in 17 seconds. The follow-up source `c84514f` was explicitly built and
 deployed as `odysseus:candidate-c84514f29574`; embedded source and health
 matched, with image digest `sha256:895ca25c66be688132604720a696f21be4c934bc8bc528d992601ae6a26ae0cb`.
+No product assertions failed in the exact-image full regression: `6765
+passed, 5 skipped, 187 warnings`, using isolated writable data/log/probe and
+Docker-storage fixtures with the checkout read-only.
