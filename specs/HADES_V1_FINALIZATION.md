@@ -86,6 +86,21 @@ evidence changes.
 
 ## Current exact-head reconciliation (`8e273784`)
 
+### Superseding runtime verification (`71f4b00c`, 2026-08-27)
+
+The earlier host-loopback probe was not authoritative for the deployed
+container: host `127.0.0.1:11434` is intentionally not the container's Ollama
+endpoint.  The current container is configured for
+`http://host.docker.internal:11434`; from `odysseus-odysseus-1`, `/api/tags`
+returned `qwen3:8b` (digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`) and a
+direct `/api/generate` probe returned HTTP 200 with `READY`.
+
+Therefore Qwen/Ollama availability is **INTEGRATION VERIFIED** for the
+deployed runtime. Authenticated owner HTTP/SSE dogfood remains **UNVERIFIED**
+because no synthetic-owner session credential was available in this checkout;
+that is a harness-authentication gap, not an Ollama outage.
+
 The historical entries above describe earlier checkpoints. Current source and
 runtime truth is:
 
