@@ -21,7 +21,7 @@ from benchmarks.hades_dogfood import (
     _FAILURE_TAXONOMY,
     delivery_observation,
 )
-from scripts.hades_dogfood import _live_protocol_observation
+from scripts.hades_dogfood import _live_protocol_observation, configured_model_endpoint
 
 
 def test_dogfood_contract_expands_frozen_sources_and_journeys():
@@ -80,6 +80,16 @@ def test_live_protocol_requires_one_terminal_done_marker():
     assert incomplete["transport_completion"] is False
     assert incomplete["terminal_event_count"] == 0
     assert incomplete["abrupt_eof"] is True
+
+
+def test_dogfood_uses_configured_container_model_endpoint(monkeypatch):
+    monkeypatch.setenv("HADES_OLLAMA_ENDPOINT", "http://host.docker.internal:11434")
+    assert configured_model_endpoint() == "http://host.docker.internal:11434"
+
+
+def test_dogfood_keeps_standalone_loopback_default(monkeypatch):
+    monkeypatch.delenv("HADES_OLLAMA_ENDPOINT", raising=False)
+    assert configured_model_endpoint() == "http://127.0.0.1:11434"
 
 
 def test_live_protocol_duplicate_done_marker_is_not_completion():
