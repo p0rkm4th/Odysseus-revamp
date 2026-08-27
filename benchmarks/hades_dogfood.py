@@ -1564,6 +1564,34 @@ def _metric(metrics: Mapping[str, Any], *names: str, default: float = 0) -> floa
     return default
 
 
+def delivery_observation(events: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+    """Project transport delivery invariants without comparing answer prose.
+
+    Event identity and lifecycle ordering are the evidence. Repeated text is
+    deliberately not treated as a duplicate because a user may legitimately
+    receive the same words in distinct turns.
+    """
+    values = [dict(event) for event in events]
+    replacements = [event for event in values if event.get("type") == "response_replace"]
+    deltas = [event for event in values if "delta" in event]
+    replace_positions = [index for index, event in enumerate(values) if event.get("type") == "response_replace"]
+    stale_delta_after_replace = any(
+        index > replace_positions[-1] and "delta" in event
+        for index, event in enumerate(values)
+    ) if replace_positions else False
+    event_ids = [str(event.get("event_id") or event.get("id")) for event in values
+                 if event.get("event_id") is not None or event.get("id") is not None]
+    return {
+        "delta_count": len(deltas),
+        "response_replace_count": len(replacements),
+        "duplicate_finalization": len(replacements) > 1,
+        "stale_delta_after_replace": stale_delta_after_replace,
+        "duplicate_event_id": bool(event_ids and len(event_ids) != len(set(event_ids))),
+        "event_id_count": len(event_ids),
+        "delivery_identity": digest(tuple(event_ids)) if event_ids else None,
+    }
+
+
 def normalize_events(events: Iterable[Mapping[str, Any]], case: Mapping[str, Any], *, elapsed: float = 0) -> dict[str, Any]:
     events = [dict(event) for event in events]
     metrics = next((event.get("data", {}) for event in reversed(events)
@@ -1592,6 +1620,7 @@ def normalize_events(events: Iterable[Mapping[str, Any]], case: Mapping[str, Any
         "internal_leakage": bool(_INTERNAL.search(text)),
         "latency_seconds": round(float(elapsed), 4),
     })
+    delivery = delivery_observation(events)
     return {
         "schema_version": SCHEMA_VERSION, "case_id": case["id"], "source": case["source"],
         "family": case["family"], "prompt_digest": digest(case["prompt"]),
@@ -1638,6 +1667,7 @@ def normalize_events(events: Iterable[Mapping[str, Any]], case: Mapping[str, Any
                     "fallback": bool(metrics.get("aci_model_fallback")),
                     "intent": dict(intent), "reference": dict(reference),
                     "aci_trace": aci_trace},
+        "delivery": delivery,
     }
 
 
@@ -1681,6 +1711,10 @@ def score_case(case: Mapping[str, Any], record: Mapping[str, Any]) -> dict[str, 
         "recovery": not expected.get("requires_recovery") or bool(observations.get("recovered")),
         "exactly_once": trajectory["duplicate_delivery"] == 0,
     }
+    delivery = record.get("delivery") if isinstance(record.get("delivery"), Mapping) else {}
+    if delivery:
+        checks["no_duplicate_finalization"] = not bool(delivery.get("duplicate_finalization"))
+        checks["no_stale_delta_after_replace"] = not bool(delivery.get("stale_delta_after_replace"))
     transport = record.get("transport")
     if isinstance(transport, Mapping):
         checks["transport_completion"] = bool(transport.get("transport_completion"))
@@ -1690,6 +1724,8 @@ def score_case(case: Mapping[str, Any], record: Mapping[str, Any]) -> dict[str, 
         checks["tool_budget"] = trajectory["tool_calls"] <= int(expected["max_tool_calls"])
     functional_keys = ("answer_present", "no_internal_leak", "no_secret", "concept", "operation", "completion", "fallback", "required_tools", "forbidden_tools", "must_refuse", "response_excludes", "recovery")
     architectural_keys = ("decision_budget", "model_budget", "tool_index_budget", "failed_action_budget", "context_budget", "exactly_once")
+    if delivery:
+        architectural_keys += ("no_duplicate_finalization", "no_stale_delta_after_replace")
     if isinstance(transport, Mapping):
         architectural_keys += ("transport_completion", "terminal_event_count", "no_duplicate_event_id")
     functional = all(checks[key] for key in functional_keys)

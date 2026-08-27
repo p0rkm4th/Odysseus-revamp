@@ -1524,3 +1524,8 @@ seeded `generated_hidden_holdout` cases and a CLI count option. Reports retain
 oracle metadata and prompt digests but no literal holdout prompts. A 500-case
 smoke produced `500` unique held-out cases; evaluator coverage passed `30
 tests`. No second evaluator or runtime authority was introduced.
+
+Exactly-once dogfood evidence: extended the existing normalizer and live
+protocol observer with lifecycle-based response replacement and stale-delta
+checks, preserving event identity rather than deduplicating prose. Focused
+dogfood/live-selection coverage passed `51 passed, 1 warning`.

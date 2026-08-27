@@ -244,6 +244,8 @@ def create_session(base: str, cookie: str, name: str, *, model: str, endpoint_id
 
 
 def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, Any]:
+    from benchmarks.hades_dogfood import delivery_observation
+
     started = time.monotonic()
     events: list[dict[str, Any]] = []
     done_seen = False
@@ -306,6 +308,7 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
     approvals = [e for e in events if e.get("type") == "ask_user"]
     terminal_events = [e for e in events if e.get("type") in {"agent_terminal", "chat_terminal"}]
     duplicate_event_id = len(event_ids) != len(set(event_ids)) if event_ids else False
+    delivery = delivery_observation(events)
     terminal_digests = [digest(json.dumps(e.get("data") or {}, sort_keys=True, default=str)) for e in terminal_events]
     return {
         "case": case.name,
@@ -350,8 +353,9 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         "replacement_digest_sequence": replacement_digests,
         "delta_digest_sequence": delta_digests,
         "duplicate_delta_sequence": duplicate_event_id,
-        "duplicate_answer": len(terminal_digests) != len(set(terminal_digests)) if terminal_digests else False,
-        "duplicate_finalization": len(terminal_events) > 1,
+        "duplicate_answer": bool(duplicate_event_id or delivery["duplicate_finalization"]),
+        "duplicate_finalization": bool(delivery["duplicate_finalization"] or len(terminal_events) > 1),
+        "stale_delta_after_replace": bool(delivery["stale_delta_after_replace"]),
         "assistant_message_id": metrics.get("assistant_message_id"),
         "persist_count": metrics.get("persist_count"),
         "finalization_id": metrics.get("finalization_id"),
@@ -379,6 +383,8 @@ def assert_case(case: Case, result: dict[str, Any]) -> list[str]:
         failures.append("duplicate_answer")
     if result.get("duplicate_finalization"):
         failures.append("duplicate_finalization")
+    if result.get("stale_delta_after_replace"):
+        failures.append("stale_delta_after_replace")
     if not result.get("answer_present"):
         failures.append("missing_answer")
     if result.get("internal_leak") or result.get("internal_error"):
