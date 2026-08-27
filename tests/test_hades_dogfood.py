@@ -350,6 +350,24 @@ def test_chaos_journey_generator_is_reproducible_and_multiturn():
     )
 
 
+def test_chaos_turns_carry_replayable_semantic_frames():
+    cases = generate_chaos_journeys(seed=20260827, count=20)
+    assert cases
+    assert all(case["scenario"]["scenario_frame"] for case in cases)
+    assert all(
+        case["expected"]["semantic_oracle"]["scenario_frame"]
+        == case["scenario"]["scenario_frame"]
+        for case in cases
+    )
+    assert {case["scenario"]["conversation_state"] for case in cases} == {"FRESH", "CONTINUING"}
+    # The frame, rather than the rendered wording, is the durable oracle.
+    assert all(
+        case["scenario"]["scenario_frame"]["initial_world_state"]["mutation"]
+        == case["scenario"]["state_mutation"]
+        for case in cases
+    )
+
+
 def test_expand_cases_can_add_all_adversarial_layers_to_the_same_evaluator():
     cases = expand_cases(
         load_contract(), suite="all", generated_count=12, seed=15,
