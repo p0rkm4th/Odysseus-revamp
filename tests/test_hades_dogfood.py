@@ -111,6 +111,16 @@ def test_legacy_work_cases_receive_typed_fixture_from_semantic_owner():
         assert fixtures["read_work"][0]["data"]["status"] == "SUCCESS_EMPTY"
 
 
+def test_legacy_owner_cases_receive_semantic_tool_fixtures():
+    cases = (
+        ({"family": "service", "expected": {}}, "manage_homelab"),
+        ({"family": "security", "expected": {}}, "manage_security_assessment"),
+        ({"family": "developer", "expected": {}}, "developer_read"),
+    )
+    for case, tool in cases:
+        assert tool in fixtures_for_case(case)
+
+
 def test_live_protocol_duplicate_done_marker_is_not_completion():
     result = _live_protocol_observation([], done_count=2, abrupt_eof=False)
     assert result["done_seen"] is True

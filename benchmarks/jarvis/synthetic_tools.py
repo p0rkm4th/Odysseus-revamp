@@ -65,6 +65,12 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
     family = str(case.get("family") or "").strip().casefold()
     if concept == "WORK" or family == "work":
         names.add("read_work")
+    if concept in {"SERVICE", "HOMELAB_HOST"} or family in {"service", "remote_host"}:
+        names.add("manage_homelab")
+    if concept in {"SECURITY", "SECURITY_FINDING"} or family in {"security", "security_audit"}:
+        names.add("manage_security_assessment")
+    if concept == "DEVELOPER" or family == "developer":
+        names.add("developer_read")
     fixtures: dict[str, list[dict[str, Any]]] = {}
     for name in names:
         tool = str(name)
