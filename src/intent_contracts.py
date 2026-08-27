@@ -823,7 +823,9 @@ class ContinuationResolution:
 # replaced with a shell or database path.
 DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     "TECHNICAL_ASSET": DomainContract(
-        "TECHNICAL_ASSET", "inventory.manage", {"READ": "list", "READ_DETAIL": "get"}, "manage_assets",
+        "TECHNICAL_ASSET", "inventory.manage",
+        {"READ": "list", "READ_DETAIL": "get", "CREATE": "add", "UPDATE": "update"},
+        "manage_assets",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "technical_asset_list",
     ),
