@@ -8,21 +8,32 @@ is an engineering status record, not a readiness declaration.
 | Field | Current evidence |
 |---|---|
 | Branch | `hades-aci-v1` |
-| Local HEAD | `1dcd084e4f905875ae919210da54dcbf6663c019` |
-| Remote HEAD | `1dcd084e4f905875ae919210da54dcbf6663c019` |
+| Local HEAD | `b9693733f9a72f7b090d6f95356724321b30784e` |
+| Remote HEAD | `b9693733f9a72f7b090d6f95356724321b30784e` |
 | Worktree | clean; tracking `origin/hades-aci-v1` |
 | Running container | `odysseus-odysseus-1` |
 | Running image reference | `odysseus-odysseus` (Compose-managed name; candidate tag retained locally) |
-| Running image digest | `sha256:7a95786c681038159df7c51fca47eb4dec775a61964819e6c4028a10e4c4719e` |
-| Embedded source label | `1dcd084e4f905875ae919210da54dcbf6663c019` |
+| Running image digest | `sha256:4b9a9c5b6c2871d1f4be65641ac70231de9017b06bd5feb0bbd1f23d08ade567` |
+| Embedded source label | `b9693733f9a72f7b090d6f95356724321b30784e` |
 | Runtime status | running, restart count 0 |
 | Health | `GET /api/health` returns `healthy` |
-| Last known-good source | `1dcd084e4f905875ae919210da54dcbf6663c019` |
+| Last known-good source | `b9693733f9a72f7b090d6f95356724321b30784e` |
 | Rollback images | preserved locally, including `odysseus:rollback-b471e104-prev` |
 
 The running image's source label matches both local and remote HEAD. The
-runtime image reference is not itself an immutable candidate tag; a future
-release checkpoint should deploy and verify an explicit SHA-tagged image.
+explicit candidate used for this checkpoint is
+`odysseus:candidate-b9693733f9a7`; Compose's `odysseus-odysseus` reference is
+the deployed alias.
+
+## Current owner-state checkpoint (`b9693733`)
+
+The exact deployed candidate passed the Qwen quick corpus against the
+container-reachable Ollama endpoint (`host.docker.internal:11434`) using
+`qwen3:8b`: `62/62 functional`, `62/62 architectural`, and `62/62 security`,
+with no failure clusters. Focused container-backed tests passed `90` tests.
+This is fixture/synthetic plus local-model integration evidence; authenticated
+owner HTTP/SSE E6 remains unverified because no isolated acceptance principal
+credential is configured.
 
 ## Sol review reconciliation
 
@@ -51,10 +62,11 @@ against the current source rather than copied forward as assumptions.
 - Latest recorded full regression on the writable test setup: `6720 passed,
   5 skipped, 6 failed`; all six failures were storage-preflight environment
   assumptions for `/home/.docker-data`, not a claimed clean release result.
-- Current-head full regression and current-head Qwen evidence are still
-  required before any V1 readiness claim.
-- Local Ollama was previously unavailable at `127.0.0.1:11434`; live Qwen
-  verification is therefore **UNVERIFIED**, not passed by fixture evidence.
+- Current-head full regression is still required before any V1 readiness claim.
+- Ollama is available to the deployed container at
+  `http://host.docker.internal:11434`; host-local `127.0.0.1:11434` remains
+  unavailable and is not Hades' configured endpoint.
+- The Qwen quick result above is not authenticated owner E6 evidence.
 - Chroma and SearXNG were previously healthy; that does not substitute for a
   complete current-head acceptance run.
 

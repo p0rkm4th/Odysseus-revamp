@@ -1602,6 +1602,17 @@ The exact source was built and deployed as `odysseus:candidate-959b5eab8826`;
 embedded source, image digest, health, and zero restarts were verified. Full
 regression passed `6763 passed, 5 skipped, 149 warnings`.
 
+Current owner-state checkpoint (`b9693733f9a72f7b090d6f95356724321b30784e`):
+the typed semantic fixture projection was extended for Work, service,
+security, and Developer canonical reads, and the canonical ACI result seam now
+renders explicit structured empty results without model synthesis. Focused
+container-backed tests passed `90`. The exact candidate
+`odysseus:candidate-b9693733f9a7` is deployed and source-label/health matched.
+Qwen3:8B quick dogfood through the container-reachable Ollama endpoint passed
+`62/62 functional`, `62/62 architectural`, and `62/62 security`, with no
+failure clusters. Authenticated owner E6 remains unverified because no
+isolated acceptance principal credential is configured.
+
 Dead grounding alias removal: deleted the unreferenced
 `agent_loop.ground_action_completion` compatibility alias and moved its test
 consumers to `src.aci.ground_action_completion`. Affected coverage passed `68
