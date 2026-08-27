@@ -1314,6 +1314,6 @@ compatibility adapter supplying its historical registries and preserving
 existing test/import seams. No capability, policy, execution, or durable
 state authority moved into the prompt projection. Focused ACI, cutover, and
 prompt-injection coverage passed 25 tests; `py_compile` and diff checks pass.
-`agent_loop.py` is now 6,985 LOC (45 lines removed). This development slice
+`agent_loop.py` is now 6,999 LOC (31 lines removed). This development slice
 has not been deployed; production remains the last-green checkpoint source
 `c55501290b73994b9651b5802295fa41661cc2cf`.
