@@ -1598,3 +1598,6 @@ Result renderer is the only final answer producer. This removes the
 model-prose-then-replacement path for canonical reads; no text-based
 deduplication or parallel answer owner was introduced. Focused ACI/routing,
 dogfood, chat-metrics, and stream coverage passed `189 passed, 2 warnings`.
+The exact source was built and deployed as `odysseus:candidate-959b5eab8826`;
+embedded source, image digest, health, and zero restarts were verified. Full
+regression passed `6763 passed, 5 skipped, 149 warnings`.

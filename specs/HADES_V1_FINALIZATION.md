@@ -260,7 +260,7 @@ malformed Asset results; focused ACI/reference/dogfood coverage passed `263
 passed, 1 warning`. This change is not deployed until its exact source SHA is
 built and verified.
 
-## Canonical-read delivery closure (working tree)
+## Canonical-read delivery closure (`959b5eab`)
 
 The existing production compatibility loop now stops after a canonical ACI
 read Result is persisted, including deterministic read failures. It no longer
@@ -268,4 +268,7 @@ asks the model for a prose round that is subsequently replaced by the
 canonical renderer. This reduces the duplicate-delta/final-replacement path
 without adding text deduplication or a second answer owner. ACI, routing,
 dogfood, chat-metrics, and foreground-stream tests passed `189 passed, 2
-warnings`; this change is pending its exact-SHA deployment.
+warnings`. The exact source was built as `odysseus:candidate-959b5eab8826`,
+deployed, and verified by embedded source label, image digest, healthy
+`/api/health`, and zero restarts. Full current-head regression passed `6763
+passed, 5 skipped, 149 warnings`.
