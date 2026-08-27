@@ -181,6 +181,39 @@ def test_project_final_answer_prefers_canonical_result_over_model_prose():
     assert response == "No current host network interfaces were observed."
 
 
+def test_project_final_answer_owns_failed_network_read_without_model_fallback():
+    response, answer = project_final_answer(
+        "Your network has twelve active connections and a Kubernetes cluster.",
+        [{
+            "tool": "manage_homelab", "exit_code": 1,
+            "command": '{"action":"read_network_context"}',
+            "output": json.dumps({"status": "UNAVAILABLE", "action": "read_network_context", "error": "broker unavailable"}),
+        }],
+        intent_domains=("network_ops",),
+    )
+    assert answer is not None
+    assert answer.source is AnswerSource.ERROR
+    assert "No current state was inferred" in response
+    assert "Kubernetes" not in response
+    assert "twelve" not in response
+
+
+def test_project_final_answer_owns_malformed_asset_read_without_model_fallback():
+    response, answer = project_final_answer(
+        "You have several servers, GPUs, and databases.",
+        [{
+            "tool": "manage_assets", "exit_code": 0,
+            "command": '{"action":"list"}',
+            "output": '{"status":"SUCCESS"}',
+        }],
+        intent_domains=("asset_inventory",),
+    )
+    assert answer is not None
+    assert answer.source is AnswerSource.ERROR
+    assert "canonical asset inventory" in response
+    assert "several servers" not in response
+
+
 def test_canonical_network_read_answer_uses_structured_host_context():
     answer = canonical_network_read_answer([{
         "tool": "manage_homelab", "exit_code": 0,

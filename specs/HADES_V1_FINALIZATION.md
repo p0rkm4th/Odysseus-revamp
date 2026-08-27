@@ -249,3 +249,13 @@ fields as failures. This keeps fluent or incomplete records from passing a
 semantic oracle without evidence. Focused dogfood scorer coverage passed `32
 passed, 1 warning`; the deployed source remains `972015ad` until the next
 explicit candidate is built.
+
+## Canonical read failure closure (working tree)
+
+The existing `canonical_result_answer` seam now owns failed or malformed
+Network, Asset, and Household read results as `AnswerSource.ERROR`. Such a
+read emits a bounded unavailable/error projection and cannot fall through to
+model synthesis. Added regressions cover broker-unavailable Network reads and
+malformed Asset results; focused ACI/reference/dogfood coverage passed `263
+passed, 1 warning`. This change is not deployed until its exact source SHA is
+built and verified.

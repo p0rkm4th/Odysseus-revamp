@@ -1584,3 +1584,10 @@ Semantic evidence strictness: semantic ScenarioFrame scoring now fails when
 required grounding or completion trace evidence is absent, rather than
 treating missing metadata as a pass. Focused dogfood scorer coverage passed
 `32 passed, 1 warning`.
+
+Canonical read failure closure: extended the existing `canonical_result_answer`
+selection seam so recognized failed or malformed owner reads produce a
+bounded `AnswerSource.ERROR` result rather than unconstrained model prose.
+Added Network and Asset grounding regressions; focused ACI/reference/dogfood
+coverage passed `263 passed, 1 warning`. No new store, registry, executor, or
+authority path was introduced.
