@@ -20,6 +20,7 @@ from benchmarks.hades_dogfood import (
     _CROSS_DOMAIN_PAIRS,
     _FAILURE_TAXONOMY,
     delivery_observation,
+    authoritative_answer_text,
 )
 from scripts.hades_dogfood import _live_protocol_observation, configured_model_endpoint
 
@@ -115,6 +116,18 @@ def test_delivery_observation_detects_lifecycle_duplicates_without_text_deduplic
     assert broken["duplicate_finalization"] is True
     assert broken["stale_delta_after_replace"] is True
     assert broken["duplicate_event_id"] is True
+
+
+def test_evaluator_uses_authoritative_replacement_for_answer_and_journey_context():
+    events = [
+        {"type": "delta", "delta": "model prose"},
+        {"type": "response_replace", "content": "canonical result", "event_id": "final-1"},
+    ]
+    assert authoritative_answer_text(events) == "canonical result"
+    case = {"id": "replacement", "source": "test", "family": "read", "prompt": "state"}
+    record = normalize_events(events, case)
+    assert record["assistant_answer"]["present"] is True
+    assert record["assistant_answer"]["chars"] == len("canonical result")
 
 
 def test_architectural_fail_is_distinct_from_functional_pass():
