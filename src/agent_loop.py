@@ -100,9 +100,7 @@ from src.aci import (
     build_actions_snapshot,
     detect_runaway_call,
     canonical_asset_read_payload,
-    canonical_asset_read_answer,
-    canonical_household_read_answer,
-    canonical_inventory_mutation_answer,
+    canonical_result_answer,
     canonical_read_fast_path_payload,
     deterministic_reference_acknowledgement,
     assistant_requested_followup,
@@ -196,7 +194,7 @@ from src.intent_contracts import (
 # retired loop-local names. These are aliases, not independent implementations
 # or authorities; all semantics live in ACI and intent contracts.
 _canonical_asset_read_payload = canonical_asset_read_payload
-_canonical_asset_read_answer = canonical_asset_read_answer
+_canonical_result_answer = canonical_result_answer
 _aci_action_trace = action_trace
 _project_aci_trace = project_aci_trace
 _detect_runaway_call = detect_runaway_call
@@ -6718,28 +6716,17 @@ async def stream_agent_loop(
         # the round.  They must not be streamed as a second full delta.
         yield f"data: {json.dumps({'type': 'response_replace', 'content': full_response.strip()})}\n\n"
 
-    # Canonical Asset reads are rendered from the structured Result itself.
-    # This is a replacement of any model prose already streamed, never an
-    # additional delta; the model cannot invent hardware or collection rows.
-    _canonical_asset_answer = canonical_asset_read_answer(tool_events)
-    if _canonical_asset_answer and _canonical_asset_answer != full_response.strip():
-        full_response = _canonical_asset_answer
+    # ACI owns final deterministic answer selection.  The renderer returns
+    # one authoritative source/provenance record, so this loop emits at most
+    # one canonical replacement for owner-state reads and writes.
+    _canonical_answer = canonical_result_answer(tool_events)
+    if _canonical_answer and _canonical_answer.content != full_response.strip():
+        full_response = _canonical_answer.content
         yield "data: " + json.dumps({
-            "type": "response_replace", "content": full_response,
-        }) + "\n\n"
-
-    _canonical_household_answer = canonical_household_read_answer(tool_events)
-    if _canonical_household_answer and _canonical_household_answer != full_response.strip():
-        full_response = _canonical_household_answer
-        yield "data: " + json.dumps({
-            "type": "response_replace", "content": full_response,
-        }) + "\n\n"
-
-    _canonical_inventory_mutation = canonical_inventory_mutation_answer(tool_events)
-    if _canonical_inventory_mutation and _canonical_inventory_mutation != full_response.strip():
-        full_response = _canonical_inventory_mutation
-        yield "data: " + json.dumps({
-            "type": "response_replace", "content": full_response,
+            "type": "response_replace",
+            "content": full_response,
+            "answer_source": _canonical_answer.source.value,
+            "provenance": _canonical_answer.provenance,
         }) + "\n\n"
 
     # --- Final metrics ---

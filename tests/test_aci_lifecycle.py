@@ -11,6 +11,8 @@ from src.aci import (
     canonical_asset_read_answer,
     canonical_household_read_answer,
     canonical_inventory_mutation_answer,
+    canonical_result_answer,
+    AnswerSource,
     assistant_requested_followup,
     classify_action_escalation,
     classify_post_result,
@@ -115,6 +117,17 @@ def test_canonical_household_read_answer_uses_only_inventory_result():
         "tool": "read_household", "exit_code": 0,
         "output": '{"status":"SUCCESS_EMPTY","items":[]}',
     }]) == "No kitchen or household inventory is recorded for this owner."
+
+
+def test_canonical_result_answer_selects_one_authoritative_source():
+    answer = canonical_result_answer([{
+        "tool": "manage_assets", "exit_code": 0,
+        "output": json.dumps({"status": "SUCCESS", "assets": [{"name": "Thanatos"}]}),
+    }])
+    assert answer is not None
+    assert answer.source is AnswerSource.DETERMINISTIC_RESULT
+    assert answer.provenance == "canonical Asset Result"
+    assert answer.content == "I found 1 canonical IT asset:\n- Thanatos"
 
 
 def test_canonical_inventory_mutation_answer_requires_structured_result_and_readback():
