@@ -100,6 +100,7 @@ _SCENARIO_ARCHETYPES: tuple[dict[str, Any], ...] = (
     {"family": "asset", "domain": "TECHNICAL_ASSET", "intent": "READ", "target": "asset", "prompts": ("tell me about {asset}", "what hardware is in {asset}", "{asset} info")},
     {"family": "asset_reference", "domain": "TECHNICAL_ASSET", "intent": "READ", "target": "reference", "prompts": ("what about {reference}", "show me the {ordinal} one", "what is that server")},
     {"family": "network_context", "domain": "NETWORK", "intent": "READ", "target": "network", "prompts": ("what network am i on", "show current network context", "where am i connected right now")},
+    {"family": "remote_host", "domain": "HOMELAB_HOST", "intent": "READ", "target": "asset", "prompts": ("inspect remote host {asset} over SSH", "check the remote server {asset} via ssh", "what is running on remote machine {asset}")},
     {"family": "network_discovery", "domain": "NETWORK", "intent": "EXECUTE", "target": "subnet", "prompts": ("discover hosts on {subnet}", "scan the authorized lab range {subnet}", "find what is reachable on {subnet}")},
     {"family": "service_health", "domain": "SERVICE", "intent": "READ", "target": "service", "prompts": ("is {service} healthy", "check {service}", "why is {service} down")},
     {"family": "service_repair", "domain": "SERVICE", "intent": "EXECUTE", "target": "service", "prompts": ("restart {service} and verify it", "repair {service}", "make sure {service} comes back")},
@@ -161,6 +162,7 @@ _CROSS_DOMAIN_PAIRS = (
 
 _CAPABILITY_FOR_FAMILY = {
     "asset": ("inventory.manage", "get"), "asset_reference": ("inventory.manage", "get"),
+    "remote_host": ("homelab.manage", "remote_host_inspect"),
     "network_context": ("homelab.manage", "read_network_context"), "network_discovery": ("homelab.manage", "execute_network_discovery"),
     "service_health": ("homelab.manage", "service_status"), "service_repair": ("homelab.manage", "execute_service_restart"),
     "memory": ("memory.read", "summarize_owner_memory"), "work": ("work.read", "overview"),
