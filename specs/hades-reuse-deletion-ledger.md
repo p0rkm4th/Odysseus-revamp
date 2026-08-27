@@ -1565,3 +1565,11 @@ Latest cleanup checkpoint: source `e0a88d0d` retains the same semantic path;
 focused coverage passed `173`, and the prior full regression remains
 applicable at `6760 passed, 5 skipped, 149 warnings`. Live Qwen remains
 unverified because Ollama is unavailable.
+
+Semantic oracle scoring checkpoint: extended the existing dogfood scorer so
+ScenarioFrame cases grade the traced canonical domain, ActionSpec identity,
+grounding, and completion state; missing canonical Action evidence can no
+longer pass as fluent prose. Imported/frozen cases retain their existing
+contract. Focused dogfood/ACI/reference coverage passed `261 passed, 1
+warning`. No production runtime behavior, registry, store, or authority path
+was added.
