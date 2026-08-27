@@ -3084,6 +3084,56 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."
 
 
+def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render the already-projected owner Memory Result exactly once."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "read_memory"),
+        None,
+    )
+    if event is None:
+        return None
+    projection = event.get("result_projection")
+    if not isinstance(projection, Mapping):
+        return None
+    try:
+        from src.memory_grounding import render_memory_result_projection
+        return render_memory_result_projection(projection)
+    except Exception:
+        return "I couldn't retrieve the owner's remembered information. No memory was inferred."
+
+
+def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render a bounded structured Work read without model synthesis."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "read_work"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    status = str(payload.get("status") or "").strip().upper()
+    if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
+        return None
+    collections = {str(key): value for key, value in payload.items() if isinstance(value, list)}
+    if not collections:
+        return None
+    total = sum(len(value) for value in collections.values())
+    if total == 0:
+        return "No outstanding work is recorded for this owner."
+    labels = ", ".join(
+        f"{key.replace('_', ' ')}={len(value)}"
+        for key, value in sorted(collections.items()) if value
+    )
+    return f"I found {total} work record{'s' if total != 1 else ''} ({labels})."
+
+
 def canonical_result_answer(
     tool_events: Sequence[Mapping[str, Any]],
 ) -> CanonicalAnswer | None:
@@ -3096,6 +3146,8 @@ def canonical_result_answer(
     """
     candidates = (
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
+        (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
+        (canonical_work_read_answer(tool_events), "canonical Work Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
         (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
         (canonical_household_read_answer(tool_events), "canonical Household Result"),

@@ -249,6 +249,28 @@ def test_canonical_inventory_mutation_answer_requires_structured_result_and_read
     assert "not completed" in canonical_inventory_mutation_answer([event])
 
 
+def test_canonical_memory_and_work_reads_have_terminal_answers():
+    from src.aci import canonical_result_answer
+
+    memory = canonical_result_answer([{
+        "tool": "read_memory", "exit_code": 0,
+        "result_projection": {
+            "status": "zero_result", "query_type": "summary", "retrieved_count": 0,
+        },
+    }])
+    assert memory is not None
+    assert memory.source.value == "DETERMINISTIC_RESULT"
+    assert "No applicable owner-scoped memories" in memory.content
+
+    work = canonical_result_answer([{
+        "tool": "read_work", "exit_code": 0,
+        "output": '{"status":"SUCCESS_EMPTY","goals":[],"projects":[],"tasks":[]}',
+    }])
+    assert work is not None
+    assert work.source.value == "DETERMINISTIC_RESULT"
+    assert "No outstanding work" in work.content
+
+
 def _collect_stream_events(generator):
     async def _collect():
         return [chunk async for chunk in generator]
