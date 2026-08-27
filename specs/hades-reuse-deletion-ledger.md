@@ -1431,3 +1431,11 @@ populated kitchen/household reads now render only structured inventory values;
 mutations remain owned by the existing Inventory service adapter. No second
 store or executor was added. Focused ACI/inventory/intent/binding coverage
 passed 243 tests with 1 skipped. Live Qwen verification remains unavailable.
+
+Canonical IT-asset write projection: extended the existing
+`TECHNICAL_ASSET` DomainContract to expose the already-registered `add` and
+`update` ActionSpecs through `manage_assets`. Explicit owner inventory writes
+now resolve to the existing canonical binding instead of
+`operation_not_registered`; policy, owner scope, and execution remain
+downstream authorities. Focused intent/ACI regressions passed 215 tests with 1
+skipped. Live Qwen verification remains unavailable.

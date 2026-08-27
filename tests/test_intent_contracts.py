@@ -152,6 +152,18 @@ def test_household_owner_turn_enters_bounded_aci_capability_path(query):
     assert is_bounded_owner_capability_turn(compile_intent(query)) is True
 
 
+@pytest.mark.parametrize(("query", "action"), [
+    ("Add this server to my IT asset inventory.", "add"),
+    ("Update Thanatos in my asset inventory.", "update"),
+])
+def test_explicit_asset_writes_resolve_existing_canonical_actions(query, action):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.action_id == action
+    assert resolved.binding_name == "manage_assets"
+    assert resolved.contract.capability_id == "inventory.manage"
+
+
 def test_general_household_explanation_never_resolves_to_mutation():
     from src.intent_contracts import is_bounded_owner_capability_turn
 
