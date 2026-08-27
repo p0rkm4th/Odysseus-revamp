@@ -2001,37 +2001,22 @@ async def stream_agent_loop(
         logger.info("[hades-continuity] immediate reference hint applied")
     _active_run_context = None
     _session_reference_context = None
-    if work_run_id and owner:
-        try:
-            from src.agent_work_bridge import continuation_run_projection
-            _active_run_context = await asyncio.to_thread(
-                continuation_run_projection, owner, str(work_run_id),
-            )
-        except Exception:
-            logger.debug("durable reference context unavailable", exc_info=True)
-    # A completed canonical read may have no active Run on the next turn, but
-    # its ordered entity set is still the only valid source for an explicit
-    # ordinal/pronoun reference. Resolve that context from the owner-scoped
-    # session result store only when the current turn actually contains a
-    # structured reference; unrelated turns must not inherit session residue.
-    _active_reference_entities = (
-        _active_run_context.get("reference_context", {}).get("entities", [])
-        if isinstance(_active_run_context, dict)
-        and isinstance(_active_run_context.get("reference_context"), dict)
-        else []
-    )
-    if owner and session_id and not _active_reference_entities and re.search(
-        r"\b(?:the\s+)?(?:first|second|third)\b|\b(?:it|that|this|those|them)\b",
-        str(_last_user or ""),
-        re.IGNORECASE,
-    ):
-        try:
-            from src.agent_work_bridge import recent_session_reference_context
-            _session_reference_context = await asyncio.to_thread(
-                recent_session_reference_context, owner, str(session_id),
-            )
-        except Exception:
-            logger.debug("session reference context unavailable", exc_info=True)
+    _active_reference_entities = []
+    try:
+        from src.agent_work_bridge import reference_context_for_turn
+        _active_run_context, _session_reference_context, _active_reference_entities = await asyncio.to_thread(
+            reference_context_for_turn,
+            owner,
+            session_id,
+            work_run_id,
+            structured_reference=bool(re.search(
+                r"\b(?:the\s+)?(?:first|second|third)\b|\b(?:it|that|this|those|them)\b",
+                str(_last_user or ""),
+                re.IGNORECASE,
+            )),
+        )
+    except Exception:
+        logger.debug("durable reference context unavailable", exc_info=True)
     # One bounded semantic frame is attached to every turn. Existing domain
     # normalizers remain compatibility evidence, but canonical first-class
     # exposure can now be driven by the frame/contract resolver instead of a
