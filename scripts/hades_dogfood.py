@@ -58,11 +58,14 @@ def _live_protocol_observation(
     turn.  ``[DONE]`` is the protocol terminal marker; message/event identity
     is retained as digests or IDs so this remains safe for owner data.
     """
+    from benchmarks.hades_dogfood import delivery_observation
+
     event_ids = [str(item.get("event_id") or item.get("id")) for item in events
                  if item.get("event_id") is not None or item.get("id") is not None]
     terminal_events = [item for item in events
                        if item.get("type") in {"agent_terminal", "chat_terminal"}]
     duplicate_event_id = bool(event_ids and len(event_ids) != len(set(event_ids)))
+    delivery = delivery_observation(events)
     return {
         "done_seen": done_count > 0,
         "terminal_event_count": int(done_count),
@@ -74,6 +77,10 @@ def _live_protocol_observation(
         "delta_count": sum("delta" in item for item in events),
         "event_id_count": len(event_ids),
         "duplicate_event_id": duplicate_event_id,
+        "response_replace_count": delivery["response_replace_count"],
+        "duplicate_finalization": delivery["duplicate_finalization"],
+        "stale_delta_after_replace": delivery["stale_delta_after_replace"],
+        "delivery_identity": delivery["delivery_identity"],
         "terminal_payload_count": len(terminal_events),
         "transport_completion": done_count == 1 and not abrupt_eof,
     }

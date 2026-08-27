@@ -19,6 +19,7 @@ from benchmarks.hades_dogfood import (
     score_case,
     _CROSS_DOMAIN_PAIRS,
     _FAILURE_TAXONOMY,
+    delivery_observation,
 )
 from scripts.hades_dogfood import _live_protocol_observation
 
@@ -86,6 +87,24 @@ def test_live_protocol_duplicate_done_marker_is_not_completion():
     assert result["done_seen"] is True
     assert result["terminal_event_count"] == 2
     assert result["transport_completion"] is False
+
+
+def test_delivery_observation_detects_lifecycle_duplicates_without_text_deduplication():
+    clean = delivery_observation([
+        {"type": "delta", "delta": "same words"},
+        {"type": "response_replace", "content": "same words", "event_id": "final-1"},
+    ])
+    assert clean["duplicate_finalization"] is False
+    assert clean["stale_delta_after_replace"] is False
+
+    broken = delivery_observation([
+        {"type": "response_replace", "content": "answer", "event_id": "final-1"},
+        {"type": "response_replace", "content": "answer", "event_id": "final-1"},
+        {"type": "delta", "delta": "stale"},
+    ])
+    assert broken["duplicate_finalization"] is True
+    assert broken["stale_delta_after_replace"] is True
+    assert broken["duplicate_event_id"] is True
 
 
 def test_architectural_fail_is_distinct_from_functional_pass():

@@ -162,3 +162,9 @@ The existing dogfood runner also supports seeded hidden holdouts through
 with deterministic transform chains and are not serialized into coverage
 reports; only digests and semantic metadata remain. A seed `20260827` smoke
 produced `500/500` unique held-out cases.
+
+The dogfood transport projection now records response-replacement count,
+duplicate finalization, stale deltas after replacement, and a delivery identity
+derived from event IDs. The live runner uses these lifecycle signals without
+answer-text deduplication. Focused dogfood/live-selection coverage passed `51
+passed, 1 warning`.
