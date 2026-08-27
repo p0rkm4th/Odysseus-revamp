@@ -1353,3 +1353,15 @@ the strict transport; it must not accept a model-supplied host or import a
 Cookbook route as an executor. No code was copied or moved and no production
 caller changed. Focused SSH transport characterization remains the gate before
 implementation.
+
+Canonical remote-read slice: extended the existing `homelab.manage` capability
+with `ssh_connect_test` and `remote_host_inspect`. The ActionSpec and binding
+accept only an owner Asset reference; `HomelabOperations` resolves the stored
+SSH target, validates it, and delegates fixed read-only commands to
+`core.platform_compat.run_ssh_command`, which reuses Cookbook's strict SSH
+transport mechanics. No caller can supply an arbitrary remote host, command,
+credential, or permissive host-key setting. Focused contract/network/SSH tests
+passed 137 tests with 1 skipped and 1 warning. This is fixture-verified only;
+no remote host was contacted and production remains pinned to the last-green
+image. The next slice is remote fixture/integration verification and canonical
+Asset SSH enrollment metadata, before any remote mutation is considered.

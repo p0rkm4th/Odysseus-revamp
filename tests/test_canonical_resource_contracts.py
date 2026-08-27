@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from src.capability_dependencies import (
     DEPENDENCY_REGISTRY,
     HOST_PACKAGE_ALLOWLIST,
@@ -224,6 +226,59 @@ def test_canonical_homelab_path_uses_dependency_manager_directly():
     assert "remediation_handoff(" not in source
     assert "dependency_manager.inspect_operation" in source
     assert "dependency_manager.resume_receipt" in source
+
+
+def test_remote_homelab_read_resolves_target_from_owner_asset_and_uses_strict_transport(tmp_path, monkeypatch):
+    from src import asset_inventory
+    from src.homelab_operations import HomelabOperations
+
+    monkeypatch.setattr(asset_inventory, "DB_PATH", tmp_path / "assets.db")
+    connection = asset_inventory.db()
+    connection.execute(
+        "INSERT INTO assets(id,name,type,status,hostname,attributes_json,created_at,updated_at,owner) "
+        "VALUES(?,?,?,?,?,?,?,?,?)",
+        ("asset-1", "Thanatos", "host", "active", "thanatos.lan",
+         json.dumps({"ssh_user": "admin", "ssh_port": "2222"}), "now", "now", "owner-1"),
+    )
+    connection.commit()
+    connection.close()
+    captured = {}
+
+    def fake_ssh(remote, port, command, **kwargs):
+        captured.update(remote=remote, port=port, command=command, kwargs=kwargs)
+        return SimpleNamespace(returncode=0, stdout="hostname=thanatos\nos=Linux", stderr="")
+
+    monkeypatch.setattr("src.homelab_operations.run_ssh_command", fake_ssh)
+    result = asyncio.run(HomelabOperations().execute({
+        "action": "remote_host_inspect", "asset": "asset-1", "remote_host": "evil.example",
+    }, owner="owner-1"))
+
+    assert result["success"] is True
+    assert result["asset_id"] == "asset-1"
+    assert captured["remote"] == "admin@thanatos.lan"
+    assert captured["port"] == "2222"
+    assert captured["kwargs"]["strict_host_key_checking"] is True
+    assert "evil.example" not in captured["command"]
+
+
+def test_remote_homelab_read_fails_closed_without_owner_asset_target(tmp_path, monkeypatch):
+    from src import asset_inventory
+    from src.homelab_operations import HomelabOperationError, HomelabOperations
+
+    monkeypatch.setattr(asset_inventory, "DB_PATH", tmp_path / "assets.db")
+    connection = asset_inventory.db()
+    connection.execute(
+        "INSERT INTO assets(id,name,type,status,hostname,attributes_json,created_at,updated_at,owner) "
+        "VALUES(?,?,?,?,?,?,?,?,?)",
+        ("asset-2", "Unconfigured", "host", "active", "", "{}", "now", "now", "owner-1"),
+    )
+    connection.commit()
+    connection.close()
+
+    with pytest.raises(HomelabOperationError, match="no configured SSH target"):
+        asyncio.run(HomelabOperations().execute({
+            "action": "ssh_connect_test", "asset": "asset-2",
+        }, owner="owner-1"))
 
 
 def test_canonical_status_projections_do_not_call_compatibility_health_wrapper():
