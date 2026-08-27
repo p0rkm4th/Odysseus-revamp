@@ -1260,3 +1260,12 @@ hydration, reference persistence, continuation, policy, and execution remain
 outside this projection helper. Focused intent/ACI/lifecycle/cutover tests
 passed 212 tests with 2 warnings. `agent_loop.py` is now 7,048 LOC; this local
 slice has not been built or deployed.
+
+Durable reference-source ownership: added `reference_context_for_turn` to the
+existing `src/agent_work_bridge.py` and replaced the loop's inline Run/session
+lookup with that adapter. Active owner-scoped Run references remain preferred;
+recent session results are consulted only for structured ordinal/pronoun
+references, preventing unrelated turns from inheriting stale context. Focused
+bridge, ACI, lifecycle, cutover, first-class tool, and corpus tests passed 117
+tests with 2 warnings. `agent_loop.py` is now 7,033 LOC; this local slice has
+not been built or deployed.

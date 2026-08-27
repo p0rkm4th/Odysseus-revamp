@@ -432,6 +432,37 @@ def recent_session_reference_context(owner: str, session_id: str, *, limit: int 
     return None
 
 
+def reference_context_for_turn(
+    owner: str | None,
+    session_id: str | None,
+    run_id: str | None,
+    *,
+    structured_reference: bool = False,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]]]:
+    """Resolve the bounded durable reference sources for one turn.
+
+    The active Run is preferred. Recent session results are consulted only for
+    an explicit structured reference, preventing unrelated turns from
+    inheriting stale ordinal/pronoun context.
+    """
+    active: dict[str, Any] | None = None
+    session: dict[str, Any] | None = None
+    if owner and run_id:
+        try:
+            active = continuation_run_projection(str(owner), str(run_id))
+        except Exception:
+            active = None
+    reference = active.get("reference_context") if isinstance(active, dict) else None
+    entities = reference.get("entities", []) if isinstance(reference, dict) else []
+    active_entities = entities if isinstance(entities, list) else []
+    if owner and session_id and not active_entities and structured_reference:
+        try:
+            session = recent_session_reference_context(str(owner), str(session_id))
+        except Exception:
+            session = None
+    return active, session, active_entities
+
+
 def _latest_result_references(results: list[Any]) -> list[dict[str, Any]]:
     """Extract the ordered refs from the newest result that exposes them.
 
