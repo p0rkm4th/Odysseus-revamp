@@ -188,6 +188,64 @@ def assemble_prompt(
     return "\n\n".join(parts)
 
 
+def skill_index_prompt(
+    *,
+    tool_names: set,
+    disabled_tools: Optional[set] = None,
+    owner: Optional[str] = None,
+    suppress_local_context: bool = False,
+    suppress_skills: bool = False,
+) -> str:
+    """Project the owner-scoped Skill catalogue as untrusted model context."""
+    if suppress_local_context or suppress_skills:
+        return ""
+    try:
+        from services.memory.skills import SkillsManager
+        from src.constants import DATA_DIR
+        from src.settings import get_setting
+
+        prefs = {}
+        try:
+            from routes.prefs_routes import _load_for_user
+            prefs = _load_for_user(owner) or {}
+        except Exception:
+            pass
+        manager = SkillsManager(DATA_DIR)
+        active_tools = list(set(tool_names) - set(disabled_tools or set()))
+        allow_drafts = bool(prefs.get("auto_approve_skills", True))
+        try:
+            min_confidence = float(prefs.get(
+                "skill_min_confidence",
+                get_setting("skill_autosave_min_confidence", 0.85),
+            ))
+        except (TypeError, ValueError):
+            min_confidence = 0.85
+        skills = manager.index_for(
+            owner=owner,
+            active_toolsets=active_tools,
+            allow_teacher_drafts=allow_drafts,
+            min_confidence=min_confidence,
+        )
+        if not skills:
+            return ""
+        lines = [
+            "## Available skills",
+            "Catalogue of reusable procedures. Relevant full procedures, when matched, are injected separately and should be followed directly. Do not browse or fetch Skills automatically. Use `manage_skills` only when the user explicitly asks to inspect or manage the Skill registry, or when a referenced Skill resource is required.",
+        ]
+        by_category: dict[str, list] = {}
+        for skill in skills:
+            by_category.setdefault(skill["category"], []).append(skill)
+        for category in sorted(by_category):
+            lines.append(f"\n**{category}**")
+            for skill in by_category[category]:
+                badge = " *(draft)*" if skill.get("status") == "draft" else ""
+                lines.append(f"- `{skill['name']}` — {skill['description']}{badge}")
+        return "\n\n" + "\n".join(lines)
+    except Exception as exc:
+        logger.debug("Skill-index injection skipped: %s", exc)
+        return ""
+
+
 _HARD_ACTION_HINTS = {
     "shell_exec": "Invoke bash with the exact non-interactive command the user requested.",
     "operations": "Begin with a real read-only status/log/configuration inspection using bash or the available read tools.",

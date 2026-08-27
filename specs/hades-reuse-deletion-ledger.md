@@ -1232,3 +1232,11 @@ truth remain canonical elsewhere. Focused ACI, lifecycle, cutover, prompt
 security, and first-class tool coverage passed 99 tests with 2 warnings.
 `agent_loop.py` is now 7,118 LOC; this local slice has not been built or
 deployed.
+
+Skill-index projection ownership: moved owner-scoped Skill catalogue
+formatting from `agent_loop.py` into existing `src/aci.py` as
+`skill_index_prompt`. The Skill manager remains the storage/registration owner;
+the projection is explicitly untrusted and grants no authority. Focused ACI,
+lifecycle, cutover, Skill-injection, prompt-security, and first-class tool
+coverage passed 102 tests with 2 warnings. `agent_loop.py` is now 7,073 LOC;
+this local slice has not been built or deployed.
