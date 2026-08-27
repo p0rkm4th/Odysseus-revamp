@@ -1536,3 +1536,10 @@ intentional `main, dev, hades-aci-v1` push trigger. Source
 matching image/source evidence; focused validation passed `102`, and the seven
 affected full-regression tests passed `8` in a writable fixture. The remaining
 read-only full-regression failures are documented environment evidence.
+
+Foreground route authority closure: removed the mutable route-level
+`stream_agent_loop` hook and redirected its test seam to `stream_aci_turn`.
+This eliminates the remaining foreground redirection path without adding a
+new owner. Focused cutover/lifecycle/routing/dogfood validation passed `204
+tests`; the AST audit found zero direct legacy stream callers in production
+runtime packages.

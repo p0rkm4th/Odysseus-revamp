@@ -180,3 +180,12 @@ passed, 1 warning`.
 - Full regression with intentionally read-only `/home` fixture: `6751 passed, 5 skipped, 5 failed, 2 errors`; failures/errors were writable-fixture failures except one stale CI assertion.
 - Writable rerun of the seven affected tests, including the corrected CI assertion: `8 passed, 2 warnings`.
 - Live Ollama/Qwen remains unavailable; live owner-model verification is **UNVERIFIED**.
+
+## Foreground route authority closure
+
+The foreground chat route no longer exposes a mutable `stream_agent_loop`
+compatibility hook. `_chat_stream_entrypoint` now always enters the existing
+ACI seam with `aci_mode="aci"`; tests replace that canonical seam directly.
+The cutover, lifecycle, foreground routing, dogfood, and live-protocol suites
+passed `204 passed, 2 warnings`. No production direct legacy stream callers
+were found by the AST audit.
