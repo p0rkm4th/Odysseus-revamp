@@ -141,8 +141,7 @@ def _run_metadata(args: argparse.Namespace) -> dict[str, Any]:
         "config_fingerprint": hashlib.sha256(
             json.dumps(config, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()[:16],
-    }
-
+}
 
 async def run_synthetic(
     case: dict[str, Any],
