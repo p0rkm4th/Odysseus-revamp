@@ -53,6 +53,8 @@ services:
       - CHROMADB_PORT=8000
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
       - AUTH_ENABLED=${AUTH_ENABLED:-true}
+      # Development/acceptance only; disabled by default and fail-closed in the app.
+      - HADES_ACCEPTANCE_PRINCIPAL_ENABLED=${HADES_ACCEPTANCE_PRINCIPAL_ENABLED:-false}
       - LOCALHOST_BYPASS=${LOCALHOST_BYPASS:-false}
       - COMPANION_BASE_URL=${COMPANION_BASE_URL:-}
       - ODYSSEUS_ADMIN_USER=${ODYSSEUS_ADMIN_USER:-admin}
