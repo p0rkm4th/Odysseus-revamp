@@ -2995,6 +2995,61 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     return None
 
 
+def canonical_read_failure_answer(
+    tool_events: Sequence[Mapping[str, Any]],
+) -> CanonicalAnswer | None:
+    """Own the final answer when a canonical owner read did not complete.
+
+    A failed canonical read is not an invitation for model synthesis: the
+    model has no evidence from which to construct current state.  This helper
+    deliberately recognizes only the existing owner-read bindings and emits
+    a bounded error projection; it does not reinterpret arbitrary tool
+    failures as owner-state failures.
+    """
+    read_actions = {
+        "read_network_context", "read_network_observations",
+        "list", "get", "read", "inspect", "count",
+    }
+    owner_tools = {"manage_homelab", "manage_assets", "read_household"}
+    for event in reversed(tuple(tool_events or ())):
+        if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() not in owner_tools:
+            continue
+        payload: Mapping[str, Any] = {}
+        try:
+            parsed = json.loads(str(event.get("output") or ""))
+            if isinstance(parsed, Mapping):
+                payload = parsed
+        except (TypeError, ValueError):
+            pass
+        action = str(payload.get("action") or "").strip()
+        if not action:
+            try:
+                command = json.loads(str(event.get("command") or ""))
+                if isinstance(command, Mapping):
+                    action = str(command.get("action") or "").strip()
+            except (TypeError, ValueError):
+                pass
+        if action not in read_actions:
+            continue
+        status = str(payload.get("status") or "").strip().upper()
+        # A successful event with an invalid projection is still a retrieval
+        # failure from the answer owner's perspective: it is not evidence
+        # that generic synthesis may fill in the missing state.
+        label = {
+            "manage_homelab": "network state",
+            "manage_assets": "canonical asset inventory",
+            "read_household": "household inventory",
+        }[str(event.get("tool") or "").strip()]
+        detail = str(payload.get("error") or payload.get("message") or "").strip()
+        suffix = f" ({detail[:240]})" if detail else ""
+        return CanonicalAnswer(
+            content=f"I couldn't retrieve the {label}{suffix}. No current state was inferred.",
+            source=AnswerSource.ERROR,
+            provenance=f"canonical {label} read failure",
+        )
+    return None
+
+
 def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the terminal inventory mutation from its structured Result."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
@@ -3052,7 +3107,7 @@ def canonical_result_answer(
                 source=AnswerSource.DETERMINISTIC_RESULT,
                 provenance=provenance,
             )
-    return None
+    return canonical_read_failure_answer(tool_events)
 
 
 def project_final_answer(
