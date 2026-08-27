@@ -827,7 +827,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "network_capability_or_discovery",
     ),
     "HOMELAB_HOST": DomainContract(
-        "HOMELAB_HOST", "homelab.manage", {"READ": "inspect_host"}, "manage_homelab",
+        "HOMELAB_HOST", "homelab.manage", {"READ": "inspect_host", "REMOTE_READ": "remote_host_inspect"}, "manage_homelab",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "homelab_host_observation",
     ),
@@ -1347,8 +1347,24 @@ def compile_intent(
     # deterministic canonical lookup, even when the user uses a terse
     # fragment such as "Thanatos hardware".  Do not make the model rediscover
     # the identity or arbitrate among unrelated Actions.
+    remote_requested = False
     if concept == "TECHNICAL_ASSET" and target and operation == "READ":
         read_explicit = True
+    # Remote inspection remains the same homelab contract, but its executor
+    # must use a canonical owner Asset target rather than the local host.
+    # This is an intent projection only; Asset resolution and SSH validation
+    # still happen at the canonical execution boundary.
+    if concept in {"TECHNICAL_ASSET", "HOMELAB_HOST"} and operation == "READ" and re.search(
+        r"\b(?:remote|ssh|over\s+ssh|via\s+ssh)\b", q,
+    ):
+        concept = "HOMELAB_HOST"
+        remote_target = re.search(
+            r"\b(?:remote\s+)?(?:host|server|machine|system)\s+"
+            r"([A-Za-z][A-Za-z0-9_.:-]{2,80})\b", text, re.IGNORECASE,
+        )
+        if remote_target and (not target or str(target).casefold() in {"remote", "ssh"}):
+            target = remote_target.group(1)
+        remote_requested = True
     if concept == "SERVICE" and operation == "EXECUTE" and not target:
         # A restart preflight is safe, but it is not meaningful without the
         # exact unit.  Keep the semantic contract available for qualified
@@ -1415,6 +1431,8 @@ def compile_intent(
     ):
         safety_constraints.append("network_scope_requires_authorization")
     reference_filters = {}
+    if remote_requested:
+        reference_filters["remote"] = True
     if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
         reference_filters["entity_refs"] = list(reference_resolution["refs"])
     semantic_view = deterministic_read_view(text, concept)
@@ -1557,6 +1575,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:
         return ResolvedContract(frame, contract, None, None, contract.binding, False, "target_required")
     action_key = frame.operation_class
+    if frame.domain_concept == "HOMELAB_HOST" and frame.filters.get("remote") and frame.operation_class == "READ":
+        action_key = "REMOTE_READ"
     if frame.domain_concept == "TECHNICAL_ASSET" and frame.operation_class == "READ" and frame.entity_reference:
         action_key = "READ_DETAIL"
     if frame.domain_concept == "WORK" and frame.filters.get("view") == "attention":
@@ -1623,9 +1643,9 @@ def validate_contracts() -> list[str]:
                 )
                 if missing_textual:
                     errors.append(f"{concept}: textual contract omits ActionSpec exposure {missing_textual}")
-            if operation in {"READ", "READ_DETAIL", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
+            if operation in {"READ", "READ_DETAIL", "REMOTE_READ", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
-            if operation in {"READ", "READ_DETAIL", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id not in {"developer.read", "web.evidence"} and "read_private" not in action.effects:
+            if operation in {"READ", "READ_DETAIL", "REMOTE_READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id not in {"developer.read", "web.evidence"} and "read_private" not in action.effects:
                 errors.append(f"{concept}/{action_id}: read lacks read_private effect")
             if operation in {"READ_FILE", "READ_MAP"} and "read_workspace" not in action.effects:
                 errors.append(f"{concept}/{action_id}: developer read lacks read_workspace effect")

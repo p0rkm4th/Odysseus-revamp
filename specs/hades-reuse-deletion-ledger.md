@@ -1365,3 +1365,14 @@ passed 137 tests with 1 skipped and 1 warning. This is fixture-verified only;
 no remote host was contacted and production remains pinned to the last-green
 image. The next slice is remote fixture/integration verification and canonical
 Asset SSH enrollment metadata, before any remote mutation is considered.
+
+Remote intent regression: explicit phrases such as “check the remote server
+Morpheus via SSH” were initially classified as `TECHNICAL_ASSET` because the
+generic server/asset read predicate ran before remote-target interpretation.
+The existing `intent_contracts` compiler now gives explicit remote/SSH host
+language precedence, extracts only the bounded host/Asset reference, and
+projects the request to `HOMELAB_HOST/REMOTE_READ` →
+`homelab.manage/remote_host_inspect`. Added paraphrase regressions for host,
+server, and machine wording; intent and deterministic-read coverage passed
+290 tests with 1 skipped and 1 warning. No phrase-specific production action
+was added and no authority boundary changed.

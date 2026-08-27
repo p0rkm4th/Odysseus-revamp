@@ -493,6 +493,22 @@ def test_existing_domain_read_bindings_are_semantically_exposed(query, concept, 
 
 
 @pytest.mark.parametrize("query", [
+    "Inspect remote host Thanatos over SSH",
+    "check the remote server Morpheus via ssh",
+    "what is running on remote machine atlas",
+])
+def test_remote_host_reads_project_to_asset_bound_ssh_action(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "HOMELAB_HOST"
+    assert resolved.frame.filters["remote"] is True
+    assert resolved.frame.target in {"Thanatos", "Morpheus", "atlas"}
+    assert resolved.action_id == "remote_host_inspect"
+    assert resolved.binding_name == "manage_homelab"
+    assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
     "Restart nginx service",
     "Recover postgres service",
 ])
