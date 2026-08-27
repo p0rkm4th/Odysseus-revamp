@@ -11,7 +11,7 @@ import re
 
 
 _READ_REQUEST = re.compile(
-    r"^(?:what|what's|whats|which|where|who|show|list|tell|whatcha|describe|summarize|give|provide|"
+    r"^(?:what|what's|whats|which|where|who|how\s+many|show|list|tell|whatcha|describe|summarize|give|provide|"
     r"review|display|remind|anything|do\s+i|have\s+i|you\s+know)\b",
     re.IGNORECASE,
 )
@@ -47,7 +47,9 @@ _WORK_OWNER = re.compile(
 _ASSET_SUBJECT = re.compile(
     r"\b(?:it\s+assets?|assets?|tech(?:nical)?|computers?|machines?|hardware|"
     r"computational\s+(?:assets?|hardware)|boxes?|gear|"
-    r"physical\s+(?:machines?|boxes|hosts?)|equipment|servers?)\b",
+    r"physical\s+(?:machines?|boxes|hosts?)|equipment|servers?|"
+    r"gpus?|graphics\s+cards?|processors?|cpus?|ram|memory|storage|"
+    r"motherboards?|nvme|ssds?|hard\s+drives?)\b",
     re.IGNORECASE,
 )
 _ASSET_OWNER = re.compile(

@@ -27,7 +27,7 @@ MANAGE_ASSETS_SCHEMA = {
         "name": "manage_assets",
         "description": "Manage the persistent hardware/asset inventory, component relationships, and observation history. Prefer strong identity evidence such as system UUID, serial, or MAC. Never merge assets solely by IP address.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge"]},
+            "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset"]},
             "asset": {"type": "string"}, "name": {"type": "string"}, "type": {"type": "string"}, "status": {"type": "string"},
             "manufacturer": {"type": "string"}, "model": {"type": "string"}, "serial": {"type": "string"}, "system_uuid": {"type": "string"},
             "hostname": {"type": "string"}, "mac": {"type": "string"}, "location": {"type": "string"}, "notes": {"type": "string"}, "source": {"type": "string"},
@@ -209,7 +209,8 @@ failed canonical read with `ls`, `grep`, SQLite inspection, or another shell
 path.
 
 Actions: `summary`, `list`, `search`, `get`, `add`, `update`, `record_observation`,
-`link_component`, `unlink_component`, `retire`, and `merge`. Use the documented
+`link_component`, `unlink_component`, `retire`, `merge`, `add_item`, `add_stock`,
+`consume_stock`, `adjust_stock`, and `update_asset`. Use the documented
 JSON/function schema for action-specific parameters.
 
 Identity rule: UUID/serial/MAC are strong identity evidence. IP address alone

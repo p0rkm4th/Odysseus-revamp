@@ -6784,7 +6784,12 @@ async def stream_agent_loop(
             sorted(_intent_domains), full_response[:240],
         )
         full_response = _grounded_response
-        yield "data: " + json.dumps({"delta": full_response}) + "\n\n"
+        # This is a replacement of already-streamed model prose, not a new
+        # delta.  Emitting the full corrected answer as ``delta`` makes the
+        # browser append it to the hallucinated answer (the owner-visible
+        # duplicate/failure-disclaimer bug).  The replacement event preserves
+        # one logical answer while keeping the grounded value authoritative.
+        yield "data: " + json.dumps({"type": "response_replace", "content": full_response}) + "\n\n"
     if _ody_qwen_finetune_model:
         full_response = _normalize_ody_qwen_text_artifacts(full_response)
         if (
@@ -6838,8 +6843,9 @@ async def stream_agent_loop(
         and full_response.strip() != (_response_before_tool_summary or "").strip()
         and full_response.strip() not in (_response_before_tool_summary or "")
     ):
-        _final_delta = full_response.strip()
-        yield f"data: {json.dumps({'delta': _final_delta})}\n\n"
+        # Deterministic summaries replace model prose already emitted during
+        # the round.  They must not be streamed as a second full delta.
+        yield f"data: {json.dumps({'type': 'response_replace', 'content': full_response.strip()})}\n\n"
 
     # --- Final metrics ---
     total_duration = time.time() - total_start

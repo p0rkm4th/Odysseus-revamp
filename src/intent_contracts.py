@@ -878,6 +878,17 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "household_overview",
     ),
+    # Mutations use the same Inventory service as the human-facing inventory
+    # adapter.  Keeping this as a separate contract avoids changing the
+    # established read-only Household binding while making CREATE/UPDATE
+    # explicit canonical Actions instead of model-selected prose.
+    "INVENTORY_MUTATION": DomainContract(
+        "INVENTORY_MUTATION", "inventory.manage",
+        {"CREATE": "add_item", "UPDATE": "add_stock", "EXECUTE": "consume_stock"},
+        "manage_assets",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "inventory_mutation",
+    ),
     "INTEGRATION": DomainContract(
         "INTEGRATION", "setup.read", {"READ": "state", "READ_INTEGRATIONS": "integrations"}, "read_setup",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
@@ -1196,7 +1207,7 @@ def compile_intent(
         concept = "SECURITY_FINDING"
     elif re.search(r"\b(?:osint|open source intelligence|investigations?|cases?)\b", q):
         concept = "OSINT_CASE"
-    elif re.search(r"\b(?:household|pantry|stock|shopping|recipe|recipes|groceries)\b", q):
+    elif re.search(r"\b(?:household|pantry|stock|shopping|recipe|recipes|groceries|kitchen)\b", q):
         concept = "HOUSEHOLD_ITEM"
     elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
         concept = "WORK"
@@ -1434,6 +1445,16 @@ def compile_intent(
         reference_filters["view"] = "context"
     elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
         reference_filters["view"] = "roles"
+    if concept == "TECHNICAL_ASSET" and operation == "READ":
+        # Aggregations remain canonical Asset reads.  Preserve only the
+        # bounded component/model term for the inventory adapter; never ask
+        # the model to count from prose or memory.
+        aggregate = re.search(r"\bhow\s+many\s+(.+?)\s+do\s+i\s+have\b", q)
+        if aggregate:
+            component = re.sub(r"\b(?:gpus?|graphics\s+cards?|machines?|servers?|boxes?)\b", "", aggregate.group(1), flags=re.IGNORECASE)
+            component = re.sub(r"\s+", " ", component).strip(" ?.,")
+            if component:
+                reference_filters["asset_query"] = component
     workspace = {
         "MEMORY": "hades", "WORK": "work", "GOAL": "work", "PROJECT": "work", "TASK": "work", "RUN": "work", "COMMITMENT": "work", "MISSION": "work", "WATCH": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
         "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",
@@ -1527,7 +1548,10 @@ def resolve_continuation(frame: IntentFrame, active_run: Mapping[str, Any] | Non
 
 
 def resolve_intent(frame: IntentFrame) -> ResolvedContract:
-    contract = DOMAIN_CONTRACTS.get(frame.domain_concept)
+    contract_key = frame.domain_concept
+    if frame.domain_concept == "HOUSEHOLD_ITEM" and frame.operation_class in {"CREATE", "UPDATE", "EXECUTE"}:
+        contract_key = "INVENTORY_MUTATION"
+    contract = DOMAIN_CONTRACTS.get(contract_key)
     if contract is None:
         return ResolvedContract(frame, None, None, None, None, False, "no_domain_contract")
     if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:

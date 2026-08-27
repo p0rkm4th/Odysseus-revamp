@@ -218,9 +218,74 @@ def test_strict_text_contracts_and_fenced_code_safety():
 def test_explicit_it_asset_reads_select_canonical_domain_without_shell_fallback():
     assert _asset_read_request("Explain my current IT asset inventory, what do I have?")
     assert _asset_read_request("What servers do I have?")
+
+
+def test_grounding_and_summary_corrections_use_replacement_events_not_full_deltas():
+    from pathlib import Path
+
+    root = Path(__file__).parents[1]
+    loop = (root / "src" / "agent_loop.py").read_text(encoding="utf-8")
+    route = (root / "routes" / "chat_routes.py").read_text(encoding="utf-8")
+    browser = (root / "static" / "js" / "chat.js").read_text(encoding="utf-8")
+
+    assert '"type": "response_replace"' in loop
+    assert "json.dumps({'delta': _final_delta})" not in loop
+    assert route.count('data.get("type") == "response_replace"') == 2
+    assert "json.type === 'response_replace'" in browser
+    assert "accumulated = replacement" in browser
     assert _asset_read_request("Show unidentified devices")
     assert _asset_read_request("What do we know about Cerberus?")
     assert not _asset_read_request("Update the asset hostname")
+
+
+@pytest.mark.parametrize("query", [
+    "tell me about my hardware",
+    "what it assets do i have?",
+    "how many 2080 GPUs do i have?",
+])
+def test_owner_asset_reads_are_canonical_and_aggregation_is_bounded(query):
+    from src.deterministic_reads import deterministic_read_concept
+    from src.intent_contracts import compile_intent
+    from src.aci import canonical_read_fast_path_payload
+
+    assert deterministic_read_concept(query) == "TECHNICAL_ASSET"
+    frame = compile_intent(query)
+    if "2080" in query:
+        assert canonical_read_fast_path_payload(
+            "manage_assets", "list", frame.as_dict(),
+        ) == {"action": "list", "query": "2080"}
+
+
+def test_kitchen_mutation_resolves_to_existing_inventory_service_action():
+    from src.intent_contracts import compile_intent, resolve_intent
+
+    resolved = resolve_intent(compile_intent("Add angel hair pasta to my kitchen inventory."))
+    assert resolved.available is True
+    assert resolved.action_id == "add_item"
+    assert resolved.binding_name == "manage_assets"
+    assert resolved.contract.capability_id == "inventory.manage"
+
+
+@pytest.mark.asyncio
+async def test_kitchen_mutation_binding_delegates_to_existing_inventory_service(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeInventoryTool:
+        async def execute(self, content, ctx):
+            assert json.loads(content)["action"] == "add_item"
+            assert ctx["owner"] == "alice"
+            return {"item": {"id": "pasta-1"}, "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageInventoryTool", FakeInventoryTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "add_item", "domain": "kitchen", "name": "angel hair pasta",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+    assert result["provenance"] == "USER_ASSERTED"
 
 
 def test_canonical_asset_reads_are_read_only_and_need_no_approval():

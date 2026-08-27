@@ -246,6 +246,14 @@ def create_session(base: str, cookie: str, name: str, *, model: str, endpoint_id
 def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, Any]:
     started = time.monotonic()
     events: list[dict[str, Any]] = []
+    done_seen = False
+    terminal_event_count = 0
+    first_error_event: str | None = None
+    delta_digests: list[str] = []
+    replacement_digests: list[str] = []
+    answer = ""
+    event_ids: list[str] = []
+    abrupt_eof = False
     response = requests.post(
         f"{base}/api/chat_stream",
         cookies={"odysseus_session": cookie},
@@ -259,20 +267,46 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         timeout=(15, 180),
     )
     response.raise_for_status()
-    for line in response.iter_lines(decode_unicode=True):
-        if not line or not line.startswith("data: ") or line == "data: [DONE]":
-            continue
-        try:
-            value = json.loads(line[6:])
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            events.append(value)
+    try:
+        for line in response.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data: "):
+                continue
+            if line == "data: [DONE]":
+                done_seen = True
+                terminal_event_count += 1
+                continue
+            try:
+                value = json.loads(line[6:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict):
+                events.append(value)
+                event_id = value.get("event_id") or value.get("id")
+                if event_id is not None:
+                    event_ids.append(str(event_id))
+                delta = value.get("delta")
+                if delta is not None:
+                    delta_digests.append(digest(str(delta)))
+                    answer += str(delta)
+                if value.get("type") == "response_replace":
+                    replacement = str(value.get("content") or "")
+                    replacement_digests.append(digest(replacement))
+                    # Grounding/tool summaries replace already-streamed prose;
+                    # they are not an additional answer delta.
+                    answer = replacement
+                if value.get("error") and first_error_event is None:
+                    first_error_event = digest(str(value.get("error")))
+    except (requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError):
+        abrupt_eof = not done_seen
+    finally:
+        response.close()
 
     metrics = next((e.get("data", {}) for e in reversed(events) if e.get("type") == "metrics"), {})
-    answer = "".join(str(e.get("delta") or "") for e in events)
     tools = [e for e in events if e.get("type") == "tool_start"]
     approvals = [e for e in events if e.get("type") == "ask_user"]
+    terminal_events = [e for e in events if e.get("type") in {"agent_terminal", "chat_terminal"}]
+    duplicate_event_id = len(event_ids) != len(set(event_ids)) if event_ids else False
+    terminal_digests = [digest(json.dumps(e.get("data") or {}, sort_keys=True, default=str)) for e in terminal_events]
     return {
         "case": case.name,
         "prompt_digest": digest(case.prompt),
@@ -306,6 +340,24 @@ def run_case(base: str, cookie: str, session_id: str, case: Case) -> dict[str, A
         "input_tokens": metrics.get("input_tokens"),
         "output_tokens": metrics.get("output_tokens"),
         "error": next((e.get("error") for e in events if e.get("error")), None),
+        "done_seen": done_seen,
+        "abrupt_eof": abrupt_eof,
+        "terminal_event_count": terminal_event_count,
+        "first_error_event": first_error_event,
+        "stream_duration": round(time.monotonic() - started, 2),
+        "delta_count": len(delta_digests),
+        "replacement_count": len(replacement_digests),
+        "replacement_digest_sequence": replacement_digests,
+        "delta_digest_sequence": delta_digests,
+        "duplicate_delta_sequence": duplicate_event_id,
+        "duplicate_answer": len(terminal_digests) != len(set(terminal_digests)) if terminal_digests else False,
+        "duplicate_finalization": len(terminal_events) > 1,
+        "assistant_message_id": metrics.get("assistant_message_id"),
+        "persist_count": metrics.get("persist_count"),
+        "finalization_id": metrics.get("finalization_id"),
+        "stream_sequence": metrics.get("stream_sequence"),
+        "duplicate_event_id": duplicate_event_id,
+        "event_id_sequence": event_ids,
     }
 
 
@@ -313,6 +365,20 @@ def assert_case(case: Case, result: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     if result.get("error"):
         failures.append("transport_error")
+    # Older fixture-only callers may not carry transport telemetry.  Every
+    # real ``run_case`` result does, so live runs fail closed on missing or
+    # malformed terminal protocol state without breaking pure assertion tests.
+    if "done_seen" in result:
+        if not result.get("done_seen"):
+            failures.append("transport_completion_failure")
+        if result.get("abrupt_eof"):
+            failures.append("abrupt_eof")
+        if result.get("terminal_event_count") != 1:
+            failures.append("invalid_terminal_event_count")
+    if result.get("duplicate_answer"):
+        failures.append("duplicate_answer")
+    if result.get("duplicate_finalization"):
+        failures.append("duplicate_finalization")
     if not result.get("answer_present"):
         failures.append("missing_answer")
     if result.get("internal_leak") or result.get("internal_error"):

@@ -1279,3 +1279,25 @@ independently invokes those resolvers. Focused intent, ACI, continuation,
 bridge, and first-class tool coverage passed 237 tests with 2 warnings.
 `agent_loop.py` is now 7,024 LOC; this local slice has not been built or
 deployed.
+
+Owner-session hotfix ownership: extended the existing deterministic read and
+Asset inventory owners for owner-scoped hardware/component aggregation. The
+resolver now projects bounded component queries (for example `2080`) into the
+existing canonical CMDB attributes read, and `asset_inventory` searches its
+structured attributes without using model prose as state. Kitchen/household
+mutations were exposed as additional ActionSpecs on the existing
+`inventory.manage` capability and delegated through the existing `manage_assets`
+ToolBinding to `inventory_service`/`inventory_tools`; no second registry,
+binding, or execution engine was introduced. The live dogfood harness now
+records and asserts `[DONE]`, terminal count, abrupt EOF, event/delta identity,
+and duplicate-finalization telemetry. Focused inventory, binding, ACI, and
+live-harness coverage passed 88 tests with 2 warnings. Current local changes
+are not deployed; production remains source `8f33fb231d7a` until this hotfix
+passes the broader checkpoint gates.
+
+Checkpoint verification: current source-mounted full regression passed `6,713
+passed, 5 skipped, 150 warnings` in approximately 305 seconds. Python compile
+and diff checks passed. No live owner-authenticated Qwen acceptance was run in
+this checkpoint because the required acceptance credential was unavailable;
+that evidence remains explicitly UNVERIFIED and the candidate is not yet
+deployed.

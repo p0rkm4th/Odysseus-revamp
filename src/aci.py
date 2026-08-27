@@ -2535,6 +2535,12 @@ def canonical_read_fast_path_payload(
     if binding == "manage_assets" and action == "get":
         return canonical_asset_read_payload(frame)
     payload = {"action": action}
+    if binding == "manage_assets" and action in {"list", "search"}:
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        query = str(filters.get("asset_query") or "").strip()
+        if query:
+            payload["query"] = query[:120]
     if action == "summarize_owner_memory":
         payload["query"] = query or "what do you remember about me"
     elif binding == "developer_read":
