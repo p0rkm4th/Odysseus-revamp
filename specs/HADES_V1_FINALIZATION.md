@@ -214,3 +214,11 @@ Docker storage path mounted read-only: `6760 passed, 5 skipped, 149 warnings`.
 The storage-preflight tests passed `6/6` under the corrected fixture; the six
 prior failures were mount artifacts. No current-head full-regression failure
 was observed in this run.
+
+## Latest checkpoint (`e0a88d0d`)
+
+The dead-alias cleanup was applied without changing semantic behavior. Focused
+ACI/cutover/resource/agent-loop/dogfood coverage passed `173 passed, 1 warning`.
+The prior full-regression result remains applicable to this cleanup-only
+checkpoint: `6760 passed, 5 skipped, 149 warnings`; live Ollama/Qwen remains
+unavailable and therefore unverified.
