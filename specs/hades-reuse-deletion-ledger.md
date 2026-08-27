@@ -1317,3 +1317,14 @@ prompt-injection coverage passed 25 tests; `py_compile` and diff checks pass.
 `agent_loop.py` is now 6,999 LOC (31 lines removed). This development slice
 has not been deployed; production remains the last-green checkpoint source
 `c55501290b73994b9651b5802295fa41661cc2cf`.
+
+ACI prompt-message assembly: moved trusted-system insertion, consecutive
+system-message merging, and placement/reordering of document, email,
+integration, MCP, Skill, and time supplements into
+`src/aci.py.finalize_prompt_messages`. The legacy loop now supplies the
+already-built projections and receives the ordered message list through a
+compatibility call; untrusted supplements remain outside the trusted system
+role. Focused ACI, injection, workspace, lifecycle, cutover, and inventory
+coverage passed 148 tests; full regression is pending for this working slice.
+`agent_loop.py` is now 6,897 LOC (102 ACI lines added, 117 loop lines
+removed). Production remains pinned to the deployed `c555012…` checkpoint.

@@ -151,6 +151,7 @@ from src.aci import (
     domain_tools_for_projection,
     assemble_prompt,
     build_base_prompt,
+    finalize_prompt_messages,
     skill_index_prompt,
     select_prompt_tools,
     resolve_turn_intent,
@@ -1575,123 +1576,20 @@ def _build_system_prompt(
         except Exception as _mcp_err:
             logger.debug(f"MCP description injection skipped: {_mcp_err}")
 
-    agent_msg = {
-        "role": "system",
-        "content": agent_prompt,
-        "_agent_injected": "prompt",
-    }
-    insert_idx = 0
-    for i, msg in enumerate(messages):
-        if msg.get("role") == "system":
-            insert_idx = i + 1
-        else:
-            break
-
-    messages = messages[:insert_idx] + [agent_msg] + messages[insert_idx:]
-
-    # Merge consecutive system messages — but skip _protected doc messages
-    merged = []
-    for msg in messages:
-        if (msg.get("_agent_injected") == "prompt"
-            and merged and merged[-1].get("role") == "system"
-            and not merged[-1].get("_protected")
-            and not merged[-1].get("_agent_injected")):
-            base_message = dict(merged[-1])
-            merged[-1] = {
-                "role": "system",
-                "content": base_message.get("content", "") + "\n\n" + msg["content"],
-                "_agent_injected": "merged_prompt",
-                "_agent_base_message": base_message,
-            }
-        elif (msg.get("role") == "system"
-            and not msg.get("_protected")
-            and not msg.get("_agent_injected")
-            and merged and merged[-1].get("role") == "system"
-            and not merged[-1].get("_protected")
-            and not merged[-1].get("_agent_injected")):
-            merged[-1] = {
-                "role": "system",
-                "content": merged[-1]["content"] + "\n\n" + msg["content"],
-            }
-        else:
-            merged.append(msg)
-
-    # Insert the document message right before the last user message so it's
-    # close to the user's request and survives context trimming independently.
-    # Same treatment for the matched-skills block — user-editable skill
-    # content must never be in the system role (see _skills_message above).
-    last_user_idx = len(merged) - 1
-    for i in range(len(merged) - 1, -1, -1):
-        if merged[i].get("role") == "user":
-            last_user_idx = i
-            break
-    for injected in (
-        _doc_message,
-        _email_message,
-        _email_style_message,
-        _integ_message,
-        _mcp_desc_message,
-        _skills_message,
-        _datetime_message,
-    ):
-        if injected:
-            injected["_agent_injected"] = "context"
-    if _doc_message:
-        merged.insert(last_user_idx, _doc_message)
-        last_user_idx += 1  # the document message is now at last_user_idx
-    if _email_message:
-        merged.insert(last_user_idx, _email_message)
-        last_user_idx += 1
-    if _email_style_message:
-        merged.insert(last_user_idx, _email_style_message)
-        last_user_idx += 1
-    if _integ_message:
-        merged.insert(last_user_idx, _integ_message)
-        last_user_idx += 1
-    if _mcp_desc_message:
-        merged.insert(last_user_idx, _mcp_desc_message)
-        last_user_idx += 1
-    if _skills_message:
-        merged.insert(last_user_idx, _skills_message)
-        last_user_idx += 1
-    if _datetime_message:
-        merged.insert(last_user_idx, _datetime_message)
-
-    # Keep the immediately preceding assistant turn adjacent to the current
-    # user turn.  Skills, integrations, MCP descriptions, and clock/context
-    # projections are deliberately user-role messages for prompt-injection
-    # isolation, but placing large ones between the two conversational turns
-    # makes small local models treat the latest user-role block as the active
-    # exchange.  They are supplemental context, not conversation history.
-    # Move only non-protected injected supplements before the recent tail.
-    _supplement_indexes = [
-        i for i, msg in enumerate(merged)
-        if (
-            not msg.get("_protected")
-            and (
-                msg.get("_agent_injected") == "context"
-                or msg.get("_context_supplement")
-                or (msg.get("metadata") or {}).get("context_kind") == "supplement"
-            )
-        )
-    ]
-    if _supplement_indexes:
-        _supplements = [merged[i] for i in _supplement_indexes]
-        _remaining = [msg for i, msg in enumerate(merged) if i not in set(_supplement_indexes)]
-        _tail_start = None
-        for i in range(len(_remaining) - 1, -1, -1):
-            if _remaining[i].get("role") == "assistant":
-                _tail_start = i
-                break
-        if _tail_start is None:
-            for i in range(len(_remaining) - 1, -1, -1):
-                if _remaining[i].get("role") == "user":
-                    _tail_start = i
-                    break
-        if _tail_start is not None:
-            merged = _remaining[:_tail_start] + _supplements + _remaining[_tail_start:]
-
-    return merged, mcp_schemas
+    messages = finalize_prompt_messages(
+        messages,
+        agent_prompt,
+        (
+            _doc_message,
+            _email_message,
+            _email_style_message,
+            _integ_message,
+            _mcp_desc_message,
+            _skills_message,
+            _datetime_message,
+        ),
+    )
+    return messages, mcp_schemas
 
 
 _ADMIN_TOOLS = {
