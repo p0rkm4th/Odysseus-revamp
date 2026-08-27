@@ -151,6 +151,16 @@ def test_generated_cases_cover_thin_canonical_product_families():
     )
 
 
+def test_semantic_generator_covers_asset_bound_remote_host_reads():
+    cases = generate_semantic_cases(seed=44, count=300)
+    remote = [case for case in cases if case["family"] == "remote_host"]
+    assert remote
+    assert {case["scenario"]["action_id"] for case in remote} == {"remote_host_inspect"}
+    assert all(case["scenario"]["capability_id"] == "homelab.manage" for case in remote)
+    assert all(case["scenario"]["scenario_frame"]["expected_domain"] == "HOMELAB_HOST" for case in remote)
+    assert all(case["expected"]["semantic_oracle"]["expected_side_effect_boundary"] == "NO_SIDE_EFFECT" for case in remote)
+
+
 def test_scenario_frames_are_semantic_first_reproducible_and_constrained():
     first = generate_scenario_frames(seed=20260826, count=1000)
     second = generate_scenario_frames(seed=20260826, count=1000)

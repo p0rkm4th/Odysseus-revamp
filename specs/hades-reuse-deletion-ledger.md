@@ -1376,3 +1376,11 @@ projects the request to `HOMELAB_HOST/REMOTE_READ` →
 server, and machine wording; intent and deterministic-read coverage passed
 290 tests with 1 skipped and 1 warning. No phrase-specific production action
 was added and no authority boundary changed.
+
+Semantic dogfood expansion: added a dedicated `remote_host` ScenarioFrame
+family to the existing evaluator, mapped to the canonical
+`homelab.manage:remote_host_inspect` ActionSpec with a no-side-effect oracle.
+The evaluator suite passed 26 tests. A seeded core generation produced 1,693
+cases and reduced reported coverage gaps from 204 to 202; this is generation
+coverage only, not live-model success. The generated artifact was kept outside
+the repository and contains no raw prompts or answers.
