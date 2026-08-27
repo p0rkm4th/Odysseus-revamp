@@ -45,6 +45,10 @@ jobs:
         uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5  # v3.3.0
         with:
           dockerfile: Dockerfile
+          # Hadolint defaults to failing on INFO/style findings.  Keep real
+          # warnings and errors blocking while allowing advisory style notes
+          # (such as DL3059) to remain visible without creating red runs.
+          failure-threshold: warning
           # DL3008: pinning apt package versions is impractical on a -slim base
           # image. Debian purges old package versions from its repos, so a
           # pinned version breaks future rebuilds. The base image itself is
