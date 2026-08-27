@@ -1651,3 +1651,19 @@ matched, with image digest `sha256:895ca25c66be688132604720a696f21be4c934bc8bc52
 No product assertions failed in the exact-image full regression: `6765
 passed, 5 skipped, 187 warnings`, using isolated writable data/log/probe and
 Docker-storage fixtures with the checkout read-only.
+
+Semantic fixture-world closure (`0de31e0c`, local-only checkpoint): the
+interrupted `aci-canonical_reads-*` family was reproduced and classified as
+missing typed synthetic environment declarations, not a deployed ACI answer
+delivery failure. Explicit fixture profiles were added for mixed domain,
+continuation, and security/work cases; `read_setup` received a typed empty
+result and the existing structured-empty renderer now claims it. Focused
+container-backed coverage passed `96` tests; targeted replay passed all five
+previously failing cases with zero failed Actions and complete deterministic
+answers. A 245-case aggregate rerun was not accepted as benchmark evidence
+because the disposable runner could not reach its configured Ollama endpoint.
+Local HEAD is `0de31e0c6bab36a82fb90ce5235bf638da884352`, remote remains
+`8e064b1d9c51ecd5b78a405da9ad82c0c6b472bf`, and the deployed runtime remains
+the healthy `8e064b1d` image. Push is pending owner unlock of the existing
+encrypted SSH key; no source/runtime match is claimed for this local-only
+checkpoint.
