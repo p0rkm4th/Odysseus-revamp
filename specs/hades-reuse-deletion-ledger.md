@@ -1579,3 +1579,8 @@ deployed with matching embedded source and image label; the corrected
 storage-fixture full regression passed `6761 passed, 5 skipped, 149 warnings`.
 Container health was green with zero restarts. Live Qwen/Ollama remains
 unverified because the provider is unavailable.
+
+Semantic evidence strictness: semantic ScenarioFrame scoring now fails when
+required grounding or completion trace evidence is absent, rather than
+treating missing metadata as a pass. Focused dogfood scorer coverage passed
+`32 passed, 1 warning`.
