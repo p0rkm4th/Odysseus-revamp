@@ -5,7 +5,7 @@ import json
 
 import src.agent_loop as agent_loop
 from src.aci import ground_action_completion
-from src.intent_contracts import is_network_service_enumeration_request
+from src.intent_contracts import network_discovery_request_cidr, is_network_service_enumeration_request
 
 
 def _collect(generator):
@@ -33,7 +33,7 @@ def test_network_discovery_request_without_cidr_does_not_reuse_historical_scope(
         "tools you need, such as nmap or ip. list all hosts and what you "
         "think they are and may do. Begin now"
     )
-    assert agent_loop._network_discovery_request_cidr(query) is None
+    assert network_discovery_request_cidr(query) is None
 
 
 def test_unscoped_network_deep_dive_is_framework_clarification_bound():
