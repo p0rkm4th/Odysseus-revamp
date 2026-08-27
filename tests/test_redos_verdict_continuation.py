@@ -19,7 +19,8 @@ import pytest
 
 import src.agent_tools  # noqa: F401  (break agent_tools<->agent_loop import cycle)
 from routes.skills_routes import _VERDICT_PROSE_RE
-from src.agent_loop import _EXPLICIT_CONTINUATION_RE, _is_explicit_continuation
+from src.agent_loop import _EXPLICIT_CONTINUATION_RE
+from src.intent_contracts import is_explicit_continuation
 
 _BUDGET_S = 4.0
 
@@ -60,19 +61,19 @@ def test_verdict_prose_flood_is_fast():
     "the second one", "  yes  ", "continue", "go on", "run it!", "third???",
 ])
 def test_continuation_accepts_terse_confirmations(text):
-    assert _is_explicit_continuation(text)
+    assert is_explicit_continuation(text)
 
 
 @pytest.mark.parametrize("text", [
     "no", "maybe yes", "yesx", "let's not", "y . ! .", "", "run the script please",
 ])
 def test_continuation_rejects_non_confirmations(text):
-    assert not _is_explicit_continuation(text)
+    assert not is_explicit_continuation(text)
 
 
 def test_continuation_flood_is_fast():
     evil = "y" + "\t" * 40000 + "x"  # terse opener then whitespace flood, no `$`
-    (_, dt) = _timed(_is_explicit_continuation, evil)
+    (_, dt) = _timed(is_explicit_continuation, evil)
     assert dt < _BUDGET_S, f"_is_explicit_continuation took {dt:.2f}s"
     # Direct on the compiled pattern too (the function strips first).
     (m, dt2) = _timed(_EXPLICIT_CONTINUATION_RE.match, evil)
