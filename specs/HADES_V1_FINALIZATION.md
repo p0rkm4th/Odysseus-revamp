@@ -93,7 +93,7 @@ The exact reconciled baseline before this closure slice was:
 - Running image ID: `sha256:77bd2346f2278e564757142ac68a14250f60aa62d74ac38d463d0895920fa226`
 - Embedded source label: `299ef9ee72b666c1a796d79436576dead1196166`
 - Container state: running; `/api/health` returned `healthy` after startup
-- Worktree: clean at reconciliation; current closure edits are not deployed
+- Worktree: clean at reconciliation; closure checkpoint is deployed below
 
 The closure slice adds active Asset property/reference projections (`specs`,
 GPU, RAM, and “other one”), suppresses intermediate deterministic-read
@@ -109,3 +109,17 @@ slice; six storage-preflight failures were environment failures caused by the
 minimal test container lacking `/home/.docker-data` and are not converted to
 passes. A current-head full regression and explicit redeployment are still
 required.
+
+## Deployed closure checkpoint
+
+- Source SHA: `c77563e82c543d0f8901164ee261638fb1afa20e`
+- Remote HEAD: `c77563e82c543d0f8901164ee261638fb1afa20e`
+- Running image ID: `sha256:b98de538b4dcb8800645395445c4800d8fc1f2768caa66690ba634f1f9bba01e`
+- Running source label and `/app/.odysseus-source-commit`: `c77563e82c543d0f8901164ee261638fb1afa20e`
+- Runtime: `odysseus-odysseus-1`, running, restart count `0`
+- Health: `GET /api/health` returned `{"status":"healthy"}`
+- Rollback: `odysseus:rollback-299ef9ee72b6-prev`, source `299ef9ee72b666c1a796d79436576dead1196166`
+- Host Ollama: unreachable at `127.0.0.1:11434`; live Qwen evidence is **UNVERIFIED**.
+
+The documentation-only follow-up that records this deployment must itself be
+included in the next source/image match if the tree changes again.
