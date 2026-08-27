@@ -111,7 +111,11 @@ def _live_case_fixture_environment(data: Mapping[str, Any]) -> dict[str, Any]:
             family = "infrastructure"
     if family == "memory":
         tool = "manage_memory" if any(word in prompt for word in ("forget", "save")) else "read_memory"
-    elif family == "work":
+    elif family == "work" or (
+        family == "continuation" and any(
+            word in prompt for word in ("review", "outstanding", "work", "task", "run", "waiting", "blocked", "failed")
+        )
+    ):
         tool = "read_work"
     elif family == "assets":
         tool = "manage_assets"

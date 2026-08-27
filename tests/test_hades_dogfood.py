@@ -157,6 +157,31 @@ def test_aci_corpus_declares_fixture_world_outside_expected_oracle():
         assert fixtures_for_case(case) == fixtures_for_case(altered)
 
 
+def test_mixed_aci_corpus_domains_declare_semantic_fixture_world():
+    cases = {
+        case["id"]: case
+        for case in expand_cases(load_contract(), suite="all")
+        if case["id"] in {
+            "aci-domain-07", "aci-domain-09", "aci-continuation-10", "aci-security-10",
+        }
+    }
+    assert cases["aci-domain-07"]["environment"] == {
+        "fixture_profile": {"tools": ["read_work"]}
+    }
+    assert cases["aci-domain-09"]["environment"] == {
+        "fixture_profile": {"tools": ["read_setup"]}
+    }
+    assert cases["aci-continuation-10"]["environment"] == {
+        "fixture_profile": {"tools": ["read_work"]}
+    }
+    assert cases["aci-security-10"]["environment"] == {
+        "fixture_profile": {"tools": ["read_work"]}
+    }
+    for case in cases.values():
+        altered = {**case, "expected": {"concept": "WRONG_ORACLE", "required_tools": []}}
+        assert fixtures_for_case(case) == fixtures_for_case(altered)
+
+
 def test_imported_live_cases_declare_fixture_world_outside_expected_oracle():
     cases = {
         case["id"]: case

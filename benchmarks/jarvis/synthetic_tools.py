@@ -122,6 +122,14 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
                 "output": json.dumps({"status": "SUCCESS_EMPTY", "findings": []}, sort_keys=True),
                 "exit_code": 0, "success": True,
             }]
+        elif tool == "read_setup":
+            fixtures[tool] = [{
+                "output": json.dumps({
+                    "status": "SUCCESS_EMPTY", "integrations": [], "permissions": [],
+                    "readiness": [],
+                }, sort_keys=True),
+                "exit_code": 0, "success": True,
+            }]
         elif tool == "developer_read":
             fixtures[tool] = [{
                 "output": json.dumps({"status": "SUCCESS_EMPTY", "matches": [], "files": []}, sort_keys=True),

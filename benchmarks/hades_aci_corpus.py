@@ -128,6 +128,29 @@ def _fixture_environment(category: str, index: int, prompt: str) -> dict[str, An
         tools = ("read_work",)
     elif category == "infrastructure":
         tools = ("manage_assets",) if index == 0 else ("manage_homelab",)
+    elif category == "domain":
+        # This category mixes domains intentionally.  The simulated world is
+        # declared from the case's semantic subject, never from expected
+        # scoring data, so a model/product trajectory cannot gain tools from
+        # the answer key.
+        tools = {
+            0: ("read_work",),
+            1: ("manage_assets",),
+            2: ("manage_homelab",),
+            3: ("manage_security_assessment",),
+            4: ("manage_osint",),
+            5: ("read_memory",),
+            6: ("read_work",),
+            7: ("manage_homelab",),
+            8: ("read_setup",),
+            9: ("manage_assets",),
+        }.get(index, ())
+    elif category == "continuation" and any(
+        word in prompt.casefold() for word in ("task", "work", "run", "waiting", "blocked", "failed", "project")
+    ):
+        tools = ("read_work",)
+    elif category == "security" and index == 9:
+        tools = ("read_work",)
     return {"fixture_profile": {"tools": list(tools)}} if tools else {}
 
 
