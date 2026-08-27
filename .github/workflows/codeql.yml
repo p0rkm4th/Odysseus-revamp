@@ -4,7 +4,7 @@ name: CodeQL
 # surfacing findings before merge instead of only after a change lands on dev.
 on:
   push:
-    branches: [dev, main]
+    branches: [dev, main, hades-aci-v1]
   pull_request:
     branches: [dev]
   schedule:

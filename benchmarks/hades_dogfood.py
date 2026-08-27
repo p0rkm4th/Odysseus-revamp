@@ -290,6 +290,12 @@ _LANGUAGE_TRANSFORMS = (
 _NETWORK_SCOPE_STATES = ("HOME", "WORK", "VPN", "UNKNOWN")
 _ADDRESS_STATES = ("UNCHANGED", "DHCP_CHANGED", "NEW", "UNKNOWN")
 _ASSET_IDENTITY_STRENGTHS = ("STRONG", "WEAK", "IP_ONLY", "CONFLICTED")
+_STATE_MUTATIONS = (
+    "NONE", "DHCP_ADDRESS_CHANGED", "SERVICE_DEGRADED", "HOST_DISAPPEARED",
+    "HOST_REAPPEARED", "VPN_ACTIVATED", "ROUTE_CHANGED", "DEPENDENCY_REMOVED",
+    "ASSET_RENAMED", "NEW_DEVICE_JOINED", "APPROVAL_EXPIRED", "MODEL_UNAVAILABLE",
+    "BACKGROUND_JOB_FINISHED",
+)
 
 
 @dataclass(frozen=True)
@@ -737,6 +743,81 @@ _METAMORPHIC_TRANSFORMS = (
     ("CAPITALIZATION", lambda text: text.upper()),
 )
 
+_MINIMAL_PAIRS = (
+    ("network_concept", "What is a network?", "What network am I on?", "UNKNOWN", "ANSWER", "NETWORK", "READ"),
+    ("networking_concept", "Explain networking.", "Explain my network.", "UNKNOWN", "ANSWER", "NETWORK", "READ"),
+    ("raid_concept", "What is RAID 10?", "What RAID do I have?", "UNKNOWN", "ANSWER", "STORAGE", "READ"),
+    ("gpu_concept", "What is a GPU?", "What GPUs do I own?", "UNKNOWN", "ANSWER", "TECHNICAL_ASSET", "READ"),
+    ("docker_concept", "How does Docker work?", "What's running in Docker?", "UNKNOWN", "ANSWER", "CONTAINER", "READ"),
+    ("dns_concept", "What is DNS?", "What DNS am I using?", "UNKNOWN", "ANSWER", "NETWORK", "READ"),
+    ("restart_explanation", "How do I restart Jellyfin?", "Restart Jellyfin.", "SERVICE", "ANSWER", "SERVICE", "EXECUTE"),
+    ("scan_explanation", "What is a network scan?", "Scan my current network.", "NETWORK", "ANSWER", "NETWORK", "EXECUTE"),
+    ("package_explanation", "What package contains smartctl?", "Install smartmontools.", "DEPENDENCY", "ANSWER", "DEPENDENCY", "EXECUTE"),
+)
+
+
+def generate_minimal_pair_cases(*, seed: int = 0, count: int = 0, split: str = "generated") -> list[dict[str, Any]]:
+    """Generate semantic minimal pairs whose small wording change changes operation.
+
+    The pair oracle is explicit: the left side is conceptual/informational and
+    must not execute; the right side may select the bounded operational path.
+    This is intentionally separate from keyword routing in production.
+    """
+    if count <= 0:
+        return []
+    cases: list[dict[str, Any]] = []
+    for index in range(int(count)):
+        pair_id, conceptual, operational, domain_left, op_left, domain_right, op_right = _MINIMAL_PAIRS[index % len(_MINIMAL_PAIRS)]
+        pair_seed = int(seed) + index
+        for side, prompt, domain, operation, must_not_execute in (
+            ("conceptual", conceptual, domain_left, op_left, True),
+            ("operational", operational, domain_right, op_right, False),
+        ):
+            frame = ScenarioFrame(
+                entity_type="NETWORK" if domain_right == "NETWORK" else "SERVICE" if domain_right == "SERVICE" else "ASSET",
+                entity_id="minimal-pair",
+                related_entities=(), intent=operation, requested_property="identity",
+                relation="ASSOCIATED_WITH", relation_depth=0, temporal_scope="CURRENT",
+                epistemic_state="UNKNOWN", expected_domain=domain,
+                secondary_domains=(), expected_reference_resolution="EXACT_NAME",
+                expected_authority="READ_ALLOWED" if must_not_execute else "UNKNOWN_SCOPE",
+                expected_action_class=operation, execution_required=not must_not_execute,
+                approval_state="NONE" if must_not_execute else "REQUIRED",
+                initial_world_state={"condition": "UNKNOWN", "pair": pair_id},
+                expected_result_state="UNKNOWN" if must_not_execute else "BLOCKED",
+                expected_completion_state="ANSWER" if must_not_execute else "BLOCKED",
+                expected_grounding="MODEL_KNOWLEDGE" if must_not_execute else "CANONICAL_CONTEXT",
+            )
+            scenario = {
+                "semantic_case": True, "minimal_pair": True, "pair_id": pair_id,
+                "pair_side": side, "must_not_execute": must_not_execute,
+                "negative_near_miss": must_not_execute, "intent": operation,
+                "domain": domain, "authority": frame.expected_authority,
+                "operation": operation, "conversation_form": "DIRECT",
+                "execution_result": "CAPABILITY_UNAVAILABLE" if must_not_execute else "SUCCESS",
+                "scenario_frame": frame.to_dict(),
+                "language_transform_chain": ["minimal_pair", side],
+            }
+            expected = {
+                "concept": domain, "operation": operation,
+                "semantic_case": True, "minimal_pair": True,
+                "pair_id": pair_id, "pair_side": side,
+                "max_tool_index_lookups": 0,
+                "max_tool_calls": 0 if must_not_execute else None,
+                "semantic_oracle": {
+                    "expected_domain": domain, "expected_action_class": operation,
+                    "expected_side_effect_boundary": "NO_SIDE_EFFECT" if must_not_execute else "POLICY_BOUND",
+                    "scenario_frame": frame.to_dict(),
+                },
+            }
+            cases.append(_case(
+                f"minimal-pair-{pair_seed:05d}-{pair_id}-{side}", prompt,
+                family="minimal_pair", source="generated_minimal_pair", split=split,
+                expected=expected, scenario=scenario,
+                fixture_id=f"minimal-pair-fixture-{pair_seed:05d}",
+            ) | {"seed": pair_seed, "variant_id": f"{pair_id}-{side}"})
+    return cases
+
 
 def generate_metamorphic_cases(*, seed: int = 0, count: int = 250, split: str = "generated") -> list[dict[str, Any]]:
     """Generate equivalent phrasings with an explicit semantic invariant.
@@ -859,6 +940,7 @@ def generate_chaos_journeys(*, seed: int = 0, count: int = 50, split: str = "gen
             turns.append(("what changed since yesterday", "WORK", "READ", "domain_switch"))
         if journey_index % 11 == 0:
             turns.append(("show me the current verified state", "SELFSTATE", "READ", "technical"))
+        state_mutation = _STATE_MUTATIONS[journey_index % len(_STATE_MUTATIONS)]
         for turn_index, (prompt, domain, intent, reference_type) in enumerate(turns, 1):
             result = "FAILURE" if "fail" in prompt or prompt == "fix it" else "SUCCESS"
             scenario = {
@@ -868,6 +950,8 @@ def generate_chaos_journeys(*, seed: int = 0, count: int = 50, split: str = "gen
                 "conversation_form": reference_type.upper(), "execution_result": result,
                 "reference_type": reference_type, "journey_length": len(turns),
                 "failure_class": "EXECUTION_FAILURE" if result == "FAILURE" else "",
+                "state_mutation": state_mutation if turn_index > 1 else "NONE",
+                "mutation_boundary": "BEFORE_TURN" if turn_index > 1 and state_mutation != "NONE" else "NONE",
                 "semantic_oracle": {
                     "expected_domain": domain, "expected_action_class": intent,
                     "expected_reference_type": reference_type,
@@ -877,6 +961,7 @@ def generate_chaos_journeys(*, seed: int = 0, count: int = 50, split: str = "gen
                 "concept": domain, "operation": intent if intent in {"READ", "EXECUTE", "RESEARCH", "CONTINUE"} else None,
                 "semantic_case": True, "journey_turn": turn_index,
                 "max_tool_index_lookups": 0,
+                "state_mutation": state_mutation if turn_index > 1 else "NONE",
             }
             if intent in {"READ", "CLARIFY"}:
                 expected["max_decision_calls"] = 1
@@ -965,7 +1050,7 @@ def expand_cases(
     seed: int = 0, shard_index: int = 0, shard_count: int = 1,
     regressions_path: str | Path | None = None,
     metamorphic_count: int = 0, negative_count: int = 0,
-    chaos_journey_count: int = 0,
+    chaos_journey_count: int = 0, minimal_pair_count: int = 0,
 ) -> list[dict[str, Any]]:
     """Expand all selected sources into one stable scenario list."""
     if suite not in {"baseline", "all", "security", "held_out"}:
@@ -1040,6 +1125,11 @@ def expand_cases(
         cases.extend(generate_negative_near_miss_cases(seed=seed, count=negative_count, split="held_out" if suite == "held_out" else "generated"))
     if chaos_journey_count and suite not in {"security", "held_out"}:
         cases.extend(generate_chaos_journeys(seed=seed, count=chaos_journey_count))
+    if minimal_pair_count and suite != "security":
+        cases.extend(generate_minimal_pair_cases(
+            seed=seed, count=minimal_pair_count,
+            split="held_out" if suite == "held_out" else "generated",
+        ))
     if regressions_path and suite != "held_out":
         cases.extend(load_regression_cases(regressions_path))
     if suite == "held_out":
