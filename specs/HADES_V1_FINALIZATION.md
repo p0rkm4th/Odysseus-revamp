@@ -84,6 +84,23 @@ against the current source rather than copied forward as assumptions.
 This document must be updated whenever the source, deployment, or release
 evidence changes.
 
+## Current exact-head reconciliation (`8e273784`)
+
+The historical entries above describe earlier checkpoints. Current source and
+runtime truth is:
+
+- Branch: `hades-aci-v1`
+- Local HEAD = remote HEAD: `8e2737847812a3f21aff8d798ede7beff7bd2b9e`
+- Worktree: clean
+- Candidate image: `odysseus:candidate-8e2737847812`
+- Image ID: `sha256:0ea35c34923346bc3268c740442318283227fd4a667d5be9a01d3d26c2a0714d`
+- Image revision label and `/app/.odysseus-source-commit`: exact current SHA
+- Running container: `odysseus-odysseus-1`, running, restart count `0`
+- Health: `GET /api/health` returned `healthy`
+- Focused cutover/resource/ACI/dogfood validation: `136 passed, 1 warning`
+- Production direct legacy stream callers and imports: `0`
+- Live Ollama/Qwen: unavailable; live owner-model acceptance remains **UNVERIFIED**.
+
 ## Model-decision projection checkpoint (`76c64ce0e593f2d4a626fcf9384e5e6542629487`)
 
 The existing ACI seam now owns model-decision parsing, bounded invalid-decision
