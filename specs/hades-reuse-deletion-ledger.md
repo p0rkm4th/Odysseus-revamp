@@ -1404,3 +1404,13 @@ event rather than a second answer delta. Focused ACI, inventory, deterministic
 read, and dogfood coverage passed 276 tests. This prevents fabricated hardware
 and inventory rows without changing policy, execution, or persistence
 authority; full regression and live Qwen verification remain pending.
+
+Canonical Asset aggregation projection: extended the existing
+`intent_contracts` → `aci.canonical_read_fast_path_payload` →
+`tool_execution` → `asset_inventory` chain for component/model counts. The
+compiler marks a structured Asset query as a count projection, the executor
+preserves only that bounded metadata alongside filtered canonical rows, and
+`canonical_asset_read_answer` renders the count without model arithmetic or
+prose-derived inventory. No new service, registry, store, or execution path
+was introduced. Focused ACI/Asset regression passed 84 tests. Local changes
+are not yet committed or deployed; live Qwen verification remains unavailable.

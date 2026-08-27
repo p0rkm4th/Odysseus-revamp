@@ -1481,6 +1481,13 @@ async def _execute_manage_assets_binding(block, owner=None):
                 "source": "canonical_it_asset_cmdb",
                 "owner_scope": str(owner or "authenticated_owner"),
             }
+            # Preserve the bounded semantic projection selected by ACI.  This
+            # is result metadata, not model authority; the canonical renderer
+            # uses it to produce deterministic counts from these rows.
+            if payload.get("result_projection") in {"count"}:
+                data["result_projection"] = payload["result_projection"]
+            if payload.get("query"):
+                data["query"] = str(payload["query"])[:120]
         elif action == "get" and isinstance(parsed, dict):
             # Keep the asset read Result contract collection-shaped so the
             # same projection/grounding path can represent both a list and a

@@ -84,6 +84,22 @@ def test_canonical_asset_read_answer_preserves_empty_and_rejects_failed_results(
     }]) is None
 
 
+def test_canonical_asset_read_answer_counts_only_structured_filtered_rows():
+    answer = canonical_asset_read_answer([{
+        "tool": "manage_assets", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS",
+            "query": "2080",
+            "result_projection": "count",
+            "assets": [
+                {"id": "a-1", "name": "Thanatos", "attributes": {"gpu": "RTX 2080"}},
+                {"id": "a-2", "name": "Morpheus", "attributes": {"gpu": "RTX 2080"}},
+            ],
+        }),
+    }])
+    assert answer == "I found 2 canonical IT assets matching '2080'."
+
+
 def _collect_stream_events(generator):
     async def _collect():
         return [chunk async for chunk in generator]

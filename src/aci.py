@@ -2709,9 +2709,18 @@ def canonical_read_fast_path_payload(
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        requested_query = str(query or "")
         query = str(filters.get("asset_query") or "").strip()
         if query:
             payload["query"] = query[:120]
+            # Aggregation is a canonical projection over the filtered Result.
+            # Keep the request shape explicit so the final answer renderer can
+            # count structured rows without asking the model to do arithmetic
+            # or infer inventory from prose.
+            if filters.get("asset_projection") == "count" or re.search(
+                r"\bhow\s+many\b", requested_query, re.IGNORECASE
+            ):
+                payload["result_projection"] = "count"
     if action == "summarize_owner_memory":
         payload["query"] = query or "what do you remember about me"
     elif binding == "developer_read":
@@ -2764,6 +2773,11 @@ def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str
     assets = payload.get("assets")
     if not isinstance(assets, list):
         return None
+    projection = str(payload.get("result_projection") or "").strip().lower()
+    if projection == "count":
+        query = str(payload.get("query") or "").strip()
+        qualifier = f" matching {query!r}" if query else ""
+        return f"I found {len(assets)} canonical IT asset{'s' if len(assets) != 1 else ''}{qualifier}."
     if not assets:
         return "No canonical IT assets are recorded for this owner."
 
