@@ -222,3 +222,14 @@ ACI/cutover/resource/agent-loop/dogfood coverage passed `173 passed, 1 warning`.
 The prior full-regression result remains applicable to this cleanup-only
 checkpoint: `6760 passed, 5 skipped, 149 warnings`; live Ollama/Qwen remains
 unavailable and therefore unverified.
+
+## Semantic dogfood oracle checkpoint (working tree)
+
+The existing evaluator now grades ScenarioFrame cases against traced canonical
+ActionSpec identity, domain, grounding, and completion state. A fluent answer
+without the required canonical Action evidence is recorded as a semantic
+failure; non-ScenarioFrame imports retain their prior scoring contract.
+Focused dogfood/ACI/reference coverage passed `261 passed, 1 warning`. This
+change is evaluator-only and is not yet represented by the deployed image;
+the deployed source remains `fb7a43ea` until a new explicit candidate is
+built.

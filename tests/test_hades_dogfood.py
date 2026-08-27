@@ -130,6 +130,38 @@ def test_architectural_fail_is_distinct_from_functional_pass():
     assert score["outcome"] == "FUNCTIONAL_PASS"
 
 
+def test_semantic_oracle_rejects_fluent_answer_without_canonical_action():
+    case = {
+        "id": "semantic-action-required", "family": "generated_semantic",
+        "expected": {
+            "concept": "TECHNICAL_ASSET", "operation": "READ",
+            "semantic_oracle": {
+                "expected_domain": "TECHNICAL_ASSET",
+                "expected_completion": "COMPLETE_AFTER_ANSWER",
+                "expected_grounding": "CURRENT_ACTION_RESULT",
+            },
+        },
+        "scenario": {"action_spec": "inventory.manage:list"},
+    }
+    record = {
+        "assistant_answer": {"present": True, "internal_leak": False, "secret_seen": False},
+        "trajectory": {
+            "tool_calls": 0, "failed_actions": 0, "duplicate_delivery": 0,
+            "intent": {"domain_concept": "TECHNICAL_ASSET", "operation_class": "READ"},
+            "reference": {}, "aci_trace": {
+                "completion_state": "COMPLETE", "grounding": "CURRENT_ACTION_RESULT",
+                "selected_action": None,
+            },
+        },
+        "metrics": {"model_calls": 1, "decision_calls": 1, "tool_index_lookups": 0, "context_hydrations": 0},
+        "runtime": {"completion": True, "fallback": False, "intent": {}, "reference": {}},
+    }
+    score = score_case(case, record)
+    assert score["functional_pass"] is False
+    assert "semantic_action" in score["failures"]
+    assert "GROUNDING_FAILURE" not in score["failure_classes"]
+
+
 def test_dogfood_corpus_view_alias_uses_canonical_runtime_concept():
     case = {
         "id": "network-context-alias", "family": "metamorphic", "expected": {

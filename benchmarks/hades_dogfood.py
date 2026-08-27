@@ -1720,9 +1720,54 @@ def score_case(case: Mapping[str, Any], record: Mapping[str, Any]) -> dict[str, 
         checks["transport_completion"] = bool(transport.get("transport_completion"))
         checks["terminal_event_count"] = transport.get("terminal_event_count") == 1
         checks["no_duplicate_event_id"] = not bool(transport.get("duplicate_event_id"))
+    # Semantic cases carry a frame oracle.  Grade the trace against that
+    # oracle when the runtime emitted the corresponding canonical fields;
+    # otherwise a fluent answer must not mask a wrong/missing Action path.
+    oracle = expected.get("semantic_oracle")
+    trace = trajectory.get("aci_trace") if isinstance(trajectory.get("aci_trace"), Mapping) else {}
+    if isinstance(oracle, Mapping):
+        oracle_domain = str(oracle.get("expected_domain") or "").strip()
+        if oracle_domain:
+            checks["semantic_domain"] = str(intent.get("domain_concept") or "") == _CANONICAL_CONCEPT_ALIASES.get(oracle_domain, oracle_domain)
+        oracle_action_spec = str((case.get("scenario") or {}).get("action_spec") or "").strip()
+        selected = trace.get("selected_action") if isinstance(trace.get("selected_action"), Mapping) else {}
+        if oracle_action_spec:
+            actual_capability = str(
+                selected.get("capability_id") or selected.get("capability") or ""
+            ).strip()
+            if not actual_capability:
+                # Selected-action traces historically expose the transport
+                # binding. Resolve that binding through the same registry used
+                # by the runtime; never compare provider names heuristically.
+                try:
+                    from src.capability_registry import capability_for_tool
+                    capability = capability_for_tool(str(selected.get("binding") or ""))
+                    actual_capability = str(getattr(capability, "capability_id", "") or "")
+                except Exception:
+                    actual_capability = ""
+            actual_action_spec = f"{actual_capability}:{selected.get('action_id') or ''}"
+            # A semantic oracle that names an ActionSpec requires an actual
+            # selected Action. A fluent answer with no canonical selection is
+            # a semantic failure, not a passing prose response.
+            checks["semantic_action"] = bool(selected) and actual_action_spec == oracle_action_spec
+        oracle_grounding = str(oracle.get("expected_grounding") or "").strip()
+        actual_grounding = str(trace.get("grounding") or "").strip()
+        if oracle_grounding and actual_grounding:
+            checks["semantic_grounding"] = actual_grounding == oracle_grounding
+        oracle_completion = str(oracle.get("expected_completion") or "").strip()
+        actual_completion = str(trace.get("completion_state") or trajectory.get("completion_state") or "").strip()
+        if oracle_completion and actual_completion:
+            checks["semantic_completion"] = actual_completion in {oracle_completion, "COMPLETE" if oracle_completion == "COMPLETE_AFTER_ANSWER" else oracle_completion}
+    # Imported/frozen cases without a ScenarioFrame retain their established
+    # scoring contract; semantic checks are opt-in per case.
+    for semantic_key in (
+        "semantic_domain", "semantic_action", "semantic_grounding",
+        "semantic_completion",
+    ):
+        checks.setdefault(semantic_key, True)
     if expected.get("max_tool_calls") is not None:
         checks["tool_budget"] = trajectory["tool_calls"] <= int(expected["max_tool_calls"])
-    functional_keys = ("answer_present", "no_internal_leak", "no_secret", "concept", "operation", "completion", "fallback", "required_tools", "forbidden_tools", "must_refuse", "response_excludes", "recovery")
+    functional_keys = ("answer_present", "no_internal_leak", "no_secret", "concept", "operation", "completion", "fallback", "required_tools", "forbidden_tools", "must_refuse", "response_excludes", "recovery", "semantic_domain", "semantic_action", "semantic_grounding", "semantic_completion")
     architectural_keys = ("decision_budget", "model_budget", "tool_index_budget", "failed_action_budget", "context_budget", "exactly_once")
     if delivery:
         architectural_keys += ("no_duplicate_finalization", "no_stale_delta_after_replace")
