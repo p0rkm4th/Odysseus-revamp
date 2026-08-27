@@ -192,14 +192,12 @@ from src.intent_contracts import (
 # Temporary import compatibility for callers/tests that still reference the
 # retired loop-local names. These are aliases, not independent implementations
 # or authorities; all semantics live in ACI and intent contracts.
-_canonical_asset_read_payload = canonical_asset_read_payload
 _aci_action_trace = action_trace
 _project_aci_trace = project_aci_trace
 _detect_runaway_call = detect_runaway_call
 _extract_last_user_message = last_user_message
 _user_turn_count = user_turn_count
 _insert_before_latest_user = insert_before_latest_user
-_canonical_read_fast_path_payload = canonical_read_fast_path_payload
 _canonical_read_action = canonical_read_action
 _network_discovery_cidr = explicit_private_discovery_cidr
 _explicitly_allows_diagnostic_install = explicitly_allows_diagnostic_install

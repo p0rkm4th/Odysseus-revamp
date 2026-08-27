@@ -1606,3 +1606,8 @@ Dead grounding alias removal: deleted the unreferenced
 `agent_loop.ground_action_completion` compatibility alias and moved its test
 consumers to `src.aci.ground_action_completion`. Affected coverage passed `68
 passed, 1 warning`; no production semantic owner or execution path changed.
+
+Dead canonical-read alias removal: removed the two unreferenced
+`agent_loop.py` exports `_canonical_asset_read_payload` and
+`_canonical_read_fast_path_payload`; tests now use `src.aci` directly. Focused
+coverage passed `275 passed, 1 warning`.
