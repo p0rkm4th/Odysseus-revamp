@@ -153,6 +153,7 @@ from src.aci import (
     skill_index_prompt,
     select_prompt_tools,
     resolve_turn_intent,
+    compile_turn_contract,
 )
 from src.intent_contracts import (
     EXPLICIT_CONTINUATION_PHRASE_RE as _EXPLICIT_CONTINUATION_PHRASE_RE,
@@ -2022,18 +2023,12 @@ async def stream_agent_loop(
     # exposure can now be driven by the frame/contract resolver instead of a
     # growing list of phrase-specific branches.
     try:
-        from src.intent_contracts import compile_intent, resolve_continuation, resolve_intent
-        _intent_frame = compile_intent(
-            str(_intent.get("retrieval_query") or _last_user),
-            continuation=bool(_intent.get("continuation")),
-            run_reference=str(work_run_id or "").strip() or None,
-            reference_context=(
-                _active_run_context.get("reference_context")
-                if isinstance(_active_run_context, dict)
-                else (_session_reference_context if isinstance(_session_reference_context, dict) else None)
-            ),
+        _intent_frame, _resolved_contract, _continuation_result, canonical_domains = compile_turn_contract(
+            _intent,
+            _last_user,
+            run_reference=work_run_id,
+            active_run=(_active_run_context if isinstance(_active_run_context, dict) else None),
         )
-        _resolved_contract = resolve_intent(_intent_frame)
         _record_aci_framework("intent_resolution")
         if _intent_frame.entity_reference or _intent_frame.run_reference or _intent_frame.reference_resolution.get("status") == "RESOLVED":
             _record_aci_framework("reference_resolution")
@@ -2048,9 +2043,7 @@ async def stream_agent_loop(
         _intent["intent_frame"] = _intent_frame.as_dict()
         _intent["resolved_contract"] = _resolved_contract.as_dict()
         if _intent_frame.operation_class == "CONTINUE":
-            from src.agent_work_bridge import continuation_run_projection
             active_run = _active_run_context
-            _continuation_result = resolve_continuation(_intent_frame, active_run)
             _intent["continuation_resolution"] = _continuation_result.as_dict()
             if _continuation_result.status == "BLOCKED":
                 # A durable Continue that resolves to a terminal, blocked, or
@@ -2097,8 +2090,6 @@ async def stream_agent_loop(
                     "_agent_injected": "continuation_state",
                     "_protected": True,
                 })
-        from src.intent_contracts import canonical_domain_projection
-        canonical_domains = set(canonical_domain_projection(_intent_frame))
         if _aci_enabled and canonical_domains:
             # ACI owns domain selection for concepts it understands.  The
             # legacy classifier remains available only as a transport hint

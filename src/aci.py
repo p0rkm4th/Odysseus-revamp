@@ -315,6 +315,40 @@ def resolve_turn_intent(
     return intent, contract_owned
 
 
+def compile_turn_contract(
+    intent: Mapping[str, Any],
+    last_user: str,
+    *,
+    run_reference: Optional[str] = None,
+    active_run: Optional[Mapping[str, Any]] = None,
+) -> tuple[Any, Any, Any, set[str]]:
+    """Compile one IntentFrame and its canonical domain/action projection."""
+    from src.intent_contracts import (
+        canonical_domain_projection,
+        compile_intent,
+        resolve_continuation,
+        resolve_intent,
+    )
+
+    frame = compile_intent(
+        str(intent.get("retrieval_query") or last_user),
+        continuation=bool(intent.get("continuation")),
+        run_reference=str(run_reference or "").strip() or None,
+        reference_context=(
+            active_run.get("reference_context")
+            if isinstance(active_run, Mapping)
+            else None
+        ),
+    )
+    resolved = resolve_intent(frame)
+    continuation = (
+        resolve_continuation(frame, active_run)
+        if frame.operation_class == "CONTINUE"
+        else None
+    )
+    return frame, resolved, continuation, set(canonical_domain_projection(frame))
+
+
 _HARD_ACTION_HINTS = {
     "shell_exec": "Invoke bash with the exact non-interactive command the user requested.",
     "operations": "Begin with a real read-only status/log/configuration inspection using bash or the available read tools.",

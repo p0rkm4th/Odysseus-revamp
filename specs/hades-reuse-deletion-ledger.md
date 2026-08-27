@@ -1269,3 +1269,13 @@ references, preventing unrelated turns from inheriting stale context. Focused
 bridge, ACI, lifecycle, cutover, first-class tool, and corpus tests passed 117
 tests with 2 warnings. `agent_loop.py` is now 7,033 LOC; this local slice has
 not been built or deployed.
+
+Intent-frame compilation ownership: moved IntentFrame compilation,
+resolved-contract projection, continuation resolution, and canonical-domain
+projection orchestration behind the existing ACI seam as
+`compile_turn_contract`. The loop now consumes the compiled contract and
+applies only the resulting durable-state/message transitions; it no longer
+independently invokes those resolvers. Focused intent, ACI, continuation,
+bridge, and first-class tool coverage passed 237 tests with 2 warnings.
+`agent_loop.py` is now 7,024 LOC; this local slice has not been built or
+deployed.
