@@ -1549,3 +1549,8 @@ to distinguish historical checkpoints from the active `8e2737847812` source.
 The current candidate image and embedded source match exactly, focused
 cutover/resource/ACI/dogfood validation passed `136`, and live Qwen remains
 unverified because Ollama is unavailable.
+
+Full current-head regression evidence: `6760 passed, 5 skipped, 149 warnings`
+against source `8ea00f81`, using a writable project fixture and a read-only
+mount of the host Docker storage path. Storage-preflight coverage passed `6/6`
+under that corrected fixture; the earlier six failures were mount artifacts.
