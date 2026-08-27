@@ -150,6 +150,7 @@ from src.aci import (
     hard_turn_capability_directive,
     domain_tools_for_projection,
     assemble_prompt,
+    build_base_prompt,
     skill_index_prompt,
     select_prompt_tools,
     resolve_turn_intent,
@@ -1712,58 +1713,26 @@ def _build_base_prompt(
     suppress_skills: bool = False,
     intent_domains: Optional[Set[str]] = None,
 ):
-    """Build the agent prompt with only relevant tools included.
-
-    If relevant_tools is provided (from RAG retrieval), only those tools
-    are shown with full descriptions. Otherwise falls back to full prompt.
-    """
+    """Compatibility adapter into the canonical ACI base-prompt projection."""
     from src.tool_index import ALWAYS_AVAILABLE
-
-    disabled, selected_tools, static_full_prompt = select_prompt_tools(
-        all_tool_names=set(TOOL_SECTIONS),
-        always_available=ALWAYS_AVAILABLE,
-        admin_tools=_ADMIN_TOOLS,
+    return build_base_prompt(
+        tool_sections=TOOL_SECTIONS,
+        agent_system_prompt=AGENT_SYSTEM_PROMPT,
         disabled_tools=disabled_tools,
-        relevant_tools=relevant_tools,
+        mcp_mgr=mcp_mgr,
         needs_admin=needs_admin,
-        image_gen_enabled=get_setting("image_gen_enabled", False),
-    )
-
-    if relevant_tools is not None:
-        # RAG mode: trust the relevant_tools set as already-composed.
-        # get_tools_for_query starts from ALWAYS_AVAILABLE and may
-        # *discard* tools that conflict with the query's intent (e.g.
-        # drop manage_memory for clear contact-save patterns). Unioning
-        # ALWAYS_AVAILABLE back in here used to silently undo those
-        # drops. Only force-include the irreducible loop primitives
-        # (ask_user, update_plan) as belt-and-suspenders.
-        agent_prompt = _assemble_prompt(selected_tools, disabled, compact=compact, intent_domains=intent_domains)
-    else:
-        # Fallback: full prompt (RAG unavailable)
-        agent_prompt = (
-            AGENT_SYSTEM_PROMPT
-            if static_full_prompt and intent_domains is None and not compact
-            else _assemble_prompt(
-                set(TOOL_SECTIONS.keys()), disabled, compact=compact,
-                intent_domains=intent_domains,
-            )
-        )
-        if not needs_admin:
-            agent_prompt = _assemble_prompt(selected_tools, disabled, compact=compact, intent_domains=intent_domains)
-        elif compact:
-            agent_prompt = _assemble_prompt(set(TOOL_SECTIONS.keys()), disabled, compact=True, intent_domains=intent_domains)
-
-    # The Skill catalogue is a separate untrusted projection.  Its manager
-    # remains the storage/registration owner; it cannot grant authority.
-    skill_index_block = skill_index_prompt(
-        tool_names=set(TOOL_SECTIONS),
-        disabled_tools=disabled,
+        relevant_tools=relevant_tools,
+        mcp_disabled_map=mcp_disabled_map,
+        compact=compact,
         owner=owner,
         suppress_local_context=suppress_local_context,
         suppress_skills=suppress_skills,
+        intent_domains=intent_domains,
+        admin_tools=_ADMIN_TOOLS,
+        always_available=ALWAYS_AVAILABLE,
+        image_gen_enabled=get_setting("image_gen_enabled", False),
+        assemble=lambda names, **kwargs: _assemble_prompt(names, **kwargs),
     )
-
-    return agent_prompt, skill_index_block
 
 
 

@@ -4,6 +4,7 @@ from src.aci import (
     PostResultState, classify_post_result, resolve_turn_disposition,
     adaptive_shortlist, hard_filter_actions, model_burden,
     parse_decision_json, state_fingerprint,
+    build_base_prompt,
 )
 from src.agent_loop import _minimal_aci_model_fallback_messages
 
@@ -78,6 +79,35 @@ def test_context_envelope_does_not_confuse_architecture_with_effective_budget():
 def test_objective_and_burden_are_machine_state_not_prose():
     objective = ObjectiveSpec("o1", "owner", "work", "Fix test", completion=CompletionContract("tests"))
     assert objective.completion.kind == "tests"
+
+
+def test_base_prompt_projection_is_owned_by_aci():
+    rendered = []
+
+    def render(names, **kwargs):
+        rendered.append((set(names), dict(kwargs)))
+        return "bounded prompt"
+
+    prompt, skills = build_base_prompt(
+        tool_sections={"read_file": "read", "manage_memory": "memory"},
+        agent_system_prompt="full prompt",
+        disabled_tools={"manage_memory"},
+        mcp_mgr=None,
+        needs_admin=False,
+        relevant_tools={"read_file", "manage_memory"},
+        always_available={"read_file"},
+        admin_tools=set(),
+        suppress_skills=True,
+        assemble=render,
+    )
+    assert prompt == "bounded prompt"
+    assert skills == ""
+    assert len(rendered) == 1
+    selected, options = rendered[0]
+    assert selected == {"read_file", "manage_memory", "ask_user", "update_plan"}
+    assert options["disabled_tools"] == {"manage_memory", "generate_image"}
+    assert options["compact"] is False
+    assert options["intent_domains"] is None
     metrics = model_burden(framework=7, model=2, labels={"reference": "FRAMEWORK"})
     assert metrics["model_ratio"] == 0.2222
     assert state_fingerprint({"x": 1}) == state_fingerprint({"x": 1})
