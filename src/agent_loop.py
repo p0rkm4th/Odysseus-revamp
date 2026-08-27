@@ -100,6 +100,7 @@ from src.aci import (
     build_actions_snapshot,
     detect_runaway_call,
     canonical_asset_read_payload,
+    canonical_tool_result_projection,
     canonical_result_answer,
     project_final_answer,
     project_model_decision,
@@ -6422,6 +6423,10 @@ async def stream_agent_loop(
                 tool_event["diff"] = result["diff"]
             if _memory_projection is not None:
                 tool_event["result_projection"] = _memory_projection
+            else:
+                _canonical_projection = canonical_tool_result_projection(block.tool_type, result)
+                if _canonical_projection is not None:
+                    tool_event["result_projection"] = _canonical_projection
             if _pending_ask_user_event:
                 # Persist the structured question with the tool event.  On a
                 # reload, chatRenderer can restore the card; a later user

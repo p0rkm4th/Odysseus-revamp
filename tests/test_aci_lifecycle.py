@@ -11,6 +11,8 @@ from src.aci import (
     canonical_asset_read_answer,
     canonical_household_read_answer,
     canonical_network_read_answer,
+    canonical_homelab_read_answer,
+    canonical_tool_result_projection,
     canonical_inventory_mutation_answer,
     canonical_result_answer,
     project_final_answer,
@@ -229,6 +231,72 @@ def test_canonical_network_read_answer_uses_structured_host_context():
         "Default route gateway: 192.168.1.1."
     )
     assert "2001:db8" not in answer
+
+
+def test_large_network_result_is_projected_before_truncated_transport_output():
+    raw_result = {
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA",
+            "action": "read_network_observations",
+            "nodes": [{
+                "id": "node-1",
+                "name": "Thanatos",
+                "attributes": {
+                    "hostname": "thanatos",
+                    "observed_ip": "10.20.30.40",
+                    "large_evidence": "x" * 100_000,
+                },
+            }],
+            "edges": [],
+            "node_count": 1,
+            "edge_count": 0,
+        }),
+        "exit_code": 0,
+    }
+    projection = canonical_tool_result_projection("manage_homelab", raw_result)
+    assert projection is not None
+    assert "large_evidence" not in json.dumps(projection)
+    answer = canonical_network_read_answer([{
+        "tool": "manage_homelab",
+        "exit_code": 0,
+        "command": '{"action":"read_network_observations"}',
+        "output": '{"status":"SUCCESS_WITH_DATA"... (truncated, 101944 chars total)',
+        "result_projection": projection,
+    }])
+    assert answer == "I found 1 persisted network observation:\n- Thanatos"
+
+
+def test_homelab_inspection_has_grounded_deterministic_answer():
+    projection = canonical_tool_result_projection("manage_homelab", {
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA",
+            "action": "inspect_host",
+            "kind": "read",
+            "target": "local_host",
+            "observation_location": "HOST_OPERATOR",
+            "output": "up 3 days, load average: 0.12, 0.08, 0.03",
+        }),
+        "exit_code": 0,
+    })
+    answer = canonical_homelab_read_answer([{
+        "tool": "manage_homelab",
+        "exit_code": 0,
+        "output": "truncated transport text",
+        "result_projection": projection,
+    }])
+    assert answer == (
+        "Host inspection for local_host (observed via HOST_OPERATOR):\n"
+        "up 3 days, load average: 0.12, 0.08, 0.03"
+    )
+    selected = canonical_result_answer([{
+        "tool": "manage_homelab",
+        "exit_code": 0,
+        "output": "truncated transport text",
+        "result_projection": projection,
+    }])
+    assert selected is not None
+    assert selected.source is AnswerSource.DETERMINISTIC_RESULT
+    assert selected.provenance == "canonical Homelab Result"
 
 
 def test_canonical_inventory_mutation_answer_requires_structured_result_and_readback():
