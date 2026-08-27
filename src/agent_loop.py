@@ -193,13 +193,7 @@ from src.intent_contracts import (
 # Temporary import compatibility for callers/tests that still reference the
 # retired loop-local names. These are aliases, not independent implementations
 # or authorities; all semantics live in ACI and intent contracts.
-_extract_last_user_message = last_user_message
 _insert_before_latest_user = insert_before_latest_user
-_network_discovery_cidr = explicit_private_discovery_cidr
-_network_discovery_request_cidr = network_discovery_request_cidr
-_network_prerequisite_request = is_network_prerequisite_request
-_explicit_network_discovery_request = is_explicit_network_discovery_request
-_network_substantive_fallback_command = network_substantive_fallback_command
 _recent_reference_resolution_hint = reference_resolution_hint
 _deterministic_reference_acknowledgement = deterministic_reference_acknowledgement
 _is_contextual_retry_continuation = is_contextual_retry_continuation
@@ -1421,7 +1415,7 @@ def _build_system_prompt(
     # before deciding which tool to call.
     if not suppress_local_context and not suppress_skills:
         try:
-            last_user = _extract_last_user_message(messages)
+            last_user = last_user_message(messages)
             # Respect the user's skills-enabled toggle (mirrors memory_enabled).
             # When off, don't inject relevant skills into the prompt.
             _skills_on = True
@@ -1747,7 +1741,7 @@ async def stream_agent_loop(
 
     _t0 = time.time()
     _needs_admin = _detect_admin_intent(messages)
-    _last_user = _extract_last_user_message(messages)
+    _last_user = last_user_message(messages)
     _aci_mode = str(aci_mode or "legacy").strip().lower()
     _aci_enabled = _aci_mode in {"shadow", "aci"}
     _aci_packet = None
@@ -2696,7 +2690,7 @@ async def stream_agent_loop(
         and _relevant_tools is not None
         and "network_ops" in _intent_domains
         and (
-            _explicit_network_discovery_request(_last_user)
+            is_explicit_network_discovery_request(_last_user)
             or _network_discovery_reply
             or _network_discovery_followup
         )
@@ -2713,7 +2707,7 @@ async def stream_agent_loop(
     # resolves nmap/iproute2 and routes installation through the broker.
     if (
         not _aci_canonical_tool_projection
-        and _network_prerequisite_request(_last_user)
+        and is_network_prerequisite_request(_last_user)
         and _relevant_tools is not None
     ):
         _relevant_tools.discard("bash")
@@ -2733,7 +2727,7 @@ async def stream_agent_loop(
         and _relevant_tools is not None
         and "network_ops" in _intent_domains
         and (
-            _explicit_network_discovery_request(_last_user)
+            is_explicit_network_discovery_request(_last_user)
             or _network_discovery_reply
             or _network_discovery_followup
         )
@@ -2856,7 +2850,7 @@ async def stream_agent_loop(
                 active_run=_active_run_context,
                 query=str(_intent.get("retrieval_query") or _last_user),
                 profile=_aci_profile,
-                network_cidr=_network_discovery_request_cidr(_last_user),
+                network_cidr=network_discovery_request_cidr(_last_user),
                 read_payload_builder=canonical_read_fast_path_payload,
             )
 
@@ -3248,7 +3242,7 @@ async def stream_agent_loop(
     # on such turns and at most _VERIFIER_MAX_ROUNDS times.
     _effectful_used = False
     _verifier_rounds = 0
-    _verifier_instruction = _extract_last_user_message(messages)
+    _verifier_instruction = last_user_message(messages)
     real_input_tokens = 0   # Accumulated real usage from API
     real_output_tokens = 0
     last_round_input_tokens = 0  # Last round's input tokens (for context % peak)
@@ -3639,7 +3633,7 @@ async def stream_agent_loop(
             ],
         )
         _approved_fallback = _hard_action_fallback_command(_intent_domains)
-        _approved_substantive = _network_substantive_fallback_command(
+        _approved_substantive = network_substantive_fallback_command(
             _intent_domains, _retrieval_query
         )
         _approved_is_substantive = bool(
@@ -4400,7 +4394,7 @@ async def stream_agent_loop(
         # approval gate. Convert it into the bounded first-class prerequisite
         # plan so the existing resolver, broker policy, and verification path
         # remain authoritative.
-        _network_request_cidr = _network_discovery_request_cidr(_last_user)
+        _network_request_cidr = network_discovery_request_cidr(_last_user)
         _network_service_request = is_network_service_enumeration_request(_last_user)
         if not _aci_canonical_tool_projection and (
             not tool_blocks
@@ -4638,7 +4632,7 @@ async def stream_agent_loop(
             tool_blocks
             and all(block.tool_type in {"bash", "run_shell"} for block in tool_blocks)
             and (
-                _network_prerequisite_request(_last_user)
+                is_network_prerequisite_request(_last_user)
                 or (
                     _network_request_cidr
                     and "network_ops" in set(_intent_domains or set())
@@ -4975,7 +4969,7 @@ async def stream_agent_loop(
         # For an explicitly scoped network request, finish capability
         # selection deterministically after that single repair attempt. CIDR
         # validation and approval remain in HomelabOperations.
-        _network_cidr = _network_discovery_request_cidr(_ody_v38_user_text)
+        _network_cidr = network_discovery_request_cidr(_ody_v38_user_text)
         if not _aci_canonical_tool_projection and (
             not guide_only
             and not _force_answer
@@ -5046,7 +5040,7 @@ async def stream_agent_loop(
             + " Explain only after seeing the actual tool result."
                 ),
             })
-            _repair_substantive = _network_substantive_fallback_command(
+            _repair_substantive = network_substantive_fallback_command(
                 _intent_domains, _retrieval_query
             )
             if (
@@ -5355,7 +5349,7 @@ async def stream_agent_loop(
                     and set(_homelab_payload) <= {"action", "scope", "target", "cidr", "mode"}
                     and (_homelab_payload.get("scope") or _homelab_payload.get("target") or _homelab_payload.get("cidr"))
                 ):
-                    _alias_cidr = _network_discovery_cidr(str(
+                    _alias_cidr = explicit_private_discovery_cidr(str(
                         _homelab_payload.get("scope")
                         or _homelab_payload.get("target")
                         or _homelab_payload.get("cidr")
@@ -5377,7 +5371,7 @@ async def stream_agent_loop(
                     and set(_homelab_payload) <= {"action", "scope", "cidr", "mode"}
                     and _homelab_payload.get("scope")
                 ):
-                    _alias_cidr = _network_discovery_cidr(str(_homelab_payload.get("scope")))
+                    _alias_cidr = explicit_private_discovery_cidr(str(_homelab_payload.get("scope")))
                     if _alias_cidr:
                         logger.info(
                             "[agent] normalized provider network_discovery alias to canonical plan cidr=%s",
@@ -5394,7 +5388,7 @@ async def stream_agent_loop(
                     and _homelab_payload.get("scope")
                     and _homelab_payload.get("authorization")
                 ):
-                    _alias_target = _network_discovery_cidr(str(_homelab_payload.get("scope")))
+                    _alias_target = explicit_private_discovery_cidr(str(_homelab_payload.get("scope")))
                     if _alias_target:
                         _alias_operation = {
                             "action": "execute_network_discovery",
@@ -5425,7 +5419,7 @@ async def stream_agent_loop(
                     and set(_homelab_payload) <= {"action", "scope", "target", "cidr", "mode", "approval"}
                     and (_homelab_payload.get("scope") or _homelab_payload.get("target") or _homelab_payload.get("cidr"))
                 ):
-                    _alias_target = _network_discovery_cidr(str(
+                    _alias_target = explicit_private_discovery_cidr(str(
                         _homelab_payload.get("scope")
                         or _homelab_payload.get("target")
                         or _homelab_payload.get("cidr")
@@ -5457,7 +5451,7 @@ async def stream_agent_loop(
                     and set(_homelab_payload) <= {"action", "target", "scope", "cidr", "mode"}
                     and (_homelab_payload.get("target") or _homelab_payload.get("scope") or _homelab_payload.get("cidr"))
                 ):
-                    _alias_target = _network_discovery_cidr(str(
+                    _alias_target = explicit_private_discovery_cidr(str(
                         _homelab_payload.get("target")
                         or _homelab_payload.get("scope")
                         or _homelab_payload.get("cidr")
@@ -5477,7 +5471,7 @@ async def stream_agent_loop(
                     and set(_homelab_payload) <= {"action", "target", "cidr", "mode"}
                     and _homelab_payload.get("target")
                 ):
-                    _alias_target = _network_discovery_cidr(str(_homelab_payload.get("target")))
+                    _alias_target = explicit_private_discovery_cidr(str(_homelab_payload.get("target")))
                     if _alias_target:
                         _alias_operation = {
                             "action": "execute_network_discovery",
@@ -5503,7 +5497,7 @@ async def stream_agent_loop(
                     and _homelab_action == "discover_network"
                     and set(_homelab_payload) <= {"action", "target", "scope", "cidr", "scan_type"}
                 ):
-                    _alias_target = _network_discovery_cidr(str(
+                    _alias_target = explicit_private_discovery_cidr(str(
                         _homelab_payload.get("target")
                         or _homelab_payload.get("scope")
                         or _homelab_payload.get("cidr")
@@ -5948,7 +5942,7 @@ async def stream_agent_loop(
                     _hard_action_fallback
                     and block.content.strip() == _hard_action_fallback.strip()
                 )
-                _current_substantive = _network_substantive_fallback_command(
+                _current_substantive = network_substantive_fallback_command(
                     _intent_domains, _retrieval_query
                 )
                 _is_substantive_fallback = bool(
