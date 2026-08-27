@@ -1474,3 +1474,14 @@ observations are now presented only from structured `manage_homelab` results;
 there is no network-specific model or executor path. Focused post-fix coverage
 passed 252 tests with 1 skipped. Live Qwen owner verification remains
 unavailable.
+
+Owner-state reliability closure: extended the existing deterministic-read
+semantic owner for ordinary possessive/discourse Network variants (`my`,
+`our`, `yo`, current-connection phrasing) while keeping network concepts and
+purchase/recommendation near-misses off canonical reads. Added permanent
+metamorphic-style owner Network and conceptual-question regressions. Focused
+coverage passed 354 tests with 1 skipped. The isolated current-head full suite
+recorded 6,729 passed, 5 skipped, and 7 failures: one near-miss fixed here and
+six storage-preflight failures caused by the intentionally minimal test
+container lacking `/home/.docker-data`; those six remain environment evidence,
+not converted passes. Live Qwen verification remains unavailable.

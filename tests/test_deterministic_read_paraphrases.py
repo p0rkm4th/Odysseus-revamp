@@ -327,6 +327,39 @@ def test_current_network_context_is_not_filtered_as_a_definition():
     assert resolved.action_id == "read_network_context"
 
 
+@pytest.mark.parametrize("query", [
+    "tell me about my network",
+    "tell me about our network",
+    "what network am i on",
+    "what's my network like",
+    "show me my network",
+    "what do we know about our network",
+    "yo what network am i on",
+    "what about the network i'm on",
+    "give me the network context",
+    "what's the current connection",
+])
+def test_owner_network_paraphrases_use_bounded_canonical_read(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "NETWORK"
+    assert resolved.frame.operation_class == "READ"
+    assert resolved.binding_name == "manage_homelab"
+    assert resolved.action_id in {"read_network_context", "read_network_observations"}
+
+
+@pytest.mark.parametrize("query", [
+    "what is a network",
+    "tell me about networking",
+    "how does subnetting work",
+    "explain a default route",
+])
+def test_network_concept_questions_stay_on_general_answer_floor(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert not (resolved.available and frame.operation_class in {"READ", "EXECUTE"})
+
+
 def test_unknown_selfstate_capability_question_does_not_become_work_read():
     frame = compile_intent("What capabilities are working?")
     assert frame.domain_concept == "UNKNOWN"

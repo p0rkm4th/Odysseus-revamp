@@ -58,6 +58,10 @@ _ASSET_OWNER = re.compile(
     re.IGNORECASE,
 )
 _NETWORK_SUBJECT = re.compile(r"\b(?:network|lan|connection|connected)\b", re.IGNORECASE)
+_OWNER_NETWORK = re.compile(
+    r"\b(?:my|our|ours)\s+network\b|\bnetwork\s+(?:i(?:'m|\s+am)|we(?:'re|\s+are))\s+on\b",
+    re.IGNORECASE,
+)
 _NETWORK_CONTEXT_DETAIL = re.compile(
     r"\b(?:default\s+route|interface\s+(?:carrying|has|is)|"
     r"network\s+context|subnet|where\s+am\s+i\s+connected)\b",
@@ -156,7 +160,7 @@ def deterministic_read_concept(text: str) -> str | None:
     # unless the turn also carries an explicit owner/current-state subject.
     if _GENERAL_EXPLANATION.search(query) and not (
         _OWNER_SELF.search(query)
-        or re.search(r"\b(?:my|mine|i\s+am|i'm|right\s+now|current(?:ly)?)\b", query)
+        or re.search(r"\b(?:my|mine|our|ours|we|i\s+am|i'm|right\s+now|current(?:ly)?)\b", query)
         or re.search(r"\bwe\b.{0,20}\bworking\b", query)
     ):
         return None
@@ -211,6 +215,7 @@ def deterministic_read_concept(text: str) -> str | None:
         _ASSET_SUBJECT.search(query)
         and _READ_REQUEST.search(query)
         and not re.search(r"\b(?:network|lan|devices?\s+look|look\s+like\s+servers?)\b", query)
+        and not re.search(r"\b(?:buy|purchase|recommend|suggest|should\s+i|worth)\b", query)
         and not re.search(r"\b(?:how\s+do|what\s+is|define|explain)\b", query)
     ):
         return "TECHNICAL_ASSET"
@@ -233,6 +238,7 @@ def deterministic_read_concept(text: str) -> str | None:
         or _NETWORK_CONTEXT_DETAIL.search(query)
     ) and (
         _CURRENT_STATE.search(query)
+        or _OWNER_NETWORK.search(query)
         or re.search(r"\bwhere(?:'s|\s+is)\s+(?:hades|this\s+machine)\s+connected\b", query)
         or _NETWORK_CONTEXT_DETAIL.search(query)
         or re.search(r"\b(?:figure\s+it\s+out|explore)\b", query)
