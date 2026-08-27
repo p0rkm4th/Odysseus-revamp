@@ -90,6 +90,22 @@ def test_create_session_trusted_rejects_username_renamed_after_verification(tmp_
     assert mgr.create_session_trusted("alice") is None
 
 
+def test_acceptance_principal_requires_explicit_flag_and_expires_sessions(monkeypatch, tmp_path):
+    auth_mod = _auth_module()
+    auth_mod._hash_password = lambda password: f"hash:{password}"
+    auth_mod._verify_password = lambda password, hashed: hashed == f"hash:{password}"
+    mgr = auth_mod.AuthManager(str(tmp_path / "auth.json"))
+    monkeypatch.delenv("HADES_ACCEPTANCE_PRINCIPAL_ENABLED", raising=False)
+    assert mgr.create_acceptance_principal("acceptance-password") is False
+    monkeypatch.setenv("HADES_ACCEPTANCE_PRINCIPAL_ENABLED", "true")
+    assert mgr.create_acceptance_principal("acceptance-password", expires_at=__import__("time").time() + 60)
+    token = mgr.create_session("hades-acceptance", "acceptance-password")
+    assert token and mgr.validate_token(token)
+    monkeypatch.delenv("HADES_ACCEPTANCE_PRINCIPAL_ENABLED", raising=False)
+    assert mgr.validate_token(token) is False
+    assert mgr.create_session("hades-acceptance", "acceptance-password") is None
+
+
 def _change_password_endpoint(auth_manager):
     sys.modules.pop("routes.auth_routes", None)
     _real_core_package()
