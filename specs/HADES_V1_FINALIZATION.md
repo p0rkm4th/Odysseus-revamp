@@ -83,3 +83,29 @@ against the current source rather than copied forward as assumptions.
 
 This document must be updated whenever the source, deployment, or release
 evidence changes.
+
+## Owner-state closure checkpoint (working tree after `299ef9ee`)
+
+The exact reconciled baseline before this closure slice was:
+
+- Local/remote source: `299ef9ee72b666c1a796d79436576dead1196166`
+- Running container: `odysseus-odysseus-1`
+- Running image ID: `sha256:77bd2346f2278e564757142ac68a14250f60aa62d74ac38d463d0895920fa226`
+- Embedded source label: `299ef9ee72b666c1a796d79436576dead1196166`
+- Container state: running; `/api/health` returned `healthy` after startup
+- Worktree: clean at reconciliation; current closure edits are not deployed
+
+The closure slice adds active Asset property/reference projections (`specs`,
+GPU, RAM, and “other one”), suppresses intermediate deterministic-read
+replacement events when a canonical Result exists, and ignores duplicate
+provider terminal markers within one HTTP stream. The affected suites passed
+`401 passed, 1 skipped` before the final documentation/commit step. This is
+integration/fixture evidence; live Qwen owner verification remains
+**UNVERIFIED**.
+
+The prior isolated full regression remains honestly recorded as `6729 passed,
+5 skipped, 7 failed`: the semantic near-miss failure was fixed in the closure
+slice; six storage-preflight failures were environment failures caused by the
+minimal test container lacking `/home/.docker-data` and are not converted to
+passes. A current-head full regression and explicit redeployment are still
+required.

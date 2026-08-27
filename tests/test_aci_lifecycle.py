@@ -146,6 +146,21 @@ def test_canonical_result_answer_selects_one_authoritative_source():
     assert answer.content == "I found 1 canonical IT asset:\n- Thanatos"
 
 
+def test_canonical_answer_suppresses_intermediate_untrusted_summary():
+    events = [{
+        "tool": "manage_homelab", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA", "action": "read_network_context",
+            "interfaces": [{"name": "enp1s0", "kind": "PHYSICAL_LAN", "addresses": []}],
+            "default_routes": [],
+        }),
+    }]
+    answer = canonical_result_answer(events)
+    assert answer is not None
+    assert answer.source is AnswerSource.DETERMINISTIC_RESULT
+    assert answer.content == "Current host network context (observed):\n- enp1s0 (PHYSICAL_LAN)\nNo default route was observed."
+
+
 def test_canonical_network_read_answer_uses_structured_host_context():
     answer = canonical_network_read_answer([{
         "tool": "manage_homelab", "exit_code": 0,

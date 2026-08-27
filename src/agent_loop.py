@@ -6637,6 +6637,10 @@ async def stream_agent_loop(
     # Action-grounding boundary: prose is never evidence of an external
     # operation. Only persisted tool events/results authorize completion
     # language. This applies to every model, including local Qwen routes.
+    # Select the canonical owner-state answer before emitting any correction.
+    # When present, it suppresses intermediate model/legacy summaries so the
+    # transport receives one authoritative replacement only.
+    _canonical_answer = canonical_result_answer(tool_events)
     _grounded_response = (
         full_response
         if _aci_clarification_only
@@ -6647,7 +6651,7 @@ async def stream_agent_loop(
             stored_evidence=_has_stored_canonical_evidence(messages),
         )
     )
-    if _grounded_response != full_response:
+    if _grounded_response != full_response and _canonical_answer is None:
         logger.warning(
             "[agent-grounding] suppressed ungrounded completion claim domains=%s text=%r",
             sorted(_intent_domains), full_response[:240],
@@ -6708,6 +6712,7 @@ async def stream_agent_loop(
 
     if (
         tool_events
+        and _canonical_answer is None
         and full_response.strip()
         and full_response.strip() != (_response_before_tool_summary or "").strip()
         and full_response.strip() not in (_response_before_tool_summary or "")
@@ -6719,7 +6724,6 @@ async def stream_agent_loop(
     # ACI owns final deterministic answer selection.  The renderer returns
     # one authoritative source/provenance record, so this loop emits at most
     # one canonical replacement for owner-state reads and writes.
-    _canonical_answer = canonical_result_answer(tool_events)
     if _canonical_answer and _canonical_answer.content != full_response.strip():
         full_response = _canonical_answer.content
         yield "data: " + json.dumps({

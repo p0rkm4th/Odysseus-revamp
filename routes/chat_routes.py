@@ -1678,6 +1678,10 @@ def setup_chat_routes(
             # the outer scope. (Was `nonlocal` but never reassigned.)
             research_sources = None
             web_sources = ctx.web_sources
+            # Provider streams can append a second terminal marker after a
+            # retry/error path. One logical HTTP stream has one terminal
+            # completion; persistence is separately idempotent by turn_id.
+            _done_seen = False
 
             # Register active stream for partial-save safety net
             _active_streams[session] = {"status": "streaming", "partial": "", "query": message, "is_research": effective_do_research, "mode": _effective_mode, "turn_id": turn_id}
@@ -2262,6 +2266,9 @@ def setup_chat_routes(
                         elif chunk.startswith("event: "):
                             yield chunk
                         elif chunk == "data: [DONE]\n\n":
+                            if _done_seen:
+                                continue
+                            _done_seen = True
                             if _chat_terminal_saved:
                                 # Some providers append DONE after a terminal
                                 # error.  The failed partial is already saved;
@@ -2589,6 +2596,9 @@ def setup_chat_routes(
                         elif chunk.startswith("event: "):
                             yield chunk
                         elif chunk == "data: [DONE]\n\n":
+                            if _done_seen:
+                                continue
+                            _done_seen = True
                             _has_tool_events = bool((last_metrics or {}).get("tool_events"))
                             if full_response or _has_tool_events:
                                 _response_to_save = full_response or "Done."

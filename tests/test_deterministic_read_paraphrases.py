@@ -22,6 +22,35 @@ from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
 
+def test_asset_detail_followups_resolve_active_referent_and_property():
+    context = {
+        "ordered_entities": [
+            {"ref": "asset-1", "concept": "TECHNICAL_ASSET"},
+            {"ref": "asset-2", "concept": "TECHNICAL_ASSET"},
+        ],
+        "last": {"ref": "asset-1", "concept": "TECHNICAL_ASSET"},
+    }
+    for query, ref, prop in (
+        ("Tell me the specs.", "asset-1", "specs"),
+        ("What GPUs does it have?", "asset-1", "gpu"),
+        ("What about its RAM?", "asset-1", "ram"),
+        ("Tell me about the other one.", "asset-2", None),
+    ):
+        frame = compile_intent(query, reference_context=context)
+        assert frame.domain_concept == "TECHNICAL_ASSET"
+        assert frame.entity_reference == ref
+        assert frame.operation_class == "READ"
+        if prop:
+            assert frame.filters["asset_property"] == prop
+
+
+def test_asset_detail_followup_without_context_is_unresolved():
+    frame = compile_intent("Tell me the specs.", reference_context=None)
+    assert frame.domain_concept == "UNKNOWN"
+    assert frame.entity_reference is None
+    assert frame.filters == {}
+
+
 @pytest.mark.parametrize(("query", "concept", "action", "binding"), [
     ("tell me about my hardware", "TECHNICAL_ASSET", "list", "manage_assets"),
     ("Please explore my current hardware", "HOMELAB_HOST", "inspect_host", "manage_homelab"),
