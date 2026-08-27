@@ -111,6 +111,26 @@ def _trajectory(category: str, prompt: str) -> dict[str, Any]:
     return trajectory
 
 
+def _fixture_environment(category: str, index: int, prompt: str) -> dict[str, Any]:
+    """Declare the simulated tool world separately from scoring expectations."""
+    tools: tuple[str, ...] = ()
+    if category == "canonical_reads":
+        tools = (
+            ("manage_assets",) if index < 3 else
+            ("read_work",) if index < 6 else
+            ("read_memory",) if index == 6 else
+            ("manage_homelab",) if index in {7, 9} else
+            ("manage_security_assessment",)
+        )
+    elif category == "memory":
+        tools = ("manage_memory",) if any(word in prompt.casefold() for word in ("forget", "save")) else ("read_memory",)
+    elif category == "work":
+        tools = ("read_work",)
+    elif category == "infrastructure":
+        tools = ("manage_assets",) if index == 0 else ("manage_homelab",)
+    return {"fixture_profile": {"tools": list(tools)}} if tools else {}
+
+
 def build_corpus() -> list[dict[str, Any]]:
     cases = []
     for category, prompts in _CATEGORIES.items():
@@ -122,6 +142,7 @@ def build_corpus() -> list[dict[str, Any]]:
                 "split": "development" if index < 8 else "held_out",
                 "canary": index == 0,
                 "expected_trajectory": _trajectory(category, prompt),
+                "environment": _fixture_environment(category, index, prompt),
             })
     return cases
 
