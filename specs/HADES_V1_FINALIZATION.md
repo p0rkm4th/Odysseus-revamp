@@ -324,3 +324,11 @@ seconds). The follow-up exact source `c84514f29574266b93fd95981ff2cf7677c5e9d9`
 was built as `odysseus:candidate-c84514f29574` (image
 `sha256:895ca25c66be688132604720a696f21be4c934bc8bc528d992601ae6a26ae0cb`),
 deployed explicitly, and verified healthy with matching embedded source.
+
+## Exact-image full regression (`d59e4845`)
+
+With the checkout mounted read-only and isolated writable data, logs, probe,
+and Docker-storage fixtures, the exact candidate image completed `6765 passed,
+5 skipped, 187 warnings`. This removes the earlier read-only/image-layout
+false negatives from the release evidence; warnings are existing deprecation
+and runtime notices, not test failures.
