@@ -2993,6 +2993,19 @@ def canonical_read_fast_path_payload(
     if binding == "manage_assets" and action == "get":
         return canonical_asset_read_payload(frame)
     payload = {"action": action}
+    if binding == "read_recipes":
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        reference = str(frame.get("entity_reference") or "").strip()
+        if reference and action in {"get", "can_make", "scale"}:
+            payload["recipe_id"] = reference[:500]
+        recipe_query = str(filters.get("recipe_query") or "").strip()
+        if recipe_query and action == "search":
+            payload["query"] = recipe_query[:200]
+        servings = str(filters.get("servings") or "").strip()
+        if servings and action == "scale":
+            payload["servings"] = servings[:20]
+        return payload
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
