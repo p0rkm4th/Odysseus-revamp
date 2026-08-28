@@ -5,17 +5,24 @@ services:
   odysseus:
     image: ${HADES_ACCEPTANCE_IMAGE:-odysseus-odysseus}
     ports: !override
-      - "127.0.0.1:7002:7000"
+      - "127.0.0.1:${HADES_ACCEPTANCE_APP_PORT:-7002}:7000"
   chromadb:
     ports: !override
-      - "127.0.0.1:8102:8000"
+      - "127.0.0.1:${HADES_ACCEPTANCE_CHROMA_PORT:-8102}:8000"
   searxng:
     ports: !override
-      - "127.0.0.1:8082:8080"
+      - "127.0.0.1:${HADES_ACCEPTANCE_SEARX_PORT:-8082}:8080"
   ntfy:
     ports: !override
-      - "127.0.0.1:8093:80"
+      - "127.0.0.1:${HADES_ACCEPTANCE_NTFY_PORT:-8093}:80"
 
 networks:
   default:
-    name: hades-owner-journey-net
+    # The base product Compose file uses a global ``odysseus_default`` name.
+    # Override both name and subnet so an acceptance run cannot join the
+    # owner's network or collide with another disposable run.
+    name: ${HADES_ACCEPTANCE_NETWORK_NAME:-${COMPOSE_PROJECT_NAME:-hades-owner-journey}-net}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${HADES_ACCEPTANCE_NETWORK_SUBNET:-172.30.0.0/16}

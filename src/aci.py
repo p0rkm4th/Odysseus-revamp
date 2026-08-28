@@ -4225,12 +4225,16 @@ def project_action_selection(
                 payload.update(draft)
         if (
             str(frame.get("domain_concept") or "") in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"}
-            and str(frame.get("operation_class") or "") == "CREATE"
+            and str(frame.get("operation_class") or "") in {"CREATE", "EXECUTE"}
             and str(item.get("binding") or "") == "manage_assets"
-            and str(item.get("action_id") or "") == "add_item"
+            and str(item.get("action_id") or "") in {"add_item", "consume_stock"}
         ):
-            from src.intent_contracts import inventory_add_item_payload
-            draft = inventory_add_item_payload(query)
+            from src.intent_contracts import inventory_add_item_payload, inventory_consume_stock_payload
+            draft = (
+                inventory_add_item_payload(query)
+                if str(item.get("action_id") or "") == "add_item"
+                else inventory_consume_stock_payload(query)
+            )
             if draft:
                 payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
