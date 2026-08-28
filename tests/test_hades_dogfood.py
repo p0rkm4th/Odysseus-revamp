@@ -158,6 +158,39 @@ def test_incremental_dogfood_checkpoint_retains_progress_and_classifies_stop(tmp
     assert rows[-1]["remaining"] == 1
 
 
+def test_run_cases_persists_timeout_rows_without_losing_following_cases(monkeypatch, tmp_path):
+    import scripts.hades_dogfood as runner
+
+    cases = [
+        {"id": "slow", "prompt": "slow", "family": "test", "source": "test", "expected": {}},
+        {"id": "fast", "prompt": "fast", "family": "test", "source": "test", "expected": {}},
+    ]
+    calls = 0
+
+    async def fake_run_synthetic(case, _args, *, messages=None):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise asyncio.TimeoutError
+        return (
+            {"assistant_answer": {"present": True}, "metrics": {"model_calls": 0}},
+            "grounded answer",
+        )
+
+    monkeypatch.setattr(runner, "run_synthetic", fake_run_synthetic)
+    args = argparse.Namespace(case_timeout=1)
+    checkpoint = runner._IncrementalCheckpoint(tmp_path / "progress.jsonl", metadata={"run_id": "r"}, total=2)
+    records = asyncio.run(runner.run_cases(args, cases, checkpoint=checkpoint))
+    assert len(records) == 2
+    assert records[0]["failure_class"] == "CASE_TIMEOUT"
+    assert records[1]["assistant_answer"]["present"] is True
+    rows = [json.loads(line) for line in (tmp_path / "progress.jsonl").read_text().splitlines()]
+    assert [row["kind"] for row in rows] == ["run_started", "case", "case", "run_finished"]
+    assert [row["status"] for row in rows[1:3]] == ["timeout", "completed"]
+    assert rows[-1]["completed"] == 2
+    assert rows[-1]["remaining"] == 0
+
+
 def test_dogfood_uses_configured_container_model_endpoint(monkeypatch):
     monkeypatch.setenv("HADES_OLLAMA_ENDPOINT", "http://host.docker.internal:11434")
     assert configured_model_endpoint() == "http://host.docker.internal:11434"
