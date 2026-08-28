@@ -18,7 +18,7 @@ from src.aci import (
 )
 from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
-from src.intent_contracts import canonical_read_action, compile_intent, resolve_intent
+from src.intent_contracts import canonical_read_action, compile_intent, recipe_create_payload, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
@@ -164,6 +164,25 @@ def test_recipe_search_keeps_only_bounded_query_text():
     frame = compile_intent("find recipe chili")
     assert frame.filters["recipe_query"] == "chili"
     assert resolve_intent(frame).action_id == "search"
+
+
+def test_explicit_recipe_create_projects_structured_draft_into_canonical_action():
+    query = (
+        "Add this recipe to my recipes: Acceptance Chicken and Rice. "
+        "Ingredients: 2 chicken breasts, 1 cup rice. "
+        "Instructions: Bake the chicken and cook the rice."
+    )
+    draft = recipe_create_payload(query)
+    assert draft["action"] == "add"
+    assert draft["name"] == "Acceptance Chicken and Rice"
+    assert [(row["name"], row["quantity"], row["unit"]) for row in draft["ingredients"]] == [
+        ("chicken breasts", 2.0, "each"), ("rice", 1.0, "cup")
+    ]
+    assert "Bake the chicken" in draft["instructions"]
+
+
+def test_incomplete_recipe_create_draft_fails_closed():
+    assert recipe_create_payload("Add a recipe called Dinner") is None
 
 
 def test_expiring_recipe_composition_uses_distinct_canonical_action():

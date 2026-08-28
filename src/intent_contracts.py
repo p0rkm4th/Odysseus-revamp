@@ -21,6 +21,64 @@ from src.deterministic_reads import deterministic_read_concept, deterministic_re
 logger = logging.getLogger(__name__)
 
 
+def recipe_create_payload(query: str) -> dict[str, Any] | None:
+    """Extract a complete recipe draft from an explicit owner CREATE turn.
+
+    This is schema extraction, not domain routing: the caller has already
+    resolved RECIPE/CREATE through the canonical contract.  Returning ``None``
+    for an incomplete draft keeps the action fail-closed; InventoryService
+    remains responsible for validation, persistence, and readback.
+    """
+    text = str(query or "").strip()
+    sections = re.search(
+        r"\bingredients\s*:\s*(?P<ingredients>.+?)\s+instructions\s*:\s*(?P<instructions>.+)$",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if not sections:
+        return None
+    name_match = re.search(
+        r"\brecipe\b(?:\s+(?:to\s+)?(?:my\s+)?recipes?)?\s*:\s*"
+        r"(?P<name>.+?)(?=\.\s*ingredients\s*:|\s+ingredients\s*:)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if not name_match:
+        return None
+    name = name_match.group("name").strip().strip("\"'")
+    if not name:
+        return None
+    ingredients: list[dict[str, Any]] = []
+    unit_words = (
+        r"teaspoons?|tsp|tablespoons?|tbsp|cups?|ounces?|oz|pounds?|lbs?|"
+        r"grams?|g|kilograms?|kg|millilit(?:er|re)s?|ml|lit(?:er|re)s?|l|"
+        r"cloves?|cans?|packages?|slices?|pieces?"
+    )
+    for raw in re.split(r",|\s*;\s*|\s+and\s+(?=\d+(?:\.\d+)?\s)", sections.group("ingredients")):
+        item = raw.strip().strip(".")
+        match = re.match(
+            rf"(?P<quantity>\d+(?:\.\d+)?|\.\d+)\s+(?:(?P<unit>{unit_words})\s+)?(?P<name>.+)$",
+            item,
+            re.IGNORECASE,
+        )
+        if not match:
+            return None
+        ingredients.append({
+            "name": match.group("name").strip(),
+            "quantity": float(match.group("quantity")),
+            "unit": (match.group("unit") or "each").strip().lower(),
+        })
+    if not ingredients:
+        return None
+    return {
+        "action": "add",
+        "name": name[:200],
+        "servings": 1,
+        "ingredients": ingredients[:200],
+        "instructions": sections.group("instructions").strip()[:20000],
+    }
+
+
 # Operational domain metadata used by prompt/capability projections.  These
 # flags describe cognition requirements only; policy and execution remain
 # owned by the canonical Action path.

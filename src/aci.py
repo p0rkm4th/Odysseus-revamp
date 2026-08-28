@@ -4210,6 +4210,19 @@ def project_action_selection(
     for index, item in enumerate(selected):
         choice = chr(ord("A") + index)
         payload: dict[str, Any] = {"action": item["action_id"]}
+        if (
+            str(frame.get("domain_concept") or "") == "RECIPE"
+            and str(frame.get("operation_class") or "") == "CREATE"
+            and str(item.get("binding") or "") == "manage_recipes"
+            and str(item.get("action_id") or "") == "add"
+        ):
+            # The model chooses the already-authorized Action; structured
+            # fields come from the user's explicit recipe draft, never from
+            # model prose.  InventoryService still validates and verifies it.
+            from src.intent_contracts import recipe_create_payload
+            draft = recipe_create_payload(query)
+            if draft:
+                payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
         if item["binding"] == "web_search":
