@@ -1008,6 +1008,44 @@ def test_canonical_read_does_not_invoke_teacher_after_authoritative_answer(monke
     assert any(event.get("type") == "response_replace" for event in events)
 
 
+def test_household_count_read_uses_deterministic_fast_path(monkeypatch):
+    """Count phrasing must execute the canonical read without model arbitration."""
+    import src.agent_loop as agent_loop
+
+    monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default, raising=False)
+    monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None, raising=False)
+    monkeypatch.setattr(agent_loop, "blocked_tools_for_owner", lambda owner: set(), raising=False)
+    monkeypatch.setattr(agent_loop, "estimate_tokens", lambda *args, **kwargs: 10, raising=False)
+    executed = []
+
+    async def fake_execute(block, *args, **kwargs):
+        executed.append((block.tool_type, json.loads(block.content)))
+        return block.tool_type, {
+            "output": json.dumps({
+                "status": "SUCCESS",
+                "items": [{"name": "Acceptance Tomatoes", "domain": "kitchen", "stock_quantity": "3.000000", "default_unit": "count"}],
+            }),
+            "exit_code": 0,
+        }
+
+    async def unexpected_model(*args, **kwargs):
+        raise AssertionError("deterministic household count read invoked the model")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", unexpected_model, raising=False)
+    events = _collect_stream_events(agent_loop.stream_agent_loop(
+        "http://local.test/v1", "small-local-model",
+        [{"role": "user", "content": "How many Acceptance Tomatoes do I have?"}],
+        aci_mode="aci", tool_executor=fake_execute,
+    ))
+
+    assert executed == [("read_household", {"action": "overview"})]
+    replacement = [event for event in events if event.get("type") == "response_replace"]
+    assert len(replacement) == 1
+    assert replacement[0]["answer_source"] == "DETERMINISTIC_RESULT"
+    assert "Acceptance Tomatoes" in replacement[0]["content"]
+
+
 def test_canonical_aci_turn_does_not_invoke_legacy_teacher_takeover(monkeypatch):
     """ACI's final answer owner must not be followed by teacher output."""
     import src.agent_loop as agent_loop
