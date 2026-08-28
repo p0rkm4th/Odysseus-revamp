@@ -61,6 +61,27 @@ def test_registry_action_language_preserves_declared_domain():
         assert domain in case["prompt"].casefold()
 
 
+def test_registry_read_probes_allow_one_bounded_action_selection():
+    """Registry ActionSpec probes are not canonical deterministic reads."""
+    from benchmarks.hades_dogfood import _registry_action_entries
+
+    entries = _registry_action_entries()
+    cases = generate_semantic_cases(seed=31, count=len(entries))
+    registry_cases = [case for case in cases if case["family"] == "registry_action"]
+    assert registry_cases
+    assert all(
+        case["expected"].get("max_decision_calls") == 1
+        for case in registry_cases
+        if case["expected"].get("operation") == "READ"
+    )
+
+    semantic = next(
+        case for case in generate_semantic_cases(seed=31, count=len(entries) + 1)
+        if case["family"] != "registry_action"
+    )
+    assert semantic["expected"].get("max_decision_calls") == 0
+
+
 def test_generated_registry_cases_project_executor_fixture_without_oracle_fields():
     cases = generate_semantic_cases(seed=23, count=40)
     registry_cases = [case for case in cases if case["family"] == "registry_action"]
