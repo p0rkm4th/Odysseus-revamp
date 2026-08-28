@@ -2205,7 +2205,7 @@ import { loadPanel } from './panels.js';
         return contentDiv;
       }
       function _ensureVisibleRoundForDelta() {
-        if (!roundHolder || roundHolder.style.display !== 'none') return;
+        if (roundHolder && roundHolder.style.display !== 'none') return;
         const box = document.getElementById('chat-history');
         if (!box) {
           roundHolder.style.display = '';
@@ -3098,6 +3098,24 @@ import { loadPanel } from './panels.js';
                 // A server-side grounding/summary correction replaces prose
                 // that may already have streamed.  It is not another delta.
                 // Keep one logical answer and render the authoritative text.
+                // A tool round can leave a hidden model bubble in the DOM
+                // before the replacement creates its visible continuation.
+                // Remove those superseded answer bubbles, but leave the
+                // diagnostic tool thread in place.  Otherwise the owner sees
+                // two assistant answers even though transport emitted one
+                // authoritative response_replace.
+                const _historyForReplacement = document.getElementById('chat-history');
+                if (_historyForReplacement) {
+                  const _lastUserForReplacement = [..._historyForReplacement.querySelectorAll('.msg-user')].at(-1);
+                  if (_lastUserForReplacement) {
+                    for (let _node = _lastUserForReplacement.nextElementSibling; _node;) {
+                      const _nextNode = _node.nextElementSibling;
+                      if (_node.classList.contains('msg-ai')) _node.remove();
+                      _node = _nextNode;
+                    }
+                  }
+                }
+                roundHolder = null;
                 const replacement = String(json.content || '');
                 accumulated = replacement;
                 currentAccumulated = replacement;
