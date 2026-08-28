@@ -2586,7 +2586,14 @@ async def stream_aci_runtime(
             and not approved_plan
             and not guide_only
         ):
-            route_messages = _minimal_odysseus_general_messages(route_messages, include_memory=True)
+            # ACI owns the production prompt projection.  Keep the patchable
+            # compatibility alias only for the legacy route, where existing
+            # provider-compatibility tests still characterize that seam.
+            route_messages = (
+                minimal_odysseus_general_messages(route_messages, include_memory=True)
+                if _aci_enabled
+                else _minimal_odysseus_general_messages(route_messages, include_memory=True)
+            )
             route_mcp_schemas = []
         if plan_mode and not guide_only:
                 prepend_agent_directive(route_messages, PLAN_MODE_DIRECTIVE)
