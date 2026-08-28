@@ -325,6 +325,20 @@ def test_resolved_asset_fast_path_preserves_strong_identity():
     assert payload == {"action": "get", "asset": "PHYSICAL-001"}
 
 
+def test_recipe_fast_path_preserves_reference_query_and_servings():
+    context = {
+        "ordered_entities": [{"ref": "RECIPE-001", "concept": "RECIPE"}],
+    }
+    detail = compile_intent("tell me about the first one", reference_context=context)
+    assert canonical_read_fast_path_payload(
+        "read_recipes", "get", detail.as_dict(), query="tell me about the first one"
+    ) == {"action": "get", "recipe_id": "RECIPE-001"}
+    scaled = compile_intent("scale this recipe to six servings", reference_context=context)
+    assert canonical_read_fast_path_payload(
+        "read_recipes", "scale", scaled.as_dict(), query="scale this recipe to six servings"
+    ) == {"action": "scale", "recipe_id": "RECIPE-001", "servings": "6"}
+
+
 def test_ambiguous_asset_pronoun_does_not_become_lexical_target():
     frame = compile_intent("what about that one", reference_context={
         "ordered_entities": [
