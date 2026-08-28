@@ -2138,6 +2138,26 @@ completion failures caused by an impossible fixture world.
 Focused dogfood tests pass (`55`). Full local regression passes (`6812 passed,
 4 skipped, 186 warnings`). No production executable was changed or deployed;
 the running executable remains `f5c07ff3`.
+
+## Recovered canonical-read shard (`7e8eb47d`, 2026-08-28)
+
+After the laptop restart, no surviving partial JSONL/report or benchmark
+process was found for the interrupted `aci-canonical_reads-*` execution. The
+smallest reproducible bounded shard was rerun against exact deployed candidate
+`odysseus:candidate-7e8eb47d` (10 cases, seed `20260828`, shard `12/25`). It
+completed with `10/10` functional, `10/10` architectural, `10/10` security,
+zero duplicate delivery, and no top-level failure clusters. Failed
+Actions/task was `0.1`, model calls/task `0.3`, median latency `0.235s`, and
+P95 `2.3437s`. One embedded reference case was unqualified (`0/1`); this is
+coverage debt, not a product-failure claim.
+
+Source/runtime: local and remote `7e8eb47d6459e4affd6afe44776fd20b341337d5`,
+candidate image `sha256:cea4e6012805c041afeacce8e0707c1baeeb1996be74cba644b0491a4db2e751`,
+embedded/running source equal to that SHA, healthy, restart count `0`, and
+Qwen endpoint `host.docker.internal:11434` from the Hades namespace.
+
+This bounded shard does not replace full regression, frozen baseline, or live
+owner acceptance gates.
 ## Descriptive tool-registry extraction (`225195aa`, 2026-08-28)
 
 Moved the descriptive `TOOL_SECTIONS` registry (241 lines) from
