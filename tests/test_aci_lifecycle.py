@@ -76,7 +76,7 @@ def test_production_aci_stream_entrypoint_forces_canonical_mode(monkeypatch):
         captured.update(kwargs)
         return "canonical-stream"
 
-    monkeypatch.setattr(legacy, "stream_agent_loop", fake_stream)
+    monkeypatch.setattr(legacy, "stream_aci_runtime", fake_stream)
     assert stream_aci_turn("endpoint", aci_mode="legacy") == "canonical-stream"
     assert captured["aci_mode"] == "aci"
 

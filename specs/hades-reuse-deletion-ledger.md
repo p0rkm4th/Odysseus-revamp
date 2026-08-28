@@ -1725,3 +1725,14 @@ warnings`. The seeded generator replay (`20260828`) produced `1,793` cases
 and `233` coverage metadata gaps (`33` critical, `69` high). The changed gap
 count reflects explicit unsupported-executor coverage, not a runtime failure
 rate.
+
+## ACI runtime seam checkpoint
+
+The production entrypoint now invokes the explicitly named
+`stream_aci_runtime` implementation. The historical `stream_agent_loop` name
+is retained as a thin async-generator compatibility facade and propagates
+generator closure to preserve in-flight tool cancellation. This removes the
+legacy-named entry from the production ACI path without creating a second
+runtime or authority. Characterization coverage passed 79 focused tests; the
+full current-head regression and exact-SHA candidate deployment remain
+required before this executable slice is considered released.
