@@ -10,7 +10,7 @@ from src.aci import (
     parse_decision_json, state_fingerprint,
     build_base_prompt,
 )
-from src.agent_loop import _minimal_aci_model_fallback_messages
+from src.aci import minimal_aci_model_fallback_messages
 
 
 def _packet(cards=(ActionCard("A", "inspect", "Inspect", "Read state"),)):
@@ -234,7 +234,7 @@ def test_typed_turn_disposition_has_one_authoritative_precedence():
 
 
 def test_model_fallback_context_excludes_internal_execution_plumbing():
-    messages = _minimal_aci_model_fallback_messages([
+    messages = minimal_aci_model_fallback_messages([
         {"role": "system", "content": "manage_memory ActionSpec ToolBinding"},
         {"role": "assistant", "content": "Prior answer"},
         {"role": "user", "content": "Do the thing to Cerberus."},
@@ -249,7 +249,7 @@ def test_model_fallback_context_excludes_internal_execution_plumbing():
 
 
 def test_model_fallback_can_receive_sanitized_runtime_self_state_without_authority():
-    messages = _minimal_aci_model_fallback_messages(
+    messages = minimal_aci_model_fallback_messages(
         [{"role": "user", "content": "What model are you using?"}],
         runtime_self_state={
             "active": True,

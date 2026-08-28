@@ -6,14 +6,15 @@ from benchmarks.hades_aci_metamorphic import (
     NEGATIVE_NEAR_MISSES,
     READ_PARAPHRASE_SETS,
 )
-from src.agent_loop import (
-    _classify_agent_request,
-    _minimal_aci_answer_messages,
-    _matches_resolved_canonical_read,
-    _prefetched_explicit_memory_result,
-    _strip_agent_injected_messages,
+from src.agent_loop import _classify_agent_request
+from src.aci import (
+    canonical_asset_read_payload,
+    canonical_read_fast_path_payload,
+    minimal_aci_answer_messages,
+    matches_resolved_canonical_read,
+    prefetched_explicit_memory_result,
 )
-from src.aci import canonical_asset_read_payload, canonical_read_fast_path_payload
+from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
 from src.intent_contracts import canonical_read_action, compile_intent, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
@@ -463,8 +464,8 @@ def test_answer_only_projection_has_no_tool_prompt_or_binding_identity():
         },
         {"role": "user", "content": "Tell me about me."},
     ]
-    assert _prefetched_explicit_memory_result(messages)
-    projected = _minimal_aci_answer_messages(messages)
+    assert prefetched_explicit_memory_result(messages)
+    projected = minimal_aci_answer_messages(messages)
     serialized = "\n".join(str(message.get("content") or "") for message in projected)
     assert "manage_memory" not in serialized
     assert "read_memory" not in serialized
@@ -483,7 +484,7 @@ def test_answer_only_projection_discards_unrelated_session_residue():
             "metadata": {"assistant_tool_result": True},
         },
     ]
-    projected = _minimal_aci_answer_messages(messages)
+    projected = minimal_aci_answer_messages(messages)
     serialized = "\n".join(str(message.get("content") or "") for message in projected)
     assert "stale project" not in serialized
     assert "current work items" in serialized
@@ -518,4 +519,4 @@ def test_exact_resolved_read_result_is_answer_terminal(query):
     resolved = resolve_intent(frame)
     assert resolved.available is True
     block = ToolBlock(resolved.binding_name, '{"action":"' + resolved.action_id + '"}')
-    assert _matches_resolved_canonical_read(block, frame.as_dict(), resolved.as_dict())
+    assert matches_resolved_canonical_read(block, frame.as_dict(), resolved.as_dict())
