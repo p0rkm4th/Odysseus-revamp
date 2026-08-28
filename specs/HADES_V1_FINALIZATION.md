@@ -787,6 +787,22 @@ security; duplicate delivery `0`; reference resolution `1.0`; failed
 Actions/task `0.0161`; model calls/task `0.2581`; median `0.0164s`; P95
 `2.5771s`.
 
+## Foundation closure evidence (`f5c07ff3`, 2026-08-28)
+
+The exact deployed helper-export checkpoint remains healthy and source
+synchronized. A seeded RC coverage audit generated `2540` scenarios with
+`128` reported gaps (`31` critical, `10` high); these are coverage gaps, not
+runtime failures. The critical queue is concentrated in failure classes,
+approval branches, post-result states, and policy branches.
+
+A seeded Qwen3:8B hidden-holdout run added `100` hidden cases to the existing
+corpus (`345` cases total). It produced `247/345` functional and `305/345`
+architectural results, with security `345/345`, duplicate delivery `0`,
+failed Actions/task `0.0754`, model calls/task `0.8406`, and P95 `5.4353s`.
+Failures clustered in generated `registry_action` cases (domain/action/
+completion burden), so this is diagnostic holdout evidence rather than a
+release pass. No production authority change was made in response.
+
 ## ACI compatibility-export reduction (`a27806e1`, 2026-08-28)
 
 Removed six unused underscore exports from `agent_loop.py` whose semantic

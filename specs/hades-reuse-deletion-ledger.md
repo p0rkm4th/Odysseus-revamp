@@ -1968,6 +1968,18 @@ security; duplicate delivery `0`; reference resolution `1.0`; failed
 Actions/task `0.0161`; model calls/task `0.2581`; median `0.0164s`; P95
 `2.5771s`.
 
+## Foundation closure evidence (`f5c07ff3`, 2026-08-28)
+
+Seeded RC coverage generated `2540` scenarios and reported `128` gaps (`31`
+critical, `10` high), chiefly failure classes, approval branches,
+post-result states, and policy branches. These are coverage gaps, not runtime
+failures. A seeded Qwen3:8B holdout added `100` hidden cases (`345` total)
+and produced `247/345` functional, `305/345` architectural, and `345/345`
+security results; duplicate delivery was `0`, failed Actions/task `0.0754`,
+model calls/task `0.8406`, and P95 `5.4353s`. Failures were concentrated in
+generated registry-action domain/action/completion burden. This is diagnostic
+evidence, not a release pass, and no production authority was changed.
+
 ## Qwen revalidation after memory/notes alias reduction (`2cf8a5fb`, 2026-08-28)
 
 The exact candidate passed `6809` full-regression tests with `5` skips before
