@@ -2613,3 +2613,28 @@ Authenticated browser acceptance against that exact image passed `7` prompts
 over `8` streams. The supported full project-venv regression passed
 `6837 passed, 4 skipped, 186 warnings` in `174.56s`. The branch tip after this
 entry is documentation-only and does not require a rebuild.
+
+## Canonical asset-summary renderer checkpoint (`1dab6efc`, 2026-08-28)
+
+The generated registry-action shard identified a real canonical Result gap:
+`inventory.manage:summary` returned structured count data, but the deterministic
+Asset renderer only claimed collection/detail payloads. The ACI renderer now
+handles the summary contract using only its validated counts and type map,
+including an explicit zero-asset result; malformed summary fields fail closed.
+Focused lifecycle, dogfood, and production-cutover coverage passed `128` tests
+with `1` skip, followed by full regression at `6840 passed, 4 skipped, 186
+warnings`.
+
+The executable source `1dab6efcea2c95d9b5e50190a02e4d7e19a36c67` was pushed and
+built as `odysseus:candidate-1dab6efc`, image ID
+`sha256:0afb78a71b961044b62cb356b4d392e22062cfb3423200bca4364b0b4380f5fb`.
+OCI revision, `/app/.odysseus-source-commit`, and running source match; the
+application is healthy with zero restarts. The prior `fefdd9be` image is
+retained as `odysseus:rollback-fefdd9be`.
+
+Authenticated browser acceptance against the exact candidate passed `7`
+prompts over `8` streams. The bounded Qwen replay completed all `22` cases with
+security `22/22` and duplicate delivery `0`; remaining failures are unchanged
+generated burden/capability/routing clusters. The evaluator budget correction
+for registry probes was separately pushed as `ad54566f` and is not executable
+runtime code.
