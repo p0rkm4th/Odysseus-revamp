@@ -10,11 +10,10 @@ from types import SimpleNamespace
 
 import pytest
 from src.agent_loop import (
-    _API_HOSTS,
     _agent_route_tool_mode,
-    _endpoint_lookup_keys,
     _is_ollama_openai_compat_url,
 )
+from src.endpoint_resolver import API_TOOL_HOSTS as _API_HOSTS, endpoint_lookup_keys as _endpoint_lookup_keys
 from src.llm_core import _is_ollama_native_url
 
 

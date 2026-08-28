@@ -5,20 +5,21 @@ cloud API with native tool-calling. These tests pin the three host-list integrat
   - agent loop sends native tool schemas to Kimi Code (not fenced-block parsing),
   - teacher escalation treats Kimi Code as SOTA (loop OFF, no added latency).
 """
-from src import agent_loop, teacher_escalation
+from src import teacher_escalation
+from src.endpoint_resolver import API_TOOL_HOSTS
 
 
 class TestAgentToolHosts:
     def test_kimi_code_in_api_hosts(self):
-        assert "api.kimi.com" in agent_loop._API_HOSTS
+        assert "api.kimi.com" in API_TOOL_HOSTS
 
     def test_kimi_code_url_matches_api_host(self):
         url = "https://api.kimi.com/coding/v1/chat/completions"
-        assert any(h in url for h in agent_loop._API_HOSTS)
+        assert any(h in url for h in API_TOOL_HOSTS)
 
     def test_unknown_host_not_matched(self):
         url = "https://example.invalid/v1/chat/completions"
-        assert not any(h in url for h in agent_loop._API_HOSTS)
+        assert not any(h in url for h in API_TOOL_HOSTS)
 
 
 class TestTeacherEscalationSota:

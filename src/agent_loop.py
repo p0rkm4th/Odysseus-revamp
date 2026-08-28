@@ -42,9 +42,7 @@ from src.context_compactor import (
 )
 from src.settings import get_setting
 from src.endpoint_resolver import (
-    API_TOOL_HOSTS as _API_HOSTS,
     agent_route_tool_mode as _agent_route_tool_mode,
-    endpoint_lookup_keys as _endpoint_lookup_keys,
     is_ollama_openai_compat_url as _is_ollama_openai_compat_url,
 )
 from src.prompt_security import untrusted_context_message
@@ -80,7 +78,6 @@ from src.tool_approvals import (
 )
 from src.tool_utils import _truncate, get_mcp_manager
 from src.mcp_manager import (
-    MCP_KEYWORDS as _MCP_KEYWORDS,
     load_mcp_disabled_map as _load_mcp_disabled_map,
     select_local_mcp_schemas as _select_local_mcp_schemas,
 )
