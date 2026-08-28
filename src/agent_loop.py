@@ -257,6 +257,23 @@ _resolve_tool_blocks = resolve_tool_blocks
 _append_tool_results = append_tool_results
 
 logger = logging.getLogger(__name__)
+
+
+def __getattr__(name: str):
+    """Lazily expose the historical stream facade for old callers.
+
+    The canonical runtime must not eagerly import its compatibility facade.
+    Keeping this lookup lazy preserves ``from src.agent_loop import
+    stream_agent_loop`` for legacy tests/providers without making the facade a
+    participant in ACI runtime initialization.
+    """
+    if name == "stream_agent_loop":
+        from src.legacy_agent_loop import stream_agent_loop
+
+        return stream_agent_loop
+    raise AttributeError(name)
+
+
 from src.legacy_prompt_contract import (
     AGENT_PREAMBLE as _AGENT_PREAMBLE,
     AGENT_RULES as _AGENT_RULES,
@@ -1146,9 +1163,6 @@ PLAN_MODE_DIRECTIVE = (
     "effect). Do not execute. Do not end with 'Done' or anything implying the work "
     "is finished. End your turn with the checklist."
 )
-
-
-from src.legacy_agent_loop import stream_agent_loop
 
 
 async def stream_aci_runtime(
