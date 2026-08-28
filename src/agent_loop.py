@@ -21,9 +21,7 @@ from urllib.parse import urlparse
 
 from src.llm_core import (
     dedupe_model_candidates,
-    stream_llm,
     stream_llm_with_fallback,
-    _is_ollama_native_url,
     _normalize_http_status,
     _normalize_usage_counts,
     strip_think_blocks,
@@ -43,6 +41,8 @@ from src.context_compactor import (
 from src.settings import get_setting
 from src.endpoint_resolver import (
     agent_route_tool_mode as _agent_route_tool_mode,
+    # Compatibility export retained for provider-tool support tests/callers;
+    # endpoint classification remains owned by endpoint_resolver.
     is_ollama_openai_compat_url as _is_ollama_openai_compat_url,
 )
 from src.prompt_security import untrusted_context_message
@@ -52,7 +52,6 @@ from src.memory_grounding import (
     build_runtime_self_state,
     project_explicit_memory_result,
     render_memory_result_projection,
-    minimal_saved_memory_message,
     looks_like_memory_identity_turn,
 )
 from src.tool_security import (
@@ -62,14 +61,10 @@ from src.tool_security import (
 )
 from src.tool_policy import GUIDE_ONLY_DIRECTIVE, WEB_TOOL_NAMES, ToolPolicy
 from src.tool_capabilities import (
-    ResultIntegrity,
     ToolRunSecurityContext,
-    blocked_tool_result,
     capabilities_for_action,
-    capabilities_for_tool,
     messages_contain_external_untrusted_context,
     tool_result_is_successful,
-    tool_result_should_arm_gate,
 )
 from src.tool_approvals import (
     ExactToolApproval,
@@ -128,7 +123,6 @@ from src.aci import (
     recent_context_for_retrieval,
     resolved_tool_event_name,
     semanticize_internal_action_names,
-    successful_deterministic_read_result,
     user_turn_count,
     note_list_summary_from_tool_output,
     calendar_list_summary_from_tool_output,
@@ -157,10 +151,7 @@ from src.aci import (
     compile_turn_contract,
 )
 from src.intent_contracts import (
-    EXPLICIT_CONTINUATION_PHRASE_RE as _EXPLICIT_CONTINUATION_PHRASE_RE,
     EXPLICIT_CONTINUATION_RE as _EXPLICIT_CONTINUATION_RE,
-    canonical_read_action,
-    DOMAIN_POLICIES,
     HARD_TOOL_DOMAINS,
     DETERMINISTIC_TOOL_DOMAINS,
     SPECIALIZED_OPERATIONAL_DOMAINS,
@@ -223,7 +214,6 @@ _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
 _minimal_odysseus_doc_messages = minimal_odysseus_doc_messages
 _minimal_odysseus_general_messages = minimal_odysseus_general_messages
 from src.agent_tools import (
-    parse_tool_blocks,
     strip_tool_blocks,
     execute_tool_block,
     stream_tool_execution,
