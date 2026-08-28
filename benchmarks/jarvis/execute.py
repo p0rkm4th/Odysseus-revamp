@@ -25,7 +25,6 @@ async def execute_case(args, case, model_metadata, hardware, headers):
     # Keep metadata validation and --help usable in lightweight environments.
     # The application stack is required only when a model run actually starts.
     from src.aci import stream_aci_turn
-    from src.agent_loop import stream_agent_loop
 
     collector = SyntheticRunCollector(case, model_metadata, hardware)
     executor = SyntheticToolExecutor(fixtures_for_case(case))
@@ -42,7 +41,12 @@ async def execute_case(args, case, model_metadata, hardware, headers):
         fallbacks = [(args.endpoint, args.model, headers or {})]
         fallback_statuses = {502, 503, 504}
     try:
-        stream = stream_aci_turn if args.aci_mode == "aci" else stream_agent_loop
+        stream = stream_aci_turn
+        if args.aci_mode != "aci":
+            # Historical H0/shadow comparisons are opt-in; canonical ACI
+            # evaluation must not even import the retired compatibility path.
+            from src.agent_loop import stream_agent_loop
+            stream = stream_agent_loop
         async with asyncio.timeout(args.case_timeout):
             async for chunk in stream(
                 endpoint_url=primary_endpoint,
