@@ -766,6 +766,27 @@ failed Actions/task was `0.0161`; model calls/task `0.2581`; median latency
 `0.0200s`; P95 `2.5672s`. Embedded/running source matches the pushed SHA,
 health is healthy, and restart count is `0`.
 
+## ACI helper-export reduction (`f5c07ff3`, 2026-08-28)
+
+Removed three unused `agent_loop.py` exports for think-block stripping,
+empty-response fallback, and exact-approval checking. Their implementations
+and runtime call sites already belong to `src.llm_core` or
+`src.capability_registry`; compatibility/context exports that remain active
+were not changed. The focused canonical helper/cutover tests passed `59`
+tests (one unrelated isolated fixture-order case was deselected), and the
+supported full regression passed `6809` tests with `5` skips and `149`
+warnings.
+
+The exact pushed executable source is
+`f5c07ff33e6754784fc328fa8392daea4b6178e0`. Candidate
+`odysseus:candidate-f5c07ff3` is deployed with image ID
+`sha256:b23213db1791e89d3ff3d96b90a72ea7106c50ea6311bb25602258cef06c9fbf`;
+OCI/source markers match, health is healthy, and restart count is zero.
+Exact-image Qwen3:8B evidence is `62/62` functional, architectural, and
+security; duplicate delivery `0`; reference resolution `1.0`; failed
+Actions/task `0.0161`; model calls/task `0.2581`; median `0.0164s`; P95
+`2.5771s`.
+
 ## ACI compatibility-export reduction (`a27806e1`, 2026-08-28)
 
 Removed six unused underscore exports from `agent_loop.py` whose semantic
