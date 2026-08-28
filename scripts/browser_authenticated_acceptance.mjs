@@ -256,6 +256,34 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
   throw new Error(`${scenario.id} uses unsupported readback kind`);
 }
 
+async function verifyScenarioPrecondition(page, scenario) {
+  const spec = scenario?.expected?.readback;
+  const before = scenario?.expected?.before;
+  if (!spec || !before) return null;
+  const result = await page.evaluate(async (readback) => {
+    const response = await fetch(readback.endpoint, {credentials: 'same-origin'});
+    const payload = await response.json().catch(() => ({}));
+    return {ok: response.ok, status: response.status, payload};
+  }, spec);
+  if (!result.ok) throw new Error(`${scenario.id} canonical precondition read failed (${result.status})`);
+  if (spec.kind === 'recipes' && before.recipe_count !== undefined) {
+    const count = Array.isArray(result.payload?.recipes) ? result.payload.recipes.length : 0;
+    if (count !== Number(before.recipe_count)) throw new Error(`${scenario.id} recipe precondition count mismatch`);
+    return {kind: spec.kind, count};
+  }
+  if (spec.kind === 'inventory' && before.quantity !== undefined) {
+    const items = Array.isArray(result.payload?.items) ? result.payload.items : [];
+    const wanted = String(spec.item_name || '').trim().toLowerCase();
+    const item = items.find((candidate) => String(candidate?.name || '').trim().toLowerCase() === wanted);
+    const quantity = item ? Number(item.stock_quantity ?? item.quantity ?? NaN) : 0;
+    if (!Number.isFinite(quantity) || Math.abs(quantity - Number(before.quantity)) > 0.000001) {
+      throw new Error(`${scenario.id} inventory precondition quantity mismatch`);
+    }
+    return {kind: spec.kind, quantity};
+  }
+  return null;
+}
+
 async function waitForAnswer(page, beforeAssistant, streamIndex, prompt) {
   await page.waitForFunction(() => !document.querySelector('#chat-history .msg-ai.streaming'));
   await page.waitForFunction(({ before }) => {
@@ -476,6 +504,14 @@ async function main() {
     // present in trace network metadata.
     await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
     tracing = true;
+
+    if (scenarios) {
+      diagnostics.preconditions = [];
+      for (const scenario of scenarios) {
+        const precondition = await verifyScenarioPrecondition(page, scenario);
+        if (precondition) diagnostics.preconditions.push({scenarioId: scenario.id, ...precondition});
+      }
+    }
 
     const prompts = scenarios
       ? scenarios.flatMap((scenario) => scenario.turns.map((turn) => ({
