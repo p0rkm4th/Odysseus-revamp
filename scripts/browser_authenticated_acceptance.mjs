@@ -26,6 +26,7 @@ const screenshotFile = path.join(root, 'failure.png');
 const python = process.env.HADES_PYTHON || './venv/bin/python';
 const externalCredentialFile = process.env.HADES_BROWSER_EXTERNAL_CREDENTIAL_FILE || '';
 const externalAcceptance = Boolean(externalCredentialFile);
+const isolatedAcceptance = process.env.HADES_BROWSER_ISOLATED_ACCEPTANCE === 'true';
 const householdAcceptance = process.env.HADES_BROWSER_HOUSEHOLD_ACCEPTANCE === 'true';
 const journeyFile = process.env.HADES_BROWSER_JOURNEY_FILE || '';
 if (householdAcceptance && !externalAcceptance) {
@@ -55,6 +56,10 @@ function loadJourneyScenarios() {
     ['CREATE', 'UPDATE', 'DELETE', 'EXECUTE'].includes(String(turn.expected?.operation || '').toUpperCase())));
   if (hasMutation && !externalAcceptance) {
     throw new Error('refusing owner-instance browser run: mutation journeys require an isolated external acceptance deployment');
+  }
+  if (scenarios.some((scenario) => scenario.environment !== 'actual_owner_read_only') &&
+      (!externalAcceptance || !isolatedAcceptance)) {
+    throw new Error('synthetic owner journeys require HADES_BROWSER_ISOLATED_ACCEPTANCE=true and an external isolated acceptance deployment');
   }
   if (scenarios.some((scenario) => scenario.environment === 'actual_owner_read_only') && !externalAcceptance) {
     throw new Error('actual_owner_read_only journeys require an explicitly supplied owner session credential');
@@ -214,6 +219,43 @@ function assertHumanCanonicalAnswer(turn, prompt) {
   return text;
 }
 
+function literalPattern(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
+  const spec = scenario?.expected?.readback;
+  if (!spec) return null;
+  // Readback is deliberately a small allowlisted assertion vocabulary.  The
+  // browser still performs the mutation through chat; these GETs only inspect
+  // the resulting canonical owner state independently of the rendered answer.
+  const result = await page.evaluate(async (readback) => {
+    const response = await fetch(readback.endpoint, {credentials: 'same-origin'});
+    const payload = await response.json().catch(() => ({}));
+    return {ok: response.ok, status: response.status, payload};
+  }, spec);
+  if (!result.ok) throw new Error(`${scenario.id} canonical readback failed (${result.status})`);
+  if (spec.kind === 'recipes') {
+    const recipes = Array.isArray(result.payload?.recipes) ? result.payload.recipes : [];
+    const wanted = String(spec.contains_name || '').trim().toLowerCase();
+    const found = recipes.find((recipe) => String(recipe?.name || '').trim().toLowerCase() === wanted);
+    if (!found) throw new Error(`${scenario.id} recipe readback missing canonical recipe`);
+    return {phase, kind: spec.kind, found: true};
+  }
+  if (spec.kind === 'inventory') {
+    const items = Array.isArray(result.payload?.items) ? result.payload.items : [];
+    const wanted = String(spec.item_name || '').trim().toLowerCase();
+    const item = items.find((candidate) => String(candidate?.name || '').trim().toLowerCase() === wanted);
+    if (!item) throw new Error(`${scenario.id} inventory readback missing canonical item`);
+    const quantity = Number(item.stock_quantity ?? item.quantity ?? NaN);
+    if (!Number.isFinite(quantity) || Math.abs(quantity - Number(spec.quantity)) > 0.000001) {
+      throw new Error(`${scenario.id} inventory readback quantity mismatch`);
+    }
+    return {phase, kind: spec.kind, found: true, quantity};
+  }
+  throw new Error(`${scenario.id} uses unsupported readback kind`);
+}
+
 async function waitForAnswer(page, beforeAssistant, streamIndex, prompt) {
   await page.waitForFunction(() => !document.querySelector('#chat-history .msg-ai.streaming'));
   await page.waitForFunction(({ before }) => {
@@ -256,11 +298,15 @@ async function send(page, prompt, expectation = {}) {
   await page.evaluate((value) => { window.__hadesE2ELastTurn = value; }, { stream, snapshot, turn });
   const finalText = assertHumanCanonicalAnswer(turn, prompt);
   const mustInclude = expectation.must_include_any || [];
-  if (mustInclude.length && !mustInclude.some((value) => new RegExp(String(value), 'i').test(finalText))) {
+  if (mustInclude.length && !mustInclude.some((value) => new RegExp(literalPattern(value), 'i').test(finalText))) {
     throw new Error(`semantic answer oracle failed for ${prompt}: expected one of ${mustInclude.join(', ')}`);
   }
+  const mustIncludeAll = expectation.must_include_all || [];
+  if (mustIncludeAll.length && mustIncludeAll.some((value) => !new RegExp(literalPattern(value), 'i').test(finalText))) {
+    throw new Error(`semantic answer oracle failed for ${prompt}: missing required canonical fact`);
+  }
   for (const forbidden of expectation.forbidden || []) {
-    if (new RegExp(String(forbidden), 'i').test(finalText)) {
+    if (new RegExp(literalPattern(forbidden), 'i').test(finalText)) {
       throw new Error(`forbidden claim in final answer for ${prompt}: ${forbidden}`);
     }
   }
@@ -275,12 +321,12 @@ async function send(page, prompt, expectation = {}) {
     // These are black-box expectations: only serialized transport evidence is
     // inspected. They never enter prompts, routing, or executor state.
     const toolNames = stream.events.filter((event) => event.tool).map((event) => event.tool);
-    if (expectation.tool_binding && toolNames.length && !toolNames.some((name) => name === expectation.tool_binding)) {
+    if (expectation.tool_binding && !toolNames.some((name) => name === expectation.tool_binding)) {
       throw new Error(`expected tool binding ${expectation.tool_binding} was not observed for ${prompt}: ${toolNames.join(', ')}`);
     }
     if (expectation.action) {
       const actions = stream.events.filter((event) => event.action).map((event) => event.action);
-      if (actions.length && !actions.includes(expectation.action)) {
+      if (!actions.includes(expectation.action)) {
         throw new Error(`expected canonical action ${expectation.action} was not observed for ${prompt}: ${actions.join(', ')}`);
       }
     }
@@ -289,6 +335,12 @@ async function send(page, prompt, expectation = {}) {
     const successfulTool = stream.events.some((event) => event.tool &&
       (event.success === true || event.verified === true || /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(event.status || '')));
     if (!successfulTool) throw new Error(`effectful journey has no attributable successful Action evidence for ${prompt}`);
+  }
+  if (expectedSource) {
+    const distinctSources = [...new Set(stream.events.filter((event) => event.answerSource).map((event) => event.answerSource))];
+    if (distinctSources.length !== 1 || distinctSources[0] !== expectedSource) {
+      throw new Error(`turn had contradictory or repeated AnswerSource ownership for ${prompt}: ${distinctSources.join(', ') || 'none'}`);
+    }
   }
   const rawToolText = turn.tools.map((tool) => tool.rawOutput || '').join('\n').trim();
   if (rawToolText && (finalText === rawToolText || finalText.includes(rawToolText))) {
@@ -456,7 +508,12 @@ async function main() {
     for (const turn of prompts) {
       const prompt = typeof turn === 'string' ? turn : turn.prompt;
       const result = await send(page, prompt, typeof turn === 'string' ? {} : turn.expected || {});
-      diagnostics.prompts.push({ prompt, scenarioId: turn.scenarioId, ...result });
+      diagnostics.prompts.push({
+        prompt,
+        scenarioId: turn.scenarioId,
+        operation: typeof turn === 'string' ? null : turn.expected?.operation || null,
+        ...result,
+      });
       if (prompt.toLowerCase() === 'tell me about my network.' || prompt.toLowerCase() === 'tell me about my network') {
         console.log(JSON.stringify({
           networkTrace: result.stream.events.map((event) => event.type),
@@ -468,12 +525,29 @@ async function main() {
       }
     }
 
-    const beforeReload = await assistantCount(page);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.locator('#chat-history .msg').first().waitFor({ timeout: 30000 });
-    const afterReload = await assistantCount(page);
-    if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
-    await send(page, householdAcceptance ? 'what else is in the kitchen?' : 'what about its RAM?');
+    if (scenarios) {
+      diagnostics.readbacks = [];
+      for (const scenario of scenarios) {
+        const readback = await verifyScenarioReadback(page, scenario);
+        if (readback) diagnostics.readbacks.push(readback);
+      }
+      const beforeReload = await assistantCount(page);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.locator('#chat-history .msg').first().waitFor({ timeout: 30000 });
+      const afterReload = await assistantCount(page);
+      if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
+      for (const scenario of scenarios) {
+        const readback = await verifyScenarioReadback(page, scenario, 'after-reload');
+        if (readback) diagnostics.readbacks.push(readback);
+      }
+    } else {
+      const beforeReload = await assistantCount(page);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.locator('#chat-history .msg').first().waitFor({ timeout: 30000 });
+      const afterReload = await assistantCount(page);
+      if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
+      await send(page, householdAcceptance ? 'what else is in the kitchen?' : 'what about its RAM?');
+    }
 
     // The acceptance account owns only disposable test conversations. Remove
     // them through the normal owner-scoped session API before revocation so a
@@ -520,7 +594,16 @@ async function main() {
     tracing = false;
     await context.close();
     await browser.close();
-    console.log(JSON.stringify({ status: 'PASS', prompts: diagnostics.prompts.length, streams: diagnostics.prompts.length + 1 }));
+    const turns = diagnostics.prompts.length;
+    const mutations = diagnostics.prompts.filter(({operation}) =>
+      ['CREATE', 'UPDATE', 'DELETE', 'EXECUTE'].includes(String(operation || '').toUpperCase())).length;
+    console.log(JSON.stringify({
+      status: 'PASS', scenarios: scenarios?.length || 0, turns,
+      reads: turns - mutations, mutations,
+      readbacks: diagnostics.readbacks?.length || 0,
+      streams: turns, done: turns, abruptEOF: 0, duplicateDelivery: 0,
+      environment: scenarios ? [...new Set(scenarios.map((scenario) => scenario.environment))] : ['legacy'],
+    }));
   } catch (error) {
     diagnostics.failure = String(error?.stack || error);
     if (page) {
