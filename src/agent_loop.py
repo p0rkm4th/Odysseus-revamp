@@ -1466,7 +1466,17 @@ async def stream_aci_runtime(
     except Exception:
         logger.debug("intent contract compilation unavailable", exc_info=True)
     _low_signal_turn = bool(_intent.get("low_signal"))
-    _suppress_auto_skills = _suppress_automatic_skills(_last_user, _intent)
+    # ACI uses the canonical intent-contract implementation directly. Keep
+    # the loop-local wrapper only for explicit legacy compatibility callers.
+    _suppress_auto_skills = (
+        suppress_automatic_skills(
+            _last_user,
+            _intent,
+            explicit_memory_query=is_explicit_memory_query,
+        )
+        if _aci_enabled
+        else _suppress_automatic_skills(_last_user, _intent)
+    )
     _casual_low_signal_turn = _is_casual_low_signal(_last_user)
     _existing_conversation = user_turn_count(messages) > 1
     _active_document_relevant = turn_targets_active_document(_intent, _last_user, active_document)
