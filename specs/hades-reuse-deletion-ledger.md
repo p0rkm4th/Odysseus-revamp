@@ -1806,8 +1806,8 @@ Candidate: `odysseus:candidate-a8b3b7c588e6`; image:
 `sha256:0b6cbd4dae1829140d8f0498a9eae8386f88b6212a1c053c34811966ce536eb6`.
 OCI marker and running source match; health is healthy; restart count is `0`.
 
-Full supported-image regression: `6800 passed, 5 skipped`; six storage
-preflight tests failed because the isolated test container lacks the host
-runtime paths `/home/.docker-data` and `/home/.containerd-data`. Classified as
-an environment-only failure before fixture evaluation; storage logic was not
-changed.
+An initial isolated run exposed six storage-preflight environment failures
+because the test image lacked the host runtime paths. Re-running in the
+supported project image with `/home/.docker-data`, `/home/.containerd-data`,
+and the Docker socket mounted passed all six storage tests and the full suite:
+`6806 passed, 5 skipped, 149 warnings`. No storage logic was changed.

@@ -590,8 +590,9 @@ healthy and restart count is `0`. Qwen3:8B is reachable from the Hades
 container namespace with digest
 `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
 
-The current-head full regression produced `6800 passed, 5 skipped` and six
-failures confined to storage-preflight tests. The project image lacks host
-paths `/home/.docker-data` and `/home/.containerd-data`, so the script exits
-before its fixture thresholds are evaluated. Classified as
-`STORAGE/ENVIRONMENT_FAILURE`, not a product pass or fix.
+An initial isolated run produced six storage-preflight environment failures
+because the test image lacked the host runtime paths. Re-running in the
+supported project image with the real runtime roots and Docker socket mounted
+produced the authoritative result: `6806 passed, 5 skipped, 149 warnings`.
+The earlier six failures are superseded environment evidence, not product
+failures.
