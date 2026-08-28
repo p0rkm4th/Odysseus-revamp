@@ -1809,6 +1809,21 @@ OCI marker and running source match; health is healthy; restart count is `0`.
 The exact `c0e73ada` source then passed the corrected full regression in the
 supported container environment: `6806 passed, 5 skipped, 149 warnings`.
 
+## Canonical helper call-site checkpoint (`cf7cc7ba`, 2026-08-28)
+
+After correcting indentation from the helper call-site substitution, syntax
+compilation and affected coverage passed (`300 passed, 1 warning`). Exact
+source `cf7cc7ba29b4e7c664f98d2204babb96a6de8d4f` was pushed and deployed as
+`odysseus:candidate-cf7cc7ba29b4`; image
+`sha256:02ccfdcc91df48cc8be09f794425c34f28fa32889cd3a821022164c4efc2584b`.
+OCI marker and running source match; health is healthy and restart count is
+zero. Full regression passed `6806 passed, 5 skipped, 149 warnings`.
+
+The exact candidate's in-container Qwen3:8B frozen quick run passed `62/62`
+functional, architectural, and security, duplicate delivery `0`, failed
+Actions/task `0.0161`, model calls/task `0.2581`, reference resolution `1.0`,
+and P95 latency `2.1386s`.
+
 ## Canonical internal-call checkpoint (`a8b3b7c5`, 2026-08-28)
 
 Replaced seven production call sites that reached canonical ACI/intent owners

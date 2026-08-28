@@ -593,6 +593,22 @@ restart count is `0`, and Qwen3:8B remains available from the configured
 The exact `c0e73ada` source then passed the corrected full regression in the
 supported container environment: `6806 passed, 5 skipped, 149 warnings`.
 
+## Canonical helper call-site checkpoint (`cf7cc7ba`, 2026-08-28)
+
+After correcting indentation from the helper call-site substitution, syntax
+compilation and the affected suite passed (`300 passed, 1 warning`). The
+exact pushed source `cf7cc7ba29b4e7c664f98d2204babb96a6de8d4f` was built as
+`odysseus:candidate-cf7cc7ba29b4`, deployed, and verified by OCI revision,
+embedded marker, and running source. The running image is
+`sha256:02ccfdcc91df48cc8be09f794425c34f28fa32889cd3a821022164c4efc2584b`;
+health is healthy and restart count is `0`.
+
+The exact candidate full regression passed `6806 passed, 5 skipped, 149
+warnings`. In-container Qwen3:8B frozen quick evidence passed `62/62`
+functional, architectural, and security, with duplicate delivery `0`, failed
+Actions/task `0.0161`, model calls/task `0.2581`, reference resolution `1.0`,
+and P95 latency `2.1386s`.
+
 ## Canonical internal-call checkpoint (`a8b3b7c5`, 2026-08-28)
 
 The ACI runtime now calls canonical imported owners directly for memory
