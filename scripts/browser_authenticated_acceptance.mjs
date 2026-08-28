@@ -275,9 +275,16 @@ async function send(page, prompt, expectation = {}) {
     if (expectation.tool_binding && toolNames.length && !toolNames.some((name) => name === expectation.tool_binding)) {
       throw new Error(`expected tool binding ${expectation.tool_binding} was not observed for ${prompt}: ${toolNames.join(', ')}`);
     }
+    if (expectation.action) {
+      const actions = stream.events.filter((event) => event.action).map((event) => event.action);
+      if (actions.length && !actions.includes(expectation.action)) {
+        throw new Error(`expected canonical action ${expectation.action} was not observed for ${prompt}: ${actions.join(', ')}`);
+      }
+    }
   }
   if (expectation.requires_effect) {
-    const successfulTool = stream.events.some((event) => event.tool && /success|verified|result/i.test(`${event.type} ${event.tool}`));
+    const successfulTool = stream.events.some((event) => event.tool &&
+      (event.success === true || event.verified === true || /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(event.status || '')));
     if (!successfulTool) throw new Error(`effectful journey has no attributable successful Action evidence for ${prompt}`);
   }
   const rawToolText = turn.tools.map((tool) => tool.rawOutput || '').join('\n').trim();
@@ -359,6 +366,10 @@ async function main() {
                 if (json.delta) { event.deltaLength = String(json.delta).length; record.deltaCount += 1; }
                 if (json.content) event.contentLength = String(json.content).length;
                 if (json.tool) event.tool = String(json.tool).slice(0, 120);
+                if (json.action) event.action = String(json.action).slice(0, 120);
+                if (json.status) event.status = String(json.status).slice(0, 80);
+                if (json.success !== undefined) event.success = Boolean(json.success);
+                if (json.verified !== undefined) event.verified = Boolean(json.verified);
                 if (json.answer_source) event.answerSource = String(json.answer_source);
                 record.events.push(event);
               } catch (_) {
@@ -410,7 +421,11 @@ async function main() {
 
     const scenarios = loadJourneyScenarios();
     const prompts = scenarios
-      ? scenarios.flatMap((scenario) => scenario.turns.map((turn) => ({ ...turn, scenarioId: scenario.id })))
+      ? scenarios.flatMap((scenario) => scenario.turns.map((turn) => ({
+        ...turn,
+        scenarioId: scenario.id,
+        expected: { ...scenario.expected, ...(turn.expected || {}) },
+      })))
       : process.env.HADES_BROWSER_RECIPE_ACCEPTANCE === 'true'
       ? [
         { prompt: 'what recipes do i have' },
