@@ -1806,6 +1806,9 @@ Candidate: `odysseus:candidate-c0e73ada0bce`.
 Image: `sha256:81e8095c91a8edcf99b72f3e0e52cf5cc850bd50213e58c765f90032c11d43b6`.
 OCI marker and running source match; health is healthy; restart count is `0`.
 
+The exact `c0e73ada` source then passed the corrected full regression in the
+supported container environment: `6806 passed, 5 skipped, 149 warnings`.
+
 ## Canonical internal-call checkpoint (`a8b3b7c5`, 2026-08-28)
 
 Replaced seven production call sites that reached canonical ACI/intent owners
