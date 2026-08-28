@@ -146,6 +146,20 @@ def test_legacy_owner_cases_receive_semantic_tool_fixtures():
         assert tool in fixtures_for_case(case)
 
 
+def test_legacy_metamorphic_owner_concepts_receive_typed_fixtures():
+    """Compatibility cases must not turn successful reads into fixture failures."""
+    cases = (
+        ({"family": "metamorphic", "expected": {"concept": "MEMORY"}}, "read_memory"),
+        ({"family": "metamorphic", "expected": {"concept": "TECHNICAL_ASSET"}}, "manage_assets"),
+        ({"family": "metamorphic", "expected": {"concept": "NETWORK_CONTEXT"}}, "manage_homelab"),
+        ({"family": "metamorphic", "expected": {"concept": "HOUSEHOLD"}}, "read_household"),
+    )
+    for case, tool in cases:
+        fixtures = fixtures_for_case(case)
+        assert tool in fixtures
+        assert fixtures[tool][0]["exit_code"] == 0
+
+
 def test_explicit_environment_fixture_is_independent_of_expected_oracle():
     base = {
         "prompt": "show my machines",
