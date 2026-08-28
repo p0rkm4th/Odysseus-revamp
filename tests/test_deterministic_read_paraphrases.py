@@ -49,6 +49,17 @@ def test_asset_detail_followup_without_context_is_unresolved():
     assert frame.filters == {}
 
 
+@pytest.mark.parametrize("query", [
+    "what do you know about me",
+    "tell me about my memory",
+    "what's in memory",
+])
+def test_canonical_memory_questions_are_not_asset_references(query):
+    frame = compile_intent(query, reference_context=None)
+    assert frame.reference_resolution["status"] == "NOT_REFERENCE"
+    assert frame.entity_reference is None
+
+
 @pytest.mark.parametrize(("query", "concept", "action", "binding"), [
     ("tell me about my hardware", "TECHNICAL_ASSET", "list", "manage_assets"),
     ("Please explore my current hardware", "HOMELAB_HOST", "inspect_host", "manage_homelab"),

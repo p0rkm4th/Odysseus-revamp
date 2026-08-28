@@ -1091,7 +1091,12 @@ def resolve_structured_reference(
     # use a possessive pronoun ("what about its RAM"). They are references
     # only when prior canonical context can provide the identity.
     implicit_detail = bool(re.search(
-        r"\b(?:specs?|specifications?|hardware|cpus?|processors?|ram|memory|gpus?|"
+        # ``memory`` by itself names the canonical Memory domain. Treat it as
+        # an Asset property only when the surrounding possessive/reference
+        # language makes that relationship explicit; otherwise ordinary
+        # questions such as "what do you know about me?" must not become
+        # unresolved Asset references.
+        r"\b(?:specs?|specifications?|hardware|cpus?|processors?|ram|gpus?|"
         r"graphics\s+cards?|storage|motherboard|os|operating\s+system)\b",
         query,
     )) and bool(re.search(r"\b(?:tell|show|what|which|give|list|describe)\b", query))
