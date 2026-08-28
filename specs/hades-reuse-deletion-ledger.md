@@ -2271,3 +2271,26 @@ persistent `/run/user/1000/ssh-agent.socket`; GitHub authentication and
 remote HEAD `06598d717bf6d5fcf2aad18be0b1052a97f9375c`. The running executable
 remains the healthy `a308ff06` candidate with restart count `0`; later branch
 commits are documentation-only.
+
+## Canonical failed-Action answer closure (`d3aee6e6`, 2026-08-28)
+
+Added the existing ACI result-rendering seam's bounded failure projection for
+an already-selected Action whose executor returns a nonzero result. The
+projection consumes only the structured executor output, emits
+`AnswerSource.ERROR`, and cannot retry, select, approve, or grant authority.
+This closes the case where ACI correctly blocked/refrained from retrying an
+Action but an empty model response left the owner with no final answer.
+
+Focused ACI/network/dogfood coverage passed `172` tests; full regression passed
+`6819 passed, 4 skipped`. The exact pushed candidate
+`odysseus:candidate-d3aee6e6` was deployed with image
+`sha256:96291c655dae147f85a84395b7fe2901535f399ec1e1db8f983f00e79dc3a639`;
+OCI revision, source marker, and running source all match
+`d3aee6e6eb6e2bb591f779f4e90dd95602a80f4c`. Health was healthy with zero
+restarts; Qwen3:8B was available from the container namespace. Browser
+acceptance passed (`7` prompts, `8` streams), and the frozen Qwen quick corpus
+passed `62/62` functional, architectural, and security with duplicate delivery
+`0`.
+
+The follow-up singular-finalization assertion is test-only and was pushed as
+`1d9549a9`; it does not change the deployed executable.
