@@ -398,7 +398,7 @@ async function send(page, prompt, expectation = {}) {
       throw new Error(`network answer source was ${replacement.answerSource || 'missing'}`);
     }
   }
-  if (householdAcceptance) {
+  if (householdAcceptance && String(expectation.domain || '').toUpperCase() === 'HOUSEHOLD') {
     if (!/milk/i.test(finalText)) {
       throw new Error(`household final answer omitted the seeded canonical item for ${prompt}`);
     }
