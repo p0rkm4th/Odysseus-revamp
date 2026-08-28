@@ -234,6 +234,19 @@ def test_grounding_and_summary_corrections_use_replacement_events_not_full_delta
     assert not _asset_read_request("Update the asset hostname")
 
 
+def test_browser_owner_acceptance_rejects_tool_success_as_final_answer():
+    """Keep the real-browser regression stronger than a non-empty tool card."""
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "scripts" / "browser_authenticated_acceptance.mjs").read_text(encoding="utf-8")
+    assert "latestTurnAnswers" in source
+    assert "assertHumanCanonicalAnswer" in source
+    assert "final answer appears to be raw structured tool output" in source
+    assert "agent-tool-output[open]" in source
+    assert "answerSource !== 'DETERMINISTIC_RESULT'" in source
+    assert "stream.doneCount !== 1 || stream.abruptEOF" in source
+
+
 @pytest.mark.parametrize("query", [
     "tell me about my hardware",
     "what it assets do i have?",
