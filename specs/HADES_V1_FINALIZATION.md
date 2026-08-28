@@ -664,3 +664,17 @@ tests and the exact candidate full regression passed `6807 passed, 5 skipped,
 This preserves the earlier ACI-owned reductions while avoiding a compatibility
 regression; no further alias removal is justified without a characterization
 slice for those seams.
+
+## Real-Qwen semantic shard (`5fb800d7`, 2026-08-28)
+
+The bounded execution shard was rerun on the Hades Compose network so the
+configured Ollama endpoint was genuinely reachable. It exercised `327` cases
+across frozen, generated, metamorphic, near-miss, minimal-pair, and chaos
+families with `qwen3:8b`. Evidence: `260/327` functional, `310/327`
+architectural, `327/327` security, duplicate rate `0`, failed Actions/task
+`0.0581`, model calls/task `0.7278`, P95 `6.2559s`. This is a bounded shard,
+not a release baseline. The only missing-answer case was the existing
+minimal-pair contract for `What's running in Docker?`: its oracle says
+`CONTAINER/READ`, while the current canonical ontology resolves it as
+`SERVICE/READ` and the synthetic service result is blocked. This is recorded
+as an ontology/fixture contract gap; no phrase-specific route was added.
