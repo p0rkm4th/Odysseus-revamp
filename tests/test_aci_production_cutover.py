@@ -8,6 +8,8 @@ ACI seam and the compatibility implementation itself.
 import ast
 from pathlib import Path
 
+from src.aci import expects_canonical_action
+
 
 def _runtime_call_nodes(function_name: str):
     calls = []
@@ -61,6 +63,24 @@ def test_production_runtime_does_not_import_legacy_stream_function():
                 ):
                     imports.append(f"{path.relative_to(repo)}:{node.lineno}")
     assert imports == []
+
+
+def test_canonical_action_expectation_is_owned_by_aci():
+    assert expects_canonical_action(
+        answer_only=False, clarification_only=False,
+        asset_read_explicit=True, read_binding="manage_assets",
+        read_action="list", operation_class="READ",
+    ) is True
+    assert expects_canonical_action(
+        answer_only=True, clarification_only=False,
+        asset_read_explicit=True, read_binding="manage_assets",
+        read_action="list", operation_class="EXECUTE",
+    ) is False
+    assert expects_canonical_action(
+        answer_only=False, clarification_only=False,
+        asset_read_explicit=False, read_binding=None, read_action=None,
+        operation_class="RESEARCH",
+    ) is True
 
 
 def test_legacy_runtime_imports_are_limited_to_owner_facing_tool_metadata():
