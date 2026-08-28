@@ -1978,6 +1978,26 @@ SHA, OCI revision, source marker, and running source are
 `sha256:62987b38363f8c7adf27d348e0c20a169ea3b4cc191403408278c1d8eeedf56d`;
 health is healthy and restart count is zero.
 
+## ACI compatibility-export reduction (`a27806e1`, 2026-08-28)
+
+Removed six unused underscore exports from `agent_loop.py` whose semantic
+implementations already belong to `src.aci`: reference hints, reference
+acknowledgement, explicit-memory detection, minimal ACI answer projections,
+and canonical-read matching. Tests now import these helpers from canonical
+owners; active provider/context compatibility seams remain unchanged.
+Focused coverage passed `282` tests and the supported full regression passed
+`6809` tests with `5` skips and `149` warnings.
+
+The exact pushed executable source is
+`a27806e1837576297aa0e4db3028e0a5423b4d72`. Candidate
+`odysseus:candidate-a27806e1` is deployed with image ID
+`sha256:a7013b6a9d6fed32eb9ed3a9521143b228fdbc0054851af339fac82129bc1b13`;
+OCI/source markers match, health is healthy, and restart count is zero.
+Frozen exact-image Qwen3:8B evidence: `62/62` functional, architectural,
+and security; duplicate delivery `0`; reference resolution `1.0`; failed
+Actions/task `0.0161`; model calls/task `0.2581`; median `0.0183s`; P95
+`2.7525s`.
+
 Exact-image Qwen3:8B frozen quick evidence: `62/62` functional,
 `62/62` architectural, `62/62` security, duplicate delivery `0`, reference
 resolution `1.0`, failed Actions/task `0.0161`, model calls/task `0.2581`,
