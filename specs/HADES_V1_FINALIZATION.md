@@ -1,5 +1,26 @@
 # Hades V1 Finalization Status
 
+## Canonical-read eligibility projection (`5a486253`, 2026-08-28)
+
+Moved the predicate identifying an explicit, executable canonical READ contract
+into `src.aci.is_canonical_read_contract`. The runtime now delegates this
+semantic eligibility decision instead of interpreting `IntentFrame` and
+resolved-contract fields locally. Action selection, policy, approval,
+execution, and result ownership remain unchanged.
+
+Focused coverage passed `119` tests. Full regression passed `6815` tests with
+`4` skips and `186` warnings. Candidate
+`odysseus:candidate-5a486253-exact` was built from the pushed SHA and deployed
+as image
+`sha256:18ef1da50fa4a04ec5e4891cc86bc193c127a6c5740432742b9fa25a3cb63d99`.
+OCI revision, source marker, and running source match
+`5a486253bf8ba99adecd03d4751a35ad99c47d1a`; health is healthy, restart count
+is zero, and qwen3:8b is reachable from the Hades container namespace.
+
+Authenticated Playwright acceptance passed all seven required journeys plus
+post-reload continuation (`8` streams). Acceptance cleanup revoked the
+temporary principal, disabled acceptance mode, and removed credentials.
+
 ## Canonical no-action diagnostics (`e15ab6e3`, 2026-08-28)
 
 Moved the runtime's no-action outcome classification into
