@@ -1,5 +1,15 @@
 # Hades reuse / deletion ledger
 
+## Authenticated browser acceptance (`225195aa`, 2026-08-28)
+
+The existing Playwright authenticated lane passed the seven required journeys
+and the post-reload continuation (`8` streams) against the real login,
+`/api/chat_stream`, persistence, and client-rendering path. Cleanup verified
+logout/revocation, disabled acceptance mode, removed the temporary credential,
+and left the exact candidate healthy with zero restarts. Evidence is attributed
+to executable source `225195aa`; it proves the isolated synthetic acceptance
+principal path, not real-owner data correctness.
+
 ## Exact candidate deployment and Qwen revalidation (`225195aa`, 2026-08-28)
 
 Candidate `odysseus:candidate-225195aa-exact` was deployed with image
