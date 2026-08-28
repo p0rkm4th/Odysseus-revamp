@@ -247,7 +247,7 @@ def test_browser_owner_acceptance_rejects_tool_success_as_final_answer():
     assert "stream.doneCount !== 1 || stream.abruptEOF" in source
     assert "HADES_BROWSER_HOUSEHOLD_ACCEPTANCE" in source
     assert "requires an external isolated acceptance deployment" in source
-    assert "household acceptance readback was not canonical" in source
+    assert "household acceptance stock readback was not canonical" in source
 
 
 @pytest.mark.parametrize("query", [
