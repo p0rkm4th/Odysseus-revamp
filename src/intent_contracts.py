@@ -902,7 +902,9 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "household_overview",
     ),
     "RECIPE": DomainContract(
-        "RECIPE", "recipe.read", {"READ": "list", "READ_SEARCH": "search"}, "read_recipes",
+        "RECIPE", "recipe.read",
+        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make"},
+        "read_recipes",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "recipe_read",
     ),
@@ -1032,6 +1034,8 @@ def canonical_read_action(
         operation = "READ_ROLES"
     elif domain_concept == "RECIPE" and str(dict(filters or {}).get("recipe_query") or "").strip():
         operation = "READ_SEARCH"
+    elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_coverage") is True:
+        operation = "READ_COVERAGE"
     return contract.actions.get(operation)
 
 
@@ -1596,6 +1600,11 @@ def compile_intent(
         query_match = re.search(r"\b(?:find|search|look\s+for)\s+(?:a\s+)?(?:recipes?\s+(?:for\s+)?)?(.+)$", q)
         if query_match and query_match.group(1).strip():
             reference_filters["recipe_query"] = query_match.group(1).strip(" ?.!\n")
+    if concept == "RECIPE" and operation == "READ" and re.search(
+        r"\b(?:can\s+i\s+make|do\s+i\s+have\s+everything|pantry\s+coverage|"
+        r"missing\s+ingredients?)\b", q,
+    ):
+        reference_filters["recipe_coverage"] = True
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
@@ -1744,6 +1753,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_ROLES"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_query"):
         action_key = "READ_SEARCH"
+    elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_coverage") is True:
+        action_key = "READ_COVERAGE"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "file":
         action_key = "READ_FILE"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "map":
@@ -1874,7 +1885,13 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
         if not isinstance(result.get("findings"), list):
             return False, "INVALID_RESULT"
     if frame.domain_concept == "RECIPE" and frame.operation_class == "READ":
-        if not isinstance(result.get("recipes"), list):
+        if frame.filters.get("recipe_coverage") is True:
+            if not isinstance(result.get("can_make"), bool) or not isinstance(result.get("shortages"), list):
+                return False, "INVALID_RESULT"
+        elif frame.entity_reference:
+            if not isinstance(result.get("recipe"), Mapping):
+                return False, "INVALID_RESULT"
+        elif not isinstance(result.get("recipes"), list):
             return False, "INVALID_RESULT"
     return True, status
 
@@ -1901,7 +1918,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
         for operation, registered_action in contract.actions.items():
             if registered_action != action_id:
                 continue
-            if operation in {"READ", "READ_SEARCH", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
+            if operation in {"READ", "READ_SEARCH", "READ_DETAIL", "READ_COVERAGE", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
                 filters = {}
                 if operation == "READ_INTEGRATIONS":
                     filters["view"] = "integrations"
@@ -1911,11 +1928,18 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     filters["view"] = "roles"
                 elif operation == "READ_SEARCH":
                     filters["recipe_query"] = "search"
+                elif operation == "READ_COVERAGE":
+                    filters["recipe_coverage"] = True
+                if operation == "READ_DETAIL":
+                    frame_entity_reference = "recipe"
+                else:
+                    frame_entity_reference = None
                 frame = IntentFrame(
                     operation_class="READ",
                     domain_concept=concept,
                     filters=filters,
                     read_explicit=True,
+                    entity_reference=frame_entity_reference,
                 )
                 valid, reason = validate_result(frame, result)
                 # Explicit adapter availability failures are truthful control
@@ -1944,6 +1968,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     ("HOUSEHOLD_ITEM", "search_items"): "items",
                     ("RECIPE", "list"): "recipes",
                     ("RECIPE", "search"): "recipes",
+                    ("RECIPE", "get"): "recipe",
                     ("COMMUNICATIONS", "overview"): "email",
                     ("CONTACT", "contacts"): "contacts",
                 }.get((concept, action_id))

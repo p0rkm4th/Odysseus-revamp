@@ -154,6 +154,20 @@ def test_recipe_search_keeps_only_bounded_query_text():
 
 
 @pytest.mark.parametrize("query", [
+    "can I make this recipe with what I have",
+    "do I have everything for this meal",
+    "check missing ingredients for the chili recipe",
+])
+def test_recipe_pantry_coverage_has_distinct_canonical_result_contract(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["recipe_coverage"] is True
+    assert resolved.action_id == "can_make"
+    assert resolved.binding_name == "read_recipes"
+
+
+@pytest.mark.parametrize("query", [
     "What all is on my network? do a discovery dive?",
     "tell me about the network, do a deep dive discovery mission to tell me whats going on",
     "map the devices on our current network",
