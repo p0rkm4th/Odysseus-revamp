@@ -960,6 +960,8 @@ def test_failed_aci_action_is_not_retried_without_new_evidence(monkeypatch):
         and "fixture unavailable" in str(event.get("content"))
         for event in events
     )
+    assert sum(event.get("type") == "response_replace" for event in events) == 1
+    assert sum(event.get("type") == "metrics" for event in events) == 1
     metrics = next(event["data"] for event in events if event.get("type") == "metrics")
     assert metrics["aci_trace"]["failed_actions"] == 1
     assert metrics["aci_trace"]["post_result_state"] == "BLOCKED"
