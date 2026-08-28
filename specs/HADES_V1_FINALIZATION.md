@@ -765,3 +765,13 @@ security cases. Duplicate delivery was `0`; reference resolution was `1.0`;
 failed Actions/task was `0.0161`; model calls/task `0.2581`; median latency
 `0.0200s`; P95 `2.5672s`. Embedded/running source matches the pushed SHA,
 health is healthy, and restart count is `0`.
+
+## Qwen revalidation after memory/notes alias reduction (`2cf8a5fb`, 2026-08-28)
+
+The exact candidate `odysseus:candidate-2cf8a5fb` passed the supported full
+regression before deployment (`6809 passed, 5 skipped, 149 warnings`). The
+baked-image frozen Qwen3:8B run passed `62/62` functional, architectural, and
+security cases. Duplicate delivery was `0`; reference resolution was `1.0`;
+failed Actions/task was `0.0161`; model calls/task `0.2581`; median latency
+`0.0187s`; P95 `3.15s`. Embedded/running source matches the pushed SHA,
+health is healthy, and restart count is `0`.
