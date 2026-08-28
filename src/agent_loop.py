@@ -6145,6 +6145,11 @@ async def stream_aci_runtime(
     metrics["model_calls"] = _provider_request_count
     metrics["tool_index_bypass_count"] = 1 if _tool_index_bypassed else 0
     metrics["tool_index_lookup_count"] = 1 if _tool_index_lookup_attempted else 0
+    # Ownership evidence is observational only.  The compatibility
+    # classifier remains an injected adapter for domains not yet covered by a
+    # DomainContract; it must never be mistaken for a second ACI authority.
+    metrics["aci_contract_owned"] = bool(_aci_enabled and _aci_contract_owned)
+    metrics["aci_compatibility_fallback"] = bool(_aci_enabled and not _aci_contract_owned)
     metrics["aci_model_fallback"] = bool(_aci_model_fallback)
     metrics["aci_empty_answer_fallback"] = bool(_aci_empty_answer_fallback_used)
     # Keep runtime intent evidence compact and machine-readable for the
