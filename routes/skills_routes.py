@@ -1266,7 +1266,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
             return s[:240]
 
         try:
-            from src.agent_loop import TOOL_SECTIONS
+            from src.tool_sections import TOOL_SECTIONS
             from src.tool_overrides import get_builtin_overrides
         except Exception as e:
             return {"builtin": [], "count": 0, "error": str(e)}
@@ -1292,7 +1292,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
         """Full text of a built-in tool's instruction block — the override
         if one is set, plus the shipped default (for the revert button)."""
         try:
-            from src.agent_loop import TOOL_SECTIONS
+            from src.tool_sections import TOOL_SECTIONS
             from src.tool_overrides import get_builtin_overrides
         except Exception as e:
             raise HTTPException(500, str(e))
@@ -1318,7 +1318,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
         WARNING surfaced in the UI — this changes how the assistant is
         told to use a native tool."""
         require_admin(request)
-        from src.agent_loop import TOOL_SECTIONS
+        from src.tool_sections import TOOL_SECTIONS
         valid = set()
         for key in TOOL_SECTIONS:
             valid.update(key if isinstance(key, tuple) else (key,))
