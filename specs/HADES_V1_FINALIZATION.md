@@ -573,3 +573,25 @@ candidate `odysseus:candidate-b0b94a6773f7` is running with image
 embedded/running source `b0b94a6773f705f131a26b74cb9ff9118379c806`, healthy
 status, and restart count `0`. The frozen Qwen quick run remains `62/62/62`
 with duplicate delivery `0`.
+
+## Canonical internal-call checkpoint (`a8b3b7c5`, 2026-08-28)
+
+The ACI runtime now calls canonical imported owners directly for memory
+prefetch, reference acknowledgement, verifier execution, exact approval
+detection, canonical-read matching, and final metrics. Historical underscore
+names remain compatibility aliases for tests/callers; no second authority was
+introduced. Supported-image focused coverage passed `304` tests.
+
+The exact pushed source is `a8b3b7c588e666520136f26439e39e24342072e9`.
+Candidate `odysseus:candidate-a8b3b7c588e6` runs as image
+`sha256:0b6cbd4dae1829140d8f0498a9eae8386f88b6212a1c053c34811966ce536eb6`;
+OCI label, `/app/.odysseus-source-commit`, and running source match. Health is
+healthy and restart count is `0`. Qwen3:8B is reachable from the Hades
+container namespace with digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+
+The current-head full regression produced `6800 passed, 5 skipped` and six
+failures confined to storage-preflight tests. The project image lacks host
+paths `/home/.docker-data` and `/home/.containerd-data`, so the script exits
+before its fixture thresholds are evaluated. Classified as
+`STORAGE/ENVIRONMENT_FAILURE`, not a product pass or fix.
