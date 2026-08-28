@@ -64,7 +64,7 @@ def test_production_runtime_does_not_import_legacy_stream_function():
 
 
 def test_legacy_runtime_imports_are_limited_to_owner_facing_tool_metadata():
-    """The compatibility module cannot become a hidden production entrypoint."""
+    """Production runtime must not import descriptive metadata from the loop."""
     repo = Path(__file__).parents[1]
     imports = []
     for root_name in ("routes", "src", "core", "services"):
@@ -79,11 +79,7 @@ def test_legacy_runtime_imports_are_limited_to_owner_facing_tool_metadata():
                     (path.relative_to(repo), alias.name)
                     for alias in node.names
                 )
-    assert imports
-    assert {
-        (path, name)
-        for path, name in imports
-    } == {(Path("routes/skills_routes.py"), "TOOL_SECTIONS")}
+    assert imports == []
 
 
 def test_production_runtime_has_canonical_aci_stream_callers():
