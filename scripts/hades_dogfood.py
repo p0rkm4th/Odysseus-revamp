@@ -98,6 +98,15 @@ def _live_protocol_observation(
     }
 
 
+def _case_deadline(started: float, timeout_seconds: float) -> float:
+    """Return an absolute deadline shared by all live-case operations."""
+    return started + max(float(timeout_seconds), 0.001)
+
+
+def _case_deadline_expired(deadline: float) -> bool:
+    return time.perf_counter() >= deadline
+
+
 def _source_reference() -> str:
     configured = os.environ.get("HADES_SOURCE_REFERENCE")
     if configured:
@@ -354,15 +363,23 @@ def run_live_cases(
         done_count = 0
         abrupt_eof = False
         started = time.perf_counter()
+        case_timeout = max(float(args.case_timeout), 0.001)
+        deadline = _case_deadline(started, case_timeout)
         try:
             response = requests.post(
                 f"{base}/api/chat_stream", cookies={"odysseus_session": cookie},
                 data={"session": session_id, "message": case["prompt"],
                       "mode": "agent", "allow_web_search": "false"},
-                stream=True, timeout=(15, args.case_timeout),
+                # Requests' read timeout is only an inactivity bound. The
+                # absolute deadline below prevents a continuously-chatty
+                # stream from exceeding the case budget indefinitely.
+                stream=True, timeout=(min(15.0, case_timeout), case_timeout),
             )
             response.raise_for_status()
             for line in response.iter_lines(decode_unicode=True):
+                if _case_deadline_expired(deadline):
+                    response.close()
+                    raise requests.exceptions.Timeout("dogfood case deadline exceeded")
                 if line and line.strip() == "data: [DONE]":
                     done_count += 1
                     continue
