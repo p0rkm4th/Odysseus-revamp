@@ -8,12 +8,13 @@ import asyncio
 import hashlib
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Mapping
 
 import requests
 
@@ -151,8 +152,65 @@ def _run_metadata(args: argparse.Namespace) -> dict[str, Any]:
         "config_fingerprint": hashlib.sha256(
             json.dumps(config, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()[:16],
-}
+    }
 
+
+class _IncrementalCheckpoint:
+    """Durable, append-only progress record for long dogfood runs.
+
+    The final JSON report is intentionally still produced by the existing
+    evaluator.  This sidecar means an interrupted model run retains its
+    metadata and every completed case without becoming a second evaluator or
+    persistence authority.
+    """
+
+    def __init__(self, path: str | Path, *, metadata: Mapping[str, Any], total: int):
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.started = time.monotonic()
+        self.total = total
+        self.completed = 0
+        self._append({
+            "kind": "run_started", "metadata": dict(metadata),
+            "total": total, "completed": 0, "remaining": total,
+            "elapsed_seconds": 0.0, "throughput_cases_per_second": 0.0,
+        })
+
+    def _append(self, value: Mapping[str, Any]) -> None:
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(dict(value), sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    def case(self, index: int, case_id: str, record: Mapping[str, Any], *, status: str) -> None:
+        self.completed += 1
+        elapsed = max(time.monotonic() - self.started, 1e-9)
+        self._append({
+            "kind": "case", "index": index, "case_id": case_id,
+            "status": status, "record": dict(record),
+            "completed": self.completed,
+            "remaining": max(self.total - self.completed, 0),
+            "elapsed_seconds": round(elapsed, 3),
+            "throughput_cases_per_second": round(self.completed / elapsed, 4),
+        })
+
+    def stopped(self, reason: str) -> None:
+        elapsed = max(time.monotonic() - self.started, 1e-9)
+        self._append({
+            "kind": "run_stopped", "reason": reason,
+            "completed": self.completed, "remaining": max(self.total - self.completed, 0),
+            "elapsed_seconds": round(elapsed, 3),
+            "throughput_cases_per_second": round(self.completed / elapsed, 4),
+        })
+
+    def finished(self) -> None:
+        elapsed = max(time.monotonic() - self.started, 1e-9)
+        self._append({
+            "kind": "run_finished", "completed": self.completed,
+            "remaining": max(self.total - self.completed, 0),
+            "elapsed_seconds": round(elapsed, 3),
+            "throughput_cases_per_second": round(self.completed / elapsed, 4),
+        })
 async def run_synthetic(
     case: dict[str, Any],
     args: argparse.Namespace,
@@ -208,12 +266,23 @@ async def run_synthetic(
     return record, assistant_text
 
 
-async def run_cases(args: argparse.Namespace, cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+async def run_cases(
+    args: argparse.Namespace,
+    cases: list[dict[str, Any]],
+    *,
+    checkpoint: _IncrementalCheckpoint | None = None,
+    stop_requested: Callable[[], bool] | None = None,
+) -> list[dict[str, Any]]:
     records = []
     journey_context: dict[str, list[dict[str, str]]] = {}
-    for case in cases:
+    for index, case in enumerate(cases, 1):
+        if stop_requested and stop_requested():
+            if checkpoint:
+                checkpoint.stopped("signal")
+            break
         journey = str(case.get("journey") or "")
         prior_messages = journey_context.get(journey) if journey else None
+        status = "completed"
         try:
             record, assistant_text = await run_synthetic(
                 case, args, messages=prior_messages
@@ -221,24 +290,43 @@ async def run_cases(args: argparse.Namespace, cases: list[dict[str, Any]]) -> li
         except asyncio.TimeoutError:
             record = normalize_events([{"error": "timeout"}], case, elapsed=args.case_timeout)
             record["failure"] = "timeout"
+            record["failure_class"] = "CASE_TIMEOUT"
             assistant_text = ""
+            status = "timeout"
         except Exception as exc:  # sanitized failure artifact
             record = normalize_events([{"error": type(exc).__name__}], case, elapsed=0)
             record["failure"] = type(exc).__name__
+            record["failure_class"] = "CASE_ERROR"
             assistant_text = ""
+            status = "error"
         records.append(record)
+        if checkpoint:
+            checkpoint.case(index, case["id"], record, status=status)
         if journey:
             context = journey_context.setdefault(journey, [])
             context.extend([
                 {"role": "user", "content": case["prompt"]},
                 {"role": "assistant", "content": assistant_text[-12000:]},
             ])
-        print(json.dumps({"case_id": case["id"], "functional": records[-1]["assistant_answer"]["present"],
-                          "model_calls": records[-1]["metrics"]["model_calls"]}, sort_keys=True), flush=True)
+        elapsed = max(checkpoint and time.monotonic() - checkpoint.started or 0.0, 1e-9)
+        print(json.dumps({"case_id": case["id"], "status": status,
+                          "functional": records[-1]["assistant_answer"]["present"],
+                          "model_calls": records[-1]["metrics"]["model_calls"],
+                          "completed": len(records), "remaining": len(cases) - len(records),
+                          "elapsed_seconds": round(elapsed, 3),
+                          "throughput_cases_per_second": round(len(records) / elapsed, 4)}, sort_keys=True), flush=True)
+    if checkpoint and not (stop_requested and stop_requested()):
+        checkpoint.finished()
     return records
 
 
-def run_live_cases(args: argparse.Namespace, cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def run_live_cases(
+    args: argparse.Namespace,
+    cases: list[dict[str, Any]],
+    *,
+    checkpoint: _IncrementalCheckpoint | None = None,
+    stop_requested: Callable[[], bool] | None = None,
+) -> list[dict[str, Any]]:
     """Use the existing authenticated SSE route with the shared scorer."""
     from scripts.hades_live_dogfood import cookie_from_file, create_session
 
@@ -250,7 +338,11 @@ def run_live_cases(args: argparse.Namespace, cases: list[dict[str, Any]]) -> lis
     base = args.base_url.rstrip("/")
     sessions: dict[str, str] = {}
     records: list[dict[str, Any]] = []
-    for case in cases:
+    for index, case in enumerate(cases, 1):
+        if stop_requested and stop_requested():
+            if checkpoint:
+                checkpoint.stopped("signal")
+            break
         group = case.get("journey")
         session_id = sessions.get(str(group)) if group else None
         if session_id is None:
@@ -278,21 +370,39 @@ def run_live_cases(args: argparse.Namespace, cases: list[dict[str, Any]]) -> lis
                 if item is not None:
                     events.append(item)
             record = normalize_events(events, case, elapsed=time.perf_counter() - started)
+        except requests.exceptions.Timeout as exc:
+            record = normalize_events(events, case, elapsed=time.perf_counter() - started)
+            record["failure"] = type(exc).__name__
+            record["failure_class"] = "CASE_TIMEOUT"
+            abrupt_eof = False
         except (requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError) as exc:
             abrupt_eof = True
             record = normalize_events(events, case, elapsed=time.perf_counter() - started)
             record["failure"] = type(exc).__name__
+            record["failure_class"] = "TRANSPORT_ERROR"
         except Exception as exc:  # retain only an exception class in artifacts
             record = normalize_events([{"error": type(exc).__name__}], case,
                                       elapsed=time.perf_counter() - started)
             record["failure"] = type(exc).__name__
+            record["failure_class"] = "CASE_ERROR"
         record["transport"] = _live_protocol_observation(
             events, done_count=done_count, abrupt_eof=abrupt_eof,
         )
         record["trajectory"]["transport"] = dict(record["transport"])
         records.append(record)
-        print(json.dumps({"case_id": case["id"], "functional": record["assistant_answer"]["present"],
-                          "model_calls": record["metrics"]["model_calls"]}, sort_keys=True), flush=True)
+        if checkpoint:
+            checkpoint.case(index, case["id"], record,
+                            status="error" if record.get("failure") else "completed")
+        elapsed = max(checkpoint and time.monotonic() - checkpoint.started or 0.0, 1e-9)
+        print(json.dumps({"case_id": case["id"],
+                          "status": "timeout" if record.get("failure_class") == "CASE_TIMEOUT" else "error" if record.get("failure") else "completed",
+                          "functional": record["assistant_answer"]["present"],
+                          "model_calls": record["metrics"]["model_calls"],
+                          "completed": len(records), "remaining": len(cases) - len(records),
+                          "elapsed_seconds": round(elapsed, 3),
+                          "throughput_cases_per_second": round(len(records) / elapsed, 4)}, sort_keys=True), flush=True)
+    if checkpoint and not (stop_requested and stop_requested()):
+        checkpoint.finished()
     return records
 
 
@@ -312,6 +422,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--endpoint-id", default="e4e4196b")
     parser.add_argument("--model", default="qwen3:8b")
     parser.add_argument("--output", default="/tmp/hades-dogfood-baseline.json")
+    parser.add_argument("--checkpoint", help="append-only progress sidecar (defaults to <output>.jsonl)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--generated-count", type=int, default=None, help="add this many reproducible semantic scenarios")
     parser.add_argument("--metamorphic-count", type=int, default=None, help="add equivalent-phrasing semantic variants")
@@ -323,6 +434,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--generate-only", action="store_true", help="emit semantic cases and coverage without invoking a model")
     parser.add_argument("--coverage-only", action="store_true", help="emit coverage gaps without invoking a model")
+    parser.add_argument("--generated-only", action="store_true", help="run only generated cases from the selected seeded additions")
     parser.add_argument("--capture-failures", help="append synthetic failures to a reproducible regression corpus")
     parser.add_argument("--regressions", help="include a previously captured synthetic regression corpus")
     parser.add_argument("--history", help="append sanitized summary/trend data to a JSON history file")
@@ -370,6 +482,10 @@ def main(argv: list[str] | None = None) -> int:
         minimal_pair_count=args.minimal_pair_count,
         hidden_holdout_count=args.hidden_holdout_count,
     )
+    if args.generated_only:
+        cases = [case for case in cases if str(case.get("source") or "").startswith("generated")]
+        if not cases:
+            raise SystemExit("--generated-only selected no generated cases; add a generated count")
     run_metadata = _run_metadata(args)
     for case in cases:
         case["run_id"] = run_metadata["run_id"]
@@ -390,8 +506,33 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.output).write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(json.dumps({"DOGFOOD_COVERAGE": args.output, "scenario_count": len(cases), "coverage_gap_count": result["coverage"]["coverage_gap_count"]}, sort_keys=True))
         return 0
-    records = (run_live_cases(args, cases) if args.mode == "live"
-               else asyncio.run(run_cases(args, cases)))
+    checkpoint = _IncrementalCheckpoint(
+        args.checkpoint or f"{args.output}.jsonl",
+        metadata=run_metadata,
+        total=len(cases),
+    )
+    stop_state = {"requested": False}
+
+    def request_stop(_signum, _frame):
+        # Let the current bounded case finish so its timeout/error row is
+        # durable, then stop before starting another case.
+        stop_state["requested"] = True
+
+    previous_handlers = {}
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        previous_handlers[signum] = signal.getsignal(signum)
+        signal.signal(signum, request_stop)
+    try:
+        records = (run_live_cases(
+            args, cases, checkpoint=checkpoint,
+            stop_requested=lambda: stop_state["requested"],
+        ) if args.mode == "live" else asyncio.run(run_cases(
+            args, cases, checkpoint=checkpoint,
+            stop_requested=lambda: stop_state["requested"],
+        )))
+    finally:
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
     result = report(contract, cases, records, model=args.model, mode=f"{args.mode}_runtime", seed=args.seed)
     result["run_metadata"] = run_metadata
     if args.capture_failures:
