@@ -2326,3 +2326,27 @@ slice is not justified by current evidence.
 Current-head full regression at `959ca1ec` passed `6819` tests with `4`
 documented skips in `174.47s` (186 warnings). This validates the docs-only
 descendant against the same executable code as the deployed d3 checkpoint.
+
+## Canonical stream seam closure (`60980b5f` / `7edab187`, 2026-08-28)
+
+Removed the canonical `aci.stream_aci_turn` fallback that inspected a replaced
+legacy `stream_agent_loop` symbol. The ACI entrypoint now resolves only the
+explicit `stream_aci_runtime` implementation and fails closed if it is absent;
+the legacy facade remains available only to explicit compatibility callers.
+The initial full-suite run exposed six stale tests patching the retired seam,
+so scheduler, skills, and teacher tests were migrated to patch
+`src.aci.stream_aci_turn` instead. The affected suite passed `85` tests and the
+current full regression passed `6819 passed, 4 skipped` in `176.34s`.
+
+The exact executable candidate `odysseus:candidate-60980b5f` was built from
+`60980b5f67c51ea549fa6219e340f01e8e1ae9b8`, image ID
+`sha256:710492e93387788767ad36239387448068b19556eab694195d4a0d83649a4c47`,
+and deployed explicitly. OCI revision, `/app/.odysseus-source-commit`, and
+running source match; health is healthy with zero restarts. Qwen3:8B is
+reachable from the container namespace. Browser acceptance passed (`7`
+prompts, `8` streams); frozen Qwen quick passed `62/62` functional,
+architectural, and security, with duplicate delivery `0`, failed Actions/task
+`0.0161`, median latency `0.0283s`, and P95 `1.6638s`.
+
+The later `7edab187` changes are test-only seam migration; the running
+executable remains the exact `60980b5f` candidate.
