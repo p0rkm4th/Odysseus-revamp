@@ -430,3 +430,29 @@ and Docker-storage fixtures, the exact candidate image completed `6765 passed,
 5 skipped, 187 warnings`. This removes the earlier read-only/image-layout
 false negatives from the release evidence; warnings are existing deprecation
 and runtime notices, not test failures.
+
+## Foundation closure checkpoint (`0ba721bf`, 2026-08-28)
+
+The current evaluator/test branch is clean and synchronized at
+`0ba721bf6565337ea6a73666a9886688e5ff3aee`. It is a test/evaluator-only
+descendant of the deployed executable source, so it was not rebuilt or used
+for product acceptance.
+
+| Field | Observed value |
+|---|---|
+| Branch | `hades-aci-v1` |
+| Local/remote HEAD | exact `0ba721bf6565337ea6a73666a9886688e5ff3aee` |
+| Worktree | clean |
+| Executable running source | `100d2e0f4e00ebf753a816984981603f666e6190` |
+| Running image | `sha256:b2a1be4fa1856261f235bc90fa967c0b2f0a2595d570e66ac8558a7d68d31c07` |
+| Runtime health | `/api/health` healthy; restart count `0` |
+| Ollama | `http://host.docker.internal:11434` from Hades; `qwen3:8b` present |
+
+Fresh evidence on the current branch: full regression `6803 passed, 4
+skipped`; durability/recovery/approval suites `116 passed`; ACI/dogfood/lifecycle
+suites `125 passed`. The seeded semantic coverage audit reproduced `1,793`
+scenarios and `196` coverage gaps (`34` critical, `69` high). These are
+coverage dimensions, not newly observed product failures. No safe additional
+`agent_loop.py` authority removal was identified: production still enters via
+`aci.stream_aci_turn`, and the remaining loop surface is compatibility/runtime
+plumbing.
