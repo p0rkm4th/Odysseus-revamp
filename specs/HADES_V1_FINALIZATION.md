@@ -745,3 +745,13 @@ median latency `0.0181s`, and P95 `3.379s`. The one failure is the known
 `jarvis-environment-assumption` evaluator grounding assertion; its trajectory
 had no Action and did produce an answer. Runtime source and OCI marker match
 the pushed SHA; health is healthy with zero restarts.
+
+## Qwen revalidation after result-summary alias reduction (`e4385a6d`, 2026-08-28)
+
+The exact deployed candidate `odysseus:candidate-e4385a6d` passed the supported
+full regression before deployment (`6809 passed, 5 skipped, 149 warnings`).
+The baked-image frozen Qwen3:8B run passed `62/62` functional, architectural,
+and security cases. Duplicate delivery was `0`; reference resolution was
+`1.0`; failed Actions/task was `0.0161`; model calls/task `0.2581`; median
+latency `0.0192s`; P95 `2.7039s`. Runtime source and OCI marker match the
+pushed SHA, health is healthy, and restart count is `0`.
