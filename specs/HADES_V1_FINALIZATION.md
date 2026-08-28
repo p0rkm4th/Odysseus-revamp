@@ -96,6 +96,44 @@ against the current source rather than copied forward as assumptions.
 This document must be updated whenever the source, deployment, or release
 evidence changes.
 
+## Exact checkpoint after acceptance-principal closure (`174c5921`)
+
+This appendix supersedes earlier runtime values in this document for the
+current checkpoint.  It records the observed state without claiming that the
+broader V1 release gates are complete.
+
+| Field | Observed value |
+|---|---|
+| Branch | `hades-aci-v1` |
+| Local HEAD | `174c5921fbb958da8ed9b54f85e7dad0c8eac19f` |
+| Remote HEAD | `174c5921fbb958da8ed9b54f85e7dad0c8eac19f` |
+| Worktree | clean |
+| Candidate | `odysseus:candidate-174c5921fbb9` |
+| Running image | `sha256:2ebeaf2ac6f05dcd2b0cc1d05707d1beb6444cd51b47182606a97a30e2c0b46a` |
+| Embedded/running source | `174c5921fbb958da8ed9b54f85e7dad0c8eac19f` |
+| Container | `odysseus-odysseus-1`, restart count `0` |
+| Health | `/api/health` returned `healthy` |
+| Ollama endpoint | `http://host.docker.internal:11434` from the Hades namespace |
+| Model | `qwen3:8b`, digest `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41` |
+| Acceptance principal | revoked; feature flag disabled; temporary credentials removed |
+
+Focused benchmark-integrity and semantic dogfood tests passed (`17 passed`).
+The seeded generate-only audit produced `1,062` scenarios and reported `69`
+critical plus `104` high coverage gaps; these are coverage gaps, not execution
+passes.  The production ownership/cutover/lifecycle suite passed `91` tests.
+
+Authenticated acceptance-principal HTTP/SSE smoke had useful grounded answers
+for Network, Homelab, and Memory, with one terminal `[DONE]` each, zero abrupt
+EOF, and zero duplicate finalization.  The broader live core sample was
+`11/12`; its only failure was a missing answer for a continuation fixture with
+no active durable Run, so this is not recorded as a complete live-model gate.
+The previously recorded exact-source full regression remains `6,783 passed,
+4 skipped`; no new executable source was changed in this checkpoint.
+
+The remaining foundation work is failure/coverage-cluster closure, benchmark
+anti-leak evidence, and failed-Action reduction.  No new runtime subsystem or
+physical loop decomposition is justified by this checkpoint.
+
 ## Current exact-head reconciliation (`8e273784`)
 
 ### Superseding runtime verification (`71f4b00c`, 2026-08-27)
