@@ -1345,6 +1345,21 @@ def classify_no_action_reason(
     return "MODEL_PROSE_ONLY"
 
 
+def is_canonical_read_contract(
+    intent_frame: Mapping[str, Any] | None,
+    resolved_contract: Mapping[str, Any] | None,
+) -> bool:
+    """Return whether ACI resolved an explicit, executable canonical read."""
+    frame = intent_frame if isinstance(intent_frame, Mapping) else {}
+    contract = resolved_contract if isinstance(resolved_contract, Mapping) else {}
+    return bool(
+        frame.get("operation_class") == "READ"
+        and frame.get("read_explicit") is True
+        and str(contract.get("binding") or "").strip()
+        and str(contract.get("action_id") or "").strip()
+    )
+
+
 def usage_bucket(
     *,
     round_num: int,
