@@ -144,7 +144,7 @@ async function loadStock() {
 }
 
 function renderRecipesScaffold() {
-  return `<div class="inventory-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><button class="inventory-primary" data-action="new-recipe">+ Recipe</button></div><div id="inventory-recipe-list">${loading()}</div>`;
+  return `<div class="inventory-toolbar hades-list-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><button class="inventory-primary hades-btn-primary" data-action="new-recipe">+ Recipe</button></div><div id="inventory-recipe-list">${loading()}</div>`;
 }
 
 async function loadRecipes() {
@@ -155,11 +155,11 @@ async function loadRecipes() {
     const {recipes = []} = await api('/api/recipes');
     const plans = await Promise.all(recipes.map(recipe => api(`/api/recipes/${encodeURIComponent(recipe.id)}/can-make`)));
     const list = document.getElementById('inventory-recipe-list');
-    list.innerHTML = recipes.length ? recipes.map((recipe, i) => `<article class="inventory-card inventory-recipe" data-recipe-id="${escapeHtml(recipe.id)}">
+    list.innerHTML = recipes.length ? recipes.map((recipe, i) => `<article class="inventory-card hades-record-card inventory-recipe" data-recipe-id="${escapeHtml(recipe.id)}">
       <div class="inventory-card-main"><h3>${escapeHtml(recipe.name)}</h3><p>${escapeHtml(recipe.servings)} servings · ${(recipe.ingredients || []).length} ingredients</p></div>
-      <span class="inventory-ready ${plans[i].can_make ? 'yes' : 'no'}">${plans[i].can_make ? 'Ready to make' : `${plans[i].shortages.length} shortage${plans[i].shortages.length === 1 ? '' : 's'}`}</span>
-      <button data-action="recipe-details">Details</button>${plans[i].can_make ? '<button class="inventory-primary" data-action="cook">Cook</button>' : ''}
-    </article>`).join('') : '<div class="inventory-state">No recipes yet.</div>';
+      <span class="inventory-ready hades-badge ${plans[i].can_make ? 'hades-badge-success yes' : 'hades-badge-warning no'}">${plans[i].can_make ? 'Ready to make' : `${plans[i].shortages.length} shortage${plans[i].shortages.length === 1 ? '' : 's'}`}</span>
+      <button class="hades-btn-secondary" data-action="recipe-details">Details</button>${plans[i].can_make ? '<button class="inventory-primary hades-btn-primary" data-action="cook">Cook</button>' : ''}
+    </article>`).join('') : '<div class="inventory-state hades-empty-state">No recipes yet.</div>';
   } catch (error) { showInlineError(error); }
 }
 
@@ -214,15 +214,15 @@ function renderDraft(draft) {
 
 function modalForm(title, body, submitLabel, kind, id = '') {
   const modal = document.createElement('div');
-  modal.className = 'inventory-dialog-backdrop';
-  modal.innerHTML = `<form class="inventory-dialog" data-kind="${kind}" data-id="${escapeHtml(id)}"><h3>${escapeHtml(title)}</h3>${body}<div class="inventory-dialog-actions"><button type="button" data-action="dismiss-dialog">Cancel</button><button class="inventory-primary" type="submit">${escapeHtml(submitLabel)}</button></div></form>`;
+  modal.className = 'inventory-dialog-backdrop hades-dialog-backdrop';
+  modal.innerHTML = `<form class="inventory-dialog hades-dialog" data-kind="${kind}" data-id="${escapeHtml(id)}"><h3>${escapeHtml(title)}</h3>${body}<div class="inventory-dialog-actions hades-dialog-actions"><button class="hades-btn-secondary" type="button" data-action="dismiss-dialog">Cancel</button><button class="inventory-primary hades-btn-primary" type="submit">${escapeHtml(submitLabel)}</button></div></form>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', onClick);
   modal.addEventListener('submit', onSubmit);
   modal.querySelector('input')?.focus();
 }
 
-function field(label, name, attrs = '') { return `<label>${label}<input name="${name}" ${attrs}></label>`; }
+function field(label, name, attrs = '') { return `<label class="hades-intake-field"><span>${escapeHtml(label)}</span><input name="${escapeHtml(name)}" ${attrs}></label>`; }
 
 async function onSubmit(event) {
   const form = event.target;
@@ -277,7 +277,7 @@ async function onClick(event) {
     } catch (error) { uiModule.showError?.(error.message); return; }
   }
   if (action === 'stock-add' || action === 'stock-consume') return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
-  if (action === 'new-recipe') return modalForm('New recipe', `${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}<label>Ingredients <small>item ID | quantity | unit</small><textarea name="ingredients" required></textarea></label><label>Instructions<textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
+  if (action === 'new-recipe') return modalForm('New recipe', `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div><label class="hades-intake-field"><span>Ingredients <small>one canonical item reference per line: item ID | quantity | unit</small></span><textarea name="ingredients" required></textarea></label><label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
   const recipeCard = button.closest('[data-recipe-id]');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);
   if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button);
