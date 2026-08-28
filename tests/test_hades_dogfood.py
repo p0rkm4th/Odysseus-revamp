@@ -47,6 +47,19 @@ def test_registry_action_generator_classifies_effectful_actions_and_contextualiz
     assert generated["expected"]["operation"] == "EXECUTE"
 
 
+def test_registry_action_language_preserves_declared_domain():
+    """Generated action wording must not change the ScenarioFrame domain."""
+    from benchmarks.hades_dogfood import _registry_action_entries
+
+    entries = _registry_action_entries()
+    cases = generate_semantic_cases(seed=29, count=len(entries))
+    registry_cases = [case for case in cases if case["family"] == "registry_action"]
+    assert len(registry_cases) == len(entries)
+    for case in registry_cases:
+        domain = str(case["scenario"]["domain"]).replace("_", " ").casefold()
+        assert domain in case["prompt"].casefold()
+
+
 def test_generated_registry_cases_project_executor_fixture_without_oracle_fields():
     cases = generate_semantic_cases(seed=23, count=40)
     registry_cases = [case for case in cases if case["family"] == "registry_action"]

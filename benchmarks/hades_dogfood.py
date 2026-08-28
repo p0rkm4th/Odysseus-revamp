@@ -657,16 +657,23 @@ def generate_semantic_cases(*, seed: int = 0, count: int = 1000, split: str = "g
         registry_entry = registry_entries[index] if index < len(registry_entries) else None
         if registry_entry:
             readable_action = registry_entry["action_id"].replace("_", " ")
-            capability_label = registry_entry["capability_id"].replace(".", " ").replace("_", " ")
-            operation_label = "read-only" if registry_entry["operation"] == "READ" else "effectful"
+            domain_label = registry_entry["domain"].replace("_", " ").casefold()
+            operation = registry_entry["operation"]
+            if operation == "READ":
+                prompts = (
+                    f"show my {domain_label} {readable_action} information",
+                    f"what is the current {readable_action} for my {domain_label}",
+                    f"look up {readable_action} in my {domain_label} state",
+                )
+            else:
+                prompts = (
+                    f"perform the {readable_action} operation for my {domain_label}",
+                    f"I need to {readable_action} in my {domain_label}",
+                    f"execute {readable_action} against my {domain_label} target",
+                )
             archetype = {
                 "family": "registry_action", "domain": registry_entry["domain"],
-                "intent": registry_entry["operation"], "target": "capability",
-                "prompts": (
-                    f"inspect the canonical {registry_entry['domain']} {readable_action} operation",
-                    f"what does the registered {capability_label} {readable_action} capability do",
-                    f"use the registered {operation_label} {capability_label} {readable_action} primitive",
-                ),
+                "intent": operation, "target": "capability", "prompts": prompts,
             }
             base_frame = None
         else:
