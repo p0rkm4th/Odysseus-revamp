@@ -1949,6 +1949,25 @@ Actions/task `0.0161`, model calls/task `0.2581`, median `0.0192s`, and P95
 `2.7039s`. Embedded/running source matches the pushed SHA and the runtime is
 healthy with zero restarts.
 
+## ACI helper-export reduction (`f5c07ff3`, 2026-08-28)
+
+Removed three unused `agent_loop.py` exports for think-block stripping,
+empty-response fallback, and exact-approval checking. Their implementations
+and runtime call sites already belong to `src.llm_core` or
+`src.capability_registry`; active compatibility/context exports remain
+unchanged. Focused canonical helper/cutover coverage passed `59` tests after
+isolating an unrelated test-only import-order fixture issue. The supported
+full regression passed `6809` tests with `5` skips and `149` warnings.
+
+Exact pushed executable source: `f5c07ff33e6754784fc328fa8392daea4b6178e0`.
+Candidate image ID:
+`sha256:b23213db1791e89d3ff3d96b90a72ea7106c50ea6311bb25602258cef06c9fbf`.
+OCI/source markers match, health is healthy, and restart count is zero.
+Exact-image Qwen3:8B evidence: `62/62` functional, architectural, and
+security; duplicate delivery `0`; reference resolution `1.0`; failed
+Actions/task `0.0161`; model calls/task `0.2581`; median `0.0164s`; P95
+`2.5771s`.
+
 ## Qwen revalidation after memory/notes alias reduction (`2cf8a5fb`, 2026-08-28)
 
 The exact candidate passed `6809` full-regression tests with `5` skips before
