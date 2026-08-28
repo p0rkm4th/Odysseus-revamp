@@ -1,5 +1,17 @@
 # Hades reuse / deletion ledger
 
+## Canonical-read eligibility projection (`5a486253`, 2026-08-28)
+
+Moved canonical READ contract eligibility into `src.aci.is_canonical_read_contract`;
+the runtime now delegates this semantic predicate. Focused coverage passed
+`119` tests and full regression passed `6815 passed, 4 skipped, 186 warnings`.
+The exact candidate `odysseus:candidate-5a486253-exact` was deployed as image
+`sha256:18ef1da50fa4a04ec5e4891cc86bc193c127a6c5740432742b9fa25a3cb63d99`;
+OCI/source markers and running source match `5a486253`, health is healthy with
+zero restarts, and Qwen is reachable in-container. Browser acceptance passed
+seven journeys plus reload continuation; cleanup revoked the principal and
+removed credentials.
+
 ## Canonical no-action diagnostics (`e15ab6e3`, 2026-08-28)
 
 Moved no-action outcome classification into `src.aci.classify_no_action_reason`;
