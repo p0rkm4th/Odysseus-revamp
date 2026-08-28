@@ -553,3 +553,14 @@ embedded/running source `c42a8e2313c483bcf950d0482b79c276aba6528d`, healthy
 status, and restart count `0`. The frozen Qwen quick run is `62/62/62` with
 zero duplicates. This entry is evidence for the executable checkpoint; later
 documentation-only commits must not be conflated with the running source.
+
+## Final deployed executable checkpoint: `5e8d8250`
+
+The subsequent compatibility-hook correction is the deployed executable
+source. Local and remote match at `5e8d8250ea3cc548472ec513901a02a7bde31615`;
+candidate `odysseus:candidate-5e8d8250ea3c`, image
+`sha256:ace756fd4609f06c982a60773306653933b71e2b83ab7bed9f94c34ec16ce7e6`,
+OCI source label, embedded marker, and running source all match. Health is
+healthy with restart count `0`. Full regression is `6807 passed, 4 skipped,
+186 warnings`; the in-container frozen Qwen quick run is `62/62/62`, with
+duplicates `0` and reference accuracy `1.0`.
