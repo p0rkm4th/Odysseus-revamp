@@ -1,5 +1,16 @@
 # Hades reuse / deletion ledger
 
+## Recovered semantic coverage shard (`437ad048`, 2026-08-28)
+
+The interrupted shard had no surviving process or partial artifact. Re-running
+only shard `0/4` with seed `20260828` and no model invocation produced `934`
+scenarios and `264` coverage gaps (`39` critical, `24` high, `201` normal).
+Critical gaps are untested/partial dimensions, chiefly failure classes,
+executors, approval branches, post-result states, and policy branches; they
+are not product execution failures. The focused dogfood/cutover suite passed
+`89` tests. No executable source changed and the healthy `f5c07ff3` runtime was
+left untouched.
+
 This ledger records semantic ownership before new work is added.  “Reuse” is
 not counted as consolidation until the superseded authoritative path is
 removed or reduced to a delegating compatibility boundary.
