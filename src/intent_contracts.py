@@ -1183,7 +1183,10 @@ def compile_intent(
     """Compile common current product concepts into a bounded IntentFrame."""
     text = str(query or "").strip()
     q = text.lower()
-    reference_resolution = resolve_structured_reference(text, reference_context)
+    reference_resolution = dict(resolve_structured_reference(text, reference_context))
+    # Keep the low-level resolver's stable public shape while exposing an
+    # explicit attempt bit in the IntentFrame projection for evaluator metrics.
+    reference_resolution["attempted"] = reference_resolution.get("status") != "NOT_REFERENCE"
     operation = _operation(text, continuation=continuation)
     semantic_read_concept = (
         deterministic_read_concept(text) if operation == "READ" else None

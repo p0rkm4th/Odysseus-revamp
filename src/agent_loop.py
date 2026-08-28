@@ -6734,8 +6734,12 @@ async def stream_agent_loop(
             "entity_reference": bool(_intent_frame_metrics.get("entity_reference")),
         }
     if isinstance(_aci_reference_resolution, dict):
+        _reference_status = str(_aci_reference_resolution.get("status") or "UNKNOWN")
         metrics["aci_reference_resolution"] = {
-            "status": str(_aci_reference_resolution.get("status") or "UNKNOWN"),
+            "status": _reference_status,
+            "attempted": bool(_aci_reference_resolution.get(
+                "attempted", _reference_status not in {"UNKNOWN", "NOT_REFERENCE"}
+            )),
             "concept": _aci_reference_resolution.get("concept"),
             "selection": _aci_reference_resolution.get("selection"),
             "resolved_count": len(_aci_reference_resolution.get("refs") or []),
