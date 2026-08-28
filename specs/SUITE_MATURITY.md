@@ -70,6 +70,14 @@ the complete journey works.
   `sha256:79304d95ed2f5831b005ef608c5ff8905cac8b10b5d42350b5966d8565cbc9f9`
   and deployed with marker/source `5f05f1fad8476c70b868cce19873406432781add`,
   healthy and at zero restarts. Meal-plan mutation remains deferred.
+- Contract-parity checkpoint `42a7fcd1b75e0f7c7371e15cfc8621abecf17123`
+  exposes `expiring_candidates` in the existing textual Recipe binding after
+  full-regression parity tests found the native/textual projection mismatch.
+  Focused coverage is `415 passed, 1 skipped`; corrected full regression is
+  `6875 passed, 4 skipped`. The exact candidate image is
+  `sha256:26fa612317e5e9cfdc3d99d818dd91d91e640b90903c16c3c9996fc534ad5987`,
+  with matching OCI/source marker, healthy runtime, zero restarts, and Qwen3:8B
+  reachable from the Hades container namespace.
 - The full-regression process was attempted against `b8b24f82` but was
   externally terminated around 2% before pytest emitted a summary; this is
   recorded as unresolved environment/process evidence, not as a pass.
