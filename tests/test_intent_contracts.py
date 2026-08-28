@@ -143,6 +143,19 @@ def test_inventory_state_is_a_canonical_asset_read_but_household_inventory_is_no
 
 
 @pytest.mark.parametrize("query", [
+    "look up summary in my technical asset state",
+    "show my technical asset list information",
+    "what is the current search for my technical asset",
+])
+def test_asset_collection_view_nouns_are_not_misread_as_asset_targets(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.entity_reference is None
+    assert resolved.action_id == "list"
+
+
+@pytest.mark.parametrize("query", [
     "Show me what's in the kitchen.",
     "Add angel hair pasta to my kitchen inventory.",
 ])
