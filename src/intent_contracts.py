@@ -1343,7 +1343,7 @@ def compile_intent(
             r"\b(?:why|explain|what\s+(?:is|are|does)|how\s+does|"
             r"difference\s+between|versus|what\s+should\s+i|"
             r"what\s+should\s+(?:you|i)\s+remember|"
-            r"tell\s+me\s+about\s+(?:the\s+)?(?:memory|network))\b",
+            r"tell\s+me\s+about\s+(?:the\s+)?(?:memory|network(?:ing)?))\b",
             q,
         )
         and not re.search(r"\b(?:my|mine|right\s+now|current(?:ly)?|on\s+my\s+plate)\b", q)
@@ -1351,6 +1351,31 @@ def compile_intent(
         and not re.search(r"\b(?:hades|waiting\s+on|needs?\s+attention|pending\s+approvals?)\b", q)
     ):
         concept = "UNKNOWN"
+    # Make the operation class explicit for genuinely conceptual questions
+    # that did not resolve to a canonical domain contract.  ``READ`` is the
+    # safe lexical default, but it misleadingly presents general knowledge as
+    # an attempted owner-state read in the IntentFrame.  Owner/current-state
+    # qualifiers deliberately keep their canonical READ semantics.  This is
+    # an operation-class projection, not a phrase-specific tool route: ANSWER
+    # has no ActionSpec or executor and therefore cannot acquire authority.
+    if (
+        concept == "UNKNOWN"
+        and operation == "READ"
+        and re.search(
+            r"^\s*(?:what\s+(?:is|are)\b|explain\b|define\b|"
+            r"how\s+(?:does|do)\b|why\s+does\b|"
+            r"what\s+does\b[^?]*\bmean\b|"
+            r"tell\s+me\s+about\s+(?:the\s+)?network(?:ing)?\b)",
+            q,
+        )
+        and not re.search(
+            r"\b(?:my|mine|our|ours|we|i\s+(?:have|own)|own(?:ed)?|"
+            r"current(?:ly)?|right\s+now|running|using|connected|on\s+my)\b",
+            q,
+        )
+    ):
+        operation = "ANSWER"
+        read_explicit = False
     if (
         concept == "WORK"
         and re.search(r"\b(?:start|begin)\s+working\s+on\b|\bwhat\s+should\s+i\s+work\s+on\b", q)
@@ -1380,7 +1405,7 @@ def compile_intent(
     match = re.search(r"\b(?:about|for|asset)\s+([A-Za-z0-9_.:-]{2,80})", text, re.IGNORECASE)
     # A resolved opaque reference is stronger than a lexical fragment such as
     # ``about first``. Never replace a server-owned identity with an ordinal.
-    if match and not target and match.group(1).casefold() not in {
+    if match and operation != "ANSWER" and not target and match.group(1).casefold() not in {
         "the", "a", "an", "one", "it", "that", "this", "these", "those",
         "me", "my", "mah", "mine", "myself", "you", "your", "yours", "us", "our",
         "ours", "them", "their", "theirs", "first", "second", "third",
