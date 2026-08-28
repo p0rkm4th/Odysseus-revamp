@@ -20,6 +20,8 @@ def test_inventory_uses_shared_window_and_form_primitives():
         "hades-empty-state",
         "name | quantity | unit",
         "source_url",
+        "recipes/import/prepare",
+        "recipes/import/commit",
     ):
         assert marker in source
 

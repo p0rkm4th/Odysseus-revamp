@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import date, datetime, timezone
+import json
 import logging
 import re
 from typing import Any
@@ -191,6 +192,41 @@ def setup_inventory_routes(
             inventory.create_recipe, _owner(request),
             **{key: value for key, value in payload.items() if key in allowed},
         )}
+
+    @router.post("/recipes/import/prepare")
+    async def prepare_recipe_import(request: Request, payload: dict[str, Any] = Body(...)):
+        """Prepare an unpersisted RecipeDraft from owner-supplied evidence."""
+        owner = _owner(request)
+        source_url = str(payload.get("source_url") or "").strip() or None
+        source_text = str(payload.get("source_text") or "").strip() or None
+        if not source_url and not source_text:
+            raise HTTPException(400, "source_url or source_text is required")
+        if source_url and not re.match(r"^https?://", source_url, re.IGNORECASE):
+            raise HTTPException(400, "source_url must use http or https")
+        if source_url and not source_text:
+            from src.agent_tools.web_tools import WebFetchTool
+            fetched = await WebFetchTool().execute(json.dumps({"url": source_url}), {"owner": owner})
+            if fetched.get("exit_code") != 0:
+                return {"status": "NEEDS_REVIEW", "draft": None, "source_url": source_url,
+                        "message": "The recipe source could not be fetched for review."}
+            source_text = str(fetched.get("output") or "")
+        return await call(
+            inventory.manage_recipes,
+            {"action": "prepare_import", "source_text": source_text, "source_url": source_url},
+            owner=owner,
+        )
+
+    @router.post("/recipes/import/commit", status_code=201)
+    async def commit_recipe_import(request: Request, payload: dict[str, Any] = Body(...)):
+        """Commit only a validated RecipeDraft through the canonical owner."""
+        owner = _owner(request)
+        draft = payload.get("draft")
+        if not isinstance(draft, dict):
+            raise HTTPException(400, "a validated draft is required")
+        return await call(
+            inventory.manage_recipes,
+            {"action": "commit_import", "draft": draft}, owner=owner,
+        )
 
     @router.get("/recipes/{recipe_id}/can-make")
     async def can_make(request: Request, recipe_id: str, servings: str | None = None):
