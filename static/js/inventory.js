@@ -144,7 +144,7 @@ async function loadStock() {
 }
 
 function renderRecipesScaffold() {
-  return `<div class="inventory-toolbar hades-list-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><button class="inventory-primary hades-btn-primary" data-action="new-recipe">+ Recipe</button></div><div id="inventory-recipe-list">${loading()}</div>`;
+  return `<div class="inventory-toolbar hades-list-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><div class="inventory-toolbar-actions"><button class="hades-btn-secondary" data-action="import-recipe">Import</button><button class="inventory-primary hades-btn-primary" data-action="new-recipe">+ Recipe</button></div></div><div id="inventory-recipe-list">${loading()}</div>`;
 }
 
 async function loadRecipes() {
@@ -262,6 +262,14 @@ async function onSubmit(event) {
       });
       await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, source_url:data.source_url || null})});
     }
+    if (kind === 'recipe-import') {
+      const prepared = await api('/api/recipes/import/prepare', {method:'POST', body:JSON.stringify({source_url:data.source_url || null, source_text:data.source_text || null})});
+      if (!prepared.draft) throw new Error(prepared.message || 'No verified recipe draft was found.');
+      const ingredients = prepared.draft.ingredients || [];
+      const summary = `${prepared.draft.name || 'Untitled recipe'}\n${ingredients.length} ingredient(s)\n\n${prepared.draft.instructions || 'No instructions recorded.'}`;
+      if (!window.confirm(`Review this unpersisted recipe draft before saving:\n\n${summary}`)) return;
+      await api('/api/recipes/import/commit', {method:'POST', body:JSON.stringify({draft:prepared.draft})});
+    }
     form.closest('.inventory-dialog-backdrop')?.remove();
     uiModule.showToast?.('Inventory updated');
     kind === 'recipe' ? await loadRecipes() : await loadStock();
@@ -289,6 +297,7 @@ async function onClick(event) {
   }
   if (action === 'stock-add' || action === 'stock-consume') return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
   if (action === 'new-recipe') return modalForm('New recipe', `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div><label class="hades-intake-field"><span>Ingredients <small>one per line: name | quantity | unit</small></span><textarea name="ingredients" required placeholder="rice | 1 | cup"></textarea></label>${field('Source URL','source_url','type="url" maxlength="4000" placeholder="https://…"')}<label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
+  if (action === 'import-recipe') return modalForm('Import recipe', `<div class="inventory-callout hades-callout"><strong>Review before saving.</strong> External text is untrusted; preparation never changes canonical state.</div>${field('Recipe URL','source_url','type="url" maxlength="4000" placeholder="https://example.com/recipe"')}<label class="hades-intake-field"><span>Or paste recipe text / JSON-LD</span><textarea name="source_text" maxlength="20000" placeholder="Paste a complete recipe or schema.org JSON-LD"></textarea></label>`, 'Prepare draft', 'recipe-import');
   const recipeCard = button.closest('[data-recipe-id]');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);
   if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button);
