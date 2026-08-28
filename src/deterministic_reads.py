@@ -205,6 +205,14 @@ def deterministic_read_concept(text: str) -> str | None:
         return "RECIPE"
     if _HOUSEHOLD_STATE.search(query) and not re.search(
         r"\b(?:explain|define|how\s+does)\b", query,
+    ) and not (
+        # A property/count question about owner hardware can match the broad
+        # ``how much/many ... do I have`` inventory predicate.  Preserve the
+        # canonical asset owner when the object is RAM/GPU/storage/etc.; this
+        # is semantic precedence, not another phrase route.
+        _ASSET_SUBJECT.search(query)
+        and _ASSET_OWNER.search(query)
+        and re.search(r"\b(?:what|which|where|show|list|how\s+many|how\s+much)\b", query)
     ):
         return "HOUSEHOLD_ITEM"
     # A noun such as "memory" or "network" is not by itself an owner-state
@@ -247,6 +255,11 @@ def deterministic_read_concept(text: str) -> str | None:
     if (
         (_HOUSEHOLD_SUBJECT.search(query) or _HOUSEHOLD_STATE.search(query))
         and not re.search(r"\b(?:what\s+is|what's|how\s+does|explain|define)\b.*\b(?:recipe|ingredient|food|kitchen)\b", query)
+        and not (
+            _ASSET_SUBJECT.search(query)
+            and _ASSET_OWNER.search(query)
+            and re.search(r"\b(?:what|which|where|show|list|how\s+many|how\s+much)\b", query)
+        )
     ):
         return "HOUSEHOLD_ITEM"
     if re.search(r"\b(?:review|show|list|summarize)\b.*\b(?:outstanding|open|active)\s+work\b", query):
