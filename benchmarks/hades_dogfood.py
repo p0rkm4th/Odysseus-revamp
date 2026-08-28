@@ -1996,7 +1996,10 @@ def summarize(records: Iterable[Mapping[str, Any]], scores: Iterable[Mapping[str
     refs = [
         r["trajectory"].get("reference", {}).get("status")
         for r in records
-        if r["trajectory"].get("reference", {}).get("status") not in {None, "NOT_REFERENCE"}
+        if r["trajectory"].get("reference", {}).get(
+            "attempted",
+            r["trajectory"].get("reference", {}).get("status") not in {None, "NOT_REFERENCE"},
+        )
     ]
     repair_candidates = [
         {"failure": failure, "architecture_layer": _REPAIR_LAYERS.get(failure, "evaluation_contract"),
