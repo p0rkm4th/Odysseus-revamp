@@ -1794,6 +1794,18 @@ count is zero. In-container frozen Qwen evidence was rerun before this
 entry: `62/62/62`, duplicate delivery `0`, reference accuracy `1.0`, failed
 Actions/task `0.0161`, model calls/task `0.2581`, P95 `2.9884s`.
 
+## Compatibility-alias reduction checkpoint (`c0e73ada`, 2026-08-28)
+
+Removed four unused internal compatibility aliases and switched their runtime
+call sites to canonical imports for usage summaries, action snapshots,
+directive insertion, and the retired verifier seam. Aliases still referenced
+by legacy scripts/tests remain preserved. Focused coverage passed `270` tests.
+
+Pushed/deployed source: `c0e73ada0bce579506ca6fcacb5c92868b740f3a`.
+Candidate: `odysseus:candidate-c0e73ada0bce`.
+Image: `sha256:81e8095c91a8edcf99b72f3e0e52cf5cc850bd50213e58c765f90032c11d43b6`.
+OCI marker and running source match; health is healthy; restart count is `0`.
+
 ## Canonical internal-call checkpoint (`a8b3b7c5`, 2026-08-28)
 
 Replaced seven production call sites that reached canonical ACI/intent owners
