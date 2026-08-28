@@ -857,6 +857,36 @@ def test_canonical_read_does_not_invoke_teacher_after_authoritative_answer(monke
     assert any(event.get("type") == "response_replace" for event in events)
 
 
+def test_canonical_aci_turn_does_not_invoke_legacy_teacher_takeover(monkeypatch):
+    """ACI's final answer owner must not be followed by teacher output."""
+    import src.agent_loop as agent_loop
+    import src.teacher_escalation as teacher_escalation
+
+    monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default, raising=False)
+    monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None, raising=False)
+    monkeypatch.setattr(agent_loop, "blocked_tools_for_owner", lambda owner: set(), raising=False)
+    monkeypatch.setattr(agent_loop, "estimate_tokens", lambda *args, **kwargs: 10, raising=False)
+
+    async def unexpected_teacher(*args, **kwargs):
+        raise AssertionError("legacy teacher takeover ran during a canonical ACI turn")
+        yield  # pragma: no cover
+
+    async def fake_stream(*args, **kwargs):
+        yield 'data: {"delta":"A bounded answer."}\n\n'
+        yield "data: [DONE]\n\n"
+
+    monkeypatch.setattr(teacher_escalation, "run_teacher_inline", unexpected_teacher)
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", fake_stream, raising=False)
+
+    events = _collect_stream_events(agent_loop.stream_agent_loop(
+        "http://local.test/v1", "small-local-model",
+        [{"role": "user", "content": "give me a concise answer"}],
+        aci_mode="aci",
+    ))
+
+    assert any(event.get("type") == "metrics" for event in events)
+
+
 def test_canonical_aci_projection_skips_post_packet_legacy_network_repair():
     from pathlib import Path
 
