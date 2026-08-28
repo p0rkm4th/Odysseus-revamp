@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 
 from benchmarks.hades_dogfood import (
     capture_failure_regressions,
@@ -140,6 +141,21 @@ def test_live_protocol_requires_one_terminal_done_marker():
     assert incomplete["transport_completion"] is False
     assert incomplete["terminal_event_count"] == 0
     assert incomplete["abrupt_eof"] is True
+
+
+def test_incremental_dogfood_checkpoint_retains_progress_and_classifies_stop(tmp_path):
+    from scripts.hades_dogfood import _IncrementalCheckpoint
+
+    path = tmp_path / "run.jsonl"
+    checkpoint = _IncrementalCheckpoint(path, metadata={"run_id": "r1", "seed": 7}, total=2)
+    checkpoint.case(1, "case-1", {"failure_class": "CASE_TIMEOUT"}, status="timeout")
+    checkpoint.stopped("signal")
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    assert [row["kind"] for row in rows] == ["run_started", "case", "run_stopped"]
+    assert rows[1]["status"] == "timeout"
+    assert rows[1]["record"]["failure_class"] == "CASE_TIMEOUT"
+    assert rows[-1]["completed"] == 1
+    assert rows[-1]["remaining"] == 1
 
 
 def test_dogfood_uses_configured_container_model_endpoint(monkeypatch):
