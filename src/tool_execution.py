@@ -1860,6 +1860,22 @@ async def _execute_read_recipes_binding(block, owner=None):
         if not owner:
             raise PermissionError("authenticated recipe owner is required")
         from src.inventory_service import get_inventory_service
+        if action == "prepare_import" and payload.get("source_url") and not payload.get("source_text"):
+            # Public page content is untrusted evidence. Reuse the existing
+            # bounded web-fetch tool; it never persists recipe state.
+            from src.agent_tools.web_tools import WebFetchTool
+            fetched = await WebFetchTool().execute(
+                _ody_v34_json.dumps({"url": payload["source_url"]}), {"owner": owner}
+            )
+            if fetched.get("exit_code") != 0:
+                unavailable = {
+                    "status": "NEEDS_REVIEW", "draft": None,
+                    "source_url": payload["source_url"],
+                    "message": "The recipe source could not be fetched for review.",
+                }
+                return "read_recipes", {"output": _ody_v34_json.dumps(unavailable),
+                                         "exit_code": 0, "success": True, "data": unavailable}
+            payload["source_text"] = fetched.get("output") or ""
         result = get_inventory_service().manage_recipes(payload, owner=owner)
         result = _with_canonical_read_status(result)
         return "read_recipes", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}

@@ -3320,6 +3320,15 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
     if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
         return None
     action = str(command.get("action") or "list").strip().casefold() if isinstance(command, Mapping) else "list"
+    if action == "prepare_import":
+        if status == "NEEDS_REVIEW":
+            return "I found the recipe source, but it does not contain enough verified structure to prepare a draft for review."
+        draft = payload.get("draft")
+        if not isinstance(draft, Mapping):
+            return None
+        name = str(draft.get("name") or "the recipe").strip()
+        ingredients = draft.get("ingredients") if isinstance(draft.get("ingredients"), list) else []
+        return f"Prepared {name!r} as an unpersisted draft with {len(ingredients)} ingredient(s). Review it before committing."
     if action == "can_make":
         can_make = payload.get("can_make")
         shortages = payload.get("shortages") if isinstance(payload.get("shortages"), list) else []
@@ -4239,6 +4248,10 @@ def project_action_selection(
                 payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
+        if item["binding"] == "read_recipes" and item["action_id"] == "prepare_import":
+            url_match = re.search(r"https?://[^\s)>]+", query, re.IGNORECASE)
+            if url_match:
+                payload["source_url"] = url_match.group(0).rstrip(".,")
         if item["binding"] == "web_search":
             payload["query"] = query
         if item["binding"] == "web_fetch":
