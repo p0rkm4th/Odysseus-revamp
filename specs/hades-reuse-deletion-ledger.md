@@ -1899,3 +1899,12 @@ no-source-mount `pytest -q` cannot provide full image-backed regression
 evidence (pytest reports no test files, exit `5`). Source-mounted targeted
 anti-leak coverage passes `18` tests; the packaging limitation is recorded
 explicitly rather than treated as a product result.
+
+## Current authority audit (`c610b289`, 2026-08-28)
+
+Static call-graph review found no unused top-level `agent_loop` helper safe to
+delete. Production callers use `stream_aci_turn`; `stream_agent_loop` remains
+a compatibility facade, while `stream_aci_runtime` is the executable ACI
+runtime. Focused cutover/lifecycle/contract/canonical-resource coverage passed
+`114` tests. Further alias removal remains deferred pending characterization of
+the compatibility seams that previously regressed.
