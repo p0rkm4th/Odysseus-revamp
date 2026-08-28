@@ -237,7 +237,6 @@ _ody_qwen_temperature_cap = odysseus_qwen_temperature_cap
 _compute_final_metrics = compute_final_metrics
 _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
 _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
-_run_verifier_subagent = run_legacy_completion_verifier
 _uploaded_files_context_message = uploaded_files_context_message
 _privileged_action_requires_exact_approval = requires_exact_approval
 _note_list_summary_from_tool_output = note_list_summary_from_tool_output
@@ -550,10 +549,8 @@ _SPECIALIZED_OPERATIONAL_DOMAINS = SPECIALIZED_OPERATIONAL_DOMAINS
 
 _intent_requires_action = intent_requires_action
 _usage_bucket = usage_bucket
-_usage_bucket_summary = usage_bucket_summary
-_build_actions_snapshot = build_actions_snapshot
+
 _strip_agent_injected_messages = strip_agent_injected_messages
-_prepend_agent_directive = prepend_agent_directive
 _hard_action_hint = hard_action_hint
 _hard_action_fallback_command = hard_action_fallback_command
 _hard_action_followup_hint = hard_action_followup_hint
@@ -1990,7 +1987,7 @@ async def stream_aci_runtime(
                 "round_models": [direct_actual_model],
                 "round_endpoint_ids": [direct_actual_endpoint_id],
                 "round_endpoint_labels": [direct_actual_endpoint_label],
-                **_usage_bucket_summary([direct_usage]),
+                **usage_bucket_summary([direct_usage]),
             }
             if direct_reasoning.strip():
                 terminal_metadata["thinking"] = direct_reasoning.strip()
@@ -2158,7 +2155,7 @@ async def stream_aci_runtime(
             "agent_rounds": 0,
             "tool_calls": 0,
             "direct_low_signal": True,
-            **_usage_bucket_summary([direct_usage]),
+            **usage_bucket_summary([direct_usage]),
         }
         if isinstance(direct_actual_endpoint_cost_tracked, bool):
             metrics["endpoint_cost_tracked"] = direct_actual_endpoint_cost_tracked
@@ -3014,7 +3011,7 @@ async def stream_aci_runtime(
             route_mcp_schemas = []
             route_tools = set()
         elif strict_text_tools and not guide_only:
-            _prepend_agent_directive(route_messages, 'TOOL TRANSPORT FOR THIS ROUTE: Bare Markdown fenced blocks are display-only and never execute. To invoke a tool, use explicit XML with the documented parameter names. Example for Bash: <invoke name="bash"><parameter name="command">top -b -n 1</parameter></invoke>. Do not invent a generic `arg` parameter. Use one or more documented parameter elements for structured arguments. Do not wrap invoke markup in a code fence.')
+            prepend_agent_directive(route_messages, 'TOOL TRANSPORT FOR THIS ROUTE: Bare Markdown fenced blocks are display-only and never execute. To invoke a tool, use explicit XML with the documented parameter names. Example for Bash: <invoke name="bash"><parameter name="command">top -b -n 1</parameter></invoke>. Do not invent a generic `arg` parameter. Use one or more documented parameter elements for structured arguments. Do not wrap invoke markup in a code fence.')
         if doc_mode and not plan_mode and not approved_plan and not guide_only:
             route_messages = _minimal_odysseus_doc_messages(
                 route_messages,
@@ -3035,17 +3032,17 @@ async def stream_aci_runtime(
             route_messages = _minimal_odysseus_general_messages(route_messages, include_memory=True)
             route_mcp_schemas = []
         if plan_mode and not guide_only:
-            _prepend_agent_directive(route_messages, PLAN_MODE_DIRECTIVE)
+                prepend_agent_directive(route_messages, PLAN_MODE_DIRECTIVE)
         elif approved_plan and approved_plan.strip() and not guide_only:
-            _prepend_agent_directive(route_messages, build_active_plan_note(approved_plan))
+                prepend_agent_directive(route_messages, build_active_plan_note(approved_plan))
         if guide_only:
-            _prepend_agent_directive(route_messages, GUIDE_ONLY_DIRECTIVE)
+                prepend_agent_directive(route_messages, GUIDE_ONLY_DIRECTIVE)
         if not guide_only and not _aci_canonical_tool_projection:
             _capability_directive = _hard_turn_capability_directive(
                 route_tools, disabled_tools, _intent_domains
             )
             if _capability_directive:
-                _prepend_agent_directive(route_messages, _capability_directive)
+                prepend_agent_directive(route_messages, _capability_directive)
         return {
             "messages": route_messages,
             "mcp_schemas": route_mcp_schemas,
@@ -3907,7 +3904,7 @@ async def stream_aci_runtime(
                         "round_models": [*round_models, _round_actual_model],
                         "round_endpoint_ids": [*round_endpoint_ids, _round_actual_endpoint_id],
                         "round_endpoint_labels": [*round_endpoint_labels, _round_actual_endpoint_label],
-                        **_usage_bucket_summary(usage_buckets),
+                        **usage_bucket_summary(usage_buckets),
                     }
                     if round_reasoning.strip():
                         terminal_metadata["thinking"] = round_reasoning.strip()
@@ -5027,7 +5024,7 @@ async def stream_aci_runtime(
                 yield f'data: {json.dumps({"type": "agent_step", "round": round_num})}\n\n'
                 _vfail = await run_legacy_completion_verifier(
                     _verifier_instruction,
-                    _build_actions_snapshot(tool_events),
+                    build_actions_snapshot(tool_events),
                     endpoint_url=endpoint_url, model=model, headers=headers,
                 )
                 if _vfail:
@@ -6600,7 +6597,7 @@ async def stream_aci_runtime(
     metrics["endpoint_label"] = actual_endpoint_label
     if isinstance(actual_endpoint_cost_tracked, bool):
         metrics["endpoint_cost_tracked"] = actual_endpoint_cost_tracked
-    usage_summary = _usage_bucket_summary(usage_buckets)
+    usage_summary = usage_bucket_summary(usage_buckets)
     if usage_summary:
         metrics.update(usage_summary)
         if not backend_gen_tps and total_duration > 0:
