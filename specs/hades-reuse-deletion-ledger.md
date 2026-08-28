@@ -2446,3 +2446,29 @@ corpus on the deployed candidate is `61/62` functional, `62/62` architectural,
 calls/task `0.2581`, and P95 `2.3987s`. The sole functional failure remains
 the evaluator-only Jarvis prerequisite `response_excludes` check; no new
 canonical owner-state failure was observed.
+
+## ACI ownership audit (`74eba767`, 2026-08-28)
+
+Re-audited the production runtime after the conceptual operation-class
+change. No production caller directly invokes `stream_agent_loop`, imports
+the compatibility stream, or selects the retained loop aliases; scheduled
+work also enters through `stream_aci_turn`. The remaining `stream_agent_loop`
+symbol is an explicitly marked compatibility facade used by direct legacy
+tests and is not an independent production semantic owner. The remaining
+`agent_loop.py` surface is compatibility/provider plumbing plus the canonical
+runtime adapter; deleting it without a characterization slice would remove
+compatibility rather than authority.
+
+Current source/runtime evidence: branch `hades-aci-v1` local and remote
+`74eba767f7755661aea845e2202a365e4563459f`, clean worktree, deployed
+executable source `c873385fbbd4f9080fe75fde9911eb1a0dbc1e42a`, healthy image
+`sha256:592906b35032e25f076471cf6a20822de30c3bc18c2c4bba1c9bb8fc6f96a22a`,
+zero restarts. The branch tip is docs-only relative to the deployed
+executable and intentionally does not require a rebuild.
+
+The focused ACI/dogfood/cutover run passed `258` tests. The four explicit
+environment/oracle-independence tests passed. Three repeated probes of the
+remaining Jarvis prerequisite case produced one `apt-get` wording failure and
+two clean model-prose-only runs; all had zero tool execution and zero authority
+grant. This is nondeterministic model wording/evaluator debt, not evidence for
+a new semantic-owner or delivery fix.
