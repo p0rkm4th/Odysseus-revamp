@@ -28,6 +28,10 @@ the complete journey works.
   variants, household stock/expiry language, and recipe planning language.
 - First productization slice resolves the service and household variants via
   existing contracts; recipe planning remains deferred pending owner audit.
+- Productization checkpoint `818a0a218900c4f173e2773e1469050057ea8b61` was
+  pushed and deployed exactly; focused routing/household coverage is
+  `342 passed, 1 skipped`, runtime health is healthy, and Qwen3:8B is reachable
+  from the Hades container namespace.
 
 ## Product quality rule
 
