@@ -16,6 +16,14 @@ SQLAlchemy deprecation warning. No executable source changed in this phase;
 the running product remains the healthy `f5c07ff3` deployment and the
 `225195aa` candidate remains provenance-verified but undeployed.
 
+The corresponding unsharded seeded audit (`seed=20260828`, RC generation,
+coverage-only) produced `3733` scenarios and `128` gaps: `31` critical, `10`
+high, and `87` normal. The critical remainder is `17` untested failure
+classes, `5` untested approval branches, `4` partial failure classes, `3`
+untested post-result states, `1` untested policy branch, and `1` partial
+post-result state. These are missing coverage dimensions, not runtime pass or
+failure results.
+
 This is an exact-head reconciliation against the current local checkout. It
 is an engineering status record, not a readiness declaration.
 
