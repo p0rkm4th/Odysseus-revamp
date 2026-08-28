@@ -323,3 +323,47 @@ def test_ambiguous_binding_outcome_retains_locks_and_requires_resolution(db):
     resolved = svc.resolve_ambiguous_action("alice", action["id"], occurred=False)
     assert resolved["run_lifecycle_state"] == "failed"
     assert svc.lock_conflicts("alice", action["id"]) == []
+
+
+def test_restart_reconstructs_failed_and_ambiguous_execution_boundaries(db):
+    svc = WorkEngine(db)
+
+    failed_run = svc.create_run("alice", {"domain": "homelab"})
+    failed_action = svc.create_action(
+        "alice", failed_run["id"],
+        {"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["host:lab-1"]},
+    )
+    with pytest.raises(WorkError, match="binding unavailable"):
+        svc.execute_bound_action(
+            "alice", failed_action["id"],
+            lambda _value: (_ for _ in ()).throw(WorkError("binding unavailable")),
+        )
+
+    ambiguous_run = svc.create_run("alice", {"domain": "homelab"})
+    ambiguous_action = svc.create_action(
+        "alice", ambiguous_run["id"],
+        {"capability_id": "homelab.manage", "action_id": "service_status", "locks": ["host:lab-2"]},
+    )
+    svc.execute_bound_action(
+        "alice", ambiguous_action["id"],
+        lambda _value: (_ for _ in ()).throw(AmbiguousExecution("transport timeout")),
+    )
+
+    restarted = WorkEngine(db)
+    failed_replay = restarted.reconstruct_run("alice", failed_run["id"])
+    ambiguous_replay = restarted.reconstruct_run("alice", ambiguous_run["id"])
+    failed_action_state = restarted.get_run("alice", failed_run["id"])["actions"][0]
+    ambiguous_run_state = restarted.get_run("alice", ambiguous_run["id"])
+    # A binding failure is an Action failure; the parent Run remains
+    # reconstructible for an explicit retry or alternative next step.
+    assert failed_replay["lifecycle_state"] == "created"
+    assert failed_replay["action_events"]
+    assert failed_action_state["status"] == "failed"
+    assert failed_action_state["error"] == "binding unavailable"
+    assert ambiguous_replay["current_projection"] == "execution_ambiguous"
+    assert ambiguous_replay["action_events"]
+    # The Action is marked failed with an explicit ambiguous error while the
+    # parent Run retains the unresolved execution state and its lock.
+    assert ambiguous_run_state["actions"][0]["status"] == "failed"
+    assert ambiguous_run_state["actions"][0]["error"].startswith("execution_ambiguous:")
+    assert ambiguous_run_state["continuation_state"]["execution_ambiguous"] is True
