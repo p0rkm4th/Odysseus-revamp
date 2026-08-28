@@ -2178,6 +2178,23 @@ with `7` prompts and `8` streams.
 
 The current runtime executable matches `de1ceeb7`. Later documentation-only
 commits may advance the branch HEAD without requiring a product rebuild.
+
+Frozen Qwen3:8B quick revalidation on the exact `de1ceeb7` image passed `62/62`
+functional, architectural, and security cases. Duplicate delivery was `0`,
+reference resolution `1.0`, failed Actions/task `0.0161`, model calls/task
+`0.2581`, median latency `0.0314s`, and P95 `1.6759s`. The run used Qwen from
+the Hades container namespace and is attributable to the deployed executable
+SHA, not to the later documentation-only HEAD.
+
+## Current semantic coverage audit (`de1ceeb7`, 2026-08-28)
+
+The existing `core` generator audit (seed `20260828`) produced `1,793`
+reproducible cases and `233` coverage gaps: `33` CRITICAL, `69` HIGH, and
+`131` NORMAL. Critical gaps are coverage metadata gaps, not asserted runtime
+failures; they include approval replay/expiry/mismatch branches, disabled
+policy, post-result continuation/clarification states, and failure taxonomy
+variants. The audit is preserved as the next dogfood work queue. No runtime
+routing or authority was changed to make these dimensions appear covered.
 ## Descriptive tool-registry extraction (`225195aa`, 2026-08-28)
 
 Moved the descriptive `TOOL_SECTIONS` registry (241 lines) from
