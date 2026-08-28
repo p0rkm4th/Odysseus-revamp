@@ -65,11 +65,23 @@ def test_generated_registry_cases_project_executor_fixture_without_oracle_fields
     registry_cases = [case for case in cases if case["family"] == "registry_action"]
     assert registry_cases
     for case in registry_cases:
-        if case["scenario"].get("executor") in {None, "", "none"}:
+        if (
+            case["scenario"].get("executor") in {None, "", "none"}
+            or not case["scenario"].get("synthetic_capability_available", True)
+        ):
             continue
         assert case["environment"].get("fixture_profile", {}).get("tools")
         altered = {**case, "expected": {"concept": "WRONG_ORACLE"}}
         assert fixtures_for_case(case) == fixtures_for_case(altered)
+
+
+def test_unsupported_registry_executor_is_not_given_neighboring_read_fixture():
+    cases = generate_semantic_cases(seed=20260828, count=5)
+    for case, executor in ((cases[0], "workspace_yolo"), (cases[4], "local_intelligence")):
+        assert case["scenario"]["executor"] == executor
+        assert case["scenario"]["synthetic_capability_available"] is False
+        assert case["environment"] == {}
+        assert case["expected"]["capability_available"] is False
 
 
 def test_dogfood_contract_expands_frozen_sources_and_journeys():
