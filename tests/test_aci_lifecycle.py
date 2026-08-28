@@ -812,6 +812,43 @@ def test_canonical_aci_turn_does_not_append_legacy_hard_capability_directive(mon
     assert any(event.get("type") == "metrics" for event in events)
 
 
+def test_canonical_read_does_not_invoke_teacher_after_authoritative_answer(monkeypatch):
+    import src.agent_loop as agent_loop
+    import src.teacher_escalation as teacher_escalation
+
+    monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default, raising=False)
+    monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None, raising=False)
+    monkeypatch.setattr(agent_loop, "blocked_tools_for_owner", lambda owner: set(), raising=False)
+    monkeypatch.setattr(agent_loop, "estimate_tokens", lambda *args, **kwargs: 10, raising=False)
+
+    async def fake_execute(block, *args, **kwargs):
+        return block.tool_type, {
+            "status": "SUCCESS",
+            "network": {"interfaces": [], "routes": [], "services": []},
+            "output": "{}",
+            "exit_code": 0,
+        }
+
+    async def fake_stream(*args, **kwargs):
+        yield 'data: {"delta":"model text must not become the final answer"}\n\n'
+        yield "data: [DONE]\n\n"
+
+    async def unexpected_teacher(*args, **kwargs):
+        raise AssertionError("teacher takeover ran after a terminal canonical read")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", fake_stream, raising=False)
+    monkeypatch.setattr(teacher_escalation, "run_teacher_inline", unexpected_teacher)
+    events = _collect_stream_events(agent_loop.stream_agent_loop(
+        "http://local.test/v1", "small-local-model",
+        [{"role": "user", "content": "what network am i on"}],
+        aci_mode="aci", tool_executor=fake_execute,
+    ))
+
+    assert any(event.get("type") == "metrics" for event in events)
+    assert any(event.get("type") == "response_replace" for event in events)
+
+
 def test_canonical_aci_projection_skips_post_packet_legacy_network_repair():
     from pathlib import Path
 
