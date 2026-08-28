@@ -94,7 +94,7 @@ function hydrateSemanticNavIcons() {
     // Static markup remains a no-JS fallback. Once the shared semantic icon
     // is available, replace that one direct glyph rather than appending a
     // second icon to the same navigation entry.
-    const legacyIcon = [...item.children].find(child => child.tagName === 'SVG');
+    const legacyIcon = [...item.children].find(child => child.tagName.toLowerCase() === 'svg');
     const semanticIcon = document.createElement('template');
     semanticIcon.innerHTML = iconSvg(name);
     const nextIcon = semanticIcon.content.firstElementChild;
