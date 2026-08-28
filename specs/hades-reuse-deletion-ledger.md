@@ -1,5 +1,20 @@
 # Hades reuse / deletion ledger
 
+## Exact candidate deployment and Qwen revalidation (`225195aa`, 2026-08-28)
+
+Candidate `odysseus:candidate-225195aa-exact` was deployed with image
+`sha256:20437b95b12b3b78f0cc46b0569586ce4bb784029cada1122367df4a44bb4003`.
+OCI revision, source marker, and running source match
+`225195aa1e4b3985c7fb00a128dd7c7e16160cef`; health is healthy and restarts
+are zero. The retained rollback tag is `odysseus:candidate-f5c07ff3`.
+
+The in-container frozen Qwen3:8B quick run passed `62/62` functional,
+architectural, and security cases, with duplicate delivery `0`, reference
+resolution `1.0`, failed Actions/task `0.0161`, model calls/task `0.2581`,
+median latency `0.030s`, and P95 `1.6798s`. The model endpoint was
+`http://host.docker.internal:11434`. Later branch commits are documentation
+only; this evidence is attributed to executable source `225195aa`.
+
 ## Recovered semantic coverage shard (`437ad048`, 2026-08-28)
 
 The interrupted shard had no surviving process or partial artifact. Re-running

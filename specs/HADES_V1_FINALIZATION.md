@@ -1,5 +1,29 @@
 # Hades V1 Finalization Status
 
+## Exact candidate deployment and Qwen revalidation (`225195aa`, 2026-08-28)
+
+The exact executable candidate `odysseus:candidate-225195aa-exact` was
+deployed explicitly using the existing Compose volumes and configuration. Its
+image is
+`sha256:20437b95b12b3b78f0cc46b0569586ce4bb784029cada1122367df4a44bb4003`;
+OCI revision, `/app/.odysseus-source-commit`, and running source all match
+`225195aa1e4b3985c7fb00a128dd7c7e16160cef`. `/api/health` is healthy and the
+container has zero restarts. The known-good image remains retained as
+`odysseus:candidate-f5c07ff3`.
+
+The frozen Qwen3:8B quick corpus ran inside the deployed Hades container
+against `http://host.docker.internal:11434` and passed `62/62` functional,
+`62/62` architectural, and `62/62` security cases. Duplicate delivery was
+`0`; reference resolution was `1.0`; failed Actions/task was `0.0161`; model
+calls/task `0.2581`; median latency `0.030s`; P95 `1.6798s`; and tool-index
+lookups/task `0.0806`. This is synthetic/model evidence, not authenticated
+owner-browser evidence.
+
+Subsequent branch commits through `25296d34` contain documentation/evidence
+updates only. Thus current branch HEAD is intentionally a documentation-only
+descendant while the deployed executable source remains the tested
+`225195aa` revision.
+
 ## Recovered semantic coverage shard (`437ad048`, 2026-08-28)
 
 After the laptop restart, no execution process or partial report survived. The
