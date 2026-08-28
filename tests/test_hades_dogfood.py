@@ -22,7 +22,12 @@ from benchmarks.hades_dogfood import (
     delivery_observation,
     authoritative_answer_text,
 )
-from scripts.hades_dogfood import _live_protocol_observation, configured_model_endpoint
+from scripts.hades_dogfood import (
+    _live_protocol_observation,
+    _source_dirty,
+    _source_reference,
+    configured_model_endpoint,
+)
 from benchmarks.jarvis.synthetic_tools import fixtures_for_case
 
 
@@ -117,6 +122,22 @@ def test_dogfood_uses_configured_container_model_endpoint(monkeypatch):
 def test_dogfood_keeps_standalone_loopback_default(monkeypatch):
     monkeypatch.delenv("HADES_OLLAMA_ENDPOINT", raising=False)
     assert configured_model_endpoint() == "http://127.0.0.1:11434"
+
+
+def test_container_dogfood_uses_embedded_source_when_git_is_absent(tmp_path, monkeypatch):
+    import scripts.hades_dogfood as dogfood
+
+    marker = tmp_path / ".odysseus-source-commit"
+    marker.write_text("embedded-sha\n", encoding="utf-8")
+    monkeypatch.setattr(dogfood, "ROOT", tmp_path)
+    monkeypatch.delenv("HADES_SOURCE_REFERENCE", raising=False)
+
+    def no_git(*_args, **_kwargs):
+        raise OSError("git unavailable")
+
+    monkeypatch.setattr(dogfood.subprocess, "run", no_git)
+    assert _source_reference() == "embedded-sha"
+    assert _source_dirty() is False
 
 
 def test_synthetic_owner_reads_use_typed_empty_results():

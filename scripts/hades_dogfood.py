@@ -107,7 +107,14 @@ def _source_reference() -> str:
             capture_output=True, text=True, timeout=5,
         ).stdout.strip() or "working-tree"
     except (OSError, subprocess.SubprocessError):
-        return "working-tree"
+        # Production images intentionally omit .git.  The immutable build
+        # marker is the authoritative source identity in that environment.
+        marker = ROOT / ".odysseus-source-commit"
+        try:
+            value = marker.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError):
+            value = ""
+        return value or "working-tree"
 
 
 def _source_dirty() -> bool:
@@ -118,7 +125,10 @@ def _source_dirty() -> bool:
         )
         return bool(result.stdout.strip())
     except (OSError, subprocess.SubprocessError):
-        return True
+        # An image with an embedded revision is an immutable checkout from the
+        # evaluator's perspective; unlike a source-mounted tree it has no
+        # untracked working state to report.
+        return not (ROOT / ".odysseus-source-commit").is_file()
 
 
 def _run_metadata(args: argparse.Namespace) -> dict[str, Any]:
