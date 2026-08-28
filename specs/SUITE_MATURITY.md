@@ -178,3 +178,22 @@ Each suite must progress through canonical state, bounded Action/Result,
 verification/readback where effectful, deterministic rendering where possible,
 Qwen3:8B dogfood, and browser acceptance where user-visible. Capability names
 alone do not advance a suite to IMPLEMENTED.
+## Recipe P0 ingestion checkpoint — `c1de67a1`
+
+- `RecipeDraft` is now an explicit untrusted proposal schema owned by the
+  existing intent/Inventory path.
+- Recipe CREATE accepts the reproduced owner-style long paste (`as "name":`,
+  multiline ingredients, instructions, optional servings/source URL) while
+  remaining fail-closed for incomplete or malformed drafts.
+- `manage_recipes.add` remains the sole canonical persistence Action; the
+  existing executor performs persistence and readback before verified success.
+- The browser acceptance runner now treats multiline/list formatting
+  structurally and removes superseded model answer bubbles when a canonical
+  `response_replace` arrives, preserving one visible final AnswerSource.
+- Focused contract/lifecycle/recipe tests: `297 passed`.
+- Exact disposable candidate `odysseus:candidate-c1de67a1`, source-matched and
+  healthy: long-paste chat mutation/readback/reload browser journey `PASS`
+  (`3/3` streams, `3/3` DONE, `0` false-success, `0` duplicate delivery).
+- URL/video/image import preparation/commit remains deferred; no unverified
+  importer was added. Meal-plan mutation remains gated on that future import
+  slice.

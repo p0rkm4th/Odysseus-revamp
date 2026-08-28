@@ -374,8 +374,15 @@ async function send(page, prompt, expectation = {}) {
   const composer = page.locator('textarea#message:visible').first();
   await composer.fill(prompt);
   await page.locator('.send-btn').click();
-  await page.waitForFunction((text) => [...document.querySelectorAll('#chat-history .msg-user')]
-    .some((node) => (node.querySelector('.body')?.innerText || node.innerText || '').includes(text)), prompt);
+  await page.waitForFunction((text) => {
+    const normalize = (value) => String(value || '')
+      .replace(/(^|\s)[-*•]\s+/g, '$1')
+      .replace(/(^|\s)\d+[.)]\s+/g, '$1')
+      .replace(/\s+/g, ' ').trim();
+    const expected = normalize(text);
+    return [...document.querySelectorAll('#chat-history .msg-user')]
+      .some((node) => normalize(node.querySelector('.body')?.innerText || node.innerText).includes(expected));
+  }, prompt);
   const stream = await waitForAnswer(page, beforeAssistant, beforeStreams, prompt);
   const afterAssistant = await assistantCount(page);
   if (afterAssistant !== beforeAssistant + 1) {
