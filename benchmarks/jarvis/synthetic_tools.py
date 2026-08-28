@@ -47,6 +47,33 @@ class SyntheticToolExecutor:
         return f"{name}: synthetic fixture", response
 
 
+def fixture_tool_for_semantic_concept(concept: Any) -> str | None:
+    """Map a legacy semantic case to its simulated external capability.
+
+    This is evaluator compatibility plumbing only.  It must not be imported by
+    production routing or used to derive authority from an answer key.
+    """
+    value = str(concept or "").strip().upper()
+    return {
+        "WORK": "read_work",
+        "MEMORY": "read_memory",
+        "MEMORY_READ": "read_memory",
+        "TECHNICAL_ASSET": "manage_assets",
+        "ASSET": "manage_assets",
+        "ASSETS": "manage_assets",
+        "NETWORK": "manage_homelab",
+        "NETWORK_CONTEXT": "manage_homelab",
+        "HOUSEHOLD": "read_household",
+        "KITCHEN": "read_household",
+        "INVENTORY": "read_household",
+        "SERVICE": "manage_homelab",
+        "HOMELAB_HOST": "manage_homelab",
+        "SECURITY": "manage_security_assessment",
+        "SECURITY_FINDING": "manage_security_assessment",
+        "DEVELOPER": "developer_read",
+    }.get(value)
+
+
 def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]]:
     """Build the minimum allowlisted fixture set declared by a suite case."""
     expected = case.get("expected", {})
@@ -70,21 +97,22 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
         # ``family``/``concept`` rather than carrying an explicit tool fixture.
         concept = str(expected.get("concept") or "").strip().upper()
         family = str(case.get("family") or "").strip().casefold()
-        if concept == "WORK" or family == "work":
+        legacy_tool = fixture_tool_for_semantic_concept(concept)
+        if legacy_tool:
+            names.add(legacy_tool)
+        elif family == "work":
             names.add("read_work")
-        if concept in {"MEMORY", "MEMORY_READ"} or family == "memory":
+        elif family == "memory":
             names.add("read_memory")
-        if concept in {"TECHNICAL_ASSET", "ASSET", "ASSETS"} or family in {"asset", "assets"}:
+        elif family in {"asset", "assets"}:
             names.add("manage_assets")
-        if concept in {"NETWORK", "NETWORK_CONTEXT"} or family in {"network", "infrastructure"}:
+        elif family in {"network", "infrastructure", "service", "remote_host"}:
             names.add("manage_homelab")
-        if concept in {"HOUSEHOLD", "KITCHEN", "INVENTORY"} or family in {"household", "kitchen", "inventory"}:
+        elif family in {"household", "kitchen", "inventory"}:
             names.add("read_household")
-        if concept in {"SERVICE", "HOMELAB_HOST"} or family in {"service", "remote_host"}:
-            names.add("manage_homelab")
-        if concept in {"SECURITY", "SECURITY_FINDING"} or family in {"security", "security_audit"}:
+        elif family in {"security", "security_audit"}:
             names.add("manage_security_assessment")
-        if concept == "DEVELOPER" or family == "developer":
+        elif family == "developer":
             names.add("developer_read")
     fixtures: dict[str, list[dict[str, Any]]] = {}
     for name in names:
