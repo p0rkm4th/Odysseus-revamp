@@ -101,7 +101,6 @@ from src.aci import (
     detect_runaway_call,
     canonical_asset_read_payload,
     canonical_tool_result_projection,
-    canonical_result_answer,
     project_final_answer,
     project_model_decision,
     canonical_read_fast_path_payload,
@@ -154,8 +153,6 @@ from src.aci import (
     build_base_prompt,
     finalize_prompt_messages,
     trim_route_request_messages,
-    skill_index_prompt,
-    select_prompt_tools,
     resolve_turn_intent,
     compile_turn_contract,
 )
@@ -260,7 +257,6 @@ except ModuleNotFoundError as exc:
 _document_stream_events = document_stream_events
 from src.tool_parsing import (
     strip_doc_model_artifacts,
-    normalize_truncated_document_tool_fences,
     normalize_stream_document_fences,
     resolve_tool_blocks,
 )
