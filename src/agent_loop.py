@@ -205,7 +205,6 @@ _asset_read_request = asset_read_request
 _normalize_homelab_intent = normalize_homelab_intent
 _normalize_operational_intent_evidence = normalize_operational_intent_evidence
 _looks_like_local_computer_request = looks_like_local_computer_request
-_explicitly_references_missing_workspace = explicitly_references_missing_workspace
 _looks_like_notes_turn = looks_like_notes_request
 _looks_like_notes_calendar_followup = looks_like_notes_calendar_followup
 _is_casual_low_signal = is_casual_low_signal
@@ -1968,7 +1967,7 @@ async def stream_agent_loop(
     # Tool retrieval uses the latest message by default. It may inherit recent
     # user turns only for explicit continuations ("yes", "do it", "1").
     _retrieval_query = str(_intent.get("retrieval_query") or _last_user)
-    if _explicitly_references_missing_workspace(_retrieval_query, workspace):
+    if explicitly_references_missing_workspace(_retrieval_query, workspace):
         msg = (
             "No active workspace is set. Use `/workspace pick` or "
             "`/workspace set /absolute/path`, then rerun the request."
