@@ -20,6 +20,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from benchmarks.jarvis.synthetic_tools import fixture_tool_for_semantic_concept
+
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = Path(__file__).with_name("hades_dogfood_contract.json")
 SCHEMA_VERSION = 1
@@ -1285,11 +1287,17 @@ def expand_cases(
         elif adapter == "metamorphic":
             for group, prompts in values.items():
                 selected = prompts[:3] if suite == "baseline" else prompts
+                fixture_tool = fixture_tool_for_semantic_concept(group)
+                environment = (
+                    {"fixture_profile": {"tools": [fixture_tool]}}
+                    if fixture_tool else {}
+                )
                 for index, prompt in enumerate(selected, 1):
                     cases.append(_case(f"meta-{group.casefold()}-{index:02d}", prompt,
                                        family="metamorphic", source=spec["id"],
                                        expected={"concept": group, "max_decision_calls": 0,
-                                                 "max_tool_index_lookups": 0}))
+                                                 "max_tool_index_lookups": 0},
+                                       environment=environment))
         elif adapter == "live_case":
             for item in values:
                 data = item.__dict__ if hasattr(item, "__dict__") else dict(item)

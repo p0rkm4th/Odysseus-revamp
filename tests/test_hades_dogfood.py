@@ -160,6 +160,14 @@ def test_legacy_metamorphic_owner_concepts_receive_typed_fixtures():
         assert fixtures[tool][0]["exit_code"] == 0
 
 
+def test_metamorphic_fixture_world_is_explicit_and_oracle_independent():
+    cases = expand_cases(load_contract(), suite="baseline")
+    case = next(item for item in cases if item["id"] == "meta-memory-01")
+    assert case["environment"] == {"fixture_profile": {"tools": ["read_memory"]}}
+    altered = {**case, "expected": {"concept": "NETWORK", "required_tools": ["manage_homelab"]}}
+    assert fixtures_for_case(case) == fixtures_for_case(altered)
+
+
 def test_explicit_environment_fixture_is_independent_of_expected_oracle():
     base = {
         "prompt": "show my machines",
