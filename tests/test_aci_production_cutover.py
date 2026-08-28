@@ -91,6 +91,44 @@ def test_production_runtime_has_canonical_aci_stream_callers():
     assert len(calls) >= 6, calls
 
 
+def test_aci_runtime_does_not_call_retained_compatibility_aliases():
+    """Compatibility exports must not become a second runtime authority."""
+    repo = Path(__file__).parents[1]
+    tree = ast.parse(
+        (repo / "src" / "agent_loop.py").read_text(encoding="utf-8"),
+        filename=str(repo / "src" / "agent_loop.py"),
+    )
+    runtime = next(
+        node for node in tree.body
+        if isinstance(node, ast.AsyncFunctionDef)
+        and node.name == "stream_aci_runtime"
+    )
+    retained_aliases = {
+        "_recent_reference_resolution_hint",
+        "_deterministic_reference_acknowledgement",
+        "_prefetched_explicit_memory_result",
+        "_minimal_aci_answer_messages",
+        "_minimal_aci_model_fallback_messages",
+        "_strip_agent_injected_messages",
+        "_strip_think_blocks",
+        "_empty_response_fallback",
+        "_compute_final_metrics",
+        "_run_verifier_subagent",
+        "_privileged_action_requires_exact_approval",
+        "_matches_resolved_canonical_read",
+        "_usage_bucket_summary",
+        "_build_actions_snapshot",
+        "_prepend_agent_directive",
+    }
+    calls = {
+        node.func.id
+        for node in ast.walk(runtime)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+    }
+    assert not (calls & retained_aliases)
+
+
 def test_every_production_aci_stream_call_explicitly_selects_aci_mode():
     """Prevent a future caller from silently selecting the compatibility default."""
     missing = []
