@@ -70,6 +70,9 @@ if (!await inventoryPane.evaluate(node => node.classList.contains('hades-workspa
 if (await inventoryPane.locator('.hades-window-titlebar').count() !== 1 || await inventoryPane.locator('.hades-module-tabs').count() !== 1) throw new Error('inventory shared chrome is incomplete');
 const inventoryBox = await inventoryPane.boundingBox();
 if (!inventoryBox || inventoryBox.left < 0 || inventoryBox.top < 0 || inventoryBox.right > 1440 || inventoryBox.bottom > 900) throw new Error('inventory window escapes viewport');
+await inventoryPane.locator('[data-tab="recipes"]').click();
+await inventoryPane.locator('#inventory-recipe-list').waitFor();
+if (await inventoryPane.locator('#inventory-recipe-list .hades-empty-state, #inventory-recipe-list .hades-record-card').count() !== 1) throw new Error('recipe view lacks shared empty/list state');
 await inventoryPane.locator('[data-close]').click();
 await desktop.page.evaluate(content => window.hadesWindowManager.openView('osint-fixture', null, 'OSINT realistic fixture', content), fixture);
 const desktopWindow = desktop.page.locator('[data-view="osint-fixture"]');

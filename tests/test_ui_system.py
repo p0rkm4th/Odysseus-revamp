@@ -15,6 +15,9 @@ def test_inventory_uses_shared_window_and_form_primitives():
         "hades-intake-field",
         "inventory-advanced",
         "hades-btn-primary",
+        "hades-record-card",
+        "hades-dialog",
+        "hades-empty-state",
     ):
         assert marker in source
 

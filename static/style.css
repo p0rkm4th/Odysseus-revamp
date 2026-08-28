@@ -41592,6 +41592,7 @@ body.settings-sidebar-resize-active {
 .hades-badge-success { background:color-mix(in srgb, var(--hades-success) 20%, transparent); color:var(--hades-success); }
 .hades-badge-info { background:color-mix(in srgb, var(--hades-info) 20%, transparent); color:var(--hades-info); }
 .hades-badge-danger { background:color-mix(in srgb, var(--hades-danger) 20%, transparent); color:var(--hades-danger); }
+.hades-badge-warning { background:color-mix(in srgb, var(--hades-warning) 20%, transparent); color:var(--hades-warning); }
 .hades-provenance { border:1px solid var(--hades-border-subtle); color:var(--hades-text-muted); }
 .hades-provenance-user-provided { color:var(--hades-info); }
 .hades-provenance-observed, .hades-provenance-confirmed { color:var(--hades-success); }
@@ -41657,4 +41658,11 @@ body.settings-sidebar-resize-active {
 .inventory-pane .inventory-advanced summary { cursor:pointer; color:var(--hades-text-muted); font-size:.8rem; }
 .inventory-pane .inventory-dialog-actions button:not(.inventory-primary) { background:transparent; }
 .inventory-pane .inventory-card { background:var(--hades-surface-raised); }
+.inventory-pane .hades-list-toolbar h3, .inventory-pane .hades-list-toolbar p { margin:0; }
+.inventory-pane .hades-list-toolbar p { color:var(--hades-text-muted); font-size:.82rem; margin-top:3px; }
+.inventory-pane .hades-dialog { display:block; }
+.inventory-pane .hades-dialog h3 { color:var(--fg); }
+.inventory-pane .hades-dialog .hades-intake-field { margin-top:var(--hades-space-3); }
+.inventory-pane .hades-dialog .hades-intake-grid { gap:var(--hades-space-3); }
+.inventory-pane .hades-dialog-actions { margin-top:var(--hades-space-4); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.001ms !important; } }
