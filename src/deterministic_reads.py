@@ -79,6 +79,11 @@ _HOUSEHOLD_STATE = re.compile(
     r"what\s+did\s+(?:i|we)\s+run\s+out\s+of)",
     re.IGNORECASE,
 )
+_RECIPE_READ = re.compile(
+    r"\b(?:what|which|show|list|find|search)\b.*\brecipes?\b|"
+    r"\brecipes?\b.*\b(?:do\s+(?:i|we)\s+have|saved|stored|on\s+file)\b",
+    re.IGNORECASE,
+)
 _HOST_INSPECTION = re.compile(
     r"\b(?:inspect|check|show|read|explore|scan)\s+(?:me\s+)?"
     r"(?:(?:the|this|current|local|my|your)\s+){0,2}"
@@ -149,6 +154,7 @@ def deterministic_read_concept(text: str) -> str | None:
     if not query or (
         not _READ_REQUEST.search(query)
         and not _INFRASTRUCTURE_STATUS.search(query)
+        and not _RECIPE_READ.search(query)
         and not _HOST_INSPECTION.search(query)
         and not (
             _NETWORK_SUBJECT.search(query)
@@ -171,6 +177,10 @@ def deterministic_read_concept(text: str) -> str | None:
         return "MEMORY"
     # Expiry/stock state is an inventory question even when the phrase starts
     # with the generic "what is" interrogative.
+    if _RECIPE_READ.search(query) and not re.search(
+        r"\b(?:what\s+is|how\s+does|explain|define)\b", query,
+    ):
+        return "RECIPE"
     if _HOUSEHOLD_STATE.search(query) and not re.search(
         r"\b(?:explain|define|how\s+does)\b", query,
     ):

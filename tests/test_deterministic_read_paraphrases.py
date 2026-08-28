@@ -135,6 +135,25 @@ def test_infrastructure_status_variants_use_canonical_service_read(query):
 
 
 @pytest.mark.parametrize("query", [
+    "what recipes do i have",
+    "show my recipes",
+    "find recipe chili",
+])
+def test_recipe_inventory_queries_use_existing_inventory_service_owner(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.frame.domain_concept == "RECIPE"
+    assert resolved.frame.operation_class == "READ"
+    assert resolved.action_id in {"list", "search"}
+    assert resolved.binding_name == "read_recipes"
+
+
+def test_recipe_search_keeps_only_bounded_query_text():
+    frame = compile_intent("find recipe chili")
+    assert frame.filters["recipe_query"] == "chili"
+    assert resolve_intent(frame).action_id == "search"
+
+
+@pytest.mark.parametrize("query", [
     "What all is on my network? do a discovery dive?",
     "tell me about the network, do a deep dive discovery mission to tell me whats going on",
     "map the devices on our current network",
