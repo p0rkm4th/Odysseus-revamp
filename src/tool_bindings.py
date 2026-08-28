@@ -34,6 +34,7 @@ MANAGE_ASSETS_SCHEMA = {
             "confidence": {"type": "number"}, "attributes": {"type": "object"}, "query": {"type": "string"}, "limit": {"type": "integer"},
             "kind": {"type": "string"}, "data": {"type": "object"}, "text": {"type": "string"}, "parent": {"type": "string"}, "child": {"type": "string"},
             "relation": {"type": "string"}, "source_asset": {"type": "string"}, "target_asset": {"type": "string"}, "reason": {"type": "string"},
+            "initial_quantity": {"type": "number", "minimum": 0.01}, "initial_unit": {"type": "string"},
         }, "required": ["action"]},
     }
 }

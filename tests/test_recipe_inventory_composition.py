@@ -151,3 +151,18 @@ def test_expiring_recipe_result_has_a_human_renderer_distinct_from_raw_result():
     )
     assert answer.startswith("Recipes using")
     assert not answer.startswith("{")
+
+
+def test_household_add_item_can_atomically_seed_requested_initial_stock():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+
+    item = service.manage_inventory({
+        "action": "add_item", "name": "Acceptance Tomatoes", "domain": "kitchen",
+        "item_kind": "ingredient", "default_unit": "each",
+        "initial_quantity": 3, "initial_unit": "each",
+    }, owner="alice")["item"]
+
+    overview = service.household_overview("alice")
+    row = next(row for row in overview["items"] if row["id"] == item["id"])
+    assert row["stock_quantity"] == "3.000000"

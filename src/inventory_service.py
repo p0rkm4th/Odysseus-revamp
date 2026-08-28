@@ -251,6 +251,8 @@ class InventoryService:
         location_id: str | None = None,
         metadata: dict[str, Any] | None = None,
         image_refs: Iterable[str] | None = None,
+        initial_quantity: Any | None = None,
+        initial_unit: str | None = None,
     ) -> dict[str, Any]:
         owner = _required_text(owner, "owner", maximum=255)
         display_name = _required_text(name, "name", maximum=200)
@@ -284,6 +286,23 @@ class InventoryService:
             )
             db.add(item)
             db.flush()
+            if initial_quantity is not None:
+                amount = _canonical_amount(
+                    initial_quantity, initial_unit or default_unit, item.default_unit,
+                )
+                key = f"initial:{item.id}"
+                lot = InventoryLot(
+                    id=str(uuid4()), owner=owner, item_id=item.id,
+                    location_id=item.location_id, quantity=amount,
+                    unit=item.default_unit,
+                )
+                movement = InventoryMovement(
+                    id=str(uuid4()), owner=owner, item_id=item.id, lot_id=lot.id,
+                    quantity_delta=amount, unit=item.default_unit, reason="add",
+                    source_kind="stock_add", source_id=key, idempotency_key=key,
+                )
+                db.add_all([lot, movement])
+                db.flush()
             return _item_view(item)
 
     def get_item(self, owner: str, item_id: str) -> dict[str, Any]:
@@ -1001,6 +1020,8 @@ class RecipeService(InventoryService):
                 brand=args.get("brand"), manufacturer=args.get("manufacturer"),
                 model=args.get("model"), sku=args.get("sku"), barcode=args.get("barcode"),
                 location_id=args.get("location_id"),
+                initial_quantity=args.get("initial_quantity"),
+                initial_unit=args.get("initial_unit") or args.get("unit"),
             )
             return {"item": item}
         if action == "add_stock":

@@ -18,7 +18,7 @@ from src.aci import (
 )
 from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
-from src.intent_contracts import canonical_read_action, compile_intent, recipe_create_payload, resolve_intent
+from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, recipe_create_payload, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
@@ -183,6 +183,17 @@ def test_explicit_recipe_create_projects_structured_draft_into_canonical_action(
 
 def test_incomplete_recipe_create_draft_fails_closed():
     assert recipe_create_payload("Add a recipe called Dinner") is None
+
+
+def test_household_quantity_add_projects_item_and_initial_stock():
+    query = "Add 3 synthetic cans of Acceptance Tomatoes to the pantry."
+    frame = compile_intent(query)
+    assert resolve_intent(frame).action_id == "add_item"
+    assert inventory_add_item_payload(query) == {
+        "action": "add_item", "name": "Acceptance Tomatoes", "domain": "kitchen",
+        "item_kind": "ingredient", "default_unit": "each",
+        "initial_quantity": 3.0, "initial_unit": "each", "category": "pantry",
+    }
 
 
 def test_expiring_recipe_composition_uses_distinct_canonical_action():

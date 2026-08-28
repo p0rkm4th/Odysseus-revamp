@@ -79,6 +79,33 @@ def recipe_create_payload(query: str) -> dict[str, Any] | None:
     }
 
 
+def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
+    """Extract explicit item quantity for the canonical inventory CREATE."""
+    text = str(query or "").strip()
+    match = re.search(
+        r"\badd\s+(?P<quantity>\d+(?:\.\d+)?)\s+(?P<name>.+?)"
+        r"(?:\s+to\s+(?:the\s+)?(?P<area>pantry|refrigerator|fridge|freezer|cabinet|kitchen))?\s*\.?$",
+        text, re.IGNORECASE,
+    )
+    if not match:
+        return None
+    name = re.sub(
+        r"\b(?:synthetic|cans?|bottles?|boxes?|items?)\b", " ",
+        match.group("name"), flags=re.IGNORECASE,
+    )
+    name = re.sub(r"\s+", " ", name).strip(" .\"'")
+    name = re.sub(r"^of\s+", "", name, flags=re.IGNORECASE).strip()
+    if not name:
+        return None
+    return {
+        "action": "add_item", "name": name[:200], "domain": "kitchen",
+        "item_kind": "ingredient", "default_unit": "each",
+        "initial_quantity": float(match.group("quantity")),
+        "initial_unit": "each",
+        "category": (match.group("area") or "").casefold() or None,
+    }
+
+
 # Operational domain metadata used by prompt/capability projections.  These
 # flags describe cognition requirements only; policy and execution remain
 # owned by the canonical Action path.
