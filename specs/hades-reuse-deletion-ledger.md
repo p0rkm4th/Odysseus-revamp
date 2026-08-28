@@ -2294,3 +2294,21 @@ passed `62/62` functional, architectural, and security with duplicate delivery
 
 The follow-up singular-finalization assertion is test-only and was pushed as
 `1d9549a9`; it does not change the deployed executable.
+
+## Exact deployed generated sample (`d3aee6e6`, 2026-08-28)
+
+A bounded generated run against the exact deployed d3 executable covered `345`
+scenarios (seed `20260828`). Functional was `249/345` (`0.7217`), architectural
+`306/345` (`0.8870`), security `345/345`, duplicate delivery `0`, missing
+assistant answers `0`, and missing terminal completions `0`. Failed Actions/task
+was `0.1159`, median latency `0.3217s`, and P95 `3.9807s`. The exploratory
+failure clusters were domain routing (`57`), burden (`39`), intent (`26`), and
+capability gaps (`23`); these are the next semantic-dogfood work queue and are
+not evidence of a canonical-result delivery regression.
+
+Product/runtime provenance at execution: branch `hades-aci-v1` was clean at
+`b84c4154`; the deployed executable, OCI/source marker, and running container
+were the earlier exact d3 source `d3aee6e6eb6e2bb591f779f4e90dd95602a80f4c`,
+image `sha256:96291c655dae147f85a84395b7fe2901535f399ec1e1db8f983f00e79dc3a639`,
+healthy with zero restarts. This was synthetic Qwen3:8B evidence, not live-owner
+acceptance.
