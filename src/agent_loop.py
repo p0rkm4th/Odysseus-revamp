@@ -235,7 +235,6 @@ _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
 _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
 _privileged_action_requires_exact_approval = requires_exact_approval
 _minimal_odysseus_doc_messages = minimal_odysseus_doc_messages
-_minimal_odysseus_notes_messages = minimal_odysseus_notes_messages
 _minimal_odysseus_general_messages = minimal_odysseus_general_messages
 from src.agent_tools import (
     parse_tool_blocks,
@@ -276,7 +275,6 @@ from src.tool_parsing import (
     normalize_stream_document_fences,
     resolve_tool_blocks,
 )
-_strip_doc_model_artifacts = strip_doc_model_artifacts
 _normalize_stream_document_fences = normalize_stream_document_fences
 _resolve_tool_blocks = resolve_tool_blocks
 _append_tool_results = append_tool_results
@@ -3006,7 +3004,7 @@ async def stream_aci_runtime(
             )
             route_mcp_schemas = []
         elif notes_mode and not plan_mode and not approved_plan and not guide_only:
-            route_messages = _minimal_odysseus_notes_messages(route_messages)
+            route_messages = minimal_odysseus_notes_messages(route_messages)
             route_mcp_schemas = []
         elif (
             is_ody
@@ -3869,7 +3867,7 @@ async def stream_aci_runtime(
                         ),
                     ).strip()
                     if _ody_qwen_finetune_model:
-                        partial_round = _strip_doc_model_artifacts(partial_round).strip()
+                        partial_round = strip_doc_model_artifacts(partial_round).strip()
                     failure_note = f"[Agent stopped: {terminal_error['message']}]"
                     terminal_round = (
                         f"{partial_round}\n\n{failure_note}"
@@ -4061,7 +4059,7 @@ async def stream_aci_runtime(
                             round_reasoning += data["delta"]
                         else:
                             _delta_text = (
-                                _strip_doc_model_artifacts(data["delta"])
+                                strip_doc_model_artifacts(data["delta"])
                                 if _ody_qwen_finetune_model
                                 else data["delta"]
                             )
