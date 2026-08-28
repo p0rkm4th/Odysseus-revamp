@@ -32,35 +32,24 @@ logger = logging.getLogger(__name__)
 def stream_aci_turn(*args: Any, **kwargs: Any):
     """Canonical production stream entrypoint during the strangler migration.
 
-    The implementation remains behind the temporary compatibility module, but
-    production callers cannot accidentally select legacy or shadow behavior
-    through this seam. Compatibility callers may still invoke
+    The implementation remains behind the temporary runtime module, but
+    production callers cannot select legacy or shadow behavior through this
+    seam. Compatibility callers may still invoke
     ``agent_loop.stream_agent_loop`` explicitly while migration completes.
     """
     kwargs = dict(kwargs)
     kwargs["aci_mode"] = "aci"
-    # The executable implementation has an ACI-owned name.  The old
+    # The executable implementation has an ACI-owned name. The old
     # ``stream_agent_loop`` symbol remains only as a compatibility facade for
     # direct legacy callers and tests; production ACI traffic must not enter
     # through that legacy-named seam.
     import importlib
     runtime_module = importlib.import_module("src.agent_loop")
     runtime = getattr(runtime_module, "stream_aci_runtime", None)
-    legacy = getattr(runtime_module, "stream_agent_loop", None)
-    # Keep the long-standing monkeypatch/adapter seam usable for compatibility
-    # callers. In the real module the legacy symbol is marked as our facade, so
-    # production always selects the explicitly ACI-named implementation. A
-    # replaced legacy symbol is treated as an intentional test/adapter hook,
-    # never as a second production authority.
     if runtime is None:
         # A missing canonical runtime is a deployment/programming failure, not
         # permission to revive the retired stream implementation.
         raise RuntimeError("ACI runtime is unavailable")
-    if (
-        legacy is not None
-        and not getattr(legacy, "_aci_compatibility_facade", False)
-    ):
-        runtime = legacy
     return runtime(*args, **kwargs)
 
 
