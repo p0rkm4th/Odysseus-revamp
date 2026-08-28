@@ -7,7 +7,7 @@ the complete journey works.
 | Suite | Existing canonical owner | Current state | Verified journeys | Immediate gap | V1 disposition |
 |---|---|---|---|---|---|
 | Homelab / Network / Infrastructure | `AssetInventory`, `HomelabOperations`, `NetworkState`, ACI contracts | IMPLEMENTED / PARTIAL | asset list/detail, network context/observations, host inspection, service status contract | service target/detail rendering and readback coverage need a focused product slice | Tier 1 active |
-| Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / PARTIAL | overview, item/list/search/get contracts, mutation/readback suites, isolated authenticated browser readback | natural stock/expiry/location projections and browser mutation journeys need expansion | Tier 1 active |
+| Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / PARTIAL | overview, item/list/search/get contracts, mutation/readback suites, isolated authenticated browser readback, deterministic stock/expiry rendering | location projections and browser mutation journeys need expansion | Tier 1 active |
 | Recipes / Meal Planning | existing `InventoryRecipe`, `RecipeService`, stock planner, and Cookbook code | IMPLEMENTED / PARTIAL | canonical list/search/get, pantry coverage, serving scale, expiring-inventory candidates, isolated Qwen/browser trajectory | meal-plan/shopping projections and broader fresh-install journeys | Tier 1 active |
 | Memory / Personal Knowledge | Memory store, grounding, `read_memory` | IMPLEMENTED | deterministic owner reads, stale/current precedence, browser acceptance | broaden everyday recall/correction journeys | Tier 1 next |
 | Work / Projects / Tasks | Work Engine, Runs, Actions, `read_work` | IMPLEMENTED | overview, attention, continuation and persistence tests | add cross-suite remediation/task journeys | Tier 1 next |
@@ -108,6 +108,20 @@ the complete journey works.
   `3 prompts / 4 streams`; this is acceptance-principal evidence, not owner
   data evidence. The disposable container and credentials were removed after
   the run.
+
+- Executable checkpoint `e73f15876744cb9c8226ca3c15f42a7eab227e23` extends the
+  existing Household renderer to present canonical `expiring_lots` and
+  `low_stock` projections as human-readable secondary sections. It does not
+  add a route, Action, store, or deterministic-read classifier. Focused
+  coverage for the changed renderer and Tier 1 contracts is `37 passed, 1
+  skipped`; the exact candidate image is
+  `sha256:3d70fe0d76b2072d9af805c590f37e4f29540e5a66a534d84fa095cf80c03f21`,
+  with matching OCI marker/running source, healthy runtime, and zero restarts.
+  A fresh disposable deployment of that exact image passed the strengthened
+  authenticated Household Playwright lane (`3 prompts / 4 streams`), including
+  canonical stock readback, one deterministic finalization per turn, reload
+  continuation, and cleanup. This is acceptance-principal evidence, not owner
+  data evidence.
 
 ## Product quality rule
 
