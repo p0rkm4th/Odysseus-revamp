@@ -2700,3 +2700,21 @@ tests with `4` skips; exact candidate and running source `1d9a92d0`, image
 healthy, zero restarts, Qwen3:8B reachable in-container. The deployed frozen
 quick corpus remained `62/62/62`, duplicate delivery `0`, with failed
 Actions/task `0.0161`.
+
+## Lazy legacy-stream boundary (`05c32fb5`, 2026-08-28)
+
+Classification: `COMPATIBILITY DECOUPLING / NO AUTHORITY CHANGE`.
+
+Removed the eager `src.legacy_agent_loop` import from `src.agent_loop`. The
+historical `agent_loop.stream_agent_loop` surface remains available through a
+lazy module accessor, so compatibility callers retain the same facade while
+canonical ACI runtime initialization no longer imports legacy streaming code.
+The legacy facade still delegates to `stream_aci_runtime`; no second runtime,
+policy path, Action registry, or persistence owner was introduced.
+
+Evidence: `175` focused cutover/compatibility tests and `6844` full regression
+tests with `4` skips. Exact candidate `odysseus:candidate-05c32fb5`, image
+`sha256:af9837af70e55fec6ce721336cc149f80ef331cd9cfe2d9827860cb4b5a445d6`;
+OCI marker and running source match `05c32fb5`, health is healthy, restart
+count is zero, Qwen3:8B is reachable in-container, and authenticated browser
+acceptance passed `7` prompts across `8` streams.
