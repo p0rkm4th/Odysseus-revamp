@@ -81,6 +81,21 @@ def test_production_aci_stream_entrypoint_forces_canonical_mode(monkeypatch):
     assert captured["aci_mode"] == "aci"
 
 
+def test_production_aci_stream_ignores_replaced_legacy_symbol(monkeypatch):
+    import src.agent_loop as runtime_module
+
+    def canonical_stream(*args, **kwargs):
+        return "canonical-stream"
+
+    def unexpected_legacy_stream(*args, **kwargs):
+        raise AssertionError("canonical ACI entrypoint selected legacy stream")
+
+    monkeypatch.setattr(runtime_module, "stream_aci_runtime", canonical_stream)
+    monkeypatch.setattr(runtime_module, "stream_agent_loop", unexpected_legacy_stream)
+
+    assert stream_aci_turn("endpoint") == "canonical-stream"
+
+
 def test_production_aci_stream_fails_closed_without_canonical_runtime(monkeypatch):
     import src.agent_loop as legacy
 
