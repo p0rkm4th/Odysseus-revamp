@@ -38,6 +38,12 @@ regression is `6908 passed, 5 skipped`; the exact candidate image is
 `sha256:469f6d2cb017a142373b70b9dc1319016cd44a94cd6837a5ede34d07d6b8f770`.
 Neither candidate replaced the owner's running container.
 
+The Recipe UI checkpoint `71947f5f32ac4f2611622d07d4fce2826fbc1ed0` replaces
+opaque item-ID-first entry with human-readable `name | quantity | unit`
+rows, retains UUID references for advanced users, and records an optional
+source URL. Focused UI/Recipe coverage is `239 passed`; exact candidate image
+is `sha256:a92afcbfcf5397f3070640200f5b108ca5505338e0afda218cd060473970e3f1`.
+
 ## Baseline evidence
 
 - Post-merge `main`: `364380ed3f46c1d14d3229e5b7530698cfa22e65`.
