@@ -574,6 +574,22 @@ embedded/running source `b0b94a6773f705f131a26b74cb9ff9118379c806`, healthy
 status, and restart count `0`. The frozen Qwen quick run remains `62/62/62`
 with duplicate delivery `0`.
 
+## Compatibility-alias reduction checkpoint (`c0e73ada`, 2026-08-28)
+
+Removed four unused internal compatibility aliases and switched their runtime
+call sites to canonical imports: usage-summary projection, action-snapshot
+construction, directive insertion, and the retired verifier alias. Aliases
+still referenced by legacy scripts/tests remain intentionally preserved.
+Focused coverage passed `270` tests; the corrected full environment previously
+passed `6806 passed, 5 skipped, 149 warnings`.
+
+Pushed source and exact candidate are `c0e73ada0bce579506ca6fcacb5c92868b740f3a`
+and `odysseus:candidate-c0e73ada0bce`. Running image is
+`sha256:81e8095c91a8edcf99b72f3e0e52cf5cc850bd50213e58c765f90032c11d43b6`;
+OCI revision, embedded marker, and running source match. Health is healthy,
+restart count is `0`, and Qwen3:8B remains available from the configured
+`http://host.docker.internal:11434` endpoint.
+
 ## Canonical internal-call checkpoint (`a8b3b7c5`, 2026-08-28)
 
 The ACI runtime now calls canonical imported owners directly for memory
