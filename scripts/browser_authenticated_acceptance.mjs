@@ -323,6 +323,9 @@ async function send(page, prompt, expectation = {}) {
 }
 
 async function main() {
+  // Validate scenario safety before any provisioning can enable the gated
+  // acceptance facility or touch deployment state.
+  const scenarios = loadJourneyScenarios();
   const credentials = provision();
   await waitForHealth();
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
@@ -419,7 +422,6 @@ async function main() {
     await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
     tracing = true;
 
-    const scenarios = loadJourneyScenarios();
     const prompts = scenarios
       ? scenarios.flatMap((scenario) => scenario.turns.map((turn) => ({
         ...turn,
