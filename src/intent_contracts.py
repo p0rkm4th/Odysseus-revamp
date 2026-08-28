@@ -1167,7 +1167,9 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
-    if re.search(r"\b(?:restart|recover|execute|run|scan|discover\w*|install|turn on|start|begin)\b", q): return "EXECUTE"
+    if re.search(r"\b(?:restart|recover|execute|run|scan|discover\w*|install|turn on|start|begin)\b", q) and not re.search(
+        r"\brun\s+out\s+of\b", q,
+    ): return "EXECUTE"
     if re.search(r"\b(?:research|investigate|deep dive|look into)\b", q): return "RESEARCH"
     if re.search(r"\b(?:monitor|watch|alert)\b", q): return "MONITOR"
     return "READ"

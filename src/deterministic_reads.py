@@ -67,6 +67,18 @@ _NETWORK_CONTEXT_DETAIL = re.compile(
     r"network\s+context|subnet|where\s+am\s+i\s+connected)\b",
     re.IGNORECASE,
 )
+_HOUSEHOLD_SUBJECT = re.compile(
+    r"\b(?:household|pantry|kitchen|freezer|fridge|refrigerator|cabinet|"
+    r"groceries|grocery|shopping|stock|inventory|food|ingredients?)\b",
+    re.IGNORECASE,
+)
+_HOUSEHOLD_STATE = re.compile(
+    r"\b(?:about\s+to\s+expire|expir(?:e|ing|y)|run(?:ning)?\s+out|"
+    r"ran\s+out|low\s+on|in\s+the\s+(?:freezer|fridge|refrigerator|pantry)|"
+    r"how\s+much\s+.+\s+do\s+(?:i|we)\s+have|"
+    r"what\s+did\s+(?:i|we)\s+run\s+out\s+of)",
+    re.IGNORECASE,
+)
 _HOST_INSPECTION = re.compile(
     r"\b(?:inspect|check|show|read|explore|scan)\s+(?:me\s+)?"
     r"(?:(?:the|this|current|local|my|your)\s+){0,2}"
@@ -81,7 +93,8 @@ _CURRENT_STATE = re.compile(
     re.IGNORECASE,
 )
 _INFRASTRUCTURE_STATUS = re.compile(
-    r"\b(?:(?:what(?:'s|s|\s+is)?)\s+running(?:\s+in\s+\w+)?|"
+    r"\b(?:(?:what(?:'s|s|\s+is)?)\s+running(?:\s+(?:in|on)\s+\w+)?|"
+    r"what\s+services?\s+(?:(?:are|is)\s+)?(?:up|alive|down|unhealthy|failing)|"
     r"anything\s+(?:un)?healthy|what(?:'s|\s+is)\s+up|"
     r"what\s+services?\s+(?:(?:are|is)\s+)?(?:up|alive)|"
     r"(?:are|is)\s+(?:my\s+)?services?\s+(?:up|alive)|"
@@ -146,6 +159,7 @@ def deterministic_read_concept(text: str) -> str | None:
             and _ASSET_OWNER.search(query)
             and re.search(r"\b(?:tell\s+me|what|which|where|show|how\s+many)\b", query)
         )
+        and not (_HOUSEHOLD_SUBJECT.search(query) or _HOUSEHOLD_STATE.search(query))
     ):
         return None
     if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
@@ -155,10 +169,16 @@ def deterministic_read_concept(text: str) -> str | None:
         query,
     ):
         return "MEMORY"
+    # Expiry/stock state is an inventory question even when the phrase starts
+    # with the generic "what is" interrogative.
+    if _HOUSEHOLD_STATE.search(query) and not re.search(
+        r"\b(?:explain|define|how\s+does)\b", query,
+    ):
+        return "HOUSEHOLD_ITEM"
     # A noun such as "memory" or "network" is not by itself an owner-state
     # read. Explanations and definitions belong on the general-model floor
     # unless the turn also carries an explicit owner/current-state subject.
-    if _GENERAL_EXPLANATION.search(query) and not (
+    if _GENERAL_EXPLANATION.search(query) and not _INFRASTRUCTURE_STATUS.search(query) and not (
         _OWNER_SELF.search(query)
         or re.search(r"\b(?:my|mine|our|ours|we|i\s+am|i'm|right\s+now|current(?:ly)?)\b", query)
         or re.search(r"\bwe\b.{0,20}\bworking\b", query)
@@ -187,6 +207,16 @@ def deterministic_read_concept(text: str) -> str | None:
         and not re.search(r"\b(?:projects?|tasks?|goals?|commitments?|runs?|missions?|watches?)\b", query)
     ):
         return "WORK"
+    # Household reads are owner-state projections over the existing inventory
+    # service.  The state predicate covers natural omissions such as
+    # "how much milk do we have" and "what is about to expire" without
+    # promoting ordinary food definitions or recipe advice into inventory
+    # reads.
+    if (
+        (_HOUSEHOLD_SUBJECT.search(query) or _HOUSEHOLD_STATE.search(query))
+        and not re.search(r"\b(?:what\s+is|what's|how\s+does|explain|define)\b.*\b(?:recipe|ingredient|food|kitchen)\b", query)
+    ):
+        return "HOUSEHOLD_ITEM"
     if re.search(r"\b(?:review|show|list|summarize)\b.*\b(?:outstanding|open|active)\s+work\b", query):
         return "WORK"
     if (
@@ -247,6 +277,12 @@ def deterministic_read_concept(text: str) -> str | None:
     # Operational status questions share the existing harmless service-status
     # Action.  Keep this narrow enough that ordinary explanations such as
     # "what is a service?" remain general-model questions.
+    if (
+        _INFRASTRUCTURE_STATUS.search(query)
+        and re.search(r"\b(?:remote|ssh|over\s+ssh|via\s+ssh)\b", query)
+        and re.search(r"\b(?:host|server|machine|system)\b", query)
+    ):
+        return "HOMELAB_HOST"
     if _INFRASTRUCTURE_STATUS.search(query):
         return "SERVICE"
     # A broad self-description request with no narrower subject is an

@@ -105,6 +105,36 @@ def test_it_assets_collection_read_does_not_consume_active_asset_referent():
 
 
 @pytest.mark.parametrize("query", [
+    "what's in the kitchen",
+    "what's in the freezer",
+    "how much milk do we have",
+    "what is about to expire",
+    "what are we low on",
+    "what did we run out of",
+])
+def test_household_inventory_variants_use_canonical_read_owner(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert resolved.frame.operation_class == "READ"
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_household"
+    assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
+    "what is running on Erebus",
+    "what services are down",
+    "what's running in the homelab",
+])
+def test_infrastructure_status_variants_use_canonical_service_read(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.frame.domain_concept == "SERVICE"
+    assert resolved.frame.operation_class == "READ"
+    assert resolved.action_id == "service_status"
+    assert resolved.binding_name == "manage_homelab"
+
+
+@pytest.mark.parametrize("query", [
     "What all is on my network? do a discovery dive?",
     "tell me about the network, do a deep dive discovery mission to tell me whats going on",
     "map the devices on our current network",
