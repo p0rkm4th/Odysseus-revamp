@@ -69,6 +69,31 @@ def test_projection_has_no_duplicate_conflicting_bindings():
         assert binding.executor_key
 
 
+def test_recipe_binding_executes_canonical_scale_read(monkeypatch):
+    class FakeInventory:
+        def manage_recipes(self, payload, *, owner):
+            assert owner == "alice"
+            assert payload == {"action": "scale", "recipe_id": "recipe-1", "servings": "6"}
+            return {
+                "recipe_id": "recipe-1",
+                "recipe_name": "Chili",
+                "servings": "6",
+                "scaled_ingredients": [],
+            }
+
+    monkeypatch.setattr(
+        "src.inventory_service.get_inventory_service",
+        lambda: FakeInventory(),
+    )
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_recipes",
+        payload={"action": "scale", "recipe_id": "recipe-1", "servings": "6"},
+        owner="alice",
+    ))
+    assert result["success"] is True
+    assert result["data"]["scaled_ingredients"] == []
+
+
 def test_network_binding_preserves_host_broker_boundary():
     binding = TOOL_BINDINGS["manage_homelab"]
     assert binding.execution_location == "host_broker"
