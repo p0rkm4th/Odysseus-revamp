@@ -195,12 +195,23 @@ def recipe_import_draft(source_text: str | None, *, source_url: str | None = Non
     """
     text = str(source_text or "").strip()
     draft = recipe_create_draft(text) if text else None
-    if draft is None and text.startswith(("{", "[")):
+    if draft is None:
+        json_text = text
+        script = re.search(
+            r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(?P<body>.*?)</script>",
+            text, re.IGNORECASE | re.DOTALL,
+        )
+        if script:
+            json_text = script.group("body").strip()
+        if not json_text.startswith(("{", "[")):
+            json_text = ""
         try:
-            value: Any = json.loads(text)
+            value: Any = json.loads(json_text) if json_text else None
         except (TypeError, ValueError):
             value = None
         candidates = value if isinstance(value, list) else [value]
+        if isinstance(value, Mapping) and isinstance(value.get("@graph"), list):
+            candidates.extend(value["@graph"])
         recipe = next((item for item in candidates if isinstance(item, Mapping) and (
             item.get("@type") == "Recipe" or "Recipe" in (item.get("@type") or [])
         )), None)
