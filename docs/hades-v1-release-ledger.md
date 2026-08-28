@@ -9,6 +9,20 @@ scope, exact approval, durable continuation, canonical reads, fallback
 authority, and rollback invariants remain covered by the current focused/full
 gates.
 
+## Owner journey acceptance expansion
+
+The legacy browser smoke lane remains unchanged. A supplemental data-driven
+black-box lane is now defined in `benchmarks/hades_owner_journeys.json` and is
+run by `test:browser:owner-journeys` against an isolated acceptance deployment.
+It covers canonical Asset/RAM and filtered reads, Network, empty Recipe reads,
+chat-driven Recipe mutation/readback, and chat-driven Household mutation/
+readback. Expectations are evaluator-only; they are not supplied to routing or
+model prompts. Mutation scenarios refuse to run without an external isolated
+acceptance credential, preventing accidental writes to the owner instance.
+
+The lane is prepared and contract-tested; live execution remains a separate
+acceptance result and is not claimed by this documentation-only checkpoint.
+
 ## V1 RC fixes and evidence
 
 | Item | Status | Evidence |
