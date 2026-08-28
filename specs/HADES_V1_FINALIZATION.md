@@ -530,3 +530,12 @@ The full current-head regression subsequently passed `6807 passed, 4 skipped,
 `1,793` scenarios and `233` coverage metadata gaps (`33` critical, `69` high).
 The changed gap count reflects explicit unsupported-executor/capability-gap
 coverage, not a product failure rate. No executable source changed.
+
+## Current executable seam change
+
+`aci.stream_aci_turn` now enters `agent_loop.stream_aci_runtime` directly.
+`stream_agent_loop` remains only a compatibility facade and closes its
+delegated async generator on shutdown. This is a boundary change, not a new
+planner or execution path; focused characterization passed 79 tests. The
+running image still contains source `100d2e0f` until this source change is
+committed, pushed, built, and deployed through the exact-SHA loop.

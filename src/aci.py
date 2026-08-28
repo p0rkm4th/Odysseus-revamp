@@ -39,8 +39,12 @@ def stream_aci_turn(*args: Any, **kwargs: Any):
     """
     kwargs = dict(kwargs)
     kwargs["aci_mode"] = "aci"
-    from src.agent_loop import stream_agent_loop
-    return stream_agent_loop(*args, **kwargs)
+    # The executable implementation has an ACI-owned name.  The old
+    # ``stream_agent_loop`` symbol remains only as a compatibility facade for
+    # direct legacy callers and tests; production ACI traffic must not enter
+    # through that legacy-named seam.
+    from src.agent_loop import stream_aci_runtime
+    return stream_aci_runtime(*args, **kwargs)
 
 
 def local_computer_rules() -> str:

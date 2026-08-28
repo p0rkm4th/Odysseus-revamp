@@ -1622,7 +1622,26 @@ PLAN_MODE_DIRECTIVE = (
 )
 
 
-async def stream_agent_loop(
+async def stream_agent_loop(*args: Any, **kwargs: Any):
+    """Compatibility facade for callers that still use the retired name.
+
+    Canonical production traffic enters :func:`src.aci.stream_aci_turn` and
+    invokes ``stream_aci_runtime`` directly.  Keeping this facade preserves
+    the established async-generator contract for scheduled jobs, plugins,
+    and older tests without retaining a second orchestration implementation.
+    """
+    delegated = stream_aci_runtime(*args, **kwargs)
+    try:
+        async for event in delegated:
+            yield event
+    finally:
+        # Closing an async-generator facade does not automatically close the
+        # delegated generator.  Propagate closure so in-flight tool tasks use
+        # the runtime's existing cancellation/finalization path.
+        await delegated.aclose()
+
+
+async def stream_aci_runtime(
     endpoint_url: str,
     model: str,
     messages: List[Dict],
