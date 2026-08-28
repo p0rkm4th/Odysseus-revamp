@@ -11,6 +11,11 @@ are not product execution failures. The focused dogfood/cutover suite passed
 `89` tests. No executable source changed and the healthy `f5c07ff3` runtime was
 left untouched.
 
+The matching unsharded seeded coverage-only audit (`seed=20260828`, RC
+generation) produced `3733` scenarios and `128` gaps (`31` critical, `10` high,
+`87` normal). Critical gaps remain coverage dimensions rather than product
+execution failures; the focused dogfood/cutover suite remained `89 passed`.
+
 This ledger records semantic ownership before new work is added.  “Reuse” is
 not counted as consolidation until the superseded authoritative path is
 removed or reduced to a delegating compatibility boundary.
