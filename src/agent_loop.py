@@ -93,6 +93,7 @@ from src.aci import (
     intent_requires_action,
     expects_canonical_action,
     classify_no_action_reason,
+    is_canonical_read_contract,
     usage_bucket,
     usage_bucket_summary,
     compute_final_metrics,
@@ -1925,12 +1926,8 @@ async def stream_aci_runtime(
          if isinstance(_intent.get("resolved_contract"), dict) else "")
         or ""
     ).strip()
-    _canonical_read_fast = bool(
-        isinstance(_intent.get("intent_frame"), dict)
-        and _intent["intent_frame"].get("operation_class") == "READ"
-        and _intent["intent_frame"].get("read_explicit") is True
-        and _canonical_binding
-        and (_intent.get("resolved_contract") or {}).get("action_id")
+    _canonical_read_fast = is_canonical_read_contract(
+        _intent.get("intent_frame"), _intent.get("resolved_contract")
     )
     # Once ACI has resolved a supported semantic contract, its binding is the
     # only model-facing capability for this turn.  The old route used to add

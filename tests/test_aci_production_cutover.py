@@ -8,7 +8,11 @@ ACI seam and the compatibility implementation itself.
 import ast
 from pathlib import Path
 
-from src.aci import classify_no_action_reason, expects_canonical_action
+from src.aci import (
+    classify_no_action_reason,
+    expects_canonical_action,
+    is_canonical_read_contract,
+)
 
 
 def _runtime_call_nodes(function_name: str):
@@ -93,6 +97,16 @@ def test_no_action_failure_classification_is_owned_by_aci():
     assert classify_no_action_reason(
         **base, tool_events=[{"exit_code": 0, "success": True}]
     ) is None
+
+
+def test_canonical_read_contract_eligibility_is_owned_by_aci():
+    frame = {"operation_class": "READ", "read_explicit": True}
+    contract = {"binding": "manage_assets", "action_id": "list"}
+    assert is_canonical_read_contract(frame, contract) is True
+    assert is_canonical_read_contract(frame, {"binding": "", "action_id": "list"}) is False
+    assert is_canonical_read_contract(
+        {"operation_class": "EXECUTE", "read_explicit": True}, contract
+    ) is False
     assert expects_canonical_action(
         answer_only=True, clarification_only=False,
         asset_read_explicit=True, read_binding="manage_assets",
