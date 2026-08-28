@@ -2388,3 +2388,16 @@ OCI revision, source marker, and running source match; health is healthy with
 zero restarts, and Qwen3:8B is reachable from the container namespace. Browser
 acceptance passed (`7` prompts, `8` streams). This leaves provider-facing and
 explicit compatibility exports intact while removing dead loop scaffolding.
+
+## Test bootstrap isolation (`de9d4560`, 2026-08-28)
+
+Hardened `tests/test_agent_loop.py` cleanup so mocked bootstrap imports do not
+pollute canonical `src.*`/`core.*` modules for later tests. The focused
+order-sensitive run (`test_agent_loop.py` plus
+`test_external_context_tool_gate.py`) passed `209` tests. The full current
+regression passed `6820` tests with `4` skips and `186` warnings.
+
+This is test-only and does not change the deployed executable. The running
+production candidate remains `odysseus:candidate-ee7eef7c`, sourced from
+`ee7eef7cc3163a85e3055b15ae28a36ee5dc9907`; the branch/test source is
+`de9d4560586c058ac2b6b024d670d09ca763108d`.
