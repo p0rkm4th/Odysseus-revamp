@@ -307,7 +307,8 @@ items. Technical asset identity remains owned by CMDB/IT Assets.
 
 _RECIPE_READ_CONTRACT = '''### `read_recipes`
 Canonical read-only Recipe and pantry-coverage projection over the existing
-Inventory Service. Use `list`, `search`, `get`, or deterministic `can_make`.
+Inventory Service. Use `list`, `search`, `get`, deterministic `can_make`, or
+read-only `scale` for a requested serving count.
 Recipe suggestions never assert inventory possession and never mutate stock.
 `<invoke name="read_recipes"><parameter name="action">list</parameter></invoke>`.'''
 
