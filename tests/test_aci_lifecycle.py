@@ -826,6 +826,13 @@ def test_aci_turn_does_not_reenter_legacy_tool_index_projection(monkeypatch):
         raise AssertionError("canonical ACI turn re-entered legacy tool index")
 
     monkeypatch.setattr(tool_index, "get_tool_index", unexpected_tool_index_lookup)
+    monkeypatch.setattr(
+        agent_loop,
+        "_suppress_automatic_skills",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("ACI turn re-entered legacy skill suppression wrapper")
+        ),
+    )
     executed = []
 
     async def fake_execute(block, *args, **kwargs):
