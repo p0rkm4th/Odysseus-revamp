@@ -23,6 +23,13 @@ acceptance credential, preventing accidental writes to the owner instance.
 The lane is prepared and contract-tested; live execution remains a separate
 acceptance result and is not claimed by this documentation-only checkpoint.
 
+To run the synthetic profiles, the operator must provide a disposable
+isolated deployment and set `HADES_BROWSER_ISOLATED_ACCEPTANCE=true` together
+with `HADES_BROWSER_EXTERNAL_CREDENTIAL_FILE`; the runner will not provision
+or use the current owner Compose volumes for those cases. The
+`actual_owner_read_only` profile remains a separate explicitly supplied
+read-only smoke lane.
+
 The lane now refuses synthetic scenarios unless the operator explicitly marks
 the deployment as isolated (`HADES_BROWSER_ISOLATED_ACCEPTANCE=true`) and
 supplies an external acceptance credential. Per-turn action/tool-binding
@@ -30,7 +37,7 @@ expectations are mandatory, semantic oracles support required-all facts, and
 recipe/household mutations perform independent allowlisted canonical GET
 readback before and after browser reload. The acceptance output reports
 scenario/turn/read/mutation/readback/DONE/EOF counts. Checkpoint
-`de493621` is evaluator-only; the deployed executable remains `34ced247`.
+`c1e9aa72` is evaluator/docs-only; the deployed executable remains `34ced247`.
 
 ## V1 RC fixes and evidence
 
