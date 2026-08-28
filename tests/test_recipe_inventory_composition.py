@@ -1,10 +1,12 @@
 from datetime import date, timedelta
+import json
 from decimal import Decimal
 
 from core import database as cdb
 from core import inventory_models  # noqa: F401 - register inventory tables
 from src.inventory_service import InventoryNotFound, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
+from src.aci import canonical_recipe_read_answer
 
 
 def _recipe_fixture():
@@ -123,3 +125,29 @@ def test_expiring_inventory_composes_with_recipe_coverage_without_mutation():
     assert candidate["expiring_ingredients"][0]["name"] == "Chicken"
     assert {row["name"] for row in candidate["shortages"]} == {"rice"}
     assert service.get_recipe("alice", recipe["id"])["name"] == "Chicken Rice"
+
+
+def test_expiring_recipe_result_has_a_human_renderer_distinct_from_raw_result():
+    event = {
+        "tool": "read_recipes",
+        "exit_code": 0,
+        "command": json.dumps({"action": "expiring_candidates"}),
+        "output": json.dumps({
+            "status": "SUCCESS",
+            "candidates": [{
+                "recipe_name": "Chicken Rice",
+                "can_make": False,
+                "shortages": [{"name": "Rice"}],
+            }],
+        }),
+    }
+
+    answer = canonical_recipe_read_answer([event])
+
+    assert answer == (
+        "Recipes using ingredients that are expiring soon:\n"
+        "- Chicken Rice (missing ingredients)\n"
+        "  Missing: Rice"
+    )
+    assert answer.startswith("Recipes using")
+    assert not answer.startswith("{")
