@@ -3332,6 +3332,51 @@ def canonical_read_failure_answer(
     return None
 
 
+def canonical_action_failure_answer(
+    tool_events: Sequence[Mapping[str, Any]],
+) -> CanonicalAnswer | None:
+    """Render one bounded answer for a failed, already-selected Action.
+
+    A failed Action is terminal for that attempt, but an empty model response
+    must not make the owner-facing turn disappear.  This renderer consumes
+    only the executor's structured failure and never retries, reinterprets, or
+    grants authority to the model.
+    """
+    for event in reversed(tuple(tool_events or ())):
+        if not isinstance(event, Mapping) or event.get("exit_code") in (None, 0):
+            continue
+        tool = str(event.get("tool") or "").strip()
+        if not tool:
+            continue
+        request: Mapping[str, Any] = {}
+        for field in ("command", "output"):
+            try:
+                parsed = json.loads(str(event.get(field) or ""))
+            except (TypeError, ValueError):
+                continue
+            if isinstance(parsed, Mapping):
+                if field == "command":
+                    request = parsed
+                    break
+        action = str(request.get("action") or "").strip()
+        if not action:
+            continue
+        detail = ""
+        try:
+            payload = json.loads(str(event.get("output") or ""))
+            if isinstance(payload, Mapping):
+                detail = str(payload.get("error") or payload.get("message") or "").strip()
+        except (TypeError, ValueError):
+            detail = str(event.get("output") or "").strip()
+        suffix = f" ({detail[:240]})" if detail else ""
+        return CanonicalAnswer(
+            content=f"The requested action could not be completed{suffix}. No successful change is confirmed.",
+            source=AnswerSource.ERROR,
+            provenance=f"failed Action {tool}:{action}",
+        )
+    return None
+
+
 def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the terminal inventory mutation from its structured Result."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
@@ -3477,7 +3522,7 @@ def canonical_result_answer(
                 source=AnswerSource.DETERMINISTIC_RESULT,
                 provenance=provenance,
             )
-    return canonical_read_failure_answer(tool_events)
+    return canonical_read_failure_answer(tool_events) or canonical_action_failure_answer(tool_events)
 
 
 def project_final_answer(

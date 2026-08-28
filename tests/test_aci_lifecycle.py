@@ -955,6 +955,11 @@ def test_failed_aci_action_is_not_retried_without_new_evidence(monkeypatch):
     )
 
     assert executed == ["manage_homelab"]
+    assert any(
+        event.get("type") == "response_replace"
+        and "fixture unavailable" in str(event.get("content"))
+        for event in events
+    )
     metrics = next(event["data"] for event in events if event.get("type") == "metrics")
     assert metrics["aci_trace"]["failed_actions"] == 1
     assert metrics["aci_trace"]["post_result_state"] == "BLOCKED"
