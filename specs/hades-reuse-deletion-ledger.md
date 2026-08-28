@@ -2518,3 +2518,35 @@ Local and `origin/hades-aci-v1` are synchronized at `6cf40f56`; the worktree
 is clean. The remaining `agent_loop.py` surface is compatibility/provider
 plumbing plus the canonical runtime adapter; no further deletion was justified
 without a new characterization slice.
+
+## Post-restart foundation checkpoint (`e135a2b1`, 2026-08-28)
+
+Persistent SSH-agent recovery was verified after the workstation restart:
+`SSH_AUTH_SOCK=/run/user/1000/ssh-agent.socket` has the existing authorized
+identity loaded, `ssh -T git@github.com` authenticates successfully, and
+`git ls-remote origin HEAD` is readable. Local and remote `hades-aci-v1` are
+both `e135a2b123585a44701a9d042eef67852e46fc52`; the worktree is clean.
+
+The branch tip is documentation-only relative to executable checkpoint
+`6cf40f56ea9f2cd79b3ec750815b810a033946f6`, so the deployed candidate remains
+valid without a rebuild: image
+`sha256:31d621b3bcb10f57c5358c44df4dc5d46b45c5c288e4a2ee63ec68852d03070e`,
+OCI/source marker and running source `6cf40f56`, healthy `/api/health`, and
+zero restarts. Qwen3:8B is reachable from the Hades container namespace at
+the configured host-gateway endpoint with digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+
+The supported full project-venv regression was rerun after restoring the
+required prompt-helper compatibility export: `6829 passed, 4 skipped, 186
+warnings` in `192.78s`. The transient working-tree deletion that caused one
+compatibility test failure is not present in the committed source.
+
+A bounded seeded semantic shard (`52` cases, seed `20260828`) completed with
+incremental JSONL evidence in `10.314s`; no cases were lost and duplicate
+delivery remained `0`. Its model-backed failures are classified as an
+environment issue: the host-side synthetic runner attempted
+`127.0.0.1:11434`, while production container integration is healthy at
+`host.docker.internal:11434`. This shard supplies persistence and failure
+classification evidence, not live-Qwen qualification. It reported `50/52`
+architectural and `52/52` security, with functional failures dominated by the
+unavailable host endpoint; no product source was changed.
