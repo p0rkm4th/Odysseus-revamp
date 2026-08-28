@@ -95,6 +95,10 @@ the complete journey works.
 - The full-regression process was attempted against `b8b24f82` but was
   externally terminated around 2% before pytest emitted a summary; this is
   recorded as unresolved environment/process evidence, not as a pass.
+- Household readback coverage now proves, against one `InventoryService` owner,
+  idempotent stock addition, canonical litre-to-millilitre normalization,
+  quantity decrement to zero, and fail-closed over-consumption without state
+  drift. The focused ACI/Household/Recipe regression is `307 passed, 1 warning`.
 
 ## Product quality rule
 
