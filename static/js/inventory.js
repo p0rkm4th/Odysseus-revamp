@@ -76,21 +76,21 @@ async function api(path, options = {}) {
 function shell() {
   const node = document.createElement('section');
   node.id = 'inventory-pane';
-  node.className = 'inventory-pane';
+  node.className = 'inventory-pane hades-workspace-window';
   node.setAttribute('role', 'dialog');
   node.setAttribute('aria-modal', 'true');
   node.setAttribute('aria-labelledby', 'inventory-title');
   node.innerHTML = `
-    <header class="inventory-header">
+    <header class="inventory-header hades-window-titlebar">
       <div><h2 id="inventory-title">Home inventory</h2><p>IT assets, pantry, and household stock</p></div>
-      <button class="inventory-icon-btn" data-close aria-label="Close inventory">×</button>
+      <button class="inventory-icon-btn hades-btn-secondary" data-close aria-label="Close inventory">×</button>
     </header>
-    <nav class="inventory-tabs" aria-label="Inventory views">
-      <button data-tab="stock" class="active">Stock</button>
-      <button data-tab="recipes">Recipes</button>
-      <button data-tab="intake">Add from text or media</button>
+    <nav class="inventory-tabs hades-module-tabs" aria-label="Inventory views">
+      <button data-tab="stock" class="hades-module-tab active">Stock</button>
+      <button data-tab="recipes" class="hades-module-tab">Recipes</button>
+      <button data-tab="intake" class="hades-module-tab">Add from text or media</button>
     </nav>
-    <main id="inventory-content" class="inventory-content"></main>`;
+    <main id="inventory-content" class="inventory-content hades-window-body"></main>`;
   node.addEventListener('click', onClick);
   node.addEventListener('submit', onSubmit);
   node.addEventListener('input', onInput);
@@ -106,7 +106,7 @@ function renderStockScaffold() {
     <div class="inventory-toolbar">
       <input id="inventory-search" type="search" maxlength="200" value="${escapeHtml(query)}" placeholder="Search stock" aria-label="Search stock">
       <div class="inventory-domain-filter">${DOMAINS.map(d => `<button data-domain="${d}" class="${domain === d ? 'active' : ''}">${d === 'all' ? 'All' : d}</button>`).join('')}</div>
-      <button class="inventory-primary" data-action="new-item">+ Item</button>
+      <button class="inventory-primary hades-btn-primary" data-action="new-item">+ Item</button>
     </div>
     <div id="inventory-stock-list">${loading()}</div>`;
 }
@@ -164,23 +164,29 @@ async function loadRecipes() {
 }
 
 function intakeForm() {
-  return `<form id="inventory-intake-form" class="inventory-form">
-    <div class="inventory-callout"><strong>Review required.</strong> Text, voice transcripts, and photo descriptions are untrusted. Nothing changes until the structured draft is ready and you explicitly confirm it.</div>
-    <label>Source <select name="source_type"><option value="natural_language">Natural language</option><option value="voice">Voice transcript</option><option value="photo">Photo</option><option value="telegram">Telegram</option></select></label>
-    <label class="inventory-wide">What did you add or use?<textarea name="source_text" maxlength="4000" placeholder="For example: Added 2 kg of rice to the pantry"></textarea></label>
-    <label class="inventory-wide">Server upload IDs <input name="attachment_ids" autocomplete="off" placeholder="Optional opaque upload ID"></label>
-    <fieldset class="inventory-candidate"><legend>Reviewed operation</legend>
-      <label>Action <select name="action"><option value="add">Add</option><option value="remove">Remove</option></select></label>
-      <label>Area <select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT hardware</option></select></label>
-      <label class="inventory-wide">Item name <input name="name" required maxlength="160"></label>
-      <label>Exact quantity <input name="quantity" required inputmode="decimal"></label>
-      <label>Unit <select name="unit">${UNITS.map(u => `<option>${u}</option>`).join('')}</select></label>
-      <label>Category <input name="category" maxlength="80"></label><label>Brand / maker <input name="brand" maxlength="120"></label>
-      <label>Manufacturer <input name="manufacturer" maxlength="120"></label><label>Model <input name="model" maxlength="160"></label>
-      <label>Serial number <input name="serial_number" maxlength="160"></label><label>Part number <input name="part_number" maxlength="160"></label>
-      <label>Condition <input name="condition" maxlength="80"></label>
+  return `<form id="inventory-intake-form" class="inventory-form hades-intake-panel">
+    <div class="inventory-callout hades-callout"><strong>Review required.</strong> Text, voice transcripts, and photo descriptions are untrusted. Nothing changes until the structured draft is ready and you explicitly confirm it.</div>
+    <div class="inventory-form-grid hades-intake-grid">
+      <label class="hades-intake-field"><span>Source</span><select name="source_type"><option value="natural_language">Natural language</option><option value="voice">Voice transcript</option><option value="photo">Photo</option><option value="telegram">Telegram</option></select></label>
+      <label class="inventory-wide hades-intake-field"><span>What did you add or use?</span><textarea name="source_text" maxlength="4000" placeholder="For example: Added 2 kg of rice to the pantry"></textarea></label>
+      <label class="inventory-wide hades-intake-field"><span>Server upload IDs <small>(optional)</small></span><input name="attachment_ids" autocomplete="off" placeholder="Optional opaque upload ID"></label>
+    </div>
+    <fieldset class="inventory-candidate hades-intake-panel"><legend>Reviewed operation</legend>
+      <div class="hades-intake-grid">
+      <label class="hades-intake-field"><span>Action</span><select name="action"><option value="add">Add</option><option value="remove">Remove</option></select></label>
+      <label class="hades-intake-field"><span>Area</span><select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT hardware</option></select></label>
+      <label class="inventory-wide hades-intake-field"><span>Item name</span><input name="name" required maxlength="160"></label>
+      <label class="hades-intake-field"><span>Exact quantity</span><input name="quantity" required inputmode="decimal"></label>
+      <label class="hades-intake-field"><span>Unit</span><select name="unit">${UNITS.map(u => `<option>${u}</option>`).join('')}</select></label>
+      <label class="hades-intake-field"><span>Category</span><input name="category" maxlength="80"></label><label class="hades-intake-field"><span>Brand / maker</span><input name="brand" maxlength="120"></label>
+      <details class="inventory-wide inventory-advanced"><summary>Technical details</summary><div class="hades-intake-grid">
+      <label class="hades-intake-field"><span>Manufacturer</span><input name="manufacturer" maxlength="120"></label><label class="hades-intake-field"><span>Model</span><input name="model" maxlength="160"></label>
+      <label class="hades-intake-field"><span>Serial number</span><input name="serial_number" maxlength="160"></label><label class="hades-intake-field"><span>Part number</span><input name="part_number" maxlength="160"></label>
+      <label class="hades-intake-field"><span>Condition</span><input name="condition" maxlength="80"></label>
+      </div></details>
+      </div>
     </fieldset>
-    <button class="inventory-primary" type="submit">Create review draft</button>
+    <button class="inventory-primary hades-btn-primary" type="submit">Create review draft</button>
   </form><div id="inventory-draft-review"></div>`;
 }
 

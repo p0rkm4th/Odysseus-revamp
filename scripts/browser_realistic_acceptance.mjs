@@ -48,6 +48,16 @@ async function openPage(viewport) {
   page.on('response', response => { if (response.status() >= 500) errors.push(`http${response.status()}: ${response.url()}`); });
   await page.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => !!window.hadesWindowManager && !!document.querySelector('#icon-rail'));
+  const sidebarEntries = page.locator('#sidebar .list-item[id^="tool-"]:visible');
+  for (let i = 0; i < await sidebarEntries.count(); i += 1) {
+    const entry = sidebarEntries.nth(i);
+    if (await entry.locator(':scope > svg').count() !== 1) throw new Error(`sidebar entry has duplicate/missing icon: ${await entry.getAttribute('id')}`);
+  }
+  if (await page.locator('#sidebar #tool-security-btn:visible').count() > 1 || await page.locator('#sidebar #tool-research-btn:visible').count() > 1) {
+    throw new Error('duplicate Security or Deep Research navigation entry');
+  }
+  const pageMetrics = await page.evaluate(() => ({width: innerWidth, scrollWidth: document.documentElement.scrollWidth}));
+  if (pageMetrics.scrollWidth > pageMetrics.width + 1) throw new Error('desktop navigation escapes viewport');
   return { context, page };
 }
 
@@ -55,6 +65,8 @@ const desktop = await openPage({ width: 1440, height: 900 });
 await desktop.page.evaluate(content => window.hadesWindowManager.openView('osint-fixture', null, 'OSINT realistic fixture', content), fixture);
 const desktopWindow = desktop.page.locator('[data-view="osint-fixture"]');
 await desktopWindow.waitFor();
+const desktopBox = await desktopWindow.boundingBox();
+if (!desktopBox || desktopBox.left < 0 || desktopBox.top < 0 || desktopBox.right > 1440 || desktopBox.bottom > 900) throw new Error('desktop window escapes viewport');
 if (!await desktop.page.locator('[data-fixture-cta]').isVisible()) throw new Error('primary CTA hidden');
 assertOrdered(await Promise.all(['.fixture-header', '.fixture-nav', '.fixture-summary', '.fixture-cases', '.fixture-dossier', '.fixture-report'].map(s => box(desktop.page, s))), 'desktop regions');
 assertContained(await box(desktop.page, '.fixture-seed'), await box(desktop.page, '.fixture-dossier'), 'seed');
@@ -74,6 +86,8 @@ await narrow.page.locator('[data-view="osint-fixture-narrow"]').waitFor();
 const tabs = narrow.page.locator('[data-view="osint-fixture-narrow"] .hades-module-tabs');
 const tabMetrics = await tabs.evaluate(node => ({ clientWidth: node.clientWidth, scrollWidth: node.scrollWidth, overflowX: getComputedStyle(node).overflowX }));
 if (tabMetrics.scrollWidth > tabMetrics.clientWidth && tabMetrics.overflowX === 'hidden') throw new Error('tabs clipped in constrained width');
+const narrowMetrics = await narrow.page.evaluate(() => ({width: innerWidth, scrollWidth: document.documentElement.scrollWidth}));
+if (narrowMetrics.scrollWidth > narrowMetrics.width + 1) throw new Error('narrow layout escapes viewport');
 assertContained(await box(narrow.page, '.fixture-seed'), await box(narrow.page, '.fixture-dossier'), 'narrow seed');
 await narrow.page.screenshot({ path: '/tmp/hades-osint-realistic-narrow.png', fullPage: false });
 await narrow.context.close();

@@ -17,7 +17,9 @@ export const WORKSPACE_DEFINITIONS = Object.freeze([
   },
   {
     id: 'research', label: 'Research', icon: 'deepResearch', defaultModule: 'osint',
-    modules: ['osint', 'deepResearch', 'securityResearch', 'researchSources'],
+    // Security is owned by Infrastructure. Keeping the old securityResearch
+    // child here exposed the same destination twice in workspace navigation.
+    modules: ['osint', 'deepResearch', 'researchSources'],
   },
   {
     id: 'infrastructure', label: 'Infrastructure', icon: 'network', defaultModule: 'assets',
@@ -56,7 +58,6 @@ export const MODULE_DEFINITIONS = Object.freeze([
   ['tasks', 'Tasks', 'work', 'tool-tasks-btn'],
   ['osint', 'OSINT', 'osint', 'tool-osint-btn'],
   ['deepResearch', 'Deep Research', 'deepResearch', 'tool-research-btn'],
-  ['securityResearch', 'Security Research', 'security', null],
   ['researchSources', 'Sources', 'documents', null],
   ['inventory', 'Inventory', 'household', 'tool-inventory-btn'],
   ['assets', 'IT Assets', 'itAssets', 'tool-it-assets-btn'],

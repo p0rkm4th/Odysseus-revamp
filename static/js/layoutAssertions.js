@@ -25,3 +25,9 @@ export function assertVisible(element, label='element') {
   if (a.width <= 0 || a.height <= 0) throw new Error(`${label} is not visible`);
   return true;
 }
+
+export function assertNoViewportOverflow(element, viewport={width: window.innerWidth, height: window.innerHeight}, label='element') {
+  const a=rect(element);
+  if (a.left < -1 || a.top < -1 || a.right > viewport.width + 1 || a.bottom > viewport.height + 1) throw new Error(`${label} escapes viewport`);
+  return true;
+}

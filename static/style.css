@@ -41637,3 +41637,24 @@ body.settings-sidebar-resize-active {
 .osint-known-information summary { cursor:pointer; color:var(--hades-text-muted); margin-bottom:var(--hades-space-2); }
 .osint-known-information p { max-width:72ch; margin:.65em 0; }
 @media (max-width: 700px) { .osint-case-meta { margin-left:0; align-items:flex-start; text-align:left; } }
+
+/* Shared interaction and inventory migration. Inventory keeps its legacy
+   selectors for behavior, but Hades primitives own its visual grammar. */
+.hades-btn-primary:focus-visible, .hades-btn-secondary:focus-visible,
+.hades-module-tab:focus-visible, .hades-intake-field input:focus-visible,
+.hades-intake-field select:focus-visible, .hades-intake-field textarea:focus-visible,
+.inventory-dialog input:focus-visible, .inventory-dialog select:focus-visible,
+.inventory-dialog textarea:focus-visible { outline:2px solid var(--action-primary-focus, var(--accent-primary, var(--red, #e56b6b))); outline-offset:2px; }
+.hades-intake-field small { color:var(--hades-text-muted); font-weight:400; }
+.inventory-pane.hades-workspace-window { border-color:var(--hades-border-subtle); }
+.inventory-pane .hades-window-titlebar { min-height:42px; }
+.inventory-pane .inventory-toolbar { margin:0; flex-wrap:wrap; }
+.inventory-pane .inventory-tabs { margin:0; }
+.inventory-pane .inventory-form { max-width:none; display:block; }
+.inventory-pane .inventory-form > .hades-intake-grid { margin:0 0 var(--hades-space-3); }
+.inventory-pane .inventory-candidate { margin:var(--hades-space-3) 0; }
+.inventory-pane .inventory-advanced { grid-column:1/-1; margin-top:var(--hades-space-2); }
+.inventory-pane .inventory-advanced summary { cursor:pointer; color:var(--hades-text-muted); font-size:.8rem; }
+.inventory-pane .inventory-dialog-actions button:not(.inventory-primary) { background:transparent; }
+.inventory-pane .inventory-card { background:var(--hades-surface-raised); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.001ms !important; } }
