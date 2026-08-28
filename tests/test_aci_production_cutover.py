@@ -170,6 +170,10 @@ def test_aci_runtime_does_not_call_retained_compatibility_aliases():
         "_usage_bucket_summary",
         "_build_actions_snapshot",
         "_prepend_agent_directive",
+        "_asset_read_request",
+        "_looks_like_local_computer_request",
+        "_minimal_odysseus_doc_messages",
+        "_detect_admin_intent",
     }
     calls = {
         node.func.id
