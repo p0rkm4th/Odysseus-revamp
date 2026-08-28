@@ -1107,3 +1107,17 @@ failed Actions/task `0.52`. The dominant `INTENT_FAILURE` cluster was in
 generated `registry_action` frames requesting unavailable or deliberately
 blocked capability/action combinations. Trace inspection did not expose a new
 canonical owner or authority defect, so no executable source change was made.
+
+## Supported-domain generated triage (`80bdba30`, 2026-08-28)
+
+A bounded 50-case Qwen3:8B run selected existing Hades capability IDs across
+supported domains and completed all cases in 90.2 seconds without timeout.
+Security was `50/50` and duplicate delivery was `0`; functional was `8/50`,
+architectural `36/50`, failed Actions/task `0.24`, median latency `1.81s`,
+and P95 `4.03s`. The dominant clusters were burden/routing/intent failures.
+
+Trace inspection found generated registry-action prompts with synthetic,
+fine-grained action labels and deliberately unavailable, approval-bound, or
+incomplete states. They remain exploratory weak-model evidence and do not
+establish a shared production semantic-owner defect. No executable source
+change or deployment was justified by this run.
