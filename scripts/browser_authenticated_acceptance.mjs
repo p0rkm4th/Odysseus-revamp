@@ -199,6 +199,7 @@ async function main() {
     // normal login route can no longer authenticate it.
     disableAndRevoke();
     cleanupDone = true;
+    await waitForHealth();
     await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded' });
     await page.locator('#username').fill(credentials.username);
     await page.locator('#password').fill(credentials.password);
