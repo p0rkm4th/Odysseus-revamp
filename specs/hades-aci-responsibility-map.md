@@ -10,20 +10,20 @@ that the legacy loop has already been removed.
 |---|---|
 | Repository | `/home/scootz/Odysseus/odysseus` |
 | Branch | `hades-aci-v1` |
-| Local HEAD | `1c7bdb6d00d856e739f715c0ec976a440f16df28` |
-| Origin HEAD | `1c7bdb6d00d856e739f715c0ec976a440f16df28` (`origin/hades-aci-v1`) |
+| Local HEAD | `1dc141ff15a260e881f500ba3806bf8b8a199956` |
+| Origin HEAD | `1dc141ff15a260e881f500ba3806bf8b8a199956` (`origin/hades-aci-v1`) |
 | Divergence | 0 ahead, 0 behind (verified with `git rev-list --left-right --count origin/hades-aci-v1...HEAD`) |
 | Worktree | clean at checkpoint; no intentional changes discarded |
-| Deployed image | `odysseus:candidate-3e7b66124c4c` (Compose service tag points to same image ID) |
-| Deployed source | `3e7b66124c4cff877f4fb9d9f2b6bde7d5f22953` |
+| Deployed image | `odysseus:candidate-7e8eb47d` (`sha256:cea4e6012805c041afeacce8e0707c1baeeb1996be74cba644b0491a4db2e751`) |
+| Deployed source | `7e8eb47d6459e4affd6afe44776fd20b341337d5` |
 | Production health | `/api/health` healthy; app restart count 0 |
 | Rollback image | `odysseus:rollback-b471e104-prev` |
 | Storage | GREEN; 59 GiB root free, 251 GiB bulk free |
-| `src/agent_loop.py` | 6,897 LOC in the current checkpoint worktree; remaining implementation is behind the ACI entrypoint, with compatibility-only callers outside the production path |
+| `src/agent_loop.py` | 6,335 LOC; remaining implementation is behind the ACI entrypoint, with compatibility-only callers outside the production path |
 
-The uncommitted evaluator and RC2 files are preserved as existing work. The
-deployed image is intentionally source-matched to the origin commit, not to
-the local worktree.
+The current HEAD is one documentation-only commit beyond the deployed
+executable source. The deployed image is intentionally source-matched to
+`7e8eb47d`; `1dc141ff` records evidence and does not require a rebuild.
 
 ## Authority map
 
@@ -124,5 +124,13 @@ boundary, not an unreported second success path.
 All active callers now import `stream_aci_turn` from `src.aci` (aliased locally
 where the surrounding call shape is retained). The seam force-binds
 `aci_mode="aci"` before delegating to the temporary implementation, so a
-production caller cannot select legacy or shadow orchestration. The sole
-remaining direct stream import is inside this compatibility seam itself.
+production caller cannot select legacy or shadow orchestration. The only
+runtime compatibility stream is the facade in `src/legacy_agent_loop.py`; the
+remaining `stream_agent_loop` matches in routes and `src/llm_core.py` are
+comments, not callers.
+
+The current executable evidence is `6819 passed, 4 skipped, 186 warnings` in
+the supported virtualenv, plus a recovered 10-case canonical-read shard with
+10/10 functional, architectural, and security results and zero duplicate
+delivery. No physical decomposition is justified until a compatibility
+characterization slice can remove implementation rather than relocate it.
