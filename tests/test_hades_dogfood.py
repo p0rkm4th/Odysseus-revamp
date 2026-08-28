@@ -1,3 +1,6 @@
+import argparse
+import asyncio
+
 from benchmarks.hades_dogfood import (
     capture_failure_regressions,
     coverage_audit,
@@ -206,6 +209,56 @@ def test_explicit_environment_fixture_is_independent_of_expected_oracle():
     }
     assert fixtures_for_case(base) == fixtures_for_case(altered)
     assert set(fixtures_for_case(altered)) == {"manage_assets"}
+
+
+def test_synthetic_execution_trajectory_is_independent_of_oracle_metadata(monkeypatch):
+    """The answer key may score a run, but must not steer its execution."""
+    import src.aci as aci
+    from scripts.hades_dogfood import run_synthetic
+
+    observed = []
+
+    async def fake_stream(**kwargs):
+        executor = kwargs["tool_executor"]
+
+        class Block:
+            tool_type = "manage_assets"
+            content = "show the synthetic asset inventory"
+
+        fixture_text, fixture_result = await executor(Block())
+        observed.append({
+            "endpoint": kwargs["endpoint_url"],
+            "model": kwargs["model"],
+            "messages": kwargs["messages"],
+            "fixture_text": fixture_text,
+            "fixture_result": fixture_result,
+        })
+        yield 'data: {"type":"delta","delta":"grounded fixture answer"}\n\n'
+        yield "data: [DONE]\n\n"
+
+    monkeypatch.setattr(aci, "stream_aci_turn", fake_stream)
+    args = argparse.Namespace(
+        endpoint="http://model.test", model="qwen3:8b", case_timeout=5,
+        max_tokens=128, max_rounds=1, max_tool_calls=1, context_length=2048,
+    )
+    base = {
+        "id": "oracle-invariance",
+        "source": "test",
+        "prompt": "show my machines",
+        "family": "asset",
+        "environment": {"fixture_profile": {"tools": ["manage_assets"]}},
+        "expected": {"concept": "TECHNICAL_ASSET", "operation": "READ"},
+    }
+    altered = {
+        **base,
+        "expected": {"concept": "NETWORK", "operation": "EXECUTE", "must_refuse": True},
+    }
+    first = asyncio.run(run_synthetic(base, args))
+    second = asyncio.run(run_synthetic(altered, args))
+
+    assert first[0]["assistant_answer"]["present"] is True
+    assert second[0]["assistant_answer"]["present"] is True
+    assert observed[0] == observed[1]
 
 
 def test_aci_corpus_declares_fixture_world_outside_expected_oracle():
