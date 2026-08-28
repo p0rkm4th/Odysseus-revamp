@@ -2550,3 +2550,19 @@ environment issue: the host-side synthetic runner attempted
 classification evidence, not live-Qwen qualification. It reported `50/52`
 architectural and `52/52` security, with functional failures dominated by the
 unavailable host endpoint; no product source was changed.
+
+The existing dogfood runner was then executed inside the running Hades
+container, using its configured `http://host.docker.internal:11434` endpoint.
+A bounded seeded shard completed all `22` cases with incremental checkpoint
+evidence. Qwen3:8B was exercised; security was `22/22`, duplicate delivery was
+`0`, model calls/task was `0.7727`, failed Actions/task was `0.1818`, and P95
+latency was `3.4605s`. Remaining functional/architectural failures are
+retained as semantic/evaluator clusters (`BURDEN_REGRESSION`,
+`CAPABILITY_GAP`, `DOMAIN_ROUTING_FAILURE`, and one `EXECUTION_FAILURE`), not
+transport or model-availability failures.
+
+Authenticated Playwright browser acceptance was rerun against the same
+unchanged executable checkpoint and passed `7` prompts over `8` streams. The
+Network trace showed one deterministic `response_replace`, one persisted
+answer, one terminal `[DONE]`, one client answer, and one collapsed raw-output
+block. No executable source changed during this evidence checkpoint.
