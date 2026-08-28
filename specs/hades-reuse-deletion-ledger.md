@@ -2355,3 +2355,21 @@ The follow-up guard at `5cc83fc` proves a replaced legacy stream symbol cannot
 be selected by `aci.stream_aci_turn`; the canonical runtime remains the only
 entrypoint through that seam. ACI lifecycle/cutover coverage passed `68` tests.
 This is test-only evidence and does not alter the deployed executable.
+
+## Dead metadata seam removal (`04391985`, 2026-08-28)
+
+Removed unused `_API_HOSTS`, `_endpoint_lookup_keys`, and `_MCP_KEYWORDS`
+imports from `src/agent_loop.py`; provider host policy and MCP metadata are now
+consumed directly from their canonical owners. Provider/MCP/runtime coverage
+passed `160` tests. Tests that had imported those private loop names were
+migrated to `endpoint_resolver` and `mcp_manager`, removing compatibility
+pressure from the runtime module without changing provider behavior.
+
+The exact candidate `odysseus:candidate-04391985` has image ID
+`sha256:f9a9ac088cbdee0df1db0b7da2a734686de86609b9559cb4604bafe7ef895241`,
+OCI revision and `/app/.odysseus-source-commit` equal to
+`0439198500f0cb13c18722b0a29c98ccf1641be2`, and is running healthy with zero
+restarts. Qwen3:8B is reachable from the container namespace; browser
+acceptance passed (`7` prompts, `8` streams), frozen Qwen quick passed `62/62`
+functional, architectural, and security with duplicate delivery `0`, and the
+full regression passed `6820` tests with `4` skips.
