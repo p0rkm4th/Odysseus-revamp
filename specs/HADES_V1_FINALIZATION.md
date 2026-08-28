@@ -457,6 +457,16 @@ coverage dimensions, not newly observed product failures. No safe additional
 `aci.stream_aci_turn`, and the remaining loop surface is compatibility/runtime
 plumbing.
 
+## Current foundation verification (`ade29da7`, 2026-08-28)
+
+The exact current branch head passed the full regression with `6805 passed, 4
+skipped, 186 warnings`. The targeted approval, WorkEngine, verification, and
+recovery suites passed `69` tests. A container-namespace run of 100 generated
+registry-action cases reproduced 13 failed-action cases; these are retained as
+model/shortlist burden caused by underspecified exact-ActionSpec wording, not
+authority or security failures. No executable source changed in this phase;
+the deployed product remains source `100d2e0f`.
+
 ## Container-namespace Qwen checkpoint (`8e45fa79`, 2026-08-28)
 
 The frozen 62-case quick corpus was rerun in a disposable container sharing the
