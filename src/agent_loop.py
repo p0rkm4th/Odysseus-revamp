@@ -209,7 +209,6 @@ _looks_like_notes_turn = looks_like_notes_request
 _looks_like_notes_calendar_followup = looks_like_notes_calendar_followup
 _is_casual_low_signal = is_casual_low_signal
 _detect_admin_intent = detect_admin_intent
-_workspace_coding_rules = workspace_coding_rules
 def _section_text(name: str, default: str) -> str:
     return effective_tool_section(name, default, overrides=get_builtin_overrides())
 
@@ -220,7 +219,6 @@ def _domain_rules_for_tools(tool_names: set) -> list[str]:
         domain_tool_map=_DOMAIN_TOOL_MAP,
         domain_rules={**_DOMAIN_RULES, "_LINK_RULES": _LINK_RULES},
     )
-_looks_like_explicit_skill_request = looks_like_explicit_skill_request
 
 
 def _suppress_automatic_skills(text: str, intent: Dict[str, object]) -> bool:
@@ -237,7 +235,6 @@ _ody_qwen_temperature_cap = odysseus_qwen_temperature_cap
 _compute_final_metrics = compute_final_metrics
 _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
 _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
-_uploaded_files_context_message = uploaded_files_context_message
 _privileged_action_requires_exact_approval = requires_exact_approval
 _note_list_summary_from_tool_output = note_list_summary_from_tool_output
 _email_list_summary_from_tool_output = email_list_summary_from_tool_output
@@ -1247,7 +1244,7 @@ def _build_system_prompt(
             pass
 
     if workspace and not suppress_local_context:
-        agent_prompt += _workspace_coding_rules(workspace)
+        agent_prompt += workspace_coding_rules(workspace)
     elif (
         relevant_tools
         and not suppress_local_context
@@ -1620,7 +1617,7 @@ async def stream_aci_runtime(
         disabled_tools.update(plan_mode_disabled_tools())
 
     uploaded_files = uploaded_files or []
-    _upload_msg = _uploaded_files_context_message(uploaded_files)
+    _upload_msg = uploaded_files_context_message(uploaded_files)
     if _upload_msg:
         messages = insert_before_latest_user(messages, _upload_msg)
 
@@ -2483,7 +2480,7 @@ async def stream_aci_runtime(
                 allow_teacher_drafts=_allow_tool_drafts,
                 min_confidence=_tool_skill_min_conf,
             ) if _skills_on else []
-            if _looks_like_explicit_skill_request(_last_user):
+            if looks_like_explicit_skill_request(_last_user):
                 _relevant_tools.add("manage_skills")
             if _owner_skills and _retrieval_query:
                     # Validate against every known executable tool, not just
@@ -2523,7 +2520,7 @@ async def stream_aci_runtime(
             _deterministic_allowed.update(
                 t for t in forced_tools if t not in disabled_tools
             )
-        if _looks_like_explicit_skill_request(_last_user):
+        if looks_like_explicit_skill_request(_last_user):
             _deterministic_allowed.add("manage_skills")
         if disabled_tools:
             logger.info(
