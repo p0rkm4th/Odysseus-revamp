@@ -1264,6 +1264,21 @@ def compile_intent(
         re.search(r"\binventory\b", q)
         and re.search(r"\b(?:state|status|registered|recorded|current|known|show|list)\b", q)
         and not re.search(r"\b(?:pantry|shopping|groceries|recipe|household|stock)\b", q)
+        ) or (
+        re.search(
+            r"\b(?:gpu|gpus|graphics\s+cards?|vram|ram|memory|cpu|cpus|"
+            r"processors?|motherboard|storage|specs?|specifications?)\b",
+            q,
+        )
+        and re.search(
+            r"\b(?:my|mine|our|ours|we|i\s+(?:have|own|got)|"
+            r"do\s+i\s+have|how\s+many|which\s+(?:machines?|hosts?|servers?|boxes?)|"
+            r"what\s+(?:machines?|hosts?|servers?|boxes?)|show|list|find|search)\b",
+            q,
+        )
+        ) or (
+        re.search(r"\bhow\s+many\s+(?:\d{3,5}|(?:rtx|gtx|quadro|tesla|radeon|arc)\b)", q)
+        and re.search(r"\bdo\s+i\s+have\b", q)
         )
     ):
         concept = "TECHNICAL_ASSET"
@@ -1415,7 +1430,9 @@ def compile_intent(
         # ``state``/``list``.
         "state", "states", "list", "lists", "summary", "summaries",
         "inventory", "information", "info", "details", "detail", "data",
-        "records", "record", "search", "results", "result",
+        "records", "record", "search", "results", "result", "gpu", "gpus",
+        "vram", "ram", "memory", "cpu", "cpus", "processor", "processors",
+        "motherboard", "storage", "specs", "specifications", "graphics", "cards",
     }:
         target = match.group(1)
     # A named asset is a bounded lexical candidate, not a model-selected
@@ -1578,8 +1595,14 @@ def compile_intent(
             r"\b(specs?|specifications?|cpus?|processors?|ram|memory|gpus?|graphics\s+cards?|"
             r"storage|motherboard|os|operating\s+system)\b", q,
         )
+        collection_property = bool(re.search(
+            r"\b(?:which|what|how\s+many|how\s+much|show|list|find|search)\b",
+            q,
+        ))
         if property_match and (
-            target or reference_resolution.get("status") == "RESOLVED"
+            target
+            or reference_resolution.get("status") == "RESOLVED"
+            or collection_property
         ):
             property_name = property_match.group(1).replace(" ", "_")
             reference_filters["asset_property"] = {
