@@ -2011,11 +2011,27 @@ def provisional_intent_projection(
     from src.intent_contracts import DOMAIN_CONTRACTS, compile_intent, is_explicit_continuation
 
     latest = str(text or "")
-    continuation = (
-        is_explicit_continuation(latest)
-        or assistant_requested_followup(messages)
+    explicit_continuation = is_explicit_continuation(latest)
+    contextual_continuation = (
+        assistant_requested_followup(messages)
         or is_contextual_retry_continuation(messages, latest)
         or is_contextual_reference_followup(messages, latest)
+    )
+    # A substantive canonical read remains a read even when surrounding
+    # conversation contains a generic follow-up cue.  Otherwise a prior
+    # assistant question can turn an interpretable request such as
+    # "scale this recipe to six servings" into CONTINUE, suppressing the
+    # already-resolved read Action and leaking the turn back to the model.
+    # Explicit continuation language still wins; this only prevents
+    # contextual heuristics from overriding an unambiguous canonical read.
+    read_frame = compile_intent(latest, continuation=False)
+    continuation = explicit_continuation or (
+        contextual_continuation
+        and not (
+            read_frame.operation_class == "READ"
+            and read_frame.domain_concept in DOMAIN_CONTRACTS
+            and read_frame.read_explicit
+        )
     )
     frame = compile_intent(latest, continuation=continuation)
     if frame.domain_concept not in DOMAIN_CONTRACTS:
