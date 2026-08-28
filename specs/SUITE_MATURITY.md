@@ -141,6 +141,19 @@ the complete journey works.
   restarts. Remaining UI migration is incremental across Recipes and later
   suites; no broad redesign or frontend framework was introduced.
 
+- Recipe UI migration checkpoint `cc7f215435e0c814caf364adf74d71b5005da877`
+  carries that shared system through the Recipe list, readiness badges,
+  detail/create dialogs, grouped serving fields, and empty state. Recipe
+  semantics and persistence remain owned by the existing Inventory Service and
+  recipe APIs; no store or router was added. The authenticated Playwright
+  realistic lane now opens the real Inventory surface, switches to Recipes,
+  waits for the canonical loaded state, and verifies a shared empty/list state
+  plus viewport containment. The exact executable candidate is
+  `sha256:b9df84071d1ec10000630e065cef9aebcaf3e6736b869c70afd3bbe08682c26c`,
+  source `cc7f2154`, healthy with zero restarts; realistic and window browser
+  lanes pass. Follow-on Recipe work remains functional journey coverage and
+  broader migration, not a new visual architecture.
+
 ## Product quality rule
 
 Each suite must progress through canonical state, bounded Action/Result,
