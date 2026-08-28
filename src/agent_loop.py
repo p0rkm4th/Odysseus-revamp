@@ -1253,7 +1253,10 @@ async def stream_aci_runtime(
         messages = insert_before_latest_user(messages, _upload_msg)
 
     _t0 = time.time()
-    _needs_admin = _detect_admin_intent(messages)
+    # Runtime semantics use the canonical intent-contract owner directly;
+    # ``_detect_admin_intent`` remains an import-compatible alias for callers
+    # and tests that still use the retired loop surface.
+    _needs_admin = detect_admin_intent(messages)
     _last_user = last_user_message(messages)
     _aci_mode = str(aci_mode or "legacy").strip().lower()
     _aci_enabled = _aci_mode in {"shadow", "aci"}
