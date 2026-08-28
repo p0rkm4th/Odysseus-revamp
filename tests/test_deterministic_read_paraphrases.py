@@ -14,6 +14,7 @@ from src.aci import (
     minimal_aci_answer_messages,
     matches_resolved_canonical_read,
     prefetched_explicit_memory_result,
+    provisional_intent_projection,
 )
 from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
@@ -179,6 +180,29 @@ def test_recipe_scale_followup_preserves_recipe_reference_and_serving_target():
     assert frame.entity_reference == "recipe-1"
     assert frame.filters == {"recipe_scale": True, "servings": "6"}
     assert resolved.action_id == "scale"
+
+
+def test_contextual_followup_cue_does_not_demote_substantive_recipe_read():
+    messages = [
+        {"role": "user", "content": "what recipes do i have"},
+        {"role": "assistant", "content": "Which recipe would you like?"},
+        {"role": "user", "content": "scale this recipe to six servings"},
+    ]
+    projection, owned = provisional_intent_projection(
+        messages, "scale this recipe to six servings",
+    )
+    assert owned is True
+    assert projection["continuation"] is False
+    frame = compile_intent(
+        projection["retrieval_query"],
+        continuation=projection["continuation"],
+        reference_context={
+            "ordered_entities": [{"ref": "recipe-1", "concept": "RECIPE"}],
+            "last": {"ref": "recipe-1", "concept": "RECIPE"},
+        },
+    )
+    assert frame.operation_class == "READ"
+    assert resolve_intent(frame).action_id == "scale"
 
 
 def test_recipe_detail_followup_uses_session_reference_context_and_get_action():
