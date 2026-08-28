@@ -211,7 +211,6 @@ _looks_like_notes_turn = looks_like_notes_request
 _looks_like_notes_calendar_followup = looks_like_notes_calendar_followup
 _is_casual_low_signal = is_casual_low_signal
 _detect_admin_intent = detect_admin_intent
-_local_computer_rules = local_computer_rules
 _workspace_coding_rules = workspace_coding_rules
 def _section_text(name: str, default: str) -> str:
     return effective_tool_section(name, default, overrides=get_builtin_overrides())
@@ -1379,7 +1378,7 @@ def _build_system_prompt(
         and not suppress_local_context
         and (set(relevant_tools) & _WORKSPACE_TERMINUS_TOOLS)
     ):
-        agent_prompt += _local_computer_rules()
+        agent_prompt += local_computer_rules()
 
     # When creating email documents, instruct the AI on the format
     if relevant_tools and not suppress_local_context and (_EMAIL_TOOL_HINTS & set(relevant_tools)):
