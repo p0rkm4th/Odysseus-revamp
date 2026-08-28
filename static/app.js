@@ -90,8 +90,16 @@ function hydrateSemanticNavIcons() {
   };
   for (const [id, name] of Object.entries(icons)) {
     const item = document.getElementById(id);
-    if (!item || item.querySelector('.hades-nav-icon')) continue;
-    item.insertAdjacentHTML('afterbegin', iconSvg(name));
+    if (!item) continue;
+    // Static markup remains a no-JS fallback. Once the shared semantic icon
+    // is available, replace that one direct glyph rather than appending a
+    // second icon to the same navigation entry.
+    const legacyIcon = [...item.children].find(child => child.tagName === 'SVG');
+    const semanticIcon = document.createElement('template');
+    semanticIcon.innerHTML = iconSvg(name);
+    const nextIcon = semanticIcon.content.firstElementChild;
+    if (legacyIcon) legacyIcon.replaceWith(nextIcon);
+    else item.insertAdjacentHTML('afterbegin', iconSvg(name));
   }
   groupToolDestinations();
 }
