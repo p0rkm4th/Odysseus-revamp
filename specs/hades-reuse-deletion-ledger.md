@@ -1913,3 +1913,18 @@ The characterization slice now directly proves the ACI-first intent boundary:
 owned frames bypass compatibility classification and normalization; unowned
 concepts retain the fallback adapter. Contract/cutover coverage passed `30`
 tests. No executable runtime change or image rebuild was made.
+
+## Executable alias-reduction checkpoint (`8e9c0766`, 2026-08-28)
+
+Three unused internal compatibility aliases were removed and their runtime
+uses now call canonical imports directly. Full supported regression: `6809
+passed, 5 skipped, 149 warnings`; focused ACI/routing/context coverage: `284
+passed`. Candidate `odysseus:candidate-8e9c0766` is deployed and healthy with
+zero restarts; image digest is
+`sha256:01da8785463d6266759065093ad5f7dfa271640ee7f658f01f20d957cae6ff30`,
+and embedded/running source matches the pushed SHA.
+
+The exact-image, no-source-mount frozen Qwen3:8B run passed `62/62` functional,
+architectural, and security; duplicate delivery `0`, failed Actions/task
+`0.0161`, model calls/task `0.2581`, median `0.0182s`, P95 `2.5476s`. Live
+authenticated owner acceptance remains separate evidence.

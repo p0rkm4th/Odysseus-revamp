@@ -714,3 +714,22 @@ canonical ACI-owned frames do not consult the compatibility classifier or its
 normalizers, while unowned concepts use those adapters only as fallback. The
 combined contract/cutover slice passed `30` tests. This is evaluator/test
 coverage only; the deployed executable remains `5fb800d7`.
+
+## Executable alias-reduction checkpoint (`8e9c0766`, 2026-08-28)
+
+Removed three unused internal compatibility aliases (`workspace_coding_rules`,
+`looks_like_explicit_skill_request`, and `uploaded_files_context_message`) and
+switched their ACI-runtime call sites to canonical imports. The supported full
+regression passed `6809` tests with `5` skips and `149` warnings; focused
+ACI/routing/context coverage passed `284` tests. The exact candidate
+`odysseus:candidate-8e9c0766` was deployed with OCI and runtime source
+`8e9c0766df8e4f8e4966c3b60e0852abf1abb86d`, image
+`sha256:01da8785463d6266759065093ad5f7dfa271640ee7f658f01f20d957cae6ff30`,
+healthy and at zero restarts. Qwen3:8B was reachable from the container
+namespace with the expected digest.
+
+The no-source-mount frozen 62-case run against that exact image passed `62/62`
+functional, architectural, and security, with duplicate delivery `0`,
+reference resolution `1.0`, failed Actions/task `0.0161`, model calls/task
+`0.2581`, median latency `0.0182s`, and P95 `2.5476s`. This does not substitute
+for authenticated owner-browser acceptance.
