@@ -79,7 +79,71 @@ function visibleMessages(page) {
     role: node.classList.contains('msg-user') ? 'user' : 'assistant',
     text: (node.querySelector('.body')?.innerText || node.innerText || '').trim().slice(0, 1000),
     classes: node.className,
+    toolNodes: node.querySelectorAll('.agent-thread-node').length,
+    rawOutputs: node.querySelectorAll('.agent-tool-output').length,
   })));
+}
+
+function finalAnswerSnapshot(page) {
+  return page.locator('#chat-history').evaluate((history) => {
+    const messages = [...history.querySelectorAll('.msg-ai')]
+      .filter((node) => !node.classList.contains('agent-thinking-dots') && !node.classList.contains('streaming'))
+      .map((node) => {
+        const body = node.querySelector(':scope > .body');
+        const text = (body?.innerText || '').trim();
+        const raw = String(node.dataset.raw || '').trim();
+        const toolOutput = [...node.querySelectorAll('.agent-tool-output pre')].map((el) => el.innerText).join('\n');
+        return { text: text.slice(0, 2000), raw: raw.slice(0, 2000), toolOutput: toolOutput.slice(0, 2000), classes: node.className };
+      });
+    const threads = [...history.querySelectorAll('.agent-thread')].map((thread) => ({
+      text: (thread.innerText || '').trim().slice(0, 2000),
+      openNodes: thread.querySelectorAll('.agent-thread-node.open').length,
+      outputBlocks: thread.querySelectorAll('.agent-tool-output').length,
+    }));
+    return { messages, threads };
+  });
+}
+
+async function latestTurnAnswers(page) {
+  return page.locator('#chat-history').evaluate((history) => {
+    const users = [...history.querySelectorAll('.msg-user')];
+    const user = users.at(-1);
+    if (!user) return { answers: [], tools: [] };
+    const answers = [];
+    const tools = [];
+    for (let node = user.nextElementSibling; node; node = node.nextElementSibling) {
+      if (node.classList.contains('msg-ai') && !node.classList.contains('streaming')) {
+        const body = node.querySelector(':scope > .body');
+        const text = (body?.innerText || '').trim();
+        if (text) answers.push({ text: text.slice(0, 3000), raw: String(node.dataset.raw || '').slice(0, 3000) });
+      }
+      if (node.classList.contains('agent-thread')) {
+        tools.push({
+          text: (node.innerText || '').trim().slice(0, 1000),
+          outputBlocks: node.querySelectorAll('.agent-tool-output').length,
+          openNodes: node.querySelectorAll('.agent-thread-node.open').length,
+          openOutputs: node.querySelectorAll('.agent-tool-output[open]').length,
+          rawOutput: [...node.querySelectorAll('.agent-tool-output pre')]
+            .map((el) => el.innerText).join('\n').slice(0, 3000),
+        });
+      }
+    }
+    return { answers, tools };
+  });
+}
+
+function assertHumanCanonicalAnswer(turn, prompt) {
+  if (!turn || turn.answers.length !== 1) {
+    throw new Error(`expected exactly one final assistant answer for ${prompt}, got ${turn?.answers?.length || 0}`);
+  }
+  const text = turn.answers[0].text.trim();
+  if (text.length < 12 || /^(done|successfully completed)[.!]?$/i.test(text)) {
+    throw new Error(`tool-backed turn has no useful human-readable final answer for ${prompt}`);
+  }
+  if (/^\s*[\[{]/.test(text) || /(?:asset_id|observation_id|provenance|freshness|relationships)\s*[:=]/i.test(text)) {
+    throw new Error(`final answer appears to be raw structured tool output for ${prompt}`);
+  }
+  return text;
 }
 
 async function waitForAnswer(page, beforeAssistant, streamIndex, prompt) {
@@ -103,6 +167,7 @@ async function waitForAnswer(page, beforeAssistant, streamIndex, prompt) {
     const warning = page.getByText('Stream connection ended. Composer unlocked; send again if needed.');
     if (await warning.count()) throw new Error(`stream warning rendered for ${prompt}`);
   }
+  return stream;
 }
 
 async function send(page, prompt) {
@@ -113,11 +178,39 @@ async function send(page, prompt) {
   await page.locator('.send-btn').click();
   await page.waitForFunction((text) => [...document.querySelectorAll('#chat-history .msg-user')]
     .some((node) => (node.querySelector('.body')?.innerText || node.innerText || '').includes(text)), prompt);
-  await waitForAnswer(page, beforeAssistant, beforeStreams, prompt);
+  const stream = await waitForAnswer(page, beforeAssistant, beforeStreams, prompt);
   const afterAssistant = await assistantCount(page);
   if (afterAssistant !== beforeAssistant + 1) {
     throw new Error(`expected one assistant answer for ${prompt}, got ${afterAssistant - beforeAssistant}`);
   }
+  const snapshot = await finalAnswerSnapshot(page);
+  const turn = await latestTurnAnswers(page);
+  await page.evaluate((value) => { window.__hadesE2ELastTurn = value; }, { stream, snapshot, turn });
+  const finalText = assertHumanCanonicalAnswer(turn, prompt);
+  const rawToolText = turn.tools.map((tool) => tool.rawOutput || '').join('\n').trim();
+  if (rawToolText && (finalText === rawToolText || finalText.includes(rawToolText))) {
+    throw new Error(`final answer is raw tool output for ${prompt}`);
+  }
+  if (turn.tools.some((tool) => tool.openOutputs > 0)) {
+    throw new Error(`raw tool output is expanded by default for ${prompt}`);
+  }
+  if (prompt === 'tell me about my network') {
+    if (!/network/i.test(finalText)) throw new Error('network final answer does not summarize the network');
+    if (!/(current|observed|last|stale|unknown|unavailable|fresh|no .*recorded|no .*observations)/i.test(finalText)) {
+      throw new Error('network final answer omits freshness/current-state qualification');
+    }
+    if (!turn.tools.length) throw new Error('network acceptance did not expose the executed tool evidence');
+    const eventTypes = stream.events.map((event) => event.type);
+    if (!eventTypes.includes('response_replace')) throw new Error('network deterministic answer was not emitted');
+    if (stream.events.filter((event) => event.type === 'response_replace').length !== 1) {
+      throw new Error('network deterministic answer was finalized more than once');
+    }
+    const replacement = stream.events.find((event) => event.type === 'response_replace');
+    if (replacement.answerSource !== 'DETERMINISTIC_RESULT') {
+      throw new Error(`network answer source was ${replacement.answerSource || 'missing'}`);
+    }
+  }
+  return { stream, snapshot, turn, assistantDelta: afterAssistant - beforeAssistant };
 }
 
 async function main() {
@@ -145,12 +238,31 @@ async function main() {
         const response = await originalFetch(...args);
         const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
         if (url.includes('/api/chat_stream')) {
-          const record = { doneCount: 0, abruptEOF: false, terminalCount: 0, deltaCount: 0 };
+          const record = { doneCount: 0, abruptEOF: false, terminalCount: 0, deltaCount: 0, events: [] };
           window.__hadesE2EStreams.push(record);
           response.clone().text().then((body) => {
-            record.doneCount = (body.match(/data: \[DONE\]/g) || []).length;
-            record.terminalCount = (body.match(/data: \[DONE\]/g) || []).length;
-            record.deltaCount = (body.match(/"delta"/g) || []).length;
+            for (const frame of body.split(/\n\s*\n/)) {
+              const line = frame.split('\n').find((entry) => entry.startsWith('data: '));
+              if (!line) continue;
+              const data = line.slice(6).trim();
+              if (data === '[DONE]') {
+                record.doneCount += 1;
+                record.terminalCount += 1;
+                record.events.push({ type: '[DONE]' });
+                continue;
+              }
+              try {
+                const json = JSON.parse(data);
+                const event = { type: json.type || (json.delta ? 'delta' : json.error ? 'error' : 'unknown') };
+                if (json.delta) { event.deltaLength = String(json.delta).length; record.deltaCount += 1; }
+                if (json.content) event.contentLength = String(json.content).length;
+                if (json.tool) event.tool = String(json.tool).slice(0, 120);
+                if (json.answer_source) event.answerSource = String(json.answer_source);
+                record.events.push(event);
+              } catch (_) {
+                record.events.push({ type: 'malformed' });
+              }
+            }
           }).catch(() => { record.abruptEOF = true; });
         }
         return response;
@@ -179,8 +291,17 @@ async function main() {
       'what work is outstanding?',
     ];
     for (const prompt of prompts) {
-      await send(page, prompt);
-      diagnostics.prompts.push(prompt);
+      const result = await send(page, prompt);
+      diagnostics.prompts.push({ prompt, ...result });
+      if (prompt === 'tell me about my network') {
+        console.log(JSON.stringify({
+          networkTrace: result.stream.events.map((event) => event.type),
+          networkAnswerCount: result.turn.answers.length,
+          networkToolCount: result.turn.tools.length,
+          networkRawOutputBlocks: result.turn.tools.reduce((sum, tool) => sum + tool.outputBlocks, 0),
+          networkOpenToolNodes: result.turn.tools.reduce((sum, tool) => sum + tool.openNodes, 0),
+        }));
+      }
     }
 
     const beforeReload = await assistantCount(page);
@@ -237,6 +358,8 @@ async function main() {
     diagnostics.failure = String(error?.stack || error);
     if (page) {
       diagnostics.visibleMessages = await visibleMessages(page).catch(() => []);
+      diagnostics.lastTurn = await page.evaluate(() => window.__hadesE2ELastTurn || null).catch(() => null);
+      diagnostics.streams = await page.evaluate(() => window.__hadesE2EStreams || []).catch(() => []);
       await page.screenshot({ path: screenshotFile, fullPage: true }).catch(() => {});
     }
     fs.writeFileSync(diagnosticsFile, JSON.stringify(diagnostics, null, 2), { mode: 0o600 });
