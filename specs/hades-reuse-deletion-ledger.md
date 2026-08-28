@@ -2420,3 +2420,29 @@ This is evidence against executable source
 test/docs-only `c930180f`). Runtime image ID remains
 `sha256:8fd1ae9357a8d4cd99a52eb0158408ca2ff66d107f104e3288c6e06fdbd1dded`,
 embedded source matches `ee7eef7`, health is healthy, and restart count is zero.
+
+## Explicit conceptual operation class (`c873385f`, 2026-08-28)
+
+The seeded Qwen soak exposed that conceptual minimal-pair questions were
+carrying `READ/UNKNOWN` instead of an explicit no-authority `ANSWER` operation.
+The canonical intent contract now projects unqualified definition/explanation
+questions to `ANSWER`, while owner/current-state qualifiers remain canonical
+`READ` and existing household overview semantics remain unchanged. Conceptual
+answers acquire no ActionSpec, ToolBinding, or executor and do not receive a
+lexical target.
+
+Focused coverage passed `437` tests with `1` skip; the full regression passed
+`6826` tests with `4` skips. The pushed source is
+`c873385fbbd4f9080fe75fde991eb1a0dbc1e42a`, and the exact candidate
+`odysseus:candidate-c873385fbbd4` was built and deployed. Its image ID is
+`sha256:592906b35032e25f076471cf6a20822de30c3bc18c2c4bba1c9bb8fc6f96a22a`;
+OCI marker and running source match, health is healthy, and restart count is
+zero. Container-namespace Qwen3:8B is available at the configured endpoint
+with digest `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+
+Browser acceptance passed (`7` prompts, `8` streams). The frozen Qwen quick
+corpus on the deployed candidate is `61/62` functional, `62/62` architectural,
+`62/62` security, duplicate delivery `0`, failed Actions/task `0.0161`, model
+calls/task `0.2581`, and P95 `2.3987s`. The sole functional failure remains
+the evaluator-only Jarvis prerequisite `response_excludes` check; no new
+canonical owner-state failure was observed.
