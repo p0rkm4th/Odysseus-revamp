@@ -38,7 +38,6 @@ try:
         _detect_admin_intent,
         _classify_agent_request,
         _append_tool_results,
-        _MCP_KEYWORDS,
         _select_local_mcp_schemas,
     )
     _IMPORTED_AGENT_LOOP = sys.modules.get("src.agent_loop")
@@ -54,6 +53,7 @@ from src.aci import (
     prefetched_explicit_memory_result,
     successful_deterministic_read_result,
 )
+from src.mcp_manager import MCP_KEYWORDS as _MCP_KEYWORDS
 
 
 def test_import_stubs_do_not_leak_into_later_tests():
