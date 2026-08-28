@@ -1,5 +1,28 @@
 # Hades V1 Finalization Status
 
+## Canonical no-action diagnostics (`e15ab6e3`, 2026-08-28)
+
+Moved the runtime's no-action outcome classification into
+`src.aci.classify_no_action_reason`. ACI now owns the observed precedence for
+approval-required, policy-denied, execution-failed, missing-contract,
+unprojected-action, and model-prose-only diagnostics; the runtime only emits
+the resulting diagnostic. No Action authority, retry, policy, approval, or
+execution behavior changed.
+
+Focused coverage passed `118` tests. Full regression passed `6814` tests with
+`4` skips and `186` warnings. Candidate
+`odysseus:candidate-e15ab6e3-exact` was built from the pushed SHA and deployed
+as image
+`sha256:b3239d3a19722d0a531a03c30142e1ae02a9553260872a9ea5ab6d5cb4380388`.
+OCI revision, source marker, and running source match
+`e15ab6e34b7657ff29a6cdd008fcc9666275b8f4`; health is healthy, restart count
+is zero, and qwen3:8b is reachable from the Hades container namespace.
+
+Authenticated Playwright acceptance passed all seven required journeys plus
+post-reload continuation (`8` streams), with the temporary principal revoked,
+acceptance mode disabled, and credentials removed. This proves the isolated
+authenticated browser path against `e15ab6e3`.
+
 ## Canonical action-expectation projection (`45ecaf5c`, 2026-08-28)
 
 Moved the runtime's `expected canonical Action` diagnostic predicate into
