@@ -247,6 +247,8 @@ def test_browser_owner_acceptance_rejects_tool_success_as_final_answer():
     assert "stream.doneCount !== 1 || stream.abruptEOF" in source
     assert "HADES_BROWSER_HOUSEHOLD_ACCEPTANCE" in source
     assert "requires an external isolated acceptance deployment" in source
+    assert "HADES_BROWSER_ISOLATED_ACCEPTANCE=true" in source
+    assert "verifyScenarioReadback" in source
     assert "household acceptance stock readback was not canonical" in source
     assert "household final answer omitted the seeded canonical item" in source
     assert "exactly one deterministic finalization" in source
