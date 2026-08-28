@@ -1861,6 +1861,18 @@ regression (`6807 passed, 5 skipped, 149 warnings`). Runtime is deployed from
 the exact pushed SHA and remains healthy. Retained aliases remain compatibility
 exports, not evidence of independent ACI authority.
 
+## Real-Qwen semantic shard (`5fb800d7`, 2026-08-28)
+
+On the Hades Compose network, the existing evaluator reached the actual
+`qwen3:8b` endpoint and ran `327` bounded cases. Results: `260/327`
+functional, `310/327` architectural, `327/327` security, duplicate rate `0`,
+failed Actions/task `0.0581`, model calls/task `0.7278`, P95 `6.2559s`.
+The one missing-answer case is a contract mismatch: `What's running in
+Docker?` is oracle-labeled `CONTAINER/READ`, but canonical intent currently
+selects `SERVICE/READ`; the service fixture is blocked. Treat this as an
+ontology/fixture gap requiring a bounded owner decision, not as justification
+for a sentence-specific router.
+
 ## Compatibility-authority guard (`5a204cb0`, 2026-08-28)
 
 Added a focused AST regression that rejects calls from the canonical
