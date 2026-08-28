@@ -1514,8 +1514,10 @@ async def _execute_manage_assets_binding(block, owner=None):
             # Preserve the bounded semantic projection selected by ACI.  This
             # is result metadata, not model authority; the canonical renderer
             # uses it to produce deterministic counts from these rows.
-            if payload.get("result_projection") in {"count"}:
+            if payload.get("result_projection") in {"count", "property", "filter"}:
                 data["result_projection"] = payload["result_projection"]
+            if payload.get("asset_property"):
+                data["asset_property"] = str(payload["asset_property"])[:40]
             if payload.get("query"):
                 data["query"] = str(payload["query"])[:120]
         elif action == "get" and isinstance(parsed, dict):
@@ -1828,6 +1830,28 @@ async def _execute_read_recipes_binding(block, owner=None):
     except Exception as exc:
         return "read_recipes", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
+async def _execute_manage_recipes_binding(block, owner=None):
+    """Persist recipe mutations through Inventory Service and verify readback."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        if str(payload.get("action") or "").casefold() != "add":
+            raise ValueError("unsupported recipe mutation")
+        if not owner:
+            raise PermissionError("authenticated recipe owner is required")
+        from src.inventory_service import get_inventory_service
+        service = get_inventory_service()
+        created = service.manage_recipes(payload, owner=owner)
+        recipe = created.get("recipe") if isinstance(created, dict) else None
+        if not isinstance(recipe, dict) or not recipe.get("id"):
+            raise ValueError("recipe mutation returned no canonical recipe")
+        readback = service.get_recipe(owner, str(recipe["id"]))
+        if readback.get("id") != recipe.get("id"):
+            raise ValueError("recipe readback did not match persisted recipe")
+        result = {"status": "VERIFIED", "success": True, "action": "add", "recipe": readback, "canonical_store": "inventory_service", "verification": {"status": "VERIFIED"}}
+        return "manage_recipes", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result, "verified": True}
+    except Exception as exc:
+        return "manage_recipes", {"error": str(exc), "output": str(exc), "exit_code": 1, "success": False}
+
 async def _execute_read_setup_binding(block, owner=None):
     """Adapt Setup Center's secret-free owner projection to a read binding."""
     try:
@@ -2056,6 +2080,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_work": _execute_read_work_binding,
     "read_household": _execute_read_household_binding,
     "read_recipes": _execute_read_recipes_binding,
+    "manage_recipes": _execute_manage_recipes_binding,
     "read_setup": _execute_read_setup_binding,
     "read_career": _execute_read_career_binding,
     "read_communications": _execute_read_communications_binding,

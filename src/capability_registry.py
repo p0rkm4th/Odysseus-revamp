@@ -150,6 +150,11 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             for action in ("list", "search", "get", "can_make", "scale", "expiring_candidates")
         )),
     ),
+    "recipe.manage": CapabilitySpec(
+        capability_id="recipe.manage",
+        description="Persist owner-scoped recipes through Inventory Service with readback verification.",
+        actions=_actions(ActionSpec(action_id="add", effects=("write_private",), executor_key="manage_recipes")),
+    ),
     "setup.read": CapabilitySpec(
         capability_id="setup.read",
         description="Owner-scoped read projections over Setup Center and integrations.",
@@ -337,6 +342,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_work": "work.read",
     "read_household": "household.read",
     "read_recipes": "recipe.read",
+    "manage_recipes": "recipe.manage",
     "read_setup": "setup.read",
     "read_career": "career.read",
     "read_communications": "communications.read",

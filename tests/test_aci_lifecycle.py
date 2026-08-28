@@ -24,6 +24,7 @@ from src.aci import (
     classify_post_result,
     compile_composite_action,
     ground_action_completion,
+    canonical_recipe_mutation_answer,
     project_action_selection,
     project_post_result_transition,
     project_result_observation,
@@ -140,6 +141,14 @@ def test_canonical_asset_read_answer_preserves_empty_and_rejects_failed_results(
     }]) is None
 
 
+def test_recipe_mutation_answer_requires_verified_canonical_result():
+    assert canonical_recipe_mutation_answer([{
+        "tool": "manage_recipes", "exit_code": 0, "success": True,
+        "output": json.dumps({"status": "VERIFIED", "recipe": {"id": "r1", "name": "Cordon Bleu"}}),
+    }]) == "Recorded recipe 'Cordon Bleu'; the canonical recipe readback is verified."
+    assert canonical_recipe_mutation_answer([]) is None
+
+
 def test_canonical_asset_read_answer_counts_only_structured_filtered_rows():
     answer = canonical_asset_read_answer([{
         "tool": "manage_assets", "exit_code": 0,
@@ -154,6 +163,22 @@ def test_canonical_asset_read_answer_counts_only_structured_filtered_rows():
         }),
     }])
     assert answer == "I found 2 canonical IT assets matching '2080'."
+
+
+def test_canonical_asset_property_and_filter_results_are_bounded():
+    property_answer = canonical_asset_read_answer([{
+        "tool": "manage_assets", "exit_code": 0,
+        "result_projection": {
+            "status": "SUCCESS", "result_projection": "property",
+            "asset_property": "ram", "assets": [{"id": "a-1", "name": "Thanatos", "ram": "64 GB"}],
+        }, "output": "{}",
+    }])
+    assert property_answer == "Recorded RAM by asset:\n- Thanatos: 64 GB"
+    filter_answer = canonical_asset_read_answer([{
+        "tool": "manage_assets", "exit_code": 0,
+        "output": json.dumps({"status": "SUCCESS_EMPTY", "assets": [], "query": "RTX 4090", "result_projection": "filter"}),
+    }])
+    assert filter_answer == "I don't have any recorded server with RTX 4090."
 
 
 def test_canonical_asset_read_answer_renders_structured_summary_counts():

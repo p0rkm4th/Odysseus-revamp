@@ -5812,6 +5812,8 @@ async def stream_aci_runtime(
                     "MEMORY" if block.tool_type == "read_memory" else None
                 ),
             }
+            if result.get("verified") is True:
+                tool_event["verified"] = True
             if result.get("image_url"):
                 for ik in ("image_url", "image_prompt", "image_model", "image_size", "image_quality"):
                     if result.get(ik):
@@ -6070,6 +6072,7 @@ async def stream_aci_runtime(
         intent_domains=_intent_domains,
         stored_evidence=has_stored_canonical_evidence(messages),
         clarification_only=_aci_clarification_only,
+        effectful_request=_intent_frame.operation_class in {"CREATE", "UPDATE", "DELETE", "EXECUTE"},
     )
     if _projected_response.strip() != full_response.strip():
         if _canonical_answer is None:
