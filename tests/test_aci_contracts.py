@@ -5,6 +5,7 @@ from src.aci import (
     ContextEnvelope, DecisionMode, ObjectiveSpec, TurnDisposition, WorkingSet,
     PostResultState, classify_post_result, project_post_result_transition,
     resolve_turn_disposition,
+    resolve_turn_intent,
     adaptive_shortlist, hard_filter_actions, model_burden,
     parse_decision_json, state_fingerprint,
     build_base_prompt,
@@ -114,6 +115,64 @@ def test_base_prompt_projection_is_owned_by_aci():
     metrics = model_burden(framework=7, model=2, labels={"reference": "FRAMEWORK"})
     assert metrics["model_ratio"] == 0.2222
     assert state_fingerprint({"x": 1}) == state_fingerprint({"x": 1})
+
+
+def test_canonical_intent_resolution_does_not_consult_compatibility_classifier():
+    calls = []
+
+    def provisional(messages, text):
+        return {"domain_concept": "NETWORK", "operation_class": "READ"}, True
+
+    def compatibility(messages, text):
+        calls.append("classifier")
+        return {"domain_concept": "LEGACY"}
+
+    def normalizer(intent, text):
+        calls.append("normalizer")
+        return intent
+
+    intent, owned = resolve_turn_intent(
+        [],
+        "what network am i on",
+        aci_enabled=True,
+        provisional_resolver=provisional,
+        compatibility_classifier=compatibility,
+        compatibility_normalizers=(normalizer,),
+    )
+
+    assert owned is True
+    assert intent["domain_concept"] == "NETWORK"
+    assert calls == []
+
+
+def test_unowned_intent_resolution_uses_compatibility_adapter_only_as_fallback():
+    calls = []
+
+    def provisional(messages, text):
+        return None, False
+
+    def compatibility(messages, text):
+        calls.append("classifier")
+        return {"domain_concept": "DOCUMENT", "retrieval_query": text}
+
+    def normalizer(intent, text):
+        calls.append("normalizer")
+        intent["adapted"] = True
+        return intent
+
+    intent, owned = resolve_turn_intent(
+        [],
+        "find the document",
+        aci_enabled=True,
+        provisional_resolver=provisional,
+        compatibility_classifier=compatibility,
+        compatibility_normalizers=(normalizer,),
+    )
+
+    assert owned is False
+    assert intent["domain_concept"] == "DOCUMENT"
+    assert intent["adapted"] is True
+    assert calls == ["classifier", "normalizer"]
 
 
 def test_post_result_state_does_not_reenter_decision_for_sufficient_canonical_read():

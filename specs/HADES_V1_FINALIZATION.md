@@ -708,3 +708,9 @@ marked compatibility facade. Top-level loop helpers are all referenced by the
 runtime or compatibility tests. Removing additional aliases without a
 characterization slice is therefore not justified. Cutover, lifecycle,
 contract, and canonical-resource focused coverage passed `114` tests.
+
+The follow-up characterization slice adds explicit tests for the intent seam:
+canonical ACI-owned frames do not consult the compatibility classifier or its
+normalizers, while unowned concepts use those adapters only as fallback. The
+combined contract/cutover slice passed `30` tests. This is evaluator/test
+coverage only; the deployed executable remains `5fb800d7`.

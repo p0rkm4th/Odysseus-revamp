@@ -1908,3 +1908,8 @@ a compatibility facade, while `stream_aci_runtime` is the executable ACI
 runtime. Focused cutover/lifecycle/contract/canonical-resource coverage passed
 `114` tests. Further alias removal remains deferred pending characterization of
 the compatibility seams that previously regressed.
+
+The characterization slice now directly proves the ACI-first intent boundary:
+owned frames bypass compatibility classification and normalization; unowned
+concepts retain the fallback adapter. Contract/cutover coverage passed `30`
+tests. No executable runtime change or image rebuild was made.
