@@ -52,6 +52,18 @@ function loadJourneyScenarios() {
     : null;
   const scenarios = payload.scenarios.filter((scenario) => !requested || requested.has(scenario.id));
   if (!scenarios.length) throw new Error('owner journey selection is empty');
+  const fixtureProfiles = [...new Set(scenarios.map((scenario) => String(scenario.fixture_profile || '').trim()).filter(Boolean))];
+  if (fixtureProfiles.length !== 1) {
+    throw new Error(
+      `owner journey run must use exactly one isolated fixture_profile; selected: ${fixtureProfiles.join(', ') || 'none'}`
+    );
+  }
+  const environments = [...new Set(scenarios.map((scenario) => scenario.environment))];
+  if (environments.length !== 1) {
+    throw new Error(
+      `owner journey run must use exactly one environment; selected: ${environments.join(', ')}`
+    );
+  }
   const hasMutation = scenarios.some((scenario) => scenario.turns.some((turn) =>
     ['CREATE', 'UPDATE', 'DELETE', 'EXECUTE'].includes(String(turn.expected?.operation || '').toUpperCase())));
   if (hasMutation && !externalAcceptance) {
@@ -445,7 +457,13 @@ async function main() {
   let page;
   let tracing = false;
   let cleanupDone = false;
-  const diagnostics = { baseURL, principal: credentials.username, prompts: [], errors: [], unexpectedErrors: [], failedRequests: [], http5xx: [] };
+  const diagnostics = {
+    baseURL,
+    principal: credentials.username,
+    fixtureProfile: scenarios?.[0]?.fixture_profile || null,
+    environment: scenarios?.[0]?.environment || 'legacy',
+    prompts: [], errors: [], unexpectedErrors: [], failedRequests: [], http5xx: [],
+  };
   try {
     context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     page = await context.newPage();
@@ -679,12 +697,40 @@ async function main() {
     const turns = diagnostics.prompts.length;
     const mutations = diagnostics.prompts.filter(({operation}) =>
       ['CREATE', 'UPDATE', 'DELETE', 'EXECUTE'].includes(String(operation || '').toUpperCase())).length;
+    const readJourneys = turns - mutations;
+    const falseSuccess = diagnostics.prompts.filter(({turn, stream, operation}) => {
+      const effectful = ['CREATE', 'UPDATE', 'DELETE', 'EXECUTE'].includes(String(operation || '').toUpperCase());
+      if (!effectful || !turn?.answers?.some(({text}) =>
+        /\b(?:added|created|saved|updated|deleted|removed|moved|restarted|sent|changed|completed)\b/i.test(text))) return false;
+      const eventSuccess = (stream?.events || []).some((event) =>
+        event.success === true || event.verified === true ||
+        /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(event.status || '')
+      );
+      const cardSuccess = (turn.tools || []).some((tool) => {
+        try {
+          const result = JSON.parse(tool.rawOutput || '{}');
+          return result?.success === true || result?.verified === true ||
+            /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(result?.status || '') ||
+            /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(result?.verification?.status || '');
+        } catch (_) { return false; }
+      });
+      return !eventSuccess && !cardSuccess;
+    }).length;
+    const rawFinalResults = diagnostics.prompts.filter(({turn}) =>
+      turn?.answers?.some(({text}) => /^\s*[\[{]/.test(text) || /(?:asset_id|observation_id|relationships)\s*[:=]/i.test(text))
+    ).length;
+    const duplicateDelivery = diagnostics.prompts.filter(({stream}) =>
+      stream?.doneCount !== 1 || stream?.terminalCount !== 1 ||
+      (stream?.events || []).filter((event) => event.type === 'response_replace').length > 1
+    ).length;
+    const abruptEOF = diagnostics.prompts.filter(({stream}) => stream?.abruptEOF).length;
     console.log(JSON.stringify({
       status: 'PASS', scenarios: scenarios?.length || 0, turns,
-      reads: turns - mutations, mutations,
+      fixtureProfile: diagnostics.fixtureProfile, environment: diagnostics.environment,
+      readJourneys, mutations, mutationReadbacks: diagnostics.readbacks?.length || 0,
+      falseSuccess, rawFinalResults, duplicateDelivery, abruptEOF,
       readbacks: diagnostics.readbacks?.length || 0,
-      streams: turns, done: turns, abruptEOF: 0, duplicateDelivery: 0,
-      environment: scenarios ? [...new Set(scenarios.map((scenario) => scenario.environment))] : ['legacy'],
+      streams: turns, done: turns,
     }));
   } catch (error) {
     diagnostics.failure = String(error?.stack || error);
