@@ -631,3 +631,13 @@ supported project image with the real runtime roots and Docker socket mounted
 produced the authoritative result: `6806 passed, 5 skipped, 149 warnings`.
 The earlier six failures are superseded environment evidence, not product
 failures.
+
+## Canonical-runtime compatibility guard (`5a204cb0`, 2026-08-28)
+
+Added a static production-cutover regression proving `stream_aci_runtime` does
+not call retained underscore compatibility aliases. The aliases remain only
+where compatibility tests or legacy seams require them; this test prevents
+them from becoming a second runtime authority. The focused cutover/lifecycle
+suite passed `61` tests. This is test-only evidence: the deployed executable
+remains `cf7cc7ba29b4e7c664f98d2204babb96a6de8d4f`, so no image rebuild was
+performed.
