@@ -6833,7 +6833,15 @@ async def stream_agent_loop(
     # gets a turn (with its own tool calls forwarded to the user) and
     # a skill is saved ONLY if the teacher actually succeeds. Skipped
     # when we ARE the teacher to avoid recursion.
-    if not _is_teacher_run and not guide_only and not _awaiting_user:
+    if (
+        not _is_teacher_run
+        and not guide_only
+        and not _awaiting_user
+        # A deterministic canonical read already has one authoritative
+        # answer source.  Running teacher takeover after it can introduce a
+        # second answer author (and another model call) after completion.
+        and not (_aci_enabled and _aci_terminal_canonical_read)
+    ):
         try:
             from src.teacher_escalation import run_teacher_inline
             async for evt in run_teacher_inline(
