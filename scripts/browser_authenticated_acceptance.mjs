@@ -470,6 +470,14 @@ async function main() {
                 if (json.status) event.status = String(json.status).slice(0, 80);
                 if (json.success !== undefined) event.success = Boolean(json.success);
                 if (json.verified !== undefined) event.verified = Boolean(json.verified);
+                // Tool completion fields may be nested in the transport's
+                // data envelope.  Preserve only the bounded outcome scalars;
+                // raw Result content remains available only in the DOM
+                // diagnostic disclosure and is never copied into the trace.
+                const nested = json.data && typeof json.data === 'object' ? json.data : null;
+                if (nested?.status && !event.status) event.status = String(nested.status).slice(0, 80);
+                if (nested?.success !== undefined && event.success === undefined) event.success = Boolean(nested.success);
+                if (nested?.verified !== undefined && event.verified === undefined) event.verified = Boolean(nested.verified);
                 if (json.answer_source) event.answerSource = String(json.answer_source);
                 record.events.push(event);
               } catch (_) {
