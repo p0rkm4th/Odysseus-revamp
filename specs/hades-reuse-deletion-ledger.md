@@ -2683,3 +2683,20 @@ loop-local name remains compatibility-only. Focused post-deploy coverage passed
 `sha256:3ec28b2019bb869855a909313928b2d6677236c2284d500e6b42453733cd9606`;
 health is healthy and the rollback image `odysseus:rollback-before-f12ebb9e`
 preserves `afaf3e25`.
+
+## Route schema projection ownership (`1d9a92d0`, 2026-08-28)
+
+Classification: `MIGRATED SEMANTICS / ACI PROJECTION`.
+
+Moved the route tool-schema projection implementation out of the nested
+`stream_aci_runtime` body and into `src.aci.project_route_tool_schemas`.
+The ACI function receives the policy-filtered tool universe and all turn-local
+inputs explicitly; it cannot expand authority. The runtime keeps only a
+binding adapter, and legacy provider-mode behavior is preserved.
+
+Evidence: `174` focused ACI/lifecycle/routing tests; `6844` full regression
+tests with `4` skips; exact candidate and running source `1d9a92d0`, image
+`sha256:a9f6dbcf514dd5132384c47651d8585b91fa6eda5adaa0a5e1aaba791964b3b6`,
+healthy, zero restarts, Qwen3:8B reachable in-container. The deployed frozen
+quick corpus remained `62/62/62`, duplicate delivery `0`, with failed
+Actions/task `0.0161`.
