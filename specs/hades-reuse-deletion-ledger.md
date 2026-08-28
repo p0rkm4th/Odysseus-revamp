@@ -2228,6 +2228,18 @@ OCI/source marker and running source match `a308ff06a57fe24ffb61e0cd7281ac7c96a7
 Health is healthy, restart count `0`, Qwen3:8B is reachable in-container,
 and authenticated browser acceptance passed (`7` prompts, `8` streams).
 
+## Seeded hidden-holdout coverage (`936a40c5`, 2026-08-28)
+
+A generation-only hidden holdout using seed `20260828` produced `542`
+reproducible cases from the existing evaluator. Its `503` reported gaps are
+coverage dimensions, not runtime failures: `75` are critical, concentrated in
+approval outcomes (`REPLAY`, `EXPIRED`, missing/owner/digest mismatch),
+disabled policy, post-result continuation/approval/clarification states, and
+unrepresented action/executor combinations. No production decision or
+authority code was changed for this audit. The holdout remains suitable for
+future bounded execution after those lifecycle fixtures have explicit
+environment semantics.
+
 ## Exact deployed soak characterization (`a308ff06`, 2026-08-28)
 
 The interrupted broad semantic execution had no surviving process or partial
