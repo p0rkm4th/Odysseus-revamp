@@ -234,8 +234,6 @@ _compute_final_metrics = compute_final_metrics
 _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
 _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
 _privileged_action_requires_exact_approval = requires_exact_approval
-_minimal_recent_notes_tool_context_message = minimal_recent_notes_tool_context_message
-_looks_like_memory_identity_turn = looks_like_memory_identity_turn
 _minimal_odysseus_doc_messages = minimal_odysseus_doc_messages
 _minimal_odysseus_notes_messages = minimal_odysseus_notes_messages
 _minimal_odysseus_general_messages = minimal_odysseus_general_messages
@@ -1679,7 +1677,7 @@ async def stream_aci_runtime(
     _requested_temperature = temperature
     if _ody_qwen_finetune_model:
         temperature = odysseus_qwen_temperature_cap(temperature)
-    _ody_memory_identity_turn = _looks_like_memory_identity_turn(_last_user)
+    _ody_memory_identity_turn = looks_like_memory_identity_turn(_last_user)
     _aci_answer_only = (
         prefetched_explicit_memory_result(messages)
         and is_explicit_memory_query(_last_user)
@@ -2637,7 +2635,7 @@ async def stream_aci_runtime(
                 or _looks_like_notes_turn(_last_user)
                 or (
                     _looks_like_notes_calendar_followup(_last_user)
-                    and _minimal_recent_notes_tool_context_message(messages) is not None
+                    and minimal_recent_notes_tool_context_message(messages) is not None
                 )
             )
             and "files" not in _intent_domains
