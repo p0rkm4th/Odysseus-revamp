@@ -169,6 +169,15 @@ def test_recipe_import_prepare_accepts_schema_org_jsonld_without_persisting():
     assert len(draft.ingredients) == 2
 
 
+def test_recipe_import_prepare_extracts_jsonld_embedded_in_untrusted_html():
+    html = '<html><script type="application/ld+json">{"@type":"Recipe","name":"HTML Dinner",'
+    html += '"recipeIngredient":["1 cup rice"],"recipeInstructions":"Steam the rice."}</script></html>'
+    draft = recipe_import_draft(html, source_url="https://example.test/html")
+    assert isinstance(draft, RecipeDraft)
+    assert draft.name == "HTML Dinner"
+    assert draft.source_url == "https://example.test/html"
+
+
 def test_recipe_import_commit_requires_validated_draft_and_verifies_readback():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
