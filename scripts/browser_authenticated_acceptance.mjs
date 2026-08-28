@@ -56,6 +56,9 @@ function loadJourneyScenarios() {
   if (hasMutation && !externalAcceptance) {
     throw new Error('refusing owner-instance browser run: mutation journeys require an isolated external acceptance deployment');
   }
+  if (scenarios.some((scenario) => scenario.environment === 'actual_owner_read_only') && !externalAcceptance) {
+    throw new Error('actual_owner_read_only journeys require an explicitly supplied owner session credential');
+  }
   return scenarios;
 }
 
