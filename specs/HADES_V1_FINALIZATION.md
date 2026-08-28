@@ -1097,3 +1097,13 @@ A separate 10-case generated Qwen sample completed without timeout: functional
 failed Actions/task `0.20`. Its failures remain clustered in exploratory
 unsupported capability/routing/burden cases and require separate generalized
 triage.
+
+## Generated failure-cluster triage (`88cd7ee8`, 2026-08-28)
+
+A bounded 25-case generated Qwen3:8B run completed all cases in 44.2 seconds
+with incremental checkpoint rows and no timeouts. Security was `25/25` and
+duplicate delivery was `0`; functional was `6/25`, architectural `23/25`, and
+failed Actions/task `0.52`. The dominant `INTENT_FAILURE` cluster was in
+generated `registry_action` frames requesting unavailable or deliberately
+blocked capability/action combinations. Trace inspection did not expose a new
+canonical owner or authority defect, so no executable source change was made.

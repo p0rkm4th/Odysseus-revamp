@@ -2653,3 +2653,12 @@ Actions/task; duplicate delivery `0`. A separate 10-case generated Qwen
 sample completed all cases without timeout, with security `10/10` and
 duplicate delivery `0`; its lower functional/architectural score is retained
 as exploratory capability/routing/burden evidence, not hidden.
+
+## Generated failure-cluster triage (`88cd7ee8`, 2026-08-28)
+
+The bounded 25-case Qwen3:8B sample completed without timeout: security
+`25/25`, duplicate delivery `0`, functional `6/25`, architectural `23/25`,
+and failed Actions/task `0.52`. The largest `INTENT_FAILURE` cluster was
+confined to generated registry-action cases requesting unavailable or blocked
+capabilities. Existing ACI traces fail closed and retain bounded authority;
+this evidence did not justify a production semantic-owner change.
