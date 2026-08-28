@@ -31,7 +31,10 @@ def test_qwen_compact_projection_preserves_explicit_zero_and_failure_status():
 
 
 def test_memory_domain_rule_separates_brain_from_skills():
-    source = Path("src/agent_loop.py").read_text(encoding="utf-8")
+    source = "\n".join(
+        Path(path).read_text(encoding="utf-8")
+        for path in ("src/legacy_domain_contract.py", "src/agent_loop.py")
+    )
     assert '"memory": {"manage_memory"}' in source
     assert "Skills are not user memory" in source
 
