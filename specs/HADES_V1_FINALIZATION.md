@@ -733,3 +733,15 @@ functional, architectural, and security, with duplicate delivery `0`,
 reference resolution `1.0`, failed Actions/task `0.0161`, model calls/task
 `0.2581`, median latency `0.0182s`, and P95 `2.5476s`. This does not substitute
 for authenticated owner-browser acceptance.
+
+## Qwen revalidation after second alias reduction (`11c4a7d6`, 2026-08-28)
+
+The exact deployed candidate `odysseus:candidate-11c4a7d6` passed the supported
+full regression before deployment (`6809 passed, 5 skipped, 149 warnings`).
+The baked-image frozen Qwen3:8B run passed `62/62` architectural and security
+cases and `61/62` functional cases, with duplicate delivery `0`, reference
+resolution `1.0`, failed Actions/task `0.0161`, model calls/task `0.2581`,
+median latency `0.0181s`, and P95 `3.379s`. The one failure is the known
+`jarvis-environment-assumption` evaluator grounding assertion; its trajectory
+had no Action and did produce an answer. Runtime source and OCI marker match
+the pushed SHA; health is healthy with zero restarts.
