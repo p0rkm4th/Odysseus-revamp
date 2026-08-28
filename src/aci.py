@@ -3213,6 +3213,41 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         lines.append(f"- {name}" + (f" ({', '.join(details)})" if details else ""))
     if len(items) > 100:
         lines.append(f"- …and {len(items) - 100} more")
+
+    # ``household_overview`` already computes these risk projections from the
+    # canonical InventoryService.  Keep the renderer responsible only for
+    # presenting that evidence; do not infer expiry or stock state from the
+    # item names or model prose.
+    expiring = payload.get("expiring_lots")
+    if isinstance(expiring, list) and expiring:
+        lines.append("Expiring soon:")
+        for row in expiring[:100]:
+            if not isinstance(row, Mapping):
+                continue
+            item = row.get("item") if isinstance(row.get("item"), Mapping) else {}
+            lot = row.get("lot") if isinstance(row.get("lot"), Mapping) else {}
+            name = str(item.get("name") or item.get("id") or "Unnamed item").strip()
+            expiry = str(lot.get("expiry_date") or "date unknown").strip()
+            status = str(row.get("status") or "expiring").strip()
+            lines.append(f"- {name} ({status}, expires {expiry})")
+        if len(expiring) > 100:
+            lines.append(f"- …and {len(expiring) - 100} more expiring lot{'s' if len(expiring) != 1 else ''}")
+
+    low_stock = payload.get("low_stock")
+    if isinstance(low_stock, list) and low_stock:
+        lines.append("Low stock:")
+        for row in low_stock[:100]:
+            if not isinstance(row, Mapping):
+                continue
+            item = row.get("item") if isinstance(row.get("item"), Mapping) else {}
+            name = str(item.get("name") or item.get("id") or "Unnamed item").strip()
+            quantity = str(row.get("quantity") or "0").strip()
+            unit = str(item.get("default_unit") or "").strip()
+            reorder = str(row.get("reorder_point") or "unknown").strip()
+            amount = f"{quantity} {unit}".strip()
+            lines.append(f"- {name} ({amount}; reorder at {reorder})")
+        if len(low_stock) > 100:
+            lines.append(f"- …and {len(low_stock) - 100} more low-stock item{'s' if len(low_stock) != 1 else ''}")
     return "\n".join(lines)
 
 

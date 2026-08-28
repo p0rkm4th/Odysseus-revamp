@@ -199,6 +199,30 @@ def test_canonical_household_read_answer_uses_only_inventory_result():
     }]) == "No kitchen or household inventory is recorded for this owner."
 
 
+def test_canonical_household_read_answer_renders_inventory_risk_projections():
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA",
+            "items": [{"id": "i-1", "name": "Rice", "domain": "kitchen", "stock_quantity": "1", "default_unit": "kg"}],
+            "expiring_lots": [{
+                "item": {"id": "i-1", "name": "Rice"},
+                "lot": {"expiry_date": "2099-01-02"},
+                "status": "expiring",
+            }],
+            "low_stock": [{
+                "item": {"id": "i-1", "name": "Rice", "default_unit": "kg"},
+                "quantity": "1", "reorder_point": "2",
+            }],
+        }),
+    }])
+    assert answer is not None
+    assert "Expiring soon:" in answer
+    assert "Rice (expiring, expires 2099-01-02)" in answer
+    assert "Low stock:" in answer
+    assert "Rice (1 kg; reorder at 2)" in answer
+
+
 def test_canonical_result_answer_selects_one_authoritative_source():
     answer = canonical_result_answer([{
         "tool": "manage_assets", "exit_code": 0,
