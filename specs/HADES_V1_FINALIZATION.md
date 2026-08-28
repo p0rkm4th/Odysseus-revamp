@@ -641,3 +641,13 @@ them from becoming a second runtime authority. The focused cutover/lifecycle
 suite passed `61` tests. This is test-only evidence: the deployed executable
 remains `cf7cc7ba29b4e7c664f98d2204babb96a6de8d4f`, so no image rebuild was
 performed.
+
+## Semantic coverage shard recovery (`20260828`, 2026-08-28)
+
+No surviving execution report or partial JSONL was found after the interrupted
+shard. A bounded replacement coverage-only shard (`0/4`, seed `20260828`)
+generated `474` scenarios and `372` coverage gaps (`46` critical, `88` high).
+These are coverage gaps, not failed product executions: the run deliberately
+invoked no model and produced no runtime pass rate. The largest categories are
+untested ActionSpecs, capabilities, failure classes, and lifecycle/policy
+branches; they remain foundation-closure work.
