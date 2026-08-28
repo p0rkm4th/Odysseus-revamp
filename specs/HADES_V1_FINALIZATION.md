@@ -539,3 +539,17 @@ delegated async generator on shutdown. This is a boundary change, not a new
 planner or execution path; focused characterization passed 79 tests. The
 running image still contains source `100d2e0f` until this source change is
 committed, pushed, built, and deployed through the exact-SHA loop.
+
+## Executable checkpoint: `c42a8e23`
+
+The production ACI entrypoint selects `stream_aci_runtime`; the old
+`stream_agent_loop` symbol is a closure-propagating compatibility facade.
+Focused coverage passed `64` tests and the full regression passed `6807
+passed, 4 skipped, 186 warnings`.
+
+Candidate `odysseus:candidate-c42a8e2313c4` is running with image ID
+`sha256:b2d97c4521e19fff3a987598c404288d2d3f67f298df73805f099522a7c7009b`,
+embedded/running source `c42a8e2313c483bcf950d0482b79c276aba6528d`, healthy
+status, and restart count `0`. The frozen Qwen quick run is `62/62/62` with
+zero duplicates. This entry is evidence for the executable checkpoint; later
+documentation-only commits must not be conflated with the running source.
