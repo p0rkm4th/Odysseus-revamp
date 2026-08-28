@@ -257,6 +257,15 @@ async function send(page, prompt) {
       throw new Error(`network answer source was ${replacement.answerSource || 'missing'}`);
     }
   }
+  if (householdAcceptance) {
+    if (!/milk/i.test(finalText)) {
+      throw new Error(`household final answer omitted the seeded canonical item for ${prompt}`);
+    }
+    const replacements = stream.events.filter((event) => event.type === 'response_replace');
+    if (replacements.length !== 1 || replacements[0].answerSource !== 'DETERMINISTIC_RESULT') {
+      throw new Error(`household read did not have exactly one deterministic finalization for ${prompt}`);
+    }
+  }
   return { stream, snapshot, turn, assistantDelta: afterAssistant - beforeAssistant };
 }
 
