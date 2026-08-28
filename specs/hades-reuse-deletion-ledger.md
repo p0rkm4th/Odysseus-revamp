@@ -1,5 +1,19 @@
 # Hades reuse / deletion ledger
 
+## Canonical no-action diagnostics (`e15ab6e3`, 2026-08-28)
+
+Moved no-action outcome classification into `src.aci.classify_no_action_reason`;
+the compatibility runtime now emits an ACI-owned diagnostic projection.
+Focused coverage passed `118` tests and full regression passed
+`6814 passed, 4 skipped, 186 warnings`.
+
+Exact candidate `odysseus:candidate-e15ab6e3-exact` was deployed as image
+`sha256:b3239d3a19722d0a531a03c30142e1ae02a9553260872a9ea5ab6d5cb4380388`;
+OCI/source markers and running source match `e15ab6e3`, health is healthy with
+zero restarts, and qwen3:8b is reachable in-container. Authenticated browser
+acceptance passed seven journeys plus reload continuation; cleanup revoked the
+temporary principal, disabled the facility, and removed credentials.
+
 ## Canonical action-expectation projection (`45ecaf5c`, 2026-08-28)
 
 Moved the runtime's canonical-action expectation predicate into
