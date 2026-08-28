@@ -903,7 +903,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     ),
     "RECIPE": DomainContract(
         "RECIPE", "recipe.read",
-        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make", "READ_SCALE": "scale"},
+        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make", "READ_SCALE": "scale", "READ_EXPIRING": "expiring_candidates"},
         "read_recipes",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "recipe_read",
@@ -1034,6 +1034,8 @@ def canonical_read_action(
         operation = "READ_ROLES"
     elif domain_concept == "RECIPE" and str(dict(filters or {}).get("recipe_query") or "").strip():
         operation = "READ_SEARCH"
+    elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_expiring") is True:
+        operation = "READ_EXPIRING"
     elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_coverage") is True:
         operation = "READ_COVERAGE"
     elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_scale") is True:
@@ -1614,6 +1616,10 @@ def compile_intent(
         if serving_target:
             reference_filters["recipe_scale"] = True
             reference_filters["servings"] = serving_target
+    if concept == "RECIPE" and operation == "READ" and re.search(
+        r"\b(?:expir(?:e|ing|y)|about\s+to\s+expire)\b", q,
+    ) and re.search(r"\b(?:recipe|meal|dish|cook|make)\b", q):
+        reference_filters["recipe_expiring"] = True
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
@@ -1762,6 +1768,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_ROLES"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_query"):
         action_key = "READ_SEARCH"
+    elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_expiring") is True:
+        action_key = "READ_EXPIRING"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_coverage") is True:
         action_key = "READ_COVERAGE"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_scale") is True:
@@ -1902,6 +1910,9 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
         elif frame.filters.get("recipe_scale") is True:
             if not isinstance(result.get("scaled_ingredients"), list) or not result.get("servings"):
                 return False, "INVALID_RESULT"
+        elif frame.filters.get("recipe_expiring") is True:
+            if not isinstance(result.get("candidates"), list):
+                return False, "INVALID_RESULT"
         elif frame.entity_reference:
             if not isinstance(result.get("recipe"), Mapping):
                 return False, "INVALID_RESULT"
@@ -1986,6 +1997,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     ("RECIPE", "search"): "recipes",
                     ("RECIPE", "get"): "recipe",
                     ("RECIPE", "scale"): "scaled_ingredients",
+                    ("RECIPE", "expiring_candidates"): "candidates",
                     ("COMMUNICATIONS", "overview"): "email",
                     ("CONTACT", "contacts"): "contacts",
                 }.get((concept, action_id))

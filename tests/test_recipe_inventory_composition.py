@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from decimal import Decimal
 
 from core import database as cdb
@@ -84,3 +85,41 @@ def test_recipe_owner_scope_does_not_leak_across_inventory_service_reads():
         assert str(exc) == "recipe not found"
     else:
         raise AssertionError("recipe crossed owner boundary")
+
+
+def test_expiring_inventory_composes_with_recipe_coverage_without_mutation():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    chicken = service.create_item(
+        "alice", name="Chicken", domain="kitchen", item_kind="ingredient",
+        default_unit="g",
+    )
+    rice = service.create_item(
+        "alice", name="Rice", domain="kitchen", item_kind="ingredient",
+        default_unit="g",
+    )
+    service.add_stock(
+        "alice", chicken["id"], quantity="500", unit="g",
+        idempotency_key="chicken-expiring",
+        expiry_date=date.today() + timedelta(days=2),
+    )
+    recipe = service.create_recipe(
+        "alice", name="Chicken Rice", servings="2", ingredients=[
+            {"item_id": chicken["id"], "quantity": "400", "unit": "g"},
+            {"item_id": rice["id"], "quantity": "200", "unit": "g"},
+        ],
+    )
+
+    result = service.manage_recipes(
+        {"action": "expiring_candidates", "expiry_days": 7}, owner="alice",
+    )
+
+    assert result["canonical_store"] == "inventory_service"
+    assert result["expiry_days"] == 7
+    assert len(result["candidates"]) == 1
+    candidate = result["candidates"][0]
+    assert candidate["recipe_id"] == recipe["id"]
+    assert candidate["can_make"] is False
+    assert candidate["expiring_ingredients"][0]["name"] == "Chicken"
+    assert {row["name"] for row in candidate["shortages"]} == {"rice"}
+    assert service.get_recipe("alice", recipe["id"])["name"] == "Chicken Rice"

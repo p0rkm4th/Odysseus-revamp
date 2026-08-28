@@ -20,7 +20,7 @@ INVENTORY_ACTIONS = frozenset({
     "adjust_stock", "get_components", "update_asset", "create_intake_draft",
 })
 RECIPE_ACTIONS = frozenset({
-    "list", "get", "can_make", "add", "cook",
+    "list", "get", "can_make", "scale", "expiring_candidates", "add", "cook",
 })
 
 
