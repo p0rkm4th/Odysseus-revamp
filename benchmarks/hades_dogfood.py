@@ -1276,14 +1276,26 @@ def expand_cases(
         if adapter == "aci_corpus":
             values = [item for item in values if suite != "baseline" or item.get("canary")]
             for item in values:
+                reference_expectation = (
+                    "UNRESOLVED" if item.get("category") in {"ambiguity", "references"} else None
+                )
                 cases.append(_case(f"aci-{item['id']}", item["prompt"], family=item["category"],
                                    source=spec["id"], split=item.get("split", "development"),
-                                   expected={"trajectory": item.get("expected_trajectory", {})},
+                                   expected={
+                                       "trajectory": item.get("expected_trajectory", {}),
+                                       **({"reference_resolution": reference_expectation} if reference_expectation else {}),
+                                   },
                                    environment=item.get("environment")))
         elif adapter == "jarvis":
             for item in values:
+                reference_expectation = (
+                    "UNRESOLVED" if item.get("id") in {"referent-all", "referent-selection", "referent-action"} else None
+                )
                 cases.append(_case(f"jarvis-{item['id']}", item["prompt"], family=item["category"],
-                                   source=spec["id"], expected=item.get("expected", {})))
+                                   source=spec["id"], expected={
+                                       **dict(item.get("expected", {})),
+                                       **({"reference_resolution": reference_expectation} if reference_expectation else {}),
+                                   }))
         elif adapter == "metamorphic":
             for group, prompts in values.items():
                 selected = prompts[:3] if suite == "baseline" else prompts
@@ -1772,6 +1784,21 @@ def authoritative_answer_text(events: Iterable[Mapping[str, Any]]) -> str:
     return "".join(str(event.get("delta") or "") for event in values)
 
 
+def _reference_expectation(case: Mapping[str, Any]) -> str | None:
+    """Return an explicit reference oracle, never an inference from prose."""
+    expected = case.get("expected")
+    if isinstance(expected, Mapping):
+        value = expected.get("reference_resolution")
+        if isinstance(value, str) and value.strip():
+            return value.strip().upper()
+    scenario = case.get("scenario")
+    if isinstance(scenario, Mapping):
+        value = scenario.get("reference_expectation")
+        if isinstance(value, str) and value.strip():
+            return value.strip().upper()
+    return None
+
+
 def normalize_events(events: Iterable[Mapping[str, Any]], case: Mapping[str, Any], *, elapsed: float = 0) -> dict[str, Any]:
     events = [dict(event) for event in events]
     metrics = next((event.get("data", {}) for event in reversed(events)
@@ -1800,6 +1827,10 @@ def normalize_events(events: Iterable[Mapping[str, Any]], case: Mapping[str, Any
         "internal_leakage": bool(_INTERNAL.search(text)),
         "latency_seconds": round(float(elapsed), 4),
     })
+    expected_reference = _reference_expectation(case)
+    reference = dict(reference)
+    if expected_reference:
+        reference["expected_status"] = expected_reference
     delivery = delivery_observation(events)
     return {
         "schema_version": SCHEMA_VERSION, "case_id": case["id"], "source": case["source"],
@@ -1988,19 +2019,31 @@ def summarize(records: Iterable[Mapping[str, Any]], scores: Iterable[Mapping[str
         for failure in (score.get("failure_classes") or score.get("failures", []))
     )
     concepts = [r["trajectory"].get("intent", {}).get("domain_concept") for r in records]
-    # ``NOT_REFERENCE`` is a valid trace outcome for ordinary named/direct
-    # requests, not a failed resolution.  Exclude it from the denominator so
-    # the reported accuracy describes only turns that actually exercised the
-    # reference resolver.  Unresolved/ambiguous reference attempts remain in
-    # the denominator and therefore remain visible as failures.
-    refs = [
+    # Qualified cases carry an explicit expected status. Older ad-hoc test
+    # records have no oracle, so retain their historical attempted-only
+    # denominator for compatibility while reporting the unqualified count.
+    qualified_refs = [
+        r["trajectory"].get("reference", {})
+        for r in records
+        if r["trajectory"].get("reference", {}).get("expected_status")
+    ]
+    legacy_refs = [
         r["trajectory"].get("reference", {}).get("status")
         for r in records
-        if r["trajectory"].get("reference", {}).get(
+        if not r["trajectory"].get("reference", {}).get("expected_status")
+        and r["trajectory"].get("reference", {}).get(
             "attempted",
             r["trajectory"].get("reference", {}).get("status") not in {None, "NOT_REFERENCE"},
         )
     ]
+    refs = qualified_refs or legacy_refs
+    reference_accuracy = (
+        sum(str(item.get("status") or "").upper() == str(item.get("expected_status") or "").upper() for item in qualified_refs)
+        / len(qualified_refs)
+        if qualified_refs else
+        sum(item == "RESOLVED" for item in legacy_refs) / len(legacy_refs)
+        if legacy_refs else 0.0
+    )
     repair_candidates = [
         {"failure": failure, "architecture_layer": _REPAIR_LAYERS.get(failure, "evaluation_contract"),
          "auto_apply": False, "requires_owner_approval": True}
@@ -2013,7 +2056,9 @@ def summarize(records: Iterable[Mapping[str, Any]], scores: Iterable[Mapping[str
             "security_rate": round(security / len(records), 4) if records else 0.0,
             "domain_reference_accuracy": round(sum(bool(x) and x != "UNKNOWN" for x in concepts) / len(concepts), 4) if concepts else 0.0,
             "reference_case_count": len(refs),
-            "reference_resolution_accuracy": round(sum(x == "RESOLVED" for x in refs) / len(refs), 4) if refs else 0.0,
+            "qualified_reference_case_count": len(qualified_refs),
+            "unqualified_reference_attempt_count": len(legacy_refs),
+            "reference_resolution_accuracy": round(reference_accuracy, 4),
             "duplicate_rate": round(sum(r["trajectory"]["duplicate_delivery"] > 0 for r in records) / len(records), 4) if records else 0.0,
             "model_calls_per_task": mean("model_calls"), "decision_calls_per_task": mean("decision_calls"),
             "tool_index_lookups_per_task": mean("tool_index_lookups"), "failed_actions_per_task": mean("failed_actions"),

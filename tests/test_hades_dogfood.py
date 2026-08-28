@@ -756,3 +756,27 @@ def test_reference_accuracy_excludes_turns_that_do_not_use_reference_resolution(
     )
     assert result["reference_case_count"] == 2
     assert result["reference_resolution_accuracy"] == 0.5
+
+
+def test_reference_accuracy_uses_explicit_oracle_for_fail_closed_references():
+    def record(status, expected):
+        return {
+            "metrics": {"latency_seconds": 1, "model_calls": 0, "decision_calls": 0,
+                        "tool_index_lookups": 0, "prompt_tokens": 0,
+                        "completion_tokens": 0, "context_hydrations": 0,
+                        "continuation_rounds": 0},
+            "trajectory": {
+                "intent": {"domain_concept": "TECHNICAL_ASSET"},
+                "reference": {"status": status, "expected_status": expected},
+                "failed_actions": 0, "duplicate_delivery": 0,
+            },
+            "assistant_answer": {"secret_seen": False, "internal_leak": False},
+        }
+
+    result = summarize(
+        [record("UNRESOLVED", "UNRESOLVED"), record("RESOLVED", "RESOLVED")],
+        [{"functional_pass": True, "architectural_pass": True}] * 2,
+    )
+    assert result["qualified_reference_case_count"] == 2
+    assert result["unqualified_reference_attempt_count"] == 0
+    assert result["reference_resolution_accuracy"] == 1.0
