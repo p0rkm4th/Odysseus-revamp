@@ -2033,3 +2033,14 @@ Exact-image Qwen3:8B frozen quick evidence: `62/62` functional,
 `62/62` architectural, `62/62` security, duplicate delivery `0`, reference
 resolution `1.0`, failed Actions/task `0.0161`, model calls/task `0.2581`,
 median `0.0174s`, P95 `2.4932s`.
+
+## Evaluator fixture-world correction (`8d432c51`, 2026-08-29)
+
+Generated semantic fixtures now enact their declared ScenarioFrame result state
+through explicit environment metadata. This removes unconditional synthetic
+success, preserves oracle independence, and prevents false grounding and
+completion failures caused by an impossible fixture world.
+
+Focused dogfood tests pass (`55`). Full local regression passes (`6812 passed,
+4 skipped, 186 warnings`). No production executable was changed or deployed;
+the running executable remains `f5c07ff3`.

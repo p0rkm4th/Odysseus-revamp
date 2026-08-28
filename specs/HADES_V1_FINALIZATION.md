@@ -766,6 +766,26 @@ failed Actions/task was `0.0161`; model calls/task `0.2581`; median latency
 `0.0200s`; P95 `2.5672s`. Embedded/running source matches the pushed SHA,
 health is healthy, and restart count is `0`.
 
+## Generated fixture outcome alignment (`8d432c51`, 2026-08-29)
+
+The hidden-holdout audit showed generated ScenarioFrames declaring varied
+execution outcomes while the synthetic fixture world returned unconditional
+success. This was an evaluator-contract defect, not a production routing
+failure. Explicit `environment.fixture_profile` now carries the ScenarioFrame
+result state; the synthetic executor enacts success, partial, and failure
+states from that environment. Expected/oracle fields remain evaluator-only,
+with regression coverage proving they do not change fixture selection.
+
+Focused dogfood tests: `55 passed`. Full local regression: `6812 passed, 4
+skipped, 186 warnings`.
+
+Pushed evaluator source: `8d432c5166c9fa6c2d8878baaac85c588002dc87`.
+Candidate `odysseus:candidate-8d432c51` was built with that revision but not
+deployed because executable product behavior is unchanged. Running product
+remains the healthy `f5c07ff3` candidate. A repeat hidden run was not valid
+Qwen evidence: Ollama was unreachable from the evaluator container, yielding
+`0` model calls and an environment-degraded `53/162` functional result.
+
 ## ACI helper-export reduction (`f5c07ff3`, 2026-08-28)
 
 Removed three unused `agent_loop.py` exports for think-block stripping,
