@@ -1641,6 +1641,9 @@ async def stream_agent_loop(*args: Any, **kwargs: Any):
         await delegated.aclose()
 
 
+stream_agent_loop._aci_compatibility_facade = True
+
+
 async def stream_aci_runtime(
     endpoint_url: str,
     model: str,
