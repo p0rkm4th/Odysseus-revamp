@@ -2227,3 +2227,35 @@ deployed explicitly. Image ID is
 OCI/source marker and running source match `a308ff06a57fe24ffb61e0cd7281ac7c96a73d55`.
 Health is healthy, restart count `0`, Qwen3:8B is reachable in-container,
 and authenticated browser acceptance passed (`7` prompts, `8` streams).
+
+## Exact deployed soak characterization (`a308ff06`, 2026-08-28)
+
+The interrupted broad semantic execution had no surviving process or partial
+report after restart. The intact bounded soak report was retained at
+`/tmp/soak-a308ff06.json` and is attributable to the exact deployed executable
+source `a308ff06a57fe24ffb61e0cd7281ac7c96a73d55` (Qwen3:8B, synthetic
+executor; not live-owner evidence).
+
+It covered `769` cases: functional `283/769` (`0.3680`), architectural
+`592/769` (`0.7698`), security `769/769`, duplicate delivery `0`, model
+calls/task `0.9077`, decision calls/task `0.3615`, failed Actions/task
+`0.1456`, median latency `1.1598s`, and P95 `4.6024s`. The dominant clusters
+were `DOMAIN_ROUTING_FAILURE` (`336`), `BURDEN_REGRESSION` (`177`), and
+`INTENT_FAILURE` (`139`).
+
+Trace inspection showed mixed generated-oracle/model-burden and synthetic
+fixture cases rather than a shared owner Network/Asset renderer failure.
+Representative blocked developer and asset actions had explicit policy/result
+state in their traces; no canonical-state security regression or
+duplicate-delivery boundary was exposed. The existing focused anti-leak
+regression continues to prove that changing `expected` metadata does not
+change generated fixture selection. This soak remains an exploratory work
+queue, not a production failure, and does not justify phrase-specific routing
+changes.
+
+At the same checkpoint, the workstation SSH agent was verified through the
+persistent `/run/user/1000/ssh-agent.socket`; GitHub authentication and
+`git ls-remote` succeeded. Branch `hades-aci-v1` is clean and local HEAD equals
+remote HEAD `06598d717bf6d5fcf2aad18be0b1052a97f9375c`. The running executable
+remains the healthy `a308ff06` candidate with restart count `0`; later branch
+commits are documentation-only.
