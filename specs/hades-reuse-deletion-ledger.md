@@ -2211,3 +2211,19 @@ OCI revision and `/app/.odysseus-source-commit` match the SHA. The candidate
 was not deployed; the known-good running source remains `f5c07ff3` with zero
 restarts. This is source/test/candidate evidence, not live evidence for the
 new executable.
+
+## Executable prompt-adapter cleanup (`a308ff06`, 2026-08-28)
+
+Removed the unreferenced `_section_text` wrapper from `src/agent_loop.py`; the
+existing ACI `effective_tool_section` formatter is now called directly with
+the same dynamic built-in overrides. This removed compatibility indirection
+without changing prompt content, capability identity, policy, or execution.
+Focused tests passed `169`; full regression passed `6819 passed, 4 skipped,
+186 warnings`.
+
+Candidate `odysseus:candidate-a308ff06` was built from the pushed SHA and
+deployed explicitly. Image ID is
+`sha256:71d3ace70a69a70e863eb9f5fb13dad8132ea5994a4a445083b6c11ea784db24`;
+OCI/source marker and running source match `a308ff06a57fe24ffb61e0cd7281ac7c96a73d55`.
+Health is healthy, restart count `0`, Qwen3:8B is reachable in-container,
+and authenticated browser acceptance passed (`7` prompts, `8` streams).
