@@ -513,12 +513,10 @@ _cached_base_prompt = None
 _cached_base_prompt_key = None
 
 # Constants — moved out of hot paths to avoid per-request/per-round allocation
-_ADMIN_SCHEMA_NAMES = frozenset([
-    "manage_session", "manage_skills", "manage_tasks",
-    "manage_endpoints", "manage_mcp", "manage_webhooks", "manage_tokens",
-    "create_session", "list_sessions", "send_to_session", "pipeline",
-    "ask_teacher", "list_models", "search_chats",
-])
+from src.legacy_domain_contract import (
+    ADMIN_SCHEMA_NAMES as _ADMIN_SCHEMA_NAMES,
+    ADMIN_TOOLS as _ADMIN_TOOLS,
+)
 _TOOL_SELECTION_TIMEOUT_SECONDS = 1.5
 
 
@@ -1108,13 +1106,6 @@ def _build_system_prompt(
     )
     return messages, mcp_schemas
 
-
-_ADMIN_TOOLS = {
-    "manage_session", "manage_skills", "manage_tasks",
-    "manage_endpoints", "manage_mcp", "manage_webhooks", "manage_tokens",
-    "manage_documents", "manage_settings", "create_session", "list_sessions",
-    "send_to_session", "pipeline", "ask_teacher", "list_models",
-}
 
 def _build_base_prompt(
     disabled_tools,
