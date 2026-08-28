@@ -786,6 +786,17 @@ remains the healthy `f5c07ff3` candidate. A repeat hidden run was not valid
 Qwen evidence: Ollama was unreachable from the evaluator container, yielding
 `0` model calls and an environment-degraded `53/162` functional result.
 
+The same seeded run was then repeated from the correct `odysseus_default`
+network, where the deployed Hades namespace can reach Ollama. Qwen3:8B was
+available with the recorded digest. The run covered `162` cases and produced
+`67/162` functional, `146/162` architectural, `162/162` security, duplicate
+delivery `0`, reference resolution `1.0`, failed Actions/task `0.2037`, model
+calls/task `0.7407`, median latency `1.6328s`, and P95 `6.0475s`. This is
+diagnostic holdout evidence, not a V1 gate: the command used the frozen
+baseline plus the 100-case holdout, and the remaining clusters are dominated
+by generated routing/action and burden cases. The result is now valid model
+evidence, unlike the prior wrong-network run.
+
 ## ACI helper-export reduction (`f5c07ff3`, 2026-08-28)
 
 Removed three unused `agent_loop.py` exports for think-block stripping,
