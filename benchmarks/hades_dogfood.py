@@ -1009,6 +1009,19 @@ def generate_hidden_holdout_cases(*, seed: int = 0, count: int = 500) -> list[di
     )
     registry_bases = candidates[:registry_count]
     semantic_bases = candidates[registry_count:]
+    # Keep the hidden product holdout capability-backed. The broader
+    # ScenarioFrame universe intentionally contains future/unsupported
+    # domains and operations; those belong in coverage-gap exploration, not a
+    # success-oriented holdout whose oracle would otherwise demand an Action
+    # Hades cannot currently own. Hand-authored families still cover the
+    # supported semantic surface and are repeated with fresh wording/state.
+    supported_bases = [
+        base for base in semantic_bases
+        if base.get("family") != "semantic_frame"
+        and (base.get("scenario") or {}).get("capability_id")
+    ]
+    if supported_bases:
+        semantic_bases = supported_bases
     bases: list[dict[str, Any]] = []
     registry_index = 0
     semantic_index = 0
