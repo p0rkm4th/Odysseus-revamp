@@ -63,6 +63,14 @@ async function openPage(viewport) {
 }
 
 const desktop = await openPage({ width: 1440, height: 900 });
+await desktop.page.locator('#tool-inventory-btn').click();
+const inventoryPane = desktop.page.locator('#inventory-pane');
+await inventoryPane.waitFor();
+if (!await inventoryPane.evaluate(node => node.classList.contains('hades-workspace-window'))) throw new Error('inventory does not use shared window shell');
+if (await inventoryPane.locator('.hades-window-titlebar').count() !== 1 || await inventoryPane.locator('.hades-module-tabs').count() !== 1) throw new Error('inventory shared chrome is incomplete');
+const inventoryBox = await inventoryPane.boundingBox();
+if (!inventoryBox || inventoryBox.left < 0 || inventoryBox.top < 0 || inventoryBox.right > 1440 || inventoryBox.bottom > 900) throw new Error('inventory window escapes viewport');
+await inventoryPane.locator('[data-close]').click();
 await desktop.page.evaluate(content => window.hadesWindowManager.openView('osint-fixture', null, 'OSINT realistic fixture', content), fixture);
 const desktopWindow = desktop.page.locator('[data-view="osint-fixture"]');
 await desktopWindow.waitFor();
