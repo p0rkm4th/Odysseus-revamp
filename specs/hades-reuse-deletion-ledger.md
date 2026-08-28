@@ -2373,3 +2373,18 @@ restarts. Qwen3:8B is reachable from the container namespace; browser
 acceptance passed (`7` prompts, `8` streams), frozen Qwen quick passed `62/62`
 functional, architectural, and security with duplicate delivery `0`, and the
 full regression passed `6820` tests with `4` skips.
+
+## Dead ACI import cleanup (`ee7eef7`, 2026-08-28)
+
+Removed four unreferenced canonical helper imports from `src/agent_loop.py`:
+`canonical_result_answer`, `skill_index_prompt`, `select_prompt_tools`, and
+`normalize_truncated_document_tool_fences`. The focused runtime/cutover suite
+passed `180` tests; the full regression passed `6820 passed, 4 skipped`.
+
+The exact candidate `odysseus:candidate-ee7eef7c` was built from
+`ee7eef7cc3163a85e3055b15ae28a36ee5dc9907`, image ID
+`sha256:8fd1ae9357a8d4cd99a52eb0158408ca2ff66d107f104e3288c6e06fdbd1dded`.
+OCI revision, source marker, and running source match; health is healthy with
+zero restarts, and Qwen3:8B is reachable from the container namespace. Browser
+acceptance passed (`7` prompts, `8` streams). This leaves provider-facing and
+explicit compatibility exports intact while removing dead loop scaffolding.
