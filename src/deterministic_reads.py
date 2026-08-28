@@ -52,6 +52,10 @@ _ASSET_SUBJECT = re.compile(
     r"motherboards?|nvme|ssds?|hard\s+drives?)\b",
     re.IGNORECASE,
 )
+_ASSET_MODEL = re.compile(
+    r"\b(?:rtx|gtx|quadro|tesla|radeon|arc)\s*\d{3,5}s?\b|\b\d{4}s?\b",
+    re.IGNORECASE,
+)
 _ASSET_OWNER = re.compile(
     r"\b(?:my|mah|mine|i\s+(?:actually\s+)?own|do\s+i(?:\s+actually)?\s+own|do\s+i\s+(?:have|got)|have\s+i|"
     r"i(?:'ve|\s+do)?\s+got|registered|recorded\s+for\s+me|known\s+to\s+me)\b",
@@ -210,7 +214,7 @@ def deterministic_read_concept(text: str) -> str | None:
         # ``how much/many ... do I have`` inventory predicate.  Preserve the
         # canonical asset owner when the object is RAM/GPU/storage/etc.; this
         # is semantic precedence, not another phrase route.
-        _ASSET_SUBJECT.search(query)
+        (_ASSET_SUBJECT.search(query) or _ASSET_MODEL.search(query))
         and _ASSET_OWNER.search(query)
         and re.search(r"\b(?:what|which|where|show|list|how\s+many|how\s+much)\b", query)
     ):
@@ -256,7 +260,7 @@ def deterministic_read_concept(text: str) -> str | None:
         (_HOUSEHOLD_SUBJECT.search(query) or _HOUSEHOLD_STATE.search(query))
         and not re.search(r"\b(?:what\s+is|what's|how\s+does|explain|define)\b.*\b(?:recipe|ingredient|food|kitchen)\b", query)
         and not (
-            _ASSET_SUBJECT.search(query)
+            (_ASSET_SUBJECT.search(query) or _ASSET_MODEL.search(query))
             and _ASSET_OWNER.search(query)
             and re.search(r"\b(?:what|which|where|show|list|how\s+many|how\s+much)\b", query)
         )
@@ -275,10 +279,10 @@ def deterministic_read_concept(text: str) -> str | None:
     # owner hardware requests such as "tell me about my hardware" therefore
     # remain asset reads, while a later host-inspection branch still handles
     # "inspect this host" and "scan the current system".
-    if _ASSET_SUBJECT.search(query) and _ASSET_OWNER.search(query):
+    if (_ASSET_SUBJECT.search(query) or _ASSET_MODEL.search(query)) and _ASSET_OWNER.search(query):
         return "TECHNICAL_ASSET"
     if (
-        _ASSET_SUBJECT.search(query)
+        (_ASSET_SUBJECT.search(query) or _ASSET_MODEL.search(query))
         and _ASSET_OWNER.search(query)
         and re.search(r"\b(?:tell\s+me|what|which|where|show|how\s+many)\b", query)
     ):
