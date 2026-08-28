@@ -1696,7 +1696,7 @@ async def stream_aci_runtime(
         temperature = _ody_qwen_temperature_cap(temperature)
     _ody_memory_identity_turn = _looks_like_memory_identity_turn(_last_user)
     _aci_answer_only = (
-        _prefetched_explicit_memory_result(messages)
+        prefetched_explicit_memory_result(messages)
         and is_explicit_memory_query(_last_user)
     )
     if _aci_answer_only:
@@ -1722,10 +1722,10 @@ async def stream_aci_runtime(
         ),
         record_framework=_record_aci_framework,
     )
-    _reference_hint = _recent_reference_resolution_hint(messages, _last_user)
+    _reference_hint = reference_resolution_hint(messages, _last_user)
     _reference_ack = None
     if _reference_hint:
-        _reference_ack = _deterministic_reference_acknowledgement(_reference_hint)
+        _reference_ack = deterministic_reference_acknowledgement(_reference_hint)
         messages = insert_before_latest_user(
             messages,
             {
@@ -5025,7 +5025,7 @@ async def stream_aci_runtime(
             ):
                 # Brief "working" indicator while the verifier runs.
                 yield f'data: {json.dumps({"type": "agent_step", "round": round_num})}\n\n'
-                _vfail = await _run_verifier_subagent(
+                _vfail = await run_legacy_completion_verifier(
                     _verifier_instruction,
                     _build_actions_snapshot(tool_events),
                     endpoint_url=endpoint_url, model=model, headers=headers,
@@ -5470,7 +5470,7 @@ async def stream_aci_runtime(
             # approval projection. The historical helper name is retained for
             # compatibility, but approval is no longer limited to the
             # privileged_action transport (network discovery is also exact).
-            if _privileged_action_requires_exact_approval(
+            if requires_exact_approval(
                 block.tool_type,
                 block.content,
             ):
@@ -5673,7 +5673,7 @@ async def stream_aci_runtime(
                 _aci_enabled
                 and _aci_mode == "aci"
                 and (
-                    _matches_resolved_canonical_read(
+                    matches_resolved_canonical_read(
                         block,
                         _intent.get("intent_frame"),
                         _intent.get("resolved_contract"),
@@ -6582,7 +6582,7 @@ async def stream_aci_runtime(
     # --- Final metrics ---
     total_duration = time.time() - total_start
     final_context_tokens = estimate_tokens(messages)
-    metrics = _compute_final_metrics(
+    metrics = compute_final_metrics(
         _last_route_request_messages, full_response, total_duration, time_to_first_token,
         _last_route_context_length, real_input_tokens, real_output_tokens,
         has_real_usage, tool_events, round_texts, model=actual_model,
