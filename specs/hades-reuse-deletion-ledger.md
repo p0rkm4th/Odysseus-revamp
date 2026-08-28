@@ -1841,3 +1841,12 @@ because the test image lacked the host runtime paths. Re-running in the
 supported project image with `/home/.docker-data`, `/home/.containerd-data`,
 and the Docker socket mounted passed all six storage tests and the full suite:
 `6806 passed, 5 skipped, 149 warnings`. No storage logic was changed.
+
+## Compatibility-authority guard (`5a204cb0`, 2026-08-28)
+
+Added a focused AST regression that rejects calls from the canonical
+`stream_aci_runtime` to retained compatibility aliases. This records the
+semantic ownership boundary without deleting compatibility exports that are
+still exercised by nested runtime paths and tests. Focused cutover/lifecycle
+coverage: `61 passed`. Test-only checkpoint; running executable remains
+`cf7cc7ba29b4e7c664f98d2204babb96a6de8d4f`.
