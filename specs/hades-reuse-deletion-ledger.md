@@ -2158,6 +2158,26 @@ Qwen endpoint `host.docker.internal:11434` from the Hades namespace.
 
 This bounded shard does not replace full regression, frozen baseline, or live
 owner acceptance gates.
+
+## Executable route-projection cleanup (`de1ceeb7`, 2026-08-28)
+
+Removed the identity-only `_filter_route_tool_schemas` wrapper from
+`src/agent_loop.py` and inlined its two call sites. This deletes accidental
+indirection without changing capability visibility, policy, Action identity,
+or execution. Focused coverage passed `437` tests; full regression passed
+`6819 passed, 4 skipped, 186 warnings`.
+
+The exact pushed executable source is
+`de1ceeb7e1ddd7391f12b9c832c7aaf89e462f31`. Candidate
+`odysseus:candidate-de1ceeb7` was built with OCI revision and source marker
+matching that SHA and deployed explicitly as the running `odysseus` image
+`sha256:53610ab02bc53be8c6951c19a278689e62651e6e3e292d725512970bf129d784`.
+The container is healthy with restart count `0`; Qwen3:8B is reachable from
+the production container namespace. Authenticated browser acceptance passed
+with `7` prompts and `8` streams.
+
+The current runtime executable matches `de1ceeb7`. Later documentation-only
+commits may advance the branch HEAD without requiring a product rebuild.
 ## Descriptive tool-registry extraction (`225195aa`, 2026-08-28)
 
 Moved the descriptive `TOOL_SECTIONS` registry (241 lines) from
