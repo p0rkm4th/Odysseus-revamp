@@ -698,3 +698,13 @@ build context. A no-source-mount `pytest -q` therefore reports no test files
 and exits with code `5`. The supported source-mounted container remains valid
 for regression execution, but this is an explicit test-packaging limitation,
 not exact-image full-regression evidence.
+
+## Current authority audit (`c610b289`, 2026-08-28)
+
+The production call graph contains no direct `stream_agent_loop` callers and
+uses the canonical `stream_aci_turn` seam. The remaining implementation named
+`stream_aci_runtime` is the executable ACI runtime; `stream_agent_loop` is a
+marked compatibility facade. Top-level loop helpers are all referenced by the
+runtime or compatibility tests. Removing additional aliases without a
+characterization slice is therefore not justified. Cutover, lifecycle,
+contract, and canonical-resource focused coverage passed `114` tests.
