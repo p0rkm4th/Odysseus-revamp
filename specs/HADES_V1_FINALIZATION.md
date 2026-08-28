@@ -524,3 +524,9 @@ closed without a tool call. Supported transports retain exact ActionSpec
 grading. Affected ACI/dogfood/lifecycle regressions passed `184 passed, 2
 warnings`. This checkpoint changes evaluator code only; the deployed product
 image was not rebuilt.
+
+The full current-head regression subsequently passed `6807 passed, 4 skipped,
+186 warnings`. Replaying the seeded semantic generator (`20260828`) produced
+`1,793` scenarios and `233` coverage metadata gaps (`33` critical, `69` high).
+The changed gap count reflects explicit unsupported-executor/capability-gap
+coverage, not a product failure rate. No executable source changed.
