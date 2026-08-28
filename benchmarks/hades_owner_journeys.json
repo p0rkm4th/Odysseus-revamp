@@ -42,7 +42,7 @@
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-recipes",
       "turns": [
-        {"prompt": "Add this recipe to my recipes: Acceptance Chicken and Rice. Ingredients: 2 chicken breasts, 1 cup rice. Instructions: Bake the chicken and cook the rice.", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add", "tool_binding": "manage_recipes", "requires_effect": true, "forbidden": ["successfully added", "saved"]}},
+        {"prompt": "Add the following to my recipes as \"Acceptance Chicken and Rice\":\n\nIngredients:\n- 2 chicken breasts\n- 1 cup rice\n- 1 tablespoon olive oil\n- 1 teaspoon salt\n\nInstructions:\n1. Season the chicken with salt.\n2. Cook the rice and chicken with olive oil until done.\n3. Serve hot.", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add", "tool_binding": "manage_recipes", "requires_effect": true, "forbidden": ["successfully added", "saved"]}},
         {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "read_recipes", "must_include_all": ["Acceptance Chicken and Rice"], "forbidden": ["no recipes", "don't have"]}},
         {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "read_recipes", "must_include_all": ["Acceptance Chicken and Rice"]}}
       ],
