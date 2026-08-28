@@ -91,6 +91,7 @@ TOOL_TAGS = {"bash", "python", "web_search", "web_fetch", "read_file", "write_fi
              "manage_endpoints", "manage_mcp", "manage_webhooks",
              "manage_tokens", "manage_documents", "manage_settings",
              "manage_notes", "manage_calendar",
+             "manage_recipes",
              "resolve_contact", "manage_contact",
              "read_communications",
              # Email tool names come from BUILTIN_EMAIL_TOOLS (unioned below)

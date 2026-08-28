@@ -311,6 +311,11 @@ _register(
     result_integrity=ResultIntegrity.SYSTEM,
 )
 _register(
+    {"manage_recipes"},
+    ToolEffect.WRITE_PRIVATE,
+    result_integrity=ResultIntegrity.SYSTEM,
+)
+_register(
     {"read_setup"},
     ToolEffect.READ_PRIVATE,
     result_integrity=ResultIntegrity.SYSTEM,
