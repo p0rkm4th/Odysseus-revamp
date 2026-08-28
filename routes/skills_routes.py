@@ -1255,7 +1255,8 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
         sessions, tasks, email, etc.) — the things it natively knows how to do.
         Surfaced so the Skills tab can show them in a separate "Built-in"
         section alongside the user's learned SKILL.md skills. Sourced from
-        agent_loop.TOOL_SECTIONS (the same descriptions the model is given)."""
+        the canonical tool-sections registry (the same descriptions the model
+        is given)."""
         import re
 
         def _clean(raw: str) -> str:
@@ -1633,7 +1634,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
 
         run = job.get("_run") or {}
         transcript = job.pop("_transcript", [])
-        # stream_agent_loop owns its per-round message list internally. Rebuild
+        # The ACI runtime owns its per-round message list internally. Rebuild
         # continuation context from the original untrusted skill plus the
         # accumulated transcript so repeated approvals do not lose earlier
         # approved results, while keeping every transcript byte tainted.
