@@ -2,6 +2,8 @@ import argparse
 import asyncio
 import json
 
+import pytest
+
 from benchmarks.hades_dogfood import (
     capture_failure_regressions,
     coverage_audit,
@@ -220,6 +222,25 @@ def test_run_cases_persists_timeout_rows_without_losing_following_cases(monkeypa
     assert [row["status"] for row in rows[1:3]] == ["timeout", "completed"]
     assert rows[-1]["completed"] == 2
     assert rows[-1]["remaining"] == 0
+
+
+def test_run_synthetic_enforces_the_per_case_deadline(monkeypatch):
+    import src.aci as aci
+    import scripts.hades_dogfood as runner
+
+    async def hanging_stream(*_args, **_kwargs):
+        await asyncio.sleep(1)
+        yield 'data: {"delta":"late"}\n\n'
+
+    monkeypatch.setattr(aci, "stream_aci_turn", hanging_stream)
+    args = argparse.Namespace(
+        endpoint="http://model.test", model="qwen3:8b", case_timeout=0.01,
+        max_tokens=128, max_rounds=1, max_tool_calls=1, context_length=2048,
+    )
+    case = {"id": "deadline", "prompt": "slow", "expected": {}}
+
+    with pytest.raises(asyncio.TimeoutError):
+        asyncio.run(runner.run_synthetic(case, args))
 
 
 def test_dogfood_uses_configured_container_model_endpoint(monkeypatch):
