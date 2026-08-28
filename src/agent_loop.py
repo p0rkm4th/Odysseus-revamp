@@ -229,9 +229,7 @@ def _suppress_automatic_skills(text: str, intent: Dict[str, object]) -> bool:
     )
 _strip_think_blocks = strip_think_blocks
 _empty_response_fallback = empty_response_fallback
-_normalize_ody_qwen_text_artifacts = normalize_ody_qwen_text_artifacts
 _is_odysseus_qwen_model = is_odysseus_qwen_model
-_ody_qwen_temperature_cap = odysseus_qwen_temperature_cap
 _compute_final_metrics = compute_final_metrics
 _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
 _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
@@ -1687,7 +1685,7 @@ async def stream_aci_runtime(
     # fallback chain inherits the other's value.
     _requested_temperature = temperature
     if _ody_qwen_finetune_model:
-        temperature = _ody_qwen_temperature_cap(temperature)
+        temperature = odysseus_qwen_temperature_cap(temperature)
     _ody_memory_identity_turn = _looks_like_memory_identity_turn(_last_user)
     _aci_answer_only = (
         prefetched_explicit_memory_result(messages)
@@ -1933,7 +1931,7 @@ async def stream_aci_runtime(
                 "messages": candidate_messages,
                 "kwargs": {
                     "temperature": (
-                        _ody_qwen_temperature_cap(_requested_temperature)
+                        odysseus_qwen_temperature_cap(_requested_temperature)
                         if candidate_is_qwen
                         else _requested_temperature
                     ),
@@ -3699,7 +3697,7 @@ async def stream_aci_runtime(
                         "max_tokens": min(max_tokens or 512, 512),
                     } if _aci_enabled and _aci_mode == "aci" and not _aci_answer_only and not _aci_model_fallback else {}),
                     "temperature": (
-                        _ody_qwen_temperature_cap(_requested_temperature)
+                        odysseus_qwen_temperature_cap(_requested_temperature)
                         if _is_odysseus_qwen_model(candidate_model)
                         else _requested_temperature
                     ),
@@ -4077,7 +4075,7 @@ async def stream_aci_runtime(
                                 else data["delta"]
                             )
                             if _ody_qwen_finetune_model:
-                                _delta_text = _normalize_ody_qwen_text_artifacts(_delta_text)
+                                _delta_text = normalize_ody_qwen_text_artifacts(_delta_text)
                             round_response += _delta_text
                             data["delta"] = _delta_text
                             _buffer_this_delta = bool(
@@ -6200,7 +6198,7 @@ async def stream_aci_runtime(
                     or "",
                 })
                 if _terminal_summary:
-                    _terminal_summary = _normalize_ody_qwen_text_artifacts(_terminal_summary).strip()
+                    _terminal_summary = normalize_ody_qwen_text_artifacts(_terminal_summary).strip()
                     _clean_current = strip_tool_blocks(full_response).strip()
                     # Replace model-written summaries for list/read tools. They
                     # are the common source of doubled text and dropped-letter
@@ -6503,7 +6501,7 @@ async def stream_aci_runtime(
             },
         }) + "\n\n"
     if _ody_qwen_finetune_model:
-        full_response = _normalize_ody_qwen_text_artifacts(full_response)
+        full_response = normalize_ody_qwen_text_artifacts(full_response)
         if (
             not tool_events
             and looks_like_destructive_request(_last_user)
