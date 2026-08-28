@@ -156,6 +156,28 @@ def test_asset_collection_view_nouns_are_not_misread_as_asset_targets(query):
 
 
 @pytest.mark.parametrize("query", [
+    "which machines have GPUs",
+    "search my assets for GPU",
+    "how much RAM do my AI nodes have",
+    "how many 2080s do I have",
+])
+def test_owner_asset_property_queries_use_collection_read_contract(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.entity_reference is None
+    assert frame.filters.get("asset_property") in {"gpu", "ram", None}
+    assert resolved.action_id == "list"
+
+
+def test_conceptual_component_question_does_not_become_asset_read():
+    frame = compile_intent("What is a GPU?")
+    assert frame.domain_concept == "UNKNOWN"
+    assert frame.operation_class == "ANSWER"
+    assert resolve_intent(frame).available is False
+
+
+@pytest.mark.parametrize("query", [
     "Show me what's in the kitchen.",
     "Add angel hair pasta to my kitchen inventory.",
 ])
