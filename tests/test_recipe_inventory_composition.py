@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 import json
+import pytest
 from decimal import Decimal
 
 from core import database as cdb
@@ -210,6 +211,22 @@ def test_recipe_import_prepare_renderer_never_claims_persistence():
     answer = canonical_recipe_read_answer([event])
     assert answer == "Prepared 'Review Dinner' as an unpersisted draft with 1 ingredient(s). Review it before committing."
     assert "saved" not in answer.lower()
+
+
+@pytest.mark.asyncio
+async def test_youtube_recipe_source_uses_existing_transcript_owner(monkeypatch):
+    import src.recipe_import_sources as sources
+
+    async def transcript(url, video_id):
+        assert video_id == "abc123"
+        return {"success": True, "transcript": "Ingredients: 2 cups rice\nInstructions: Cook the rice."}
+
+    monkeypatch.setattr("src.youtube_handler.extract_youtube_id", lambda url: "abc123")
+    monkeypatch.setattr("src.youtube_handler.is_youtube_url", lambda url: True)
+    monkeypatch.setattr("src.youtube_handler.extract_transcript_async", transcript)
+    text, error = await sources.fetch_recipe_source("https://youtu.be/abc123", owner="alice")
+    assert error is None
+    assert "Cook the rice" in text
 
 
 def test_household_add_item_can_atomically_seed_requested_initial_stock():
