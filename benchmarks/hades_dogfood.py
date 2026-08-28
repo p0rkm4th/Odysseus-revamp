@@ -256,7 +256,12 @@ def _generated_fixture_environment(scenario: Mapping[str, Any]) -> dict[str, Any
     tool = _SYNTHETIC_TOOL_FOR_CAPABILITY.get(capability)
     if not tool:
         tool = _SYNTHETIC_TOOL_FOR_EXECUTOR.get(str(scenario.get("executor") or "").strip())
-    return {"fixture_profile": {"tools": [tool]}} if tool else {}
+    if not tool:
+        return {}
+    # Result state is part of the simulated external world, not the answer
+    # key.  The synthetic executor uses it to enact failures/partial results
+    # declared by the ScenarioFrame instead of returning unconditional success.
+    return {"fixture_profile": {"tools": [tool], "result_state": str(scenario.get("execution_result") or "SUCCESS")}}
 
 _CAPABILITY_DOMAIN_HINTS = {
     "developer.workspace_shell": "DEVELOPER", "developer.read": "DEVELOPER",
