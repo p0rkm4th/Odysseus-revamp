@@ -3,7 +3,7 @@
 # This file does not alter the normal product Compose deployment.
 services:
   odysseus:
-    image: odysseus-odysseus
+    image: ${HADES_ACCEPTANCE_IMAGE:-odysseus-odysseus}
     ports: !override
       - "127.0.0.1:7002:7000"
   chromadb:
