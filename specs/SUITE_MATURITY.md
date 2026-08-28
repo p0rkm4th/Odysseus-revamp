@@ -85,6 +85,13 @@ the complete journey works.
   `MODEL_ENDPOINT_UNAVAILABLE` evidence, not as Recipe product evidence; the
   disposable container and credentials were removed. The owner runtime was not
   used for synthetic Recipe seeding.
+- A subsequent isolated candidate replay used a disposable Compose-network
+  container after confirming the endpoint was reachable. Normal authenticated
+  HTTP/SSE `expiring_candidates` returned a human-readable Chicken/Rice
+  coverage answer with one `DETERMINISTIC_RESULT`, one `[DONE]`, zero model
+  calls, and no abrupt EOF. The existing Playwright Recipe lane also passed
+  four Recipe turns plus reload continuation (`streams: 5`). Disposable state
+  and credentials were removed; this does not claim owner-data evidence.
 - The full-regression process was attempted against `b8b24f82` but was
   externally terminated around 2% before pytest emitted a summary; this is
   recorded as unresolved environment/process evidence, not as a pass.
