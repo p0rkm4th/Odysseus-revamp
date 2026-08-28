@@ -1579,7 +1579,7 @@ class TaskScheduler:
         # Provide current date/time as a user-role message so the system prompt
         # stays byte-identical across runs and doesn't bust the Anthropic prompt
         # cache on every scheduled tick (see issue #2927 and the identical fix on
-        # the interactive-chat path in src/agent_loop.py).  The message is built
+        # the interactive-chat path in the ACI runtime). The message is built
         # once here and shared by both execution paths below (agent loop and the
         # direct fallback) so time grounding is never lost on either path.
         tz_name = _resolve_task_timezone(db, task)
