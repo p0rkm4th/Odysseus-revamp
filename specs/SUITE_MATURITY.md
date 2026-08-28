@@ -8,7 +8,7 @@ the complete journey works.
 |---|---|---|---|---|---|
 | Homelab / Network / Infrastructure | `AssetInventory`, `HomelabOperations`, `NetworkState`, ACI contracts | IMPLEMENTED / PARTIAL | asset list/detail, network context/observations, host inspection, service status contract | service target/detail rendering and readback coverage need a focused product slice | Tier 1 active |
 | Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / PARTIAL | overview, item/list/search/get contracts, mutation/readback suites | natural stock/expiry/location projections and browser journeys need expansion | Tier 1 active |
-| Recipes / Meal Planning | existing `InventoryRecipe`, `RecipeService`, stock planner, and Cookbook code | IMPLEMENTED / PARTIAL | canonical recipe list/search/get and pantry-coverage binding plus inventory recipe tests | add seeded end-to-end recipe journeys and meal-plan/shopping projections | Tier 1 active |
+| Recipes / Meal Planning | existing `InventoryRecipe`, `RecipeService`, stock planner, and Cookbook code | IMPLEMENTED / PARTIAL | canonical list/search/get, pantry coverage, serving scale, expiring-inventory candidates, isolated Qwen/browser trajectory | meal-plan/shopping projections and broader fresh-install journeys | Tier 1 active |
 | Memory / Personal Knowledge | Memory store, grounding, `read_memory` | IMPLEMENTED | deterministic owner reads, stale/current precedence, browser acceptance | broaden everyday recall/correction journeys | Tier 1 next |
 | Work / Projects / Tasks | Work Engine, Runs, Actions, `read_work` | IMPLEMENTED | overview, attention, continuation and persistence tests | add cross-suite remediation/task journeys | Tier 1 next |
 | OSINT / Public Research | public web evidence and OSINT contracts | PARTIAL | contract/security characterization | end-to-end case/evidence/report journey | Tier 2 |
@@ -56,6 +56,20 @@ the complete journey works.
   public API has no recipe-delete operation. Do not seed Recipe rows into the
   owner's database; run those journeys only against an isolated acceptance
   deployment.
+- Recipe delivery checkpoint `71611f15a382602dcfc6c7755f4c58a46e0ccf3c` is
+  deployed exactly as candidate image `sha256:d72e277685dd6cabe02e7c9c4ccc81f872a484757fa16873722ea6a389a75d24`; isolated
+  authenticated Qwen3:8B HTTP/SSE list, detail/reference, scale, and pantry
+  coverage all returned one `DETERMINISTIC_RESULT`, one `[DONE]`, and zero
+  model calls. The isolated Playwright lane passed the same four Recipe turns
+  through normal login, session UI, reload persistence, and cleanup.
+- Recipe composition checkpoint `5f05f1fad8476c70b868cce19873406432781add`
+  adds the read-only `expiring_candidates` contract. It composes expiring
+  canonical Inventory lots with deterministic per-recipe pantry coverage and
+  explicit shortages through the existing `InventoryService`; focused coverage
+  is `247 passed, 1 warning`. It has been built as candidate image
+  `sha256:79304d95ed2f5831b005ef608c5ff8905cac8b10b5d42350b5966d8565cbc9f9`
+  and deployed with marker/source `5f05f1fad8476c70b868cce19873406432781add`,
+  healthy and at zero restarts. Meal-plan mutation remains deferred.
 - The full-regression process was attempted against `b8b24f82` but was
   externally terminated around 2% before pytest emitted a summary; this is
   recorded as unresolved environment/process evidence, not as a pass.
