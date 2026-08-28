@@ -30,9 +30,13 @@ remain deferred until an existing safe evidence source is connected; no
 recipe is persisted from a URL or media reference without a validated draft.
 
 Focused recipe/ACI coverage at this checkpoint: 300 passed. Full supported
-regression: 6907 passed, 5 skipped. The exact candidate image was built from
-`f29eaff1ac6d8ba9201b6d7a142376d81262fb56`; it has not replaced the owner's
-running container.
+regression: 6907 passed, 5 skipped. The follow-up URL-preparation checkpoint
+`82cb7ba6809d3f7cc06c1202cce3c46c61fb0cd3` added URL evidence acquisition
+through the existing bounded `web_fetch` binding and preserves fail-closed
+NEEDS_REVIEW behavior when a page lacks sufficient recipe structure. Its full
+regression is `6908 passed, 5 skipped`; the exact candidate image is
+`sha256:469f6d2cb017a142373b70b9dc1319016cd44a94cd6837a5ede34d07d6b8f770`.
+Neither candidate replaced the owner's running container.
 
 ## Baseline evidence
 
