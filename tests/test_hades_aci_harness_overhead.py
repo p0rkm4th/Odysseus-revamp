@@ -47,3 +47,16 @@ def test_output_accounting_separates_framework_fallback_text():
         {"output_tokens": 3, "output_chars": 99, "aci_empty_answer_fallback": True},
     )
     assert result == {"consistent": False, "reason": "hades_framework_generated_fallback"}
+
+
+def test_jarvis_benchmark_defaults_to_canonical_aci():
+    from benchmarks.jarvis.execute import build_parser
+
+    args = build_parser().parse_args([
+        "--endpoint", "http://127.0.0.1:11434",
+        "--model", "qwen3:8b",
+        "--model-metadata", "model.json",
+        "--hardware", "hardware.json",
+        "--output", "run.jsonl",
+    ])
+    assert args.aci_mode == "aci"

@@ -27,7 +27,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from src.agent_loop import stream_agent_loop
+from src.aci import stream_aci_turn
 from src.model_context import estimate_tokens
 
 
@@ -96,7 +96,7 @@ async def hades_chat(
     output_chars = 0
     metrics: dict[str, Any] = {}
     async with asyncio.timeout(timeout):
-        async for chunk in stream_agent_loop(
+        async for chunk in stream_aci_turn(
             endpoint_url=endpoint,
             model=model,
             messages=[{"role": "user", "content": prompt}],
