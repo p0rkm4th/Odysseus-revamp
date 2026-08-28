@@ -1736,3 +1736,27 @@ legacy-named entry from the production ACI path without creating a second
 runtime or authority. Characterization coverage passed 79 focused tests; the
 full current-head regression and exact-SHA candidate deployment remain
 required before this executable slice is considered released.
+
+## ACI runtime seam checkpoint (`c42a8e23`, 2026-08-28)
+
+The production `aci.stream_aci_turn` entrypoint now selects
+`agent_loop.stream_aci_runtime` directly. `stream_agent_loop` is retained as
+a compatibility async-generator facade; it forwards generator closure so
+in-flight tool cancellation remains intact. The focused characterization
+suite passed `64` tests, and the exact current-head full regression passed
+`6807 passed, 4 skipped, 186 warnings`.
+
+The exact candidate `odysseus:candidate-c42a8e2313c4` was built and deployed.
+Its image ID is
+`sha256:b2d97c4521e19fff3a987598c404288d2d3f67f298df73805f099522a7c7009b`;
+OCI label, `/app/.odysseus-source-commit`, and running source all equal
+`c42a8e2313c483bcf950d0482b79c276aba6528d`. `/api/health` is healthy and the
+container restart count is zero. Qwen3:8B is reachable from the Hades
+container namespace with digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+
+The in-container frozen quick run remained `62/62` functional,
+`62/62` architectural, `62/62` security, duplicate delivery `0`, qualified
+reference accuracy `1.0`, failed Actions/task `0.0161`, model calls/task
+`0.2581`, and P95 `2.4794s`. No authenticated acceptance-principal replay was
+performed in this checkpoint.
