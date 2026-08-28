@@ -2566,3 +2566,28 @@ unchanged executable checkpoint and passed `7` prompts over `8` streams. The
 Network trace showed one deterministic `response_replace`, one persisted
 answer, one terminal `[DONE]`, one client answer, and one collapsed raw-output
 block. No executable source changed during this evidence checkpoint.
+
+## Asset target-boundary checkpoint (`c04434b6`, 2026-08-28)
+
+Container-backed Qwen dogfood exposed a generalized intent-contract defect:
+collection-view nouns such as `state`, `list`, `summary`, and `inventory`
+were eligible for lexical extraction as if they were named asset identities.
+That could turn an owner collection read into a detail `get` lookup. The
+canonical intent contract now excludes those view nouns from target extraction;
+named assets continue to resolve to bounded detail reads. Three focused
+collection-view regressions were added and the relevant intent/dogfood suite
+passed `327` tests with `1` skip.
+
+The exact executable checkpoint `c04434b64cc900869a696f033e3a592997a0657e`
+was pushed, built as `odysseus:candidate-c04434b6`, and explicitly deployed.
+Image ID is
+`sha256:316bcf66564ca28b1ec668f4fbdd029c804233e04fe7b6883a55b7603dc43eb2`;
+OCI revision, `/app/.odysseus-source-commit`, and running source match. The
+application is healthy with zero restarts, and Qwen3:8B is reachable from the
+container namespace with the pinned digest.
+
+Authenticated browser acceptance against this exact candidate passed `7`
+prompts over `8` streams. The current-head supported full regression passed
+`6832 passed, 4 skipped, 186 warnings` in `195.56s`. No transport, security,
+or owner-answer regression was observed. The branch later received only this
+ledger entry, so no rebuild is required for the documentation descendant.
