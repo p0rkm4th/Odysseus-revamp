@@ -1667,3 +1667,27 @@ Local HEAD is `0de31e0c6bab36a82fb90ce5235bf638da884352`, remote remains
 the healthy `8e064b1d` image. Push is pending owner unlock of the existing
 encrypted SSH key; no source/runtime match is claimed for this local-only
 checkpoint.
+
+Current convergence checkpoint (`3db8632c`, 2026-08-28): the generated
+executor-fixture projection now derives synthetic tool availability from the
+explicit environment fixture profile for registry-generated cases, including
+workspace, local-intelligence, network-plan, and work executors. The evaluator
+regression proves mutating `expected`/oracle fields does not change the fixture
+set. This is evaluator-only code; no production authority, Action registry, or
+executor was added. The exact current-head repository suite passed `6786
+passed, 4 skipped, 186 warnings` in the project venv. A naive in-container
+`pytest -q` remains an invalid full-suite command because the image lacks the
+checkout's test tree and collects bundled third-party tests under `data/local`;
+the supported checkout suite was used instead. The focused ACI/cutover/
+lifecycle/dogfood suite passed `137 passed, 1 warning`.
+
+At this checkpoint local HEAD, `origin/hades-aci-v1`, and the deployed
+container source are all `3db8632cc3fd4af47da30459c96ffe94f0d0fbf1`; the
+worktree was clean, the running image was
+`sha256:6e886f92c674e3292582a194ef42ef5f193547f61f61af0261410d9e1f15b4e1`,
+restart count was zero, `/api/health` was healthy, and qwen3:8b was reachable
+from the container namespace. The remaining `agent_loop.py` implementation is
+the compatibility stream/runtime seam. A static audit found no unreferenced
+alias suitable for safe deletion; moving `TOOL_SECTIONS` would be a physical
+refactor only because the Skills UI still consumes its legacy built-in
+projection. No executable refactor was justified by current evidence.
