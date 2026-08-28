@@ -1966,3 +1966,19 @@ security cases; duplicate delivery `0`, reference resolution `1.0`, failed
 Actions/task `0.0161`, model calls/task `0.2581`, median `0.0200s`, and P95
 `2.5672s`. Embedded/running source matches the pushed SHA and the runtime is
 healthy with zero restarts.
+
+## Executable alias-reduction checkpoint (`dfa5a2a1`, 2026-08-28)
+
+Removed two internal-only aliases for notes-message construction and document
+artifact stripping; runtime call sites now use canonical imports directly.
+Focused coverage passed `305` tests and the supported source-mounted full
+regression passed `6809` tests with `5` skips and `149` warnings. The pushed
+SHA, OCI revision, source marker, and running source are
+`dfa5a2a13822fb33a7edf774a78916f2eab6aa64`. Candidate image ID is
+`sha256:62987b38363f8c7adf27d348e0c20a169ea3b4cc191403408278c1d8eeedf56d`;
+health is healthy and restart count is zero.
+
+Exact-image Qwen3:8B frozen quick evidence: `62/62` functional,
+`62/62` architectural, `62/62` security, duplicate delivery `0`, reference
+resolution `1.0`, failed Actions/task `0.0161`, model calls/task `0.2581`,
+median `0.0174s`, P95 `2.4932s`.

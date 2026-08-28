@@ -766,6 +766,26 @@ failed Actions/task was `0.0161`; model calls/task `0.2581`; median latency
 `0.0200s`; P95 `2.5672s`. Embedded/running source matches the pushed SHA,
 health is healthy, and restart count is `0`.
 
+## Executable alias-reduction checkpoint (`dfa5a2a1`, 2026-08-28)
+
+Removed two internal-only aliases (`_minimal_odysseus_notes_messages` and
+`_strip_doc_model_artifacts`) and switched their runtime call sites to the
+canonical imports. Focused coverage passed `305` tests; supported
+source-mounted full regression passed `6809` tests with `5` skips and `149`
+warnings. The pushed source, OCI revision, source marker, and running source
+are `dfa5a2a13822fb33a7edf774a78916f2eab6aa64`.
+
+Candidate `odysseus:candidate-dfa5a2a1` is deployed with image ID
+`sha256:62987b38363f8c7adf27d348e0c20a169ea3b4cc191403408278c1d8eeedf56d`;
+health is healthy and restart count is zero. Qwen3:8B is reachable from the
+Hades container namespace with digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+
+Exact-image frozen Qwen3:8B evidence: `62/62` functional, architectural, and
+security; duplicate delivery `0`; reference resolution `1.0`; failed
+Actions/task `0.0161`; model calls/task `0.2581`; median `0.0174s`; P95
+`2.4932s`.
+
 ## Qwen revalidation after memory/notes alias reduction (`2cf8a5fb`, 2026-08-28)
 
 The exact candidate `odysseus:candidate-2cf8a5fb` passed the supported full
