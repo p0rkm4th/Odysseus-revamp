@@ -1,7 +1,10 @@
+import pytest
+
 from src.aci import (
     ACIProfile, AgentTaskPacket, ActionCard, CompletionContract,
     ContextEnvelope, DecisionMode, ObjectiveSpec, TurnDisposition, WorkingSet,
-    PostResultState, classify_post_result, resolve_turn_disposition,
+    PostResultState, classify_post_result, project_post_result_transition,
+    resolve_turn_disposition,
     adaptive_shortlist, hard_filter_actions, model_burden,
     parse_decision_json, state_fingerprint,
     build_base_prompt,
@@ -127,6 +130,34 @@ def test_post_result_state_does_not_reenter_decision_for_sufficient_canonical_re
     assert classify_post_result(
         {"approval_required": True}, canonical_read=True,
     ) is PostResultState.NEEDS_APPROVAL
+
+
+@pytest.mark.parametrize(
+    ("result", "kwargs", "expected"),
+    [
+        ({"exit_code": 0}, {"deterministic_next_step": True}, PostResultState.CONTINUE_DETERMINISTICALLY),
+        ({"exit_code": 0}, {"unresolved_required_information": True}, PostResultState.NEEDS_CONTEXT),
+        ({"exit_code": 0}, {}, PostResultState.NEEDS_BOUNDED_REASONING),
+        ({"approval_required": True}, {}, PostResultState.NEEDS_APPROVAL),
+        ({"error": "denied"}, {}, PostResultState.BLOCKED),
+        ({"exit_code": 1}, {}, PostResultState.BLOCKED),
+        (None, {}, PostResultState.BLOCKED),
+    ],
+)
+def test_post_result_classifier_covers_canonical_lifecycle_states(result, kwargs, expected):
+    assert classify_post_result(result, **kwargs) is expected
+
+
+def test_post_result_transition_does_not_claim_completion_for_approval_or_reasoning():
+    approval = project_post_result_transition({"approval_required": True})
+    assert approval.state is PostResultState.NEEDS_APPROVAL
+    assert approval.answer_only is False
+    assert approval.completion_satisfied is False
+
+    reasoning = project_post_result_transition({"exit_code": 0})
+    assert reasoning.state is PostResultState.NEEDS_BOUNDED_REASONING
+    assert reasoning.answer_only is False
+    assert reasoning.completion_satisfied is False
 
 
 def test_model_fallback_is_a_non_authoritative_turn_disposition():
