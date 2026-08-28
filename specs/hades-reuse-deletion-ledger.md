@@ -2401,3 +2401,22 @@ This is test-only and does not change the deployed executable. The running
 production candidate remains `odysseus:candidate-ee7eef7c`, sourced from
 `ee7eef7cc3163a85e3055b15ae28a36ee5dc9907`; the branch/test source is
 `de9d4560586c058ac2b6b024d670d09ca763108d`.
+
+## Seeded Qwen soak checkpoint (`c930180f`, 2026-08-28)
+
+The deployed executable candidate was exercised in its actual container
+namespace with `qwen3:8b` using seed `20260828`: `769` cases across the frozen,
+generated, metamorphic, near-miss, stateful-chaos, and minimal-pair families.
+The run recorded `1.0` security, `0.7789` architectural, `0.3680` functional,
+`0.0` duplicate delivery, `0.1456` failed Actions/task, `0.9064` model calls/task,
+and `4.6313s` P95 latency. The low aggregate functional score is dominated by
+generated continuation/domain/intent expectations, not the previously fixed
+canonical owner-read regressions; those canonical network/asset/memory/work
+cases completed successfully. The report is retained at
+`/tmp/hades-soak-c930.json` for local diagnosis and is not source-controlled.
+
+This is evidence against executable source
+`ee7eef7cc3163a85e3055b15ae28a36ee5dc9907` (the branch descendant is
+test/docs-only `c930180f`). Runtime image ID remains
+`sha256:8fd1ae9357a8d4cd99a52eb0158408ca2ff66d107f104e3288c6e06fdbd1dded`,
+embedded source matches `ee7eef7`, health is healthy, and restart count is zero.
