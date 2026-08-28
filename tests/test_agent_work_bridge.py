@@ -66,6 +66,28 @@ def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch)
         engine.dispose()
 
 
+def test_completed_recipe_result_projects_ordered_refs_for_next_turn(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-recipes", "What recipes do I have?",
+            intent={"domains": ["recipes"], "domain_concept": "RECIPE", "operation_class": "READ"},
+            completion_criteria={"completion_mode": "single_verified_read", "objective": "recipe read"},
+        )
+        action_id = bridge.prepare_action("alice", run_id, "read_recipes", {"action": "list"})
+        bridge.record_result("alice", action_id, {"data": {"status": "SUCCESS", "recipes": [
+            {"id": "recipe:first"}, {"id": "recipe:second"},
+        ]}})
+        context = bridge.recent_session_reference_context("alice", "chat-recipes")
+        assert [item["ref"] for item in context["ordered_entities"]] == [
+            "recipe:first", "recipe:second",
+        ]
+        assert all(item["concept"] == "RECIPE" for item in context["ordered_entities"])
+    finally:
+        engine.dispose()
+
+
 def test_new_referenced_objective_does_not_reuse_terminal_run(monkeypatch):
     """A completed read's references survive, but its Run is not appendable."""
     engine, session_factory = _session_factory()

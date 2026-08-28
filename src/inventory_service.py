@@ -982,7 +982,9 @@ class RecipeService(InventoryService):
                 owner, _required_text(args.get("recipe_id"), "recipe_id"),
                 servings=args.get("servings"),
             )
+            recipe = self.get_recipe(owner, _required_text(args.get("recipe_id"), "recipe_id"))
             return {
+                "recipe_id": recipe["id"], "recipe_name": recipe["name"],
                 "can_make": plan.can_make,
                 "deductions": [{
                     "lot_id": row.lot_id, "item_id": row.item_id,

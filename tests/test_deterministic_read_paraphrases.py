@@ -10,6 +10,7 @@ from src.agent_loop import _classify_agent_request
 from src.aci import (
     canonical_asset_read_payload,
     canonical_read_fast_path_payload,
+    compile_turn_contract,
     minimal_aci_answer_messages,
     matches_resolved_canonical_read,
     prefetched_explicit_memory_result,
@@ -178,6 +179,31 @@ def test_recipe_scale_followup_preserves_recipe_reference_and_serving_target():
     assert frame.entity_reference == "recipe-1"
     assert frame.filters == {"recipe_scale": True, "servings": "6"}
     assert resolved.action_id == "scale"
+
+
+def test_recipe_detail_followup_uses_session_reference_context_and_get_action():
+    context = {
+        "ordered_entities": [{"ref": "recipe-1", "concept": "RECIPE"}],
+        "last": {"ref": "recipe-1", "concept": "RECIPE"},
+    }
+    frame = compile_intent("tell me about the first one", reference_context=context)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.entity_reference == "recipe-1"
+    assert resolved.action_id == "get"
+    assert resolved.binding_name == "read_recipes"
+
+
+def test_turn_contract_accepts_recent_session_reference_context():
+    context = {
+        "ordered_entities": [{"ref": "recipe-1", "concept": "RECIPE"}],
+        "last": {"ref": "recipe-1", "concept": "RECIPE"},
+    }
+    frame, resolved, _continuation, _domains = compile_turn_contract(
+        {}, "tell me about the first one", reference_context=context,
+    )
+    assert frame.entity_reference == "recipe-1"
+    assert resolved.action_id == "get"
 
 
 def test_recipe_conceptual_question_stays_on_general_answer_floor():
