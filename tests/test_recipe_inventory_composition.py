@@ -190,6 +190,19 @@ def test_recipe_url_import_prepare_is_a_read_proposal_not_a_write():
     assert resolved.binding_name == "read_recipes"
 
 
+def test_recipe_import_prepare_renderer_never_claims_persistence():
+    event = {
+        "tool": "read_recipes", "exit_code": 0,
+        "command": json.dumps({"action": "prepare_import"}),
+        "output": json.dumps({"status": "READY_FOR_REVIEW", "draft": {
+            "name": "Review Dinner", "ingredients": [{"name": "rice"}],
+        }}),
+    }
+    answer = canonical_recipe_read_answer([event])
+    assert answer == "Prepared 'Review Dinner' as an unpersisted draft with 1 ingredient(s). Review it before committing."
+    assert "saved" not in answer.lower()
+
+
 def test_household_add_item_can_atomically_seed_requested_initial_stock():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
