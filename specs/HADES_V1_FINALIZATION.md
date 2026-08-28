@@ -1137,3 +1137,25 @@ OCI revision, source marker, and running source match `f12ebb9e`; health is
 healthy with zero restarts and Qwen3:8B is reachable from the container
 namespace. The prior executable `afaf3e25` is retained as
 `odysseus:rollback-before-f12ebb9e`.
+
+## ACI route-schema projection checkpoint (`1d9a92d0`, 2026-08-28)
+
+The route tool-schema projection moved from the nested `stream_aci_runtime`
+body into `src.aci.project_route_tool_schemas`. Policy-filtered tool universe,
+disabled-tool, administrator, and route-local inputs remain explicit; no
+registry, planner, policy, execution, or persistence authority moved. The loop
+retains only a small turn-local binding adapter, and legacy provider-mode
+behavior remains compatibility-only.
+
+Focused ACI/lifecycle/routing coverage passed `174` tests; full regression
+passed `6844` tests with `4` skips. Candidate
+`odysseus:candidate-1d9a92d0` and the running container use source `1d9a92d0`,
+image ID
+`sha256:a9f6dbcf514dd5132384c47651d8585b91fa6eda5adaa0a5e1aaba791964b3b6`;
+health is healthy with zero restarts and Qwen3:8B is reachable from the Hades
+container namespace.
+
+The exact deployed 62-case Qwen3:8B quick corpus passed `62/62` functional,
+architectural, and security, with duplicate delivery `0`, reference
+resolution `1.0`, model calls/task `0.2581`, failed Actions/task `0.0161`, and
+P95 latency `1.8635s`.
