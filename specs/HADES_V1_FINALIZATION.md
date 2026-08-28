@@ -797,6 +797,19 @@ baseline plus the 100-case holdout, and the remaining clusters are dominated
 by generated routing/action and burden cases. The result is now valid model
 evidence, unlike the prior wrong-network run.
 
+The frozen 62-case Qwen3:8B quick corpus was separately rerun from the same
+evaluator candidate on the correct network: `62/62` functional, `62/62`
+architectural, `62/62` security, duplicate delivery `0`, reference
+resolution `1.0`, failed Actions/task `0.0161`, model calls/task `0.2581`,
+median latency `0.0296s`, and P95 `2.933s`. This preserves the frozen baseline;
+it is evaluator-candidate evidence, not a deployment change.
+
+Trace-level classification found 56 broad `semantic_frame` failures because
+generated entity/intent combinations are not yet represented by the current
+capability surface, plus expected unsupported long-tail registry probes. They
+remain coverage/eligibility gaps, not grounds for phrase-specific production
+routing.
+
 ## ACI helper-export reduction (`f5c07ff3`, 2026-08-28)
 
 Removed three unused `agent_loop.py` exports for think-block stripping,
