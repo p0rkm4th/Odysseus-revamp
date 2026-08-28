@@ -853,7 +853,7 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
     return classify_compatibility_request(
         messages,
         last_user,
-        recent_context_for_retrieval=_recent_context_for_retrieval,
+        recent_context_for_retrieval=recent_context_for_retrieval,
         explicit_memory_query=is_explicit_memory_query,
         contextual_retry_continuation=is_contextual_retry_continuation,
         contextual_reference_followup=is_contextual_reference_followup,
@@ -2983,7 +2983,7 @@ async def stream_aci_runtime(
             and "chatgpt.com/backend-api/codex" in (candidate_url or "").lower()
         )
         route_messages, route_mcp_schemas = _build_system_prompt(
-            _strip_agent_injected_messages(compacted_source),
+            strip_agent_injected_messages(compacted_source),
             candidate_model,
             _prompt_active_document,
             mcp_mgr,
@@ -3000,11 +3000,11 @@ async def stream_aci_runtime(
             intent_domains=_intent_domains,
         )
         if _aci_answer_only:
-            route_messages = _minimal_aci_answer_messages(route_messages)
+            route_messages = minimal_aci_answer_messages(route_messages)
             route_mcp_schemas = []
             route_tools = set()
         elif _aci_model_fallback:
-            route_messages = _minimal_aci_model_fallback_messages(
+            route_messages = minimal_aci_model_fallback_messages(
                 route_messages,
                 runtime_self_state=build_runtime_self_state(candidate_model, candidate_url),
             )
@@ -4207,7 +4207,7 @@ async def stream_aci_runtime(
                     _aci_repair_count,
                 )
                 yield f'data: {json.dumps({"type": "aci_fallback", "data": {"mode": "MODEL_FALLBACK", "reason": _aci_model_fallback_reason, "authority": "none"}})}\n\n'
-                messages = _minimal_aci_model_fallback_messages(
+                messages = minimal_aci_model_fallback_messages(
                     messages,
                     runtime_self_state=build_runtime_self_state(model, endpoint_url),
                 )
@@ -4620,7 +4620,7 @@ async def stream_aci_runtime(
             if tool_blocks:
                 logger.info(f"[agent] force-answer round {round_num}: discarding {len(tool_blocks)} ignored tool call(s)")
             tool_blocks = []
-            _force_answer_text = _strip_think_blocks(strip_tool_blocks(round_response)).strip()
+            _force_answer_text = strip_think_blocks(strip_tool_blocks(round_response)).strip()
             if _force_answer_text:
                 # ACI buffers answer deltas while it is deciding whether they
                 # are machine output. Once the turn is explicitly answer-only,
@@ -4652,7 +4652,7 @@ async def stream_aci_runtime(
                         headers=headers, temperature=0.3, max_tokens=max_tokens, timeout=60,
                     )
                     _raw_text = _raw or ""
-                    _synth = _strip_think_blocks(strip_tool_blocks(_raw_text)).strip()
+                    _synth = strip_think_blocks(strip_tool_blocks(_raw_text)).strip()
                     usage_buckets.append(_usage_bucket(
                         round_num=round_num,
                         model=model,
@@ -4817,7 +4817,7 @@ async def stream_aci_runtime(
                 round_num,
                 sorted(set(_intent_domains or set())),
                 sorted(_ody_v38_selected_first_class),
-                _strip_think_blocks(round_response).strip()[:160],
+                strip_think_blocks(round_response).strip()[:160],
             )
             if round_response and full_response.endswith(round_response):
                 full_response = full_response[:-len(round_response)]
@@ -4906,7 +4906,7 @@ async def stream_aci_runtime(
                 "[agent] hard action no-action repair on round %s domains=%s: %r",
                 round_num,
                 sorted(set(_intent_domains or set()) & _HARD_TOOL_DOMAINS),
-                _strip_think_blocks(round_response).strip()[:160],
+                strip_think_blocks(round_response).strip()[:160],
             )
             if round_response and full_response.endswith(round_response):
                 full_response = full_response[:-len(round_response)]
@@ -5006,7 +5006,7 @@ async def stream_aci_runtime(
             # the model fix them (capped, and it must do new effectful work
             # to re-trigger). Skipped on force-answer rounds (no tools to
             # fix with), pure Q&A, and when the toggle is off.
-            _claimed_done = bool(_strip_think_blocks(cleaned_round).strip())
+            _claimed_done = bool(strip_think_blocks(cleaned_round).strip())
             if legacy_completion_verifier_allowed(
                     aci_mode=_aci_mode,
                     effectful_used=_effectful_used,
@@ -5055,7 +5055,7 @@ async def stream_aci_runtime(
             # actual tool now") and loop again. Capped at
             # _MAX_INTENT_NUDGES so a model that genuinely cannot use the
             # tool doesn't pin us in a forever loop.
-            _intent_text = _strip_think_blocks(cleaned_round).strip()
+            _intent_text = strip_think_blocks(cleaned_round).strip()
             _intent_match = _INTENT_RE.search(_intent_text) if _intent_text else None
             # Only nudge when the round REALLY looks like an unfinished
             # promise: short response (<400 chars), no fenced code/answer,
@@ -5145,7 +5145,7 @@ async def stream_aci_runtime(
         # "Real" answer text = round text minus <think> blocks. Empty-think
         # rounds (just "<think>\n\n</think>" + a tool call) must not read as
         # progress, so strip think before checking.
-        _real_text = _strip_think_blocks(cleaned_round).strip()
+        _real_text = strip_think_blocks(cleaned_round).strip()
         # Circling = repeating a recent call with nothing written. Any
         # progress (a NEW distinct call, or actual answer text) resets it.
         if _is_repeat and not _real_text:
@@ -6405,7 +6405,7 @@ async def stream_aci_runtime(
         # continuity for explicit references while preventing an unrelated old
         # Work/Memory turn from steering answer synthesis.
         if _aci_answer_only:
-            messages = _minimal_aci_answer_messages(messages)
+            messages = minimal_aci_answer_messages(messages)
 
         # Emit agent_step event
         yield (
@@ -6431,7 +6431,7 @@ async def stream_aci_runtime(
 
     # If the response is completely empty and no tools were executed,
     # yield a fallback message so the user is not left hanging.
-    full_response, _fallback_chunk = _empty_response_fallback(
+    full_response, _fallback_chunk = empty_response_fallback(
         full_response, round_reasoning, tool_events
     )
     if _fallback_chunk:
