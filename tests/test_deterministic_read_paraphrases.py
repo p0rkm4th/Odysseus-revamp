@@ -225,6 +225,24 @@ def test_contextual_followup_cue_does_not_demote_substantive_recipe_read():
     assert resolve_intent(frame).action_id == "scale"
 
 
+def test_contextual_cue_does_not_demote_substantive_recipe_create():
+    messages = [
+        {"role": "user", "content": "what recipes do i have"},
+        {"role": "assistant", "content": "No recipes are recorded for this owner. The canonical Result is empty."},
+        {"role": "user", "content": "add this recipe to my recipes: Acceptance Chicken and Rice"},
+    ]
+    projection, owned = provisional_intent_projection(
+        messages, messages[-1]["content"],
+    )
+    assert owned is True
+    assert projection["continuation"] is False
+    assert projection["retrieval_query"] == messages[-1]["content"]
+    frame = compile_intent(projection["retrieval_query"], continuation=False)
+    assert frame.operation_class == "CREATE"
+    assert frame.domain_concept == "RECIPE"
+    assert resolve_intent(frame).action_id == "add"
+
+
 def test_recipe_detail_followup_uses_session_reference_context_and_get_action():
     context = {
         "ordered_entities": [{"ref": "recipe-1", "concept": "RECIPE"}],

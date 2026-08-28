@@ -1,0 +1,21 @@
+# Disposable local browser-acceptance overlay.
+# Use only with a separate COMPOSE_PROJECT_NAME, APP_DATA_DIR, and ports.
+# This file does not alter the normal product Compose deployment.
+services:
+  odysseus:
+    image: odysseus-odysseus
+    ports: !override
+      - "127.0.0.1:7002:7000"
+  chromadb:
+    ports: !override
+      - "127.0.0.1:8102:8000"
+  searxng:
+    ports: !override
+      - "127.0.0.1:8082:8080"
+  ntfy:
+    ports: !override
+      - "127.0.0.1:8093:80"
+
+networks:
+  default:
+    name: hades-owner-journey-net

@@ -2025,8 +2025,19 @@ def provisional_intent_projection(
     # Explicit continuation language still wins; this only prevents
     # contextual heuristics from overriding an unambiguous canonical read.
     read_frame = compile_intent(latest, continuation=False)
+    # A substantive operation remains a new operation even when it contains a
+    # deictic word such as "this" (for example, "add this recipe ...").
+    # Treating that language as conversational continuation causes the
+    # retrieval query to absorb the prior turn, changes the frame to CONTINUE,
+    # and can leak an effectful request back into the unconstrained model/tool
+    # path. Explicit continuation language still wins; ordinary contextual
+    # cues may only decorate genuinely follow-up/low-signal turns.
+    substantive_operation = read_frame.operation_class in {
+        "CREATE", "UPDATE", "DELETE", "EXECUTE", "RESEARCH", "MONITOR",
+    }
     continuation = explicit_continuation or (
         contextual_continuation
+        and not substantive_operation
         and not (
             read_frame.operation_class == "READ"
             and read_frame.domain_concept in DOMAIN_CONTRACTS
