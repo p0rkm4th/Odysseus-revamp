@@ -26,6 +26,10 @@ const screenshotFile = path.join(root, 'failure.png');
 const python = process.env.HADES_PYTHON || './venv/bin/python';
 const externalCredentialFile = process.env.HADES_BROWSER_EXTERNAL_CREDENTIAL_FILE || '';
 const externalAcceptance = Boolean(externalCredentialFile);
+const householdAcceptance = process.env.HADES_BROWSER_HOUSEHOLD_ACCEPTANCE === 'true';
+if (householdAcceptance && !externalAcceptance) {
+  throw new Error('Household browser acceptance requires an external isolated acceptance deployment');
+}
 const composeEnv = { ...process.env, HADES_ACCEPTANCE_PRINCIPAL_ENABLED: 'true' };
 const cleanupEnv = { ...process.env, HADES_ACCEPTANCE_PRINCIPAL_ENABLED: 'false' };
 
@@ -70,6 +74,43 @@ async function waitForHealth(timeoutMs = 60000) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error(`Hades did not become healthy at ${baseURL} within ${timeoutMs}ms`);
+}
+
+async function seedHouseholdAcceptanceState(page) {
+  // Seed only the disposable, already-authenticated acceptance principal via
+  // the normal owner-scoped API.  This is setup for browser reads, not a
+  // second persistence path and never runs against the owner instance.
+  return page.evaluate(async () => {
+    const suffix = Date.now().toString(36);
+    const create = await fetch('/api/inventory/items', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({
+        name: `Acceptance Milk ${suffix}`,
+        domain: 'kitchen', item_kind: 'ingredient', default_unit: 'l',
+        category: 'dairy', reorder_point: 0.5,
+      }),
+    });
+    if (!create.ok) throw new Error(`household acceptance item setup failed (${create.status})`);
+    const item = (await create.json()).item;
+    if (!item?.id) throw new Error('household acceptance item setup returned no item id');
+    const stock = await fetch(`/api/inventory/items/${encodeURIComponent(item.id)}/stock`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({
+        quantity: 2, unit: 'l', idempotency_key: `browser-acceptance-${suffix}`,
+      }),
+    });
+    if (!stock.ok) throw new Error(`household acceptance stock setup failed (${stock.status})`);
+    const overview = await fetch('/api/inventory/overview?expiry_days=30', {credentials: 'same-origin'});
+    if (!overview.ok) throw new Error(`household acceptance readback failed (${overview.status})`);
+    const projection = await overview.json();
+    const readback = (projection.items || []).find((candidate) => candidate.id === item.id);
+    if (!readback || String(readback.stock_quantity) !== '2000.000000') {
+      throw new Error(`household acceptance stock readback was not canonical: ${JSON.stringify(readback)}`);
+    }
+    return {itemId: item.id, itemName: item.name, stockQuantity: readback.stock_quantity};
+  });
 }
 
 function assistantCount(page) {
@@ -303,6 +344,10 @@ async function main() {
     }
     await page.locator('textarea#message:visible').first().waitFor({ state: 'visible', timeout: 30000 });
 
+    if (householdAcceptance) {
+      diagnostics.householdSeed = await seedHouseholdAcceptanceState(page);
+    }
+
     // Start tracing only after the login response, so the password cannot be
     // present in trace network metadata.
     await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
@@ -315,6 +360,12 @@ async function main() {
         'scale this recipe to six servings',
         'can i make this recipe with what i have',
       ]
+      : householdAcceptance
+        ? [
+          "what's in the kitchen?",
+          'how much milk do i have?',
+          'what do i have in the kitchen right now?',
+        ]
       : [
         'tell me about my network',
         'tell me about my homelab',
@@ -343,7 +394,7 @@ async function main() {
     await page.locator('#chat-history .msg').first().waitFor({ timeout: 30000 });
     const afterReload = await assistantCount(page);
     if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
-    await send(page, 'what about its RAM?');
+    await send(page, householdAcceptance ? 'what else is in the kitchen?' : 'what about its RAM?');
 
     // The acceptance account owns only disposable test conversations. Remove
     // them through the normal owner-scoped session API before revocation so a
