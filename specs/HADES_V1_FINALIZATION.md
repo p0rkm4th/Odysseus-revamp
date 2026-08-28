@@ -1,5 +1,21 @@
 # Hades V1 Finalization Status
 
+## Authenticated browser acceptance (`225195aa`, 2026-08-28)
+
+The existing Playwright lane ran against the exact deployed candidate through
+the normal login UI and real `/api/chat_stream` path. All seven required
+acceptance journeys passed: Network, Homelab, Memory, Asset list, Asset
+reference, GPU property follow-up, and Work; the post-reload RAM continuation
+also passed (`8` streams total). The lane reported one answer per turn and
+completed normally.
+
+After acceptance, the temporary principal was logged out and revoked, the
+acceptance feature was disabled, and the temporary credential file was absent.
+The runtime remained healthy on image
+`sha256:20437b95b12b3b78f0cc46b0569586ce4bb784029cada1122367df4a44bb4003`,
+source `225195aa1e4b3985c7fb00a128dd7c7e16160cef`, with zero restarts. This is
+authenticated synthetic-owner browser evidence, not real-owner data smoke.
+
 ## Exact candidate deployment and Qwen revalidation (`225195aa`, 2026-08-28)
 
 The exact executable candidate `odysseus:candidate-225195aa-exact` was
