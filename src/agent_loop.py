@@ -4971,6 +4971,23 @@ async def stream_aci_runtime(
                             else None
                         ),
                     )
+                    # Effectful inventory consumption uses the durable
+                    # WorkAction identity as its service idempotency key. The
+                    # key is server-owned; never ask the model to invent it.
+                    if _work_action_id and block.tool_type == "manage_assets":
+                        try:
+                            _payload = json.loads(block.content or "{}")
+                        except (TypeError, json.JSONDecodeError):
+                            _payload = None
+                        if (
+                            isinstance(_payload, dict)
+                            and _payload.get("action") == "consume_stock"
+                            and not str(_payload.get("idempotency_key") or "").strip()
+                        ):
+                            _payload["idempotency_key"] = str(_work_action_id)
+                            block = block._replace(
+                                content=json.dumps(_payload, sort_keys=True)
+                            )
                     if exact_approval is not None and _work_action_id:
                         from src.agent_work_bridge import resume_approval
                         await asyncio.to_thread(

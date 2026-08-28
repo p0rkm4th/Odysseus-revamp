@@ -9,7 +9,6 @@ grants authority or accepts model-supplied executors.
 from __future__ import annotations
 
 import json
-import hashlib
 from typing import Any
 
 from core.database import SessionLocal
@@ -705,20 +704,6 @@ def prepare_action(
         )
         if existing is not None and dict(existing.normalized_input or {}) == payload:
             return existing.id
-        # Inventory consumption requires a durable idempotency key.  The
-        # conversational payload does not need to expose that storage detail;
-        # derive it from this canonical Work run/action input and sequence so
-        # retries replay the same effect while a later action in the same run
-        # receives a distinct key.  This is action identity, not model input
-        # and not a second idempotency store.
-        next_sequence = db.query(WorkAction).filter_by(run_id=run.id).count() + 1
-        if spec.action_id == "consume_stock" and not str(payload.get("idempotency_key") or "").strip():
-            payload_digest = hashlib.sha256(
-                json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
-            ).hexdigest()[:32]
-            payload["idempotency_key"] = (
-                f"work:{run.id}:{spec.action_id}:{next_sequence}:{payload_digest}"
-            )[:255]
         read_only = bool(spec.effects) and set(spec.effects).issubset({
             "read_private", "read_public", "read_workspace", "brokered_network_read",
         })
@@ -743,6 +728,17 @@ def prepare_action(
             "status": status,
             "approval_reference": approval_reference,
         })
+        if spec.action_id == "consume_stock" and not str(payload.get("idempotency_key") or "").strip():
+            # The WorkAction identifier is the canonical identity for this
+            # effect. Persist it into the action input after creation so the
+            # dispatcher can carry the same key into the existing inventory
+            # service without introducing a second idempotency mechanism.
+            action_key = str(action["id"])
+            payload["idempotency_key"] = action_key
+            row = db.query(WorkAction).filter_by(id=action_key).one()
+            row.normalized_input = payload
+            row.idempotency_key = action_key
+            db.commit()
         work.set_run_status(owner, run.id, "awaiting_approval" if status == "awaiting_approval" else "running", {
             "lifecycle_state": "waiting_approval" if status == "awaiting_approval" else "ready" if read_only else "planning",
             "current_step": f"canonical action: {spec.action_id}",

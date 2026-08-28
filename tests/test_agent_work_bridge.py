@@ -83,7 +83,7 @@ def test_consumption_action_receives_durable_idempotency_key(monkeypatch):
             action = db.query(WorkAction).filter_by(id=action_id).one()
             key = action.normalized_input["idempotency_key"]
             assert key == action.idempotency_key
-            assert key.startswith(f"work:{run_id}:consume_stock:")
+            assert key == action_id
             assert len(key) <= 255
     finally:
         engine.dispose()
