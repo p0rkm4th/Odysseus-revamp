@@ -1842,6 +1842,15 @@ supported project image with `/home/.docker-data`, `/home/.containerd-data`,
 and the Docker socket mounted passed all six storage tests and the full suite:
 `6806 passed, 5 skipped, 149 warnings`. No storage logic was changed.
 
+## Semantic coverage shard recovery (`20260828`, 2026-08-28)
+
+The interrupted semantic shard had no surviving report or partial JSONL. A
+replacement coverage-only shard (`0/4`, seed `20260828`) generated `474`
+scenarios and reported `372` coverage gaps (`46` critical, `88` high). This is
+coverage evidence only, with no model/runtime execution and therefore no
+functional pass claim. Gaps are concentrated in ActionSpec/capability,
+failure, policy/approval, and lifecycle dimensions.
+
 ## Compatibility-authority guard (`5a204cb0`, 2026-08-28)
 
 Added a focused AST regression that rejects calls from the canonical
