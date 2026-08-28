@@ -458,6 +458,15 @@ async function main() {
                 if (json.content) event.contentLength = String(json.content).length;
                 if (json.tool) event.tool = String(json.tool).slice(0, 120);
                 if (json.action) event.action = String(json.action).slice(0, 120);
+                if (!event.action && json.command) {
+                  // Tool events carry the canonical operation in a serialized
+                  // command.  Extract only its bounded action scalar; never
+                  // retain command arguments or raw Result payloads.
+                  try {
+                    const command = typeof json.command === 'string' ? JSON.parse(json.command) : json.command;
+                    if (command?.action) event.action = String(command.action).slice(0, 120);
+                  } catch (_) { /* malformed command remains observable below */ }
+                }
                 if (json.status) event.status = String(json.status).slice(0, 80);
                 if (json.success !== undefined) event.success = Boolean(json.success);
                 if (json.verified !== undefined) event.verified = Boolean(json.verified);
