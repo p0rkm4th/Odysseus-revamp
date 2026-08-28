@@ -1442,6 +1442,17 @@ async def _execute_manage_assets_binding(block, owner=None):
         if isinstance(payload, dict) and payload.get("action") in {
             "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
         }:
+            if payload.get("action") == "consume_stock" and not payload.get("item_id"):
+                from src.inventory_service import get_inventory_service
+                item_name = str(payload.get("item_name") or "").strip()
+                matches = get_inventory_service().search_items(owner, item_name, domain="kitchen") if item_name else []
+                if len(matches) != 1:
+                    return "manage_assets", {
+                        "error": "Consumption target was not uniquely resolved in canonical inventory.",
+                        "output": "Consumption target was not uniquely resolved in canonical inventory.",
+                        "exit_code": 1, "success": False,
+                    }
+                payload["item_id"] = matches[0]["id"]
             from src.agent_tools.inventory_tools import ManageInventoryTool
             result = dict(await ManageInventoryTool().execute(
                 _ody_v34_json.dumps(payload, sort_keys=True), {"owner": owner},

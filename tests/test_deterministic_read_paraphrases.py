@@ -18,7 +18,7 @@ from src.aci import (
 )
 from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
-from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, recipe_create_payload, resolve_intent
+from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, inventory_consume_stock_payload, recipe_create_payload, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
@@ -195,6 +195,17 @@ def test_household_quantity_add_projects_item_and_initial_stock():
         "item_kind": "ingredient", "default_unit": "each",
         "initial_quantity": 3.0, "initial_unit": "each", "category": "pantry",
     }
+
+
+@pytest.mark.parametrize("query", ["Use one Acceptance Tomato.", "consume 1 Acceptance Tomatoes"])
+def test_household_consumption_promotes_to_canonical_update_action(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "EXECUTE"
+    assert resolved.action_id == "consume_stock"
+    assert resolved.binding_name == "manage_assets"
+    assert inventory_consume_stock_payload(query)["quantity"] == 1.0
 
 
 def test_expiring_recipe_composition_uses_distinct_canonical_action():

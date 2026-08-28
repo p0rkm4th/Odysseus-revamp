@@ -31,12 +31,20 @@ def test_mutation_cases_require_effect_evidence_and_readback():
 
 def test_turn_expectations_pin_each_action_and_binding_without_inheriting_wrong_defaults():
     payload = json.loads(JOURNEY_FILE.read_text())
+    from src.capability_registry import capability_for_tool
+
     for case in payload["scenarios"]:
         for turn in case["turns"]:
             expected = turn["expected"]
             if expected["operation"] in {"READ", "CREATE", "UPDATE", "DELETE", "EXECUTE"}:
                 assert expected.get("action"), f"{case['id']} turn lacks action"
                 assert expected.get("tool_binding"), f"{case['id']} turn lacks tool binding"
+                capability = capability_for_tool(expected["tool_binding"])
+                assert capability is not None, f"{case['id']} names unknown tool binding"
+                assert expected["action"] in capability.actions, (
+                    f"{case['id']} expects tool name/action mismatch: "
+                    f"{expected['tool_binding']}.{expected['action']}"
+                )
 
 
 def test_semantic_oracle_can_require_all_canonical_facts():

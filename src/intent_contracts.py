@@ -106,6 +106,33 @@ def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
     }
 
 
+def inventory_consume_stock_payload(query: str) -> dict[str, Any] | None:
+    """Extract an explicit household consumption request for the owner Action.
+
+    This is bounded argument extraction after the semantic household mutation
+    contract has been selected. It does not resolve identity: the executor
+    resolves ``item_name`` against the authenticated owner's canonical state.
+    """
+    text = str(query or "").strip()
+    match = re.search(
+        r"\b(?:use|consume|used|consumed)\s+"
+        r"(?:(?P<quantity>\d+(?:\.\d+)?)|(?P<word>one|a|an|two|three|four|five))\s+"
+        r"(?P<name>.+?)\s*\.?$", text, re.IGNORECASE,
+    )
+    if not match:
+        return None
+    word_quantities = {"one": 1.0, "a": 1.0, "an": 1.0, "two": 2.0, "three": 3.0, "four": 4.0, "five": 5.0}
+    quantity = float(match.group("quantity")) if match.group("quantity") else word_quantities[match.group("word").casefold()]
+    name = re.sub(
+        r"\s+from\s+(?:the\s+)?(?:pantry|kitchen|freezer|refrigerator|fridge)\s*$", "",
+        match.group("name"), flags=re.IGNORECASE,
+    )
+    name = re.sub(r"\s+", " ", name).strip(" .\"'")
+    if not name or quantity <= 0:
+        return None
+    return {"action": "consume_stock", "item_name": name[:200], "quantity": quantity, "unit": "each"}
+
+
 # Operational domain metadata used by prompt/capability projections.  These
 # flags describe cognition requirements only; policy and execution remain
 # owned by the canonical Action path.
@@ -1428,6 +1455,16 @@ def compile_intent(
         r"\b(?:recipe|recipes|cookbook|dish)\b", q,
     ):
         concept = "RECIPE"
+        read_explicit = False
+    # Household consumption is an owner mutation even when the item name is
+    # not known to the compiler (for example, "Use one onion"). The executor
+    # resolves that name against canonical owner-scoped inventory.
+    if concept == "UNKNOWN" and operation == "READ" and re.search(
+        r"\b(?:use|consume|used|consumed)\s+(?:\d+(?:\.\d+)?|one|a|an|two|three|four|five)\s+\S",
+        q,
+    ) and not re.search(r"\b(?:code|python|shell|command|tool|feature|api)\b", q):
+        concept = "HOUSEHOLD_ITEM"
+        operation = "EXECUTE"
         read_explicit = False
 
     # Public web access is an ordinary evidence capability. Keep bounded
