@@ -75,6 +75,24 @@ E6.
 
 ## Current release state
 
+### Productization owner-journey checkpoint — 2026-08-28
+
+- Branch `hades-v1-productization` is pushed at `171e61af0738`; worktree is
+  clean. The executable candidate `odysseus:candidate-e140a0accc52` embeds
+  `e140a0accc525646c42eb674027cbac436e9a4c7` and runs only in the disposable
+  owner-journey Compose project; the owner deployment remains on `34ced247`.
+- Exact isolated browser evidence: empty Recipe read passed; complete recipe
+  CREATE executed `manage_recipes.add`, persisted/read back the recipe, and
+  rendered one deterministic human answer plus one `[DONE]`. The prior false
+  success is closed on this candidate.
+- The browser harness now records nested tool completion outcomes and does not
+  mistake a tool card for a successful effect. Household `add_item` currently
+  fails closed because the existing canonical action has no initial-stock
+  semantics; this is a product capability gap, not a green acceptance result.
+- The isolated Network/Asset lanes still require their declared fixture
+  profiles. No owner data was modified. Full browser owner-journey acceptance,
+  current owner deployment, and merge readiness remain pending.
+
 - Branch: `hades-aci-v1`, synchronized with `origin` at `dcb57621` after the
   bounded upstream harvest and asset-reference fix.
 - Source head: `dcb57621`; deployed runtime implementation is source-matched
