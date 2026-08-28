@@ -17,6 +17,23 @@ the complete journey works.
 | Finance | no promoted read-only canonical ledger yet | DESIGN / DEFERRED | design material only | define read-only owner and provider boundary | Tier 3 |
 | TTRPG / DM | no promoted campaign canonical owner yet | DESIGN / DEFERRED | none | design only; no runtime expansion before Tier 1/2 | Tier 3 |
 
+### Recipe ingestion checkpoint — f29eaff1
+
+Recipe creation now has a bounded validated ingestion seam in the existing
+Inventory Service. `RecipeDraft.from_payload` validates proposed structured
+data; `prepare_import` is read-only and accepts owner text or schema.org
+JSON-LD evidence; `commit_import` is the effectful action and requires recipe
+persistence plus readback verification. Natural-language complete recipe
+creation continues to use the canonical `add` Action with the same draft
+validation. URL fetching, video transcript extraction, and image extraction
+remain deferred until an existing safe evidence source is connected; no
+recipe is persisted from a URL or media reference without a validated draft.
+
+Focused recipe/ACI coverage at this checkpoint: 300 passed. Full supported
+regression: 6907 passed, 5 skipped. The exact candidate image was built from
+`f29eaff1ac6d8ba9201b6d7a142376d81262fb56`; it has not replaced the owner's
+running container.
+
 ## Baseline evidence
 
 - Post-merge `main`: `364380ed3f46c1d14d3229e5b7530698cfa22e65`.
