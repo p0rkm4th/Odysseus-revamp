@@ -1881,3 +1881,12 @@ semantic ownership boundary without deleting compatibility exports that are
 still exercised by nested runtime paths and tests. Focused cutover/lifecycle
 coverage: `61 passed`. Test-only checkpoint; running executable remains
 `cf7cc7ba29b4e7c664f98d2204babb96a6de8d4f`.
+
+## Frozen Qwen quick revalidation (`5fb800d7`, 2026-08-28)
+
+The exact deployed candidate, using the Compose network and real Qwen3:8B,
+passed the frozen `62/62` functional, architectural, and security corpus.
+Duplicate delivery was `0`, reference resolution `1.0`, failed Actions/task
+`0.0161`, model calls/task `0.2581`, median latency `0.0309s`, and P95
+`3.8608s`. This is current checkpoint evidence, not a claim that the broader
+generated coverage gaps are closed.

@@ -678,3 +678,13 @@ minimal-pair contract for `What's running in Docker?`: its oracle says
 `CONTAINER/READ`, while the current canonical ontology resolves it as
 `SERVICE/READ` and the synthetic service result is blocked. This is recorded
 as an ontology/fixture contract gap; no phrase-specific route was added.
+
+## Frozen Qwen quick revalidation (`5fb800d7`, 2026-08-28)
+
+Using the exact deployed candidate on the Hades Compose network, the frozen
+62-case Qwen3:8B corpus passed `62/62` functional, `62/62` architectural, and
+`62/62` security. Duplicate delivery was `0`; reference resolution was `1.0`;
+failed Actions/task was `0.0161`; model calls/task `0.2581`; median latency
+`0.0309s`; P95 `3.8608s`. No top failure clusters were reported. This
+revalidates the frozen baseline after the compatibility-seam revert; the
+bounded generated shard remains separate evidence.
