@@ -39,6 +39,18 @@ def test_registry_action_generator_classifies_effectful_actions_and_contextualiz
     assert generated["expected"]["operation"] == "EXECUTE"
 
 
+def test_generated_registry_cases_project_executor_fixture_without_oracle_fields():
+    cases = generate_semantic_cases(seed=23, count=40)
+    registry_cases = [case for case in cases if case["family"] == "registry_action"]
+    assert registry_cases
+    for case in registry_cases:
+        if case["scenario"].get("executor") in {None, "", "none"}:
+            continue
+        assert case["environment"].get("fixture_profile", {}).get("tools")
+        altered = {**case, "expected": {"concept": "WRONG_ORACLE"}}
+        assert fixtures_for_case(case) == fixtures_for_case(altered)
+
+
 def test_dogfood_contract_expands_frozen_sources_and_journeys():
     contract = load_contract()
     cases = expand_cases(contract, suite="baseline")
