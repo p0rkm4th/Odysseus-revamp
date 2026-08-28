@@ -81,6 +81,22 @@ def test_production_aci_stream_entrypoint_forces_canonical_mode(monkeypatch):
     assert captured["aci_mode"] == "aci"
 
 
+def test_production_aci_stream_fails_closed_without_canonical_runtime(monkeypatch):
+    import src.agent_loop as legacy
+
+    async def unexpected_legacy_stream(*args, **kwargs):
+        yield "legacy"
+
+    monkeypatch.setattr(legacy, "stream_aci_runtime", None)
+    monkeypatch.setattr(legacy, "stream_agent_loop", unexpected_legacy_stream)
+    try:
+        stream_aci_turn("endpoint")
+    except RuntimeError as exc:
+        assert str(exc) == "ACI runtime is unavailable"
+    else:
+        raise AssertionError("canonical entrypoint revived legacy runtime")
+
+
 def test_canonical_asset_read_answer_uses_only_structured_result():
     answer = canonical_asset_read_answer([
         {
