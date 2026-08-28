@@ -190,6 +190,27 @@ async function main() {
     if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
     await send(page, 'what about its RAM?');
 
+    // The acceptance account owns only disposable test conversations. Remove
+    // them through the normal owner-scoped session API before revocation so a
+    // passing run cannot leave synthetic chat state behind.
+    const deletedSessions = await page.evaluate(async () => {
+      const response = await fetch('/api/sessions', { credentials: 'same-origin' });
+      if (!response.ok) throw new Error(`could not enumerate acceptance sessions (${response.status})`);
+      const payload = await response.json();
+      const sessions = Array.isArray(payload) ? payload : (payload.sessions || []);
+      let deleted = 0;
+      for (const session of sessions) {
+        const id = String(session.id || '').trim();
+        if (!id) continue;
+        const result = await fetch(`/api/session/${encodeURIComponent(id)}`, {
+          method: 'DELETE', credentials: 'same-origin',
+        });
+        if (result.ok) deleted += 1;
+      }
+      return deleted;
+    });
+    diagnostics.deletedSessions = deletedSessions;
+
     await page.locator('#user-bar-settings').click();
     await page.locator('.settings-nav-item[data-settings-tab="account"]').click();
     await page.locator('#settings-logout-btn').click();
