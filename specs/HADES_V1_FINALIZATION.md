@@ -1074,3 +1074,26 @@ running rollback target remains image
 `sha256:b23213db1791e89d3ff3d96b90a72ea7106c50ea6311bb25602258cef06c9fbf`,
 source `f5c07ff33e6754784fc328fa8392daea4b6178e0`, healthy with zero
 restarts. Therefore current runtime evidence does not yet cover `225195aa`.
+
+## Reconciled foundation/shard checkpoint (`afaf3e25`, 2026-08-28)
+
+The exact deployed executable remains `afaf3e2559f6775f352d21fc7cbf0c445ceac0da`:
+local HEAD, `origin/hades-aci-v1`, OCI source, and running source match. The
+container is healthy with zero restarts, and Qwen3:8B is reachable from the
+Hades namespace.
+
+The supported project-venv full regression passed `6842 passed, 4 skipped`.
+Focused ACI/lifecycle/dogfood/cutover coverage passed `150` tests.
+
+The interrupted `aci-canonical_reads-*` family was replayed as a bounded,
+incrementally checkpointed 10-case shard. It completed `10/10` functional,
+`10/10` architectural, and `10/10` security, with zero Decision calls per
+task, zero failed Actions per task, and duplicate delivery `0`. This is shard
+evidence; the remaining generated coverage gaps are not reclassified as
+product failures by this run.
+
+A separate 10-case generated Qwen sample completed without timeout: functional
+`5/10`, architectural `8/10`, security `10/10`, duplicate delivery `0`, and
+failed Actions/task `0.20`. Its failures remain clustered in exploratory
+unsupported capability/routing/burden cases and require separate generalized
+triage.

@@ -2638,3 +2638,18 @@ security `22/22` and duplicate delivery `0`; remaining failures are unchanged
 generated burden/capability/routing clusters. The evaluator budget correction
 for registry probes was separately pushed as `ad54566f` and is not executable
 runtime code.
+
+## Foundation shard replay (`afaf3e25`, 2026-08-28)
+
+No executable source changed in this checkpoint. The deployed source remains
+`afaf3e2559f6775f352d21fc7cbf0c445ceac0da`, synchronized across local HEAD,
+remote HEAD, OCI marker, and running container. Full regression passed
+`6842 passed, 4 skipped`; focused ACI/dogfood/cutover coverage passed `150`.
+
+The interrupted `aci-canonical_reads-*` family was replayed through the
+existing evaluator as a durable 10-case checkpointed shard: `10/10`
+functional, architectural, and security; zero Decision calls/task; zero failed
+Actions/task; duplicate delivery `0`. A separate 10-case generated Qwen
+sample completed all cases without timeout, with security `10/10` and
+duplicate delivery `0`; its lower functional/architectural score is retained
+as exploratory capability/routing/burden evidence, not hidden.
