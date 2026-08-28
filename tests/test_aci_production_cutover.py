@@ -8,7 +8,7 @@ ACI seam and the compatibility implementation itself.
 import ast
 from pathlib import Path
 
-from src.aci import expects_canonical_action
+from src.aci import classify_no_action_reason, expects_canonical_action
 
 
 def _runtime_call_nodes(function_name: str):
@@ -71,6 +71,28 @@ def test_canonical_action_expectation_is_owned_by_aci():
         asset_read_explicit=True, read_binding="manage_assets",
         read_action="list", operation_class="READ",
     ) is True
+
+
+def test_no_action_failure_classification_is_owned_by_aci():
+    base = {
+        "expected": True,
+        "read_binding": "manage_assets",
+        "operation_class": "READ",
+        "disabled_tools": (),
+    }
+    assert classify_no_action_reason(**base, tool_events=[]) == "MODEL_PROSE_ONLY"
+    assert classify_no_action_reason(
+        **base, tool_events=[{"approval_required": True}]
+    ) == "APPROVAL_REQUIRED"
+    assert classify_no_action_reason(
+        **base, tool_events=[{"blocked": True}]
+    ) == "POLICY_DENIED"
+    assert classify_no_action_reason(
+        **base, tool_events=[{"exit_code": 1}]
+    ) == "EXECUTION_FAILED"
+    assert classify_no_action_reason(
+        **base, tool_events=[{"exit_code": 0, "success": True}]
+    ) is None
     assert expects_canonical_action(
         answer_only=True, clarification_only=False,
         asset_read_explicit=True, read_binding="manage_assets",

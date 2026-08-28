@@ -92,6 +92,7 @@ from src.aci import (
     prepend_agent_directive,
     intent_requires_action,
     expects_canonical_action,
+    classify_no_action_reason,
     usage_bucket,
     usage_bucket_summary,
     compute_final_metrics,
@@ -6195,7 +6196,6 @@ async def stream_aci_runtime(
     # Sanitized architecture diagnostic for turns whose resolved intent
     # expected a canonical Action but produced no successful Result. This is
     # developer trace data, not normal chat prose.
-    _why_no_action = None
     _expected_canonical_action = expects_canonical_action(
         answer_only=_aci_answer_only,
         clarification_only=_aci_clarification_only,
@@ -6204,27 +6204,14 @@ async def stream_aci_runtime(
         read_action=_read_action,
         operation_class=_intent_frame.operation_class,
     )
-    _successful_action_event = any(
-        isinstance(event, dict)
-        and not event.get("approval_required")
-        and not event.get("blocked")
-        and event.get("exit_code") in (None, 0)
-        and event.get("success") is not False
-        for event in tool_events
+    _why_no_action = classify_no_action_reason(
+        expected=_expected_canonical_action,
+        tool_events=tool_events,
+        read_binding=_read_binding,
+        operation_class=_intent_frame.operation_class,
+        disabled_tools=disabled_tools,
     )
-    if _expected_canonical_action and not _successful_action_event:
-        if any(isinstance(event, dict) and (event.get("approval_required") or event.get("ask_user")) for event in tool_events):
-            _why_no_action = "APPROVAL_REQUIRED"
-        elif any(isinstance(event, dict) and event.get("blocked") for event in tool_events):
-            _why_no_action = "POLICY_DENIED"
-        elif any(isinstance(event, dict) and event.get("exit_code") not in (None, 0) for event in tool_events):
-            _why_no_action = "EXECUTION_FAILED"
-        elif not _read_binding and _intent_frame.operation_class == "READ":
-            _why_no_action = "NO_CONTRACT"
-        elif _read_binding in disabled_tools:
-            _why_no_action = "ACTION_NOT_PROJECTED"
-        else:
-            _why_no_action = "MODEL_PROSE_ONLY"
+    if _why_no_action:
         logger.warning(
             "[WHY_NO_ACTION] reason=%s concept=%s operation=%s binding=%s action=%s model=%s",
             _why_no_action, _asset_frame.get("domain_concept"),

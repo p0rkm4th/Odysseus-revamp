@@ -1299,6 +1299,52 @@ def expects_canonical_action(
     return str(operation_class or "") in {"EXECUTE", "RESEARCH", "MONITOR"}
 
 
+def classify_no_action_reason(
+    *,
+    expected: bool,
+    tool_events: Sequence[Mapping[str, Any]],
+    read_binding: Any,
+    operation_class: Any,
+    disabled_tools: Optional[Sequence[str]] = None,
+) -> str | None:
+    """Classify a required-but-undelivered Action for bounded diagnostics.
+
+    This reports an observed control-plane outcome only. It never authorizes,
+    retries, or replaces an Action and does not interpret model prose as
+    evidence.
+    """
+    if not expected:
+        return None
+    successful = any(
+        isinstance(event, Mapping)
+        and not event.get("approval_required")
+        and not event.get("blocked")
+        and event.get("exit_code") in (None, 0)
+        and event.get("success") is not False
+        for event in tool_events or ()
+    )
+    if successful:
+        return None
+    if any(
+        isinstance(event, Mapping)
+        and (event.get("approval_required") or event.get("ask_user"))
+        for event in tool_events or ()
+    ):
+        return "APPROVAL_REQUIRED"
+    if any(isinstance(event, Mapping) and event.get("blocked") for event in tool_events or ()):
+        return "POLICY_DENIED"
+    if any(
+        isinstance(event, Mapping) and event.get("exit_code") not in (None, 0)
+        for event in tool_events or ()
+    ):
+        return "EXECUTION_FAILED"
+    if not read_binding and str(operation_class or "") == "READ":
+        return "NO_CONTRACT"
+    if read_binding in set(disabled_tools or ()):
+        return "ACTION_NOT_PROJECTED"
+    return "MODEL_PROSE_ONLY"
+
+
 def usage_bucket(
     *,
     round_num: int,
