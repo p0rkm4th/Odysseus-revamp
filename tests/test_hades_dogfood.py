@@ -27,6 +27,8 @@ from benchmarks.hades_dogfood import (
     authoritative_answer_text,
 )
 from scripts.hades_dogfood import (
+    _case_deadline,
+    _case_deadline_expired,
     _live_protocol_observation,
     _source_dirty,
     _source_reference,
@@ -162,6 +164,14 @@ def test_live_protocol_requires_one_terminal_done_marker():
     assert incomplete["transport_completion"] is False
     assert incomplete["terminal_event_count"] == 0
     assert incomplete["abrupt_eof"] is True
+
+
+def test_live_case_deadline_is_absolute_not_only_read_inactivity():
+    import time
+
+    deadline = _case_deadline(time.perf_counter() - 2, 1)
+    assert _case_deadline_expired(deadline) is True
+    assert _case_deadline_expired(_case_deadline(time.perf_counter(), 30)) is False
 
 
 def test_incremental_dogfood_checkpoint_retains_progress_and_classifies_stop(tmp_path):
