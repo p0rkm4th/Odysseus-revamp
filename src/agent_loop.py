@@ -226,7 +226,6 @@ def _suppress_automatic_skills(text: str, intent: Dict[str, object]) -> bool:
 _strip_think_blocks = strip_think_blocks
 _empty_response_fallback = empty_response_fallback
 _is_odysseus_qwen_model = is_odysseus_qwen_model
-_compute_final_metrics = compute_final_metrics
 _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
 _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
 _privileged_action_requires_exact_approval = requires_exact_approval
