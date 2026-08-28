@@ -472,6 +472,84 @@ def finalize_prompt_messages(
     return merged
 
 
+def trim_route_request_messages(
+    candidate_url: str,
+    candidate_model: str,
+    route_messages: Sequence[Mapping[str, Any]],
+    *,
+    context_length: int = 0,
+    max_tokens: int = 0,
+    route_context_lengths: Optional[dict[tuple[str, str], int]] = None,
+) -> list[dict[str, Any]]:
+    """Apply a provider route's bounded context budget.
+
+    This is context projection infrastructure, not a routing or authority
+    decision. Keeping it outside the streaming runtime makes the canonical
+    ACI boundary testable while preserving the existing route-specific budget
+    and protected-message behavior.
+    """
+    def without_protection(items):
+        return [
+            {key: value for key, value in message.items() if key != "_protected"}
+            for message in items
+        ]
+
+    try:
+        from src.context_compactor import trim_for_context
+        from src.context_budget import (
+            compute_input_token_budget,
+            DEFAULT_BUDGET,
+            DEFAULT_HARD_MAX,
+            budget_is_explicit,
+        )
+        from src.model_context import budget_context_for_model
+        from src.settings import get_setting
+
+        candidate_context = budget_context_for_model(
+            candidate_url, candidate_model, fallback=context_length,
+        )
+        if route_context_lengths is not None:
+            route_context_lengths[(candidate_url, candidate_model)] = candidate_context
+        soft_budget = int(get_setting("agent_input_token_budget", DEFAULT_BUDGET) or 0)
+        if soft_budget <= 0:
+            return without_protection(route_messages)
+        before_trim_tokens = estimate_tokens(route_messages)
+        reserve_tokens = min(max(max_tokens or 1024, 512), 2048)
+        try:
+            hard_max = int(
+                get_setting("agent_input_token_hard_max", DEFAULT_HARD_MAX)
+                or DEFAULT_HARD_MAX
+            )
+        except (TypeError, ValueError):
+            hard_max = DEFAULT_HARD_MAX
+        if hard_max <= 0:
+            hard_max = DEFAULT_HARD_MAX
+        effective_budget = compute_input_token_budget(
+            soft_budget,
+            candidate_context,
+            budget_is_explicit(soft_budget),
+            hard_max=hard_max,
+        )
+        trimmed_messages = trim_for_context(
+            route_messages, effective_budget, reserve_tokens=reserve_tokens,
+        )
+        after_trim_tokens = estimate_tokens(trimmed_messages)
+        if after_trim_tokens < before_trim_tokens:
+            logger.info(
+                "[agent] soft-trimmed route model=%s context: %s -> %s tokens "
+                "(budget=%s, reserve=%s)",
+                candidate_model, before_trim_tokens, after_trim_tokens,
+                effective_budget, reserve_tokens,
+            )
+        return without_protection(trimmed_messages)
+    except Exception as exc:
+        logger.warning(
+            "[agent] Soft context trim skipped for route model=%s: %s",
+            candidate_model, exc,
+        )
+        return without_protection(route_messages)
+
+
 def resolve_turn_intent(
     messages: Sequence[Mapping[str, Any]],
     last_user: str,
