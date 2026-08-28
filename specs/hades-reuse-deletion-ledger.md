@@ -2672,3 +2672,14 @@ burden/routing/intent clusters came from generated registry-action prompts
 using synthetic fine-grained action labels and deliberately unavailable,
 approval-bound, or incomplete states. No production semantic-owner change was
 justified; the result remains exploratory model-burden evidence.
+
+## Canonical admin-intent call-site checkpoint (`f12ebb9e`, 2026-08-28)
+
+The runtime now calls `intent_contracts.detect_admin_intent` directly; the
+loop-local name remains compatibility-only. Focused post-deploy coverage passed
+`135` tests with `35` deselected. Candidate
+`odysseus:candidate-f12ebb9e` and the running container use source
+`f12ebb9e`, with image ID
+`sha256:3ec28b2019bb869855a909313928b2d6677236c2284d500e6b42453733cd9606`;
+health is healthy and the rollback image `odysseus:rollback-before-f12ebb9e`
+preserves `afaf3e25`.
