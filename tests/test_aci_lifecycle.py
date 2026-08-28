@@ -1142,6 +1142,21 @@ def test_post_result_transition_projects_completion_without_loop_authority():
     assert failed.framework_event == "canonical_action_failure"
 
 
+def test_verified_effectful_result_is_terminal_and_cannot_reselect_action():
+    completed = project_post_result_transition(
+        {"status": "VERIFIED", "success": True, "verified": True, "exit_code": 0},
+        selected_action={"binding": "manage_assets", "action_id": "add_item"},
+    )
+    assert completed.state.value == "COMPLETE_AFTER_ANSWER"
+    assert completed.answer_only is True
+    assert completed.completion_satisfied is True
+    nested = project_post_result_transition(
+        {"success": True, "exit_code": 0, "verification": {"status": "VERIFIED"}},
+        selected_action={"binding": "manage_assets", "action_id": "add_item"},
+    )
+    assert nested.state.value == "COMPLETE_AFTER_ANSWER"
+
+
 def test_composition_only_accepts_registered_primitives_and_acyclic_graphs():
     composite, errors = compile_composite_action(
         owner="owner",
