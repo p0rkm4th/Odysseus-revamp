@@ -1620,7 +1620,7 @@ async def stream_aci_runtime(
         disabled_tools.update(plan_mode_disabled_tools())
 
     uploaded_files = uploaded_files or []
-    _upload_msg = uploaded_files_context_message(uploaded_files)
+    _upload_msg = _uploaded_files_context_message(uploaded_files)
     if _upload_msg:
         messages = insert_before_latest_user(messages, _upload_msg)
 
@@ -1683,14 +1683,14 @@ async def stream_aci_runtime(
             _aci_profile = ACIProfile(name="qwen3_8b" if "qwen3" in model.lower() else "standard")
         except Exception:
             _aci_profile = None
-        _ody_qwen_finetune_model = is_odysseus_qwen_model(model)
+    _ody_qwen_finetune_model = _is_odysseus_qwen_model(model)
     # The caller's temperature survives for non-qwen routes; the qwen cap is
     # applied per candidate (here for the primary, in the candidate request
     # factories for fallbacks), so neither direction of a mixed qwen/non-qwen
     # fallback chain inherits the other's value.
     _requested_temperature = temperature
     if _ody_qwen_finetune_model:
-        temperature = odysseus_qwen_temperature_cap(temperature)
+        temperature = _ody_qwen_temperature_cap(temperature)
     _ody_memory_identity_turn = _looks_like_memory_identity_turn(_last_user)
     _aci_answer_only = (
         prefetched_explicit_memory_result(messages)
@@ -1904,7 +1904,7 @@ async def stream_aci_runtime(
     if _direct_low_signal:
         logger.info("[agent] direct low-signal reply path for latest=%r", _last_user[:80])
         direct_messages = (
-            minimal_odysseus_general_messages(
+            _minimal_odysseus_general_messages(
                 messages,
                 include_memory=True,
             )
@@ -1925,9 +1925,9 @@ async def stream_aci_runtime(
         direct_has_real_usage = False
 
         def _direct_candidate_request(_index, _url, candidate_model, _headers):
-            candidate_is_qwen = is_odysseus_qwen_model(candidate_model)
+            candidate_is_qwen = _is_odysseus_qwen_model(candidate_model)
             candidate_messages = (
-                minimal_odysseus_general_messages(messages, include_memory=True)
+                _minimal_odysseus_general_messages(messages, include_memory=True)
                 if candidate_is_qwen
                 else [{"role": "user", "content": _last_user}]
             )
@@ -1936,7 +1936,7 @@ async def stream_aci_runtime(
                 "messages": candidate_messages,
                 "kwargs": {
                     "temperature": (
-                        odysseus_qwen_temperature_cap(_requested_temperature)
+                        _ody_qwen_temperature_cap(_requested_temperature)
                         if candidate_is_qwen
                         else _requested_temperature
                     ),
@@ -2628,7 +2628,7 @@ async def stream_aci_runtime(
     _runtime_skill_tools: Set[str] = set()
 
     def _route_finetune_modes(candidate_model: str):
-        is_ody = is_odysseus_qwen_model(candidate_model)
+        is_ody = _is_odysseus_qwen_model(candidate_model)
         doc_mode = (
             is_ody
             and not _runtime_skill_tools
@@ -2649,7 +2649,7 @@ async def stream_aci_runtime(
                 or _looks_like_notes_turn(_last_user)
                 or (
                     _looks_like_notes_calendar_followup(_last_user)
-                    and minimal_recent_notes_tool_context_message(messages) is not None
+                    and _minimal_recent_notes_tool_context_message(messages) is not None
                 )
             )
             and "files" not in _intent_domains
@@ -3013,14 +3013,14 @@ async def stream_aci_runtime(
         elif strict_text_tools and not guide_only:
             prepend_agent_directive(route_messages, 'TOOL TRANSPORT FOR THIS ROUTE: Bare Markdown fenced blocks are display-only and never execute. To invoke a tool, use explicit XML with the documented parameter names. Example for Bash: <invoke name="bash"><parameter name="command">top -b -n 1</parameter></invoke>. Do not invent a generic `arg` parameter. Use one or more documented parameter elements for structured arguments. Do not wrap invoke markup in a code fence.')
         if doc_mode and not plan_mode and not approved_plan and not guide_only:
-            route_messages = minimal_odysseus_doc_messages(
+            route_messages = _minimal_odysseus_doc_messages(
                 route_messages,
                 _prompt_active_document,
                 stream_create=stream_create_mode,
             )
             route_mcp_schemas = []
         elif notes_mode and not plan_mode and not approved_plan and not guide_only:
-            route_messages = minimal_odysseus_notes_messages(route_messages)
+            route_messages = _minimal_odysseus_notes_messages(route_messages)
             route_mcp_schemas = []
         elif (
             is_ody
@@ -3029,7 +3029,7 @@ async def stream_aci_runtime(
             and not approved_plan
             and not guide_only
         ):
-            route_messages = minimal_odysseus_general_messages(route_messages, include_memory=True)
+            route_messages = _minimal_odysseus_general_messages(route_messages, include_memory=True)
             route_mcp_schemas = []
         if plan_mode and not guide_only:
                 prepend_agent_directive(route_messages, PLAN_MODE_DIRECTIVE)
@@ -3349,7 +3349,7 @@ async def stream_aci_runtime(
         total_tool_calls += 1
 
         if tool_result_is_successful(approved_result):
-            for doc_event in document_stream_events(approved_block):
+            for doc_event in _document_stream_events(approved_block):
                 yield f"data: {json.dumps(doc_event)}\n\n"
         if approved_result.get("action") == "suggest":
             yield (
@@ -3500,7 +3500,7 @@ async def stream_aci_runtime(
         if approved.tool_name in _VERIFIER_EFFECTFUL_TOOLS:
             _effectful_used = True
         formatted_approved_result = format_tool_result(desc, approved_result)
-        append_tool_results(
+        _append_tool_results(
             messages,
             "",
             [],
@@ -3702,8 +3702,8 @@ async def stream_aci_runtime(
                         "max_tokens": min(max_tokens or 512, 512),
                     } if _aci_enabled and _aci_mode == "aci" and not _aci_answer_only and not _aci_model_fallback else {}),
                     "temperature": (
-                        odysseus_qwen_temperature_cap(_requested_temperature)
-                        if is_odysseus_qwen_model(candidate_model)
+                        _ody_qwen_temperature_cap(_requested_temperature)
+                        if _is_odysseus_qwen_model(candidate_model)
                         else _requested_temperature
                     ),
                 },
@@ -4080,7 +4080,7 @@ async def stream_aci_runtime(
                                 else data["delta"]
                             )
                             if _ody_qwen_finetune_model:
-                                _delta_text = normalize_ody_qwen_text_artifacts(_delta_text)
+                                _delta_text = _normalize_ody_qwen_text_artifacts(_delta_text)
                             round_response += _delta_text
                             data["delta"] = _delta_text
                             _buffer_this_delta = bool(
@@ -4256,7 +4256,7 @@ async def stream_aci_runtime(
                     full_response += round_response
         if not _skip_model_round:
             _normalized_doc_round = (
-                normalize_stream_document_fences(
+                _normalize_stream_document_fences(
                     round_response,
                     "create_document" if _ody_doc_stream_create_mode else "update_document",
                 )
@@ -4266,7 +4266,7 @@ async def stream_aci_runtime(
             # ACI ACTION decisions have already been mapped to a canonical
             # ToolBlock above; never re-parse their JSON as legacy syntax.
             if not _aci_model_fallback and not (_aci_enabled and _aci_mode == "aci" and tool_blocks):
-                tool_blocks, used_native, converted_calls = resolve_tool_blocks(
+                tool_blocks, used_native, converted_calls = _resolve_tool_blocks(
                     _normalized_doc_round,
                     native_tool_calls,
                     round_num,
@@ -5966,7 +5966,7 @@ async def stream_aci_runtime(
             # doc_update first can enter diff mode and make the later stream
             # discard/save the stale pre-update document.
             if tool_result_is_successful(result):
-                for doc_event in document_stream_events(block):
+                for doc_event in _document_stream_events(block):
                     yield f'data: {json.dumps(doc_event)}\n\n'
 
             # Emit doc-specific event for document tools — the frontend
@@ -6138,7 +6138,7 @@ async def stream_aci_runtime(
                 _notes_text = ""
                 if not result.get("error"):
                     if _notes_action in {"list", "search", "find", "view", "lis"}:
-                        _notes_text = note_list_summary_from_tool_output(
+                        _notes_text = _note_list_summary_from_tool_output(
                             result.get("output") or result.get("results") or result.get("content") or ""
                         )
                     elif _notes_action in {"add", "update", "delete", "toggle_item"}:
@@ -6191,7 +6191,7 @@ async def stream_aci_runtime(
                     _ody_notes_tool_completed = True
 
             if _ody_qwen_finetune_model and not result.get("error"):
-                _terminal_summary = ody_qwen_terminal_tool_summary({
+                _terminal_summary = _ody_qwen_terminal_tool_summary({
                     "tool": block.tool_type,
                     "desc": desc,
                     "command": block.content,
@@ -6203,7 +6203,7 @@ async def stream_aci_runtime(
                     or "",
                 })
                 if _terminal_summary:
-                    _terminal_summary = normalize_ody_qwen_text_artifacts(_terminal_summary).strip()
+                    _terminal_summary = _normalize_ody_qwen_text_artifacts(_terminal_summary).strip()
                     _clean_current = strip_tool_blocks(full_response).strip()
                     # Replace model-written summaries for list/read tools. They
                     # are the common source of doubled text and dropped-letter
@@ -6393,7 +6393,7 @@ async def stream_aci_runtime(
                 "[Assistant invoked tool: " + str(b.tool_type) + "]"
                 for b in tool_blocks
             )
-        append_tool_results(messages, _history_round_response, converted_calls,
+        _append_tool_results(messages, _history_round_response, converted_calls,
                              tool_results, tool_result_texts, used_native, round_num,
                              round_reasoning=round_reasoning,
                              tool_result_records=tool_result_records)
@@ -6506,7 +6506,7 @@ async def stream_aci_runtime(
             },
         }) + "\n\n"
     if _ody_qwen_finetune_model:
-        full_response = normalize_ody_qwen_text_artifacts(full_response)
+        full_response = _normalize_ody_qwen_text_artifacts(full_response)
         if (
             not tool_events
             and looks_like_destructive_request(_last_user)
@@ -6525,7 +6525,7 @@ async def stream_aci_runtime(
             except Exception:
                 _tool_action = ""
             if _tool_name == "manage_notes" and _tool_action in {"list", "search", "find", "view", "lis"}:
-                _notes_summary = note_list_summary_from_tool_output(_ev.get("output") or "")
+                _notes_summary = _note_list_summary_from_tool_output(_ev.get("output") or "")
                 if _notes_summary:
                     full_response = _notes_summary
                 break
