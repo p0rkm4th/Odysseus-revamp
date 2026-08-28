@@ -590,6 +590,9 @@ OCI revision, embedded marker, and running source match. Health is healthy,
 restart count is `0`, and Qwen3:8B remains available from the configured
 `http://host.docker.internal:11434` endpoint.
 
+The exact `c0e73ada` source then passed the corrected full regression in the
+supported container environment: `6806 passed, 5 skipped, 149 warnings`.
+
 ## Canonical internal-call checkpoint (`a8b3b7c5`, 2026-08-28)
 
 The ACI runtime now calls canonical imported owners directly for memory
