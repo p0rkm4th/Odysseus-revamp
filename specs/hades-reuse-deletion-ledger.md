@@ -2591,3 +2591,25 @@ prompts over `8` streams. The current-head supported full regression passed
 `6832 passed, 4 skipped, 186 warnings` in `195.56s`. No transport, security,
 or owner-answer regression was observed. The branch later received only this
 ledger entry, so no rebuild is required for the documentation descendant.
+
+## Owner asset-property checkpoint (`fefdd9be`, 2026-08-28)
+
+The next container-backed Qwen replay showed the prior asset target-boundary
+cluster reduced to one evaluator action-semantic mismatch; collection-view
+phrases now resolve without fake lexical asset targets. The canonical intent
+contract was extended for owner-scoped GPU/RAM/model-property queries: these
+remain bounded Asset collection reads with structured property filters, while
+conceptual component questions remain model-only. Focused intent/deterministic
+read coverage passed `330` tests with `1` skip.
+
+Executable source `fefdd9bef31367cc1ffeaa11b7b1f6c847637c29` was pushed and
+built as `odysseus:candidate-fefdd9be`, image
+`sha256:92d360a893b38107a245c155b8fb88aa8420880ec293652283a11826b0f7cfe7`.
+OCI revision, source marker, and running source match; `/api/health` is
+healthy with zero restarts and Qwen3:8B is available from the container
+namespace with the pinned digest.
+
+Authenticated browser acceptance against that exact image passed `7` prompts
+over `8` streams. The supported full project-venv regression passed
+`6837 passed, 4 skipped, 186 warnings` in `174.56s`. The branch tip after this
+entry is documentation-only and does not require a rebuild.
