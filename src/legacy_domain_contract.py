@@ -49,3 +49,19 @@ for _binding in TOOL_BINDINGS.values():
 
 CANONICAL_TOOLS_FOR_DOMAINS = tools_for_domains
 BUILTIN_OVERRIDES = get_builtin_overrides
+
+# Prompt/schema selection metadata retained for compatibility callers. These
+# names do not grant administrative authority; policy checks remain in the
+# canonical execution boundary.
+ADMIN_SCHEMA_NAMES = frozenset({
+    "manage_session", "manage_skills", "manage_tasks",
+    "manage_endpoints", "manage_mcp", "manage_webhooks", "manage_tokens",
+    "create_session", "list_sessions", "send_to_session", "pipeline",
+    "ask_teacher", "list_models", "search_chats",
+})
+ADMIN_TOOLS = {
+    "manage_session", "manage_skills", "manage_tasks",
+    "manage_endpoints", "manage_mcp", "manage_webhooks", "manage_tokens",
+    "manage_documents", "manage_settings", "create_session", "list_sessions",
+    "send_to_session", "pipeline", "ask_teacher", "list_models",
+}
