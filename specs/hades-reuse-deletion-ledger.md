@@ -2490,3 +2490,31 @@ used an unavailable model endpoint to validate failure persistence; timeout
 rows remained distinct from functional scoring. Focused dogfood/cutover tests
 passed `67` tests. This evaluator-only change does not alter the deployed
 executable candidate.
+# Exact executable cleanup checkpoint (`6cf40f56`, 2026-08-28)
+
+Removed twelve unreferenced imports from `src/agent_loop.py` whose live
+implementations are already owned by `llm_core`, `tool_capabilities`, `aci`,
+or `tool_parsing`. The provider compatibility export
+`_is_ollama_openai_compat_url` was retained after the full collection run
+proved it remains an external compatibility surface. No Action, policy,
+approval, execution, persistence, or answer authority changed.
+
+Focused ACI/cutover/lifecycle/owner-regression coverage passed `190` tests;
+the supported full project-venv regression passed `6829 passed, 4 skipped,
+186 warnings`. The exact candidate `odysseus:candidate-6cf40f56` was built
+from the pushed SHA and explicitly deployed. Image ID is
+`sha256:31d621b3bcb10f57c5358c44df4dc5d46b45c5c288e4a2ee63ec68852d03070e`;
+OCI revision, `/app/.odysseus-source-commit`, and running source match
+`6cf40f56ea9f2cd79b3ec750815b810a033946f6`. `/api/health` is healthy and
+restart count is zero. Qwen3:8B is available from the container namespace.
+
+The authenticated browser acceptance lane was strengthened to distinguish
+tool/result cards from final answers. Against this exact runtime it passed
+seven prompts and eight streams. The Network trace contained one
+`response_replace` with `DETERMINISTIC_RESULT`, one persisted answer, one
+terminal `[DONE]`, one client answer, and one collapsed raw-output block.
+
+Local and `origin/hades-aci-v1` are synchronized at `6cf40f56`; the worktree
+is clean. The remaining `agent_loop.py` surface is compatibility/provider
+plumbing plus the canonical runtime adapter; no further deletion was justified
+without a new characterization slice.
