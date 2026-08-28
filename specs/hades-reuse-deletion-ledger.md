@@ -1948,3 +1948,12 @@ security cases; duplicate delivery `0`, reference resolution `1.0`, failed
 Actions/task `0.0161`, model calls/task `0.2581`, median `0.0192s`, and P95
 `2.7039s`. Embedded/running source matches the pushed SHA and the runtime is
 healthy with zero restarts.
+
+## Qwen revalidation after document-adapter reduction (`2cf8a5fb`, 2026-08-28)
+
+The exact candidate passed `6809` full-regression tests with `5` skips before
+deployment. Frozen Qwen3:8B passed `62/62` functional, architectural, and
+security cases; duplicate delivery `0`, reference resolution `1.0`, failed
+Actions/task `0.0161`, model calls/task `0.2581`, median `0.0200s`, and P95
+`2.5672s`. Embedded/running source matches the pushed SHA and the runtime is
+healthy with zero restarts.
