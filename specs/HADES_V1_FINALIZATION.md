@@ -1,5 +1,25 @@
 # Hades V1 Finalization Status
 
+## Canonical action-expectation projection (`45ecaf5c`, 2026-08-28)
+
+Moved the runtime's `expected canonical Action` diagnostic predicate into
+`src.aci.expects_canonical_action`. The compatibility runtime now supplies
+resolved ACI inputs to that owner rather than reinterpreting operation class,
+canonical read binding, and answer/clarification state locally. This is a
+behavior-preserving semantic-owner extraction; Action selection, policy,
+approval, execution, and completion authority were not duplicated.
+
+Focused coverage passed `117` tests. Full regression passed `6813` tests with
+`4` skips and `186` warnings. Candidate
+`odysseus:candidate-45ecaf5c-exact` was built from the pushed SHA and deployed
+explicitly as image
+`sha256:906af54544e1283e66a6a8b2457163862cf2aec0b500ad30b3b2d78cf8fee076`.
+OCI revision, source marker, and running source match
+`45ecaf5c498d9a098282fbad5791185fbf0a8e94`; health is healthy and restart
+count is zero. Authenticated Playwright acceptance passed all seven required
+journeys plus post-reload continuation (`8` streams). Acceptance cleanup
+revoked the temporary principal, disabled the feature, and removed credentials.
+
 ## Authenticated browser acceptance (`225195aa`, 2026-08-28)
 
 The existing Playwright lane ran against the exact deployed candidate through

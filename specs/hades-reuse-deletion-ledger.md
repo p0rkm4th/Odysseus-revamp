@@ -1,5 +1,18 @@
 # Hades reuse / deletion ledger
 
+## Canonical action-expectation projection (`45ecaf5c`, 2026-08-28)
+
+Moved the runtime's canonical-action expectation predicate into
+`src.aci.expects_canonical_action`; `agent_loop.py` now delegates the
+diagnostic projection using resolved ACI inputs. Focused coverage passed `117`
+tests and full regression passed `6813 passed, 4 skipped, 186 warnings`.
+
+The exact pushed candidate `odysseus:candidate-45ecaf5c-exact` was deployed as
+image `sha256:906af54544e1283e66a6a8b2457163862cf2aec0b500ad30b3b2d78cf8fee076`;
+OCI/source markers and running source match `45ecaf5c`. Health is healthy with
+zero restarts. Authenticated browser acceptance passed seven journeys plus
+reload continuation; the temporary principal and credentials were cleaned up.
+
 ## Authenticated browser acceptance (`225195aa`, 2026-08-28)
 
 The existing Playwright authenticated lane passed the seven required journeys
