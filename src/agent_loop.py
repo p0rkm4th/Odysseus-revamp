@@ -272,9 +272,6 @@ except ModuleNotFoundError as exc:
         turn_targets_active_document,
     )
 _document_stream_events = document_stream_events
-_is_email_document_obj = is_email_document_object
-_compact_email_draft_context = compact_email_draft_context
-_turn_targets_active_document = turn_targets_active_document
 from src.tool_parsing import (
     strip_doc_model_artifacts,
     normalize_truncated_document_tool_fences,
@@ -981,7 +978,7 @@ def _build_system_prompt(
         )
         _active_doc_is_email_doc = _is_email_doc
         if _is_email_doc:
-            _email_prompt_doc = _compact_email_draft_context(_doc_raw)
+            _email_prompt_doc = compact_email_draft_context(_doc_raw)
             doc_ctx = (
                 f'ACTIVE EMAIL DRAFT (open in editor — the user is looking at this right now)\n'
                 f'Title: "{active_document.title}"\n'
@@ -1832,8 +1829,8 @@ async def stream_aci_runtime(
     _suppress_auto_skills = _suppress_automatic_skills(_last_user, _intent)
     _casual_low_signal_turn = _is_casual_low_signal(_last_user)
     _existing_conversation = user_turn_count(messages) > 1
-    _active_document_relevant = _turn_targets_active_document(_intent, _last_user, active_document)
-    _active_email_draft_relevant = _active_document_relevant and _is_email_document_obj(active_document)
+    _active_document_relevant = turn_targets_active_document(_intent, _last_user, active_document)
+    _active_email_draft_relevant = _active_document_relevant and is_email_document_object(active_document)
     if _active_email_draft_relevant:
         disabled_tools.update({
             "list_email_accounts", "list_emails", "read_email", "scan_email_unsubscribes",
