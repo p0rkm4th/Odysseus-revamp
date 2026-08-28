@@ -128,12 +128,12 @@ async function main() {
   let page;
   let tracing = false;
   let cleanupDone = false;
-  const diagnostics = { baseURL, principal: credentials.username, prompts: [], errors: [], failedRequests: [], http5xx: [] };
+  const diagnostics = { baseURL, principal: credentials.username, prompts: [], errors: [], unexpectedErrors: [], failedRequests: [], http5xx: [] };
   try {
     context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     page = await context.newPage();
     page.on('console', (message) => { if (message.type() === 'error') diagnostics.errors.push(message.text().slice(0, 500)); });
-    page.on('pageerror', (error) => diagnostics.errors.push(`pageerror: ${error.message}`));
+    page.on('pageerror', (error) => diagnostics.unexpectedErrors.push(`pageerror: ${error.message}`));
     page.on('requestfailed', (request) => diagnostics.failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText || ''}`));
     page.on('response', (response) => { if (response.status() >= 500) diagnostics.http5xx.push(`${response.status()} ${response.url()}`); });
 
@@ -191,6 +191,7 @@ async function main() {
     await send(page, 'what about its RAM?');
 
     await page.locator('#user-bar-settings').click();
+    await page.locator('.settings-nav-item[data-settings-tab="account"]').click();
     await page.locator('#settings-logout-btn').click();
     await page.waitForURL((url) => url.pathname.endsWith('/login'), { timeout: 30000 });
 
