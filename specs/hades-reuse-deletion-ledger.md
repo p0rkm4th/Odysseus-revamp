@@ -1851,6 +1851,16 @@ coverage evidence only, with no model/runtime execution and therefore no
 functional pass claim. Gaps are concentrated in ActionSpec/capability,
 failure, policy/approval, and lifecycle dimensions.
 
+## Compatibility-seam rejection (`5fb800d7`, 2026-08-28)
+
+A broader runtime helper-alias migration was reverted after exact-candidate
+testing found four compatibility failures in sanctioned monkeypatch seams
+(fallback routing, notes, and MCP/document handling). The reverted checkpoint
+passes the focused ACI/cutover suite (`301` tests) and the supported full
+regression (`6807 passed, 5 skipped, 149 warnings`). Runtime is deployed from
+the exact pushed SHA and remains healthy. Retained aliases remain compatibility
+exports, not evidence of independent ACI authority.
+
 ## Compatibility-authority guard (`5a204cb0`, 2026-08-28)
 
 Added a focused AST regression that rejects calls from the canonical

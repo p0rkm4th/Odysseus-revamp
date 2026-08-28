@@ -651,3 +651,16 @@ These are coverage gaps, not failed product executions: the run deliberately
 invoked no model and produced no runtime pass rate. The largest categories are
 untested ActionSpecs, capabilities, failure classes, and lifecycle/policy
 branches; they remain foundation-closure work.
+
+## Compatibility-seam rejection (`5fb800d7`, 2026-08-28)
+
+A broader conversion of provider/document/result helper calls from retained
+underscore aliases to canonical imports was tested and rejected. The full
+regression exposed four compatibility failures where sanctioned legacy tests
+monkeypatch those aliases. The change was reverted and pushed as
+`5fb800d766a4d010a18a5073561326d62be5b36f`; focused coverage passed `301`
+tests and the exact candidate full regression passed `6807 passed, 5 skipped,
+149 warnings`. The exact candidate is deployed and healthy with zero restarts.
+This preserves the earlier ACI-owned reductions while avoiding a compatibility
+regression; no further alias removal is justified without a characterization
+slice for those seams.
