@@ -156,6 +156,7 @@ from src.aci import (
     assemble_prompt,
     build_base_prompt,
     finalize_prompt_messages,
+    trim_route_request_messages,
     skill_index_prompt,
     select_prompt_tools,
     resolve_turn_intent,
@@ -2520,76 +2521,6 @@ async def stream_aci_runtime(
     _t2 = time.time()
     _route_context_lengths = {}
 
-    def _trim_route_request_messages(candidate_url, candidate_model, route_messages):
-        """Apply the candidate route's own context budget to its request."""
-
-        def _without_protection(items):
-            # Route markers remain internal for later prompt rebuilding;
-            # protection metadata is only needed during trimming.
-            return [{k: v for k, v in message.items() if k != "_protected"} for message in items]
-
-        try:
-            from src.context_compactor import trim_for_context
-            from src.context_budget import (
-                compute_input_token_budget,
-                DEFAULT_BUDGET,
-                DEFAULT_HARD_MAX,
-                budget_is_explicit as _budget_is_explicit,
-            )
-            from src.model_context import budget_context_for_model
-
-            candidate_context = budget_context_for_model(
-                candidate_url,
-                candidate_model,
-                fallback=context_length,
-            )
-            _route_context_lengths[(candidate_url, candidate_model)] = candidate_context
-            soft_budget = int(get_setting("agent_input_token_budget", DEFAULT_BUDGET) or 0)
-            if soft_budget <= 0:
-                return _without_protection(route_messages)
-            before_trim_tokens = estimate_tokens(route_messages)
-            reserve_tokens = min(max(max_tokens or 1024, 512), 2048)
-            try:
-                hard_max = int(
-                    get_setting("agent_input_token_hard_max", DEFAULT_HARD_MAX)
-                    or DEFAULT_HARD_MAX
-                )
-            except (TypeError, ValueError):
-                hard_max = DEFAULT_HARD_MAX
-            if hard_max <= 0:
-                hard_max = DEFAULT_HARD_MAX
-            budget_is_explicit = _budget_is_explicit(soft_budget)
-            effective_budget = compute_input_token_budget(
-                soft_budget,
-                candidate_context,
-                budget_is_explicit,
-                hard_max=hard_max,
-            )
-            trimmed_messages = trim_for_context(
-                route_messages,
-                effective_budget,
-                reserve_tokens=reserve_tokens,
-            )
-            after_trim_tokens = estimate_tokens(trimmed_messages)
-            if after_trim_tokens < before_trim_tokens:
-                logger.info(
-                    "[agent] soft-trimmed route model=%s context: %s -> %s tokens "
-                    "(budget=%s, reserve=%s)",
-                    candidate_model,
-                    before_trim_tokens,
-                    after_trim_tokens,
-                    effective_budget,
-                    reserve_tokens,
-                )
-            return _without_protection(trimmed_messages)
-        except Exception as e:
-            logger.warning(
-                "[agent] Soft context trim skipped for route model=%s: %s",
-                candidate_model,
-                e,
-            )
-            return _without_protection(route_messages)
-
     async def _build_route_request_state(candidate_url, candidate_model, candidate_headers, source_messages):
         compaction_state: Dict = {}
         compacted_source = list(source_messages)
@@ -2719,10 +2650,13 @@ async def stream_aci_runtime(
     prep_timings["prompt_build"] = time.time() - _t2
 
     _t3 = time.time()
-    _initial_route_request_messages = _trim_route_request_messages(
+    _initial_route_request_messages = trim_route_request_messages(
         endpoint_url,
         model,
         messages,
+        context_length=context_length,
+        max_tokens=max_tokens,
+        route_context_lengths=_route_context_lengths,
     )
     _initial_route_context_length = _route_context_lengths.get(
         (endpoint_url, model),
@@ -3283,10 +3217,13 @@ async def stream_aci_runtime(
                 )
             request_messages = state.get("request_messages")
             if request_messages is None:
-                request_messages = _trim_route_request_messages(
+                request_messages = trim_route_request_messages(
                     candidate_url,
                     candidate_model,
                     state["messages"],
+                    context_length=context_length,
+                    max_tokens=max_tokens,
+                    route_context_lengths=_route_context_lengths,
                 )
                 state["request_messages"] = request_messages
             _last_route_request_messages = request_messages
@@ -3638,10 +3575,13 @@ async def stream_aci_runtime(
                                     headers,
                                     messages,
                                 )
-                                answering_state["request_messages"] = _trim_route_request_messages(
+                                answering_state["request_messages"] = trim_route_request_messages(
                                     endpoint_url,
                                     model,
                                     answering_state["messages"],
+                                    context_length=context_length,
+                                    max_tokens=max_tokens,
+                                    route_context_lengths=_route_context_lengths,
                                 )
                                 answering_state["context_length"] = _route_context_lengths.get(
                                     (endpoint_url, model),
