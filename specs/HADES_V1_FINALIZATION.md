@@ -810,6 +810,17 @@ capability surface, plus expected unsupported long-tail registry probes. They
 remain coverage/eligibility gaps, not grounds for phrase-specific production
 routing.
 
+## Holdout eligibility separation (`8698c834`, 2026-08-29)
+
+The hidden holdout now samples capability-backed semantic families and keeps
+the broad unsupported `ScenarioFrame` universe in the coverage-gap lane. This
+prevents the holdout from scoring future/unowned domains as failed production
+routing while preserving exploratory pressure. The exact candidate
+`odysseus:candidate-8698c834` has OCI revision
+`8698c8345e06423697ed3b75bbcbce36d3e9686b` and generated 100 cases with 20
+bounded registry probes and no `semantic_frame` cases. Focused tests passed
+`55`; full regression passed `6812 passed, 4 skipped, 186 warnings`.
+
 ## ACI helper-export reduction (`f5c07ff3`, 2026-08-28)
 
 Removed three unused `agent_loop.py` exports for think-block stripping,
