@@ -1453,6 +1453,11 @@ async def _execute_manage_assets_binding(block, owner=None):
                         "exit_code": 1, "success": False,
                     }
                 payload["item_id"] = matches[0]["id"]
+                # InventoryService validates quantities against the item's
+                # canonical unit (for example ``count`` rather than the
+                # conversational ``each``). Preserve that owner state in
+                # the Action input instead of asking the model to guess it.
+                payload["unit"] = matches[0].get("default_unit") or payload.get("unit")
             from src.agent_tools.inventory_tools import ManageInventoryTool
             result = dict(await ManageInventoryTool().execute(
                 _ody_v34_json.dumps(payload, sort_keys=True), {"owner": owner},
