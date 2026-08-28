@@ -1121,3 +1121,19 @@ fine-grained action labels and deliberately unavailable, approval-bound, or
 incomplete states. They remain exploratory weak-model evidence and do not
 establish a shared production semantic-owner defect. No executable source
 change or deployment was justified by this run.
+
+## Canonical admin-intent call-site checkpoint (`f12ebb9e`, 2026-08-28)
+
+The runtime's admin-intent check now calls the canonical
+`intent_contracts.detect_admin_intent` owner directly. The compatibility alias
+remains exported for existing callers/tests, but is no longer used by the
+runtime path.
+
+Focused post-deploy routing/ACI/agent-loop coverage passed `135` tests with
+`35` deselected. The exact candidate was built and deployed as
+`odysseus:candidate-f12ebb9e`, image ID
+`sha256:3ec28b2019bb869855a909313928b2d6677236c2284d500e6b42453733cd9606`.
+OCI revision, source marker, and running source match `f12ebb9e`; health is
+healthy with zero restarts and Qwen3:8B is reachable from the container
+namespace. The prior executable `afaf3e25` is retained as
+`odysseus:rollback-before-f12ebb9e`.
