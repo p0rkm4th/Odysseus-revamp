@@ -843,7 +843,14 @@ def generate_semantic_cases(*, seed: int = 0, count: int = 1000, split: str = "g
         if registry_entry and not scenario.get("synthetic_capability_available", False):
             expected["capability_available"] = False
         if archetype["intent"] == "READ":
-            expected["max_decision_calls"] = 0
+            # Registry-action cases are deliberately action-identity probes:
+            # their natural-language prompt is resolved against the bounded
+            # ActionCard set, so one model selection is part of the case. A
+            # blanket zero-decision budget made those probes report a burden
+            # failure even when the selected ActionSpec was correct. Keep the
+            # zero-call invariant for canonical semantic-frame reads, whose
+            # deterministic contract can select the read directly.
+            expected["max_decision_calls"] = 1 if registry_entry else 0
         if archetype["intent"] == "EXECUTE" and authority in {"OUT_OF_SCOPE", "UNKNOWN_SCOPE", "APPROVAL_STALE", "BLOCKED"}:
             expected["must_refuse"] = True
         result.append(_case(
