@@ -88,6 +88,25 @@ def test_completed_recipe_result_projects_ordered_refs_for_next_turn(monkeypatch
         engine.dispose()
 
 
+def test_foreground_recipe_tool_event_projects_refs_without_work_result(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        _active, session, _entities = bridge.reference_context_for_turn(
+            "alice", "chat-foreground-recipes", None,
+            structured_reference=True,
+            history=[{"metadata": {"tool_events": [{
+                "tool": "read_recipes",
+                "output": json.dumps({"recipes": [{"id": "recipe:first"}, {"id": "recipe:second"}]}),
+            }]}}],
+        )
+        assert [item["ref"] for item in session["ordered_entities"]] == [
+            "recipe:first", "recipe:second",
+        ]
+    finally:
+        engine.dispose()
+
+
 def test_new_referenced_objective_does_not_reuse_terminal_run(monkeypatch):
     """A completed read's references survive, but its Run is not appendable."""
     engine, session_factory = _session_factory()
