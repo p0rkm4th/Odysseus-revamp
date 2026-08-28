@@ -438,6 +438,7 @@ def reference_context_for_turn(
     run_id: str | None,
     *,
     structured_reference: bool = False,
+    history: list[Any] | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]]]:
     """Resolve the bounded durable reference sources for one turn.
 
@@ -460,6 +461,16 @@ def reference_context_for_turn(
             session = recent_session_reference_context(str(owner), str(session_id))
         except Exception:
             session = None
+        if not session:
+            refs = _history_result_references(history)
+            if refs:
+                session = {
+                    "ordered_entities": refs,
+                    "eligible_entities": refs,
+                    "entities": refs,
+                    "last": refs[-1],
+                    "source_run_id": None,
+                }
     return active, session, active_entities
 
 
@@ -486,6 +497,56 @@ def _latest_result_references(results: list[Any]) -> list[dict[str, Any]]:
             refs = [{"ref": ref.strip()[:500]} for ref in data["refs"] if isinstance(ref, str) and ref.strip()]
         if refs:
             return refs
+    return []
+
+
+def _history_result_references(history: list[Any] | None) -> list[dict[str, Any]]:
+    """Extract canonical refs from persisted chat tool events.
+
+    Foreground streams persist bounded tool events on ChatMessage while the
+    Work bridge persists WorkResult rows. Both are projections of canonical
+    results; chat history is the fallback when no WorkResult exists yet.
+    Assistant prose is never inspected for identity.
+    """
+    for message in reversed(history or []):
+        metadata = message.get("metadata") if isinstance(message, dict) else getattr(message, "metadata", None)
+        if not isinstance(metadata, dict):
+            continue
+        events = metadata.get("tool_events")
+        if not isinstance(events, list):
+            continue
+        for event in reversed(events):
+            if not isinstance(event, dict):
+                continue
+            payload = event.get("result_projection")
+            if not isinstance(payload, dict):
+                try:
+                    payload = json.loads(str(event.get("output") or ""))
+                except (TypeError, ValueError):
+                    payload = None
+            if not isinstance(payload, dict):
+                continue
+            refs: list[dict[str, Any]] = []
+            for items, concept in ((payload.get("assets"), "TECHNICAL_ASSET"), (payload.get("recipes"), "RECIPE")):
+                if not isinstance(items, list):
+                    continue
+                for item in items[:500]:
+                    if isinstance(item, dict):
+                        ref = str(item.get("id") or item.get("asset_id") or "").strip()
+                        if ref:
+                            refs.append({"ref": ref[:500], "concept": concept})
+            for key, concept in (("asset", "TECHNICAL_ASSET"), ("recipe", "RECIPE")):
+                item = payload.get(key)
+                if isinstance(item, dict):
+                    ref = str(item.get("id") or item.get("asset_id") or "").strip()
+                    if ref:
+                        refs.append({"ref": ref[:500], "concept": concept})
+            for key, concept in (("asset_id", "TECHNICAL_ASSET"), ("recipe_id", "RECIPE")):
+                ref = str(payload.get(key) or "").strip()
+                if ref:
+                    refs.append({"ref": ref[:500], "concept": concept})
+            if refs:
+                return refs
     return []
 
 

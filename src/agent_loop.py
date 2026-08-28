@@ -1397,6 +1397,7 @@ async def stream_aci_runtime(
                 str(_last_user or ""),
                 re.IGNORECASE,
             )),
+            history=messages,
         )
     except Exception:
         logger.debug("durable reference context unavailable", exc_info=True)
