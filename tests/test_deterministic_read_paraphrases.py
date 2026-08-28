@@ -53,6 +53,7 @@ def test_asset_detail_followup_without_context_is_unresolved():
     "what do you know about me",
     "tell me about my memory",
     "what's in memory",
+    "tell me about my hardware",
 ])
 def test_canonical_memory_questions_are_not_asset_references(query):
     frame = compile_intent(query, reference_context=None)
