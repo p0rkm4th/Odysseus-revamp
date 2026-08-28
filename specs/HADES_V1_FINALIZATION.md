@@ -1,5 +1,22 @@
 # Hades V1 Finalization Status
 
+## Canonical runtime default (`c1386a85`, 2026-08-28)
+
+Changed `stream_aci_runtime`'s default mode from `legacy` to `aci`. The
+legacy-named `stream_agent_loop` compatibility facade now supplies
+`aci_mode="legacy"` explicitly when callers have not selected a mode. This
+makes direct runtime use safe-by-default for the canonical control plane while
+preserving existing legacy callers and their compatibility tests.
+
+Focused lifecycle/routing/policy coverage passed `97` tests. Full regression
+passed `6816` tests with `4` skips and `186` warnings. Candidate
+`odysseus:candidate-c1386a85-exact` was built from the pushed SHA and deployed
+as image `sha256:d0e1e08879e379f3063a9527b3aa5f4cdf9fb7ff8333be4d2eeb1381bf970e94`;
+OCI revision, source marker, and running source match `c1386a85`. Health is
+healthy, restart count is zero, and qwen3:8b is reachable from the container.
+Authenticated Playwright acceptance passed seven journeys plus post-reload
+continuation (`8` streams), with the temporary principal cleaned up.
+
 ## Canonical-read eligibility projection (`5a486253`, 2026-08-28)
 
 Moved the predicate identifying an explicit, executable canonical READ contract

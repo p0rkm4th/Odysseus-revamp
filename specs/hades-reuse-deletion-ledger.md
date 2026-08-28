@@ -1,5 +1,19 @@
 # Hades reuse / deletion ledger
 
+## Canonical runtime default (`c1386a85`, 2026-08-28)
+
+`stream_aci_runtime` now defaults to ACI; the legacy-named compatibility facade
+explicitly supplies legacy mode for unmigrated callers. Focused lifecycle,
+routing, and policy coverage passed `97` tests; full regression passed
+`6816 passed, 4 skipped, 186 warnings`.
+
+Exact candidate `odysseus:candidate-c1386a85-exact` was deployed as image
+`sha256:d0e1e08879e379f3063a9527b3aa5f4cdf9fb7ff8333be4d2eeb1381bf970e94`;
+OCI/source markers and running source match `c1386a85`, health is healthy with
+zero restarts, and Qwen is reachable in-container. Browser acceptance passed
+seven journeys plus reload continuation; temporary acceptance state was
+revoked and removed.
+
 ## Canonical-read eligibility projection (`5a486253`, 2026-08-28)
 
 Moved canonical READ contract eligibility into `src.aci.is_canonical_read_contract`;
