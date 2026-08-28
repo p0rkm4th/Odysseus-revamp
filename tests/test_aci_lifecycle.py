@@ -881,7 +881,9 @@ def test_aci_turn_does_not_reenter_legacy_tool_index_projection(monkeypatch):
     )
 
     assert executed == ["manage_homelab"]
-    assert any(event.get("type") == "metrics" for event in events)
+    owner_metrics = next(event["data"] for event in events if event.get("type") == "metrics")
+    assert owner_metrics["aci_contract_owned"] is True
+    assert owner_metrics["aci_compatibility_fallback"] is False
 
 
 def test_canonical_aci_turn_does_not_append_legacy_hard_capability_directive(monkeypatch):
