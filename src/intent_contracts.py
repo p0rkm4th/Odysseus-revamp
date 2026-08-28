@@ -1409,6 +1409,13 @@ def compile_intent(
         "the", "a", "an", "one", "it", "that", "this", "these", "those",
         "me", "my", "mah", "mine", "myself", "you", "your", "yours", "us", "our",
         "ours", "them", "their", "theirs", "first", "second", "third",
+        # These are collection/read-view nouns, not owner asset identities.
+        # Without this boundary, phrases such as "technical asset state" or
+        # "asset list" become a detail lookup for an asset literally named
+        # ``state``/``list``.
+        "state", "states", "list", "lists", "summary", "summaries",
+        "inventory", "information", "info", "details", "detail", "data",
+        "records", "record", "search", "results", "result",
     }:
         target = match.group(1)
     # A named asset is a bounded lexical candidate, not a model-selected
