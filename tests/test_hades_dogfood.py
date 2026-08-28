@@ -637,6 +637,7 @@ def test_hidden_holdout_mixes_semantic_frames_with_bounded_registry_probes():
     assert "registry_action" in families
     assert any(family != "registry_action" for family in families)
     assert families.count("registry_action") <= 4
+    assert "semantic_frame" not in families
 
 
 def test_chaos_journey_generator_is_reproducible_and_multiturn():
