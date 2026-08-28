@@ -195,7 +195,6 @@ from src.intent_contracts import (
 # or authorities; all semantics live in ACI and intent contracts.
 _recent_reference_resolution_hint = reference_resolution_hint
 _deterministic_reference_acknowledgement = deterministic_reference_acknowledgement
-_looks_like_success_claim = looks_like_success_claim
 _prefetched_explicit_memory_result = prefetched_explicit_memory_result
 _recent_context_for_retrieval = recent_context_for_retrieval
 _minimal_aci_answer_messages = minimal_aci_answer_messages
@@ -6615,7 +6614,7 @@ async def stream_agent_loop(
         if (
             not tool_events
             and looks_like_destructive_request(_last_user)
-            and _looks_like_success_claim(full_response)
+            and looks_like_success_claim(full_response)
         ):
             full_response = "I couldn't make that change because no matching tool action completed."
     _response_before_tool_summary = full_response
