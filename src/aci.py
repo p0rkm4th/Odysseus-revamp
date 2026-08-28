@@ -3009,6 +3009,41 @@ def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str
     status = str(payload.get("status") or "").strip().upper()
     if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
         return None
+
+    # ``inventory.manage:summary`` is a canonical read in its own right.  Its
+    # structured contract is count-oriented rather than collection-shaped, so
+    # do not send a successful summary back through unconstrained synthesis
+    # merely because it has no ``assets`` array.  Render only the fields owned
+    # by the asset-inventory summary contract.
+    if {"assets", "active", "observed", "observations", "relationships", "by_type"} <= payload.keys():
+        try:
+            total = int(payload["assets"])
+            active = int(payload["active"])
+            observed = int(payload["observed"])
+            observations = int(payload["observations"])
+            relationships = int(payload["relationships"])
+        except (TypeError, ValueError):
+            return None
+        by_type = payload.get("by_type")
+        if not isinstance(by_type, Mapping):
+            return None
+        if total == 0:
+            return "No canonical IT assets are recorded for this owner."
+        lines = [
+            f"Canonical IT asset inventory: {total} asset{'s' if total != 1 else ''} "
+            f"({active} active, {observed} observed).",
+            f"Recorded observations: {observations}; active relationships: {relationships}.",
+        ]
+        try:
+            type_counts = [
+                f"{str(kind)}={int(count)}"
+                for kind, count in sorted(by_type.items(), key=lambda item: str(item[0]))
+            ]
+        except (TypeError, ValueError):
+            return None
+        if type_counts:
+            lines.append("By type: " + ", ".join(type_counts) + ".")
+        return "\n".join(lines)
     assets = payload.get("assets")
     if not isinstance(assets, list):
         return None

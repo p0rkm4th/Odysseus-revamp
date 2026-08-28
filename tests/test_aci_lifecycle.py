@@ -155,6 +155,34 @@ def test_canonical_asset_read_answer_counts_only_structured_filtered_rows():
     assert answer == "I found 2 canonical IT assets matching '2080'."
 
 
+def test_canonical_asset_read_answer_renders_structured_summary_counts():
+    answer = canonical_asset_read_answer([{
+        "tool": "manage_assets", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS", "database": "redacted",
+            "assets": 3, "active": 2, "observed": 1,
+            "observations": 4, "relationships": 2,
+            "by_type": {"server": 2, "vm": 1},
+        }),
+    }])
+    assert answer == (
+        "Canonical IT asset inventory: 3 assets (2 active, 1 observed).\n"
+        "Recorded observations: 4; active relationships: 2.\n"
+        "By type: server=2, vm=1."
+    )
+
+
+def test_canonical_asset_read_answer_renders_empty_structured_summary():
+    answer = canonical_asset_read_answer([{
+        "tool": "manage_assets", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS", "assets": 0, "active": 0, "observed": 0,
+            "observations": 0, "relationships": 0, "by_type": {},
+        }),
+    }])
+    assert answer == "No canonical IT assets are recorded for this owner."
+
+
 def test_canonical_household_read_answer_uses_only_inventory_result():
     answer = canonical_household_read_answer([{
         "tool": "read_household", "exit_code": 0,
