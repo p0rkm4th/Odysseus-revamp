@@ -234,10 +234,6 @@ _compute_final_metrics = compute_final_metrics
 _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
 _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
 _privileged_action_requires_exact_approval = requires_exact_approval
-_note_list_summary_from_tool_output = note_list_summary_from_tool_output
-_email_list_summary_from_tool_output = email_list_summary_from_tool_output
-_email_read_summary_from_tool_output = email_read_summary_from_tool_output
-_ody_qwen_terminal_tool_summary = ody_qwen_terminal_tool_summary
 _minimal_recent_notes_tool_context_message = minimal_recent_notes_tool_context_message
 _looks_like_memory_identity_turn = looks_like_memory_identity_turn
 _minimal_odysseus_doc_messages = minimal_odysseus_doc_messages
@@ -6133,7 +6129,7 @@ async def stream_aci_runtime(
                 _notes_text = ""
                 if not result.get("error"):
                     if _notes_action in {"list", "search", "find", "view", "lis"}:
-                        _notes_text = _note_list_summary_from_tool_output(
+                        _notes_text = note_list_summary_from_tool_output(
                             result.get("output") or result.get("results") or result.get("content") or ""
                         )
                     elif _notes_action in {"add", "update", "delete", "toggle_item"}:
@@ -6186,7 +6182,7 @@ async def stream_aci_runtime(
                     _ody_notes_tool_completed = True
 
             if _ody_qwen_finetune_model and not result.get("error"):
-                _terminal_summary = _ody_qwen_terminal_tool_summary({
+                _terminal_summary = ody_qwen_terminal_tool_summary({
                     "tool": block.tool_type,
                     "desc": desc,
                     "command": block.content,
@@ -6520,7 +6516,7 @@ async def stream_aci_runtime(
             except Exception:
                 _tool_action = ""
             if _tool_name == "manage_notes" and _tool_action in {"list", "search", "find", "view", "lis"}:
-                _notes_summary = _note_list_summary_from_tool_output(_ev.get("output") or "")
+                _notes_summary = note_list_summary_from_tool_output(_ev.get("output") or "")
                 if _notes_summary:
                     full_response = _notes_summary
                 break
@@ -6537,12 +6533,12 @@ async def stream_aci_runtime(
                     full_response = _tasks_summary
                 break
             if _tool_name in {"list_emails", "mcp__email__list_emails"}:
-                _email_summary = _email_list_summary_from_tool_output(_ev.get("output") or "")
+                _email_summary = email_list_summary_from_tool_output(_ev.get("output") or "")
                 if _email_summary:
                     full_response = _email_summary
                 break
             if _tool_name in {"read_email", "mcp__email__read_email"}:
-                _email_summary = _email_read_summary_from_tool_output(_ev.get("output") or "")
+                _email_summary = email_read_summary_from_tool_output(_ev.get("output") or "")
                 if _email_summary:
                     full_response = _email_summary
                 break
