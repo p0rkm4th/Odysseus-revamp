@@ -4118,6 +4118,101 @@ def safe_contract_fallback_selection(
     return selected
 
 
+def project_route_tool_schemas(
+    route_state: Mapping[str, Any],
+    *,
+    aci_model_fallback: bool,
+    aci_enabled: bool,
+    aci_mode: str,
+    force_answer: bool,
+    needs_admin: bool,
+    disabled_tools: set[str],
+    admin_tools: set[str],
+    admin_schema_names: set[str],
+    function_tool_schemas: Sequence[Mapping[str, Any]],
+    select_local_mcp_schemas: Callable[..., list[Mapping[str, Any]]],
+    last_user: str,
+) -> list[Mapping[str, Any]]:
+    """Project only the schemas applicable to one model route.
+
+    This is a model-facing projection, not an authority boundary.  The
+    caller supplies the already-authorized tool universe and policy-derived
+    exclusions; this function cannot discover or grant additional capability.
+    Keeping the projection here also prevents the runtime loop from owning a
+    second schema-selection implementation.
+    """
+    if aci_model_fallback:
+        return []
+    if aci_enabled and aci_mode == "aci":
+        # Decision JSON is the single negotiated machine protocol for this
+        # route. Native/fenced schemas would make a weak model solve two
+        # invocation problems at once and are intentionally suppressed.
+        return []
+    route_mcp_schemas = route_state["mcp_schemas"]
+    route_relevant_tools = route_state["relevant_tools"]
+    from src.context_compactor import tool_projection_trace
+
+    if force_answer:
+        return []
+    if route_state["is_api_model"]:
+        if route_relevant_tools:
+            schema_names = set(route_relevant_tools)
+            if needs_admin:
+                schema_names |= admin_tools
+            base_schemas = [
+                schema for schema in function_tool_schemas
+                if schema.get("function", {}).get("name") in schema_names
+            ]
+            mcp_filtered = [
+                schema for schema in route_mcp_schemas
+                if schema.get("function", {}).get("name") in route_relevant_tools
+            ]
+            schemas = base_schemas + mcp_filtered
+        else:
+            base_schemas = list(function_tool_schemas) if needs_admin else [
+                schema for schema in function_tool_schemas
+                if schema.get("function", {}).get("name") not in admin_schema_names
+            ]
+            schemas = base_schemas + list(route_mcp_schemas)
+        if route_state["ody_qwen_finetune_model"]:
+            schemas = []
+        if disabled_tools:
+            schemas = [
+                schema for schema in schemas
+                if schema.get("function", {}).get("name") not in disabled_tools
+                and schema.get("name") not in disabled_tools
+            ]
+        logger.info(
+            "[hades-tool-projection] model=%s trace=%s",
+            route_state.get("model"),
+            tool_projection_trace(
+                list(function_tool_schemas) + list(route_mcp_schemas),
+                schemas,
+                route_relevant_tools=route_relevant_tools,
+                disabled_tools=disabled_tools,
+                policy_exclusions=admin_schema_names if not needs_admin else set(),
+            ),
+        )
+        return schemas
+
+    schemas = select_local_mcp_schemas(
+        route_mcp_schemas,
+        route_relevant_tools,
+        last_user,
+    )
+    logger.info(
+        "[hades-tool-projection] model=%s trace=%s",
+        route_state.get("model"),
+        tool_projection_trace(
+            route_mcp_schemas,
+            schemas,
+            route_relevant_tools=route_relevant_tools,
+            disabled_tools=disabled_tools,
+        ),
+    )
+    return schemas
+
+
 def dependency_ready_for_action(selected: Mapping[str, Any]) -> bool:
     """Return whether a projected ActionCard may reach execution selection.
 

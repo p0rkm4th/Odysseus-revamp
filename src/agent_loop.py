@@ -115,6 +115,7 @@ from src.aci import (
     provisional_intent_projection,
     minimal_aci_answer_messages,
     minimal_aci_model_fallback_messages,
+    project_route_tool_schemas,
     project_action_selection,
     project_post_result_transition,
     project_result_observation,
@@ -2775,75 +2776,21 @@ async def stream_aci_runtime(
     _exhausted_rounds = False
 
     def _tool_schemas_for_route(route_state):
-        if _aci_model_fallback:
-            return []
-        if _aci_enabled and _aci_mode == "aci":
-            # Decision JSON is the single negotiated machine protocol for this
-            # route. Native/fenced schemas would make the weak model solve two
-            # invocation problems at once and are intentionally suppressed.
-            return []
-        route_mcp_schemas = route_state["mcp_schemas"]
-        route_relevant_tools = route_state["relevant_tools"]
-        from src.context_compactor import tool_projection_trace
-        if _force_answer:
-            return []
-        if route_state["is_api_model"]:
-            if route_relevant_tools:
-                schema_names = set(route_relevant_tools)
-                if _needs_admin:
-                    schema_names |= _ADMIN_TOOLS
-                base_schemas = [
-                    schema for schema in FUNCTION_TOOL_SCHEMAS
-                    if schema.get("function", {}).get("name") in schema_names
-                ]
-                mcp_filtered = [
-                    schema for schema in route_mcp_schemas
-                    if schema.get("function", {}).get("name") in route_relevant_tools
-                ]
-                schemas = base_schemas + mcp_filtered
-            else:
-                base_schemas = FUNCTION_TOOL_SCHEMAS if _needs_admin else [
-                    schema for schema in FUNCTION_TOOL_SCHEMAS
-                    if schema.get("function", {}).get("name") not in _ADMIN_SCHEMA_NAMES
-                ]
-                schemas = base_schemas + route_mcp_schemas
-            if route_state["ody_qwen_finetune_model"]:
-                schemas = []
-            if disabled_tools:
-                schemas = [
-                    schema for schema in schemas
-                    if schema.get("function", {}).get("name") not in disabled_tools
-                    and schema.get("name") not in disabled_tools
-                ]
-            logger.info(
-                "[hades-tool-projection] model=%s trace=%s",
-                route_state.get("model"),
-                tool_projection_trace(
-                    FUNCTION_TOOL_SCHEMAS + route_mcp_schemas,
-                    schemas,
-                    route_relevant_tools=route_relevant_tools,
-                    disabled_tools=disabled_tools,
-                    policy_exclusions=_ADMIN_SCHEMA_NAMES if not _needs_admin else set(),
-                ),
-            )
-            return schemas
-
-        schemas = _select_local_mcp_schemas(
-            route_mcp_schemas,
-            route_relevant_tools,
-            _last_user,
+        """Bind turn-local policy/context into the canonical ACI projector."""
+        return project_route_tool_schemas(
+            route_state,
+            aci_model_fallback=_aci_model_fallback,
+            aci_enabled=_aci_enabled,
+            aci_mode=_aci_mode,
+            force_answer=_force_answer,
+            needs_admin=_needs_admin,
+            disabled_tools=disabled_tools,
+            admin_tools=_ADMIN_TOOLS,
+            admin_schema_names=_ADMIN_SCHEMA_NAMES,
+            function_tool_schemas=FUNCTION_TOOL_SCHEMAS,
+            select_local_mcp_schemas=_select_local_mcp_schemas,
+            last_user=_last_user,
         )
-        logger.info(
-            "[hades-tool-projection] model=%s trace=%s",
-            route_state.get("model"),
-            tool_projection_trace(
-                route_mcp_schemas,
-                schemas,
-                route_relevant_tools=route_relevant_tools,
-                disabled_tools=disabled_tools,
-            ),
-        )
-        return schemas
 
     _approved_result_injected = False
     if exact_approval is not None:
