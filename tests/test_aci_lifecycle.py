@@ -346,6 +346,14 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     assert empty_service.source.value == "DETERMINISTIC_RESULT"
     assert "No homelab state records" in empty_service.content
 
+    empty_research = canonical_result_answer([{
+        "tool": "manage_osint", "exit_code": 0,
+        "output": '{"evidence": [], "status": "SUCCESS_EMPTY"}',
+    }])
+    assert empty_research is not None
+    assert empty_research.source.value == "DETERMINISTIC_RESULT"
+    assert "No research records" in empty_research.content
+
 
 def _collect_stream_events(generator):
     async def _collect():

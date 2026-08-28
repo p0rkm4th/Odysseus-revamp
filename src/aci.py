@@ -3244,6 +3244,7 @@ def canonical_structured_empty_read_answer(tool_events: Sequence[Mapping[str, An
     """
     supported = {
         "manage_homelab": "homelab state",
+        "manage_osint": "research",
         "manage_security_assessment": "security assessment",
         "developer_read": "workspace state",
         "read_setup": "integration/setup state",
