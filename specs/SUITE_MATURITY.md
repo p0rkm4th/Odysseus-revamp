@@ -8,7 +8,7 @@ the complete journey works.
 |---|---|---|---|---|---|
 | Homelab / Network / Infrastructure | `AssetInventory`, `HomelabOperations`, `NetworkState`, ACI contracts | IMPLEMENTED / PARTIAL | asset list/detail, network context/observations, host inspection, service status contract | service target/detail rendering and readback coverage need a focused product slice | Tier 1 active |
 | Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / PARTIAL | overview, item/list/search/get contracts, mutation/readback suites | natural stock/expiry/location projections and browser journeys need expansion | Tier 1 active |
-| Recipes / Meal Planning | existing `InventoryRecipe`/Cookbook code and recipe tests | PARTIAL / OWNER AUDIT | cookbook dependency/recipe characterization only | identify the canonical recipe read/coverage owner before adding routing | Tier 1 next |
+| Recipes / Meal Planning | existing `InventoryRecipe`, `RecipeService`, stock planner, and Cookbook code | IMPLEMENTED / PARTIAL | canonical recipe list/search/get and pantry-coverage binding plus inventory recipe tests | add seeded end-to-end recipe journeys and meal-plan/shopping projections | Tier 1 active |
 | Memory / Personal Knowledge | Memory store, grounding, `read_memory` | IMPLEMENTED | deterministic owner reads, stale/current precedence, browser acceptance | broaden everyday recall/correction journeys | Tier 1 next |
 | Work / Projects / Tasks | Work Engine, Runs, Actions, `read_work` | IMPLEMENTED | overview, attention, continuation and persistence tests | add cross-suite remediation/task journeys | Tier 1 next |
 | OSINT / Public Research | public web evidence and OSINT contracts | PARTIAL | contract/security characterization | end-to-end case/evidence/report journey | Tier 2 |
@@ -27,7 +27,10 @@ the complete journey works.
 - Initial Tier 1 semantic audit found unsupported/unknown routing for service
   variants, household stock/expiry language, and recipe planning language.
 - First productization slice resolves the service and household variants via
-  existing contracts; recipe planning remains deferred pending owner audit.
+  existing contracts.
+- Recipe read projection now uses the existing `InventoryService` owner;
+  recipe mutations/cooking and meal-plan/shopping composition remain deferred
+  until read journeys are seeded and verified.
 - Productization checkpoint `818a0a218900c4f173e2773e1469050057ea8b61` was
   pushed and deployed exactly; focused routing/household coverage is
   `342 passed, 1 skipped`, runtime health is healthy, and Qwen3:8B is reachable

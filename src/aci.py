@@ -3183,6 +3183,53 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     return "\n".join(lines)
 
 
+def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render recipe/stock-coverage reads from Inventory Service evidence."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "read_recipes"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        payload = json.loads(str(event.get("output") or ""))
+        command = json.loads(str(event.get("command") or "{}"))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    status = str(payload.get("status") or "").strip().upper()
+    if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
+        return None
+    action = str(command.get("action") or "list").strip().casefold() if isinstance(command, Mapping) else "list"
+    if action == "can_make":
+        can_make = payload.get("can_make")
+        shortages = payload.get("shortages") if isinstance(payload.get("shortages"), list) else []
+        if can_make is True:
+            return "The canonical pantry check says this recipe can be made with the recorded stock."
+        names = [str(item.get("name") or "ingredient") for item in shortages if isinstance(item, Mapping)]
+        suffix = f" Missing: {', '.join(names[:20])}." if names else ""
+        return "The canonical pantry check says this recipe cannot be made from the recorded stock." + suffix
+    recipes = payload.get("recipes")
+    if not isinstance(recipes, list):
+        recipe = payload.get("recipe")
+        recipes = [recipe] if isinstance(recipe, Mapping) else None
+    if recipes is None:
+        return None
+    if not recipes:
+        return "No recipes are recorded for this owner."
+    lines = [f"I found {len(recipes)} recorded recipe{'s' if len(recipes) != 1 else ''}:"]
+    for recipe in recipes[:50]:
+        if not isinstance(recipe, Mapping):
+            continue
+        name = str(recipe.get("name") or "Unnamed recipe").strip()
+        servings = recipe.get("servings")
+        suffix = f" ({servings} servings)" if servings not in (None, "") else ""
+        lines.append(f"- {name}{suffix}")
+    return "\n".join(lines)
+
+
 def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render network observations/context without model-invented topology."""
     event = next(
@@ -3583,6 +3630,7 @@ def canonical_result_answer(
         (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
         (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
         (canonical_household_read_answer(tool_events), "canonical Household Result"),
+        (canonical_recipe_read_answer(tool_events), "canonical Recipe Result"),
         (canonical_structured_empty_read_answer(tool_events), "canonical structured empty Result"),
     )
     for content, provenance in candidates:

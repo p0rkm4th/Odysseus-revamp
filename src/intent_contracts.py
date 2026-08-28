@@ -744,7 +744,7 @@ class IntentFrame:
 
 
 _BOUNDED_OWNER_CAPABILITY_CONCEPTS = frozenset({
-    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM",
+    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM", "RECIPE",
 })
 
 
@@ -901,6 +901,11 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "household_overview",
     ),
+    "RECIPE": DomainContract(
+        "RECIPE", "recipe.read", {"READ": "list", "READ_SEARCH": "search"}, "read_recipes",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "recipe_read",
+    ),
     # Mutations use the same Inventory service as the human-facing inventory
     # adapter.  Keeping this as a separate contract avoids changing the
     # established read-only Household binding while making CREATE/UPDATE
@@ -982,6 +987,7 @@ CANONICAL_DOMAIN_PROJECTIONS: Mapping[str, str] = {
     "MISSION": "work",
     "WATCH": "work",
     "HOUSEHOLD_ITEM": "household",
+    "RECIPE": "recipes",
     "INTEGRATION": "setup",
     "COMMUNICATIONS": "communications",
     "CONTACT": "contacts",
@@ -1024,6 +1030,8 @@ def canonical_read_action(
         operation = "READ_CONTEXT"
     elif domain_concept == "NETWORK" and view == "roles":
         operation = "READ_ROLES"
+    elif domain_concept == "RECIPE" and str(dict(filters or {}).get("recipe_query") or "").strip():
+        operation = "READ_SEARCH"
     return contract.actions.get(operation)
 
 
@@ -1292,7 +1300,7 @@ def compile_intent(
         concept = "SECURITY_FINDING"
     elif re.search(r"\b(?:osint|open source intelligence|investigations?|cases?)\b", q):
         concept = "OSINT_CASE"
-    elif re.search(r"\b(?:household|pantry|stock|shopping|recipe|recipes|groceries|kitchen)\b", q):
+    elif re.search(r"\b(?:household|pantry|stock|shopping|groceries|kitchen)\b", q):
         concept = "HOUSEHOLD_ITEM"
     elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
         concept = "WORK"
@@ -1582,6 +1590,12 @@ def compile_intent(
         reference_filters["view"] = "context"
     elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
         reference_filters["view"] = "roles"
+    if concept == "RECIPE" and operation == "READ" and re.search(
+        r"\b(?:find|search|look\s+for)\b", q,
+    ):
+        query_match = re.search(r"\b(?:find|search|look\s+for)\s+(?:a\s+)?(?:recipes?\s+(?:for\s+)?)?(.+)$", q)
+        if query_match and query_match.group(1).strip():
+            reference_filters["recipe_query"] = query_match.group(1).strip(" ?.!\n")
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
@@ -1728,6 +1742,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_CONTEXT"
     elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "roles":
         action_key = "READ_ROLES"
+    elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_query"):
+        action_key = "READ_SEARCH"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "file":
         action_key = "READ_FILE"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "map":
@@ -1857,6 +1873,9 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
     if frame.domain_concept == "SECURITY_FINDING" and frame.operation_class == "READ":
         if not isinstance(result.get("findings"), list):
             return False, "INVALID_RESULT"
+    if frame.domain_concept == "RECIPE" and frame.operation_class == "READ":
+        if not isinstance(result.get("recipes"), list):
+            return False, "INVALID_RESULT"
     return True, status
 
 
@@ -1882,7 +1901,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
         for operation, registered_action in contract.actions.items():
             if registered_action != action_id:
                 continue
-            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
+            if operation in {"READ", "READ_SEARCH", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
                 filters = {}
                 if operation == "READ_INTEGRATIONS":
                     filters["view"] = "integrations"
@@ -1890,6 +1909,8 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     filters["view"] = "unidentified"
                 elif operation == "READ_ROLES":
                     filters["view"] = "roles"
+                elif operation == "READ_SEARCH":
+                    filters["recipe_query"] = "search"
                 frame = IntentFrame(
                     operation_class="READ",
                     domain_concept=concept,
@@ -1921,6 +1942,8 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     ("WATCH", "list_watches"): "watches",
                     ("HOUSEHOLD_ITEM", "list_items"): "items",
                     ("HOUSEHOLD_ITEM", "search_items"): "items",
+                    ("RECIPE", "list"): "recipes",
+                    ("RECIPE", "search"): "recipes",
                     ("COMMUNICATIONS", "overview"): "email",
                     ("CONTACT", "contacts"): "contacts",
                 }.get((concept, action_id))

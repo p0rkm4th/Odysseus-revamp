@@ -1812,6 +1812,22 @@ async def _execute_read_household_binding(block, owner=None):
     except Exception as exc:
         return "read_household", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
+async def _execute_read_recipes_binding(block, owner=None):
+    """Adapt canonical recipe reads to the existing Inventory Service owner."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        action = str(payload.get("action") or "").strip().casefold()
+        if action not in {"list", "search", "get", "can_make"}:
+            raise ValueError("unsupported read-only Recipe action")
+        if not owner:
+            raise PermissionError("authenticated recipe owner is required")
+        from src.inventory_service import get_inventory_service
+        result = get_inventory_service().manage_recipes(payload, owner=owner)
+        result = _with_canonical_read_status(result)
+        return "read_recipes", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+    except Exception as exc:
+        return "read_recipes", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
 async def _execute_read_setup_binding(block, owner=None):
     """Adapt Setup Center's secret-free owner projection to a read binding."""
     try:
@@ -2039,6 +2055,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_memory": _execute_read_memory_binding,
     "read_work": _execute_read_work_binding,
     "read_household": _execute_read_household_binding,
+    "read_recipes": _execute_read_recipes_binding,
     "read_setup": _execute_read_setup_binding,
     "read_career": _execute_read_career_binding,
     "read_communications": _execute_read_communications_binding,

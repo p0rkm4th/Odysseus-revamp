@@ -123,6 +123,19 @@ READ_HOUSEHOLD_SCHEMA = {
     }
 }
 
+READ_RECIPES_SCHEMA = {
+    "type": "function", "function": {
+        "name": "read_recipes",
+        "description": "Read authenticated owner-scoped recipes and deterministic pantry coverage. Recipe suggestions never change inventory state.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["list", "search", "get", "can_make"]},
+            "query": {"type": "string", "maxLength": 200},
+            "recipe_id": {"type": "string"},
+            "servings": {"type": "number", "minimum": 0.01, "maximum": 1000},
+        }, "required": ["action"]},
+    }
+}
+
 READ_SETUP_SCHEMA = {
     "type": "function", "function": {
         "name": "read_setup",
@@ -292,6 +305,12 @@ Canonical read-only Household Inventory projection. Use `overview`, `list_items`
 items. Technical asset identity remains owned by CMDB/IT Assets.
 `<invoke name="read_household"><parameter name="action">overview</parameter></invoke>`.'''
 
+_RECIPE_READ_CONTRACT = '''### `read_recipes`
+Canonical read-only Recipe and pantry-coverage projection over the existing
+Inventory Service. Use `list`, `search`, `get`, or deterministic `can_make`.
+Recipe suggestions never assert inventory possession and never mutate stock.
+`<invoke name="read_recipes"><parameter name="action">list</parameter></invoke>`.'''
+
 _SETUP_READ_CONTRACT = '''### `read_setup`
 Canonical read-only Setup Center and Integration Center projection. It reports
 configuration and health state without exposing secret values or changing
@@ -343,6 +362,7 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "read_memory": ToolBinding("read_memory", TOOL_CAPABILITY_IDS["read_memory"], READ_MEMORY_SCHEMA, _MEMORY_READ_CONTRACT, frozenset({"memory"}), "read_memory"),
     "read_work": ToolBinding("read_work", TOOL_CAPABILITY_IDS["read_work"], READ_WORK_SCHEMA, _WORK_READ_CONTRACT, frozenset({"work"}), "read_work"),
     "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
+    "read_recipes": ToolBinding("read_recipes", TOOL_CAPABILITY_IDS["read_recipes"], READ_RECIPES_SCHEMA, _RECIPE_READ_CONTRACT, frozenset({"household", "recipes", "cooking"}), "read_recipes"),
     "read_setup": ToolBinding("read_setup", TOOL_CAPABILITY_IDS["read_setup"], READ_SETUP_SCHEMA, _SETUP_READ_CONTRACT, frozenset({"setup", "integrations", "system"}), "read_setup"),
     "read_career": ToolBinding("read_career", TOOL_CAPABILITY_IDS["read_career"], READ_CAREER_SCHEMA, _CAREER_READ_CONTRACT, frozenset({"work", "career"}), "read_career"),
     "read_communications": ToolBinding("read_communications", TOOL_CAPABILITY_IDS["read_communications"], READ_COMMUNICATIONS_SCHEMA, _COMMUNICATIONS_READ_CONTRACT, frozenset({"communications", "system"}), "read_communications"),
