@@ -1001,7 +1001,9 @@ def test_canonical_read_does_not_invoke_teacher_after_authoritative_answer(monke
     events = _collect_stream_events(agent_loop.stream_agent_loop(
         "http://local.test/v1", "small-local-model",
         [{"role": "user", "content": "what network am i on"}],
-        aci_mode="aci", tool_executor=fake_execute,
+        aci_mode="aci", tool_executor=fake_execute, owner="owner",
+        session_id="session", work_run_id="run",
+        relevant_tools={"read_household"},
     ))
 
     assert any(event.get("type") == "metrics" for event in events)
