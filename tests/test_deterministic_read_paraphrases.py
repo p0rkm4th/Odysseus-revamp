@@ -167,6 +167,19 @@ def test_recipe_pantry_coverage_has_distinct_canonical_result_contract(query):
     assert resolved.binding_name == "read_recipes"
 
 
+def test_recipe_scale_followup_preserves_recipe_reference_and_serving_target():
+    context = {
+        "ordered_entities": [{"ref": "recipe-1", "concept": "RECIPE"}],
+        "last": {"ref": "recipe-1", "concept": "RECIPE"},
+    }
+    frame = compile_intent("scale this recipe to six servings", reference_context=context)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.entity_reference == "recipe-1"
+    assert frame.filters == {"recipe_scale": True, "servings": "6"}
+    assert resolved.action_id == "scale"
+
+
 @pytest.mark.parametrize("query", [
     "What all is on my network? do a discovery dive?",
     "tell me about the network, do a deep dive discovery mission to tell me whats going on",

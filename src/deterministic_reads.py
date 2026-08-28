@@ -90,6 +90,14 @@ _RECIPE_COVERAGE = re.compile(
     r"\b(?:check|show)\b.*\b(?:pantry\s+coverage|missing\s+ingredients?)\b",
     re.IGNORECASE,
 )
+_RECIPE_SCALE = re.compile(
+    r"\b(?:scale|resize|adjust)\b.{0,40}\b(?:to\s+)?(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b",
+    re.IGNORECASE,
+)
+_SERVING_NUMBER = re.compile(
+    r"\b(?:to\s+)?(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b",
+    re.IGNORECASE,
+)
 _HOST_INSPECTION = re.compile(
     r"\b(?:inspect|check|show|read|explore|scan)\s+(?:me\s+)?"
     r"(?:(?:the|this|current|local|my|your)\s+){0,2}"
@@ -162,6 +170,7 @@ def deterministic_read_concept(text: str) -> str | None:
         and not _INFRASTRUCTURE_STATUS.search(query)
         and not _RECIPE_READ.search(query)
         and not _RECIPE_COVERAGE.search(query)
+        and not _RECIPE_SCALE.search(query)
         and not _HOST_INSPECTION.search(query)
         and not (
             _NETWORK_SUBJECT.search(query)
@@ -187,6 +196,8 @@ def deterministic_read_concept(text: str) -> str | None:
     if _RECIPE_COVERAGE.search(query) and not re.search(
         r"\b(?:what\s+is|how\s+does|explain|define)\b", query,
     ):
+        return "RECIPE"
+    if _RECIPE_SCALE.search(query) and re.search(r"\b(?:recipe|meal|dish|servings?)\b", query):
         return "RECIPE"
     if _RECIPE_READ.search(query) and not re.search(
         r"\b(?:what\s+is|how\s+does|explain|define)\b", query,
@@ -327,3 +338,16 @@ def deterministic_read_view(text: str, concept: str | None) -> str | None:
     if concept == "WORK" and re.search(r"\b(?:attention|on\s+my\s+plate|needs?\s+attention)\b", query):
         return "attention"
     return None
+
+
+def deterministic_recipe_servings(text: str) -> str | None:
+    """Return a normalized serving target for an explicit recipe scaling read."""
+    match = _SERVING_NUMBER.search(_normalized(text))
+    if not match:
+        return None
+    words = {
+        "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+        "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+        "eleven": "11", "twelve": "12",
+    }
+    return words.get(match.group(1).casefold(), match.group(1))

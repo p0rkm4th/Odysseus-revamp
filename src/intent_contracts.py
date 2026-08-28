@@ -16,7 +16,7 @@ from typing import Any, Mapping
 
 from src.capability_registry import ActionSpec, capability_for_id
 from src.tool_bindings import binding_for_tool
-from src.deterministic_reads import deterministic_read_concept, deterministic_read_view
+from src.deterministic_reads import deterministic_read_concept, deterministic_read_view, deterministic_recipe_servings
 
 logger = logging.getLogger(__name__)
 
@@ -903,7 +903,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     ),
     "RECIPE": DomainContract(
         "RECIPE", "recipe.read",
-        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make"},
+        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make", "READ_SCALE": "scale"},
         "read_recipes",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "recipe_read",
@@ -1036,6 +1036,8 @@ def canonical_read_action(
         operation = "READ_SEARCH"
     elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_coverage") is True:
         operation = "READ_COVERAGE"
+    elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_scale") is True:
+        operation = "READ_SCALE"
     return contract.actions.get(operation)
 
 
@@ -1605,6 +1607,13 @@ def compile_intent(
         r"missing\s+ingredients?)\b", q,
     ):
         reference_filters["recipe_coverage"] = True
+    if concept == "RECIPE" and operation == "READ" and re.search(
+        r"\b(?:scale|resize|adjust)\b.{0,40}\b(?:to\s+)?(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b", q,
+    ):
+        serving_target = deterministic_recipe_servings(q)
+        if serving_target:
+            reference_filters["recipe_scale"] = True
+            reference_filters["servings"] = serving_target
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
@@ -1755,6 +1764,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_SEARCH"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_coverage") is True:
         action_key = "READ_COVERAGE"
+    elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_scale") is True:
+        action_key = "READ_SCALE"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "file":
         action_key = "READ_FILE"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "map":
@@ -1888,6 +1899,9 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
         if frame.filters.get("recipe_coverage") is True:
             if not isinstance(result.get("can_make"), bool) or not isinstance(result.get("shortages"), list):
                 return False, "INVALID_RESULT"
+        elif frame.filters.get("recipe_scale") is True:
+            if not isinstance(result.get("scaled_ingredients"), list) or not result.get("servings"):
+                return False, "INVALID_RESULT"
         elif frame.entity_reference:
             if not isinstance(result.get("recipe"), Mapping):
                 return False, "INVALID_RESULT"
@@ -1918,7 +1932,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
         for operation, registered_action in contract.actions.items():
             if registered_action != action_id:
                 continue
-            if operation in {"READ", "READ_SEARCH", "READ_DETAIL", "READ_COVERAGE", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
+            if operation in {"READ", "READ_SEARCH", "READ_DETAIL", "READ_COVERAGE", "READ_SCALE", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
                 filters = {}
                 if operation == "READ_INTEGRATIONS":
                     filters["view"] = "integrations"
@@ -1930,6 +1944,8 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     filters["recipe_query"] = "search"
                 elif operation == "READ_COVERAGE":
                     filters["recipe_coverage"] = True
+                elif operation == "READ_SCALE":
+                    filters["recipe_scale"] = True
                 if operation == "READ_DETAIL":
                     frame_entity_reference = "recipe"
                 else:
@@ -1969,6 +1985,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     ("RECIPE", "list"): "recipes",
                     ("RECIPE", "search"): "recipes",
                     ("RECIPE", "get"): "recipe",
+                    ("RECIPE", "scale"): "scaled_ingredients",
                     ("COMMUNICATIONS", "overview"): "email",
                     ("CONTACT", "contacts"): "contacts",
                 }.get((concept, action_id))
