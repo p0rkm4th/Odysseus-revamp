@@ -1928,3 +1928,14 @@ The exact-image, no-source-mount frozen Qwen3:8B run passed `62/62` functional,
 architectural, and security; duplicate delivery `0`, failed Actions/task
 `0.0161`, model calls/task `0.2581`, median `0.0182s`, P95 `2.5476s`. Live
 authenticated owner acceptance remains separate evidence.
+
+## Qwen revalidation after second alias reduction (`11c4a7d6`, 2026-08-28)
+
+The exact baked candidate passed `6809` full-regression tests with `5` skips
+before deployment. Frozen Qwen3:8B revalidation passed `62/62` architectural,
+`62/62` security, and `61/62` functional; duplicates `0`, reference resolution
+`1.0`, failed Actions/task `0.0161`, model calls/task `0.2581`, median
+`0.0181s`, P95 `3.379s`. The only failure is the known evaluator
+`jarvis-environment-assumption` grounding assertion, with an answer present and
+no Action selected. Embedded and running source match the pushed SHA and the
+runtime is healthy with zero restarts.
