@@ -44,6 +44,11 @@ rows, retains UUID references for advanced users, and records an optional
 source URL. Focused UI/Recipe coverage is `239 passed`; exact candidate image
 is `sha256:a92afcbfcf5397f3070640200f5b108ca5505338e0afda218cd060473970e3f1`.
 
+The reviewed import UI/API checkpoint `aa9f230bd04384d736b66f533aff46b01b4d7ab1`
+adds authenticated `prepare` and `commit` endpoints and an Import dialog with
+explicit preview/confirmation. Its exact candidate image is
+`sha256:a6f771890c53f0800e8be82b7692428f737c2a8b4e47440406badc4f6a7a156a`.
+
 ## Baseline evidence
 
 - Post-merge `main`: `364380ed3f46c1d14d3229e5b7530698cfa22e65`.
