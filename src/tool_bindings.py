@@ -128,7 +128,7 @@ READ_RECIPES_SCHEMA = {
         "name": "read_recipes",
         "description": "Read authenticated owner-scoped recipes and deterministic pantry coverage. Recipe suggestions never change inventory state.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["list", "search", "get", "can_make", "scale"]},
+            "action": {"type": "string", "enum": ["list", "search", "get", "can_make", "scale", "expiring_candidates"]},
             "query": {"type": "string", "maxLength": 200},
             "recipe_id": {"type": "string"},
             "servings": {"type": "number", "minimum": 0.01, "maximum": 1000},

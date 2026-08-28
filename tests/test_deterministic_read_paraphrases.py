@@ -155,6 +155,15 @@ def test_recipe_search_keeps_only_bounded_query_text():
     assert resolve_intent(frame).action_id == "search"
 
 
+def test_expiring_recipe_composition_uses_distinct_canonical_action():
+    frame = compile_intent("what recipes can i make with ingredients expiring soon")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["recipe_expiring"] is True
+    assert resolved.action_id == "expiring_candidates"
+    assert resolved.binding_name == "read_recipes"
+
+
 @pytest.mark.parametrize("query", [
     "can I make this recipe with what I have",
     "do I have everything for this meal",

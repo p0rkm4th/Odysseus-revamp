@@ -832,6 +832,86 @@ class RecipeService(InventoryService):
             recipe = self._recipe(db, owner, recipe_id)
             return self._stock_plan(db, owner, recipe, servings if servings is not None else recipe.servings)
 
+    def expiring_recipe_candidates(self, owner: str, *, expiry_days: Any = 30) -> dict[str, Any]:
+        """Compose expiring canonical stock with deterministic recipe coverage.
+
+        This is a read-only projection over the Inventory Service.  It does
+        not claim that a recipe is available merely because an ingredient is
+        expiring: each candidate is checked against the complete canonical
+        stock plan and reports any shortages explicitly.
+        """
+        owner = _required_text(owner, "owner", maximum=255)
+        try:
+            horizon = max(0, min(int(expiry_days), 365))
+        except (TypeError, ValueError) as exc:
+            raise InventoryError("expiry_days must be an integer") from exc
+        today = date.today()
+        cutoff = today + timedelta(days=horizon)
+        with self._read() as db:
+            items = db.query(InventoryItem).filter(
+                InventoryItem.owner == owner,
+                InventoryItem.domain.in_(("kitchen", "household")),
+                InventoryItem.archived.is_(False),
+            ).all()
+            item_by_id = {item.id: item for item in items}
+            lots = db.query(InventoryLot).filter(
+                InventoryLot.owner == owner,
+                InventoryLot.item_id.in_(list(item_by_id) or ["__none__"]),
+                InventoryLot.quantity > 0,
+                InventoryLot.expiry_date.is_not(None),
+                InventoryLot.expiry_date <= cutoff,
+            ).order_by(InventoryLot.expiry_date, InventoryLot.id).all()
+            expiring_by_id: dict[str, list[dict[str, Any]]] = {}
+            for lot in lots:
+                item = item_by_id[lot.item_id]
+                expiring_by_id.setdefault(item.id, []).append({
+                    "item_id": item.id,
+                    "name": item.name,
+                    "quantity": lot.quantity,
+                    "unit": lot.unit,
+                    "expiry_date": lot.expiry_date,
+                    "status": "expired" if lot.expiry_date < today else "expiring",
+                })
+            candidates = []
+            recipes = db.query(InventoryRecipe).filter_by(
+                owner=owner, archived=False,
+            ).order_by(InventoryRecipe.normalized_name, InventoryRecipe.id).all()
+            for recipe in recipes:
+                ingredients = db.query(InventoryRecipeIngredient).filter_by(
+                    owner=owner, recipe_id=recipe.id,
+                ).all()
+                related = []
+                for ingredient in ingredients:
+                    if ingredient.item_id in expiring_by_id:
+                        related.extend(expiring_by_id[ingredient.item_id])
+                        continue
+                    normalized = normalize_item_name(ingredient.ingredient_name)
+                    related.extend(
+                        entry for item_id, entries in expiring_by_id.items()
+                        if normalize_item_name(item_by_id[item_id].name) == normalized
+                        for entry in entries
+                    )
+                if not related:
+                    continue
+                plan = self._stock_plan(db, owner, recipe, recipe.servings)
+                candidates.append({
+                    "recipe_id": recipe.id,
+                    "recipe_name": recipe.name,
+                    "can_make": plan.can_make,
+                    "expiring_ingredients": related,
+                    "shortages": [{
+                        "name": row.name, "missing": row.missing,
+                        "unit": row.unit, "optional": row.optional,
+                    } for row in plan.shortages],
+                })
+            return {
+                "candidates": candidates,
+                "expiry_days": horizon,
+                "freshness": {"computed_at": datetime.now(timezone.utc).isoformat()},
+                "canonical_store": "inventory_service",
+                "owner_scope": owner,
+            }
+
     def cook(
         self, owner: str, recipe_id: str, *, servings: Any | None = None,
         idempotency_key: str,
@@ -1010,6 +1090,10 @@ class RecipeService(InventoryService):
                     "optional": ingredient["optional"],
                 } for ingredient in recipe.get("ingredients", [])],
             }
+        if action == "expiring_candidates":
+            return self.expiring_recipe_candidates(
+                owner, expiry_days=args.get("expiry_days", 30),
+            )
         if action == "add":
             return {"recipe": self.create_recipe(
                 owner, name=args.get("name"), servings=args.get("servings") or "1",

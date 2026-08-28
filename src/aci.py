@@ -3021,6 +3021,8 @@ def canonical_read_fast_path_payload(
         servings = str(filters.get("servings") or "").strip()
         if servings and action == "scale":
             payload["servings"] = servings[:20]
+        if filters.get("recipe_expiring") is True and action == "expiring_candidates":
+            payload["expiry_days"] = 30
         return payload
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
@@ -3250,6 +3252,28 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
         for ingredient in ingredients[:100]:
             if isinstance(ingredient, Mapping):
                 lines.append(f"- {ingredient.get('quantity')} {ingredient.get('unit') or ''} {ingredient.get('name') or 'ingredient'}".strip())
+        return "\n".join(lines)
+    if action == "expiring_candidates":
+        candidates = payload.get("candidates")
+        if not isinstance(candidates, list):
+            return None
+        if not candidates:
+            return "No recorded recipes use ingredients that expire within the requested window."
+        lines = ["Recipes using ingredients that are expiring soon:"]
+        for candidate in candidates[:50]:
+            if not isinstance(candidate, Mapping):
+                continue
+            name = str(candidate.get("recipe_name") or "Unnamed recipe")
+            status = "can make" if candidate.get("can_make") is True else "missing ingredients"
+            lines.append(f"- {name} ({status})")
+            shortages = candidate.get("shortages")
+            if isinstance(shortages, list) and shortages:
+                missing = ", ".join(
+                    str(row.get("name") or "ingredient")
+                    for row in shortages[:12] if isinstance(row, Mapping)
+                )
+                if missing:
+                    lines.append(f"  Missing: {missing}")
         return "\n".join(lines)
     recipes = payload.get("recipes")
     if not isinstance(recipes, list):
