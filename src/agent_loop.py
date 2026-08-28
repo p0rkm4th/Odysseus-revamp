@@ -414,12 +414,12 @@ _DOMAIN_RULES["career"] = (
 
 # Capability V1 domain projection. These hints affect discovery/visibility;
 # policy, security gates, and execution remain owned by their existing layers.
-from src.legacy_domain_contract import (
-    DOMAIN_TOOL_MAP as _DOMAIN_TOOL_MAP,
-    TOOL_BINDINGS as _capability_v1_bindings,
-    CANONICAL_TOOLS_FOR_DOMAINS as _canonical_tools_for_domains,
-    BUILTIN_OVERRIDES as get_builtin_overrides,
-)
+# Keep the legacy domain map below as a compatibility prompt projection, but
+# source ACI's binding registry directly from its canonical owners.
+from src.legacy_domain_contract import DOMAIN_TOOL_MAP as _DOMAIN_TOOL_MAP
+from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings, tools_for_domains
+from src.tool_overrides import get_builtin_overrides
+_canonical_tools_for_domains = tools_for_domains
 _DOMAIN_RULES["asset_inventory"] = (
     "Asset inventory/CMDB tasks: prefer first-class manage_assets for canonical "
     "asset state, relationships, and observations. If privileged diagnostics or "
