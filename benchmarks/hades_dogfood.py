@@ -988,9 +988,32 @@ def generate_hidden_holdout_cases(*, seed: int = 0, count: int = 500) -> list[di
     The case is executable through the normal runner, but the resulting report
     contains only the prompt digest and ScenarioFrame metadata. A fixed seed
     reproduces the same hidden wording for an authorized replay without making
-    the holdout a visible phrase corpus.
+    the holdout a visible phrase corpus. Keep registry-action probes bounded:
+    the first entries in the registry are long-tail ActionSpec probes, not a
+    representative semantic-language holdout. Mix one registry probe into
+    each five-case block and fill the remainder from the ScenarioFrame cases.
     """
-    bases = generate_semantic_cases(seed=seed + 104729, count=count, split="held_out")
+    requested = max(0, int(count))
+    if not requested:
+        return []
+    registry_count = len(_registry_action_entries())
+    candidates = generate_semantic_cases(
+        seed=seed + 104729,
+        count=requested + registry_count,
+        split="held_out",
+    )
+    registry_bases = candidates[:registry_count]
+    semantic_bases = candidates[registry_count:]
+    bases: list[dict[str, Any]] = []
+    registry_index = 0
+    semantic_index = 0
+    for index in range(requested):
+        if index % 5 == 0 and registry_index < len(registry_bases):
+            bases.append(registry_bases[registry_index])
+            registry_index += 1
+        else:
+            bases.append(semantic_bases[semantic_index % len(semantic_bases)])
+            semantic_index += 1
     rng = random.Random(int(seed) + 161803)
     cases: list[dict[str, Any]] = []
     for index, base in enumerate(bases):
