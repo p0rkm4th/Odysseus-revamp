@@ -13,6 +13,7 @@ _MOCKED_IMPORTS = [
 ]
 _INJECTED_IMPORT_STUBS = {}
 _PREEXISTING_AGENT_LOOP = sys.modules.get("src.agent_loop")
+_PREEXISTING_BOOTSTRAP_MODULES = set(sys.modules)
 
 
 def _drop_module_if_same(name, expected):
@@ -46,6 +47,17 @@ finally:
         _drop_module_if_same("src.agent_loop", _IMPORTED_AGENT_LOOP)
     for _mod, _stub in _INJECTED_IMPORT_STUBS.items():
         _drop_module_if_same(_mod, _stub)
+    # Importing the loop under mocked database/tool modules also imports a
+    # graph of source modules whose globals retain those mocks. Remove the
+    # entire newly-loaded application graph, not just the top-level loop, so
+    # later test modules get clean canonical owners.
+    for _mod in sorted(
+        set(sys.modules) - _PREEXISTING_BOOTSTRAP_MODULES,
+        key=len,
+        reverse=True,
+    ):
+        if _mod.startswith(("src.", "core.")):
+            _drop_module_if_same(_mod, sys.modules.get(_mod))
 
 from src.aci import (
     compute_final_metrics,
