@@ -2662,3 +2662,13 @@ and failed Actions/task `0.52`. The largest `INTENT_FAILURE` cluster was
 confined to generated registry-action cases requesting unavailable or blocked
 capabilities. Existing ACI traces fail closed and retain bounded authority;
 this evidence did not justify a production semantic-owner change.
+
+## Supported-domain generated triage (`80bdba30`, 2026-08-28)
+
+The 50-case Qwen3:8B supported-domain sample completed without timeout, with
+security `50/50`, duplicate delivery `0`, functional `8/50`, architectural
+`36/50`, and failed Actions/task `0.24`. Trace inspection showed the largest
+burden/routing/intent clusters came from generated registry-action prompts
+using synthetic fine-grained action labels and deliberately unavailable,
+approval-bound, or incomplete states. No production semantic-owner change was
+justified; the result remains exploratory model-burden evidence.
