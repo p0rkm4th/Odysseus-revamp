@@ -692,3 +692,9 @@ resolution was `1.0`; failed Actions/task was `0.0161`; model calls/task
 answer, but the frozen evaluator's `response_excludes` grounding assertion
 failed. This is a frozen evaluator/contract failure, not an absent answer or
 transport failure. The bounded generated shard remains separate evidence.
+
+The candidate image excludes the repository's `tests/` tree from the Docker
+build context. A no-source-mount `pytest -q` therefore reports no test files
+and exits with code `5`. The supported source-mounted container remains valid
+for regression execution, but this is an explicit test-packaging limitation,
+not exact-image full-regression evidence.
