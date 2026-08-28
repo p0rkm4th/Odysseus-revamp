@@ -10,6 +10,7 @@ Extracted from agent_tools.py.
 import asyncio
 import collections
 import contextvars
+import hashlib
 import json
 import logging
 import os
@@ -17,6 +18,7 @@ import pathlib
 import re
 import sys
 import time
+from uuid import uuid4
 from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
 
 
@@ -805,7 +807,14 @@ async def execute_tool_block(
             else:
             # Registered bindings reuse the same security/approval gate above;
             # only their mature executor implementation is supplied here.
-                output = await _registered_executor(block, owner=owner)
+                executor_kwargs = {"owner": owner}
+                if _registered_executor is _execute_manage_assets_binding:
+                    executor_kwargs["run_id"] = (
+                        security_context.run_id
+                        if isinstance(security_context, ToolRunSecurityContext)
+                        else None
+                    )
+                output = await _registered_executor(block, **executor_kwargs)
         else:
             output = await _execute_tool_block_impl(
                 block,
@@ -1430,7 +1439,7 @@ def _ody_v34_asset_argv(args, owner=None):
     raise ValueError("unsupported manage_assets action: " + action)
 
 
-async def _execute_manage_assets_binding(block, owner=None):
+async def _execute_manage_assets_binding(block, owner=None, run_id=None):
     try:
         if not owner:
             raise PermissionError("authenticated IT asset owner is required")
@@ -1458,6 +1467,17 @@ async def _execute_manage_assets_binding(block, owner=None):
                 # conversational ``each``). Preserve that owner state in
                 # the Action input instead of asking the model to guess it.
                 payload["unit"] = matches[0].get("default_unit") or payload.get("unit")
+            if payload.get("action") == "consume_stock" and not payload.get("idempotency_key"):
+                # Direct canonical turns may not have a durable WorkAction
+                # projection. Reuse the dispatcher-owned run identity plus a
+                # canonical request digest; this remains invisible to the
+                # model and gives the service a stable replay key.
+                request_digest = hashlib.sha256(
+                    _ody_v34_json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest()[:40]
+                payload["idempotency_key"] = (
+                    f"stream:{str(run_id or uuid4()).strip()}:{request_digest}"
+                )[:255]
             from src.agent_tools.inventory_tools import ManageInventoryTool
             result = dict(await ManageInventoryTool().execute(
                 _ody_v34_json.dumps(payload, sort_keys=True), {"owner": owner},
