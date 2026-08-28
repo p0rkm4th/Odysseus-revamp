@@ -1777,3 +1777,19 @@ The in-container frozen quick run remained `62/62` functional,
 reference accuracy `1.0`, failed Actions/task `0.0161`, model calls/task
 `0.2581`, and P95 `2.4794s`. No authenticated acceptance-principal replay was
 performed in this checkpoint.
+## Dead prompt cleanup checkpoint (`b0b94a67`, 2026-08-28)
+
+Removed the unreachable first fenced-tool prompt definitions from
+`agent_loop.py`; they were overwritten by the active native-tool definitions
+before use. This deleted `120` lines with no change to the active prompt
+projection or authority path (`agent_loop.py`: `6894` → `6774` LOC at the
+source checkpoint). Prompt/cutover coverage passed `199` tests and the full
+post-deletion regression passed `6807 passed, 4 skipped, 186 warnings`.
+
+Candidate `odysseus:candidate-b0b94a6773f7` is deployed with image
+`sha256:60af34bd9c1301b76268f3daafb3cac0cdc60b10c3600ba5538c7da63e898c3b`;
+OCI label, embedded marker, and running source match
+`b0b94a6773f705f131a26b74cb9ff9118379c806`. Health is healthy and restart
+count is zero. In-container frozen Qwen evidence was rerun before this
+entry: `62/62/62`, duplicate delivery `0`, reference accuracy `1.0`, failed
+Actions/task `0.0161`, model calls/task `0.2581`, P95 `2.9884s`.

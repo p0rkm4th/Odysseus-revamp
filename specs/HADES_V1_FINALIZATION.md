@@ -564,3 +564,12 @@ OCI source label, embedded marker, and running source all match. Health is
 healthy with restart count `0`. Full regression is `6807 passed, 4 skipped,
 186 warnings`; the in-container frozen Qwen quick run is `62/62/62`, with
 duplicates `0` and reference accuracy `1.0`.
+## Post-cleanup executable evidence: `b0b94a67`
+
+The dead legacy prompt block was removed (`120` lines); full regression on the
+resulting source is `6807 passed, 4 skipped, 186 warnings`. The exact
+candidate `odysseus:candidate-b0b94a6773f7` is running with image
+`sha256:60af34bd9c1301b76268f3daafb3cac0cdc60b10c3600ba5538c7da63e898c3b`,
+embedded/running source `b0b94a6773f705f131a26b74cb9ff9118379c806`, healthy
+status, and restart count `0`. The frozen Qwen quick run remains `62/62/62`
+with duplicate delivery `0`.
