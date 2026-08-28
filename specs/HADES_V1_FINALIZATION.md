@@ -681,10 +681,14 @@ as an ontology/fixture contract gap; no phrase-specific route was added.
 
 ## Frozen Qwen quick revalidation (`5fb800d7`, 2026-08-28)
 
-Using the exact deployed candidate on the Hades Compose network, the frozen
-62-case Qwen3:8B corpus passed `62/62` functional, `62/62` architectural, and
-`62/62` security. Duplicate delivery was `0`; reference resolution was `1.0`;
-failed Actions/task was `0.0161`; model calls/task `0.2581`; median latency
-`0.0309s`; P95 `3.8608s`. No top failure clusters were reported. This
-revalidates the frozen baseline after the compatibility-seam revert; the
-bounded generated shard remains separate evidence.
+The first revalidation used a source-mounted test container and is not treated
+as image provenance evidence. A corrected run used the baked
+`odysseus:candidate-5fb800d7` image with no source mount on the Hades Compose
+network and real Qwen3:8B. It passed `61/62` functional, `62/62`
+architectural, and `62/62` security. Duplicate delivery was `0`; reference
+resolution was `1.0`; failed Actions/task was `0.0161`; model calls/task
+`0.2581`; median latency `0.0195s`; P95 `3.8855s`. The sole failure is
+`jarvis-environment-assumption`: the service-read trajectory produced an
+answer, but the frozen evaluator's `response_excludes` grounding assertion
+failed. This is a frozen evaluator/contract failure, not an absent answer or
+transport failure. The bounded generated shard remains separate evidence.

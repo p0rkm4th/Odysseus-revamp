@@ -1884,9 +1884,12 @@ coverage: `61 passed`. Test-only checkpoint; running executable remains
 
 ## Frozen Qwen quick revalidation (`5fb800d7`, 2026-08-28)
 
-The exact deployed candidate, using the Compose network and real Qwen3:8B,
-passed the frozen `62/62` functional, architectural, and security corpus.
-Duplicate delivery was `0`, reference resolution `1.0`, failed Actions/task
-`0.0161`, model calls/task `0.2581`, median latency `0.0309s`, and P95
-`3.8608s`. This is current checkpoint evidence, not a claim that the broader
-generated coverage gaps are closed.
+The initial source-mounted run is excluded from image provenance evidence. The
+corrected no-source-mount run used the baked candidate on the Compose network
+with real Qwen3:8B: `61/62` functional, `62/62` architectural, `62/62`
+security, duplicate delivery `0`, reference resolution `1.0`, failed
+Actions/task `0.0161`, model calls/task `0.2581`, median latency `0.0195s`,
+P95 `3.8855s`. The sole failure is the frozen evaluator's
+`jarvis-environment-assumption` `response_excludes` grounding assertion; an
+answer was present and delivery was complete. This is current checkpoint
+evidence, not a claim that broader generated coverage gaps are closed.
