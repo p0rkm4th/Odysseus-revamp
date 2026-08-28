@@ -19,7 +19,7 @@ These tests pin BOTH halves:
 import re
 import time
 
-from src.agent_loop import _strip_think_blocks
+from src.llm_core import strip_think_blocks
 
 # The exact pattern this fix replaces. Used only as an equivalence oracle on
 # well-formed inputs (never on the adversarial one, where it is the slow path).
@@ -57,12 +57,12 @@ EQUIV_CASES = [
 
 def test_strip_think_blocks_matches_reference_regex():
     for case in EQUIV_CASES:
-        assert _strip_think_blocks(case) == _reference(case), repr(case)
+        assert strip_think_blocks(case) == _reference(case), repr(case)
 
 
 def test_empty_and_none_safe():
-    assert _strip_think_blocks("") == ""
-    assert _strip_think_blocks(None) in (None, "")
+    assert strip_think_blocks("") == ""
+    assert strip_think_blocks(None) in (None, "")
 
 
 # -- ReDoS bound -------------------------------------------------------------
@@ -72,7 +72,7 @@ def test_many_openers_no_closer_is_linear():
     # rescans to EOS from each opener (O(n^2)); the helper scans once.
     hostile = "<think>" * 60_000 + "x"
     start = time.perf_counter()
-    out = _strip_think_blocks(hostile)
+    out = strip_think_blocks(hostile)
     elapsed = time.perf_counter() - start
     # No closer anywhere -> nothing is stripped, input returned intact.
     assert out == hostile
@@ -82,7 +82,7 @@ def test_many_openers_no_closer_is_linear():
 def test_openers_then_one_far_closer_is_linear():
     hostile = "<think>" * 60_000 + "</think>" + "tail"
     start = time.perf_counter()
-    out = _strip_think_blocks(hostile)
+    out = strip_think_blocks(hostile)
     elapsed = time.perf_counter() - start
     # First opener pairs with the single closer; lazy match spans to it.
     assert out == "tail"

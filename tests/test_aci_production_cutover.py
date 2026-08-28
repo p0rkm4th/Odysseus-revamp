@@ -105,10 +105,7 @@ def test_aci_runtime_does_not_call_retained_compatibility_aliases():
     )
     retained_aliases = {
         "_strip_agent_injected_messages",
-        "_strip_think_blocks",
-        "_empty_response_fallback",
         "_run_verifier_subagent",
-        "_privileged_action_requires_exact_approval",
         "_usage_bucket_summary",
         "_build_actions_snapshot",
         "_prepend_agent_directive",
