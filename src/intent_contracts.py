@@ -1020,7 +1020,7 @@ def canonical_read_action(
         return None
     view = dict(filters or {}).get("view")
     operation = "READ"
-    if domain_concept == "TECHNICAL_ASSET" and str(entity_reference or "").strip():
+    if domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and str(entity_reference or "").strip():
         operation = "READ_DETAIL"
     elif domain_concept == "WORK" and view == "attention":
         operation = "READ_ATTENTION"
@@ -1748,7 +1748,7 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     action_key = frame.operation_class
     if frame.domain_concept == "HOMELAB_HOST" and frame.filters.get("remote") and frame.operation_class == "READ":
         action_key = "REMOTE_READ"
-    if frame.domain_concept == "TECHNICAL_ASSET" and frame.operation_class == "READ" and frame.entity_reference:
+    if frame.domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and frame.operation_class == "READ" and frame.entity_reference:
         action_key = "READ_DETAIL"
     if frame.domain_concept == "WORK" and frame.filters.get("view") == "attention":
         action_key = "READ_ATTENTION"

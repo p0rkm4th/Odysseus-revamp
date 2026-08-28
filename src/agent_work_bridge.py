@@ -24,7 +24,7 @@ from src.work_engine import WorkEngine, WorkError, now
 # of authority.
 _WORK_DOMAINS = frozenset({
     "homelab", "network_ops", "asset_inventory", "security_audit", "osint",
-    "memory", "work", "household", "setup", "career",
+    "memory", "work", "household", "recipes", "recipe", "setup", "career",
     "communications",
 })
 
@@ -740,14 +740,31 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
             safe_data = json.loads(encoded[:100000]) if len(encoded) <= 100000 else {"truncated": True}
         except (TypeError, ValueError):
             safe_data = None
-        if isinstance(safe_data, dict) and isinstance(safe_data.get("assets"), list):
+        if isinstance(safe_data, dict):
             refs = []
-            for item in safe_data["assets"][:500]:
-                if not isinstance(item, dict):
+            collections = (
+                (safe_data.get("assets"), "TECHNICAL_ASSET"),
+                (safe_data.get("recipes"), "RECIPE"),
+            )
+            for items, concept in collections:
+                if not isinstance(items, list):
                     continue
-                ref = str(item.get("id") or item.get("asset_id") or "").strip()
+                for item in items[:500]:
+                    if not isinstance(item, dict):
+                        continue
+                    ref = str(item.get("id") or item.get("asset_id") or "").strip()
+                    if ref:
+                        refs.append({"ref": ref[:500], "concept": concept})
+            for key, concept in (("asset", "TECHNICAL_ASSET"), ("recipe", "RECIPE")):
+                item = safe_data.get(key)
+                if isinstance(item, dict):
+                    ref = str(item.get("id") or item.get("asset_id") or "").strip()
+                    if ref:
+                        refs.append({"ref": ref[:500], "concept": concept})
+            for key, concept in (("recipe_id", "RECIPE"), ("asset_id", "TECHNICAL_ASSET")):
+                ref = str(safe_data.get(key) or "").strip()
                 if ref:
-                    refs.append({"ref": ref[:500], "concept": "TECHNICAL_ASSET"})
+                    refs.append({"ref": ref[:500], "concept": concept})
             if refs:
                 safe_data = {**safe_data, "canonical_refs": refs}
         completed = work.complete_action(owner, action.id, {

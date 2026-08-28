@@ -580,6 +580,7 @@ def compile_turn_contract(
     *,
     run_reference: Optional[str] = None,
     active_run: Optional[Mapping[str, Any]] = None,
+    reference_context: Optional[Mapping[str, Any]] = None,
 ) -> tuple[Any, Any, Any, set[str]]:
     """Compile one IntentFrame and its canonical domain/action projection."""
     from src.intent_contracts import (
@@ -589,15 +590,16 @@ def compile_turn_contract(
         resolve_intent,
     )
 
+    durable_reference_context = (
+        active_run.get("reference_context")
+        if isinstance(active_run, Mapping)
+        else reference_context
+    )
     frame = compile_intent(
         str(intent.get("retrieval_query") or last_user),
         continuation=bool(intent.get("continuation")),
         run_reference=str(run_reference or "").strip() or None,
-        reference_context=(
-            active_run.get("reference_context")
-            if isinstance(active_run, Mapping)
-            else None
-        ),
+        reference_context=durable_reference_context,
     )
     resolved = resolve_intent(frame)
     continuation = (

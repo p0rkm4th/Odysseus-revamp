@@ -1410,6 +1410,7 @@ async def stream_aci_runtime(
             _last_user,
             run_reference=work_run_id,
             active_run=(_active_run_context if isinstance(_active_run_context, dict) else None),
+            reference_context=(_session_reference_context if isinstance(_session_reference_context, dict) else None),
         )
         _record_aci_framework("intent_resolution")
         if _intent_frame.entity_reference or _intent_frame.run_reference or _intent_frame.reference_resolution.get("status") == "RESOLVED":

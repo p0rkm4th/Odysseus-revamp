@@ -45,6 +45,7 @@ def test_recipe_reads_and_pantry_coverage_use_one_persisted_inventory_owner():
         {"action": "can_make", "recipe_id": recipe["id"]}, owner="alice"
     )
     assert coverage["can_make"] is True
+    assert coverage["recipe_id"] == recipe["id"]
     assert coverage["shortages"] == []
     assert coverage["deductions"]
 
