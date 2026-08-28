@@ -812,6 +812,37 @@ def test_aci_turn_does_not_reenter_legacy_tool_index_projection(monkeypatch):
         raise AssertionError("canonical ACI turn re-entered legacy tool index")
 
     monkeypatch.setattr(tool_index, "get_tool_index", unexpected_tool_index_lookup)
+    executed = []
+
+    async def fake_execute(block, *args, **kwargs):
+        executed.append(block.tool_type)
+        return block.tool_type, {"output": "network context", "exit_code": 0}
+
+    async def fake_stream(*args, **kwargs):
+        yield 'data: {"delta":"The current network context is available."}\n\n'
+        yield "data: [DONE]\n\n"
+
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", fake_stream, raising=False)
+
+    # A conceptual answer must not pay the generic tool-index cost merely
+    # because the conversation contains a domain noun. It remains on the
+    # model/general-answer floor and cannot execute the owner read.
+    conceptual_events = _collect_stream_events(
+        agent_loop.stream_agent_loop(
+            "http://local.test/v1",
+            "small-local-model",
+            [{"role": "user", "content": "what is a network"}],
+            aci_mode="aci",
+            tool_executor=fake_execute,
+        )
+    )
+    conceptual_metrics = next(
+        event["data"] for event in conceptual_events if event.get("type") == "metrics"
+    )
+    assert conceptual_metrics["tool_index_lookup_count"] == 0
+    assert conceptual_metrics["tool_index_bypass_count"] == 1
+    assert executed == []
+
     for name in (
         "_normalize_asset_inventory_intent",
         "_normalize_homelab_intent",
@@ -824,17 +855,6 @@ def test_aci_turn_does_not_reenter_legacy_tool_index_projection(monkeypatch):
                 AssertionError("canonical ACI turn re-entered legacy intent normalizer")
             ),
         )
-    executed = []
-
-    async def fake_execute(block, *args, **kwargs):
-        executed.append(block.tool_type)
-        return block.tool_type, {"output": "network context", "exit_code": 0}
-
-    async def fake_stream(*args, **kwargs):
-        yield 'data: {"delta":"The current network context is available."}\n\n'
-        yield "data: [DONE]\n\n"
-
-    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", fake_stream, raising=False)
 
     events = _collect_stream_events(
         agent_loop.stream_agent_loop(

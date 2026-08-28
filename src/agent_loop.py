@@ -1837,12 +1837,14 @@ async def stream_aci_runtime(
     )
     _tool_index_bypassed = False
     _tool_index_lookup_attempted = False
-    # A benign unknown READ in ACI has no specialized contract and no
-    # framework-resolved capability.  It is already destined for the
-    # authority-free general-model floor; do not spend embedding/tool-index
-    # latency constructing an empty Action problem.  Explicit tools,
-    # workspace, continuation, domain, and caller-provided routes remain on
-    # their normal paths.
+    # A benign no-contract turn in ACI has no framework-resolved capability.
+    # It is already destined for the authority-free general-model floor; do
+    # not spend embedding/tool-index latency constructing an empty Action
+    # problem.  Conceptual ANSWER turns are safe here even when the intent
+    # classifier retained a broad domain noun (for example NETWORK): the
+    # operation class, not the noun alone, says that no owner-state read was
+    # requested. Explicit tools, workspace, continuation, domain, and
+    # caller-provided routes remain on their normal paths.
     _aci_general_fallback_candidate = bool(
         _aci_enabled
         and (not relevant_tools or bool(_intent.get("general_explanatory")))
@@ -1853,12 +1855,19 @@ async def stream_aci_runtime(
         and not (_intent.get("domains") or set())
         and not _canonical_binding
         and isinstance(_intent.get("intent_frame"), dict)
-        and str(_intent["intent_frame"].get("domain_concept") or "") == "UNKNOWN"
-        # Unknown safe/action-like language still belongs on the authority-free
-        # conversational floor.  Asking the generic tool index to interpret it
-        # only exposes unrelated affordances (and can make a harmless request
-        # look executable). Writes remain out of this fast path.
-        and str(_intent["intent_frame"].get("operation_class") or "") in {"UNKNOWN", "READ", "EXECUTE"}
+        and (
+            str(_intent["intent_frame"].get("operation_class") or "") == "ANSWER"
+            or (
+                str(_intent["intent_frame"].get("domain_concept") or "") == "UNKNOWN"
+                # Unknown safe/action-like language still belongs on the
+                # authority-free conversational floor. Asking the generic
+                # tool index to interpret it only exposes unrelated
+                # affordances (and can make a harmless request look
+                # executable). Writes remain out of this fast path.
+                and str(_intent["intent_frame"].get("operation_class") or "")
+                in {"UNKNOWN", "READ", "EXECUTE"}
+            )
+        )
     )
     if _aci_general_fallback_candidate:
         _relevant_tools = set()
