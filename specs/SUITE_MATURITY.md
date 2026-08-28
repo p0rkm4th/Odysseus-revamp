@@ -7,7 +7,7 @@ the complete journey works.
 | Suite | Existing canonical owner | Current state | Verified journeys | Immediate gap | V1 disposition |
 |---|---|---|---|---|---|
 | Homelab / Network / Infrastructure | `AssetInventory`, `HomelabOperations`, `NetworkState`, ACI contracts | IMPLEMENTED / PARTIAL | asset list/detail, network context/observations, host inspection, service status contract | service target/detail rendering and readback coverage need a focused product slice | Tier 1 active |
-| Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / PARTIAL | overview, item/list/search/get contracts, mutation/readback suites | natural stock/expiry/location projections and browser journeys need expansion | Tier 1 active |
+| Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / PARTIAL | overview, item/list/search/get contracts, mutation/readback suites, isolated authenticated browser readback | natural stock/expiry/location projections and browser mutation journeys need expansion | Tier 1 active |
 | Recipes / Meal Planning | existing `InventoryRecipe`, `RecipeService`, stock planner, and Cookbook code | IMPLEMENTED / PARTIAL | canonical list/search/get, pantry coverage, serving scale, expiring-inventory candidates, isolated Qwen/browser trajectory | meal-plan/shopping projections and broader fresh-install journeys | Tier 1 active |
 | Memory / Personal Knowledge | Memory store, grounding, `read_memory` | IMPLEMENTED | deterministic owner reads, stale/current precedence, browser acceptance | broaden everyday recall/correction journeys | Tier 1 next |
 | Work / Projects / Tasks | Work Engine, Runs, Actions, `read_work` | IMPLEMENTED | overview, attention, continuation and persistence tests | add cross-suite remediation/task journeys | Tier 1 next |
@@ -99,6 +99,15 @@ the complete journey works.
   idempotent stock addition, canonical litre-to-millilitre normalization,
   quantity decrement to zero, and fail-closed over-consumption without state
   drift. The focused ACI/Household/Recipe regression is `307 passed, 1 warning`.
+- The existing Playwright lane now has an explicitly isolated Household mode.
+  It requires an externally supplied disposable acceptance deployment, seeds an
+  `Acceptance Milk` item and stock through the authenticated owner-scoped
+  Inventory APIs, verifies the canonical `2000.000000` millilitre readback,
+  then exercises three kitchen reads plus reload continuation through normal
+  login and `/api/chat_stream`. The exact candidate `42a7fcd1` run passed with
+  `3 prompts / 4 streams`; this is acceptance-principal evidence, not owner
+  data evidence. The disposable container and credentials were removed after
+  the run.
 
 ## Product quality rule
 
