@@ -248,8 +248,19 @@ async function onSubmit(event) {
     if (kind === 'stock') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/stock`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, idempotency_key:makeIdempotencyKey('stock')})});
     if (kind === 'consume') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/consume`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, reason:data.reason, idempotency_key:makeIdempotencyKey('consume')})});
     if (kind === 'recipe') {
-      const ingredients = data.ingredients.split('\n').filter(Boolean).map(line => { const match = line.trim().match(/^(.+?)\s*\|\s*([0-9.]+)\s*\|\s*(\w+)$/); if (!match) throw new Error('Use one ingredient per line: item ID | quantity | unit'); return {item_id:match[1].trim(), quantity:match[2], unit:match[3]}; });
-      await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions})});
+      const ingredients = data.ingredients.split('\n').filter(Boolean).map(line => {
+        const match = line.trim().match(/^(.+?)\s*\|\s*([0-9.]+)\s*\|\s*([\w ]+)$/);
+        if (!match) throw new Error('Use one ingredient per line: name | quantity | unit');
+        const ingredient = {name:match[1].trim(), quantity:match[2], unit:match[3].trim()};
+        // Preserve canonical references for advanced users while making the
+        // normal human workflow name-based.
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ingredient.name)) {
+          ingredient.item_id = ingredient.name;
+          delete ingredient.name;
+        }
+        return ingredient;
+      });
+      await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, source_url:data.source_url || null})});
     }
     form.closest('.inventory-dialog-backdrop')?.remove();
     uiModule.showToast?.('Inventory updated');
@@ -277,7 +288,7 @@ async function onClick(event) {
     } catch (error) { uiModule.showError?.(error.message); return; }
   }
   if (action === 'stock-add' || action === 'stock-consume') return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
-  if (action === 'new-recipe') return modalForm('New recipe', `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div><label class="hades-intake-field"><span>Ingredients <small>one canonical item reference per line: item ID | quantity | unit</small></span><textarea name="ingredients" required></textarea></label><label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
+  if (action === 'new-recipe') return modalForm('New recipe', `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div><label class="hades-intake-field"><span>Ingredients <small>one per line: name | quantity | unit</small></span><textarea name="ingredients" required placeholder="rice | 1 | cup"></textarea></label>${field('Source URL','source_url','type="url" maxlength="4000" placeholder="https://…"')}<label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
   const recipeCard = button.closest('[data-recipe-id]');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);
   if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button);

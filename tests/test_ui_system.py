@@ -18,6 +18,8 @@ def test_inventory_uses_shared_window_and_form_primitives():
         "hades-record-card",
         "hades-dialog",
         "hades-empty-state",
+        "name | quantity | unit",
+        "source_url",
     ):
         assert marker in source
 
