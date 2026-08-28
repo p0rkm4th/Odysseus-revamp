@@ -78,6 +78,13 @@ the complete journey works.
   `sha256:26fa612317e5e9cfdc3d99d818dd91d91e640b90903c16c3c9996fc534ad5987`,
   with matching OCI/source marker, healthy runtime, zero restarts, and Qwen3:8B
   reachable from the Hades container namespace.
+- A disposable authenticated Recipe-composition replay was attempted after
+  that checkpoint. Normal admin and non-admin acceptance logins succeeded, but
+  the disposable model-endpoint probe returned connection refused before any
+  Recipe state or chat turn was executed. This is recorded as
+  `MODEL_ENDPOINT_UNAVAILABLE` evidence, not as Recipe product evidence; the
+  disposable container and credentials were removed. The owner runtime was not
+  used for synthetic Recipe seeding.
 - The full-regression process was attempted against `b8b24f82` but was
   externally terminated around 2% before pytest emitted a summary; this is
   recorded as unresolved environment/process evidence, not as a pass.
