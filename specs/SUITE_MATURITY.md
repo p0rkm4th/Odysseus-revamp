@@ -123,6 +123,24 @@ the complete journey works.
   continuation, and cleanup. This is acceptance-principal evidence, not owner
   data evidence.
 
+- UI consolidation checkpoint `4969925a3c88ae4354e82119840900564a6e5d5e`
+  establishes the first shared visual migration for Household/Inventory:
+  the existing window/titlebar/body, tabs, buttons, panels, grouped intake
+  fields, progressive technical-details disclosure, focus treatment, and
+  reduced-motion rules now use shared Hades primitives while retaining legacy
+  behavior selectors. Navigation hydration now replaces legacy inline glyphs
+  instead of appending a second SVG, and the redundant `securityResearch`
+  Research-workspace destination was removed. Static and browser layout checks
+  cover one icon per visible sidebar entry, viewport containment,
+  constrained-width overflow, and existing window behavior. Focused UI
+  coverage is `16 passed`, Node layout coverage is `3 passed`, frontend
+  verification passes, and the existing Playwright realistic and window lanes
+  pass against exact candidate image
+  `sha256:2d6c63a509408c9c4144d9acd69e8021976e1bf9b4bf9c60dc0f3964baeec010`.
+  The image embeds/runs source `4969925a`; health is healthy with zero
+  restarts. Remaining UI migration is incremental across Recipes and later
+  suites; no broad redesign or frontend framework was introduced.
+
 ## Product quality rule
 
 Each suite must progress through canonical state, bounded Action/Result,
