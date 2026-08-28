@@ -84,7 +84,9 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
         # expected/oracle data, so changing an answer key cannot change the
         # tools visible to, or selected by, the product under test.
         names = set(profile.get("tools", []))
+        result_state = str(profile.get("result_state") or "SUCCESS").upper()
     else:
+        result_state = "SUCCESS"
         # Compatibility for the pre-environment corpus. New cases must use an
         # explicit fixture_profile; this branch remains until that corpus is
         # migrated and is evaluator plumbing only.
@@ -117,6 +119,18 @@ def fixtures_for_case(case: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]
     fixtures: dict[str, list[dict[str, Any]]] = {}
     for name in names:
         tool = str(name)
+        if result_state != "SUCCESS":
+            if result_state == "PARTIAL":
+                fixtures[tool] = [{
+                    "output": json.dumps({"status": "PARTIAL", "partial": True}, sort_keys=True),
+                    "exit_code": 0, "success": True, "partial": True,
+                }]
+            else:
+                fixtures[tool] = [{
+                    "error": f"Synthetic fixture state: {result_state}.",
+                    "exit_code": 1, "success": False, "synthetic_state": result_state,
+                }]
+            continue
         # Canonical owner reads must exercise the same structured-result
         # contract as production. A prose placeholder would make the real
         # renderer (correctly) reject the fixture and turn a valid empty read

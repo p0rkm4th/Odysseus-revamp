@@ -352,6 +352,19 @@ def test_generated_cases_declare_fixture_world_from_capability_not_oracle():
         assert fixtures_for_case(case) == fixtures_for_case(altered)
 
 
+def test_generated_fixture_world_enacts_frame_result_without_reading_oracle():
+    cases = [case for case in generate_semantic_cases(seed=17, count=80)
+             if case.get("environment") and case["scenario"]["execution_result"] != "SUCCESS"]
+    assert cases
+    case = cases[0]
+    state = case["scenario"]["execution_result"]
+    fixtures = fixtures_for_case(case)
+    tool = next(iter(fixtures))
+    assert fixtures[tool][0].get("synthetic_state") == state or state == "PARTIAL"
+    altered = {**case, "expected": {"concept": "WRONG_ORACLE", "operation": "WRONG"}}
+    assert fixtures_for_case(case) == fixtures_for_case(altered)
+
+
 def test_live_protocol_duplicate_done_marker_is_not_completion():
     result = _live_protocol_observation([], done_count=2, abrupt_eof=False)
     assert result["done_seen"] is True
