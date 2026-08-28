@@ -2312,3 +2312,13 @@ were the earlier exact d3 source `d3aee6e6eb6e2bb591f779f4e90dd95602a80f4c`,
 image `sha256:96291c655dae147f85a84395b7fe2901535f399ec1e1db8f983f00e79dc3a639`,
 healthy with zero restarts. This was synthetic Qwen3:8B evidence, not live-owner
 acceptance.
+
+## ACI ownership audit (`0cb309f3`, 2026-08-28)
+
+The production cutover, lifecycle, and dogfood contract audit passed `122` tests
+with one dependency deprecation warning. Source inspection found no production
+caller of the legacy `stream_agent_loop`; `aci.stream_aci_turn` is the sole
+production stream boundary, and the remaining loop-local projection helpers
+delegate to ACI or intent-contract owners. The compatibility facade remains for
+tests and nested compatibility paths; removing it without a characterization
+slice is not justified by current evidence.
