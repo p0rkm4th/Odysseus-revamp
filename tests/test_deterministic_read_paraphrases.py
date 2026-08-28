@@ -18,7 +18,7 @@ from src.aci import (
 )
 from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
-from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, inventory_consume_stock_payload, recipe_create_payload, resolve_intent
+from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, inventory_consume_stock_payload, recipe_create_draft, recipe_create_payload, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
@@ -184,6 +184,40 @@ def test_explicit_recipe_create_projects_structured_draft_into_canonical_action(
 
 def test_incomplete_recipe_create_draft_fails_closed():
     assert recipe_create_payload("Add a recipe called Dinner") is None
+
+
+def test_long_owner_recipe_paste_projects_a_validated_draft_into_add_action():
+    query = '''Add the following to my recipes as "Easy Chicken Cordon Bleu w/ Cheese Sauce":
+
+Ingredients:
+- 2 chicken breasts
+- 1 cup breadcrumbs
+- 4 slices ham
+- 4 slices Swiss cheese
+- 2 tablespoons butter
+
+Instructions:
+1. Pound chicken breasts thin.
+2. Layer ham and cheese, roll, and secure.
+3. Coat with breadcrumbs and bake at 375F for 30 minutes.
+4. Make the cheese sauce and serve.'''
+    draft = recipe_create_draft(query)
+    assert draft is not None
+    assert draft.name == "Easy Chicken Cordon Bleu w/ Cheese Sauce"
+    assert draft.servings == 1
+    assert len(draft.ingredients) == 5
+    assert draft.ingredients[1]["unit"] == "cup"
+    assert "Make the cheese sauce" in draft.instructions
+    assert recipe_create_payload(query)["action"] == "add"
+
+
+def test_recipe_draft_rejects_missing_or_ambiguous_sections_without_mutation():
+    assert recipe_create_draft(
+        'Add the following to my recipes as "Dinner": Ingredients: chicken. Instructions: cook it.'
+    ) is None
+    assert recipe_create_draft(
+        'Add this recipe to my recipes: Dinner. Ingredients:\n- chicken\n\nInstructions:\nCook it.'
+    ) is None
 
 
 def test_household_quantity_add_projects_item_and_initial_stock():

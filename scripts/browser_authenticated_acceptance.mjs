@@ -156,6 +156,49 @@ async function seedHouseholdAcceptanceState(page) {
   });
 }
 
+function seedCanonicalAssetFixture(scenarios) {
+  const setups = [...new Set(scenarios.map((scenario) => scenario.fixture_setup).filter(Boolean))];
+  if (!setups.length) return null;
+  if (setups.length !== 1 || !['canonical_asset_atlas_erebus', 'canonical_asset_no_4090'].includes(setups[0])) {
+    throw new Error(`unsupported or mixed canonical asset fixture setup: ${setups.join(', ')}`);
+  }
+  const database = String(process.env.HADES_BROWSER_CANONICAL_ASSET_DB || '').trim();
+  if (!database || !externalAcceptance) {
+    throw new Error('canonical asset browser fixtures require an explicit disposable external acceptance database');
+  }
+  const assets = setups[0] === 'canonical_asset_atlas_erebus'
+    ? [
+      ['acceptance-atlas', 'Atlas', '64 GB', 'RTX Fixture A'],
+      ['acceptance-erebus', 'Erebus', '128 GB', 'RTX Fixture B'],
+    ]
+    : [
+      ['acceptance-messy-atlas', 'Atlas', '64 GB', 'RTX 2080'],
+      ['acceptance-messy-erebus', 'Erebus', null, null],
+      ['acceptance-messy-erebus-copy', 'Erebus (stale)', null, 'RTX 2080'],
+    ];
+  for (const [id, name, ram, gpu] of assets) {
+    const attributes = {fixture: true};
+    if (ram) attributes.ram = ram;
+    if (gpu) attributes.gpu = gpu;
+    const result = spawnSync(python, [
+      '-m', 'src.asset_inventory', 'add', '--id', id, '--name', name,
+      '--type', 'computer', '--status', 'deployed', '--manufacturer', 'Acceptance Labs',
+      '--model', 'Fixture Host', '--source', 'acceptance-fixture', '--owner', credentialsOwner(),
+      '--attributes', JSON.stringify(attributes, Object.keys(attributes).sort()),
+    ], {
+      cwd: process.cwd(),
+      env: {...process.env, ODY_ASSET_DB: database},
+      encoding: 'utf8',
+    });
+    if (result.status !== 0) throw new Error(`canonical asset fixture setup failed for ${id}`);
+  }
+  return {setup: setups[0], assets: assets.length};
+}
+
+function credentialsOwner() {
+  return 'hades-acceptance';
+}
+
 function assistantCount(page) {
   return page.locator('#chat-history .msg-ai').evaluateAll((nodes) => nodes.filter((node) => {
     if (node.classList.contains('agent-thinking-dots') || node.classList.contains('streaming')) return false;
@@ -562,6 +605,9 @@ async function main() {
 
     if (householdAcceptance) {
       diagnostics.householdSeed = await seedHouseholdAcceptanceState(page);
+    }
+    if (scenarios) {
+      diagnostics.assetSeed = seedCanonicalAssetFixture(scenarios);
     }
 
     // Start tracing only after the login response, so the password cannot be

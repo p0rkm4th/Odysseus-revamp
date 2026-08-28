@@ -150,6 +150,9 @@ MANAGE_RECIPES_SCHEMA = {
                 "unit": {"type": "string", "maxLength": 40}, "optional": {"type": "boolean"},
             }, "required": ["name", "quantity", "unit"]}},
             "instructions": {"type": "string", "maxLength": 20000},
+            "source_url": {"type": "string", "maxLength": 4000},
+            "tags": {"type": "array", "maxItems": 32, "items": {"type": "string", "maxLength": 80}},
+            "image_refs": {"type": "array", "maxItems": 16, "items": {"type": "string", "maxLength": 500}},
         }, "required": ["action", "name", "ingredients"]},
     }
 }

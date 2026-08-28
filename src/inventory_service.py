@@ -1120,6 +1120,8 @@ class RecipeService(InventoryService):
                 owner, name=args.get("name"), servings=args.get("servings") or "1",
                 ingredients=args.get("ingredients") or [],
                 instructions=args.get("instructions") or "",
+                source_url=args.get("source_url"), tags=args.get("tags"),
+                image_refs=args.get("image_refs"),
             )}
         if action == "cook":
             return {"cook": self.cook(
