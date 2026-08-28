@@ -456,3 +456,25 @@ coverage dimensions, not newly observed product failures. No safe additional
 `agent_loop.py` authority removal was identified: production still enters via
 `aci.stream_aci_turn`, and the remaining loop surface is compatibility/runtime
 plumbing.
+
+## Container-namespace Qwen checkpoint (`8e45fa79`, 2026-08-28)
+
+The frozen 62-case quick corpus was rerun in a disposable container sharing the
+deployed Hades network namespace, with `HADES_OLLAMA_ENDPOINT` set to
+`http://host.docker.internal:11434` and an isolated data root. This avoids the
+host-loopback false negative and does not touch production state.
+
+| Metric | Observed |
+|---|---:|
+| Functional | `62/62` |
+| Architectural | `62/62` |
+| Security | `62/62` |
+| Duplicate delivery | `0` |
+| Qualified reference accuracy | `1.0` (`5/5`) |
+| Failed Actions/task | `0.0161` |
+| Model calls/task | `0.2581` |
+| P95 latency | `2.3721s` |
+
+This evidence uses current evaluator code at `8e45fa79` and the deployed
+executable image/source at `100d2e0f`; the commit is documentation-only and
+does not claim a rebuilt product image.
