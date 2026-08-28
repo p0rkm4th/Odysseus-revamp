@@ -1066,6 +1066,16 @@ class RecipeService(InventoryService):
     def manage_recipes(self, args: dict[str, Any], *, owner: str) -> dict[str, Any]:
         """Dispatch the narrow model-facing recipe action vocabulary."""
         action = str(args.get("action") or "")
+        if action == "prepare_import":
+            from src.intent_contracts import recipe_import_draft
+            draft = recipe_import_draft(args.get("source_text"), source_url=args.get("source_url"))
+            if draft is None:
+                return {
+                    "status": "NEEDS_REVIEW", "draft": None,
+                    "source_url": args.get("source_url"),
+                    "message": "The source did not contain enough verified recipe structure to prepare a draft.",
+                }
+            return {"status": "READY_FOR_REVIEW", "draft": draft.as_payload()}
         if action == "list":
             return {"recipes": self.list_recipes(
                 owner, include_archived=bool(args.get("include_archived", False))
@@ -1123,6 +1133,20 @@ class RecipeService(InventoryService):
                 source_url=args.get("source_url"), tags=args.get("tags"),
                 image_refs=args.get("image_refs"),
             )}
+        if action == "commit_import":
+            from src.intent_contracts import RecipeDraft
+            draft = RecipeDraft.from_payload(args.get("draft") or args)
+            recipe = self.create_recipe(
+                owner, name=draft.name, servings=draft.servings,
+                ingredients=draft.ingredients, instructions=draft.instructions,
+                source_url=draft.source_url, tags=args.get("tags"), image_refs=args.get("image_refs"),
+            )
+            readback = self.get_recipe(owner, recipe["id"])
+            if readback.get("id") != recipe.get("id"):
+                raise InventoryError("recipe import readback did not match the committed recipe")
+            return {"success": True, "recipe": readback,
+                    "verification": {"status": "VERIFIED", "recipe_id": readback["id"]},
+                    "source": draft.provenance}
         if action == "cook":
             return {"cook": self.cook(
                 owner, _required_text(args.get("recipe_id"), "recipe_id"),

@@ -7,6 +7,8 @@ from core import inventory_models  # noqa: F401 - register inventory tables
 from src.inventory_service import InventoryNotFound, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
 from src.aci import canonical_recipe_read_answer
+from src.intent_contracts import RecipeDraft, recipe_import_draft
+from src.intent_contracts import compile_intent, resolve_intent
 
 
 def _recipe_fixture():
@@ -151,6 +153,41 @@ def test_expiring_recipe_result_has_a_human_renderer_distinct_from_raw_result():
     )
     assert answer.startswith("Recipes using")
     assert not answer.startswith("{")
+
+
+def test_recipe_import_prepare_accepts_schema_org_jsonld_without_persisting():
+    draft = recipe_import_draft(
+        '{"@type":"Recipe","name":"JSON Dinner","recipeYield":"4 servings",'
+        '"recipeIngredient":["2 cups rice", "1 tsp salt"],'
+        '"recipeInstructions":[{"@type":"HowToStep","text":"Cook the rice."}]}',
+        source_url="https://example.test/recipe",
+    )
+    assert isinstance(draft, RecipeDraft)
+    assert draft.name == "JSON Dinner"
+    assert draft.source_url == "https://example.test/recipe"
+    assert draft.provenance == "import_evidence"
+    assert len(draft.ingredients) == 2
+
+
+def test_recipe_import_commit_requires_validated_draft_and_verifies_readback():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    result = service.manage_recipes({"action": "commit_import", "draft": {
+        "name": "Imported Dinner", "servings": 2,
+        "ingredients": [{"name": "rice", "quantity": 1, "unit": "cup"}],
+        "instructions": "Cook it.", "source_url": "https://example.test/recipe",
+    }}, owner="alice")
+    assert result["success"] is True
+    assert result["verification"]["status"] == "VERIFIED"
+    assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"][0]["name"] == "Imported Dinner"
+
+
+def test_recipe_url_import_prepare_is_a_read_proposal_not_a_write():
+    frame = compile_intent("import this recipe from https://example.test/recipe")
+    assert frame.domain_concept == "RECIPE"
+    resolved = resolve_intent(frame)
+    assert resolved.action_id == "prepare_import"
+    assert resolved.binding_name == "read_recipes"
 
 
 def test_household_add_item_can_atomically_seed_requested_initial_stock():

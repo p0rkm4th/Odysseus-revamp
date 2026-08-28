@@ -8,8 +8,9 @@ chain before a tool can run.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 import ipaddress
+import json
 import logging
 import re
 from typing import Any, Mapping
@@ -49,6 +50,48 @@ class RecipeDraft:
         if self.source_url:
             payload["source_url"] = self.source_url
         return payload
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> "RecipeDraft":
+        """Validate a proposed draft before it reaches the recipe owner."""
+        if not isinstance(payload, Mapping):
+            raise ValueError("recipe draft must be an object")
+        name = str(payload.get("name") or "").strip()
+        instructions = str(payload.get("instructions") or "").strip()
+        ingredients = payload.get("ingredients")
+        if not name or len(name) > 200 or not instructions or not isinstance(ingredients, list):
+            raise ValueError("recipe draft requires a name, ingredients, and instructions")
+        if not 1 <= len(ingredients) <= 200:
+            raise ValueError("recipe draft must contain 1-200 ingredients")
+        normalized: list[dict[str, Any]] = []
+        for item in ingredients:
+            if not isinstance(item, Mapping):
+                raise ValueError("recipe ingredients must be objects")
+            item_name = str(item.get("name") or "").strip()
+            unit = str(item.get("unit") or "").strip().lower()
+            if not item_name or not unit:
+                raise ValueError("each recipe ingredient needs a name and unit")
+            try:
+                quantity = float(item.get("quantity"))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("each recipe ingredient needs a numeric quantity") from exc
+            if quantity <= 0:
+                raise ValueError("recipe ingredient quantities must be positive")
+            normalized.append({"name": item_name[:200], "quantity": quantity, "unit": unit[:40],
+                               "optional": bool(item.get("optional", False))})
+        try:
+            servings = float(payload.get("servings", 1))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("recipe servings must be numeric") from exc
+        if servings <= 0:
+            raise ValueError("recipe servings must be positive")
+        if servings.is_integer():
+            servings = int(servings)
+        source_url = str(payload.get("source_url") or "").strip() or None
+        if source_url and not re.match(r"^https?://", source_url, re.IGNORECASE):
+            raise ValueError("recipe source_url must use http or https")
+        return cls(name[:200], servings, tuple(normalized), instructions[:20000],
+                   source_url, str(payload.get("provenance") or "owner_import")[:80])
 
 
 def _recipe_section(text: str, header: str, next_header: str | None = None) -> str | None:
@@ -141,6 +184,57 @@ def recipe_create_draft(query: str) -> RecipeDraft | None:
         instructions=instructions.strip()[:20000],
         source_url=url_match.group(0).rstrip(".,") if url_match else None,
     )
+
+
+def recipe_import_draft(source_text: str | None, *, source_url: str | None = None) -> RecipeDraft | None:
+    """Prepare a RecipeDraft from bounded untrusted text or schema.org JSON-LD.
+
+    Fetching is intentionally not done here.  Callers may supply evidence from
+    the existing public-fetch tool, but only this validated draft may proceed
+    to the effectful recipe owner.
+    """
+    text = str(source_text or "").strip()
+    draft = recipe_create_draft(text) if text else None
+    if draft is None and text.startswith(("{", "[")):
+        try:
+            value: Any = json.loads(text)
+        except (TypeError, ValueError):
+            value = None
+        candidates = value if isinstance(value, list) else [value]
+        recipe = next((item for item in candidates if isinstance(item, Mapping) and (
+            item.get("@type") == "Recipe" or "Recipe" in (item.get("@type") or [])
+        )), None)
+        if recipe:
+            raw_ingredients = recipe.get("recipeIngredient")
+            raw_instructions = recipe.get("recipeInstructions")
+            if isinstance(raw_ingredients, list) and isinstance(raw_instructions, list):
+                raw_instructions = "\n".join(
+                    str(item.get("text") if isinstance(item, Mapping) else item).strip()
+                    for item in raw_instructions
+                )
+            ingredients: list[dict[str, Any]] = []
+            if isinstance(raw_ingredients, list):
+                for item in raw_ingredients:
+                    parsed = _recipe_ingredients(str(item))
+                    if parsed and len(parsed) == 1:
+                        ingredients.extend(parsed)
+                    else:
+                        ingredients = []
+                        break
+            if recipe.get("name") and ingredients and str(raw_instructions or "").strip():
+                yield_text = str(recipe.get("recipeYield") or "1")
+                servings_match = re.search(r"\d+(?:\.\d+)?", yield_text)
+                servings: int | float = float(servings_match.group(0)) if servings_match else 1
+                if isinstance(servings, float) and servings.is_integer():
+                    servings = int(servings)
+                draft = RecipeDraft(
+                    name=str(recipe["name"]).strip()[:200], servings=servings,
+                    ingredients=tuple(ingredients[:200]), instructions=str(raw_instructions).strip()[:20000],
+                    provenance="schema_org_jsonld",
+                )
+    if draft and source_url:
+        draft = replace(draft, source_url=str(source_url).strip(), provenance="import_evidence")
+    return draft
 
 
 def recipe_create_payload(query: str) -> dict[str, Any] | None:
@@ -1084,13 +1178,13 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     ),
     "RECIPE": DomainContract(
         "RECIPE", "recipe.read",
-        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make", "READ_SCALE": "scale", "READ_EXPIRING": "expiring_candidates"},
+        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make", "READ_SCALE": "scale", "READ_EXPIRING": "expiring_candidates", "READ_IMPORT_PREPARE": "prepare_import"},
         "read_recipes",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "recipe_read",
     ),
     "RECIPE_MUTATION": DomainContract(
-        "RECIPE_MUTATION", "recipe.manage", {"CREATE": "add"}, "manage_recipes",
+        "RECIPE_MUTATION", "recipe.manage", {"CREATE": "add", "CREATE_IMPORT_COMMIT": "commit_import"}, "manage_recipes",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "recipe_mutation",
     ),
@@ -1525,6 +1619,12 @@ def compile_intent(
     ):
         concept = "RECIPE"
         read_explicit = False
+    if concept == "UNKNOWN" and re.search(r"\b(?:recipe|recipes|cookbook|dish)\b", q, re.IGNORECASE) and re.search(
+        r"\bimport\b|\bfrom\s+https?://|https?://", q, re.IGNORECASE,
+    ):
+        concept = "RECIPE"
+        operation = "READ"
+        read_explicit = True
     # Household consumption is an owner mutation even when the item name is
     # not known to the compiler (for example, "Use one onion"). The executor
     # resolves that name against canonical owner-scoped inventory.
@@ -1824,6 +1924,10 @@ def compile_intent(
         r"\b(?:expir(?:e|ing|y)|about\s+to\s+expire)\b", q,
     ) and re.search(r"\b(?:recipe|meal|dish|cook|make)\b", q):
         reference_filters["recipe_expiring"] = True
+    if concept == "RECIPE" and operation == "READ" and re.search(
+        r"\b(?:import|from)\b.*(?:recipe|https?://)|https?://", q, re.IGNORECASE,
+    ):
+        reference_filters["recipe_import"] = True
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
@@ -1983,6 +2087,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_SEARCH"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_expiring") is True:
         action_key = "READ_EXPIRING"
+    elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_import") is True:
+        action_key = "READ_IMPORT_PREPARE"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_coverage") is True:
         action_key = "READ_COVERAGE"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_scale") is True:
@@ -2117,7 +2223,10 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
         if not isinstance(result.get("findings"), list):
             return False, "INVALID_RESULT"
     if frame.domain_concept == "RECIPE" and frame.operation_class == "READ":
-        if frame.filters.get("recipe_coverage") is True:
+        if frame.filters.get("recipe_import") is True:
+            if result.get("status") not in {"READY_FOR_REVIEW", "NEEDS_REVIEW"}:
+                return False, "INVALID_RESULT"
+        elif frame.filters.get("recipe_coverage") is True:
             if not isinstance(result.get("can_make"), bool) or not isinstance(result.get("shortages"), list):
                 return False, "INVALID_RESULT"
         elif frame.filters.get("recipe_scale") is True:
@@ -2211,10 +2320,14 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     ("RECIPE", "get"): "recipe",
                     ("RECIPE", "scale"): "scaled_ingredients",
                     ("RECIPE", "expiring_candidates"): "candidates",
+                    ("RECIPE", "prepare_import"): "draft",
                     ("COMMUNICATIONS", "overview"): "email",
                     ("CONTACT", "contacts"): "contacts",
                 }.get((concept, action_id))
-                if expected and not isinstance(result.get(expected), (list, dict)):
+                if expected and not isinstance(result.get(expected), (list, dict)) and not (
+                    concept == "RECIPE" and action_id == "prepare_import"
+                    and result.get("status") == "NEEDS_REVIEW" and result.get(expected) is None
+                ):
                     return False, "INVALID_RESULT"
                 return True, reason
             # Contracted non-read projections currently have no additional

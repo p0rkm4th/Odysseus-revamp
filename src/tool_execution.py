@@ -1855,7 +1855,7 @@ async def _execute_read_recipes_binding(block, owner=None):
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
         action = str(payload.get("action") or "").strip().casefold()
-        if action not in {"list", "search", "get", "can_make", "scale", "expiring_candidates"}:
+        if action not in {"list", "search", "get", "can_make", "scale", "expiring_candidates", "prepare_import"}:
             raise ValueError("unsupported read-only Recipe action")
         if not owner:
             raise PermissionError("authenticated recipe owner is required")
@@ -1870,7 +1870,7 @@ async def _execute_manage_recipes_binding(block, owner=None):
     """Persist recipe mutations through Inventory Service and verify readback."""
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
-        if str(payload.get("action") or "").casefold() != "add":
+        if str(payload.get("action") or "").casefold() not in {"add", "commit_import"}:
             raise ValueError("unsupported recipe mutation")
         if not owner:
             raise PermissionError("authenticated recipe owner is required")
@@ -1883,7 +1883,7 @@ async def _execute_manage_recipes_binding(block, owner=None):
         readback = service.get_recipe(owner, str(recipe["id"]))
         if readback.get("id") != recipe.get("id"):
             raise ValueError("recipe readback did not match persisted recipe")
-        result = {"status": "VERIFIED", "success": True, "action": "add", "recipe": readback, "canonical_store": "inventory_service", "verification": {"status": "VERIFIED"}}
+        result = {"status": "VERIFIED", "success": True, "action": str(payload.get("action") or "add"), "recipe": readback, "canonical_store": "inventory_service", "verification": {"status": "VERIFIED"}}
         return "manage_recipes", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result, "verified": True}
     except Exception as exc:
         return "manage_recipes", {"error": str(exc), "output": str(exc), "exit_code": 1, "success": False}
