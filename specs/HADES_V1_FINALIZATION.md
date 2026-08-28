@@ -488,3 +488,28 @@ host-loopback false negative and does not touch production state.
 This evidence uses current evaluator code at `8e45fa79` and the deployed
 executable image/source at `100d2e0f`; the commit is documentation-only and
 does not claim a rebuilt product image.
+
+## Current foundation checkpoint (`980f959f`, 2026-08-28)
+
+The current branch is clean and synchronized with `origin/hades-aci-v1` at
+`980f959f39fa99f11fd3d9400d6e06f55366f129`. The authoritative project-venv
+regression completed with `6806 passed, 4 skipped, 186 warnings`. The new
+restart/reconstruct regression covers both failed and ambiguous execution
+binding states; the focused WorkEngine/verification/approval/ACI suites
+remain green.
+
+This checkpoint contains tests and evaluator evidence only. The running
+product remains the previously deployed executable source
+`100d2e0f4e00ebf753a816984981603f666e6190`, image
+`sha256:b2a1be4fa1856261f235bc90fa967c0b2f0a2595d570e66ac8558a7d68d31c07`,
+healthy with restart count `0`; qwen3:8b remains verified from the Hades
+container namespace at `http://host.docker.internal:11434`.
+
+A reproducible semantic audit with seed `20260828` generated `1,793`
+scenarios and reported `196` metadata coverage gaps (`34` critical, `69`
+high). The critical entries are predominantly unrepresented scalar labels
+for approval/failure/post-result dimensions; direct approval and lifecycle
+tests already exercise several of those branches. They are not being counted
+as product failures without executable scenario evidence. The generated
+registry-action probe remains a model/shortlist burden cluster (13/100), not
+an authority or security regression.

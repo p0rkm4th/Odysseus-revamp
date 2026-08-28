@@ -1691,3 +1691,21 @@ the compatibility stream/runtime seam. A static audit found no unreferenced
 alias suitable for safe deletion; moving `TOOL_SECTIONS` would be a physical
 refactor only because the Skills UI still consumes its legacy built-in
 projection. No executable refactor was justified by current evidence.
+
+## Current evidence checkpoint (`980f959f`, 2026-08-28)
+
+Local and `origin/hades-aci-v1` are synchronized at
+`980f959f39fa99f11fd3d9400d6e06f55366f129`; the worktree is clean. The full
+project-venv regression passed `6806 passed, 4 skipped, 186 warnings`. The
+focused restart/reconstruct execution-state regression passed alongside the
+existing approval, verification, and ACI suites. This commit adds no
+production executable code, so the deployed executable remains
+`100d2e0f4e00ebf753a816984981603f666e6190` and has not been rebuilt.
+
+The fixed-seed semantic audit (`20260828`) generated `1,793` scenarios and
+reported `196` coverage metadata gaps, including `34` critical and `69` high.
+Direct lifecycle tests cover multiple approval/post-result/failure branches;
+the remaining audit entries are retained as explicit coverage debt rather
+than relabeled as runtime failures. The 100-case registry-action runtime
+probe retained 13 model/shortlist failures caused by underspecified exact
+ActionSpec expectations; no authority or security regression was observed.
