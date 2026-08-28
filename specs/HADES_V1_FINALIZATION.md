@@ -907,3 +907,25 @@ security cases. Duplicate delivery was `0`; reference resolution was `1.0`;
 failed Actions/task was `0.0161`; model calls/task `0.2581`; median latency
 `0.0187s`; P95 `3.15s`. Embedded/running source matches the pushed SHA,
 health is healthy, and restart count is `0`.
+## Descriptive tool-registry extraction (`225195aa`, 2026-08-28)
+
+Moved the 241-line descriptive `TOOL_SECTIONS` metadata registry out of
+`src/agent_loop.py` into `src/tool_sections.py`. Skills UI metadata now imports
+the registry from its own module; the compatibility import inside
+`agent_loop.py` preserves the existing shared object and dynamic capability
+projection behavior. This removes descriptive metadata ownership from the
+runtime loop without changing Action, policy, execution, or AnswerSource
+authority.
+
+Focused cutover/tool coverage passed `99` tests. Supported full regression
+passed `6812` tests with `4` skips and `186` warnings. The exact candidate
+`odysseus:candidate-225195aa-exact` has image ID
+`sha256:20437b95b12b3b78f0cc46b0569586ce4bb784029cada1122367df4a44bb4003`;
+its OCI revision, source marker, and branch are
+`225195aa1e4b3985c7fb00a128dd7c7e16160cef` / `hades-aci-v1`.
+
+This candidate was built and provenance-verified but not deployed. The
+running rollback target remains image
+`sha256:b23213db1791e89d3ff3d96b90a72ea7106c50ea6311bb25602258cef06c9fbf`,
+source `f5c07ff33e6754784fc328fa8392daea4b6178e0`, healthy with zero
+restarts. Therefore current runtime evidence does not yet cover `225195aa`.

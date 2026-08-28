@@ -2044,3 +2044,19 @@ completion failures caused by an impossible fixture world.
 Focused dogfood tests pass (`55`). Full local regression passes (`6812 passed,
 4 skipped, 186 warnings`). No production executable was changed or deployed;
 the running executable remains `f5c07ff3`.
+## Descriptive tool-registry extraction (`225195aa`, 2026-08-28)
+
+Moved the descriptive `TOOL_SECTIONS` registry (241 lines) from
+`src/agent_loop.py` to `src/tool_sections.py`; Skills UI imports now avoid the
+loop, while the compatibility import preserves the shared registry behavior.
+No semantic execution authority moved. Focused coverage passed `99` tests;
+full regression passed `6812 passed, 4 skipped, 186 warnings`.
+
+The pushed source and exact candidate are
+`225195aa1e4b3985c7fb00a128dd7c7e16160cef` and
+`odysseus:candidate-225195aa-exact`, image
+`sha256:20437b95b12b3b78f0cc46b0569586ce4bb784029cada1122367df4a44bb4003`.
+OCI revision and `/app/.odysseus-source-commit` match the SHA. The candidate
+was not deployed; the known-good running source remains `f5c07ff3` with zero
+restarts. This is source/test/candidate evidence, not live evidence for the
+new executable.
