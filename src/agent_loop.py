@@ -91,6 +91,7 @@ from src.aci import (
     build_active_plan_note,
     prepend_agent_directive,
     intent_requires_action,
+    expects_canonical_action,
     usage_bucket,
     usage_bucket_summary,
     compute_final_metrics,
@@ -6195,16 +6196,13 @@ async def stream_aci_runtime(
     # expected a canonical Action but produced no successful Result. This is
     # developer trace data, not normal chat prose.
     _why_no_action = None
-    _expected_canonical_action = bool(
-        (
-            not _aci_answer_only
-            and not _aci_clarification_only
-            and (_asset_frame.get("read_explicit") and _read_binding and _read_action)
-        )
-        or (
-            not _aci_clarification_only
-            and _intent_frame.operation_class in {"EXECUTE", "RESEARCH", "MONITOR"}
-        )
+    _expected_canonical_action = expects_canonical_action(
+        answer_only=_aci_answer_only,
+        clarification_only=_aci_clarification_only,
+        asset_read_explicit=bool(_asset_frame.get("read_explicit")),
+        read_binding=_read_binding,
+        read_action=_read_action,
+        operation_class=_intent_frame.operation_class,
     )
     _successful_action_event = any(
         isinstance(event, dict)

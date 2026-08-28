@@ -1278,6 +1278,27 @@ def intent_requires_action(intent_domains: Any) -> bool:
     return bool(set(intent_domains or ()) & _ACTION_REQUIRED_DOMAINS)
 
 
+def expects_canonical_action(
+    *,
+    answer_only: bool,
+    clarification_only: bool,
+    asset_read_explicit: bool,
+    read_binding: Any,
+    read_action: Any,
+    operation_class: Any,
+) -> bool:
+    """Project whether a resolved turn required a canonical Action.
+
+    This diagnostic predicate belongs with ACI intent/action projections so
+    the compatibility runtime does not reinterpret the resolved turn.
+    """
+    if answer_only or clarification_only:
+        return False
+    if asset_read_explicit and read_binding and read_action:
+        return True
+    return str(operation_class or "") in {"EXECUTE", "RESEARCH", "MONITOR"}
+
+
 def usage_bucket(
     *,
     round_num: int,
