@@ -413,7 +413,23 @@ def test_owner_network_paraphrases_use_bounded_canonical_read(query):
 def test_network_concept_questions_stay_on_general_answer_floor(query):
     frame = compile_intent(query)
     resolved = resolve_intent(frame)
+    assert frame.operation_class == "ANSWER"
     assert not (resolved.available and frame.operation_class in {"READ", "EXECUTE"})
+
+
+@pytest.mark.parametrize("query", [
+    "What is a network?",
+    "Tell me about networking.",
+    "What is RAID 10?",
+    "What is a GPU?",
+    "How does Docker work?",
+    "What is DNS?",
+])
+def test_conceptual_minimal_pair_variants_have_no_canonical_action(query):
+    frame = compile_intent(query)
+    assert frame.operation_class == "ANSWER"
+    assert frame.domain_concept == "UNKNOWN"
+    assert resolve_intent(frame).available is False
 
 
 def test_unknown_selfstate_capability_question_does_not_become_work_read():
