@@ -1429,6 +1429,52 @@ def is_canonical_read_contract(
     )
 
 
+def is_aci_general_fallback_candidate(
+    intent: Mapping[str, Any] | None,
+    *,
+    aci_enabled: bool,
+    aci_mode: str,
+    relevant_tools: Any = None,
+    forced_tools: Any = None,
+    workspace: Any = None,
+    active_document_relevant: bool = False,
+    continuation: Any = None,
+    guide_only: bool = False,
+    uploaded_files: Any = None,
+    canonical_binding: str = "",
+) -> bool:
+    """Return whether a turn may use the authority-free answer floor.
+
+    This is a semantic ACI projection, not a phrase router.  A turn with an
+    explicit route, workspace/document context, continuation, or resolved
+    canonical binding must retain its normal capability projection.  A plain
+    ANSWER is safe even when its classifier retained a broad domain noun: an
+    operation class of ANSWER does not request owner-state execution.
+    """
+    payload = intent if isinstance(intent, Mapping) else {}
+    frame = payload.get("intent_frame")
+    frame = frame if isinstance(frame, Mapping) else {}
+    operation = str(frame.get("operation_class") or "")
+    domain = str(frame.get("domain_concept") or "")
+    return bool(
+        aci_enabled
+        and aci_mode == "aci"
+        and (not relevant_tools or bool(payload.get("general_explanatory")))
+        and not forced_tools
+        and not workspace
+        and not active_document_relevant
+        and not continuation
+        and not (payload.get("domains") or set())
+        and not guide_only
+        and not uploaded_files
+        and not canonical_binding
+        and (
+            operation == "ANSWER"
+            or (domain == "UNKNOWN" and operation in {"UNKNOWN", "READ", "EXECUTE"})
+        )
+    )
+
+
 def usage_bucket(
     *,
     round_num: int,
