@@ -390,6 +390,39 @@ was built as `odysseus:candidate-c84514f29574` (image
 `sha256:895ca25c66be688132604720a696f21be4c934bc8bc528d992601ae6a26ae0cb`),
 deployed explicitly, and verified healthy with matching embedded source.
 
+## Current exact checkpoint (`e3d7c2c8`, 2026-08-28)
+
+This is the current executable source/runtime checkpoint. Subsequent evidence
+must identify whether it was run against this source or a later
+documentation-only descendant.
+
+| Field | Observed value |
+|---|---|
+| Branch | `hades-aci-v1` |
+| Local/remote HEAD | `e3d7c2c889f127123dfc2c528ac0202453cbc4c0` |
+| Candidate | `odysseus:candidate-e3d7c2c889f1` |
+| Running image | `sha256:6a74d168bfd38ad9ded5aa5a4608d78e889a6b4b52ed65c0d19666e801523258` |
+| Embedded/running source | exact `e3d7c2c889f127123dfc2c528ac0202453cbc4c0` |
+| Runtime | `odysseus-odysseus-1`, restart count `0` |
+| Health | `/api/health` returned `healthy` |
+| Ollama | `http://host.docker.internal:11434` from the container; `qwen3:8b` present |
+| Acceptance facility | disabled; principal revoked; credentials removed; acceptance sessions `0` |
+
+The authenticated Playwright browser lane passed `7` owner journeys on this
+exact candidate, including normal UI login, real chat/SSE, reload persistence,
+continuation, logout/revocation, and post-cleanup login denial. It reported `8`
+streams because continuation adds one; no duplicate finalization or abrupt
+stream failure was observed.
+
+The authoritative current-head regression passed `6784 passed, 4 skipped`;
+remaining output was existing deprecation/runtime warnings. A seeded
+generate-only semantic run (`20260827`) produced `2740` scenarios and `193`
+coverage gaps. These are coverage gaps, not execution failures, and remain
+queued for cluster-driven semantic dogfood. No new semantic-owner refactor was
+justified by this checkpoint: production enters through `aci.stream_aci_turn`,
+while the remaining `agent_loop.py` surface is a compatibility/runtime seam
+whose removal requires characterization tests.
+
 ## Exact-image full regression (`d59e4845`)
 
 With the checkout mounted read-only and isolated writable data, logs, probe,
