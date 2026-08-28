@@ -49,6 +49,10 @@ adds authenticated `prepare` and `commit` endpoints and an Import dialog with
 explicit preview/confirmation. Its exact candidate image is
 `sha256:a6f771890c53f0800e8be82b7692428f737c2a8b4e47440406badc4f6a7a156a`.
 
+The HTML JSON-LD extraction checkpoint `e638686a4977f8c4fdc7de07be2f427456dc4108`
+passes `6909 passed, 5 skipped` full regression. Its exact candidate image is
+`sha256:05a5884029f7921a6feda1427f60d19e802d989b6b4718f3b6c9d65e7a29d8c9`.
+
 ## Baseline evidence
 
 - Post-merge `main`: `364380ed3f46c1d14d3229e5b7530698cfa22e65`.
