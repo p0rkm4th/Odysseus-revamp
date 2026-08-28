@@ -2350,3 +2350,8 @@ architectural, and security, with duplicate delivery `0`, failed Actions/task
 
 The later `7edab187` changes are test-only seam migration; the running
 executable remains the exact `60980b5f` candidate.
+
+The follow-up guard at `5cc83fc` proves a replaced legacy stream symbol cannot
+be selected by `aci.stream_aci_turn`; the canonical runtime remains the only
+entrypoint through that seam. ACI lifecycle/cutover coverage passed `68` tests.
+This is test-only evidence and does not alter the deployed executable.
