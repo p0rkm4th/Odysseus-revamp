@@ -6,6 +6,7 @@ ACI seam and the compatibility implementation itself.
 """
 
 import ast
+import inspect
 from pathlib import Path
 
 from src.aci import (
@@ -107,6 +108,14 @@ def test_canonical_read_contract_eligibility_is_owned_by_aci():
     assert is_canonical_read_contract(
         {"operation_class": "EXECUTE", "read_explicit": True}, contract
     ) is False
+
+
+def test_canonical_runtime_defaults_to_aci_and_legacy_facade_is_explicit():
+    from src import agent_loop
+
+    parameter = inspect.signature(agent_loop.stream_aci_runtime).parameters["aci_mode"]
+    assert parameter.default == "aci"
+    assert getattr(agent_loop.stream_agent_loop, "_aci_compatibility_facade", False)
     assert expects_canonical_action(
         answer_only=True, clarification_only=False,
         asset_read_explicit=True, read_binding="manage_assets",

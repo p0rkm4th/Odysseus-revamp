@@ -1247,6 +1247,10 @@ async def stream_agent_loop(*args: Any, **kwargs: Any):
     the established async-generator contract for scheduled jobs, plugins,
     and older tests without retaining a second orchestration implementation.
     """
+    # The legacy-named facade is the explicit compatibility boundary. Keep
+    # callers that still use it on legacy semantics while making the canonical
+    # runtime safe-by-default for any new direct caller.
+    kwargs.setdefault("aci_mode", "legacy")
     delegated = stream_aci_runtime(*args, **kwargs)
     try:
         async for event in delegated:
@@ -1296,11 +1300,10 @@ async def stream_aci_runtime(
     history_session=None,
     defer_context_shaping: bool = False,
     tool_executor=None,
-    # Chat routes explicitly select ACI.  Keep the public helper's historical
-    # default until its remaining provider/tool adapters are migrated; an
-    # implicit flip here would break compatibility callers and make the old
-    # path authoritative by accident through failed ACI fallback.
-    aci_mode: str = "legacy",
+    # New direct callers enter the canonical ACI runtime by default. The
+    # legacy-named facade above supplies ``legacy`` explicitly for compatibility
+    # callers that have not migrated yet.
+    aci_mode: str = "aci",
     aci_profile=None,
 ) -> AsyncGenerator[str, None]:
     """Streaming agent loop generator.
