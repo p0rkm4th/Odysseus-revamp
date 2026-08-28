@@ -5,6 +5,7 @@ from src.tool_bindings import TOOL_BINDINGS, binding_for_tool
 import asyncio
 import json
 import src.tool_execution as tool_execution
+from src.homelab_operations import HomelabOperations
 
 
 def _schema(name):
@@ -27,8 +28,12 @@ def test_tags_contracts_domains_and_executors_are_projected():
         assert f'<invoke name="{name}"' in binding.textual_contract
         assert binding.executor_key == name
         capability = capability_for_tool(name)
-        assert all(action.executor_key == binding.executor_key
-                   for action in capability.actions.values())
+        if name in {"web_search", "web_fetch"}:
+            action_id = {"web_search": "search", "web_fetch": "fetch"}[name]
+            assert capability.actions[action_id].executor_key == binding.executor_key
+        else:
+            assert all(action.executor_key == binding.executor_key
+                       for action in capability.actions.values())
         for domain in binding.domains:
             assert name in _DOMAIN_TOOL_MAP[domain]
 
@@ -37,15 +42,27 @@ def test_native_action_enums_cover_every_registered_action():
     """Native providers must not silently lose a canonical ActionSpec."""
     for name, binding in TOOL_BINDINGS.items():
         capability = capability_for_tool(name)
-        schema_actions = set(
-            binding.native_schema["function"]["parameters"]["properties"]["action"].get("enum", ())
-        )
-        assert set(capability.actions) <= schema_actions, (name, set(capability.actions) - schema_actions)
+        properties = binding.native_schema["function"]["parameters"]["properties"]
+        if "action" in properties:
+            schema_actions = set(properties["action"].get("enum", ()))
+            if name in {"web_search", "web_fetch"}:
+                # These are intentionally single-purpose bindings over the
+                # shared web.evidence capability.
+                expected = {"web_search": "search", "web_fetch": "fetch"}[name]
+                assert schema_actions == {expected}
+            else:
+                assert set(capability.actions) <= schema_actions, (name, set(capability.actions) - schema_actions)
+        else:
+            # Single-purpose bindings expose their ActionSpec through the
+            # binding identity rather than a multiplexed action enum.
+            assert name in {"web_search", "web_fetch"}
+            action_id = {"web_search": "search", "web_fetch": "fetch"}[name]
+            assert capability.actions[action_id].executor_key == name
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career", "read_communications"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 11
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_setup", "read_career", "read_communications", "developer_read", "web_search", "web_fetch"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 13
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
@@ -116,6 +133,28 @@ def test_trusted_work_adapter_reuses_registered_binding(monkeypatch):
     assert result["success"] is True
 
 
+def test_asset_detail_binding_preserves_collection_result_contract(monkeypatch):
+    class Completed:
+        returncode = 0
+        stdout = json.dumps({"id": "PHYSICAL-001", "name": "Cerberus"})
+        stderr = ""
+
+    calls = []
+    monkeypatch.setattr(
+        tool_execution._ody_v34_subprocess,
+        "run",
+        lambda argv, **kwargs: (calls.append(argv) or Completed()),
+    )
+    binding, result = asyncio.run(tool_execution._execute_manage_assets_binding(
+        type("Block", (), {"content": '{"action":"get","asset":"PHYSICAL-001"}'})(),
+        owner="alice",
+    ))
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["data"]["assets"] == [{"id": "PHYSICAL-001", "name": "Cerberus"}]
+    assert calls and calls[0][-1] == "PHYSICAL-001"
+
+
 def test_registered_dispatch_rejects_malformed_canonical_read_result(monkeypatch):
     async def fake_executor(block, owner=None):
         return "manage_homelab", {
@@ -133,6 +172,28 @@ def test_registered_dispatch_rejects_malformed_canonical_read_result(monkeypatch
     assert result["success"] is False
     assert result["error_code"] == "RESULT_INVALID"
     assert result["status"] == "INVALID_RESULT"
+
+
+def test_homelab_binding_preserves_structured_executor_failure(monkeypatch):
+    class FailingHomelab:
+        async def execute(self, payload, *, owner):
+            assert payload == {"action": "read_network_context"}
+            assert owner == "alice"
+            return {
+                "status": "UNAVAILABLE",
+                "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE",
+                "source": "host_network_broker",
+            }
+
+    monkeypatch.setattr("src.homelab_operations.HomelabOperations", FailingHomelab)
+    block = type("Block", (), {
+        "content": '{"action":"read_network_context"}',
+    })()
+    binding, result = asyncio.run(tool_execution._execute_manage_homelab_binding(block, owner="alice"))
+    assert binding == "manage_homelab"
+    assert result["success"] is False
+    assert result["exit_code"] == 1
+    assert result["data"]["error_code"] == "HOST_NETWORK_CONTEXT_UNAVAILABLE"
 
 
 def test_registered_binding_cannot_bypass_disabled_or_tool_policy(monkeypatch):
@@ -382,6 +443,23 @@ def test_communications_read_binding_requires_authenticated_owner():
         tool_name="read_communications", payload={"action": "overview"}, owner=None))
     assert result["success"] is False
     assert "owner" in result["error"].lower()
+
+
+def test_generic_service_status_read_uses_runtime_health_not_container_systemd(monkeypatch):
+    async def fake_health():
+        return {
+            "overall": "degraded",
+            "services": [{"name": "chromadb", "status": "ok"}],
+            "timestamp": "2026-08-26T00:00:00+00:00",
+        }
+
+    monkeypatch.setattr("src.service_health.collect_service_health", fake_health)
+    result = asyncio.run(HomelabOperations().execute({"action": "service_status"}, owner="alice"))
+    assert result["success"] is True
+    assert result["status"] == "SUCCESS_WITH_DATA"
+    assert result["target"] == "hades-runtime"
+    assert result["source"] == "canonical_service_health"
+    assert result["overall"] == "degraded"
 
 
 def test_osint_read_binding_reuses_owner_scoped_case_store(tmp_path, monkeypatch):

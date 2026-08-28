@@ -92,8 +92,9 @@ def test_network_install_intent_selects_homelab_capability_and_environment():
 
 
 def test_false_completion_is_replaced_without_action_result():
-    from src.agent_loop import ground_action_completion, _network_prerequisite_request
-    assert _network_prerequisite_request("install the tools necessary for a deep dive network scan")
+    from src.aci import ground_action_completion
+    from src.intent_contracts import is_network_prerequisite_request
+    assert is_network_prerequisite_request("install the tools necessary for a deep dive network scan")
     response = ground_action_completion(
         "I'll install iproute2 and nmap, then verify the installation.",
         intent_domains={"homelab"}, tool_events=[
@@ -106,7 +107,7 @@ def test_false_completion_is_replaced_without_action_result():
 
 
 def test_asset_inventory_claim_requires_first_class_result():
-    from src.agent_loop import ground_action_completion
+    from src.aci import ground_action_completion
     response = ground_action_completion(
         "Asset Inventory Report: 12 servers and 42 VMs, last updated today.",
         intent_domains={"asset_inventory"}, tool_events=[],

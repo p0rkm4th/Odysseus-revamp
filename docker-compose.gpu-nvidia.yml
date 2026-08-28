@@ -29,7 +29,6 @@ services:
       # land under /app/.local for the odysseus user. Persist them so a
       # container recreate does not silently remove installed serve engines.
       - ${APP_DATA_DIR:-./data}/local:/app/.local:z
-      - ${HADES_WORKSPACE:-/home/scootz/Odysseus/odysseus}:/home/scootz/Odysseus/odysseus:z
     extra_hosts:
       # Lets the container reach local services on the Docker host, including
       # Ollama at http://host.docker.internal:11434.
@@ -53,6 +52,8 @@ services:
       - CHROMADB_PORT=8000
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
       - AUTH_ENABLED=${AUTH_ENABLED:-true}
+      # Development/acceptance only; disabled by default and fail-closed in the app.
+      - HADES_ACCEPTANCE_PRINCIPAL_ENABLED=${HADES_ACCEPTANCE_PRINCIPAL_ENABLED:-false}
       - LOCALHOST_BYPASS=${LOCALHOST_BYPASS:-false}
       - COMPANION_BASE_URL=${COMPANION_BASE_URL:-}
       - ODYSSEUS_ADMIN_USER=${ODYSSEUS_ADMIN_USER:-admin}

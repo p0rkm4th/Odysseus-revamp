@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from core.persistent_agent_models import AssistantInstance, AssistantRuntimeSnapshot, Episode, Lesson, Monitor, Notification
 from core.delegated_grant_models import DelegatedCapabilityGrant
 from core.work_models import WorkCommitment, WorkEvent, WorkGoal, WorkProject, WorkRun, WorkTask
-from src.capability_dependencies import capability_health, supported_capabilities
+from src.capability_dependencies import dependency_manager, supported_capabilities
 from src.work_engine import WorkEngine
 
 
@@ -75,7 +75,7 @@ class PersistentAgent:
     def capability_health(self):
         result = []
         for name in supported_capabilities():
-            health = capability_health(name)
+            health = dependency_manager.inspect_operation(name)
             health["capability"] = name
             result.append(health)
         result.extend([

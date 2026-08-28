@@ -4,6 +4,8 @@ import asyncio
 import json
 
 import src.agent_loop as agent_loop
+from src.aci import ground_action_completion
+from src.intent_contracts import network_discovery_request_cidr, is_network_service_enumeration_request
 
 
 def _collect(generator):
@@ -31,17 +33,68 @@ def test_network_discovery_request_without_cidr_does_not_reuse_historical_scope(
         "tools you need, such as nmap or ip. list all hosts and what you "
         "think they are and may do. Begin now"
     )
-    assert agent_loop._network_discovery_request_cidr(query) is None
+    assert network_discovery_request_cidr(query) is None
+
+
+def test_unscoped_network_deep_dive_is_framework_clarification_bound():
+    from src.intent_contracts import compile_intent
+
+    frame = compile_intent("Do a deep dive on my local network.")
+    assert frame.domain_concept == "NETWORK"
+    assert "network_scope_requires_authorization" in frame.constraints
+
+
+def test_unscoped_network_deep_dive_does_not_enter_bounded_selection(monkeypatch):
+    calls = []
+    provider_calls = []
+
+    monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default)
+    monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None)
+    monkeypatch.setattr(agent_loop, "estimate_tokens", lambda *args, **kwargs: 10)
+    monkeypatch.setattr(agent_loop, "blocked_tools_for_owner", lambda owner: set())
+
+    async def fake_provider(_candidates, messages, **kwargs):
+        provider_calls.append({"messages": messages, "tools": kwargs.get("tools")})
+        yield 'data: {"delta":"I need an explicitly authorized network scope."}\n\n'
+        yield "data: [DONE]\n\n"
+
+    async def fail_execute(block, *args, **kwargs):
+        calls.append(block)
+        raise AssertionError("unscoped network deep dive must not execute")
+
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", fake_provider)
+    monkeypatch.setattr(agent_loop, "execute_tool_block", fail_execute)
+
+    chunks = _collect(agent_loop.stream_agent_loop(
+        "http://local.test/v1",
+        "local-model",
+        [{"role": "user", "content": "Do a deep dive on my local network."}],
+        max_rounds=3,
+        relevant_tools={"manage_homelab"},
+        owner="alice",
+        aci_mode="aci",
+    ))
+    events = _events(chunks)
+
+    assert calls == []
+    assert provider_calls == []
+    assert any(
+        "explicitly authorized target scope" in str(event.get("delta") or "")
+        for event in events
+    )
+    metrics = next(event["data"] for event in reversed(events) if event.get("type") == "metrics")
+    assert metrics["aci_turn_disposition"] == "CLARIFY"
+    assert metrics["model_burden"].get("bounded_action_decision", 0) == 0
 
 
 def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_active_scan():
-    assert agent_loop._network_service_enumeration_request(
+    assert is_network_service_enumeration_request(
         "perform a deeper service scan on all discovered hosts"
     ) is True
-    assert agent_loop._network_service_enumeration_request(
+    assert is_network_service_enumeration_request(
         "show the network discovery status"
     ) is False
-    response = agent_loop.ground_action_completion(
+    response = ground_action_completion(
         "The service scan is actively probing all hosts now.",
         intent_domains={"network_ops"},
         tool_events=[{
@@ -53,7 +106,7 @@ def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_ac
 
 
 def test_service_result_action_supports_grounded_active_execution_language():
-    response = agent_loop.ground_action_completion(
+    response = ground_action_completion(
         "The bounded service scan is running now.",
         intent_domains={"network_ops"},
         tool_events=[{
@@ -65,7 +118,7 @@ def test_service_result_action_supports_grounded_active_execution_language():
 
 
 def test_stored_canonical_evidence_supports_truthful_followup_without_new_action():
-    response = agent_loop.ground_action_completion(
+    response = ground_action_completion(
         "The containers currently recorded for Odysseus are healthy.",
         intent_domains={"homelab"},
         tool_events=[],

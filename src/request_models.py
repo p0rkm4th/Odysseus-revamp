@@ -8,7 +8,10 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=50000, description="Chat message")
     session: str = Field(..., description="Session ID")
     attachments: Optional[List[str]] = Field(default=[], description="Attachment IDs")
-    use_web: Optional[bool] = Field(default=False, description="Enable web search")
+    # Omitted means ACI WEB=AUTO; explicit false remains the privacy OFF
+    # policy. Keeping this tri-state prevents the API default from silently
+    # turning web evidence into a manual opt-in mode.
+    use_web: Optional[bool] = Field(default=None, description="Web evidence policy: omitted=auto, false=off, true=explicitly enabled")
     use_research: Optional[bool] = Field(default=False, description="Enable deep research")
     time_filter: Optional[str] = Field(default=None, description="Time filter for search")
     preset_id: Optional[str] = Field(default=None, description="Preset identifier")

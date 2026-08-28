@@ -29,7 +29,7 @@ def _utcnow() -> datetime:
 # setting turns them off). The RAG tool selector + ASSISTANT_ALWAYS_AVAILABLE
 # never include bash/python, so on a host with an empty/degraded tool-embedding
 # index a task could not run shell or Python even for an admin owner. Offering
-# them here is safe: stream_agent_loop's blocked_tools_for_owner() still strips
+# them here is safe: the canonical ACI turn's owner policy still strips
 # this whole group for non-admin multi-user owners, and only admits it for
 # admins and single-user (AUTH_ENABLED=false) deployments.
 TASK_DEFAULT_SHELL_TOOLS = frozenset({
@@ -44,7 +44,7 @@ def compose_task_relevant_tools(rag_tools, assistant_always, disabled_tools):
     Unions the RAG-retrieved tools, the assistant's always-available set, and
     the default shell/file group, then removes anything the task's crew
     explicitly disabled via its `enabled_tools` allowlist. Per-owner admin
-    gating is applied later by stream_agent_loop (blocked_tools_for_owner).
+    gating is applied later by the canonical ACI policy boundary.
     """
     tools = set(rag_tools) | set(assistant_always) | set(TASK_DEFAULT_SHELL_TOOLS)
     if disabled_tools:
@@ -1579,7 +1579,7 @@ class TaskScheduler:
         # Provide current date/time as a user-role message so the system prompt
         # stays byte-identical across runs and doesn't bust the Anthropic prompt
         # cache on every scheduled tick (see issue #2927 and the identical fix on
-        # the interactive-chat path in src/agent_loop.py).  The message is built
+        # the interactive-chat path in the ACI runtime). The message is built
         # once here and shared by both execution paths below (agent loop and the
         # direct fallback) so time grounding is never lost on either path.
         tz_name = _resolve_task_timezone(db, task)
@@ -1601,8 +1601,11 @@ class TaskScheduler:
             try:
                 enabled = json.loads(crew.enabled_tools)
                 if isinstance(enabled, list) and enabled:
-                    from src.tool_index import BUILTIN_TOOL_DESCRIPTIONS
-                    all_tools = set(BUILTIN_TOOL_DESCRIPTIONS.keys())
+                    # Policy owns the executable capability vocabulary.  Do
+                    # not use the legacy embedding index as a second registry
+                    # just to invert a crew allowlist.
+                    from src.tool_policy import known_tool_names
+                    all_tools = set(known_tool_names())
                     disabled_tools |= all_tools - set(enabled)
             except Exception:
                 pass
@@ -1614,20 +1617,12 @@ class TaskScheduler:
         except Exception:
             pass
 
-        # RAG-select relevant tools for this prompt + always-available assistant tools.
-        # Without this, all 40+ tools get sent and models hit their tool limit.
+        # ACI is the sole production capability projection authority for
+        # scheduled work.  Passing no caller shortlist lets it derive the
+        # bounded ActionCard/contract projection from the IntentFrame and
+        # canonical registry, avoiding a second tool-index decision here.
         relevant_tools = None
-        try:
-            from src.tool_index import get_tool_index, ASSISTANT_ALWAYS_AVAILABLE
-            tool_idx = get_tool_index()
-            if tool_idx:
-                rag_tools = tool_idx.get_tools_for_query(task.prompt or "", k=8)
-                relevant_tools = compose_task_relevant_tools(
-                    rag_tools, ASSISTANT_ALWAYS_AVAILABLE, disabled_tools
-                )
-                logger.info(f"[assistant] RAG selected {len(rag_tools)} tools + {len(ASSISTANT_ALWAYS_AVAILABLE)} always-available + shell/file defaults = {len(relevant_tools)} total for '{task.name}'")
-        except Exception as e:
-            logger.warning(f"[assistant] RAG tool selection failed, using all: {e}")
+        logger.info("[assistant] scheduled task delegates capability projection to ACI task=%r", task.name)
 
         # Try using the agent loop for full tool access
         try:
@@ -1851,7 +1846,7 @@ class TaskScheduler:
                               override_user_message: str | None = None,
                               datetime_context_msg: dict | None = None) -> str:
         """Run the full agent loop with tool access, collecting the final text."""
-        from src.agent_loop import stream_agent_loop
+        from src.aci import stream_aci_turn
 
         system_content = system_prompt or "You are a helpful assistant executing a scheduled task. Use available tools to complete the task thoroughly."
         user_content = override_user_message or task.prompt
@@ -1904,7 +1899,7 @@ class TaskScheduler:
             )[1:]
         except Exception:
             _task_fallbacks = []
-        async for event_str in stream_agent_loop(
+        async for event_str in stream_aci_turn(
             endpoint_url=endpoint_url,
             model=model,
             messages=messages,
@@ -1916,6 +1911,7 @@ class TaskScheduler:
             relevant_tools=relevant_tools,
             fallbacks=_task_fallbacks,
             workload="background",
+            aci_mode="aci",
         ):
             if event_str.startswith("data: ") and not event_str.startswith("data: [DONE]"):
                 try:

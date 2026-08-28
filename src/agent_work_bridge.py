@@ -1,9 +1,9 @@
-"""Durable Work projections for first-class agent binding execution.
+"""Durable Work projections for first-class ACI binding execution.
 
-The chat agent still owns its streaming loop and legacy tool transport. This
-module is the compatibility seam that gives registered ActionSpec/ToolBinding
-operations a durable owner/session Work trajectory without duplicating their
-executor. It never grants authority or accepts model-supplied executors.
+The temporary stream implementation remains behind the ACI compatibility seam.
+This module gives registered ActionSpec/ToolBinding operations a durable
+owner/session Work trajectory without duplicating their executor. It never
+grants authority or accepts model-supplied executors.
 """
 
 from __future__ import annotations
@@ -105,6 +105,7 @@ def ensure_agent_run(
     intent: dict[str, Any] | None = None,
     continuation: bool = False,
     completion_criteria: dict[str, Any] | None = None,
+    reference_context: dict[str, Any] | None = None,
 ) -> str | None:
     """Return or create the active owner/session Run for bridged agent work."""
     owner = str(owner or "").strip()
@@ -120,6 +121,13 @@ def ensure_agent_run(
                 WorkRun.session_id == session_id,
                 WorkRun.domain.in_(tuple(_WORK_DOMAINS)),
                 WorkRun.status.in_(("queued", "running", "awaiting_approval", "awaiting_input", "suspended")),
+                # Some completion paths update lifecycle_state before the
+                # denormalized status.  Never reuse such a terminal Run for a
+                # new user objective: WorkEngine.create_action correctly
+                # rejects it, and the current turn must get a fresh durable
+                # Run while recent canonical results remain available for
+                # reference resolution.
+                ~WorkRun.lifecycle_state.in_(("succeeded", "failed", "cancelled")),
             )
             .order_by(WorkRun.updated_at.desc())
             .first()
@@ -227,6 +235,7 @@ def ensure_agent_run(
                     "model_name": model_name,
                     "model_endpoint": model_endpoint,
                 } if model_name or model_endpoint else {},
+                **({"reference_context": reference_context} if isinstance(reference_context, dict) else {}),
             },
         })
         work.transition_run(owner, run["id"], "planning", {"current_step": "intent routed to canonical capability"})
@@ -347,19 +356,13 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
             .order_by(WorkResult.created_at.asc(), WorkResult.id.asc())
             .all()
         )
-        references = []
-        for result in results:
-            data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
-            for item in data.get("canonical_refs", data.get("entity_refs", [])):
-                if isinstance(item, dict) and str(item.get("ref") or item.get("id") or "").strip():
-                    references.append({
-                        "ref": str(item.get("ref") or item.get("id"))[:500],
-                        "concept": str(item.get("concept") or "").strip()[:80] or None,
-                    })
-            if isinstance(data.get("refs"), list):
-                for ref in data["refs"]:
-                    if isinstance(ref, str) and ref.strip():
-                        references.append({"ref": ref.strip()[:500]})
+        # Ordinals belong to the newest canonical result that exposes an
+        # ordered entity set.  Accumulating refs across the whole Run makes
+        # "the first one" point into stale/mixed-domain history after a later
+        # read, even though the current turn has a perfectly valid result
+        # context.  Durable continuation state may still explicitly override
+        # this projection below when it carries a server-owned context.
+        references = _latest_result_references(results)
         projection = {
             "id": run.id,
             "owner": run.owner,
@@ -375,6 +378,9 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
                 for action in actions
             ],
         }
+        carried = (run.continuation_state or {}).get("reference_context")
+        if isinstance(carried, dict):
+            projection["reference_context"] = carried
         # Reuse the canonical durable planner for continuation decisions.  It
         # is observational here: no Action is materialized, approved, or
         # executed.  If a malformed/incomplete Run cannot be projected, keep
@@ -389,6 +395,98 @@ def continuation_run_projection(owner: str, run_id: str) -> dict[str, Any] | Non
                 "error_class": type(exc).__name__,
             }
         return projection
+
+
+def recent_session_reference_context(owner: str, session_id: str, *, limit: int = 100) -> dict[str, Any] | None:
+    """Return ordered canonical refs from the latest result in this session.
+
+    Callers must gate this projection on a structured current-turn reference;
+    this helper never infers continuity from prose or crosses owner/session
+    boundaries.
+    """
+    with SessionLocal() as db:
+        runs = (
+            db.query(WorkRun)
+            .filter(WorkRun.owner == str(owner), WorkRun.session_id == str(session_id))
+            .order_by(WorkRun.updated_at.desc()).limit(20).all()
+        )
+        for run in runs:
+            results = (
+                db.query(WorkResult)
+                .filter(WorkResult.owner == str(owner), WorkResult.run_id == run.id)
+                .order_by(WorkResult.created_at.asc(), WorkResult.id.asc()).all()
+            )
+            refs = _latest_result_references(results)
+            if refs:
+                refs = refs[:max(1, int(limit))]
+                # Keep the result ordering explicit: ordinal language refers
+                # to the ordered canonical result, not to an incidental
+                # mixed-domain chat reference bag.
+                return {
+                    "ordered_entities": refs,
+                    "eligible_entities": refs,
+                    "entities": refs,
+                    "last": refs[-1],
+                    "source_run_id": run.id,
+                }
+    return None
+
+
+def reference_context_for_turn(
+    owner: str | None,
+    session_id: str | None,
+    run_id: str | None,
+    *,
+    structured_reference: bool = False,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]]]:
+    """Resolve the bounded durable reference sources for one turn.
+
+    The active Run is preferred. Recent session results are consulted only for
+    an explicit structured reference, preventing unrelated turns from
+    inheriting stale ordinal/pronoun context.
+    """
+    active: dict[str, Any] | None = None
+    session: dict[str, Any] | None = None
+    if owner and run_id:
+        try:
+            active = continuation_run_projection(str(owner), str(run_id))
+        except Exception:
+            active = None
+    reference = active.get("reference_context") if isinstance(active, dict) else None
+    entities = reference.get("entities", []) if isinstance(reference, dict) else []
+    active_entities = entities if isinstance(entities, list) else []
+    if owner and session_id and not active_entities and structured_reference:
+        try:
+            session = recent_session_reference_context(str(owner), str(session_id))
+        except Exception:
+            session = None
+    return active, session, active_entities
+
+
+def _latest_result_references(results: list[Any]) -> list[dict[str, Any]]:
+    """Extract the ordered refs from the newest result that exposes them.
+
+    Result order is canonical for ordinal follow-ups.  Older results remain
+    durable evidence, but must not silently change the meaning of a current
+    ``first/second/last`` reference.  The helper accepts ORM rows and keeps
+    only the compact opaque identity needed by the semantic resolver.
+    """
+    for result in reversed(results):
+        data = result.domain_reference if isinstance(getattr(result, "domain_reference", None), dict) else {}
+        raw = data.get("canonical_refs", data.get("entity_refs", []))
+        refs: list[dict[str, Any]] = []
+        if isinstance(raw, list):
+            for item in raw:
+                if not isinstance(item, dict):
+                    continue
+                ref = str(item.get("ref") or item.get("id") or "").strip()
+                if ref:
+                    refs.append({"ref": ref[:500], "concept": str(item.get("concept") or "").strip()[:80] or None})
+        if not refs and isinstance(data.get("refs"), list):
+            refs = [{"ref": ref.strip()[:500]} for ref in data["refs"] if isinstance(ref, str) and ref.strip()]
+        if refs:
+            return refs
+    return []
 
 
 def safe_auto_continuation(
@@ -642,6 +740,16 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
             safe_data = json.loads(encoded[:100000]) if len(encoded) <= 100000 else {"truncated": True}
         except (TypeError, ValueError):
             safe_data = None
+        if isinstance(safe_data, dict) and isinstance(safe_data.get("assets"), list):
+            refs = []
+            for item in safe_data["assets"][:500]:
+                if not isinstance(item, dict):
+                    continue
+                ref = str(item.get("id") or item.get("asset_id") or "").strip()
+                if ref:
+                    refs.append({"ref": ref[:500], "concept": "TECHNICAL_ASSET"})
+            if refs:
+                safe_data = {**safe_data, "canonical_refs": refs}
         completed = work.complete_action(owner, action.id, {
             "result_reference": f"agent-tool://{action.id}",
             "result": {

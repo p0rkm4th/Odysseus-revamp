@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from src.agent_loop import _classify_agent_request, _minimal_saved_memory_message, _suppress_automatic_skills
+from src.agent_loop import _classify_agent_request, _suppress_automatic_skills
+from src.memory_grounding import minimal_saved_memory_message
 from src.memory_grounding import is_explicit_memory_query
 from src.context_compactor import context_trace, tool_projection_trace
 
@@ -24,13 +25,16 @@ def test_qwen_compact_projection_preserves_explicit_zero_and_failure_status():
             "content": f"CANONICAL MEMORY RESULT\nSTATUS: {status}\nDo not invent personal facts.",
             "metadata": {"source": "saved memory: explicit canonical result", "context_kind": "explicit_memory_result"},
         }
-        compact = _minimal_saved_memory_message([message])
+        compact = minimal_saved_memory_message([message])
         assert compact is not None
         assert status in compact["content"]
 
 
 def test_memory_domain_rule_separates_brain_from_skills():
-    source = Path("src/agent_loop.py").read_text(encoding="utf-8")
+    source = "\n".join(
+        Path(path).read_text(encoding="utf-8")
+        for path in ("src/legacy_domain_contract.py", "src/agent_loop.py")
+    )
     assert '"memory": {"manage_memory"}' in source
     assert "Skills are not user memory" in source
 

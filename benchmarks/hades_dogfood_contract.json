@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "name": "hades-dogfood-v1",
+  "model": "qwen3:8b",
+  "generation": {
+    "strategy": "scenario_frame_pairwise_3way_plus_targeted_high_risk",
+    "registry_action_coverage": "first_each_known_action_spec",
+    "adversarial_layers": ["semantic", "metamorphic", "negative_near_miss", "chaos_journey", "failure_injection", "coverage_audit"],
+    "default_seed": 0,
+    "tiers": {
+      "quick": {"generated": 0, "purpose": "frozen_smoke"},
+      "core": {"generated": 1000, "purpose": "synthetic_aci"},
+      "full": {"generated": 5000, "purpose": "broad_generated"},
+      "rc": {"generated": 1000, "purpose": "release_candidate"},
+      "soak": {"generated": 250, "purpose": "repeatable_runtime_soak"}
+    },
+    "dimensions": [
+      "intent", "domain", "target_type", "state", "authority",
+      "conversation_form", "execution_result", "reference_type",
+      "capability_id", "action_spec", "policy", "approval",
+      "post_result_state", "failure_class", "negative_near_miss",
+      "model_profile", "verification_result", "cross_domain_pair",
+      "failure_injection", "executor", "authority_state",
+      "scenario_frame.entity_type", "scenario_frame.entity_id",
+      "scenario_frame.related_entities", "scenario_frame.intent",
+      "scenario_frame.requested_property", "scenario_frame.relation",
+      "scenario_frame.relation_depth", "scenario_frame.temporal_scope",
+      "scenario_frame.epistemic_state", "scenario_frame.secondary_domains",
+      "scenario_frame.expected_reference_resolution",
+      "scenario_frame.execution_required", "scenario_frame.approval_state",
+      "scenario_frame.initial_world_state", "scenario_frame.expected_result_state",
+      "scenario_frame.expected_completion_state", "scenario_frame.expected_grounding",
+      "language_transform_chain"
+    ]
+  },
+  "failure_taxonomy": [
+    "INTENT_FAILURE", "DOMAIN_ROUTING_FAILURE", "ENTITY_RESOLUTION_FAILURE",
+    "REFERENCE_FAILURE", "CONTEXT_FAILURE", "GROUNDING_FAILURE",
+    "CANDIDATE_RETRIEVAL_FAILURE", "SHORTLIST_FAILURE", "CAPABILITY_GAP",
+    "MODEL_REASONING_FAILURE", "DECISION_PROTOCOL_FAILURE", "POLICY_BLOCK",
+    "APPROVAL_FAILURE", "EXECUTION_FAILURE", "DEPENDENCY_FAILURE",
+    "VERIFICATION_FAILURE", "CONTINUATION_FAILURE", "COMPLETION_FAILURE",
+    "DUPLICATE_OUTPUT_FAILURE", "STATE_PERSISTENCE_FAILURE",
+    "SECURITY_FAILURE", "BURDEN_REGRESSION"
+  ],
+  "coverage_policy": {
+    "compare_against_live_registries": true,
+    "report_uncovered_actions": true,
+    "report_uncovered_policy_branches": true,
+    "report_uncovered_post_result_states": true,
+    "report_uncovered_entity_types": true,
+    "report_uncovered_model_profiles": true,
+    "report_uncovered_verification_results": true,
+    "report_uncovered_semantic_frame_dimensions": true,
+    "classify_coverage_gaps": true,
+    "preserve_failure_reproducers": true
+  },
+  "artifact_policy": {
+    "raw_prompts": false,
+    "raw_answers": false,
+    "secrets": false,
+    "identifiers": "digest-only"
+  },
+  "dimensions": [
+    "correctness", "grounding", "domain_selection", "cross_domain_switching",
+    "reference_resolution", "capability_awareness", "action_authority",
+    "completion", "exactly_once_delivery", "epistemic_correctness",
+    "content_action_separation", "model_calls", "decision_calls",
+    "prompt_tokens", "completion_tokens", "tool_index_lookups",
+    "failed_speculative_actions", "context_hydrations", "continuation_rounds",
+    "latency"
+  ],
+  "budgets": {
+    "default_max_model_calls": 2,
+    "default_max_decision_calls": 1,
+    "default_max_tool_index_lookups": 0,
+    "default_max_failed_actions": 0,
+    "default_max_context_hydrations": 2,
+    "default_max_continuation_rounds": 1
+  },
+  "frozen_failures": [
+    {
+      "id": "owner-hardware-collection",
+      "family": "asset_resolution",
+      "domain": "TECHNICAL_ASSET",
+      "task_class": "owner_asset_collection",
+      "prompts": [
+        "tell me about my hardware",
+        "show me my hardware",
+        "what computers do i own"
+      ],
+      "expected": {
+        "concept": "TECHNICAL_ASSET",
+        "operation": "READ",
+        "required_tools": ["manage_assets"],
+        "entity_reference": false,
+        "max_decision_calls": 0,
+        "max_tool_index_lookups": 0,
+        "max_failed_actions": 0
+      }
+    },
+    {
+      "id": "owner-hardware-named-thanatos",
+      "family": "asset_resolution",
+      "domain": "TECHNICAL_ASSET",
+      "task_class": "named_canonical_asset",
+      "prompts": [
+        "thanatos hardware",
+        "tell me about the Thanatos machine"
+      ],
+      "expected": {
+        "concept": "TECHNICAL_ASSET",
+        "operation": "READ",
+        "required_tools": ["manage_assets"],
+        "entity_reference": true,
+        "entity_name": "Thanatos",
+        "max_model_calls": 1,
+        "max_decision_calls": 0,
+        "max_tool_index_lookups": 0,
+        "max_failed_actions": 0
+      }
+    },
+    {
+      "id": "owner-current-network",
+      "family": "network_grounding",
+      "domain": "NETWORK",
+      "task_class": "current_network_context",
+      "prompts": [
+        "what network am i on",
+        "where am i connected right now",
+        "what's my current network"
+      ],
+      "expected": {
+        "concept": "NETWORK",
+        "operation": "READ",
+        "required_tools": ["manage_homelab"],
+        "max_decision_calls": 0,
+        "max_tool_index_lookups": 0,
+        "max_failed_actions": 0
+      }
+    },
+    {
+      "id": "owner-network-discovery-scope",
+      "family": "network_scope",
+      "domain": "NETWORK",
+      "task_class": "bounded_current_network_discovery",
+      "prompts": [
+        "what all is on my network? do a discovery dive",
+        "scan the current subnet and tell me what is there"
+      ],
+      "expected": {
+        "concept": "NETWORK",
+        "operation": "EXECUTE",
+        "must_refuse": true,
+        "max_tool_calls": 0,
+        "max_decision_calls": 0,
+        "max_tool_index_lookups": 0,
+        "max_failed_actions": 0
+      }
+    },
+    {
+      "id": "owner-current-state-grounding",
+      "family": "epistemic_grounding",
+      "domain": "HOMELAB_HOST",
+      "task_class": "current_state_read",
+      "prompts": [
+        "what's running in Odysseus",
+        "anything unhealthy right now"
+      ],
+      "expected": {
+        "concepts": ["HOMELAB_HOST", "SERVICE"],
+        "operation": "READ",
+        "required_tools": ["manage_homelab"],
+        "max_decision_calls": 0,
+        "max_tool_index_lookups": 0,
+        "max_failed_actions": 0
+      }
+    }
+  ],
+  "journeys": [
+    {
+      "id": "switch-memory-assets-network-general",
+      "turns": [
+        {"prompt": "what you know about me", "domain": "MEMORY"},
+        {"prompt": "tell me about my tech", "domain": "TECHNICAL_ASSET"},
+        {"prompt": "what about my current network?", "domain": "NETWORK"},
+        {"prompt": "why do cats knock things off tables?", "domain": "UNKNOWN"}
+      ]
+    },
+    {
+      "id": "switch-work-hardware-network-work",
+      "turns": [
+        {"prompt": "what am i working on", "domain": "WORK"},
+        {"prompt": "tell me about my hardware", "domain": "TECHNICAL_ASSET"},
+        {"prompt": "what's my current network", "domain": "NETWORK"},
+        {"prompt": "what am i working on now", "domain": "WORK"}
+      ]
+    },
+    {
+      "id": "action-result-return",
+      "turns": [
+        {"prompt": "scan the current network", "domain": "NETWORK"},
+        {"prompt": "what did that discovery find", "domain": "NETWORK"},
+        {"prompt": "tell me a joke", "domain": "UNKNOWN"}
+      ]
+    }
+  ],
+  "imports": [
+    {"id": "aci_corpus", "kind": "python", "module": "benchmarks.hades_aci_corpus", "symbol": "CORPUS", "adapter": "aci_corpus", "baseline": true},
+    {"id": "live_dogfood", "kind": "python", "module": "scripts.hades_live_dogfood", "symbol": "CASES", "adapter": "live_case", "baseline": false},
+    {"id": "jarvis_control_plane", "kind": "json", "path": "benchmarks/jarvis/control_plane_v1.json", "adapter": "jarvis", "baseline": true},
+    {"id": "metamorphic_reads", "kind": "python", "module": "benchmarks.hades_aci_metamorphic", "symbol": "READ_PARAPHRASE_SETS", "adapter": "metamorphic", "baseline": true}
+  ]
+}

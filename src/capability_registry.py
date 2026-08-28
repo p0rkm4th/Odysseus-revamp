@@ -60,6 +60,9 @@ class ActionSpec:
     precheck_actions: tuple[str, ...] = ()
     expected_downtime: Mapping[str, Any] | None = None
     execution_requirements: Mapping[str, Any] | None = None
+    # Reviewed prerequisite IDs resolved by the canonical DependencyManager;
+    # metadata alone never authorizes installation.
+    dependencies: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -78,6 +81,20 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="developer.workspace_shell", description="Owner-granted workspace developer execution.",
         actions=_actions(ActionSpec(action_id="execute", effects=("write_workspace", "execute_code"), approval=ApprovalMode.EXACT, executor_key="workspace_yolo")),
     ),
+    "developer.read": CapabilitySpec(
+        capability_id="developer.read",
+        description="Read-only, workspace-confined code navigation and repository inspection.",
+        actions=_actions(*(
+            ActionSpec(
+                action_id=action,
+                effects=("read_workspace",),
+                executor_key="developer_read",
+                target_scope="workspace",
+                requires_direct_container_access=False,
+            )
+            for action in ("search_code", "view_file_region", "show_repo_map")
+        )),
+    ),
     "intelligence.route": CapabilitySpec(
         capability_id="intelligence.route", description="Inspect deterministic domain/model routing.",
         actions=_actions(ActionSpec(action_id="read", effects=("read_private",), executor_key="local_intelligence")),
@@ -95,7 +112,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 for action in (
                     "summary", "list", "search", "get", "add", "update",
                     "record_observation", "link_component", "unlink_component",
-                    "retire", "merge",
+                    "retire", "merge", "add_item", "add_stock", "consume_stock",
+                    "adjust_stock", "update_asset",
                 )
             )
         ),
@@ -172,8 +190,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 effects=("read_private",) if not action.startswith("execute_") else ("admin_change",),
                 approval=ApprovalMode.EXACT if action.startswith("execute_") else ApprovalMode.NONE,
                 executor_key="manage_homelab",
-                execution_location=("host_broker" if action in {"execute_network_discovery", "execute_network_service_enumeration", "execute_diagnostic_install"} else "application"),
-                target_scope=("private_network" if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else None),
+                execution_location=("host_broker" if action in {"execute_network_discovery", "execute_network_service_enumeration", "execute_diagnostic_install"} else "remote_ssh" if action in {"ssh_connect_test", "remote_host_inspect"} else "application"),
+                target_scope=("private_network" if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else "owner_asset" if action in {"ssh_connect_test", "remote_host_inspect"} else None),
                 requires_direct_container_access=(action not in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration", "execute_diagnostic_install"}),
                 target_resources=("network:private_scope",) if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else (),
                 locks=(("network:private_scope",) if action in {"execute_network_discovery", "execute_network_service_enumeration"} else (("host:package_manager",) if action == "execute_diagnostic_install" else ())),
@@ -181,11 +199,12 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 precheck_actions=("plan_service_restart",) if action == "execute_service_restart" else (("plan_network_service_enumeration",) if action == "execute_network_service_enumeration" else (("plan_diagnostic_install",) if action == "execute_diagnostic_install" else ())),
                 postconditions=("service_active",) if action == "execute_service_restart" else (("prerequisites_verified",) if action == "execute_diagnostic_install" else ()),
                 verification=("service_active",) if action == "execute_service_restart" else (("observations_persisted", "network_map_reconciled") if action == "execute_network_discovery" else (("service_observations_persisted", "network_map_reconciled") if action == "execute_network_service_enumeration" else (("prerequisites_verified",) if action == "execute_diagnostic_install" else ()))),
+                dependencies=("binary.nmap",) if action in {"execute_network_discovery", "execute_network_service_enumeration"} else (),
                 state_invalidations=("service.status", "service.uptime", "service.process_start_time") if action == "execute_service_restart" else (("network.observations", "network.map") if action in {"execute_network_discovery", "execute_network_service_enumeration"} else (("capability.health", "executable.availability") if action == "execute_diagnostic_install" else ())),
                 risk_level=("high" if action in {"execute_network_discovery", "execute_network_service_enumeration", "execute_service_restart", "execute_diagnostic_install"} else ("low")),
                 idempotency=("conditional_retry" if action in {"execute_network_service_enumeration", "execute_service_restart", "execute_diagnostic_install"} else ("replay_safe" if action == "execute_network_discovery" else "unknown")),
             ) for action in (
-                "inspect_host", "service_status", "discovery_status", "read_network_context", "read_network_observations",
+                "inspect_host", "service_status", "ssh_connect_test", "remote_host_inspect", "discovery_status", "read_network_context", "read_network_observations",
                 "list_unidentified_hosts", "infer_role_hypotheses",
                 "plan_service_restart", "execute_service_restart",
                 "plan_network_discovery", "execute_network_discovery",
@@ -204,6 +223,28 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             ActionSpec(action_id="search", executor_key="manage_osint"),
             ActionSpec(action_id="fetch", executor_key="manage_osint"),
         ),
+    ),
+    # Public evidence is a capability, not a user-selected orchestration
+    # mode. These primitives remain untrusted reads and use the existing web
+    # transport adapters; they do not grant access to private state.
+    "web.evidence": CapabilitySpec(
+        capability_id="web.evidence",
+        description="Bounded public web evidence retrieval; results are untrusted.",
+        actions=_actions(
+            ActionSpec(action_id="search", effects=("read_public", "brokered_network_read"), executor_key="web_search", result_integrity="external_untrusted"),
+            ActionSpec(action_id="fetch", effects=("read_public", "brokered_network_read", "network_egress"), executor_key="web_fetch", result_integrity="external_untrusted"),
+        ),
+    ),
+    # Capability-gap resolution is itself a normal semantic capability. Its
+    # implementation/staging actions are proposals only; no action here makes
+    # a generated implementation trusted or widens its execution scope.
+    "capability.registry": CapabilitySpec(
+        capability_id="capability.registry",
+        description="Inspect, propose, and stage bounded capability primitives for review.",
+        actions=_actions(*(
+            ActionSpec(action_id=action, effects=("read_private",) if action in {"inspect_registry", "identify_gap"} else ("write_private",), approval=ApprovalMode.NORMAL, executor_key="capability_registry")
+            for action in ("inspect_registry", "identify_gap", "propose", "stage")
+        )),
     ),
     "security.assessment.read": CapabilitySpec(
         capability_id="security.assessment.read",
@@ -290,6 +331,9 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_setup": "setup.read",
     "read_career": "career.read",
     "read_communications": "communications.read",
+    "developer_read": "developer.read",
+    "web_search": "web.evidence",
+    "web_fetch": "web.evidence",
 })
 
 # Safe overview defaults for multiplexed first-class read bindings. These are
@@ -306,6 +350,11 @@ DEFAULT_READ_ACTIONS: Mapping[str, str] = MappingProxyType({
     "read_setup": "state",
     "read_career": "overview",
     "read_communications": "overview",
+    # Legacy web handlers accept a plain query/URL body. Treat that transport
+    # shape as the corresponding canonical evidence action rather than as an
+    # unknown action, while preserving web_fetch's egress policy.
+    "web_search": "search",
+    "web_fetch": "fetch",
 })
 
 
@@ -325,7 +374,10 @@ def action_from_content(tool_name: str, content: Any) -> str | None:
         try:
             payload = json.loads(content or "{}")
         except (TypeError, ValueError):
-            return None
+            # The mature web handlers intentionally accept a plain query/URL
+            # body in addition to JSON. Preserve that transport contract while
+            # assigning it the canonical bounded read action.
+            return DEFAULT_READ_ACTIONS.get(tool_name)
     else:
         payload = {}
     if not isinstance(payload, dict):

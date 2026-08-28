@@ -18,6 +18,7 @@ COMPOSE_FILES = [
     ROOT / "docker-compose.gpu-amd.yml",
 ]
 HOST_DOCKER_OVERLAY = ROOT / "docker" / "host-docker.yml"
+DEVELOPER_COMPOSE = ROOT / "docker-compose.developer.yml"
 TEST_DOCS = [
     ROOT / "tests" / "README.md",
     ROOT / "tests" / "TESTING_STANDARD.md",
@@ -64,6 +65,18 @@ def test_default_compose_files_do_not_mount_host_docker_socket():
     for path in COMPOSE_FILES:
         text = path.read_text(encoding="utf-8")
         assert "/var/run/docker.sock" not in text, path.name
+
+
+def test_production_compose_does_not_silently_mount_checkout_source():
+    for path in COMPOSE_FILES:
+        text = path.read_text(encoding="utf-8")
+        assert ":/app:z" not in text, path.name
+
+
+def test_developer_compose_requires_explicit_workspace_mount():
+    text = DEVELOPER_COMPOSE.read_text(encoding="utf-8")
+    assert "HADES_WORKSPACE:?HADES_WORKSPACE must name the repo-scoped developer workspace" in text
+    assert ":/app:z" in text
 
 
 def test_host_docker_overlay_mounts_socket_and_adds_docker_group():

@@ -73,6 +73,21 @@ class TestIsOllamaNativeUrlAcceptsNativePaths:
     def test_ollama_com_api(self):
         assert llm_core._is_ollama_native_url("https://ollama.com/api")
 
+    def test_arbitrary_localhost_port_pathless_is_generic(self):
+        assert not llm_core._is_ollama_native_url("http://localhost:1234")
+
+    def test_arbitrary_localhost_port_v1_is_generic(self):
+        assert not llm_core._is_ollama_native_url("http://localhost:1234/v1")
+
+    def test_explicit_api_path_identifies_remote_ollama(self):
+        assert llm_core._is_ollama_native_url("http://192.168.1.100:8123/api/chat")
+
+    def test_remote_default_port_is_ollama(self):
+        assert llm_core._is_ollama_native_url("http://192.168.1.100:11434")
+
+    def test_docker_host_default_port_is_ollama(self):
+        assert llm_core._is_ollama_native_url("http://host.docker.internal:11434")
+
 
 # ---------------------------------------------------------------------------
 # build_chat_url: port 11434 + /v1 → OpenAI-compatible /chat/completions

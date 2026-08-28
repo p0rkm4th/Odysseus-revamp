@@ -82,6 +82,7 @@ class SyntheticRunCollector:
         self._tool_succeeded_after_failure = False
         self._malformed_args = False
         self._provider_error = False
+        self._provider_recovered = False
         self._security_violation = False
         self._retries = 0
 
@@ -120,11 +121,30 @@ class SyntheticRunCollector:
                 self._tool_succeeded_after_failure = True
         elif event_type == "fallback":
             self._retries += 1
+            self._provider_recovered = True
         elif event_type == "metrics" and isinstance(event.get("data"), Mapping):
             for source, target in _METRIC_MAP.items():
                 value = event["data"].get(source)
                 if isinstance(value, (int, float)) and not isinstance(value, bool):
                     self._metrics[target] = value
+            # Responsibility accounting is a bounded, server-generated
+            # projection. Preserve only its numeric totals and label maps so
+            # benchmark artifacts can compare framework/model burden without
+            # retaining prompts, raw results, or private state.
+            burden = event["data"].get("model_burden")
+            if isinstance(burden, Mapping):
+                labels = burden.get("labels")
+                self._metrics["model_burden"] = {
+                    "framework": int(burden.get("framework") or 0),
+                    "model": int(burden.get("model") or 0),
+                    "total": int(burden.get("total") or 0),
+                    "model_ratio": float(burden.get("model_ratio") or 0.0),
+                    "labels": {
+                        key: dict(value)
+                        for key, value in (labels.items() if isinstance(labels, Mapping) else ())
+                        if key in {"framework", "model"} and isinstance(value, Mapping)
+                    },
+                }
         elif "error" in event:
             self._provider_error = True
 
@@ -157,7 +177,7 @@ class SyntheticRunCollector:
             "assistant_text": response,
             "tool_calls": self._calls,
             "metrics": self._metrics,
-            "recovered": self._tool_succeeded_after_failure,
+            "recovered": self._tool_succeeded_after_failure or self._provider_recovered,
             "refused": bool(expected.get("must_refuse") and _REFUSAL_RE.search(response)),
             "failure_category": failure,
         }

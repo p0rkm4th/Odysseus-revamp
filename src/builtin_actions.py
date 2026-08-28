@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Tuple
 
 from src.auth_helpers import owner_filter
-from core.platform_compat import IS_WINDOWS, find_bash
+from core.platform_compat import IS_WINDOWS, find_bash, run_ssh_command
 from core.constants import internal_api_base
 from src.constants import DATA_DIR, DEEP_RESEARCH_DIR, TIDY_CALENDAR_STATE_FILE, EMAIL_URGENCY_CACHE_DIR, COOKBOOK_STATE_FILE
 from src.interactive_gate import wait_for_interactive_quiet
@@ -769,7 +769,7 @@ async def _run_subprocess(argv, *, shell: bool = False, timeout: int = 120, labe
 
 
 async def action_ssh_command(owner: str, command: str = "", host: str = "localhost", **kwargs) -> Tuple[str, bool]:
-    """Run a shell command locally or on a remote host via SSH."""
+    """Run a scheduled/admin-gated command with the hardened SSH transport."""
     if not command:
         return "No command specified", False
     if host in ("localhost", "127.0.0.1", "local"):
@@ -779,9 +779,23 @@ async def action_ssh_command(owner: str, command: str = "", host: str = "localho
                 return await _run_subprocess([bash, "-c", command], timeout=120, label="Command")
             return await _run_subprocess(command, shell=True, timeout=120, label="Command")
         return await _run_subprocess(["bash", "-c", command], timeout=120, label="Command")
-    return await _run_subprocess(
-        ["ssh", "-o", "ConnectTimeout=10", host, command], timeout=120, label="Command",
-    )
+    import asyncio
+    try:
+        result = await asyncio.to_thread(
+            run_ssh_command,
+            host,
+            kwargs.get("ssh_port"),
+            command,
+            timeout=120,
+            connect_timeout=10,
+            strict_host_key_checking=True,
+        )
+        output = (result.stdout or "").strip()
+        if result.returncode != 0 and result.stderr:
+            output += "\nSTDERR: " + result.stderr.strip()
+        return output or "(no output)", result.returncode == 0
+    except Exception as exc:
+        return str(exc), False
 
 
 async def action_run_script(owner: str, script: str = "", host: str = "", **kwargs) -> Tuple[str, bool]:

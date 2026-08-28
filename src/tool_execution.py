@@ -27,6 +27,10 @@ from src.tool_security import (
     is_public_blocked_tool,
     owner_is_admin_or_single_user,
 )
+
+_BUILTIN_MCP_SERVER_IDS = frozenset({
+    "image_gen", "memory", "rag", "email", "builtin_browser",
+})
 from src.tool_capabilities import ToolRunSecurityContext, blocked_tool_result
 from src.tool_approvals import ExactToolApproval
 from src.tool_policy import ToolPolicy
@@ -338,6 +342,60 @@ def _owner_is_admin(owner: Optional[str]) -> bool:
     """Mirror route-level admin behavior for agent tool execution."""
     return owner_is_admin_or_single_user(owner)
 
+
+def _mcp_execution_disabled_reason(
+    tool_name: Any,
+    disabled_tools: Optional[set] = None,
+) -> Optional[str]:
+    """Revalidate dynamic MCP enablement at the execution boundary.
+
+    Discovery/schema filtering is advisory: a stale Action, prompt injection,
+    or a provider replay can still supply a qualified name after the server
+    configuration changed.  Read the current owner-controlled MCP registry at
+    dispatch time and fail closed if it cannot be evaluated.  This is only a
+    capability gate; ActionSpec, policy, approval, and the MCP adapter remain
+    authoritative for their respective concerns.
+    """
+    if not isinstance(tool_name, str) or not tool_name.startswith("mcp__"):
+        return None
+    policy_names = email_tool_policy_names(tool_name)
+    if disabled_tools and not policy_names.isdisjoint(disabled_tools):
+        return f"Tool '{tool_name}' is disabled by user policy."
+    parts = tool_name.split("__", 2)
+    if len(parts) != 3 or not parts[1] or not parts[2]:
+        return "Malformed MCP capability name."
+    try:
+        from core.database import McpServer, SessionLocal
+
+        db = SessionLocal()
+        try:
+            server = db.query(McpServer).filter(McpServer.id == parts[1]).first()
+            if server is None:
+                # Built-in MCP servers are registered in-process and may not
+                # have a user-configured McpServer row.  Their manager-side
+                # identity is still authoritative; an unknown dynamic server
+                # must remain fail-closed.
+                manager = get_mcp_manager()
+                is_builtin = getattr(manager, "is_builtin", None)
+                if parts[1] in _BUILTIN_MCP_SERVER_IDS or (
+                    callable(is_builtin) and is_builtin(parts[1])
+                ):
+                    return None
+                return "MCP capability is no longer registered."
+            if server.is_enabled is False:
+                return "MCP server is disabled."
+            raw_disabled = json.loads(server.disabled_tools) if server.disabled_tools else []
+            if not isinstance(raw_disabled, list):
+                return "MCP capability policy is invalid."
+            if parts[2] in {str(name) for name in raw_disabled}:
+                return f"MCP tool '{parts[2]}' is disabled by server policy."
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.warning("Unable to revalidate MCP execution policy for %s: %s", tool_name, exc)
+        return "MCP capability policy could not be revalidated."
+    return None
+
 # ---------------------------------------------------------------------------
 # MCP-backed tool helpers
 # ---------------------------------------------------------------------------
@@ -624,6 +682,26 @@ async def execute_tool_block(
         raise TypeError(
             "security_context must be a ToolRunSecurityContext or "
             "NO_TOOL_SECURITY_CONTEXT"
+        )
+
+    # MCP discovery is not authorization. Recheck the live server/tool state
+    # before exact approval is claimed or the provider adapter is invoked.
+    _mcp_block_reason = _mcp_execution_disabled_reason(
+        getattr(block, "tool_type", None), disabled_tools,
+    )
+    if _mcp_block_reason:
+        logger.warning(
+            "MCP execution denied at dispatcher boundary tool=%r reason=%s",
+            getattr(block, "tool_type", None), _mcp_block_reason,
+        )
+        return (
+            f"{getattr(block, 'tool_type', None)}: BLOCKED",
+            {
+                "error": _mcp_block_reason,
+                "exit_code": 1,
+                "blocked": True,
+                "policy": "mcp_execution_capability",
+            },
         )
 
     approval_claimed = False
@@ -1357,6 +1435,51 @@ async def _execute_manage_assets_binding(block, owner=None):
         if not owner:
             raise PermissionError("authenticated IT asset owner is required")
         payload = _ody_v34_json.loads(block.content or "{}")
+        # Kitchen/household inventory actions share the canonical inventory
+        # capability and transport with IT assets. Delegate their persistence
+        # to the existing transactional service rather than creating a second
+        # binding or installer-like subsystem.
+        if isinstance(payload, dict) and payload.get("action") in {
+            "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+        }:
+            from src.agent_tools.inventory_tools import ManageInventoryTool
+            result = dict(await ManageInventoryTool().execute(
+                _ody_v34_json.dumps(payload, sort_keys=True), {"owner": owner},
+            ))
+            result.setdefault("success", result.get("exit_code", 1) == 0 and not result.get("error"))
+            result["canonical_store"] = "inventory_service"
+            result["provenance"] = "USER_ASSERTED" if payload.get("action") in {"add_item", "add_stock", "update_asset"} else "CANONICAL_INVENTORY"
+            if result.get("success"):
+                # Verify the write through the same transactional service
+                # before final delivery. The readback is evidence metadata,
+                # never a second persistence path.
+                try:
+                    from src.inventory_service import get_inventory_service
+                    service = get_inventory_service()
+                    item = result.get("item") or result.get("asset") or {}
+                    item_id = item.get("id") if isinstance(item, dict) else None
+                    if not item_id:
+                        lot = result.get("lot")
+                        item_id = lot.get("item_id") if isinstance(lot, dict) else None
+                    if not item_id:
+                        movements = result.get("movements") or []
+                        first = movements[0] if movements and isinstance(movements[0], dict) else {}
+                        item_id = first.get("item_id")
+                    if item_id:
+                        result["verification"] = {
+                            "status": "VERIFIED",
+                            "readback": {
+                                "item": service.get_item(owner, str(item_id)),
+                                "lots": service.list_lots(owner, str(item_id)),
+                            },
+                        }
+                    else:
+                        result["verification"] = {"status": "INCOMPLETE", "reason": "no affected inventory item reference"}
+                except Exception:
+                    # The write Result remains durable, but no unsupported
+                    # current-state claim may be made without readback.
+                    result["verification"] = {"status": "INCOMPLETE", "reason": "inventory readback unavailable"}
+            return "manage_assets", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), **result}
         argv = _ody_v34_asset_argv(payload, owner=owner)
 
         def _run():
@@ -1385,6 +1508,24 @@ async def _execute_manage_assets_binding(block, owner=None):
                 "status": "EMPTY_RESULT" if not parsed else "SUCCESS",
                 "assets": parsed,
                 "asset_count": len(parsed),
+                "source": "canonical_it_asset_cmdb",
+                "owner_scope": str(owner or "authenticated_owner"),
+            }
+            # Preserve the bounded semantic projection selected by ACI.  This
+            # is result metadata, not model authority; the canonical renderer
+            # uses it to produce deterministic counts from these rows.
+            if payload.get("result_projection") in {"count"}:
+                data["result_projection"] = payload["result_projection"]
+            if payload.get("query"):
+                data["query"] = str(payload["query"])[:120]
+        elif action == "get" and isinstance(parsed, dict):
+            # Keep the asset read Result contract collection-shaped so the
+            # same projection/grounding path can represent both a list and a
+            # server-resolved detail read without exposing a second schema.
+            data = {
+                "status": "SUCCESS",
+                "assets": [parsed],
+                "asset_count": 1,
                 "source": "canonical_it_asset_cmdb",
                 "owner_scope": str(owner or "authenticated_owner"),
             }
@@ -1439,7 +1580,22 @@ async def _execute_manage_homelab_binding(block, owner=None):
         from src.execution_profiles import use_execution_profile
         with use_execution_profile("privileged_host"):
             result = await HomelabOperations().execute(payload, owner=str(owner or ""))
-        return "manage_homelab", {"output": _ody_v34_json.dumps(result, indent=2, sort_keys=True), "exit_code": 0, "data": result}
+        # Preserve executor failure semantics at the binding boundary.  Some
+        # canonical read operations report structured UNAVAILABLE/INVALID_RESULT
+        # states rather than raising; treating every returned payload as exit 0
+        # made the control plane record a failed infrastructure read as a
+        # successful Action and obscured the real broker/runtime fault.
+        failure_statuses = {"BLOCKED", "FAILED", "ERROR", "INVALID_RESULT", "UNAVAILABLE"}
+        status = str(result.get("status") or "").upper() if isinstance(result, dict) else ""
+        succeeded = bool(result.get("success", True)) if isinstance(result, dict) else False
+        if status in failure_statuses:
+            succeeded = False
+        return "manage_homelab", {
+            "output": _ody_v34_json.dumps(result, indent=2, sort_keys=True),
+            "exit_code": 0 if succeeded else 1,
+            "success": succeeded,
+            "data": result,
+        }
     except Exception as exc:
         return "manage_homelab", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
@@ -1656,7 +1812,6 @@ async def _execute_read_household_binding(block, owner=None):
     except Exception as exc:
         return "read_household", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
-
 async def _execute_read_setup_binding(block, owner=None):
     """Adapt Setup Center's secret-free owner projection to a read binding."""
     try:
@@ -1783,6 +1938,98 @@ async def _execute_read_communications_binding(block, owner=None):
         return "read_communications", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_developer_read_binding(block, owner=None):
+    """Adapt canonical Developer read Actions to confined code-nav handlers.
+
+    The adapter intentionally reuses the mature path/workspace guards.  The
+    canonical binding accepts semantic Actions, while the legacy handlers stay
+    an implementation detail and receive no shell or write authority.
+    """
+    try:
+        payload = json.loads(str(getattr(block, "content", "") or "{}"))
+    except (TypeError, ValueError):
+        return "developer_read", {"error": "developer_read requires a JSON object", "exit_code": 1}
+    if not isinstance(payload, dict):
+        return "developer_read", {"error": "developer_read requires a JSON object", "exit_code": 1}
+    action = str(payload.get("action") or "").strip().casefold()
+    workspace = get_active_workspace()
+    if action == "search_code":
+        query = str(payload.get("query") or "").strip()
+        if not query:
+            return "developer_read", {"error": "search_code requires query", "exit_code": 1}
+        try:
+            max_results = min(max(int(payload.get("max_results") or 50), 1), 200)
+        except (TypeError, ValueError):
+            return "developer_read", {"error": "search_code max_results is invalid", "exit_code": 1}
+        args = {
+            "pattern": query,
+            "path": str(payload.get("path") or workspace or ""),
+            "glob": str(payload.get("glob") or ""),
+            "max_results": max_results,
+            "ignore_case": bool(payload.get("ignore_case")),
+        }
+        legacy_tool = "grep"
+    elif action == "view_file_region":
+        path = str(payload.get("path") or "").strip()
+        if not path:
+            return "developer_read", {"error": "view_file_region requires path", "exit_code": 1}
+        try:
+            start = max(int(payload.get("start_line") or 1), 1)
+            # Keep the default view small enough for a weak local model to
+            # request another precise window instead of receiving a whole
+            # source file.  The legacy reader remains the implementation
+            # owner; this adapter only defines the canonical semantic bound.
+            end = int(payload.get("end_line") or start + 99)
+        except (TypeError, ValueError):
+            return "developer_read", {"error": "view_file_region line range is invalid", "exit_code": 1}
+        if end < start or end - start > 199:
+            return "developer_read", {"error": "view_file_region line range is invalid or too large", "exit_code": 1}
+        if workspace and not os.path.isabs(path):
+            path = os.path.join(workspace, path)
+        args = {"path": path, "offset": start, "limit": end - start + 1}
+        legacy_tool = "read_file"
+    elif action == "show_repo_map":
+        args = {"pattern": str(payload.get("query") or "**/*"), "path": str(payload.get("path") or workspace or "")}
+        legacy_tool = "glob"
+    else:
+        return "developer_read", {"error": f"unknown Developer read Action: {action or '<missing>'}", "exit_code": 1}
+    result = await _direct_fallback(legacy_tool, json.dumps(args, sort_keys=True), owner=owner)
+    if not isinstance(result, dict):
+        return "developer_read", {"error": "Developer read adapter is unavailable", "exit_code": 1}
+    output = dict(result)
+    raw_output = str(output.get("output") or "")
+    # View results carry stable source line numbers.  This is presentation
+    # metadata, not a second file reader: the confined ReadFileTool has
+    # already selected the exact requested region.
+    if action == "view_file_region" and raw_output:
+        numbered = []
+        for index, line in enumerate(raw_output.splitlines(), start=start):
+            if line.startswith("... [truncated") or line.startswith("... ["):
+                numbered.append(line)
+            else:
+                numbered.append(f"{index:>6}\t{line}")
+        raw_output = "\n".join(numbered)
+        output["output"] = raw_output[:20000]
+    exit_code = output.get("exit_code", 1)
+    success = exit_code == 0 and not output.get("error")
+    status = "FAILURE" if not success else ("SUCCESS_WITH_OUTPUT" if raw_output.strip() else "SUCCESS_EMPTY")
+    data = output.get("data") if isinstance(output.get("data"), dict) else {}
+    data.update({
+        "status": status,
+        "action": action,
+        "output": raw_output[:20000],
+        "workspace_scoped": True,
+        "truncated": "truncated" in raw_output.lower(),
+    })
+    if action == "view_file_region":
+        data.update({"path": path, "start_line": start, "end_line": end})
+    elif action == "search_code":
+        data.update({"query": query, "max_results": max_results})
+    output["data"] = data
+    output["success"] = success
+    return "developer_read", output
+
+
 _CAPABILITY_V1_EXECUTORS = {
     "manage_assets": _execute_manage_assets_binding,
     "privileged_action": _execute_privileged_action_binding,
@@ -1795,6 +2042,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_setup": _execute_read_setup_binding,
     "read_career": _execute_read_career_binding,
     "read_communications": _execute_read_communications_binding,
+    "developer_read": _execute_developer_read_binding,
 }
 
 
@@ -1908,3 +2156,45 @@ async def execute_tool_block(block, *args, **kwargs):
         *args,
         **kwargs,
     )
+
+
+async def stream_tool_execution(
+    block: Any,
+    *,
+    executor: Optional[Callable[..., Awaitable[Tuple[str, Dict]]]] = None,
+    **kwargs: Any,
+):
+    """Run one canonical tool execution while yielding bounded progress.
+
+    The helper owns only async task/progress plumbing. The selected executor
+    remains `execute_tool_block` (or an explicitly injected test/compatibility
+    executor), so security, approval, policy, and ActionSpec validation stay
+    on the canonical dispatcher path.
+    """
+    progress_queue: asyncio.Queue = asyncio.Queue()
+
+    async def push_progress(payload: Dict):
+        await progress_queue.put(payload)
+
+    async def run():
+        try:
+            selected = executor or execute_tool_block
+            return await selected(block, progress_cb=push_progress, **kwargs)
+        finally:
+            await progress_queue.put(None)
+
+    task = asyncio.create_task(run())
+    try:
+        while True:
+            event = await progress_queue.get()
+            if event is None:
+                break
+            yield "progress", event
+        yield "result", await task
+    finally:
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass

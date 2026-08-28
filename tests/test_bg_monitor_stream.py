@@ -1,14 +1,12 @@
 import asyncio
 import json
-import sys
-import types
 from types import SimpleNamespace
 
-from src import bg_monitor
+from src import aci, bg_monitor
 
 
 def test_drain_agent_ignores_non_string_deltas(monkeypatch):
-    async def fake_stream_agent_loop(*args, **kwargs):
+    async def fake_stream_aci_turn(*args, **kwargs):
         yield 'data: {"delta": null}'
         yield 'data: {"delta": ["bad"]}'
         yield 'data: {"delta": "ok"}'
@@ -16,9 +14,7 @@ def test_drain_agent_ignores_non_string_deltas(monkeypatch):
         yield 'data: {"type": "tool_output", "tool": "shell", "output": "done"}'
         yield "data: [DONE]"
 
-    agent_loop = types.ModuleType("src.agent_loop")
-    agent_loop.stream_agent_loop = fake_stream_agent_loop
-    monkeypatch.setitem(sys.modules, "src.agent_loop", agent_loop)
+    monkeypatch.setattr(aci, "stream_aci_turn", fake_stream_aci_turn)
 
     sess = SimpleNamespace(
         endpoint_url="http://example.test",
@@ -58,7 +54,7 @@ def test_background_drain_preserves_exact_approval_card(monkeypatch):
         "options": [{"label": "Allow once"}, {"label": "Deny"}],
     }
 
-    async def fake_stream_agent_loop(*args, **kwargs):
+    async def fake_stream_aci_turn(*args, **kwargs):
         yield "data: " + json.dumps({
             "type": "tool_output",
             "tool": "bash",
@@ -69,9 +65,7 @@ def test_background_drain_preserves_exact_approval_card(monkeypatch):
         })
         yield "data: [DONE]"
 
-    agent_loop = types.ModuleType("src.agent_loop")
-    agent_loop.stream_agent_loop = fake_stream_agent_loop
-    monkeypatch.setitem(sys.modules, "src.agent_loop", agent_loop)
+    monkeypatch.setattr(aci, "stream_aci_turn", fake_stream_aci_turn)
 
     sess = SimpleNamespace(
         endpoint_url="http://example.test",

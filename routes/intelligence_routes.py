@@ -9,7 +9,8 @@ from src.owner_identity import effective_storage_owner
 from src import local_intelligence
 from src import developer_mode
 from src.network_projection import map_projection
-from src.capability_dependencies import capability_health, supported_capabilities
+from src import asset_inventory
+from src.capability_dependencies import dependency_manager, supported_capabilities
 from src.persistent_agent import PersistentAgent
 from src.integrations import execute_api_call, load_integrations
 from core.persistent_agent_models import Episode, Lesson, Monitor, Notification
@@ -122,7 +123,7 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         value = owner(request)
         return {
             "owner": value,
-            "capabilities": [capability_health(name) for name in supported_capabilities()],
+            "capabilities": [dependency_manager.inspect_operation(name) for name in supported_capabilities()],
             "registry": "bounded_first_class_only",
         }
     @router.get("/api/hades/status")
@@ -140,6 +141,35 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
         value = owner(request)
         with session_factory() as db:
             return PersistentAgent(db).runtime_snapshot(value)
+    @router.get("/api/hades/runtime-profile")
+    async def hades_runtime_profile(request: Request):
+        """Return sanitized runtime/model evidence for Control Center diagnostics."""
+        value = owner(request)
+        from src.runtime_profile import RuntimeProfileCache, negotiated_decision_protocol
+        profiles = []
+        for profile in RuntimeProfileCache().all():
+            profiles.append({
+                "key": profile.key,
+                "endpoint_id": profile.endpoint_id,
+                "protocol": profile.protocol,
+                "runtime": profile.runtime,
+                "model_id": profile.model_id,
+                "model_digest": profile.model_digest,
+                "server_fingerprint": profile.server_fingerprint,
+                "context": {
+                    "architecture_max": profile.architecture_max_context,
+                    "provider_configured": profile.provider_configured_max_context,
+                    "runtime_allocated": profile.runtime_allocated_context,
+                    "hardware_recommended": profile.hardware_recommended_context,
+                },
+                "capabilities": {
+                    name: evidence.to_dict() for name, evidence in profile.capabilities.items()
+                },
+                "negotiated_decision_protocol": negotiated_decision_protocol(profile),
+                "fresh": profile.is_fresh(),
+                "refreshed_at": profile.refreshed_at,
+            })
+        return {"owner": value, "profiles": profiles, "authority_unchanged": True}
     @router.get("/api/hades/episodes")
     async def hades_episodes(request: Request, limit: int = 50):
         value = owner(request)
@@ -263,6 +293,21 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
     async def network_map(request: Request):
         value = owner(request)
         return await asyncio.to_thread(map_projection, owner=value)
+
+    @router.post("/api/network/assets/reconcile")
+    async def reconcile_network_asset(request: Request, payload: dict = Body(...)):
+        value = owner(request)
+        try:
+            return await asyncio.to_thread(
+                asset_inventory.reconcile_candidate,
+                value,
+                payload.get("candidate"),
+                payload.get("decision"),
+                name=payload.get("name"),
+                asset_type=payload.get("type", "network_device"),
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
     @router.get("/api/home-assistant/overview")
     async def home_assistant_overview(request: Request):
         owner(request)

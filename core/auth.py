@@ -51,6 +51,9 @@ from src.constants import AUTH_FILE, PASSWORD_MIN_LENGTH
 from src.owner_identity import RESERVED_AUTH_USERNAMES
 DEFAULT_AUTH_PATH = AUTH_FILE
 TOKEN_TTL = 60 * 60 * 24 * 7  # 7 days
+ACCEPTANCE_USERNAME = "hades-acceptance"
+ACCEPTANCE_PRINCIPAL_ENV = "HADES_ACCEPTANCE_PRINCIPAL_ENABLED"
+ACCEPTANCE_ACCOUNT_TTL = 60 * 60 * 24  # account metadata; sessions are shorter-lived in the CLI
 
 # Usernames the auth + middleware layer reserves for request sentinels and
 # internal storage owners; they must never belong to a real login account.
@@ -569,7 +572,69 @@ class AuthManager:
         username = username.strip().lower()
         if username not in self.users:
             return False
+        if not self._acceptance_user_allowed(username):
+            return False
         return _verify_password(password, self.users[username]["password_hash"])
+
+    @staticmethod
+    def acceptance_principal_enabled() -> bool:
+        return os.environ.get(ACCEPTANCE_PRINCIPAL_ENV, "").strip().lower() in {
+            "1", "true", "yes", "on",
+        }
+
+    def _acceptance_user_allowed(self, username: str) -> bool:
+        record = self.users.get(str(username or "").strip().lower()) or {}
+        if not record.get("acceptance_only"):
+            return True
+        if not self.acceptance_principal_enabled():
+            return False
+        expiry = record.get("acceptance_expires_at")
+        if not expiry:
+            return True
+        try:
+            return float(expiry) > time.time()
+        except (TypeError, ValueError):
+            return False
+
+    def create_acceptance_principal(
+        self,
+        password: str,
+        *,
+        expires_at: float | None = None,
+    ) -> bool:
+        """Create/rotate the explicitly enabled, least-privileged test user."""
+        if not self.acceptance_principal_enabled() or len(password) < PASSWORD_MIN_LENGTH:
+            return False
+        expiry = expires_at or (time.time() + ACCEPTANCE_ACCOUNT_TTL)
+        privileges = dict(DEFAULT_PRIVILEGES)
+        for key in ("can_use_browser", "can_use_bash", "can_use_documents", "can_use_research", "can_generate_images"):
+            privileges[key] = False
+        with self._config_lock:
+            existing = self.users.get(ACCEPTANCE_USERNAME)
+            if existing and not existing.get("acceptance_only"):
+                return False
+            self._config.setdefault("users", {})[ACCEPTANCE_USERNAME] = {
+                "password_hash": _hash_password(password),
+                "created": (existing or {}).get("created", time.time()),
+                "is_admin": False,
+                "acceptance_only": True,
+                "acceptance_expires_at": expiry,
+                "privileges": privileges,
+            }
+            self._save()
+        self.revoke_user_sessions(ACCEPTANCE_USERNAME)
+        return True
+
+    def delete_acceptance_principal(self) -> bool:
+        """Remove only the dedicated acceptance account and its sessions."""
+        with self._config_lock:
+            record = self.users.get(ACCEPTANCE_USERNAME)
+            if not record or not record.get("acceptance_only"):
+                return False
+            self._config["users"].pop(ACCEPTANCE_USERNAME, None)
+            self._save()
+        self.revoke_user_sessions(ACCEPTANCE_USERNAME)
+        return True
 
     def create_session(self, username: str, password: str) -> Optional[str]:
         """Verify credentials and return a session token, or None."""
@@ -584,7 +649,7 @@ class AuthManager:
         username = username.strip().lower()
         token = secrets.token_hex(32)
         with self._config_lock:
-            if username not in self.users:
+            if username not in self.users or not self._acceptance_user_allowed(username):
                 logger.warning("Refused to issue session for missing user '%s'", username)
                 return None
             with self._sessions_lock:
@@ -604,7 +669,7 @@ class AuthManager:
             session = self._sessions.get(token)
             if session is None:
                 return False
-            if time.time() > session["expiry"]:
+            if time.time() > session["expiry"] or not self._acceptance_user_allowed(session.get("username")):
                 self._sessions.pop(token, None)
                 expired = True
             else:
@@ -630,7 +695,7 @@ class AuthManager:
             session = self._sessions.get(token)
             if session is None:
                 return None
-            if time.time() > session["expiry"]:
+            if time.time() > session["expiry"] or not self._acceptance_user_allowed(session.get("username")):
                 self._sessions.pop(token, None)
                 expired = True
             else:

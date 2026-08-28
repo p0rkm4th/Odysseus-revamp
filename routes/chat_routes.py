@@ -6,6 +6,7 @@ import os
 import re
 import time
 import logging
+import uuid
 from datetime import datetime
 from typing import Dict, Any, AsyncGenerator, List, Optional
 
@@ -22,7 +23,7 @@ from src.llm_core import (
     stream_llm,
     stream_llm_with_fallback,
 )
-from src.agent_loop import stream_agent_loop
+from src.aci import stream_aci_turn
 from src import agent_runs
 from src.model_context import estimate_tokens
 from src.context_compactor import (
@@ -66,7 +67,7 @@ from src.image_model_ids import looks_like_image_generation_model
 from src.tool_policy import (
     WEB_TOOL_NAMES,
     build_effective_tool_policy,
-    is_web_search_explicitly_denied,
+    web_access_mode,
     web_search_enabled_for_turn,
 )
 from src.tool_approvals import tool_approval_store
@@ -75,6 +76,31 @@ logger = logging.getLogger(__name__)
 
 # Track active streams for partial-save safety net
 _active_streams: Dict[str, dict] = {}
+
+
+def _run_post_response_tasks_safely(*args, **kwargs) -> None:
+    """Keep optional post-response work outside terminal SSE correctness.
+
+    The assistant answer has already been persisted when this runs. Memory
+    extraction, webhooks, naming, and similar follow-up work may degrade, but
+    must never turn a completed response into an abrupt EOF before [DONE].
+    """
+    try:
+        run_post_response_tasks(*args, **kwargs)
+    except Exception:
+        logger.exception("Post-response tasks failed after answer persistence")
+
+
+def _chat_stream_entrypoint(*args, **kwargs):
+    """Return the canonical foreground ACI stream.
+
+    The route has no legacy stream hook: tests replace ``stream_aci_turn`` at
+    this module boundary, while production cannot be redirected to the retired
+    orchestration loop by mutating a route-level symbol.
+    """
+    kwargs = dict(kwargs)
+    kwargs.pop("aci_mode", None)
+    return stream_aci_turn(*args, aci_mode="aci", **kwargs)
 
 
 def _stream_failure_status(chunk: str) -> Optional[int]:
@@ -906,7 +932,7 @@ def setup_chat_routes(
         session_manager.save_sessions()
 
         # Background tasks (memory, webhook, auto-name)
-        run_post_response_tasks(
+        _run_post_response_tasks_safely(
             sess, session_manager, session, message, reply, None,
             ctx.uprefs, memory_manager, memory_vector, webhook_manager,
             character_name=ctx.preset.character_name,
@@ -956,6 +982,12 @@ def setup_chat_routes(
             or (body or {}).get("selected_endpoint_id")
             or ""
         ).strip()
+        turn_id = str(
+            request.headers.get("X-Odysseus-Turn-Id")
+            or form_data.get("turn_id")
+            or (body or {}).get("turn_id")
+            or uuid.uuid4().hex
+        ).strip()[:128]
         # Issue #3229: API callers send JSON, not FormData.  Read from the
         # JSON body as fallback so callers who send {"allow_bash": true}
         # actually get bash enabled.
@@ -1000,6 +1032,7 @@ def setup_chat_routes(
         # not chats we quietly promoted for a notes/calendar intent.
         user_requested_agent = (chat_mode == "agent")
         _search_enabled = web_search_enabled_for_turn(allow_web_search, use_web)
+        _web_access_mode = web_access_mode(allow_web_search, use_web)
         _explicit_web_intent = False
         _explicit_browser_intent = False
         if isinstance(message, str):
@@ -1018,6 +1051,8 @@ def setup_chat_routes(
                 r"\b(?:look\s*up|lookup)\b.{0,24}\b(?:online|web|internet)\b|"
                 r"\b(?:news|weather|forecast)\b|"
                 r"\bexchange\s+rate\b|"
+                r"\b(?:latest|newest|current)\b.{0,40}\b(?:driver|release|version|price|news|research|docs?)\b|"
+                r"\bresearch\s+(?:this|that|it|the\s+(?:topic|domain))\b|"
                 r"https?://|www\."
                 r")",
                 _msg_l,
@@ -1054,6 +1089,26 @@ def setup_chat_routes(
                 _tool_intent.category,
                 _tool_intent.reason,
             )
+        # Owner capability reads are also agent turns when the composer is in
+        # plain chat mode.  The semantic compiler selects only the bounded
+        # existing binding (manage_assets/manage_homelab); this does not expose
+        # arbitrary shell access or turn a sensitive topic into an action.
+        if chat_mode == "chat" and isinstance(message, str):
+            try:
+                from src.intent_contracts import (
+                    compile_intent, is_bounded_owner_capability_turn,
+                )
+                _owner_frame = compile_intent(message)
+                if is_bounded_owner_capability_turn(_owner_frame):
+                    chat_mode = "agent"
+                    auto_escalated = True
+                    logger.info(
+                        "chat→agent auto-escalation: bounded owner capability concept=%s operation=%s",
+                        _owner_frame.domain_concept,
+                        _owner_frame.operation_class,
+                    )
+            except Exception:
+                logger.debug("owner capability auto-escalation unavailable", exc_info=True)
         elif chat_mode == "chat" and _search_enabled:
             chat_mode = "agent"
             auto_escalated = True
@@ -1482,9 +1537,9 @@ def setup_chat_routes(
         disabled_tools = set()
         # Only disable bash when the caller *explicitly* set it to a falsy
         # value. When unset (None), defer to per-user privilege checks below.
-        # Web search is per-turn opt-in: either the chat pre-search setting
-        # (`use_web=true`) or agent web toggle (`allow_web_search=true`) must
-        # explicitly enable it.
+        # Web is an ACI evidence capability. With no explicit policy it is
+        # AUTO and may be projected when the objective needs public/current
+        # evidence; an explicit false value remains a hard privacy OFF gate.
         if allow_bash is not None and str(allow_bash).lower() != "true":
             disabled_tools.add("bash")
         # Explicit web intent is a security/capability boundary, not a semantic
@@ -1497,7 +1552,7 @@ def setup_chat_routes(
                 "[tool-policy] semantic web intent ignored for explicit-web clamp: %r",
                 message[:160],
             )
-        if is_web_search_explicitly_denied(allow_web_search) or not _search_enabled:
+        if _web_access_mode == "OFF":
             disabled_tools.update(WEB_TOOL_NAMES)
         if _explicit_web_intent:
             # A direct lookup/search request should not drift into personal
@@ -1512,12 +1567,8 @@ def setup_chat_routes(
                 "manage_notes", "manage_calendar", "manage_tasks",
                 "api_call",
             })
-            if _search_enabled:
-                disabled_tools.difference_update(WEB_TOOL_NAMES)
-            else:
+            if _web_access_mode == "OFF":
                 disabled_tools.update(WEB_TOOL_NAMES)
-        elif _search_enabled:
-            disabled_tools.difference_update(WEB_TOOL_NAMES)
 
         # Nobody/incognito mode: deny tools that would expose the user's
         # persistent memory, past chats, or other identity-linked data.
@@ -1606,7 +1657,7 @@ def setup_chat_routes(
                 disabled_tools.update({"bash", "python", "read_file", "write_file", "web_search", "web_fetch", "search_chats", "manage_tasks"})
 
         # Plan mode: investigate read-only, propose a plan, don't mutate. Block
-        # every tool not on the read-only allowlist. (stream_agent_loop enforces
+        # every tool not on the read-only allowlist. (the ACI runtime enforces
         # this again + drops MCP, so this is belt-and-suspenders.)
         if plan_mode:
             from src.tool_security import plan_mode_disabled_tools
@@ -1636,9 +1687,13 @@ def setup_chat_routes(
             # the outer scope. (Was `nonlocal` but never reassigned.)
             research_sources = None
             web_sources = ctx.web_sources
+            # Provider streams can append a second terminal marker after a
+            # retry/error path. One logical HTTP stream has one terminal
+            # completion; persistence is separately idempotent by turn_id.
+            _done_seen = False
 
             # Register active stream for partial-save safety net
-            _active_streams[session] = {"status": "streaming", "partial": "", "query": message, "is_research": effective_do_research, "mode": _effective_mode}
+            _active_streams[session] = {"status": "streaming", "partial": "", "query": message, "is_research": effective_do_research, "mode": _effective_mode, "turn_id": turn_id}
 
             # The client sent a workspace the server refused to bind (deleted
             # folder, file path, sensitive dir, filesystem root). Tell it up
@@ -2018,6 +2073,16 @@ def setup_chat_routes(
                                         full_response += data["delta"]
                                         _stream_set(session, partial=full_response)
                                     yield chunk
+                                elif data.get("type") == "response_replace":
+                                    # Grounding and deterministic summaries can
+                                    # correct prose that was already streamed.
+                                    # Preserve replacement semantics through the
+                                    # HTTP boundary; forwarding it as a delta
+                                    # would duplicate the prior answer in the
+                                    # client and in any replay subscriber.
+                                    full_response = str(data.get("content") or "")
+                                    _stream_set(session, partial=full_response)
+                                    yield chunk
                                 elif data.get("type") == "fallback":
                                     # Selected model failed; a fallback answered.
                                     # Forward the notice and remember the real model.
@@ -2198,6 +2263,7 @@ def setup_chat_routes(
                                     _terminal_metrics,
                                     character_name=ctx.preset.character_name,
                                     incognito=incognito,
+                                    turn_id=turn_id,
                                 )
                                 accumulate_token_usage(session, _terminal_metrics)
                                 _chat_terminal_saved = True
@@ -2209,6 +2275,9 @@ def setup_chat_routes(
                         elif chunk.startswith("event: "):
                             yield chunk
                         elif chunk == "data: [DONE]\n\n":
+                            if _done_seen:
+                                continue
+                            _done_seen = True
                             if _chat_terminal_saved:
                                 # Some providers append DONE after a terminal
                                 # error.  The failed partial is already saved;
@@ -2270,10 +2339,11 @@ def setup_chat_routes(
                                     used_memories=ctx.used_memories,
                                     do_research=effective_do_research,
                                     incognito=incognito,
+                                    turn_id=turn_id,
                                 )
                                 if _saved_id:
                                     yield f'data: {json.dumps({"type": "message_saved", "id": _saved_id})}\n\n'
-                                run_post_response_tasks(
+                                _run_post_response_tasks_safely(
                                     sess, session_manager, session, message, full_response,
                                     _metrics_to_save, ctx.uprefs, memory_manager, memory_vector, webhook_manager,
                                     incognito=incognito, compare_mode=compare_mode,
@@ -2337,16 +2407,18 @@ def setup_chat_routes(
                     except (TypeError, ValueError):
                         _max_rounds = _DEFAULT_ROUNDS
                     _max_rounds = max(1, min(_max_rounds, 200))
+                    # Foreground chat is the production ACI control plane.
+                    # Keep the stream helper's legacy default only for narrow
+                    # compatibility callers; a user setting must not select a
+                    # second authoritative orchestration path.
+                    # Web is an ACI evidence capability, not a manual routing
+                    # mode. AUTO leaves the bounded web bindings available to
+                    # canonical projection; the semantic frame or normal
+                    # retrieval decides whether they are relevant. Browser
+                    # actions remain an explicit MCP request.
+                    _forced_tools = set(_BROWSER_MCP_TOOLS) if _explicit_browser_intent else None
 
-                    _forced_tools = None
-                    if _search_enabled:
-                        _forced_tools = set(WEB_TOOL_NAMES)
-                        if _explicit_browser_intent:
-                            _forced_tools |= set(_BROWSER_MCP_TOOLS)
-                    elif _explicit_browser_intent:
-                        _forced_tools = set(_BROWSER_MCP_TOOLS)
-
-                    async for chunk in stream_agent_loop(
+                    async for chunk in _chat_stream_entrypoint(
                         sess.endpoint_url,
                         sess.model,
                         messages,
@@ -2384,6 +2456,7 @@ def setup_chat_routes(
                         external_untrusted_context_seen=external_untrusted_context_seen,
                         exact_approval=exact_tool_approval,
                         work_run_id=_work_run_id,
+                        aci_mode="aci",
                     ):
                         if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
                             try:
@@ -2428,6 +2501,10 @@ def setup_chat_routes(
                                         )
                                     elif data.get("type") == "tool_start":
                                         _agent_tool_calls += 1
+                                    yield chunk
+                                elif data.get("type") == "response_replace":
+                                    full_response = str(data.get("content") or "")
+                                    _stream_set(session, partial=full_response)
                                     yield chunk
                                 elif data.get("type") == "fallback":
                                     # Selected model failed; a fallback answered.
@@ -2494,6 +2571,7 @@ def setup_chat_routes(
                                             rag_sources=ctx.rag_sources,
                                             used_memories=ctx.used_memories,
                                             incognito=incognito,
+                                            turn_id=turn_id,
                                         )
                                         _terminal_saved = True
                                         accumulate_token_usage(session, terminal_metadata)
@@ -2527,6 +2605,9 @@ def setup_chat_routes(
                         elif chunk.startswith("event: "):
                             yield chunk
                         elif chunk == "data: [DONE]\n\n":
+                            if _done_seen:
+                                continue
+                            _done_seen = True
                             _has_tool_events = bool((last_metrics or {}).get("tool_events"))
                             if full_response or _has_tool_events:
                                 _response_to_save = full_response or "Done."
@@ -2542,10 +2623,11 @@ def setup_chat_routes(
                                     rag_sources=ctx.rag_sources,
                                     used_memories=ctx.used_memories,
                                     incognito=incognito,
+                                    turn_id=turn_id,
                                 )
                                 if _saved_id:
                                     yield f'data: {json.dumps({"type": "message_saved", "id": _saved_id})}\n\n'
-                                run_post_response_tasks(
+                                _run_post_response_tasks_safely(
                                     sess, session_manager, session, message, _response_to_save,
                                     _metrics_to_save, ctx.uprefs, memory_manager, memory_vector, webhook_manager,
                                     incognito=incognito, compare_mode=compare_mode,

@@ -198,7 +198,7 @@ def _chat_stream_endpoint(
     monkeypatch.setattr(chat_routes, "SessionLocal", _EmptyDb)
     monkeypatch.setattr(chat_routes, "_is_image_generation_session", lambda *args, **kwargs: False)
     monkeypatch.setattr(chat_routes, "stream_llm_with_fallback", fake_chat_stream)
-    monkeypatch.setattr(chat_routes, "stream_agent_loop", fake_agent_stream)
+    monkeypatch.setattr(chat_routes, "stream_aci_turn", fake_agent_stream)
     if capture_completion:
         monkeypatch.setattr(
             chat_routes,
@@ -3027,8 +3027,8 @@ def test_agent_round_ignores_malformed_usage_and_uses_estimate(
         ("Recovered final answer.", "Recovered final answer."),
         (
             "",
-            "I gathered some search results but couldn't pull a clean answer together. "
-            "Want me to try a more specific question, or summarize what I did find?",
+            "I wasn't able to produce a complete answer for that request. "
+            "Please rephrase it and I'll try again.",
         ),
     ],
 )

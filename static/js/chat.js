@@ -2085,11 +2085,19 @@ import { loadPanel } from './panels.js';
         try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }
         catch { return ''; }
       })();
+      const _turnId = (globalThis.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `turn-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      fd.append('turn_id', _turnId);
       _sendPerf.mark('chat_stream_post_begin');
       const res = await fetch(`${API_BASE}/api/chat_stream`, {
         method: 'POST',
         body: fd,
-        headers: { 'X-Tz-Offset': String(_tzOffsetMin), 'X-Tz-Name': _tzName },
+        headers: {
+          'X-Tz-Offset': String(_tzOffsetMin),
+          'X-Tz-Name': _tzName,
+          'X-Odysseus-Turn-Id': _turnId,
+        },
         signal: abortCtrl.signal
       });
       _sendPerf.mark('chat_stream_headers');
@@ -3085,6 +3093,24 @@ import { loadPanel } from './panels.js';
                   _scheduleThinkingSpinner();
                   // Feed streaming TTS with accumulated text
                   if (streamingTTS) window.aiTTSManager.streamingUpdate(roundText);
+                }
+              } else if (json.type === 'response_replace') {
+                // A server-side grounding/summary correction replaces prose
+                // that may already have streamed.  It is not another delta.
+                // Keep one logical answer and render the authoritative text.
+                const replacement = String(json.content || '');
+                accumulated = replacement;
+                currentAccumulated = replacement;
+                roundText = replacement;
+                roundReplyText = null;
+                _roundDisplayProjector.reset();
+                _replyDisplayProjector.reset();
+                if (!_isBg) {
+                  _ensureVisibleRoundForDelta();
+                  _renderStream({ knownNormal: true, displayText: _streamDisplayText(replacement) });
+                } else {
+                  const bgReplace = _backgroundStreams.get(streamSessionId);
+                  if (bgReplace) bgReplace.accumulated = replacement;
                 }
               } else if (json.type === 'research_progress') {
                 if (_isBg) continue; // Skip DOM updates in background
@@ -5003,6 +5029,7 @@ import { loadPanel } from './panels.js';
     let metricsData = null;
     let replayError = null;
     let canonicalTerminalSeen = false;
+    let savedMessageId = '';
     // "Rich" responses (tool calls, sources, doc streaming, multi-round) need the
     // full canonical render, which is rebuilt from the saved DB record on reload.
     // Plain text replies can be finalized in place without a reload.
@@ -5074,6 +5101,11 @@ import { loadPanel } from './panels.js';
             if (metricsData) {
               chatRenderer.recordSessionMetricsCost(metricsData, sessionId);
             }
+          } else if (json.type === 'message_saved') {
+            // Preserve the durable identity when a detached plain-text run is
+            // finalized in place. Without it, a later history replay can add
+            // the same logical assistant result a second time.
+            if (json.id) savedMessageId = String(json.id);
           } else if (json.type === 'fallback') {
             // Replay can attach after the selected route has already failed.
             // Reflect the fallback immediately, then reload the canonical
@@ -5166,6 +5198,7 @@ import { loadPanel } from './panels.js';
       if (holder.parentNode) holder.remove();
       const model = meta && meta.model;
       const meta_ = metricsData ? Object.assign({ model }, metricsData) : { model };
+      if (savedMessageId) meta_._db_id = savedMessageId;
       chatRenderer.addMessage('assistant', roundText, model, meta_);
       uiModule.scrollHistory();
       return true;

@@ -10,13 +10,86 @@ import threading
 import re
 import os
 import math
+import ipaddress
 from contextlib import asynccontextmanager
 from fastapi import HTTPException
-from typing import Optional, Dict, List, Tuple
+from typing import Any, Optional, Dict, List, Tuple
 from src.model_context import get_context_length, DEFAULT_CONTEXT, is_local_endpoint
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+def strip_think_blocks(text: str):
+    """Strip closed provider reasoning blocks in one forward-only pass."""
+    if not text:
+        return text
+    lowered = text.lower()
+    parts = []
+    pos = 0
+    while True:
+        start = lowered.find("<think>", pos)
+        if start == -1:
+            parts.append(text[pos:])
+            break
+        end = lowered.find("</think>", start + 7)
+        if end == -1:
+            parts.append(text[pos:])
+            break
+        parts.append(text[pos:start])
+        pos = end + 8
+    return "".join(parts)
+
+
+def empty_response_fallback(full_response: str, round_reasoning: str, tool_events: list) -> tuple:
+    """Return the safe final response for empty provider content."""
+    if full_response.strip() or tool_events:
+        return full_response, None
+    if round_reasoning.strip():
+        return round_reasoning, None
+    error_msg = "The model returned an empty response. Please try again or switch to a different model."
+    return error_msg, f'data: {json.dumps({"delta": error_msg})}\n\n'
+
+
+_ODY_QWEN_TEXT_FIXES = (
+    (re.compile(r"\bassistan\b", re.IGNORECASE), "assistant"),
+    (re.compile(r"\bdon'\b", re.IGNORECASE), "don't"),
+    (re.compile(r"\bcan'\b", re.IGNORECASE), "can't"),
+    (re.compile(r"\bwon'\b", re.IGNORECASE), "won't"),
+    (re.compile(r"\blates\b", re.IGNORECASE), "latest"),
+    (re.compile(r"\baccoun\b", re.IGNORECASE), "account"),
+    (re.compile(r"\bconten\b", re.IGNORECASE), "content"),
+    (re.compile(r"\bdocumen\b", re.IGNORECASE), "document"),
+    (re.compile(r"\breques\b", re.IGNORECASE), "request"),
+    (re.compile(r"\bnex\b", re.IGNORECASE), "next"),
+    (re.compile(r"\btex\b", re.IGNORECASE), "text"),
+    (re.compile(r"\bsen\b", re.IGNORECASE), "sent"),
+    (re.compile(r"\bsecre\b", re.IGNORECASE), "secret"),
+    (re.compile(r"\bAnalys\b"), "Analyst"),
+    (re.compile(r"\bAugus\b"), "August"),
+    (re.compile(r"\bbu\b", re.IGNORECASE), "but"),
+    (re.compile(r"\bmigh\b", re.IGNORECASE), "might"),
+    (re.compile(r"\bdifferen\b", re.IGNORECASE), "different"),
+    (re.compile(r"\bpoin\b", re.IGNORECASE), "point"),
+    (re.compile(r"\bmos\b", re.IGNORECASE), "most"),
+    (re.compile(r"\bjus\b", re.IGNORECASE), "just"),
+    (re.compile(r"\bBes\b"), "Best"),
+    (re.compile(r"\bstar\b", re.IGNORECASE), "start"),
+    (re.compile(r"\bge\b", re.IGNORECASE), "get"),
+    (re.compile(r"\ble\b", re.IGNORECASE), "let"),
+    (re.compile(r"\bwha\b", re.IGNORECASE), "what"),
+    (re.compile(r"\btha\b", re.IGNORECASE), "that"),
+)
+
+
+def normalize_ody_qwen_text_artifacts(text: str):
+    """Repair high-confidence dropped-letter artifacts from the Odysseus LoRA."""
+    if not text:
+        return text
+    fixed = text
+    for pattern, replacement in _ODY_QWEN_TEXT_FIXES:
+        fixed = pattern.sub(replacement, fixed)
+    return fixed
 
 _LOCAL_MODEL_LOCK = asyncio.Lock()
 _LOCAL_MODEL_WAITING_FOREGROUND = 0
@@ -571,17 +644,37 @@ def _is_ollama_native_url(url: str) -> bool:
         return True
     if path.startswith("/v1"):
         return False
-    local_ollama_host = host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} or parsed.port == 11434
-    return local_ollama_host and (path == "" or path == "/api" or path.startswith("/api/"))
+    # An explicit native API path is strong evidence on a local/private
+    # endpoint. On an arbitrary remote host, `/api` is also common for generic
+    # providers; require an Ollama-identifying host or the default port there.
+    local_host = host in {
+        "localhost", "127.0.0.1", "0.0.0.0", "::1", "host.docker.internal",
+    }
+    explicit_native_path = path == "/api" or (
+        path.startswith("/api/") and not path.startswith("/api/v1")
+    )
+    private_host = False
+    try:
+        private_host = ipaddress.ip_address(host).is_private
+    except ValueError:
+        pass
+    if explicit_native_path and (local_host or private_host):
+        return True
+    # The default Ollama port is a useful convention for local and remote
+    # installations.  A pathless arbitrary loopback port is not: LM Studio,
+    # llama.cpp, vLLM, and custom OpenAI-compatible servers commonly use one.
+    ollama_named_host = host == "ollama" or host.startswith("ollama.") or host.endswith(".ollama")
+    default_port = parsed.port == 11434
+    local_default_host = host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} and default_port
+    return path == "" and (ollama_named_host or default_port or local_default_host)
 
 
 def _is_ollama_openai_compat_url(url: str) -> bool:
     """Return True for local Ollama's OpenAI-compatible /v1 surface.
 
-    Mirrors the host detection used by ``_is_ollama_native_url`` so that the
-    two helpers stay in lockstep: a localhost Ollama on a non-default port
-    (custom ``OLLAMA_HOST``, reverse proxy, container port remap) is treated
-    the same way here as it is on the native ``/api`` path.
+    Only positively identified Ollama endpoints use this Ollama-specific
+    transport hint.  A pathless or ``/v1`` endpoint on an arbitrary loopback
+    port remains generic unless it uses Ollama's conventional port or host.
     """
     try:
         parsed = urlparse(url or "")
@@ -589,8 +682,8 @@ def _is_ollama_openai_compat_url(url: str) -> bool:
         return False
     host = parsed.hostname or ""
     path = (parsed.path or "").rstrip("/")
-    local_ollama_host = host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} or parsed.port == 11434
-    return local_ollama_host and (path == "/v1" or path.startswith("/v1/"))
+    ollama_identified = parsed.port == 11434 or "ollama" in host
+    return ollama_identified and (path == "/v1" or path.startswith("/v1/"))
 
 
 def _ollama_api_root(url: str) -> str:
@@ -736,6 +829,7 @@ def _build_ollama_payload(
     stream: bool = False,
     tools: Optional[List[Dict]] = None,
     num_ctx: Optional[int] = None,
+    response_format=None,
 ) -> Dict:
     """Build the JSON payload for Ollama's /api/chat endpoint.
 
@@ -764,6 +858,22 @@ def _build_ollama_payload(
         payload["options"] = options
     if tools:
         payload["tools"] = _alias_harmony_tools(tools, model)
+    # Keep the machine/content channels separate for normal Ollama chat too:
+    # Qwen3 otherwise spends a short answer budget in ``message.thinking``
+    # and leaves no user-visible content.  Structured decisions below repeat
+    # this assignment for clarity. Deliberate reasoning modes use their own
+    # provider adapter/request path rather than this ordinary chat builder.
+    if _supports_thinking(model):
+        payload["think"] = False
+    if response_format:
+        payload["format"] = response_format
+        # A strict ACI DecisionContract is a machine channel, not a free-form
+        # reasoning transcript. Native Ollama otherwise defaults thinking
+        # models such as Qwen3 to the `message.thinking` field, leaving
+        # `message.content` empty and making the bounded decision parser see
+        # malformed JSON. The OpenAI-compatible path already applies the
+        # equivalent transport separation below.
+        payload["think"] = False
     return payload
 
 
@@ -1092,6 +1202,19 @@ def _apply_local_generation_stability(payload: Dict, url: str, model: str) -> No
     # endpoints. Keep simple chats from running forever when the model loops.
     if not payload.get("max_tokens") and not payload.get("max_completion_tokens"):
         payload["max_tokens"] = 2048
+
+
+def is_odysseus_qwen_model(model: str) -> bool:
+    """Identify the Odysseus Qwen finetune for transport-specific handling."""
+    return str(model or "").lower().startswith("odysseus-qwen3")
+
+
+def odysseus_qwen_temperature_cap(temperature: Any) -> float:
+    """Apply the finetune's conservative sampling ceiling."""
+    try:
+        return min(float(temperature if temperature is not None else 0.2), 0.2)
+    except (TypeError, ValueError):
+        return 0.2
 
 
 def _provider_headers(provider: str, headers: Optional[Dict] = None) -> Dict[str, str]:
@@ -2392,9 +2515,12 @@ async def llm_call_async(
         if max_tokens and max_tokens > 0:
             tok_key = "max_completion_tokens" if _uses_max_completion_tokens(model) else "max_tokens"
             payload[tok_key] = max_tokens
-        # Suppress thinking for qwen3/gemma4 on Ollama /v1 — same as stream_llm.
+        # Ollama's OpenAI-compatible surface may ignore ``think:false`` while
+        # still routing Qwen/Gemma output into reasoning.  This runtime
+        # empirically honors ``reasoning_effort`` for normal answer content.
         if _is_ollama_openai_compat_url(url) and _supports_thinking(model):
             payload["think"] = False
+            payload["reasoning_effort"] = "none"
         if provider == "mistral" and _supports_thinking(model):
             payload["reasoning_effort"] = _MISTRAL_REASONING_EFFORT
         _apply_local_cache_affinity(payload, url, session_id)
@@ -2560,7 +2686,8 @@ async def stream_llm(url: str, model: str, messages: List[Dict], temperature: fl
                      max_tokens: int = LLMConfig.DEFAULT_MAX_TOKENS, headers: Optional[Dict] = None,
                      timeout: int = LLMConfig.STREAM_TIMEOUT, prompt_type: Optional[str] = None,
                      tools: Optional[List[Dict]] = None, session_id: Optional[str] = None,
-                     tool_choice_none: bool = False, workload: str = "foreground"):
+                     tool_choice_none: bool = False, workload: str = "foreground",
+                     response_format=None):
     target_url = _stream_target_url(url)
     async with _local_model_slot(target_url, model, workload):
         async for chunk in _stream_llm_inner(
@@ -2575,6 +2702,7 @@ async def stream_llm(url: str, model: str, messages: List[Dict], temperature: fl
             tools=tools,
             session_id=session_id,
             tool_choice_none=tool_choice_none,
+            response_format=response_format,
         ):
             yield chunk
 
@@ -2583,7 +2711,7 @@ async def _stream_llm_inner(url: str, model: str, messages: List[Dict], temperat
                             max_tokens: int = LLMConfig.DEFAULT_MAX_TOKENS, headers: Optional[Dict] = None,
                             timeout: int = LLMConfig.STREAM_TIMEOUT, prompt_type: Optional[str] = None,
                             tools: Optional[List[Dict]] = None, session_id: Optional[str] = None,
-                            tool_choice_none: bool = False):
+                            tool_choice_none: bool = False, response_format=None):
     """Stream LLM responses with improved error handling.
 
     Yields SSE chunks:
@@ -2621,6 +2749,7 @@ async def _stream_llm_inner(url: str, model: str, messages: List[Dict], temperat
         payload = _build_ollama_payload(
             model, messages_copy, temperature, max_tokens,
             stream=True, tools=tools, num_ctx=get_context_length(url, model),
+            response_format=response_format,
         )
     elif provider == "chatgpt-subscription":
         target_url = _normalize_chatgpt_subscription_url(url)
@@ -2645,17 +2774,21 @@ async def _stream_llm_inner(url: str, model: str, messages: List[Dict], temperat
             payload["tools"] = _alias_harmony_tools(tools, model)
         elif tool_choice_none:
             payload["tool_choice"] = "none"
+        if response_format:
+            payload["response_format"] = response_format
         # Mistral thinking-capable models — send reasoning_effort so Mistral
         # activates thinking mode and returns structured reasoning_content.
         # Effort level is configurable via ODYSSEUS_MISTRAL_REASONING_EFFORT
         # (high / medium / low / none); default "high".
         if provider == "mistral" and _supports_thinking(model):
             payload["reasoning_effort"] = _MISTRAL_REASONING_EFFORT
-        # For Ollama's OpenAI-compat /v1 endpoint with thinking models (qwen3,
-        # gemma4, etc.), suppress thinking so tool calls aren't swallowed inside
-        # <think> blocks. Ollama /v1 accepts "think": false as a top-level param.
+        # For Ollama's OpenAI-compat /v1 endpoint, send both controls: some
+        # runtimes ignore ``think:false`` but honor ``reasoning_effort:none``.
+        # Keep this provider/runtime-specific rather than changing reasoning
+        # behavior for other backends.
         if _is_ollama_openai_compat_url(url) and _supports_thinking(model):
             payload["think"] = False
+            payload["reasoning_effort"] = "none"
         _apply_local_cache_affinity(payload, url, session_id)
         _apply_local_generation_stability(payload, target_url, model)
         _scrub_openai_chat_tool_reasoning(payload, target_url, model)

@@ -1,8 +1,10 @@
 # app.py — slim orchestrator
 import mimetypes
 import os
+from pathlib import Path
 import sys
 import asyncio
+import subprocess
 import time
 
 # On Windows, asyncio.create_subprocess_exec/shell require the ProactorEventLoop.
@@ -981,6 +983,38 @@ async def serve_login(request: Request):
 @app.get("/api/version")
 async def get_version():
     from core.constants import APP_VERSION
+    declared_source_commit = os.getenv("ODYSSEUS_SOURCE_COMMIT") or "unknown"
+    runtime_source_commit = None
+    runtime_source_kind = "image_metadata"
+    try:
+        # A development compose deployment may bind-mount the checkout over
+        # the image's /app.  Expose that fact instead of claiming the image
+        # label describes the code actually imported by the process.
+        probe = subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD"],
+            cwd=str(BASE_DIR), capture_output=True, text=True, check=True,
+            timeout=2,
+        )
+        candidate = probe.stdout.strip()
+        if candidate:
+            runtime_source_commit = candidate
+            runtime_source_kind = "checkout_tree"
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if runtime_source_commit is None:
+        # Production images intentionally omit `.git`; the build records the
+        # exact source commit in this small immutable marker instead. This
+        # keeps source-match verification truthful without requiring a checkout
+        # or a host workspace mount in the production container.
+        for marker in (Path(str(BASE_DIR)) / ".odysseus-source-commit", Path("/.odysseus-source-commit")):
+            try:
+                candidate = marker.read_text(encoding="utf-8").strip()
+            except (OSError, UnicodeError):
+                continue
+            if candidate:
+                runtime_source_commit = candidate
+                runtime_source_kind = "image_source_marker"
+                break
     try:
         from core.schema_migrations import schema_migration_registry
         migrations = schema_migration_registry.ordered()
@@ -989,7 +1023,16 @@ async def get_version():
         migration_head = os.getenv("ODYSSEUS_MIGRATION_HEAD") or "unknown"
     return {
         "version": APP_VERSION,
-        "source_commit": os.getenv("ODYSSEUS_SOURCE_COMMIT") or "unknown",
+        "source_commit": declared_source_commit,
+        "source_branch": os.getenv("ODYSSEUS_SOURCE_BRANCH") or "unknown",
+        "declared_source_commit": declared_source_commit,
+        "runtime_source_commit": runtime_source_commit,
+        "runtime_source_kind": runtime_source_kind,
+        "source_match": (
+            runtime_source_commit == declared_source_commit
+            if runtime_source_commit and declared_source_commit != "unknown"
+            else None
+        ),
         "image_id": os.getenv("ODYSSEUS_IMAGE_ID") or "unknown",
         "build_id": os.getenv("ODYSSEUS_BUILD_ID") or "unbuilt-source",
         "build_time": os.getenv("ODYSSEUS_BUILD_TIME") or "unknown",

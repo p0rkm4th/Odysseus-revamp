@@ -11,25 +11,6 @@ RUN bash /usr/local/bin/build-realesrgan-wheels.sh /wheels
 
 FROM python:3.14-slim
 
-# Build provenance is supplied by the candidate-build command from the exact
-# checkout being built. Keeping these as image ENV/LABEL values makes the
-# identity survive container recreation without requiring host mounts or a
-# Docker socket inside Hades.
-ARG ODYSSEUS_SOURCE_COMMIT=unknown
-ARG ODYSSEUS_BUILD_ID=unidentified
-ARG ODYSSEUS_BUILD_TIME=unknown
-ARG ODYSSEUS_FRONTEND_BUILD_ID=unidentified
-ARG ODYSSEUS_MIGRATION_HEAD=unknown
-ENV ODYSSEUS_SOURCE_COMMIT="$ODYSSEUS_SOURCE_COMMIT" \
-    ODYSSEUS_BUILD_ID="$ODYSSEUS_BUILD_ID" \
-    ODYSSEUS_BUILD_TIME="$ODYSSEUS_BUILD_TIME" \
-    ODYSSEUS_FRONTEND_BUILD_ID="$ODYSSEUS_FRONTEND_BUILD_ID" \
-    ODYSSEUS_MIGRATION_HEAD="$ODYSSEUS_MIGRATION_HEAD"
-LABEL org.opencontainers.image.revision="$ODYSSEUS_SOURCE_COMMIT" \
-      org.opencontainers.image.version="$ODYSSEUS_BUILD_ID" \
-      org.opencontainers.image.created="$ODYSSEUS_BUILD_TIME" \
-      org.odysseus.frontend.revision="$ODYSSEUS_FRONTEND_BUILD_ID"
-
 # System deps. tmux is required by Cookbook for background downloads/serves.
 # openssh-client is required for Cookbook remote server tests, setup, probes,
 # downloads, and serves from Docker installs.
@@ -116,8 +97,34 @@ RUN pip install --no-cache-dir --no-deps /tmp/odysseus-wheels/*.whl \
 # Copy app code
 COPY . .
 
-# Create data directory (mount a volume here for persistence)
-RUN mkdir -p data logs services/cache/search
+# Keep mutable provenance after the stable OS/dependency/source layers. Build
+# IDs remain exact and inspectable, while source-only candidates do not rebuild
+# Chromium/Node/system packages merely because identity metadata changed.
+ARG ODYSSEUS_SOURCE_COMMIT=unknown
+ARG ODYSSEUS_SOURCE_BRANCH=unknown
+ARG ODYSSEUS_BUILD_ID=unidentified
+ARG ODYSSEUS_BUILD_TIME=unknown
+ARG ODYSSEUS_FRONTEND_BUILD_ID=unidentified
+ARG ODYSSEUS_MIGRATION_HEAD=unknown
+ENV ODYSSEUS_SOURCE_COMMIT="$ODYSSEUS_SOURCE_COMMIT" \
+    ODYSSEUS_SOURCE_BRANCH="$ODYSSEUS_SOURCE_BRANCH" \
+    ODYSSEUS_BUILD_ID="$ODYSSEUS_BUILD_ID" \
+    ODYSSEUS_BUILD_TIME="$ODYSSEUS_BUILD_TIME" \
+    ODYSSEUS_FRONTEND_BUILD_ID="$ODYSSEUS_FRONTEND_BUILD_ID" \
+    ODYSSEUS_MIGRATION_HEAD="$ODYSSEUS_MIGRATION_HEAD"
+LABEL org.opencontainers.image.revision="$ODYSSEUS_SOURCE_COMMIT" \
+      org.odysseus.source.branch="$ODYSSEUS_SOURCE_BRANCH" \
+      org.opencontainers.image.version="$ODYSSEUS_BUILD_ID" \
+      org.opencontainers.image.created="$ODYSSEUS_BUILD_TIME" \
+      org.odysseus.frontend.revision="$ODYSSEUS_FRONTEND_BUILD_ID"
+
+# Production images omit .git; retain a tiny immutable source marker so the
+# runtime can prove the imported image source matches its declared provenance.
+# Retain the immutable source marker and create mount points in one layer.
+# (The marker is used for runtime provenance; these directories are mounted
+# persistently by Compose.)
+RUN printf '%s\n' "$ODYSSEUS_SOURCE_COMMIT" > /app/.odysseus-source-commit \
+    && mkdir -p data logs services/cache/search
 
 # Entrypoint that drops to PUID/PGID (default 1000:1000) and repairs
 # ownership on the bind-mounted /app/data and /app/logs. Without this,

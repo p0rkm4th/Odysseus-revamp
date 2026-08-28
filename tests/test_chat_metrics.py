@@ -17,7 +17,7 @@ import json
 import asyncio
 
 from src import llm_core
-from src.agent_loop import _compute_final_metrics
+from src.aci import compute_final_metrics
 
 
 # --- captured-stream harness (mirrors test_llm_core_streaming.py) -----------
@@ -195,7 +195,7 @@ def _metrics(**overrides):
         model="qwen-local",
     )
     kwargs.update(overrides)
-    return _compute_final_metrics(**kwargs)
+    return compute_final_metrics(**kwargs)
 
 
 def test_metrics_prefer_backend_gen_tps_over_wallclock():

@@ -6,6 +6,7 @@ Provides token estimation for context usage tracking.
 """
 
 import ipaddress
+import json
 import logging
 import os
 import sys
@@ -518,6 +519,18 @@ def estimate_tokens(messages: List[Dict]) -> int:
     total = 0
     for msg in messages:
         total += 4  # per-message overhead (role, separators)
+        # Tool schemas are passed as nested JSON objects rather than chat
+        # messages. Count their serialized representation so schema-heavy
+        # requests cannot appear to fit merely because they have no
+        # ``content`` field. Normal messages retain the historical accounting
+        # below to avoid double-counting provider-specific wrappers.
+        if isinstance(msg, dict) and "role" not in msg and "content" not in msg and "tool_calls" not in msg:
+            try:
+                serialized = json.dumps(msg, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            except (TypeError, ValueError):
+                serialized = str(msg)
+            total += int(len(serialized) * 0.3)
+            continue
         content = msg.get("content", "")
         if isinstance(content, str):
             total += int(len(content) * 0.3)
