@@ -86,6 +86,7 @@ from src.aci import (
     expects_canonical_action,
     classify_no_action_reason,
     is_canonical_read_contract,
+    is_aci_general_fallback_candidate,
     usage_bucket,
     usage_bucket_summary,
     compute_final_metrics,
@@ -1837,37 +1838,18 @@ async def stream_aci_runtime(
     )
     _tool_index_bypassed = False
     _tool_index_lookup_attempted = False
-    # A benign no-contract turn in ACI has no framework-resolved capability.
-    # It is already destined for the authority-free general-model floor; do
-    # not spend embedding/tool-index latency constructing an empty Action
-    # problem.  Conceptual ANSWER turns are safe here even when the intent
-    # classifier retained a broad domain noun (for example NETWORK): the
-    # operation class, not the noun alone, says that no owner-state read was
-    # requested. Explicit tools, workspace, continuation, domain, and
-    # caller-provided routes remain on their normal paths.
-    _aci_general_fallback_candidate = bool(
-        _aci_enabled
-        and (not relevant_tools or bool(_intent.get("general_explanatory")))
-        and not forced_tools
-        and not workspace
-        and not _active_document_relevant
-        and not _intent.get("continuation")
-        and not (_intent.get("domains") or set())
-        and not _canonical_binding
-        and isinstance(_intent.get("intent_frame"), dict)
-        and (
-            str(_intent["intent_frame"].get("operation_class") or "") == "ANSWER"
-            or (
-                str(_intent["intent_frame"].get("domain_concept") or "") == "UNKNOWN"
-                # Unknown safe/action-like language still belongs on the
-                # authority-free conversational floor. Asking the generic
-                # tool index to interpret it only exposes unrelated
-                # affordances (and can make a harmless request look
-                # executable). Writes remain out of this fast path.
-                and str(_intent["intent_frame"].get("operation_class") or "")
-                in {"UNKNOWN", "READ", "EXECUTE"}
-            )
-        )
+    _aci_general_fallback_candidate = is_aci_general_fallback_candidate(
+        _intent,
+        aci_enabled=_aci_enabled,
+        aci_mode=_aci_mode,
+        relevant_tools=relevant_tools,
+        forced_tools=forced_tools,
+        workspace=workspace,
+        active_document_relevant=_active_document_relevant,
+        continuation=_intent.get("continuation"),
+        guide_only=guide_only,
+        uploaded_files=uploaded_files,
+        canonical_binding=_canonical_binding,
     )
     if _aci_general_fallback_candidate:
         _relevant_tools = set()

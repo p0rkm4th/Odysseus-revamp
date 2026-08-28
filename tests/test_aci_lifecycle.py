@@ -15,6 +15,7 @@ from src.aci import (
     canonical_tool_result_projection,
     canonical_inventory_mutation_answer,
     canonical_result_answer,
+    is_aci_general_fallback_candidate,
     project_final_answer,
     project_model_decision,
     AnswerSource,
@@ -797,6 +798,19 @@ def test_resolved_direct_action_does_not_project_unrelated_route_tools():
     )
     assert projection.fast_path == {"action": "list"}
     assert {item["binding"] for item in projection.choice_map.values()} == {"manage_assets"}
+
+
+def test_answer_floor_projection_is_server_owned_and_preserves_explicit_routes():
+    answer = {"intent_frame": {"domain_concept": "NETWORK", "operation_class": "ANSWER"}}
+    assert is_aci_general_fallback_candidate(answer, aci_enabled=True, aci_mode="aci")
+    assert not is_aci_general_fallback_candidate(
+        answer, aci_enabled=True, aci_mode="aci", forced_tools={"manage_homelab"}
+    )
+    assert not is_aci_general_fallback_candidate(
+        {"intent_frame": {"domain_concept": "NETWORK", "operation_class": "READ"},
+         "resolved_contract": {"binding": "manage_homelab"}},
+        aci_enabled=True, aci_mode="aci", canonical_binding="manage_homelab",
+    )
 
 
 def test_aci_turn_does_not_reenter_legacy_tool_index_projection(monkeypatch):
