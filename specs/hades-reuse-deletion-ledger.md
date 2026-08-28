@@ -1726,6 +1726,23 @@ and `233` coverage metadata gaps (`33` critical, `69` high). The changed gap
 count reflects explicit unsupported-executor coverage, not a runtime failure
 rate.
 
+## Exact deployed checkpoint (`5e8d8250`, 2026-08-28)
+
+The compatibility-hook correction was committed and pushed after the initial
+`c42a8e23` image, so a fresh exact candidate was required. Local and remote
+now equal `5e8d8250ea3cc548472ec513901a02a7bde31615`; the worktree is clean.
+Candidate `odysseus:candidate-5e8d8250ea3c` and the running container use image
+`sha256:ace756fd4609f06c982a60773306653933b71e2b83ab7bed9f94c34ec16ce7e6`,
+with OCI label, embedded marker, and running source matching that SHA.
+`/api/health` is healthy and restart count is zero.
+
+Focused seam coverage passed `64` tests and the full regression passed
+`6807 passed, 4 skipped, 186 warnings`. In-container Qwen3:8B quick evidence
+was `62/62` functional, architectural, and security, duplicate delivery `0`,
+qualified reference accuracy `1.0`, failed Actions/task `0.0161`, model
+calls/task `0.2581`, and P95 `2.9884s`. This is a deployment/checkpoint
+verification; authenticated acceptance-principal replay remains separate.
+
 ## ACI runtime seam checkpoint
 
 The production entrypoint now invokes the explicitly named
