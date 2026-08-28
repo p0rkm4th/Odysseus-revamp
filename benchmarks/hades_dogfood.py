@@ -558,14 +558,23 @@ def _registry_action_entries() -> tuple[dict[str, Any], ...]:
     """Return deterministic semantic entries for every known ActionSpec."""
     from src.capability_registry import CAPABILITY_REGISTRY
 
+    # ``writes`` is not the only signal for an operational ActionSpec:
+    # workspace execution and network plans carry effects without using the
+    # private-state write flag. Keep this evaluator-side classification
+    # aligned with the registry's authority semantics so generated oracle
+    # cases do not call an effectful Action a READ merely because its wording
+    # happens to be generic.
+    non_read_effects = {
+        "admin_change", "execute_code", "external_network",
+        "external_side_effect", "network_egress", "network_plan",
+        "write_private", "write_workspace",
+    }
     entries = []
     for capability_id, capability in CAPABILITY_REGISTRY.items():
         for action_id, action in capability.actions.items():
             if not action.known:
                 continue
-            read_only = not action.writes and not set(action.effects).intersection({
-                "admin_change", "external_side_effect", "external_network", "write_private",
-            })
+            read_only = not action.writes and not set(action.effects).intersection(non_read_effects)
             operation = "READ" if read_only else "EXECUTE"
             entries.append({
                 "capability_id": capability_id, "action_id": action_id,
@@ -630,13 +639,15 @@ def generate_semantic_cases(*, seed: int = 0, count: int = 1000, split: str = "g
         registry_entry = registry_entries[index] if index < len(registry_entries) else None
         if registry_entry:
             readable_action = registry_entry["action_id"].replace("_", " ")
+            capability_label = registry_entry["capability_id"].replace(".", " ").replace("_", " ")
+            operation_label = "read-only" if registry_entry["operation"] == "READ" else "effectful"
             archetype = {
                 "family": "registry_action", "domain": registry_entry["domain"],
                 "intent": registry_entry["operation"], "target": "capability",
                 "prompts": (
-                    f"inspect the canonical {readable_action} operation",
-                    f"what does the {readable_action} capability do",
-                    f"use the registered {readable_action} primitive",
+                    f"inspect the canonical {registry_entry['domain']} {readable_action} operation",
+                    f"what does the registered {capability_label} {readable_action} capability do",
+                    f"use the registered {operation_label} {capability_label} {readable_action} primitive",
                 ),
             }
             base_frame = None

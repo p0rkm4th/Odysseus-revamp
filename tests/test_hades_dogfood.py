@@ -26,6 +26,19 @@ from scripts.hades_dogfood import _live_protocol_observation, configured_model_e
 from benchmarks.jarvis.synthetic_tools import fixtures_for_case
 
 
+def test_registry_action_generator_classifies_effectful_actions_and_contextualizes_them():
+    from benchmarks.hades_dogfood import _registry_action_entries
+
+    entries = _registry_action_entries()
+    workspace = next(item for item in entries if item["capability_id"] == "developer.workspace_shell")
+    assert workspace["action_id"] == "execute"
+    assert workspace["operation"] == "EXECUTE"
+    generated = next(case for case in generate_semantic_cases(seed=17, count=entries.index(workspace) + 1)
+                     if case["scenario"].get("capability_id") == "developer.workspace_shell")
+    assert "DEVELOPER" in generated["prompt"].upper()
+    assert generated["expected"]["operation"] == "EXECUTE"
+
+
 def test_dogfood_contract_expands_frozen_sources_and_journeys():
     contract = load_contract()
     cases = expand_cases(contract, suite="baseline")
