@@ -73,6 +73,11 @@ function provision() {
   }
   run('docker', ['compose', 'up', '-d', '--no-build', 'odysseus'], composeEnv);
   run(python, ['-m', 'scripts.create_acceptance_principal', '--credential-file', credentialFile, '--ttl', '600'], composeEnv);
+  // AuthManager loads its account index at process startup.  The operator
+  // utility intentionally writes through the normal durable store, so
+  // restart the disposable app once to make that newly issued principal
+  // visible to the normal login route.  This never touches the owner lane.
+  run('docker', ['compose', 'restart', 'odysseus'], composeEnv);
   return JSON.parse(fs.readFileSync(credentialFile, 'utf8'));
 }
 
