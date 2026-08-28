@@ -66,6 +66,29 @@ def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch)
         engine.dispose()
 
 
+def test_consumption_action_receives_durable_idempotency_key(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-household", "Use one tomato",
+            intent={"domains": ["household"], "domain_concept": "HOUSEHOLD_ITEM", "operation_class": "EXECUTE"},
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_assets",
+            {"action": "consume_stock", "item_id": "item:tomato", "quantity": 1, "unit": "count"},
+        )
+        assert action_id
+        with session_factory() as db:
+            action = db.query(WorkAction).filter_by(id=action_id).one()
+            key = action.normalized_input["idempotency_key"]
+            assert key == action.idempotency_key
+            assert key.startswith(f"work:{run_id}:consume_stock:")
+            assert len(key) <= 255
+    finally:
+        engine.dispose()
+
+
 def test_completed_recipe_result_projects_ordered_refs_for_next_turn(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
