@@ -205,7 +205,6 @@ _asset_read_request = asset_read_request
 _normalize_homelab_intent = normalize_homelab_intent
 _normalize_operational_intent_evidence = normalize_operational_intent_evidence
 _looks_like_local_computer_request = looks_like_local_computer_request
-_looks_like_workspace_coding_request = looks_like_workspace_coding_request
 _explicitly_references_missing_workspace = explicitly_references_missing_workspace
 _looks_like_notes_turn = looks_like_notes_request
 _looks_like_notes_calendar_followup = looks_like_notes_calendar_followup
@@ -2487,7 +2486,7 @@ async def stream_agent_loop(
             (
                 (
                     workspace
-                    and _looks_like_workspace_coding_request(_retrieval_query or _last_user)
+                    and looks_like_workspace_coding_request(_retrieval_query or _last_user)
                 )
                 or _looks_like_local_computer_request(_retrieval_query or _last_user)
             )
