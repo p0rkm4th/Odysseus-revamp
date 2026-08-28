@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 from core import database as cdb
 from core import inventory_models  # noqa: F401 - register inventory tables
-from src.inventory_service import get_inventory_service
+from src.inventory_service import InsufficientStock, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
 
 
@@ -67,3 +67,42 @@ def test_household_workspace_uses_canonical_overview_and_common_states():
     assert "canonical_store" in source
     assert "hades-module-header" in source
     assert "hades-empty-state" in source
+
+
+def test_household_mutations_read_back_from_the_same_canonical_inventory_owner():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    milk = service.create_item(
+        "alice", name="Milk", domain="kitchen", item_kind="ingredient",
+        default_unit="l",
+    )
+
+    first = service.add_stock(
+        "alice", milk["id"], quantity="2", unit="l", idempotency_key="milk-add",
+    )
+    replay = service.add_stock(
+        "alice", milk["id"], quantity="2", unit="l", idempotency_key="milk-add",
+    )
+    assert first["replayed"] is False
+    assert replay["replayed"] is True
+    assert service.household_overview("alice")["items"][0]["stock_quantity"] == "2000.000000"
+
+    service.consume_stock(
+        "alice", milk["id"], quantity="1", unit="l", idempotency_key="milk-use-1",
+    )
+    assert service.household_overview("alice")["items"][0]["stock_quantity"] == "1000.000000"
+
+    service.consume_stock(
+        "alice", milk["id"], quantity="1", unit="l", idempotency_key="milk-use-2",
+    )
+    assert service.household_overview("alice")["items"][0]["stock_quantity"] == "0"
+
+    try:
+        service.consume_stock(
+            "alice", milk["id"], quantity="1", unit="l", idempotency_key="milk-use-3",
+        )
+    except InsufficientStock:
+        pass
+    else:
+        raise AssertionError("over-consumption must fail closed")
+    assert service.household_overview("alice")["items"][0]["stock_quantity"] == "0"
