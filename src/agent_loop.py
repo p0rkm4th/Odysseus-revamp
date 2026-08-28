@@ -2013,7 +2013,7 @@ async def stream_aci_runtime(
                     workspace
                     and looks_like_workspace_coding_request(_retrieval_query or _last_user)
                 )
-                or _looks_like_local_computer_request(_retrieval_query or _last_user)
+                or looks_like_local_computer_request(_retrieval_query or _last_user)
             )
             and not _active_document_relevant
             and not active_email
@@ -2570,7 +2570,7 @@ async def stream_aci_runtime(
         elif strict_text_tools and not guide_only:
             prepend_agent_directive(route_messages, 'TOOL TRANSPORT FOR THIS ROUTE: Bare Markdown fenced blocks are display-only and never execute. To invoke a tool, use explicit XML with the documented parameter names. Example for Bash: <invoke name="bash"><parameter name="command">top -b -n 1</parameter></invoke>. Do not invent a generic `arg` parameter. Use one or more documented parameter elements for structured arguments. Do not wrap invoke markup in a code fence.')
         if doc_mode and not plan_mode and not approved_plan and not guide_only:
-            route_messages = _minimal_odysseus_doc_messages(
+            route_messages = minimal_odysseus_doc_messages(
                 route_messages,
                 _prompt_active_document,
                 stream_create=stream_create_mode,
@@ -4040,7 +4040,7 @@ async def stream_aci_runtime(
             and not tool_blocks
             and not tool_events
             and total_tool_calls == 0
-            and (_compiled_asset_read or _asset_read_request(_last_user))
+            and (_compiled_asset_read or asset_read_request(_last_user))
             and "manage_assets" in set(_relevant_tools or set())
             and "manage_assets" not in disabled_tools
         ):
