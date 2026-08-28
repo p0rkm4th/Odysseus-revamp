@@ -6,11 +6,8 @@ import json
 import pytest
 
 from src import asset_inventory as inventory
-from src.agent_loop import (
-    _assemble_prompt,
-    _asset_read_request,
-    _privileged_action_requires_exact_approval,
-)
+from src.agent_loop import _assemble_prompt, _asset_read_request
+from src.capability_registry import requires_exact_approval
 from src.intent_contracts import canonical_read_action, is_explicit_continuation
 
 
@@ -105,14 +102,14 @@ def test_privileged_actions_are_action_aware_and_policy_still_wins():
     )
     assert status.known
     assert not status.effects
-    assert not _privileged_action_requires_exact_approval(
+    assert not requires_exact_approval(
         "privileged_action", json.dumps({"action": "status"})
     )
 
     install_content = json.dumps(
         {"action": "install_packages", "packages": ["nmap"]}
     )
-    assert _privileged_action_requires_exact_approval(
+    assert requires_exact_approval(
         "privileged_action", install_content
     )
 

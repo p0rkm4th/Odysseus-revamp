@@ -108,7 +108,7 @@ for _mod in [
     if _mod not in sys.modules:
         sys.modules[_mod] = MagicMock()
 
-from src.agent_loop import _empty_response_fallback  # noqa: E402
+from src.llm_core import empty_response_fallback  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +116,7 @@ from src.agent_loop import _empty_response_fallback  # noqa: E402
 # ---------------------------------------------------------------------------
 
 def test_stream_agent_reasoning_only_does_not_emit_error():
-    final_response, chunk = _empty_response_fallback(
+    final_response, chunk = empty_response_fallback(
         full_response="",
         round_reasoning="I reasoned carefully",
         tool_events=[],
@@ -132,7 +132,7 @@ def test_stream_agent_reasoning_only_does_not_emit_error():
 
 def test_stream_agent_reasoning_not_duplicated_as_normal_delta():
     reasoning_text = "my internal reasoning"
-    _, chunk = _empty_response_fallback(
+    _, chunk = empty_response_fallback(
         full_response="",
         round_reasoning=reasoning_text,
         tool_events=[],
