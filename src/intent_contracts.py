@@ -21,62 +21,131 @@ from src.deterministic_reads import deterministic_read_concept, deterministic_re
 logger = logging.getLogger(__name__)
 
 
-def recipe_create_payload(query: str) -> dict[str, Any] | None:
-    """Extract a complete recipe draft from an explicit owner CREATE turn.
+@dataclass(frozen=True)
+class RecipeDraft:
+    """Validated, untrusted recipe proposal before canonical persistence.
 
-    This is schema extraction, not domain routing: the caller has already
-    resolved RECIPE/CREATE through the canonical contract.  Returning ``None``
-    for an incomplete draft keeps the action fail-closed; InventoryService
-    remains responsible for validation, persistence, and readback.
+    This is deliberately a small transport schema.  It is not a recipe store
+    and it cannot create state; the InventoryService remains the authority for
+    validation, persistence, and readback.
     """
-    text = str(query or "").strip()
-    sections = re.search(
-        r"\bingredients\s*:\s*(?P<ingredients>.+?)\s+instructions\s*:\s*(?P<instructions>.+)$",
-        text,
-        re.IGNORECASE | re.DOTALL,
-    )
-    if not sections:
-        return None
-    name_match = re.search(
+
+    name: str
+    servings: int | float
+    ingredients: tuple[dict[str, Any], ...]
+    instructions: str
+    source_url: str | None = None
+    provenance: str = "owner_text"
+
+    def as_payload(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "action": "add",
+            "name": self.name,
+            "servings": self.servings,
+            "ingredients": [dict(item) for item in self.ingredients],
+            "instructions": self.instructions,
+            "provenance": self.provenance,
+        }
+        if self.source_url:
+            payload["source_url"] = self.source_url
+        return payload
+
+
+def _recipe_section(text: str, header: str, next_header: str | None = None) -> str | None:
+    boundary = rf"\b{header}\s*:\s*"
+    tail = rf"(?=\s+\b{next_header}\s*:\s*|\Z)" if next_header else r"\Z"
+    match = re.search(boundary + rf"(?P<body>.+?){tail}", text, re.IGNORECASE | re.DOTALL)
+    return match.group("body").strip() if match else None
+
+
+def _recipe_name(text: str) -> str | None:
+    patterns = (
+        # Natural owner wording: "as \"Name\":" or "called Name".
+        r"\bas\s+[\"'](?P<name>[^\"']{1,200})[\"']\s*:",
+        r"\b(?:called|named)\s+[\"']?(?P<name>[^\"'\n:.]{1,200})[\"']?\s*[:.]",
+        # Existing compact form: "recipe: Name. Ingredients: ...".
         r"\brecipe\b(?:\s+(?:to\s+)?(?:my\s+)?recipes?)?\s*:\s*"
-        r"(?P<name>.+?)(?=\.\s*ingredients\s*:|\s+ingredients\s*:)",
-        text,
-        re.IGNORECASE | re.DOTALL,
+        r"(?P<name>.+?)(?=\.\s*ingredients\s*:|\s+ingredients\s*:|\n\s*ingredients\s*:)",
     )
-    if not name_match:
-        return None
-    name = name_match.group("name").strip().strip("\"'")
-    if not name:
-        return None
-    ingredients: list[dict[str, Any]] = []
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+        if match:
+            name = " ".join(match.group("name").strip().strip("\"'").split())
+            if name:
+                return name[:200]
+    return None
+
+
+def _recipe_ingredients(section: str) -> list[dict[str, Any]] | None:
     unit_words = (
         r"teaspoons?|tsp|tablespoons?|tbsp|cups?|ounces?|oz|pounds?|lbs?|"
         r"grams?|g|kilograms?|kg|millilit(?:er|re)s?|ml|lit(?:er|re)s?|l|"
         r"cloves?|cans?|packages?|slices?|pieces?"
     )
-    for raw in re.split(r",|\s*;\s*|\s+and\s+(?=\d+(?:\.\d+)?\s)", sections.group("ingredients")):
-        item = raw.strip().strip(".")
+    # Newline-separated recipe lists are the normal long-paste shape.  Keep
+    # comma/semicolon splitting for the compact owner acceptance shape.
+    raw_lines = [line.strip() for line in section.splitlines() if line.strip()]
+    if len(raw_lines) <= 1:
+        raw_lines = re.split(r",|\s*;\s*|\s+and\s+(?=\d+(?:\.\d+)?\s)", section)
+    ingredients: list[dict[str, Any]] = []
+    for raw in raw_lines:
+        item = re.sub(r"^(?:[-*•]|\d+[.)])\s*", "", raw).strip().strip(".")
         match = re.match(
-            rf"(?P<quantity>\d+(?:\.\d+)?|\.\d+)\s+(?:(?P<unit>{unit_words})\s+)?(?P<name>.+)$",
-            item,
-            re.IGNORECASE,
+            rf"(?P<quantity>\d+(?:\.\d+)?|\.\d+|\d+\s*/\s*\d+)\s+"
+            rf"(?:(?P<unit>{unit_words})\s+)?(?P<name>.+)$",
+            item, re.IGNORECASE,
         )
         if not match:
             return None
+        quantity_text = match.group("quantity").replace(" ", "")
+        if "/" in quantity_text:
+            numerator, denominator = quantity_text.split("/", 1)
+            quantity: float = float(numerator) / float(denominator)
+        else:
+            quantity = float(quantity_text)
         ingredients.append({
             "name": match.group("name").strip(),
-            "quantity": float(match.group("quantity")),
+            "quantity": quantity,
             "unit": (match.group("unit") or "each").strip().lower(),
         })
-    if not ingredients:
+    return ingredients[:200] or None
+
+
+def recipe_create_draft(query: str) -> RecipeDraft | None:
+    """Extract and validate an explicit owner recipe draft.
+
+    The extractor accepts both compact and pasted sectioned recipes. It is
+    intentionally conservative: missing/ambiguous ingredients or instructions
+    produce no effectful payload rather than a guessed recipe.
+    """
+    text = str(query or "").strip()
+    if not text:
         return None
-    return {
-        "action": "add",
-        "name": name[:200],
-        "servings": 1,
-        "ingredients": ingredients[:200],
-        "instructions": sections.group("instructions").strip()[:20000],
-    }
+    name = _recipe_name(text)
+    ingredients_text = _recipe_section(text, "ingredients", "instructions")
+    instructions = _recipe_section(text, "instructions")
+    if not name or not ingredients_text or not instructions:
+        return None
+    ingredients = _recipe_ingredients(ingredients_text)
+    if not ingredients or not instructions.strip():
+        return None
+    servings_match = re.search(r"\b(?:serves?|servings?)\s*[:]?\s*(\d+(?:\.\d+)?)", text, re.I)
+    servings: int | float = float(servings_match.group(1)) if servings_match else 1
+    if isinstance(servings, float) and servings.is_integer():
+        servings = int(servings)
+    url_match = re.search(r"https?://[^\s)>]+", text, re.I)
+    return RecipeDraft(
+        name=name,
+        servings=servings,
+        ingredients=tuple(ingredients),
+        instructions=instructions.strip()[:20000],
+        source_url=url_match.group(0).rstrip(".,") if url_match else None,
+    )
+
+
+def recipe_create_payload(query: str) -> dict[str, Any] | None:
+    draft = recipe_create_draft(query)
+    return draft.as_payload() if draft else None
 
 
 def inventory_add_item_payload(query: str) -> dict[str, Any] | None:

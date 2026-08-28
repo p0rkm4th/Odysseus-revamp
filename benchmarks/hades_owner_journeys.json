@@ -11,6 +11,7 @@
       "id": "OWNER-ASSET-RAM-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "assets-atlas-erebus",
+      "fixture_setup": "canonical_asset_atlas_erebus",
       "turns": [{"prompt": "How much RAM do my computers have?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas", "64", "Erebus", "128"], "action": "list", "tool_binding": "manage_assets", "must_include_any": [], "forbidden": ["cannot access", "run lshw", "provide details"]}}],
       "expected": {"action": "list", "tool_binding": "manage_assets", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
     },
@@ -25,6 +26,7 @@
       "id": "OWNER-ASSET-FILTER-NO-MATCH-001",
       "environment": "realistic_messy_synthetic",
       "fixture_profile": "assets-incomplete-duplicate-like",
+      "fixture_setup": "canonical_asset_no_4090",
       "turns": [{"prompt": "Which of my servers has an RTX 4090?", "expected": {"domain": "ASSET", "operation": "READ", "action": "list", "tool_binding": "manage_assets", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["no recorded", "none", "don't have", "not recorded"], "forbidden": ["RTX 4090 is installed", "12GB", "NVIDIA GeForce RTX 4090"]}}],
       "expected": {"action": "list", "tool_binding": "manage_assets", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
     },
