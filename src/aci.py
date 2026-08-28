@@ -52,13 +52,15 @@ def stream_aci_turn(*args: Any, **kwargs: Any):
     # production always selects the explicitly ACI-named implementation. A
     # replaced legacy symbol is treated as an intentional test/adapter hook,
     # never as a second production authority.
-    if runtime is None or (
+    if runtime is None:
+        # A missing canonical runtime is a deployment/programming failure, not
+        # permission to revive the retired stream implementation.
+        raise RuntimeError("ACI runtime is unavailable")
+    if (
         legacy is not None
         and not getattr(legacy, "_aci_compatibility_facade", False)
     ):
         runtime = legacy
-    if runtime is None:
-        raise RuntimeError("ACI runtime is unavailable")
     return runtime(*args, **kwargs)
 
 
