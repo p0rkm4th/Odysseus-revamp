@@ -1893,3 +1893,9 @@ P95 `3.8855s`. The sole failure is the frozen evaluator's
 `jarvis-environment-assumption` `response_excludes` grounding assertion; an
 answer was present and delivery was complete. This is current checkpoint
 evidence, not a claim that broader generated coverage gaps are closed.
+
+The candidate image excludes `tests/` from the Docker build context, so
+no-source-mount `pytest -q` cannot provide full image-backed regression
+evidence (pytest reports no test files, exit `5`). Source-mounted targeted
+anti-leak coverage passes `18` tests; the packaging limitation is recorded
+explicitly rather than treated as a product result.
