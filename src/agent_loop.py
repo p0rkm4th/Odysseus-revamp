@@ -209,10 +209,6 @@ _looks_like_notes_turn = looks_like_notes_request
 _looks_like_notes_calendar_followup = looks_like_notes_calendar_followup
 _is_casual_low_signal = is_casual_low_signal
 _detect_admin_intent = detect_admin_intent
-def _section_text(name: str, default: str) -> str:
-    return effective_tool_section(name, default, overrides=get_builtin_overrides())
-
-
 def _domain_rules_for_tools(tool_names: set) -> list[str]:
     return domain_rules_for_tools(
         tool_names,
@@ -501,7 +497,9 @@ def _assemble_prompt(tool_names: set, disabled_tools: set = None, compact: bool 
         agent_preamble=_AGENT_PREAMBLE,
         agent_rules=_AGENT_RULES,
         domain_rules=domain_rules,
-        section_for_tool=_section_text,
+        section_for_tool=lambda name, default: effective_tool_section(
+            name, default, overrides=get_builtin_overrides()
+        ),
         compact=compact,
     )
 
