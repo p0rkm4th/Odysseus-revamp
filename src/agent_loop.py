@@ -2782,13 +2782,6 @@ async def stream_aci_runtime(
     # so the user can resume instead of the turn silently stalling.
     _exhausted_rounds = False
 
-    def _filter_route_tool_schemas(schemas):
-        # Keep candidate actions visible after taint so the model can propose
-        # the exact call that the server will seal for user approval.  Schema
-        # visibility is not authority: both the loop and dispatcher still gate
-        # execution, and only a one-use server record can cross that boundary.
-        return schemas
-
     def _tool_schemas_for_route(route_state):
         if _aci_model_fallback:
             return []
@@ -2830,7 +2823,6 @@ async def stream_aci_runtime(
                     if schema.get("function", {}).get("name") not in disabled_tools
                     and schema.get("name") not in disabled_tools
                 ]
-            schemas = _filter_route_tool_schemas(schemas)
             logger.info(
                 "[hades-tool-projection] model=%s trace=%s",
                 route_state.get("model"),
@@ -2849,7 +2841,6 @@ async def stream_aci_runtime(
             route_relevant_tools,
             _last_user,
         )
-        schemas = _filter_route_tool_schemas(schemas)
         logger.info(
             "[hades-tool-projection] model=%s trace=%s",
             route_state.get("model"),
