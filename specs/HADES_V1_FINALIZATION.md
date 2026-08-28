@@ -513,3 +513,14 @@ tests already exercise several of those branches. They are not being counted
 as product failures without executable scenario evidence. The generated
 registry-action probe remains a model/shortlist burden cluster (13/100), not
 an authority or security regression.
+
+## Registry fixture-boundary checkpoint (`9f3f834e`, 2026-08-28)
+
+The semantic evaluator now distinguishes registry ActionSpecs that have a
+first-class synthetic transport from known Actions whose executor is not
+available in the synthetic harness. Unsupported executors remain in coverage
+but are no longer assigned a neighboring read-only fixture; they must fail
+closed without a tool call. Supported transports retain exact ActionSpec
+grading. Affected ACI/dogfood/lifecycle regressions passed `184 passed, 2
+warnings`. This checkpoint changes evaluator code only; the deployed product
+image was not rebuilt.
