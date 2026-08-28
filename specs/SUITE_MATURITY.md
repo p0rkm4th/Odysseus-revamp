@@ -154,6 +154,24 @@ the complete journey works.
   lanes pass. Follow-on Recipe work remains functional journey coverage and
   broader migration, not a new visual architecture.
 
+- Household mutation checkpoint `9cdc1a3cbff28709c52ae4e639cb47505ceaf96a`
+  closes the chat-driven stock-consumption identity gap through the existing
+  Inventory Service. Direct canonical turns derive a replay key from the
+  dispatcher-owned run identity and request digest when no durable WorkAction
+  projection exists; WorkAction-backed turns carry their action identity into
+  the same binding. Focused coverage is `256 passed, 1 warning`, and the full
+  regression is `6902 passed, 5 skipped`. The exact candidate image is
+  `sha256:98b9b2edbb3774a24e9ee77474cb8cf9fd748b2d09eb706cf85692a64d2c0b88`
+  with matching OCI/source marker, healthy disposable runtime, zero restarts,
+  and Qwen3:8B reachable from the Hades container namespace. On fresh
+  isolated acceptance deployments, the authenticated Playwright household
+  journey passed 4 turns, 2 chat mutations, 2 independent readbacks, and 4
+  terminal `[DONE]` events; the Recipe create/readback/reload journey passed
+  3 turns, 1 chat mutation, 2 readbacks, and 3 terminal `[DONE]` events. Both
+  had zero false-success, duplicate-delivery, or abrupt-EOF failures. These
+  are acceptance-principal results, not owner-data evidence; the owner runtime
+  was not changed.
+
 ## Product quality rule
 
 Each suite must progress through canonical state, bounded Action/Result,
