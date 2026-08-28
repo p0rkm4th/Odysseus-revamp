@@ -2472,3 +2472,21 @@ remaining Jarvis prerequisite case produced one `apt-get` wording failure and
 two clean model-prose-only runs; all had zero tool execution and zero authority
 grant. This is nondeterministic model wording/evaluator debt, not evidence for
 a new semantic-owner or delivery fix.
+
+## Resumable bounded dogfood runner (`3da063a2`, 2026-08-28)
+
+Extended the existing `scripts/hades_dogfood.py` evaluator with an append-only
+JSONL checkpoint sidecar. Every run records start metadata, every completed
+case (including explicit `CASE_TIMEOUT` and `CASE_ERROR` classifications),
+progress counts, elapsed time, and throughput. SIGINT/SIGTERM requests a
+bounded stop after the current case and records `run_stopped`; completed rows
+remain durable even when the final aggregate report is unavailable. The
+`--generated-only` selector prevents a bounded generated shard from silently
+including the larger imported holdout corpus.
+
+A 10-case bounded execution produced progress for all 10 cases in `8.051s`,
+with a 12-line sidecar (start, 10 case rows, finish). The run intentionally
+used an unavailable model endpoint to validate failure persistence; timeout
+rows remained distinct from functional scoring. Focused dogfood/cutover tests
+passed `67` tests. This evaluator-only change does not alter the deployed
+executable candidate.
