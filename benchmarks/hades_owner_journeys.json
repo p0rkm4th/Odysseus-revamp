@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "description": "Black-box owner journey acceptance scenarios. Expectations grade the product; they are never production routing input.",
+  "environments": {
+    "deterministic_synthetic": {"fixture_profile": "owner-core-deterministic", "mutations": false},
+    "realistic_messy_synthetic": {"fixture_profile": "owner-messy-state", "mutations": false},
+    "actual_owner_read_only": {"fixture_profile": "deployed-owner-read-only", "mutations": false}
+  },
+  "scenarios": [
+    {
+      "id": "OWNER-ASSET-RAM-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "assets-atlas-erebus",
+      "turns": [{"prompt": "How much RAM do my computers have?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["Atlas", "64", "Erebus", "128"], "forbidden": ["cannot access", "run lshw", "provide details"]}}],
+      "expected": {"action": "read_assets", "tool_binding": "manage_assets", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-NETWORK-001",
+      "environment": "actual_owner_read_only",
+      "fixture_profile": "current-network-observation",
+      "turns": [{"prompt": "Tell me about my network.", "expected": {"domain": "NETWORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["network", "observed", "current", "unknown", "unavailable"], "forbidden": ["192.168.1.10", "2001:db8::1", "12 TCP", "Kubernetes master", "35% bandwidth"]}}],
+      "expected": {"action": "read_network_observations", "tool_binding": "manage_homelab", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-ASSET-FILTER-NO-MATCH-001",
+      "environment": "realistic_messy_synthetic",
+      "fixture_profile": "assets-incomplete-duplicate-like",
+      "turns": [{"prompt": "Which of my servers has an RTX 4090?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["no recorded", "none", "don't have", "not recorded"], "forbidden": ["RTX 4090 is installed", "12GB", "NVIDIA GeForce RTX 4090"]}}],
+      "expected": {"action": "read_assets", "tool_binding": "manage_assets", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-RECIPE-EMPTY-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-recipes",
+      "turns": [{"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["no", "none", "don't have", "empty"], "forbidden": ["Done", "successfully added"]}}],
+      "expected": {"action": "read_recipes", "tool_binding": "read_recipes", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-RECIPE-MUTATION-READBACK-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-recipes",
+      "turns": [
+        {"prompt": "Add this recipe to my recipes: Acceptance Chicken and Rice. Ingredients: 2 chicken breasts, 1 cup rice. Instructions: Bake the chicken and cook the rice.", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "requires_effect": true, "forbidden": ["successfully added", "saved"]}},
+        {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["Acceptance Chicken and Rice"], "forbidden": ["no recipes", "don't have"]}},
+        {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["Acceptance Chicken and Rice"]}}
+      ],
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Chicken and Rice", "readback": true}, "terminal": {"done": 3, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-HOUSEHOLD-MUTATION-READBACK-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-household",
+      "turns": [
+        {"prompt": "Add 3 synthetic cans of Acceptance Tomatoes to the pantry.", "expected": {"domain": "HOUSEHOLD", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "requires_effect": true, "forbidden": ["successfully added", "saved"]}},
+        {"prompt": "How many Acceptance Tomatoes do I have?", "expected": {"domain": "HOUSEHOLD", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["3", "three"]}},
+        {"prompt": "Use one Acceptance Tomato.", "expected": {"domain": "HOUSEHOLD", "operation": "UPDATE", "answer_source": "DETERMINISTIC_RESULT", "requires_effect": true}},
+        {"prompt": "How many Acceptance Tomatoes do I have?", "expected": {"domain": "HOUSEHOLD", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["2", "two"]}}
+      ],
+      "expected": {"policy": "allowed", "approval": "not_required", "before": {"quantity": 0}, "after": {"quantity": 2, "readback": true}, "terminal": {"done": 4, "abrupt_eof": false}}
+    }
+  ]
+}

@@ -27,6 +27,7 @@ const python = process.env.HADES_PYTHON || './venv/bin/python';
 const externalCredentialFile = process.env.HADES_BROWSER_EXTERNAL_CREDENTIAL_FILE || '';
 const externalAcceptance = Boolean(externalCredentialFile);
 const householdAcceptance = process.env.HADES_BROWSER_HOUSEHOLD_ACCEPTANCE === 'true';
+const journeyFile = process.env.HADES_BROWSER_JOURNEY_FILE || '';
 if (householdAcceptance && !externalAcceptance) {
   throw new Error('Household browser acceptance requires an external isolated acceptance deployment');
 }
@@ -39,6 +40,23 @@ function run(command, args, env = process.env) {
     throw new Error(`${command} ${args.join(' ')} failed (${result.status}): ${String(result.stderr || '').slice(-1000)}`);
   }
   return result.stdout || '';
+}
+
+function loadJourneyScenarios() {
+  if (!journeyFile) return null;
+  const payload = JSON.parse(fs.readFileSync(journeyFile, 'utf8'));
+  if (!Array.isArray(payload.scenarios)) throw new Error('owner journey file has no scenarios array');
+  const requested = process.env.HADES_BROWSER_SCENARIOS
+    ? new Set(process.env.HADES_BROWSER_SCENARIOS.split(',').map((value) => value.trim()).filter(Boolean))
+    : null;
+  const scenarios = payload.scenarios.filter((scenario) => !requested || requested.has(scenario.id));
+  if (!scenarios.length) throw new Error('owner journey selection is empty');
+  const hasMutation = scenarios.some((scenario) => scenario.turns.some((turn) =>
+    ['CREATE', 'UPDATE', 'DELETE', 'EXECUTE'].includes(String(turn.expected?.operation || '').toUpperCase())));
+  if (hasMutation && !externalAcceptance) {
+    throw new Error('refusing owner-instance browser run: mutation journeys require an isolated external acceptance deployment');
+  }
+  return scenarios;
 }
 
 function provision() {
@@ -217,7 +235,7 @@ async function waitForAnswer(page, beforeAssistant, streamIndex, prompt) {
   return stream;
 }
 
-async function send(page, prompt) {
+async function send(page, prompt, expectation = {}) {
   const beforeAssistant = await assistantCount(page);
   const beforeStreams = await page.evaluate(() => window.__hadesE2EStreams?.length || 0);
   const composer = page.locator('textarea#message:visible').first();
@@ -234,6 +252,34 @@ async function send(page, prompt) {
   const turn = await latestTurnAnswers(page);
   await page.evaluate((value) => { window.__hadesE2ELastTurn = value; }, { stream, snapshot, turn });
   const finalText = assertHumanCanonicalAnswer(turn, prompt);
+  const mustInclude = expectation.must_include_any || [];
+  if (mustInclude.length && !mustInclude.some((value) => new RegExp(String(value), 'i').test(finalText))) {
+    throw new Error(`semantic answer oracle failed for ${prompt}: expected one of ${mustInclude.join(', ')}`);
+  }
+  for (const forbidden of expectation.forbidden || []) {
+    if (new RegExp(String(forbidden), 'i').test(finalText)) {
+      throw new Error(`forbidden claim in final answer for ${prompt}: ${forbidden}`);
+    }
+  }
+  const expectedSource = expectation.answer_source;
+  if (expectedSource) {
+    const sources = stream.events.filter((event) => event.answerSource).map((event) => event.answerSource);
+    if (!sources.includes(expectedSource)) {
+      throw new Error(`expected AnswerSource ${expectedSource} was not observed for ${prompt}: ${sources.join(', ') || 'none'}`);
+    }
+  }
+  if (expectation.domain && expectation.operation) {
+    // These are black-box expectations: only serialized transport evidence is
+    // inspected. They never enter prompts, routing, or executor state.
+    const toolNames = stream.events.filter((event) => event.tool).map((event) => event.tool);
+    if (expectation.tool_binding && toolNames.length && !toolNames.some((name) => name === expectation.tool_binding)) {
+      throw new Error(`expected tool binding ${expectation.tool_binding} was not observed for ${prompt}: ${toolNames.join(', ')}`);
+    }
+  }
+  if (expectation.requires_effect) {
+    const successfulTool = stream.events.some((event) => event.tool && /success|verified|result/i.test(`${event.type} ${event.tool}`));
+    if (!successfulTool) throw new Error(`effectful journey has no attributable successful Action evidence for ${prompt}`);
+  }
   const rawToolText = turn.tools.map((tool) => tool.rawOutput || '').join('\n').trim();
   if (rawToolText && (finalText === rawToolText || finalText.includes(rawToolText))) {
     throw new Error(`final answer is raw tool output for ${prompt}`);
@@ -362,32 +408,36 @@ async function main() {
     await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
     tracing = true;
 
-    const prompts = process.env.HADES_BROWSER_RECIPE_ACCEPTANCE === 'true'
+    const scenarios = loadJourneyScenarios();
+    const prompts = scenarios
+      ? scenarios.flatMap((scenario) => scenario.turns.map((turn) => ({ ...turn, scenarioId: scenario.id })))
+      : process.env.HADES_BROWSER_RECIPE_ACCEPTANCE === 'true'
       ? [
-        'what recipes do i have',
-        'tell me about the first one',
-        'scale this recipe to six servings',
-        'can i make this recipe with what i have',
+        { prompt: 'what recipes do i have' },
+        { prompt: 'tell me about the first one' },
+        { prompt: 'scale this recipe to six servings' },
+        { prompt: 'can i make this recipe with what i have' },
       ]
       : householdAcceptance
         ? [
-          "what's in the kitchen?",
-          'how much milk do i have?',
-          'what do i have in the kitchen right now?',
+          { prompt: "what's in the kitchen?" },
+          { prompt: 'how much milk do i have?' },
+          { prompt: 'what do i have in the kitchen right now?' },
         ]
       : [
-        'tell me about my network',
-        'tell me about my homelab',
-        'what do you know about me',
-        'what computers do i have',
-        'tell me about the first one',
-        'what GPUs does it have?',
-        'what work is outstanding?',
+        { prompt: 'tell me about my network' },
+        { prompt: 'tell me about my homelab' },
+        { prompt: 'what do you know about me' },
+        { prompt: 'what computers do i have' },
+        { prompt: 'tell me about the first one' },
+        { prompt: 'what GPUs does it have?' },
+        { prompt: 'what work is outstanding?' },
       ];
-    for (const prompt of prompts) {
-      const result = await send(page, prompt);
-      diagnostics.prompts.push({ prompt, ...result });
-      if (prompt === 'tell me about my network') {
+    for (const turn of prompts) {
+      const prompt = typeof turn === 'string' ? turn : turn.prompt;
+      const result = await send(page, prompt, typeof turn === 'string' ? {} : turn.expected || {});
+      diagnostics.prompts.push({ prompt, scenarioId: turn.scenarioId, ...result });
+      if (prompt.toLowerCase() === 'tell me about my network.' || prompt.toLowerCase() === 'tell me about my network') {
         console.log(JSON.stringify({
           networkTrace: result.stream.events.map((event) => event.type),
           networkAnswerCount: result.turn.answers.length,

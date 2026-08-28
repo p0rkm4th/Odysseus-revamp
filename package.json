@@ -7,7 +7,8 @@
     "test:frontend": "bash scripts/verify_frontend.sh",
     "test:browser": "node scripts/browser_window_dogfood.mjs",
     "test:browser:realistic": "node scripts/browser_realistic_acceptance.mjs",
-    "test:browser:e2e": "HADES_BROWSER_ACCEPTANCE_ENABLE=true node scripts/browser_authenticated_acceptance.mjs"
+    "test:browser:e2e": "HADES_BROWSER_ACCEPTANCE_ENABLE=true node scripts/browser_authenticated_acceptance.mjs",
+    "test:browser:owner-journeys": "HADES_BROWSER_ACCEPTANCE_ENABLE=true HADES_BROWSER_JOURNEY_FILE=benchmarks/hades_owner_journeys.json node scripts/browser_authenticated_acceptance.mjs"
   },
   "devDependencies": {
     "@antithesishq/bombadil": "^0.6.1",
