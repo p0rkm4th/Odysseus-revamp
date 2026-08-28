@@ -1164,30 +1164,7 @@ PLAN_MODE_DIRECTIVE = (
 )
 
 
-async def stream_agent_loop(*args: Any, **kwargs: Any):
-    """Compatibility facade for callers that still use the retired name.
-
-    Canonical production traffic enters :func:`src.aci.stream_aci_turn` and
-    invokes ``stream_aci_runtime`` directly.  Keeping this facade preserves
-    the established async-generator contract for scheduled jobs, plugins,
-    and older tests without retaining a second orchestration implementation.
-    """
-    # The legacy-named facade is the explicit compatibility boundary. Keep
-    # callers that still use it on legacy semantics while making the canonical
-    # runtime safe-by-default for any new direct caller.
-    kwargs.setdefault("aci_mode", "legacy")
-    delegated = stream_aci_runtime(*args, **kwargs)
-    try:
-        async for event in delegated:
-            yield event
-    finally:
-        # Closing an async-generator facade does not automatically close the
-        # delegated generator.  Propagate closure so in-flight tool tasks use
-        # the runtime's existing cancellation/finalization path.
-        await delegated.aclose()
-
-
-stream_agent_loop._aci_compatibility_facade = True
+from src.legacy_agent_loop import stream_agent_loop
 
 
 async def stream_aci_runtime(
