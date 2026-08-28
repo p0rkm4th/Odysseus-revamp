@@ -70,6 +70,28 @@ def test_production_runtime_does_not_import_legacy_stream_function():
     assert imports == []
 
 
+def test_production_runtime_does_not_import_legacy_contract_modules():
+    """Legacy projections stay behind the loop compatibility boundary."""
+    repo = Path(__file__).parents[1]
+    forbidden = {"src.legacy_domain_contract", "src.legacy_agent_loop"}
+    imports = []
+    for root_name in ("routes", "src", "core", "services"):
+        for path in (repo / root_name).rglob("*.py"):
+            if path.name in {"agent_loop.py", "aci.py", "legacy_agent_loop.py", "legacy_domain_contract.py"}:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module in forbidden:
+                    imports.append(f"{path.relative_to(repo)}:{node.lineno}")
+                elif isinstance(node, ast.Import):
+                    imports.extend(
+                        f"{path.relative_to(repo)}:{node.lineno}"
+                        for alias in node.names
+                        if alias.name in forbidden
+                    )
+    assert imports == []
+
+
 def test_canonical_action_expectation_is_owned_by_aci():
     assert expects_canonical_action(
         answer_only=False, clarification_only=False,
