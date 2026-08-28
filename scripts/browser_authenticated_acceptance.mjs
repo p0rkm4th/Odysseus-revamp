@@ -24,6 +24,8 @@ const diagnosticsFile = path.join(root, 'diagnostics.json');
 const traceFile = path.join(root, 'trace.zip');
 const screenshotFile = path.join(root, 'failure.png');
 const python = process.env.HADES_PYTHON || './venv/bin/python';
+const externalCredentialFile = process.env.HADES_BROWSER_EXTERNAL_CREDENTIAL_FILE || '';
+const externalAcceptance = Boolean(externalCredentialFile);
 const composeEnv = { ...process.env, HADES_ACCEPTANCE_PRINCIPAL_ENABLED: 'true' };
 const cleanupEnv = { ...process.env, HADES_ACCEPTANCE_PRINCIPAL_ENABLED: 'false' };
 
@@ -36,12 +38,16 @@ function run(command, args, env = process.env) {
 }
 
 function provision() {
+  if (externalAcceptance) {
+    return JSON.parse(fs.readFileSync(externalCredentialFile, 'utf8'));
+  }
   run('docker', ['compose', 'up', '-d', '--no-build', 'odysseus'], composeEnv);
   run(python, ['-m', 'scripts.create_acceptance_principal', '--credential-file', credentialFile, '--ttl', '600'], composeEnv);
   return JSON.parse(fs.readFileSync(credentialFile, 'utf8'));
 }
 
 function disableAndRevoke() {
+  if (externalAcceptance) return;
   try {
     run(python, ['-m', 'scripts.create_acceptance_principal', '--auth-path', 'data/auth.json', '--revoke'], process.env);
   } finally {
@@ -274,6 +280,27 @@ async function main() {
     await page.locator('#password').fill(credentials.password);
     await page.locator('#authForm').evaluate((form) => form.requestSubmit());
     await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
+    if (process.env.HADES_BROWSER_SESSION_ENDPOINT_ID) {
+      const session = await page.evaluate(async ({ endpointId, model }) => {
+        const body = new FormData();
+        body.append('name', `browser acceptance ${new Date().toISOString()}`);
+        body.append('endpoint_id', endpointId);
+        body.append('model', model);
+        body.append('skip_validation', 'true');
+        const response = await fetch('/api/session', { method: 'POST', body, credentials: 'same-origin' });
+        if (!response.ok) throw new Error(`browser acceptance session create failed (${response.status})`);
+        return response.json();
+      }, {
+        endpointId: process.env.HADES_BROWSER_SESSION_ENDPOINT_ID,
+        model: process.env.HADES_BROWSER_SESSION_MODEL || 'qwen3:8b',
+      });
+      if (!session?.id) throw new Error('browser acceptance session response had no id');
+      // Seed only the UI's normal last-session preference; authentication is
+      // still established exclusively by the login route above.
+      await page.evaluate((sessionId) => localStorage.setItem('lastSessionId', sessionId), session.id);
+      await page.evaluate((sessionId) => history.replaceState(null, '', `#${sessionId}`), session.id);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+    }
     await page.locator('textarea#message:visible').first().waitFor({ state: 'visible', timeout: 30000 });
 
     // Start tracing only after the login response, so the password cannot be
@@ -281,15 +308,22 @@ async function main() {
     await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
     tracing = true;
 
-    const prompts = [
-      'tell me about my network',
-      'tell me about my homelab',
-      'what do you know about me',
-      'what computers do i have',
-      'tell me about the first one',
-      'what GPUs does it have?',
-      'what work is outstanding?',
-    ];
+    const prompts = process.env.HADES_BROWSER_RECIPE_ACCEPTANCE === 'true'
+      ? [
+        'what recipes do i have',
+        'tell me about the first one',
+        'scale this recipe to six servings',
+        'can i make this recipe with what i have',
+      ]
+      : [
+        'tell me about my network',
+        'tell me about my homelab',
+        'what do you know about me',
+        'what computers do i have',
+        'tell me about the first one',
+        'what GPUs does it have?',
+        'what work is outstanding?',
+      ];
     for (const prompt of prompts) {
       const result = await send(page, prompt);
       diagnostics.prompts.push({ prompt, ...result });
@@ -338,16 +372,19 @@ async function main() {
     await page.waitForURL((url) => url.pathname.endsWith('/login'), { timeout: 30000 });
 
     // Revoke the account and disable the facility before checking that the
-    // normal login route can no longer authenticate it.
+    // normal login route can no longer authenticate it. External isolated
+    // deployments own their cleanup lifecycle and are checked by the caller.
     disableAndRevoke();
     cleanupDone = true;
-    await waitForHealth();
-    await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded' });
-    await page.locator('#username').fill(credentials.username);
-    await page.locator('#password').fill(credentials.password);
-    await page.locator('#authForm').evaluate((form) => form.requestSubmit());
-    await page.waitForTimeout(1000);
-    if (!page.url().endsWith('/login')) throw new Error('acceptance principal authenticated after cleanup');
+    if (!externalAcceptance) {
+      await waitForHealth();
+      await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded' });
+      await page.locator('#username').fill(credentials.username);
+      await page.locator('#password').fill(credentials.password);
+      await page.locator('#authForm').evaluate((form) => form.requestSubmit());
+      await page.waitForTimeout(1000);
+      if (!page.url().endsWith('/login')) throw new Error('acceptance principal authenticated after cleanup');
+    }
 
     await context.tracing.stop();
     tracing = false;
