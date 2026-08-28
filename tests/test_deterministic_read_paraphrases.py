@@ -180,6 +180,13 @@ def test_recipe_scale_followup_preserves_recipe_reference_and_serving_target():
     assert resolved.action_id == "scale"
 
 
+def test_recipe_conceptual_question_stays_on_general_answer_floor():
+    frame = compile_intent("what is a recipe")
+    assert frame.domain_concept == "UNKNOWN"
+    assert frame.operation_class == "ANSWER"
+    assert deterministic_read_concept("what is a recipe") is None
+
+
 @pytest.mark.parametrize("query", [
     "What all is on my network? do a discovery dive?",
     "tell me about the network, do a deep dive discovery mission to tell me whats going on",

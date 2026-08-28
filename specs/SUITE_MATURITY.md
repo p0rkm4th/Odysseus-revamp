@@ -29,8 +29,14 @@ the complete journey works.
 - First productization slice resolves the service and household variants via
   existing contracts.
 - Recipe read projection now uses the existing `InventoryService` owner;
-  recipe mutations/cooking and meal-plan/shopping composition remain deferred
-  until read journeys are seeded and verified.
+  persisted list/search/get, pantry coverage, and deterministic serving-scale
+  arithmetic are covered by service integration tests. Recipe mutations/cooking
+  and meal-plan/shopping composition remain deferred until Qwen3:8B and browser
+  read/composition journeys are green.
+- Deterministic-read boundary: recipe predicates are only high-confidence
+  owner/read/coverage/scale fast paths. Conceptual questions such as `what is a
+  recipe` remain UNKNOWN/ANSWER and must reach bounded semantic resolution;
+  this layer is not a general domain classifier.
 - Productization checkpoint `818a0a218900c4f173e2773e1469050057ea8b61` was
   pushed and deployed exactly; focused routing/household coverage is
   `342 passed, 1 skipped`, runtime health is healthy, and Qwen3:8B is reachable
