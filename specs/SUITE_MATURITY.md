@@ -41,6 +41,15 @@ the complete journey works.
   pushed and deployed exactly; focused routing/household coverage is
   `342 passed, 1 skipped`, runtime health is healthy, and Qwen3:8B is reachable
   from the Hades container namespace.
+- Recipe checkpoint `62de705f71814e0728e66bf2abe73077ba823bbb` is pushed and
+  deployed exactly; the full supported regression is `6866 passed, 4 skipped`,
+  the authenticated browser lane passes its 7-prompt/reload trajectory, and
+  Recipe list/search/get, pantry coverage, scaling arithmetic, and owner
+  isolation are covered by persisted InventoryService integration tests.
+- Recipe-specific browser/Qwen evidence remains pending: the current browser
+  acceptance fixture has no disposable Recipe seed and the public API has no
+  recipe-delete operation. Do not seed Recipe rows into the owner's database;
+  run those journeys only against an isolated acceptance deployment.
 
 ## Product quality rule
 
