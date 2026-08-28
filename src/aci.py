@@ -3211,6 +3211,15 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
         names = [str(item.get("name") or "ingredient") for item in shortages if isinstance(item, Mapping)]
         suffix = f" Missing: {', '.join(names[:20])}." if names else ""
         return "The canonical pantry check says this recipe cannot be made from the recorded stock." + suffix
+    if action == "scale":
+        ingredients = payload.get("scaled_ingredients")
+        if not isinstance(ingredients, list) or not payload.get("servings"):
+            return None
+        lines = [f"Scaled {str(payload.get('recipe_name') or 'recipe')} to {payload['servings']} servings:"]
+        for ingredient in ingredients[:100]:
+            if isinstance(ingredient, Mapping):
+                lines.append(f"- {ingredient.get('quantity')} {ingredient.get('unit') or ''} {ingredient.get('name') or 'ingredient'}".strip())
+        return "\n".join(lines)
     recipes = payload.get("recipes")
     if not isinstance(recipes, list):
         recipe = payload.get("recipe")

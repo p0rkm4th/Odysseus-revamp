@@ -993,6 +993,21 @@ class RecipeService(InventoryService):
                     "unit": row.unit, "optional": row.optional,
                 } for row in plan.shortages],
             }
+        if action == "scale":
+            recipe = self.get_recipe(owner, _required_text(args.get("recipe_id"), "recipe_id"))
+            requested = parse_decimal(args.get("servings"))
+            base = parse_decimal(recipe.get("servings"))
+            multiplier = requested / base
+            return {
+                "recipe_id": recipe["id"], "recipe_name": recipe["name"],
+                "servings": requested,
+                "scaled_ingredients": [{
+                    "name": ingredient["name"],
+                    "quantity": parse_decimal(ingredient["quantity"]) * multiplier,
+                    "unit": ingredient["unit"],
+                    "optional": ingredient["optional"],
+                } for ingredient in recipe.get("ingredients", [])],
+            }
         if action == "add":
             return {"recipe": self.create_recipe(
                 owner, name=args.get("name"), servings=args.get("servings") or "1",
