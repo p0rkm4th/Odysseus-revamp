@@ -365,8 +365,28 @@ async function send(page, prompt, expectation = {}) {
     }
   }
   if (expectation.requires_effect) {
-    const successfulTool = stream.events.some((event) => event.tool &&
+    // The browser transport intentionally keeps tool-result payloads in the
+    // diagnostic disclosure rather than copying them into the normalized SSE
+    // summary.  For effectful journeys, inspect that existing rendered
+    // evidence as well as event metadata; otherwise a real verified mutation
+    // can be reported as missing merely because its result is nested in the
+    // tool card.  This remains attributable evidence: it must be the current
+    // turn's tool output and carry an explicit successful/verified outcome.
+    const successfulToolEvent = stream.events.some((event) => event.tool &&
       (event.success === true || event.verified === true || /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(event.status || '')));
+    const successfulToolCard = turn.tools.some((tool) => {
+      if (!tool.rawOutput) return false;
+      try {
+        const result = JSON.parse(tool.rawOutput);
+        const verificationStatus = result?.verification?.status;
+        return result?.success === true || result?.verified === true ||
+          /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(result?.status || '') ||
+          /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(verificationStatus || '');
+      } catch {
+        return false;
+      }
+    });
+    const successfulTool = successfulToolEvent || successfulToolCard;
     if (!successfulTool) throw new Error(`effectful journey has no attributable successful Action evidence for ${prompt}`);
   }
   if (expectedSource) {
@@ -399,7 +419,11 @@ async function send(page, prompt, expectation = {}) {
     }
   }
   if (householdAcceptance && String(expectation.domain || '').toUpperCase() === 'HOUSEHOLD') {
-    if (!/milk/i.test(finalText)) {
+    // The legacy household smoke seeds Milk and uses this as its semantic
+    // oracle. Data-driven scenarios may use a different isolated canonical
+    // item, so keep the shared deterministic-finalization assertion without
+    // coupling them to that legacy fixture.
+    if (!expectation.operation && !/milk/i.test(finalText)) {
       throw new Error(`household final answer omitted the seeded canonical item for ${prompt}`);
     }
     const replacements = stream.events.filter((event) => event.type === 'response_replace');

@@ -75,7 +75,7 @@ _HOUSEHOLD_SUBJECT = re.compile(
 _HOUSEHOLD_STATE = re.compile(
     r"\b(?:about\s+to\s+expire|expir(?:e|ing|y)|run(?:ning)?\s+out|"
     r"ran\s+out|low\s+on|in\s+the\s+(?:freezer|fridge|refrigerator|pantry)|"
-    r"how\s+much\s+.+\s+do\s+(?:i|we)\s+have|"
+    r"how\s+(?:much|many)\s+.+\s+do\s+(?:i|we)\s+have|"
     r"what\s+did\s+(?:i|we)\s+run\s+out\s+of)",
     re.IGNORECASE,
 )
