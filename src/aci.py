@@ -4593,7 +4593,8 @@ def selected_action_for_decision(
 
 def classify_post_result(result: Any, *, canonical_read: bool = False,
                          unresolved_required_information: bool = False,
-                         deterministic_next_step: bool = False) -> PostResultState:
+                         deterministic_next_step: bool = False,
+                         selected_action: Mapping[str, Any] | None = None) -> PostResultState:
     """Classify the control-plane transition after one canonical Result.
 
     Success alone never proves arbitrary Objective completion.  The terminal
@@ -4612,6 +4613,18 @@ def classify_post_result(result: Any, *, canonical_read: bool = False,
         return PostResultState.NEEDS_CONTEXT
     if deterministic_next_step:
         return PostResultState.CONTINUE_DETERMINISTICALLY
+    _verification = result.get("verification")
+    _verified_result = (
+        result.get("verified") is True
+        or str(result.get("status") or "").upper() == "VERIFIED"
+        or (isinstance(_verification, Mapping)
+            and str(_verification.get("status") or "").upper() == "VERIFIED")
+    )
+    if isinstance(selected_action, Mapping) and _verified_result and result.get("success") is not False:
+        # A verified effectful Action has satisfied this turn's completion
+        # contract.  Do not send the model back around to rediscover the same
+        # Action and risk a duplicate side effect.
+        return PostResultState.COMPLETE_AFTER_ANSWER
     if canonical_read:
         return PostResultState.COMPLETE_AFTER_ANSWER
     return PostResultState.NEEDS_BOUNDED_REASONING
@@ -4632,6 +4645,7 @@ def project_post_result_transition(
     state = classify_post_result(
         result,
         canonical_read=canonical_read or deterministic_fast_path,
+        selected_action=selected_action,
     )
     if state is PostResultState.COMPLETE_AFTER_ANSWER:
         return PostResultTransition(
