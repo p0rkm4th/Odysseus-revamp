@@ -2322,3 +2322,7 @@ production stream boundary, and the remaining loop-local projection helpers
 delegate to ACI or intent-contract owners. The compatibility facade remains for
 tests and nested compatibility paths; removing it without a characterization
 slice is not justified by current evidence.
+
+Current-head full regression at `959ca1ec` passed `6819` tests with `4`
+documented skips in `174.47s` (186 warnings). This validates the docs-only
+descendant against the same executable code as the deployed d3 checkpoint.
