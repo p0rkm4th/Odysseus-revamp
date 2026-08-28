@@ -1,10 +1,10 @@
 """P0 regressions: provider context is reconstructed from durable recent chat."""
 
 from src.context_compactor import context_trace, trim_for_context
-from src.agent_loop import (
-    _classify_agent_request,
-    _deterministic_reference_acknowledgement,
-    _recent_reference_resolution_hint,
+from src.agent_loop import _classify_agent_request
+from src.aci import (
+    deterministic_reference_acknowledgement as _deterministic_reference_acknowledgement,
+    reference_resolution_hint as _recent_reference_resolution_hint,
 )
 from src.user_time import current_datetime_context_message
 

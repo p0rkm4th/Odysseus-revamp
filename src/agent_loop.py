@@ -193,13 +193,9 @@ from src.intent_contracts import (
 # Temporary import compatibility for callers/tests that still reference the
 # retired loop-local names. These are aliases, not independent implementations
 # or authorities; all semantics live in ACI and intent contracts.
-_recent_reference_resolution_hint = reference_resolution_hint
-_deterministic_reference_acknowledgement = deterministic_reference_acknowledgement
-_prefetched_explicit_memory_result = prefetched_explicit_memory_result
+# ACI reference, memory, and canonical-read helpers are owned by ``src.aci``;
+# callers should import them from that canonical module.
 _recent_context_for_retrieval = recent_context_for_retrieval
-_minimal_aci_answer_messages = minimal_aci_answer_messages
-_minimal_aci_model_fallback_messages = minimal_aci_model_fallback_messages
-_matches_resolved_canonical_read = matches_resolved_canonical_read
 _normalize_asset_inventory_intent = normalize_asset_inventory_intent
 _asset_read_request = asset_read_request
 _normalize_homelab_intent = normalize_homelab_intent
