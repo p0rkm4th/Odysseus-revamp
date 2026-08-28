@@ -51,7 +51,8 @@ async function openPage(viewport) {
   const sidebarEntries = page.locator('#sidebar .list-item[id^="tool-"]:visible');
   for (let i = 0; i < await sidebarEntries.count(); i += 1) {
     const entry = sidebarEntries.nth(i);
-    if (await entry.locator(':scope > svg').count() !== 1) throw new Error(`sidebar entry has duplicate/missing icon: ${await entry.getAttribute('id')}`);
+    const iconCount = await entry.evaluate(node => [...node.children].filter(child => child.tagName.toLowerCase() === 'svg').length);
+    if (iconCount !== 1) throw new Error(`sidebar entry has duplicate/missing icon: ${await entry.getAttribute('id')}`);
   }
   if (await page.locator('#sidebar #tool-security-btn:visible').count() > 1 || await page.locator('#sidebar #tool-research-btn:visible').count() > 1) {
     throw new Error('duplicate Security or Deep Research navigation entry');
