@@ -121,6 +121,7 @@ def test_it_assets_collection_read_does_not_consume_active_asset_referent():
     "what's in the kitchen",
     "what's in the freezer",
     "how much milk do we have",
+    "how many cans do we have",
     "what is about to expire",
     "what are we low on",
     "what did we run out of",
