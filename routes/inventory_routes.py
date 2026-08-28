@@ -204,12 +204,11 @@ def setup_inventory_routes(
         if source_url and not re.match(r"^https?://", source_url, re.IGNORECASE):
             raise HTTPException(400, "source_url must use http or https")
         if source_url and not source_text:
-            from src.agent_tools.web_tools import WebFetchTool
-            fetched = await WebFetchTool().execute(json.dumps({"url": source_url}), {"owner": owner})
-            if fetched.get("exit_code") != 0:
+            from src.recipe_import_sources import fetch_recipe_source
+            source_text, error = await fetch_recipe_source(source_url, owner=owner)
+            if error:
                 return {"status": "NEEDS_REVIEW", "draft": None, "source_url": source_url,
-                        "message": "The recipe source could not be fetched for review."}
-            source_text = str(fetched.get("output") or "")
+                        "message": error}
         return await call(
             inventory.manage_recipes,
             {"action": "prepare_import", "source_text": source_text, "source_url": source_url},
