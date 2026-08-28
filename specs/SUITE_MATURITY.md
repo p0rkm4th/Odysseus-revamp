@@ -21,9 +21,9 @@ the complete journey works.
 
 - Post-merge `main`: `364380ed3f46c1d14d3229e5b7530698cfa22e65`.
 - Productization branch starts from that merged tree.
-- Deployed executable remains `05c32fb520ec91556ee3cef75697ccdab17e86ab`;
-  its image is healthy with zero restarts. The branch is not claimed deployed
-  until an executable checkpoint is pushed and rebuilt.
+- Deployed executable is `b8b24f8233007ca89fee8da0e03de6e45856f1b5`; its
+  exact candidate image is `sha256:b6b6645403610ebf1e946a41f2852c0b32e9f45044b2299037c9675b0578eedb`,
+  with OCI/running source matching and healthy runtime with zero restarts.
 - Initial Tier 1 semantic audit found unsupported/unknown routing for service
   variants, household stock/expiry language, and recipe planning language.
 - First productization slice resolves the service and household variants via
@@ -46,10 +46,19 @@ the complete journey works.
   the authenticated browser lane passes its 7-prompt/reload trajectory, and
   Recipe list/search/get, pantry coverage, scaling arithmetic, and owner
   isolation are covered by persisted InventoryService integration tests.
-- Recipe-specific browser/Qwen evidence remains pending: the current browser
-  acceptance fixture has no disposable Recipe seed and the public API has no
-  recipe-delete operation. Do not seed Recipe rows into the owner's database;
-  run those journeys only against an isolated acceptance deployment.
+- Recipe reference-continuity checkpoint `b8b24f8233007ca89fee8da0e03de6e45856f1b5`
+  extends the canonical bridge with persisted Recipe refs and session-context
+  compilation; focused coverage is `414 passed, 1 skipped`. The existing
+  authenticated browser smoke remains green (`7 prompts / 8 streams`), with
+  the network turn producing one deterministic replacement and one terminal
+  `[DONE]`. Recipe-specific seeded browser/Qwen evidence remains pending: the
+  current browser acceptance fixture has no disposable Recipe seed and the
+  public API has no recipe-delete operation. Do not seed Recipe rows into the
+  owner's database; run those journeys only against an isolated acceptance
+  deployment.
+- The full-regression process was attempted against `b8b24f82` but was
+  externally terminated around 2% before pytest emitted a summary; this is
+  recorded as unresolved environment/process evidence, not as a pass.
 
 ## Product quality rule
 
