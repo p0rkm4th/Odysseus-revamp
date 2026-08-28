@@ -1719,3 +1719,9 @@ and their expected outcome is an unavailable capability/fail-closed path.
 Supported transports continue to use the explicit fixture profile and oracle
 fields remain non-authoritative. The affected regression passed `184 passed,
 2 warnings`; no production executable code or image changed.
+
+The full current-head regression then passed `6807 passed, 4 skipped, 186
+warnings`. The seeded generator replay (`20260828`) produced `1,793` cases
+and `233` coverage metadata gaps (`33` critical, `69` high). The changed gap
+count reflects explicit unsupported-executor coverage, not a runtime failure
+rate.
