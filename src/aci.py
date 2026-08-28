@@ -2995,7 +2995,16 @@ def canonical_asset_read_payload(frame: Mapping[str, Any] | None) -> dict[str, A
     reference = str(frame.get("entity_reference") or "").strip()
     if reference:
         return {"action": "get", "asset": reference}
-    return {"action": "list", "limit": 500}
+    filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+    payload: dict[str, Any] = {"action": "list", "limit": 500}
+    if filters.get("asset_query"):
+        payload["query"] = str(filters["asset_query"])[:120]
+    if filters.get("asset_property") and filters.get("asset_projection") != "count":
+        payload["asset_property"] = str(filters["asset_property"])[:40]
+        payload["result_projection"] = "property"
+    elif filters.get("asset_projection") == "filter":
+        payload["result_projection"] = "filter"
+    return payload
 
 
 def canonical_read_fast_path_payload(
@@ -3039,6 +3048,11 @@ def canonical_read_fast_path_payload(
                 r"\bhow\s+many\b", requested_query, re.IGNORECASE
             ):
                 payload["result_projection"] = "count"
+        if filters.get("asset_property") and filters.get("asset_projection") != "count":
+            payload["asset_property"] = str(filters["asset_property"])[:40]
+            payload["result_projection"] = "property"
+        elif filters.get("asset_projection") == "filter":
+            payload["result_projection"] = "filter"
     if action == "summarize_owner_memory":
         payload["query"] = query or "what do you remember about me"
     elif binding == "developer_read":
@@ -3080,7 +3094,8 @@ def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str
     if event is None or event.get("exit_code") not in (None, 0):
         return None
     try:
-        payload = json.loads(str(event.get("output") or ""))
+        projection_payload = event.get("result_projection")
+        payload = projection_payload if isinstance(projection_payload, Mapping) else json.loads(str(event.get("output") or ""))
     except (TypeError, ValueError):
         return None
     if not isinstance(payload, Mapping):
@@ -3127,6 +3142,29 @@ def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str
     if not isinstance(assets, list):
         return None
     projection = str(payload.get("result_projection") or "").strip().lower()
+    if projection == "property":
+        prop = str(payload.get("asset_property") or "property").strip().lower()
+        label = {"ram": "RAM", "gpu": "GPU", "storage": "storage", "cpu": "CPU", "processor": "processor"}.get(prop, prop)
+        values = []
+        for asset in assets:
+            if not isinstance(asset, Mapping):
+                continue
+            attrs = asset.get("attributes") if isinstance(asset.get("attributes"), Mapping) else {}
+            value = asset.get(prop)
+            if value in (None, "", [], {}):
+                value = attrs.get(prop)
+            if value not in (None, "", [], {}):
+                values.append(f"{asset.get('name') or asset.get('id') or 'Unnamed asset'}: {value}")
+        if not values:
+            return f"No recorded {label} values were found for this owner's assets."
+        return f"Recorded {label} by asset:\n" + "\n".join(f"- {value}" for value in values[:50])
+    if projection == "filter":
+        query = str(payload.get("query") or "").strip()
+        if not assets:
+            return f"I don't have any recorded server with {query}." if query else "No matching canonical IT assets are recorded."
+        lines = [f"I found {len(assets)} canonical IT asset{'s' if len(assets) != 1 else ''} matching {query!r}:"]
+        lines.extend(_label(asset) for asset in assets[:50] if isinstance(asset, Mapping))
+        return "\n".join(lines)
     if projection == "count":
         query = str(payload.get("query") or "").strip()
         qualifier = f" matching {query!r}" if query else ""
@@ -3437,7 +3475,7 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() != "manage_homelab" or not isinstance(result, Mapping):
+    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets"} or not isinstance(result, Mapping):
         return None
     raw = result.get("output")
     if isinstance(raw, Mapping):
@@ -3449,6 +3487,31 @@ def canonical_tool_result_projection(
             return None
     if not isinstance(payload, Mapping):
         return None
+    if str(tool_name or "").strip() == "manage_assets":
+        assets = payload.get("assets")
+        if not isinstance(assets, list):
+            return None
+        projected = []
+        for asset in assets[:100]:
+            if not isinstance(asset, Mapping):
+                continue
+            attrs = asset.get("attributes") if isinstance(asset.get("attributes"), Mapping) else {}
+            row = {"id": asset.get("id"), "name": asset.get("name")}
+            for key in ("role", "hostname", "model", "manufacturer", "ram", "gpu", "storage", "cpu", "type"):
+                value = asset.get(key)
+                if value in (None, "", [], {}):
+                    value = attrs.get(key)
+                if value not in (None, "", [], {}):
+                    row[key] = value
+            projected.append(row)
+        return {
+            "status": payload.get("status"),
+            "assets": projected,
+            "asset_count": len(assets),
+            "query": payload.get("query"),
+            "result_projection": payload.get("result_projection"),
+            "asset_property": payload.get("asset_property"),
+        }
     action = str(payload.get("action") or "").strip()
     common = {
         "action": action,
@@ -3627,6 +3690,26 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."
 
 
+def canonical_recipe_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render only a verified recipe commit; model prose is never evidence."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_recipes"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0) or event.get("success") is not True:
+        return None
+    try:
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    recipe = payload.get("recipe") if isinstance(payload, Mapping) else None
+    if not isinstance(recipe, Mapping) or not recipe.get("id"):
+        return None
+    name = str(recipe.get("name") or "the recipe").strip()
+    return f"Recorded recipe {name!r}; the canonical recipe readback is verified."
+
+
 def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the already-projected owner Memory Result exactly once."""
     event = next(
@@ -3722,6 +3805,7 @@ def canonical_result_answer(
     authoritative or merely another piece of model prose.
     """
     candidates = (
+        (canonical_recipe_mutation_answer(tool_events), "recipe mutation Result"),
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
@@ -3749,6 +3833,7 @@ def project_final_answer(
     intent_domains: Sequence[str] = (),
     stored_evidence: bool = False,
     clarification_only: bool = False,
+    effectful_request: bool = False,
 ) -> tuple[str, CanonicalAnswer | None]:
     """Select the authoritative answer before the transport emits it."""
     canonical = canonical_result_answer(tool_events)
@@ -3756,6 +3841,21 @@ def project_final_answer(
         return canonical.content, canonical
     if clarification_only:
         return str(full_response or ""), None
+    if effectful_request and not any(
+        isinstance(event, Mapping)
+        and event.get("exit_code") in (None, 0)
+        and (event.get("verified") is True or event.get("success") is True)
+        and not event.get("ask_user")
+        for event in (tool_events or ())
+    ):
+        return (
+            "I couldn't confirm that change because no successful canonical Action completed.",
+            CanonicalAnswer(
+                content="I couldn't confirm that change because no successful canonical Action completed.",
+                source=AnswerSource.ERROR,
+                provenance="effectful request without successful Action Result",
+            ),
+        )
     return ground_action_completion(
         full_response,
         intent_domains=set(intent_domains or ()),

@@ -908,6 +908,11 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "recipe_read",
     ),
+    "RECIPE_MUTATION": DomainContract(
+        "RECIPE_MUTATION", "recipe.manage", {"CREATE": "add"}, "manage_recipes",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "recipe_mutation",
+    ),
     # Mutations use the same Inventory service as the human-facing inventory
     # adapter.  Keeping this as a separate contract avoids changing the
     # established read-only Household binding while making CREATE/UPDATE
@@ -1332,6 +1337,14 @@ def compile_intent(
             r"\b(?:sav(?:e|ed|ing)|similar|find|search)\b", q
         ): concept = "JOB_OPPORTUNITY"
         else: concept = "CAREER_PROFILE"
+    # Recipe creation is still owned by the existing Recipe/Inventory Service;
+    # distinguish it from read-only recipe cognition before model routing.
+    if concept == "UNKNOWN" and operation in {"CREATE", "UPDATE", "DELETE"} and re.search(
+        r"\b(?:recipe|recipes|cookbook|dish)\b", q,
+    ):
+        concept = "RECIPE"
+        read_explicit = False
+
     # Public web access is an ordinary evidence capability. Keep bounded
     # lookup/fetch distinct from OSINT case management and deep research. A
     # local operational question such as "current network" does not match
@@ -1650,6 +1663,13 @@ def compile_intent(
                 "graphics_cards": "gpu", "specification": "specs",
                 "specifications": "specs",
             }.get(property_name, property_name)
+        filter_match = re.search(
+            r"\b(?:with|having|has|containing)\s+(?:an?\s+)?"
+            r"((?:rtx|gtx|quadro|tesla|radeon|arc)\s+\d{3,5})\b", q,
+        )
+        if filter_match and re.search(r"\b(?:which|what|find|show|list)\b", q):
+            reference_filters["asset_query"] = filter_match.group(1).strip(" .?!")
+            reference_filters["asset_projection"] = "filter"
     workspace = {
         "MEMORY": "hades", "WORK": "work", "GOAL": "work", "PROJECT": "work", "TASK": "work", "RUN": "work", "COMMITMENT": "work", "MISSION": "work", "WATCH": "work", "CAREER_PROFILE": "work", "JOB_SEARCH": "work",
         "JOB_OPPORTUNITY": "work", "APPLICATION": "work", "INTERVIEW": "communications",
@@ -1744,6 +1764,8 @@ def resolve_continuation(frame: IntentFrame, active_run: Mapping[str, Any] | Non
 
 def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     contract_key = frame.domain_concept
+    if frame.domain_concept == "RECIPE" and frame.operation_class in {"CREATE", "UPDATE", "DELETE"}:
+        contract_key = "RECIPE_MUTATION"
     if frame.domain_concept == "HOUSEHOLD_ITEM" and frame.operation_class in {"CREATE", "UPDATE", "EXECUTE"}:
         contract_key = "INVENTORY_MUTATION"
     contract = DOMAIN_CONTRACTS.get(contract_key)

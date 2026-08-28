@@ -136,6 +136,23 @@ READ_RECIPES_SCHEMA = {
     }
 }
 
+MANAGE_RECIPES_SCHEMA = {
+    "type": "function", "function": {
+        "name": "manage_recipes",
+        "description": "Create a recipe in the authenticated owner's canonical Inventory Service. A proposal is not a saved recipe; report success only after persistence and readback.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["add"]},
+            "name": {"type": "string", "maxLength": 200},
+            "servings": {"type": "number", "minimum": 0.01, "maximum": 1000},
+            "ingredients": {"type": "array", "maxItems": 200, "items": {"type": "object", "properties": {
+                "name": {"type": "string", "maxLength": 200}, "quantity": {"type": "number"},
+                "unit": {"type": "string", "maxLength": 40}, "optional": {"type": "boolean"},
+            }, "required": ["name", "quantity", "unit"]}},
+            "instructions": {"type": "string", "maxLength": 20000},
+        }, "required": ["action", "name", "ingredients"]},
+    }
+}
+
 READ_SETUP_SCHEMA = {
     "type": "function", "function": {
         "name": "read_setup",
@@ -365,6 +382,7 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "read_work": ToolBinding("read_work", TOOL_CAPABILITY_IDS["read_work"], READ_WORK_SCHEMA, _WORK_READ_CONTRACT, frozenset({"work"}), "read_work"),
     "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
     "read_recipes": ToolBinding("read_recipes", TOOL_CAPABILITY_IDS["read_recipes"], READ_RECIPES_SCHEMA, _RECIPE_READ_CONTRACT, frozenset({"household", "recipes", "cooking"}), "read_recipes"),
+    "manage_recipes": ToolBinding("manage_recipes", TOOL_CAPABILITY_IDS["manage_recipes"], MANAGE_RECIPES_SCHEMA, """### `manage_recipes`\nCanonical recipe mutation through the existing Inventory Service. Use `add` only with a complete structured recipe. Success requires persistence and readback verification; model prose alone is never evidence.""", frozenset({"household", "recipes", "cooking"}), "manage_recipes"),
     "read_setup": ToolBinding("read_setup", TOOL_CAPABILITY_IDS["read_setup"], READ_SETUP_SCHEMA, _SETUP_READ_CONTRACT, frozenset({"setup", "integrations", "system"}), "read_setup"),
     "read_career": ToolBinding("read_career", TOOL_CAPABILITY_IDS["read_career"], READ_CAREER_SCHEMA, _CAREER_READ_CONTRACT, frozenset({"work", "career"}), "read_career"),
     "read_communications": ToolBinding("read_communications", TOOL_CAPABILITY_IDS["read_communications"], READ_COMMUNICATIONS_SCHEMA, _COMMUNICATIONS_READ_CONTRACT, frozenset({"communications", "system"}), "read_communications"),

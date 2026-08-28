@@ -45,6 +45,17 @@ def test_asset_detail_followups_resolve_active_referent_and_property():
             assert frame.filters["asset_property"] == prop
 
 
+def test_asset_property_and_model_filter_payloads_are_canonical():
+    property_frame = compile_intent("How much RAM do my computers have?")
+    assert canonical_read_fast_path_payload("manage_assets", "list", property_frame.as_dict()) == {
+        "action": "list", "asset_property": "ram", "result_projection": "property",
+    }
+    filter_frame = compile_intent("Which of my servers has an RTX 4090?")
+    assert canonical_read_fast_path_payload("manage_assets", "list", filter_frame.as_dict()) == {
+        "action": "list", "query": "rtx 4090", "result_projection": "filter",
+    }
+
+
 def test_asset_detail_followup_without_context_is_unresolved():
     frame = compile_intent("Tell me the specs.", reference_context=None)
     assert frame.domain_concept == "UNKNOWN"
