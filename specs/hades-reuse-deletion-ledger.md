@@ -1709,3 +1709,13 @@ the remaining audit entries are retained as explicit coverage debt rather
 than relabeled as runtime failures. The 100-case registry-action runtime
 probe retained 13 model/shortlist failures caused by underspecified exact
 ActionSpec expectations; no authority or security regression was observed.
+
+## Registry fixture-boundary checkpoint (`9f3f834e`, 2026-08-28)
+
+The evaluator no longer projects unsupported registry executors into
+neighboring read-only fixtures. `workspace_yolo` and `local_intelligence`
+remain visible in registry coverage, but their synthetic environment is empty
+and their expected outcome is an unavailable capability/fail-closed path.
+Supported transports continue to use the explicit fixture profile and oracle
+fields remain non-authoritative. The affected regression passed `184 passed,
+2 warnings`; no production executable code or image changed.
