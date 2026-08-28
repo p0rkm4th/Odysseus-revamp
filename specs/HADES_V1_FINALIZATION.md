@@ -1,5 +1,21 @@
 # Hades V1 Finalization Status
 
+## Recovered semantic coverage shard (`437ad048`, 2026-08-28)
+
+After the laptop restart, no execution process or partial report survived. The
+recorded replacement shard was rerun without model invocation using seed
+`20260828`, RC generation, and shard `0/4`. It produced `934` scenarios and
+`264` coverage gaps: `39` critical, `24` high, and `201` normal. Critical gaps
+are coverage deficits—not runtime failures—and are concentrated in failure
+classes (`17` untested, `5` partial), executors (`5` partial, `1` untested),
+approval branches (`5` untested), post-result states (`3` untested, `2`
+partial), and policy branches (`1` untested).
+
+The existing dogfood/cutover focused suite passed `89` tests with one known
+SQLAlchemy deprecation warning. No executable source changed in this phase;
+the running product remains the healthy `f5c07ff3` deployment and the
+`225195aa` candidate remains provenance-verified but undeployed.
+
 This is an exact-head reconciliation against the current local checkout. It
 is an engineering status record, not a readiness declaration.
 
