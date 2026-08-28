@@ -228,6 +228,20 @@ _SYNTHETIC_TOOL_FOR_CAPABILITY = {
     "developer.read": "developer_read",
 }
 
+# Registry entries use fine-grained capability IDs, while the synthetic
+# executor exposes these existing bounded transport names. This is fixture
+# projection only; it never selects an Action or changes authority.
+_SYNTHETIC_TOOL_FOR_EXECUTOR = {
+    "manage_assets": "manage_assets", "manage_homelab": "manage_homelab",
+    "manage_memory": "read_memory", "read_memory": "read_memory",
+    "manage_work": "read_work", "read_work": "read_work",
+    "read_household": "read_household", "manage_household": "read_household",
+    "read_setup": "read_setup", "manage_osint": "manage_osint",
+    "manage_security_assessment": "manage_security_assessment",
+    "developer_read": "developer_read", "workspace_yolo": "developer_read",
+    "local_intelligence": "local_intelligence",
+}
+
 
 def _generated_fixture_environment(scenario: Mapping[str, Any]) -> dict[str, Any]:
     """Project only the simulated external world for a generated case.
@@ -239,6 +253,8 @@ def _generated_fixture_environment(scenario: Mapping[str, Any]) -> dict[str, Any
     """
     capability = str(scenario.get("capability_id") or "").strip()
     tool = _SYNTHETIC_TOOL_FOR_CAPABILITY.get(capability)
+    if not tool:
+        tool = _SYNTHETIC_TOOL_FOR_EXECUTOR.get(str(scenario.get("executor") or "").strip())
     return {"fixture_profile": {"tools": [tool]}} if tool else {}
 
 _CAPABILITY_DOMAIN_HINTS = {
