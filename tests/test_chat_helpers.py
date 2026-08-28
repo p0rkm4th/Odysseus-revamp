@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
+from core.models import ChatMessage
 
 import routes.chat_helpers as chat_helpers
 from routes.chat_helpers import (
@@ -40,6 +41,54 @@ def test_communications_chat_turn_attaches_to_shared_work_run(monkeypatch):
     assert "communications" in captured["intent"]["domains"]
     assert captured["intent"]["domain_concept"] == "COMMUNICATIONS"
     assert captured["intent"]["operation_class"] == "READ"
+
+
+def test_work_run_projection_does_not_invoke_legacy_agent_classifier(monkeypatch):
+    monkeypatch.setattr(
+        "src.agent_loop._classify_agent_request",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("legacy classifier must not route Work-run creation")
+        ),
+    )
+    monkeypatch.setattr(
+        "src.agent_work_bridge.ensure_agent_run",
+        lambda *args, **kwargs: "run-aci-owned",
+    )
+    assert chat_helpers.ensure_chat_agent_work_run(
+        "alice", "chat-aci", "What communications are configured?", enabled=True,
+    ) == "run-aci-owned"
+
+
+def test_asset_detail_read_is_deferred_until_reference_is_resolved(monkeypatch):
+    """The route must not terminalize a Run with an asset-less ``get``."""
+    captured = {}
+
+    frame = SimpleNamespace(
+        domain_concept="TECHNICAL_ASSET",
+        operation_class="READ",
+        read_explicit=True,
+        entity_reference=None,
+        as_dict=lambda: {},
+    )
+    resolved = SimpleNamespace(available=True, binding_name="manage_assets", action_id="get")
+
+    monkeypatch.setattr("src.intent_contracts.compile_intent", lambda *args, **kwargs: frame)
+    monkeypatch.setattr("src.intent_contracts.resolve_intent", lambda _frame: resolved)
+    monkeypatch.setattr(
+        "src.agent_work_bridge.ensure_agent_run",
+        lambda *args, **kwargs: "run-asset-reference",
+    )
+    monkeypatch.setattr(
+        "src.agent_work_bridge.prepare_action",
+        lambda *args, **kwargs: captured.setdefault("prepare", (args, kwargs)),
+    )
+
+    run_id = chat_helpers.ensure_chat_agent_work_run(
+        "alice", "chat-assets", "Tell me about the first one", model_name="qwen3:8b", enabled=True,
+    )
+
+    assert run_id == "run-asset-reference"
+    assert "prepare" not in captured
 
 
 class _AuthManager:
@@ -375,6 +424,22 @@ def test_save_assistant_response_incognito_does_not_mutate_session_history():
 
     assert saved_id is None
     assert sess.history == []
+
+
+def test_save_assistant_response_is_idempotent_for_one_logical_turn():
+    sess = _FakeSession("selected-model")
+    existing = ChatMessage(
+        "assistant", "hello", metadata={"turn_id": "turn-1", "_db_id": "msg-1"},
+    )
+    sess.history.append(existing)
+
+    saved_id = save_assistant_response(
+        sess, session_manager=None, session_id="s1", full_response="hello",
+        last_metrics={"model": "actual-model"}, turn_id="turn-1",
+    )
+
+    assert saved_id == "msg-1"
+    assert sess.history == [existing]
 
 
 def test_add_user_message_incognito_does_not_mutate_session_history():

@@ -117,7 +117,7 @@ async def test_stop_served_model_uses_validated_remote_target(monkeypatch):
     assert result["exit_code"] == 0
     assert len(posts) == 1
     command = posts[0][1]["command"]
-    assert "ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no" in command
+    assert "ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes" in command
     assert "-p 2222 user@gpu-box" in command
     assert "tmux kill-session -t serve-abc123" in command
 
@@ -213,3 +213,30 @@ async def test_adopt_served_model_rejects_invalid_remote_host_before_shell(monke
     assert result["exit_code"] == 1
     assert "Invalid remote_host" in result["error"]
     assert posts == []
+
+
+@pytest.mark.asyncio
+async def test_adopt_served_model_health_probe_uses_strict_ssh(monkeypatch):
+    posts = _install_httpx_client(monkeypatch)
+
+    result = await tools.do_adopt_served_model(
+        json.dumps(
+            {
+                "tmux_session": "serve_abc123",
+                "model": "org/model",
+                "host": "user@gpu-box",
+                "port": 8000,
+                "add_endpoint": False,
+            }
+        )
+    )
+
+    assert result["exit_code"] == 0
+    commands = [
+        entry[1]["command"]
+        for entry in posts
+        if isinstance(entry[1], dict) and "command" in entry[1]
+    ]
+    assert len(commands) >= 2
+    health_command = next(command for command in commands if "/v1/models" in command)
+    assert "ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes" in health_command

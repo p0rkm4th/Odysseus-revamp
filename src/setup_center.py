@@ -15,6 +15,7 @@ from typing import Any
 from core.atomic_io import atomic_write_json
 from src.constants import DATA_DIR
 from src.integrations import load_integrations
+from src.capability_dependencies import artifact_manager, dependency_manager
 
 SETUP_STATE_FILE = Path(DATA_DIR) / "setup-center-state.json"
 _STATE_LOCK = Lock()
@@ -244,12 +245,13 @@ class SetupCenterService:
             capabilities.append({"capability_id": capability_id, "description": capability.description, "actions": [{
                 "action_id": action.action_id, "effects": list(action.effects), "approval": action.approval.value,
                 "execution_location": action.execution_location, "target_scope": action.target_scope,
+                "dependencies": list(action.dependencies),
             } for action in capability.actions.values()]})
         safe_grants = []
         for grant in grants or []:
             if not isinstance(grant, dict): continue
             safe_grants.append({key: grant.get(key) for key in ("id", "run_id", "action_id", "capability_id", "target_resources", "parameter_constraints", "max_calls", "consumed_calls", "expires_at", "revoked_at")})
-        return {"version": 1, "owner": owner, "capabilities": capabilities, "setup_permissions": [{"module_id": module["id"], "title": module["title"], "permissions": module["permissions"], "status": module["status"]} for module in self.projection(owner)["modules"]], "grants": safe_grants, "authority_unchanged": True, "secret_values_exposed": False, "policy_source": "canonical capability/policy/approval services"}
+        return {"version": 1, "owner": owner, "capabilities": capabilities, "resource_contracts": dependency_manager.contracts(), "artifact_contracts": artifact_manager.contracts(), "setup_permissions": [{"module_id": module["id"], "title": module["title"], "permissions": module["permissions"], "status": module["status"]} for module in self.projection(owner)["modules"]], "grants": safe_grants, "authority_unchanged": True, "secret_values_exposed": False, "policy_source": "canonical capability/policy/approval services"}
 
     def update(self, owner: str, module_id: str, data: dict[str, Any]) -> dict[str, Any]:
         contract = next((item for item in CONTRACTS if item.id == module_id), None)

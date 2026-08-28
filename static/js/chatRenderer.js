@@ -2564,6 +2564,17 @@ export function addMessage(role, content, modelName, metadata) {
     const box = document.getElementById('chat-history');
     if (!box) { console.error('Chat history element not found'); return; }
 
+    // Stable database identity is the authoritative message key. History
+    // replay, reconnect finalization, and a live optimistic render can all
+    // converge here; never insert the same logical assistant result twice.
+    const stableDbId = metadata?._db_id;
+    if (stableDbId) {
+      const existing = Array.from(box.querySelectorAll('[data-db-id]')).find(
+        node => String(node.dataset.dbId || '') === String(stableDbId),
+      );
+      if (existing) return existing;
+    }
+
     // Loading a later user message means any earlier ask_user card was
     // answered.  This also removes the live card as soon as a manual reply is
     // appended, even when the user did not click one of its buttons.
@@ -2739,6 +2750,45 @@ export function addMessage(role, content, modelName, metadata) {
             }
           }
         }
+      }
+
+      // Canonical deterministic reads persist their authoritative answer in
+      // `content` while retaining tool_events for the audit trail.  Older
+      // history rows (and some fast paths) do not have round_texts, so the
+      // multi-bubble branch would render only the tool thread and silently
+      // drop the actual answer after reload.  Keep the tool evidence and add
+      // the persisted answer as one ordinary assistant bubble.
+      if (!lastMsgAi && String(textRaw || '').trim()) {
+        const wrap = document.createElement('div');
+        wrap.className = 'msg msg-ai';
+        const roleEl = document.createElement('div');
+        roleEl.className = 'role';
+        const pair = replyModelPair(modelName, metadata);
+        const resolvedModel = pair.actualModel || pair.requestedModel;
+        roleEl.textContent = modelRouteLabel(
+          pair.requestedModel,
+          resolvedModel,
+          pair.requestedEndpointLabel,
+          pair.actualEndpointLabel,
+          pair.requestedEndpointId,
+          pair.actualEndpointId,
+        );
+        applyModelColor(roleEl, resolvedModel);
+        roleEl.appendChild(roleTimestamp(metadata?.timestamp));
+        wrap.appendChild(roleEl);
+        const body = document.createElement('div');
+        body.className = 'body';
+        const text = resolveDocumentPlaceholderLinks(
+          markdownModule.squashOutsideCode(String(textRaw || '')),
+          metadata,
+        );
+        body.innerHTML = markdownModule.processWithThinking(text);
+        wrap.appendChild(body);
+        wrap.dataset.raw = text;
+        if (metadata?._db_id) wrap.dataset.dbId = metadata._db_id;
+        box.appendChild(wrap);
+        lastWrap = wrap;
+        lastMsgAi = wrap;
       }
 
       const firstWrap = lastMsgAi || lastWrap;

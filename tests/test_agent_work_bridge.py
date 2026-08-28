@@ -45,6 +45,92 @@ def test_agent_network_intent_creates_one_owner_session_run_and_reuses_it(monkey
         engine.dispose()
 
 
+def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-assets", "What machines do I have?",
+            intent={"domains": ["asset_inventory"], "domain_concept": "TECHNICAL_ASSET", "operation_class": "READ"},
+            completion_criteria={"completion_mode": "single_verified_read", "objective": "asset read"},
+        )
+        action_id = bridge.prepare_action("alice", run_id, "manage_assets", {"action": "list"})
+        bridge.record_result("alice", action_id, {"data": {"status": "SUCCESS", "assets": [
+            {"id": "asset:first"}, {"id": "asset:second"},
+        ]}})
+        context = bridge.recent_session_reference_context("alice", "chat-assets")
+        assert [item["ref"] for item in context["ordered_entities"]] == ["asset:first", "asset:second"]
+        assert [item["ref"] for item in context["eligible_entities"]] == ["asset:first", "asset:second"]
+        assert [item["ref"] for item in context["entities"]] == ["asset:first", "asset:second"]
+    finally:
+        engine.dispose()
+
+
+def test_new_referenced_objective_does_not_reuse_terminal_run(monkeypatch):
+    """A completed read's references survive, but its Run is not appendable."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        first = bridge.ensure_agent_run(
+            "alice", "chat-terminal-reference", "What machines do I have?",
+            intent={"domains": ["asset_inventory"], "domain_concept": "TECHNICAL_ASSET", "operation_class": "READ"},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=first, owner="alice").one()
+            run.status = "completed"
+            run.lifecycle_state = "succeeded"
+            db.commit()
+
+        second = bridge.ensure_agent_run(
+            "alice", "chat-terminal-reference", "Tell me about the first one",
+            intent={"domains": ["asset_inventory"], "domain_concept": "TECHNICAL_ASSET", "operation_class": "READ"},
+            reference_context={"ordered_entities": [{"ref": "asset:first"}]},
+        )
+        assert second and second != first
+        with session_factory() as db:
+            runs = db.query(WorkRun).filter_by(owner="alice", session_id="chat-terminal-reference").all()
+            assert len(runs) == 2
+            assert db.query(WorkRun).filter_by(id=second).one().lifecycle_state == "ready"
+    finally:
+        engine.dispose()
+
+
+def test_latest_canonical_result_owns_ordinal_reference_order(monkeypatch):
+    """Older results must not shift ordinals for the current result."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-ordinal-refresh", "What machines do I have?",
+            intent={"domains": ["asset_inventory"]},
+        )
+        with session_factory() as db:
+            db.add_all([
+                WorkResult(
+                    id="result-old", owner="alice", run_id=run_id,
+                    result_type="read", reference="agent-tool://old",
+                    domain_reference={"canonical_refs": [
+                        {"ref": "asset:stale", "concept": "TECHNICAL_ASSET"},
+                    ]},
+                ),
+                WorkResult(
+                    id="result-new", owner="alice", run_id=run_id,
+                    result_type="read", reference="agent-tool://new",
+                    domain_reference={"canonical_refs": [
+                        {"ref": "asset:current-first", "concept": "TECHNICAL_ASSET"},
+                        {"ref": "asset:current-second", "concept": "TECHNICAL_ASSET"},
+                    ]},
+                ),
+            ])
+            db.commit()
+        context = bridge.recent_session_reference_context("alice", "chat-ordinal-refresh")
+        assert [item["ref"] for item in context["ordered_entities"]] == [
+            "asset:current-first", "asset:current-second",
+        ]
+    finally:
+        engine.dispose()
+
+
 def test_model_swap_preserves_run_and_records_owner_scoped_history(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)

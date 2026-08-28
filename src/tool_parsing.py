@@ -17,6 +17,80 @@ from src.tool_security import BUILTIN_EMAIL_TOOLS
 
 logger = logging.getLogger(__name__)
 
+
+_DOC_MODEL_ARTIFACT_RE = re.compile(
+    r"(?:\|end\|)+\|?assistan(?:t)?\|?"
+    r"|\|assistan(?:t)?\|"
+    r"|<\|im_start\|>\s*assistant"
+    r"|<\|im_end\|>",
+    re.IGNORECASE,
+)
+_DOC_TOOL_TRUNCATED_FENCE_RE = re.compile(
+    r"```(create|update|edit|edi|suggest)_documen(?!t)(?=\s|\n|```)",
+    re.IGNORECASE,
+)
+_DOC_TOOL_COMPACT_MARKERS = {
+    "<<FIND>": "<<<FIND>>>",
+    "<<REPLACE>": "<<<REPLACE>>>",
+    "<<SUGGEST>": "<<<SUGGEST>>>",
+    "<<REASON>": "<<<REASON>>>",
+    "<<END>": "<<<END>>>",
+}
+
+
+def strip_doc_model_artifacts(text: str) -> str:
+    return _DOC_MODEL_ARTIFACT_RE.sub("", text or "")
+
+
+def normalize_truncated_document_tool_fences(text: str) -> str:
+    """Repair provider fence/marker truncation for document tool transport."""
+    normalized = _DOC_TOOL_TRUNCATED_FENCE_RE.sub(
+        lambda m: f"```{'edit' if m.group(1).lower() == 'edi' else m.group(1).lower()}_document",
+        text or "",
+    )
+    for compact, full in _DOC_TOOL_COMPACT_MARKERS.items():
+        normalized = normalized.replace(compact, full)
+    marker = r"<<<(?:FIND|REPLACE|SUGGEST|REASON|END)>>>"
+    normalized = re.sub(rf"(?<!\n)({marker})", r"\n\1", normalized)
+    normalized = re.sub(rf"({marker})(?=\S)", r"\1\n", normalized)
+    normalized = re.sub(
+        rf"(<<<(?:REPLACE|SUGGEST|REASON)>>>)\n(<<<END>>>)",
+        r"\1\n\n\2",
+        normalized,
+    )
+    normalized = re.sub(r"\n(```)", r"\1", normalized)
+    return normalized
+
+
+def normalize_stream_document_fences(text: str, target_tool: str = "create_document") -> str:
+    """Treat visible document fences as canonical document tool blocks."""
+    text = normalize_truncated_document_tool_fences(
+        strip_doc_model_artifacts(text or "")
+    )
+
+    def repl(match: re.Match) -> str:
+        body = match.group(1) or ""
+        if target_tool == "update_document":
+            lines = body.splitlines()
+            if lines and not lines[0].lstrip().startswith("#"):
+                lines = lines[1:]
+            if lines and lines[0].strip().lower() in {
+                "markdown", "md", "text", "txt", "html", "email",
+                "python", "javascript", "typescript", "json", "yaml",
+            }:
+                lines = lines[1:]
+            while lines and not lines[0].strip():
+                lines = lines[1:]
+            body = "\n".join(lines)
+        return f"```{target_tool}\n{body}"
+
+    return re.sub(
+        r"```documen(?:t)?\s*\n([\s\S]*?)(?=\n```|$)",
+        repl,
+        text,
+        flags=re.IGNORECASE,
+    )
+
 # ---------------------------------------------------------------------------
 # Regex patterns
 # ---------------------------------------------------------------------------
@@ -1483,6 +1557,70 @@ def parse_tool_blocks(text: str, skip_fenced: bool = False) -> List[ToolBlock]:
             blocks.append(ToolBlock("ui_control", f"open_panel {m.group(1).lower()}"))
 
     return blocks
+
+
+def resolve_tool_blocks(
+    round_response: str,
+    native_tool_calls: list,
+    round_num: int,
+    is_api_model: bool = False,
+    allow_fenced_for_api: bool = False,
+    skip_fenced_tools: bool = False,
+):
+    """Normalize one provider response into canonical executable ToolBlocks.
+
+    Provider transport may expose native calls or textual markup, but this
+    boundary only parses and converts them. Policy, target validation, and
+    execution remain owned by the canonical tool/security path.
+    """
+    from src.tool_schemas import function_call_to_tool_block
+
+    used_native = False
+    converted_calls = []
+    if native_tool_calls:
+        tool_blocks = []
+        for tc in native_tool_calls:
+            tc_name = tc.get("name", "")
+            tc_args = tc.get("arguments", "{}")
+            block = function_call_to_tool_block(tc_name, tc_args)
+            if block:
+                tool_blocks.append(block)
+                converted_calls.append(tc)
+                logger.info("  -> converted: %s -> %s", tc_name, block.tool_type)
+            else:
+                logger.warning(
+                    "  -> FAILED to convert native call: %s args=%s",
+                    tc_name,
+                    str(tc_args)[:200],
+                )
+        if tool_blocks:
+            used_native = True
+    if not used_native:
+        # Native function-calling models commonly emit illustrative fenced
+        # examples in prose. Keep explicit invocation markup parseable while
+        # suppressing bare fences when the provider's structured channel is
+        # authoritative.
+        tool_blocks = parse_tool_blocks(
+            round_response,
+            skip_fenced=(skip_fenced_tools or (is_api_model and not allow_fenced_for_api)),
+        )
+        if tool_blocks:
+            logger.info(
+                "Agent round %s: %s textual tool block(s) detected",
+                round_num,
+                len(tool_blocks),
+            )
+
+    resp_preview = str(round_response or "")[:200].replace("\n", "\\n") or "(empty)"
+    logger.info(
+        "Agent round %s summary: %s chars, %s native calls, %s tool blocks. Preview: %s",
+        round_num,
+        len(round_response or ""),
+        len(native_tool_calls),
+        len(tool_blocks),
+        resp_preview,
+    )
+    return tool_blocks, used_native, converted_calls
 
 
 def strip_tool_blocks(text: str, skip_fenced: bool = False) -> str:

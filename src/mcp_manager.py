@@ -42,6 +42,68 @@ _MCP_PARAM_MAX = 12   # max params rendered per tool
 _MCP_TOKEN_MAX = 40   # max chars per rendered name / type token
 _MCP_HINT_MAX = 300   # total-length backstop for the whole hint
 
+# Compatibility-only natural-language hints for local schema visibility.
+# Semantic selection remains the preferred input; these hints do not grant
+# authority or bypass disabled-tool checks.
+MCP_KEYWORDS = frozenset({
+    "mcp", "browse", "browser", "website", "calendar", "event", "email",
+    "gmail", "screenshot", "navigate", "click", "miniflux", "rss", "feed",
+})
+
+
+def load_mcp_disabled_map() -> Dict[str, set]:
+    """Load per-server disabled tool sets from the canonical MCP store.
+
+    This is a projection of server policy only.  It does not authorize an MCP
+    tool; execution still re-checks the server's disabled set at the boundary.
+    Keeping the read here prevents the orchestration stream from owning MCP
+    persistence semantics.
+    """
+    from core.database import McpServer as CoreMcpServer, SessionLocal as core_session_factory
+
+    disabled_map: Dict[str, set] = {}
+    db = core_session_factory()
+    try:
+        for server in db.query(CoreMcpServer).all():
+            if not server.disabled_tools:
+                continue
+            try:
+                names = json.loads(server.disabled_tools)
+            except (json.JSONDecodeError, TypeError):
+                continue
+            if names:
+                disabled_map[server.id] = set(names)
+    finally:
+        db.close()
+    return disabled_map
+
+
+def select_local_mcp_schemas(
+    schemas: List[Dict],
+    relevant_tools: Optional[Set[str]],
+    user_text: str,
+) -> List[Dict]:
+    """Project selected MCP schemas for a local-model route.
+
+    Qualified semantic selections win. The keyword fallback is retained only
+    for compatibility routes that have no selected dynamic MCP binding.
+    """
+    if not schemas:
+        return []
+    relevant = set(relevant_tools or ())
+    selected_dynamic = {
+        name for name in relevant
+        if isinstance(name, str) and name.startswith("mcp__")
+    }
+    if selected_dynamic:
+        return [
+            schema for schema in schemas
+            if schema.get("function", {}).get("name") in selected_dynamic
+        ]
+    if any(keyword in (user_text or "").lower() for keyword in MCP_KEYWORDS):
+        return list(schemas)
+    return []
+
 
 def _sanitize_schema_token(value: Any, limit: int = _MCP_TOKEN_MAX) -> str:
     """Make an untrusted JSON-Schema token safe to splice into the prompt.
@@ -476,6 +538,11 @@ class McpManager:
         server_id = parts[1]
         tool_name = parts[2]
 
+        execution_block = self._execution_policy_reason(server_id, tool_name)
+        if execution_block:
+            logger.warning("Blocked MCP call at manager boundary: %s (%s)", qualified_name, execution_block)
+            return {"error": execution_block, "exit_code": 1, "blocked": True}
+
         session = self._sessions.get(server_id)
         if not session:
             return {"error": f"MCP server not connected: {server_id}", "exit_code": 1}
@@ -505,6 +572,38 @@ class McpManager:
                 return {"error": str(e), "exit_code": 1}
 
         return result
+
+    def _execution_policy_reason(self, server_id: str, tool_name: str) -> Optional[str]:
+        """Revalidate MCP enablement immediately before an adapter call.
+
+        Prompt/schema filtering is only discovery.  This manager boundary is
+        also reachable by stale Actions and internal callers, so consult the
+        current persisted server policy here. Built-in servers are registered
+        in-process and may legitimately have no ``McpServer`` row; unknown
+        dynamic servers fail closed.
+        """
+        db = SessionLocal()
+        try:
+            server = db.query(McpServer).filter(McpServer.id == server_id).first()
+            if server is None:
+                return None if self.is_builtin(server_id) else "MCP capability is no longer registered."
+            if server.is_enabled is False:
+                return "MCP server is disabled."
+            if server.disabled_tools:
+                try:
+                    disabled = json.loads(server.disabled_tools)
+                except (TypeError, json.JSONDecodeError):
+                    return "MCP capability policy is invalid."
+                if not isinstance(disabled, list):
+                    return "MCP capability policy is invalid."
+                if tool_name in {str(name) for name in disabled}:
+                    return f"MCP tool '{tool_name}' is disabled by server policy."
+            return None
+        except Exception as exc:
+            logger.warning("Unable to revalidate MCP policy for %s: %s", server_id, exc)
+            return "MCP capability policy could not be revalidated."
+        finally:
+            db.close()
 
     async def _do_call(self, session, tool_name: str, arguments: Dict) -> Dict:
         """Execute a single MCP tool call and return result dict."""
@@ -619,6 +718,25 @@ class McpManager:
                     "is_disabled": tool["name"] in disabled,
                 })
         return result
+
+    def qualified_tools_for_server(
+        self, server_id: str, *, include_disabled: bool = False,
+    ) -> Set[str]:
+        """Return discovered qualified bindings for one connected server.
+
+        Tool discovery stays owned by the MCP manager. Callers receive
+        transport names only; discovery does not grant execution authority.
+        """
+        requested = str(server_id or "").strip()
+        if not requested:
+            return set()
+        return {
+            str(tool.get("qualified_name") or "")
+            for tool in self.get_all_tools()
+            if tool.get("server_id") == requested
+            and (include_disabled or not tool.get("is_disabled"))
+            and tool.get("qualified_name")
+        }
 
     def plan_mode_blocked_mcp(self) -> Tuple[Dict[str, Set[str]], Set[str]]:
         """Plan mode: block every MCP tool that isn't clearly read-only.

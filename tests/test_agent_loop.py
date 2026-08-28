@@ -1,4 +1,4 @@
-"""Tests for agent_loop.py — _detect_admin_intent, _compute_final_metrics,
+"""Tests for agent_loop.py — _detect_admin_intent,
 and _append_tool_results. Uses mock imports to avoid loading the full app stack."""
 
 import sys
@@ -13,6 +13,7 @@ _MOCKED_IMPORTS = [
 ]
 _INJECTED_IMPORT_STUBS = {}
 _PREEXISTING_AGENT_LOOP = sys.modules.get("src.agent_loop")
+_PREEXISTING_BOOTSTRAP_MODULES = set(sys.modules)
 
 
 def _drop_module_if_same(name, expected):
@@ -37,10 +38,8 @@ try:
     from src.agent_loop import (
         _detect_admin_intent,
         _classify_agent_request,
-        _compute_final_metrics,
         _append_tool_results,
-        _insert_before_latest_user,
-        _MCP_KEYWORDS,
+        _select_local_mcp_schemas,
     )
     _IMPORTED_AGENT_LOOP = sys.modules.get("src.agent_loop")
 finally:
@@ -48,6 +47,25 @@ finally:
         _drop_module_if_same("src.agent_loop", _IMPORTED_AGENT_LOOP)
     for _mod, _stub in _INJECTED_IMPORT_STUBS.items():
         _drop_module_if_same(_mod, _stub)
+    # Importing the loop under mocked database/tool modules also imports a
+    # graph of source modules whose globals retain those mocks. Remove the
+    # entire newly-loaded application graph, not just the top-level loop, so
+    # later test modules get clean canonical owners.
+    for _mod in sorted(
+        set(sys.modules) - _PREEXISTING_BOOTSTRAP_MODULES,
+        key=len,
+        reverse=True,
+    ):
+        if _mod.startswith(("src.", "core.")):
+            _drop_module_if_same(_mod, sys.modules.get(_mod))
+
+from src.aci import (
+    compute_final_metrics,
+    insert_before_latest_user,
+    prefetched_explicit_memory_result,
+    successful_deterministic_read_result,
+)
+from src.mcp_manager import MCP_KEYWORDS as _MCP_KEYWORDS
 
 
 def test_import_stubs_do_not_leak_into_later_tests():
@@ -62,6 +80,29 @@ def test_import_stubs_do_not_leak_into_later_tests():
 
 def test_mcp_keyword_gate_matches_literal_mcp_requests():
     assert "mcp" in _MCP_KEYWORDS
+
+
+def test_local_mcp_projection_uses_semantic_selected_qualified_tool():
+    schemas = [
+        {"function": {"name": "mcp__arbitrary_notes__create_page"}},
+        {"function": {"name": "mcp__unrelated__send_message"}},
+    ]
+
+    selected = _select_local_mcp_schemas(
+        schemas,
+        {"ask_user", "mcp__arbitrary_notes__create_page"},
+        "add this to my notes",
+    )
+
+    assert [item["function"]["name"] for item in selected] == [
+        "mcp__arbitrary_notes__create_page"
+    ]
+
+
+def test_local_mcp_projection_does_not_expose_arbitrary_server_without_relevance():
+    schemas = [{"function": {"name": "mcp__unrelated__send_message"}}]
+
+    assert _select_local_mcp_schemas(schemas, {"ask_user"}, "explain RAID") == []
 
 
 def test_polish_internet_search_request_classifies_as_web():
@@ -82,7 +123,7 @@ def test_insert_before_latest_user_places_context_before_last_user_turn():
     ]
     context = {"role": "system", "content": "context"}
 
-    out = _insert_before_latest_user(messages, context)
+    out = insert_before_latest_user(messages, context)
 
     assert out == [
         {"role": "user", "content": "first"},
@@ -101,7 +142,26 @@ def test_insert_before_latest_user_appends_when_no_user_message_exists():
     messages = [{"role": "assistant", "content": "reply"}]
     context = {"role": "system", "content": "context"}
 
-    assert _insert_before_latest_user(messages, context) == [messages[0], context]
+    assert insert_before_latest_user(messages, context) == [messages[0], context]
+
+
+def test_completed_owner_memory_read_is_answer_terminal_not_action_reentry():
+    messages = [{
+        "role": "user",
+        "content": "CANONICAL MEMORY RESULT\nSTATUS: OK",
+        "metadata": {"context_kind": "explicit_memory_result"},
+    }]
+    assert prefetched_explicit_memory_result(messages) is True
+    assert successful_deterministic_read_result({
+        "data": {"status": "ok", "memories": [{"id": "m1"}]},
+        "success": True,
+        "exit_code": 0,
+    }) is True
+    assert successful_deterministic_read_result({
+        "data": {"status": "retrieval_failed"},
+        "success": False,
+        "exit_code": 1,
+    }) is False
 
 
 # ---------------------------------------------------------------------------
@@ -228,14 +288,14 @@ class TestComputeFinalMetrics:
         return defaults
 
     def test_real_usage_tokens(self):
-        m = _compute_final_metrics(**self._base_args())
+        m = compute_final_metrics(**self._base_args())
         assert m["input_tokens"] == 100
         assert m["output_tokens"] == 50
         assert m["total_tokens"] == 150
         assert m["usage_source"] == "real"
 
     def test_estimated_usage_tokens(self):
-        m = _compute_final_metrics(**self._base_args(
+        m = compute_final_metrics(**self._base_args(
             has_real_usage=False,
             real_input_tokens=0,
             real_output_tokens=0,
@@ -245,37 +305,37 @@ class TestComputeFinalMetrics:
         assert m["usage_source"] == "estimated"
 
     def test_tps_calculation(self):
-        m = _compute_final_metrics(**self._base_args(
+        m = compute_final_metrics(**self._base_args(
             real_output_tokens=100,
             total_duration=2.0,
         ))
         assert m["tokens_per_second"] == 50.0
 
     def test_tps_zero_duration(self):
-        m = _compute_final_metrics(**self._base_args(total_duration=0.0))
+        m = compute_final_metrics(**self._base_args(total_duration=0.0))
         assert m["tokens_per_second"] == 0
 
     def test_context_percent(self):
-        m = _compute_final_metrics(**self._base_args(
+        m = compute_final_metrics(**self._base_args(
             real_input_tokens=4096,
             context_length=8192,
         ))
         assert m["context_percent"] == 50.0
 
     def test_context_percent_capped_at_100(self):
-        m = _compute_final_metrics(**self._base_args(
+        m = compute_final_metrics(**self._base_args(
             real_input_tokens=10000,
             context_length=8192,
         ))
         assert m["context_percent"] == 100.0
 
     def test_context_percent_zero_context_length(self):
-        m = _compute_final_metrics(**self._base_args(context_length=0))
+        m = compute_final_metrics(**self._base_args(context_length=0))
         assert m["context_percent"] == 0
 
     def test_last_round_input_tokens_used_for_context_pct(self):
         """When last_round_input_tokens > 0, it should be used for context %."""
-        m = _compute_final_metrics(**self._base_args(
+        m = compute_final_metrics(**self._base_args(
             real_input_tokens=100,
             last_round_input_tokens=4096,
             context_length=8192,
@@ -283,23 +343,23 @@ class TestComputeFinalMetrics:
         assert m["context_percent"] == 50.0
 
     def test_response_time(self):
-        m = _compute_final_metrics(**self._base_args(total_duration=3.456))
+        m = compute_final_metrics(**self._base_args(total_duration=3.456))
         assert m["response_time"] == 3.46
 
     def test_time_to_first_token(self):
-        m = _compute_final_metrics(**self._base_args(time_to_first_token=0.123))
+        m = compute_final_metrics(**self._base_args(time_to_first_token=0.123))
         assert m["time_to_first_token"] == 0.12
 
     def test_time_to_first_token_none(self):
-        m = _compute_final_metrics(**self._base_args(time_to_first_token=None))
+        m = compute_final_metrics(**self._base_args(time_to_first_token=None))
         assert m["time_to_first_token"] == 0
 
     def test_model_returned(self):
-        m = _compute_final_metrics(**self._base_args(model="gpt-4o"))
+        m = compute_final_metrics(**self._base_args(model="gpt-4o"))
         assert m["model"] == "gpt-4o"
 
     def test_prep_timings_included(self):
-        m = _compute_final_metrics(**self._base_args(
+        m = compute_final_metrics(**self._base_args(
             time_to_first_token=1.25,
             prep_timings={"request_setup": 0.2, "tool_selection": 0.3, "prompt_build": 0.15},
         ))
@@ -315,7 +375,7 @@ class TestComputeFinalMetrics:
         events = [{"tool": "bash", "duration": 1.0}]
         texts = ["round 1 text"]
         models = ["round-1-model"]
-        m = _compute_final_metrics(**self._base_args(
+        m = compute_final_metrics(**self._base_args(
             tool_events=events,
             round_texts=texts,
             round_models=models,
@@ -325,7 +385,7 @@ class TestComputeFinalMetrics:
         assert m["round_models"] == models
 
     def test_no_tool_events_excluded(self):
-        m = _compute_final_metrics(**self._base_args(tool_events=[], round_texts=[]))
+        m = compute_final_metrics(**self._base_args(tool_events=[], round_texts=[]))
         assert "tool_events" not in m
         assert "round_texts" not in m
         assert "round_models" not in m

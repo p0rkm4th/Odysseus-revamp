@@ -25,13 +25,44 @@ import sys
 from unittest.mock import MagicMock
 
 # ── module-load stubbing (mirror tests/test_skill_index_prompt_injection.py) ──
+_PREEXISTING_AGENT_LOOP = sys.modules.get("src.agent_loop")
+_INJECTED_IMPORT_STUBS = {}
 for _mod in [
     "sqlalchemy", "sqlalchemy.orm", "sqlalchemy.ext", "sqlalchemy.ext.declarative",
     "sqlalchemy.ext.hybrid", "sqlalchemy.sql", "sqlalchemy.sql.expression",
     "src.database", "src.agent_tools", "core.models", "core.database",
 ]:
     if _mod not in sys.modules:
-        sys.modules[_mod] = MagicMock()
+        _stub = MagicMock()
+        sys.modules[_mod] = _stub
+        _INJECTED_IMPORT_STUBS[_mod] = _stub
+
+
+def _drop_module_if_same(name, expected):
+    if sys.modules.get(name) is expected:
+        sys.modules.pop(name, None)
+    parent_name, _, attr = name.rpartition(".")
+    parent = sys.modules.get(parent_name)
+    if parent is not None and getattr(parent, "__dict__", {}).get(attr) is expected:
+        delattr(parent, attr)
+
+
+def _cleanup_import_stubs():
+    """Do not leak mocked dependencies into unrelated focused suites."""
+    imported_agent_loop = sys.modules.get("src.agent_loop")
+    if _PREEXISTING_AGENT_LOOP is None and imported_agent_loop is not None:
+        _drop_module_if_same("src.agent_loop", imported_agent_loop)
+    for _mod, _stub in _INJECTED_IMPORT_STUBS.items():
+        _drop_module_if_same(_mod, _stub)
+
+
+# Collection imports happen before test execution. Clean up now so a focused
+# run cannot leave a mocked ``src.agent_tools`` module in the next test file.
+_cleanup_import_stubs()
+
+
+def teardown_module(_module):
+    _cleanup_import_stubs()
 
 
 MALICIOUS_TOOL_OUTPUT = (

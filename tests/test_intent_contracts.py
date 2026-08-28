@@ -11,11 +11,81 @@ from src.intent_contracts import (
     validate_contracts,
     validate_bound_result,
     resolve_structured_reference,
+    explicit_private_discovery_cidr,
+    is_explicit_network_discovery_request,
+    is_network_prerequisite_request,
+    is_network_service_enumeration_request,
+    network_discovery_request_cidr,
+    explicitly_allows_diagnostic_install,
+    network_substantive_fallback_command,
+    is_explicit_continuation,
 )
+from src.aci import is_contextual_reference_followup
 
 
 def test_contract_registry_is_complete_for_registered_contracts():
     assert validate_contracts() == []
+
+
+def test_contextual_reference_followup_uses_recent_semantic_context_only():
+    messages = [
+        {"role": "user", "content": "scan the current network"},
+        {"role": "assistant", "content": "Discovery requires an authorized scope."},
+        {"role": "user", "content": "what did that discovery find"},
+    ]
+    assert is_contextual_reference_followup(messages, messages[-1]["content"])
+    assert not is_contextual_reference_followup(
+        messages[:-1] + [{"role": "user", "content": "what is the weather?"}],
+        "what is the weather?",
+    )
+
+
+def test_explicit_continuation_classifier_is_owned_by_intent_contracts():
+    assert is_explicit_continuation("yes, please continue")
+    assert is_explicit_continuation("the second one")
+    assert is_explicit_continuation("all of them")
+    assert not is_explicit_continuation("what is the current network?")
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("scan 192.168.10.17/24", "192.168.10.0/24"),
+    ("discover 10.20.30.0/25", "10.20.30.0/25"),
+    ("scan 172.16.4.0/24", "172.16.4.0/24"),
+    ("scan 8.8.8.0/24", None),
+    ("scan 192.168.10.0/23", None),
+    ("scan the current network", None),
+])
+def test_network_scope_projection_requires_explicit_bounded_private_cidr(text, expected):
+    assert explicit_private_discovery_cidr(text) == expected
+    assert network_discovery_request_cidr(text) == expected
+
+
+def test_network_action_predicates_are_semantic_and_non_authorizing():
+    assert is_network_prerequisite_request("install the tools needed for an nmap scan")
+    assert is_explicit_network_discovery_request("discover hosts on my LAN")
+    assert is_network_service_enumeration_request("enumerate services on discovered hosts")
+    assert not is_explicit_network_discovery_request("what is a network scan?")
+    assert not is_network_service_enumeration_request("show the network discovery status")
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("install nmap", True),
+    ("you may install nmap if needed", True),
+    ("explain how to install nmap", False),
+    ("scan the network without installing anything", False),
+])
+def test_diagnostic_install_projection_preserves_authority_boundary(text, expected):
+    assert explicitly_allows_diagnostic_install(text) is expected
+
+
+def test_network_fallback_projection_is_canonical_and_bounded():
+    assert network_substantive_fallback_command(set(), "install nmap") == ""
+    assert network_substantive_fallback_command({"network_ops"}, "install nmap") == (
+        "python -m src.asset_inventory network-discover --install-authorized --record-observations"
+    )
+    assert "--install-authorized" not in network_substantive_fallback_command(
+        {"network_ops"}, "explain how to install nmap"
+    )
 
 
 def test_communications_read_uses_canonical_owner_scoped_projection():
@@ -48,6 +118,96 @@ def test_technical_asset_paraphrases_compile_to_one_read_contract(query):
     assert resolved.action.approval.value == "none"
 
 
+@pytest.mark.parametrize("query", [
+    "Thanatos hardware",
+    "tell me about the Thanatos machine",
+    "what hardware is in Thanatos",
+])
+def test_named_asset_language_is_a_bounded_detail_candidate(query):
+    frame = compile_intent(query)
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.entity_reference == "Thanatos"
+    assert frame.read_explicit is True
+    assert resolve_intent(frame).action_id == "get"
+
+
+def test_inventory_state_is_a_canonical_asset_read_but_household_inventory_is_not():
+    frame = compile_intent("What is the inventory state?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert resolved.action_id == "list"
+    assert resolved.binding_name == "manage_assets"
+
+    household = compile_intent("What is my pantry inventory?")
+    assert household.domain_concept == "HOUSEHOLD_ITEM"
+
+
+@pytest.mark.parametrize("query", [
+    "look up summary in my technical asset state",
+    "show my technical asset list information",
+    "what is the current search for my technical asset",
+])
+def test_asset_collection_view_nouns_are_not_misread_as_asset_targets(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.entity_reference is None
+    assert resolved.action_id == "list"
+
+
+@pytest.mark.parametrize("query", [
+    "which machines have GPUs",
+    "search my assets for GPU",
+    "how much RAM do my AI nodes have",
+    "how many 2080s do I have",
+])
+def test_owner_asset_property_queries_use_collection_read_contract(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.entity_reference is None
+    assert frame.filters.get("asset_property") in {"gpu", "ram", None}
+    assert resolved.action_id == "list"
+
+
+def test_conceptual_component_question_does_not_become_asset_read():
+    frame = compile_intent("What is a GPU?")
+    assert frame.domain_concept == "UNKNOWN"
+    assert frame.operation_class == "ANSWER"
+    assert resolve_intent(frame).available is False
+
+
+@pytest.mark.parametrize("query", [
+    "Show me what's in the kitchen.",
+    "Add angel hair pasta to my kitchen inventory.",
+])
+def test_household_owner_turn_enters_bounded_aci_capability_path(query):
+    from src.intent_contracts import is_bounded_owner_capability_turn
+
+    assert is_bounded_owner_capability_turn(compile_intent(query)) is True
+
+
+@pytest.mark.parametrize(("query", "action"), [
+    ("Add this server to my IT asset inventory.", "add"),
+    ("Update Thanatos in my asset inventory.", "update"),
+])
+def test_explicit_asset_writes_resolve_existing_canonical_actions(query, action):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.action_id == action
+    assert resolved.binding_name == "manage_assets"
+    assert resolved.contract.capability_id == "inventory.manage"
+
+
+def test_general_household_explanation_never_resolves_to_mutation():
+    from src.intent_contracts import is_bounded_owner_capability_turn
+
+    frame = compile_intent("What is the difference between a pantry and a kitchen?")
+    assert is_bounded_owner_capability_turn(frame) is True
+    assert resolve_intent(frame).action_id == "overview"
+    assert resolve_intent(frame).contract.capability_id == "household.read"
+
+
 def test_continuation_and_depth_are_structured_not_phrase_specific():
     frame = compile_intent(
         "perform a deep scan of all discovered hosts",
@@ -61,6 +221,15 @@ def test_continuation_and_depth_are_structured_not_phrase_specific():
     assert continued.operation_class == "CONTINUE"
     assert continued.run_reference == "run-1"
     assert continued.workspace_hint is None
+
+
+def test_continuation_rejects_terminal_lifecycle_even_if_status_is_stale():
+    frame = compile_intent("Continue", continuation=True, run_reference="run-1")
+    resolution = resolve_continuation(frame, {
+        "id": "run-1", "status": "running", "lifecycle_state": "succeeded",
+    })
+    assert resolution.status == "BLOCKED"
+    assert resolution.phase == "TERMINAL"
 
 
 @pytest.mark.parametrize(("query", "view", "action_id"), [
@@ -135,6 +304,43 @@ def test_structured_reference_ordinal_is_bounded_and_durable():
     assert frame.entity_reference == "asset:second"
     assert frame.domain_concept == "TECHNICAL_ASSET"
     assert resolve_structured_reference("show the third one", context)["status"] == "UNRESOLVED"
+
+
+def test_ordinal_reference_keeps_canonical_asset_identity_over_lexical_about_fragment():
+    frame = compile_intent(
+        "Tell me about the first physical one",
+        reference_context={"entities": [{"ref": "asset:strong-1", "concept": "TECHNICAL_ASSET"}]},
+    )
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.entity_reference == "asset:strong-1"
+
+
+def test_ordinal_reference_uses_ordered_eligible_result_set_over_mixed_chat_refs():
+    context = {
+        "entities": [
+            {"ref": "service:recent", "concept": "SERVICE"},
+            {"ref": "asset:second", "concept": "TECHNICAL_ASSET"},
+        ],
+        "ordered_entities": [
+            {"ref": "asset:first", "concept": "TECHNICAL_ASSET", "eligible": True},
+            {"ref": "asset:second", "concept": "TECHNICAL_ASSET", "eligible": True},
+            {"ref": "asset:hidden", "concept": "TECHNICAL_ASSET", "eligible": False},
+        ],
+        "last": {"ref": "service:recent", "concept": "SERVICE"},
+    }
+    resolution = resolve_structured_reference("tell me about the first physical one", context)
+    assert resolution["status"] == "RESOLVED"
+    assert resolution["refs"] == ["asset:first"]
+    assert resolution["concept"] == "TECHNICAL_ASSET"
+
+
+def test_last_reference_is_fallback_only_when_no_ordered_result_exists():
+    resolution = resolve_structured_reference("tell me about that one", {
+        "ordered_entities": [],
+        "last": {"ref": "asset:last", "concept": "TECHNICAL_ASSET"},
+    })
+    assert resolution["status"] == "RESOLVED"
+    assert resolution["refs"] == ["asset:last"]
 
 
 @pytest.mark.parametrize("query", [
@@ -352,6 +558,59 @@ def test_existing_domain_read_bindings_are_semantically_exposed(query, concept, 
     assert resolved.action.approval.value == "none"
 
 
+@pytest.mark.parametrize("query", [
+    "Inspect remote host Thanatos over SSH",
+    "check the remote server Morpheus via ssh",
+    "what is running on remote machine atlas",
+])
+def test_remote_host_reads_project_to_asset_bound_ssh_action(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "HOMELAB_HOST"
+    assert resolved.frame.filters["remote"] is True
+    assert resolved.frame.target in {"Thanatos", "Morpheus", "atlas"}
+    assert resolved.action_id == "remote_host_inspect"
+    assert resolved.binding_name == "manage_homelab"
+    assert resolved.action.approval.value == "none"
+
+
+@pytest.mark.parametrize("query", [
+    "Restart nginx service",
+    "Recover postgres service",
+])
+def test_qualified_service_restart_language_resolves_to_safe_canonical_preflight(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.available is True
+    assert resolved.frame.domain_concept == "SERVICE"
+    assert resolved.frame.operation_class == "EXECUTE"
+    assert resolved.action_id == "plan_service_restart"
+    assert resolved.binding_name == "manage_homelab"
+    assert resolved.action.approval.value == "none"
+    assert resolved.action.effects == ("read_private",)
+
+
+@pytest.mark.parametrize("query", [
+    "Restart the registered service",
+    "Restart the service",
+])
+def test_unqualified_service_restart_requires_target_clarification(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.frame.domain_concept == "SERVICE"
+    assert resolved.frame.operation_class == "EXECUTE"
+    assert resolved.available is False
+    assert resolved.reason == "target_required"
+
+
+@pytest.mark.parametrize(("query", "constraint"), [
+    ("Merge these devices by IP", "strong_identity_required"),
+    ("Scan a public range", "public_scope_requires_authorization"),
+    ("Approve the changed action", "action_revalidation_required"),
+])
+def test_security_boundary_constraints_are_framework_resolvable(query, constraint):
+    frame = compile_intent(query)
+    assert constraint in frame.constraints
+
+
 def test_osint_reads_compile_to_the_existing_case_store_binding():
     resolved = resolve_intent(compile_intent("What investigations do I have?"))
     assert resolved.available is True
@@ -379,6 +638,27 @@ def test_setup_reads_compile_to_the_canonical_read_binding():
     assert resolved.action.approval.value == "none"
 
 
+@pytest.mark.parametrize(
+    ("query", "concept", "binding", "action"),
+    [
+        ("What is the newest NVIDIA driver?", "WEB_EVIDENCE", "web_search", "search"),
+        ("Look this up online: example.org", "WEB_EVIDENCE", "web_search", "search"),
+        ("Fetch https://example.org/status", "WEB_URL", "web_fetch", "fetch"),
+    ],
+)
+def test_external_evidence_uses_canonical_web_capability_without_manual_mode(
+    query, concept, binding, action,
+):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == concept
+    assert frame.operation_class == "READ"
+    assert frame.read_explicit is True
+    assert resolved.available is True
+    assert resolved.binding_name == binding
+    assert resolved.action_id == action
+
+
 def test_generated_parity_rows_have_explicit_transport_applicability():
     rows = generated_parity_matrix()
     assert rows
@@ -391,16 +671,16 @@ def test_generated_parity_rows_have_explicit_transport_applicability():
 @pytest.mark.parametrize("concept", sorted(DOMAIN_CONTRACTS))
 def test_every_contract_read_has_a_canonical_projection_action(concept):
     """The loop's generic read projection cannot drift from contract metadata."""
-    from src.agent_loop import _canonical_read_action
+    from src.intent_contracts import canonical_read_action
 
     contract = DOMAIN_CONTRACTS[concept]
     if "READ" not in contract.actions:
         pytest.skip(f"{concept} has no ordinary READ operation")
-    assert _canonical_read_action(concept) == contract.actions["READ"]
+    assert canonical_read_action(concept) == contract.actions["READ"]
 
 
 def test_specialized_read_views_use_contract_operations():
-    from src.agent_loop import _canonical_read_action
+    from src.intent_contracts import canonical_read_action
 
-    assert _canonical_read_action("WORK", {"view": "attention"}) == DOMAIN_CONTRACTS["WORK"].actions["READ_ATTENTION"]
-    assert _canonical_read_action("INTEGRATION", {"view": "integrations"}) == DOMAIN_CONTRACTS["INTEGRATION"].actions["READ_INTEGRATIONS"]
+    assert canonical_read_action("WORK", {"view": "attention"}) == DOMAIN_CONTRACTS["WORK"].actions["READ_ATTENTION"]
+    assert canonical_read_action("INTEGRATION", {"view": "integrations"}) == DOMAIN_CONTRACTS["INTEGRATION"].actions["READ_INTEGRATIONS"]

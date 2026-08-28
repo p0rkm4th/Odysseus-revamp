@@ -178,5 +178,5 @@ def test_poll_access_token(monkeypatch):
 
 
 def test_agent_loop_host_allowlisted():
-    from src.agent_loop import _API_HOSTS
+    from src.endpoint_resolver import API_TOOL_HOSTS as _API_HOSTS
     assert "api.githubcopilot.com" in _API_HOSTS

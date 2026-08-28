@@ -117,6 +117,18 @@ COMPOSE_FILE=docker-compose.yml:docker/host-docker.yml
 DOCKER_GID=<host docker group gid>
 ```
 
+The default production compose files run the source baked into the image; they
+do not silently mount the host checkout over `/app`. For an explicitly
+repo-scoped developer session, add the opt-in override and workspace path:
+
+```bash
+COMPOSE_FILE=docker-compose.yml:docker-compose.developer.yml
+HADES_WORKSPACE=/absolute/path/to/the/repo
+```
+
+This override is for development only. It does not grant Workspace YOLO or any
+additional execution authority.
+
 Combine host Docker access with a GPU overlay when both are intentionally
 required:
 

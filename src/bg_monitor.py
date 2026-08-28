@@ -1,7 +1,7 @@
-"""Always-on monitor that auto-continues the agent when a background job
+"""Always-on monitor that auto-continues the canonical ACI turn when a background job
 (see src/bg_jobs.py) finishes.
 
-Reliability is the whole point: completion → agent re-invocation must never
+Reliability is the whole point: completion → canonical ACI continuation must never
 silently no-op. The monitor drains `bg_jobs.pending_followups()` every tick and
 only calls `mark_followed_up()` AFTER the agent run succeeds — so a transient
 failure is simply retried on the next tick. A timed-out/dead job still produces
@@ -37,20 +37,21 @@ def _background_result_message(rec):
 
 
 async def _drain_agent(sess, messages):
-    """Run the agent loop headless against a session. Returns
+    """Run the canonical ACI turn headless against a session. Returns
     (final_prose, tool_events) — tool_events in the same shape the live chat
     saves, so the frontend rebuilds them as standard agent-thread tool cards."""
-    from src.agent_loop import stream_agent_loop
+    from src.aci import stream_aci_turn
     full = ""
     tool_events = []
     round_num = 1
-    async for chunk in stream_agent_loop(
+    async for chunk in stream_aci_turn(
         sess.endpoint_url, sess.model, messages,
         headers=getattr(sess, "headers", None),
         context_length=getattr(sess, "context_length", 0) or 0,
         session_id=sess.id,
         max_rounds=_FOLLOWUP_MAX_ROUNDS,
         owner=getattr(sess, "owner", None),
+        aci_mode="aci",
     ):
         if not chunk.startswith("data: "):
             continue

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 import logging
 import re
 from src.constants import MAX_READ_CHARS
@@ -12,6 +12,89 @@ logger = logging.getLogger(__name__)
 def _missing_document_upload(owner: Optional[str], content: Any) -> Optional[str]:
     """Reserve explicit upload URLs before an agent persists document text."""
     return reserve_upload_references(get_upload_handler(), owner, content)
+
+
+def document_stream_events(block: Any) -> list[dict[str, str]]:
+    """Project an already-authorized document update for the editor UI."""
+    tool_type = getattr(block, "tool_type", None)
+    content = str(getattr(block, "content", "") or "")
+    if tool_type == "create_document":
+        lines = content.strip().split("\n")
+        title = lines[0].strip() if lines else "Untitled"
+        language = ""
+        content_start = 1
+        if len(lines) > 1 and len(lines[1].strip()) < 20 and lines[1].strip().isalpha():
+            language = lines[1].strip()
+            content_start = 2
+        body = "\n".join(lines[content_start:]) if len(lines) > content_start else ""
+        events = [{"type": "doc_stream_open", "title": title, "language": language}]
+        if body:
+            events.append({"type": "doc_stream_delta", "content": body})
+        return events
+    if tool_type == "update_document":
+        return [
+            {"type": "doc_stream_open", "title": "", "language": ""},
+            {"type": "doc_stream_delta", "content": content.strip()},
+        ]
+    return []
+
+
+def turn_targets_active_document(intent: Mapping[str, Any], last_user: str, active_document: Any) -> bool:
+    """Return whether the open document is relevant to the current turn."""
+    if active_document is None:
+        return False
+    raw_doc = getattr(active_document, "current_content", "") or ""
+    title_l = (getattr(active_document, "title", "") or "").strip().lower()
+    is_email_doc = (
+        getattr(active_document, "language", None) == "email"
+        or title_l in {"new email", "new mail", "new message"}
+        or ("To:" in raw_doc[:400] and "Subject:" in raw_doc[:400] and "\n---\n" in raw_doc)
+    )
+    if "documents" in (intent.get("domains") or set()):
+        return True
+    text = str(last_user or "").strip().lower()
+    if not text:
+        return False
+    if is_email_doc and re.search(
+        r"\b(email|mail|reply|respond|response|draft|compose|send|"
+        r"tell them|tell her|tell him|say|write|make it say|"
+        r"japanese|japan|polite|formal|tone|style)\b",
+        text,
+    ):
+        return True
+    if re.search(
+        r"\b(?:make|change|update|fix|edit|rewrite|rework|revise|replace|remove|delete|add|append|insert|set|turn)\b"
+        r".{0,80}\b(?:day\s*\d+|row|rows|column|columns|table|section|chapter|part|paragraph|line|lines|"
+        r"title|heading|body|intro|introduction|conclusion|schedule|itinerary|draft|content)\b",
+        text,
+    ):
+        return True
+    if re.search(
+        r"\b(?:day\s*\d+|row|rows|column|columns|table|section|chapter|part|paragraph|line|lines|"
+        r"title|heading|body|intro|introduction|conclusion|schedule|itinerary)\b"
+        r".{0,80}\b(?:make|change|update|fix|edit|rewrite|rework|revise|replace|remove|delete|add|append|insert|set|turn)\b",
+        text,
+    ):
+        return True
+    if re.search(
+        r"\b(?:add|insert|include|apply|put)\b.+\b(?:to it|to this|there|in it|in this|in the text|in the document)\b",
+        text,
+    ):
+        return True
+    if re.search(
+        r"\b(?:make it|make this|expand it|expand this|extend it|extend this|continue it|continue this)\b.*\b"
+        r"(?:longer|shorter|bigger|smaller|more detailed|more concise|expanded|extended)?\b",
+        text,
+    ):
+        return True
+    return bool(re.search(
+        r"\b(document|doc|draft|text|poem|story|essay|outline|letter|paragraph|"
+        r"stanza|line|title|heading|section|sentence|word|caps|uppercase|"
+        r"lowercase|rewrite|reword|style|tone|suggest|suggestions|feedback|"
+        r"improve|edit|change|remove|delete|replace|add another|append|"
+        r"original text|in the document|the document|this document)\b",
+        text,
+    ))
 
 # ---------------------------------------------------------------------------
 # Active document state
@@ -170,6 +253,56 @@ def _looks_like_email_document(text: str = "", title: str = "") -> bool:
     if "\n---\n" in s and _re.search(r"(?im)^To:\s*", s) and _re.search(r"(?im)^Subject:\s*", s):
         return True
     return bool(_re.search(r"(?im)^To:\s*", s) and _re.search(r"(?im)^Subject:\s*", s))
+
+
+def is_email_document_object(active_document: Any) -> bool:
+    """Return whether an editor document uses the email-draft contract."""
+    if active_document is None:
+        return False
+    raw = getattr(active_document, "current_content", "") or ""
+    title = (getattr(active_document, "title", "") or "").strip().lower()
+    return (
+        getattr(active_document, "language", None) == "email"
+        or title in {"new email", "new mail", "new message"}
+        or ("To:" in raw[:400] and "Subject:" in raw[:400] and "\n---\n" in raw)
+    )
+
+
+def compact_email_draft_context(
+    raw: str,
+    *,
+    max_own_chars: int = 1200,
+    max_history_chars: int = 1200,
+) -> str:
+    """Bound an email draft while retaining headers and reply history cues."""
+    text = raw or ""
+    if "\n---\n" not in text:
+        return text[:3500] + ("\n...[truncated]" if len(text) > 3500 else "")
+    header, body = text.split("\n---\n", 1)
+    literal = "---------- Previous message ----------"
+    index = body.find(literal)
+    if index >= 0:
+        own = body[:index].strip()
+        history = body[index:].strip()
+    else:
+        own = body.strip()
+        history = ""
+    if len(own) > max_own_chars:
+        own = own[:max_own_chars].rstrip() + "\n...[draft body truncated]"
+    if len(history) > max_history_chars:
+        history = history[:max_history_chars].rstrip() + (
+            "\n...[quoted history truncated; full history is preserved by Odysseus]"
+        )
+    if history:
+        body_out = (f"{own}\n\n" if own else "") + (
+            "QUOTED HISTORY EXCERPT FOR CONTEXT ONLY -- do not rewrite or include "
+            "this excerpt in your tool output; Odysseus preserves the full quoted "
+            "thread below the reply automatically.\n"
+            f"{history}"
+        )
+    else:
+        body_out = own
+    return header.rstrip() + "\n---\n" + body_out.strip()
 
 def _split_email_header_body(text: str) -> tuple[str, str]:
     if "\n---\n" in (text or ""):

@@ -447,7 +447,7 @@ async def _run_skill_test_job(
     """Background coroutine: run the skill in an agent loop, capture a condensed
     log + transcript, then have the judge grade it. Writes into _skill_test_jobs."""
     import json as _json
-    from src.agent_loop import stream_agent_loop
+    from src.aci import stream_aci_turn
 
     job = _skill_test_jobs.get(key)
     if job is None:
@@ -463,10 +463,11 @@ async def _run_skill_test_job(
 
     messages = list(messages) if isinstance(messages, list) else _skill_test_messages(md, task)
     try:
-        async for chunk in stream_agent_loop(
+        async for chunk in stream_aci_turn(
             url, model, messages, headers=headers,
             temperature=0.3, max_tokens=0, max_rounds=8, owner=owner,
             exact_approval=exact_approval,
+            aci_mode="aci",
         ):
             if not chunk.startswith("data: ") or chunk.strip() == "data: [DONE]":
                 continue
@@ -738,7 +739,7 @@ def _apply_skill_md(skills_manager, name: str, md: str, owner) -> bool:
 async def _run_skill_test_once(md: str, task: str, url, model, headers, owner) -> tuple:
     """Run the skill once in the agent loop; return (transcript, verdict)."""
     import json as _json
-    from src.agent_loop import stream_agent_loop
+    from src.aci import stream_aci_turn
     transcript = []
     approval_required = None
     messages = _skill_test_messages(md, task)
@@ -747,8 +748,9 @@ async def _run_skill_test_once(md: str, task: str, url, model, headers, owner) -
         # OpenAI-compat) generate an empty completion, which manifested as
         # the skill test returning nothing while chat (which carries its
         # preset's max_tokens) worked. 4096 matches the chat default.
-        async for chunk in stream_agent_loop(url, model, messages, headers=headers,
-                                             temperature=0.3, max_tokens=4096, max_rounds=8, owner=owner):
+        async for chunk in stream_aci_turn(url, model, messages, headers=headers,
+                                             temperature=0.3, max_tokens=4096, max_rounds=8, owner=owner,
+                                             aci_mode="aci"):
             if not chunk.startswith("data: ") or chunk.strip() == "data: [DONE]":
                 continue
             try:
@@ -1253,7 +1255,8 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
         sessions, tasks, email, etc.) — the things it natively knows how to do.
         Surfaced so the Skills tab can show them in a separate "Built-in"
         section alongside the user's learned SKILL.md skills. Sourced from
-        agent_loop.TOOL_SECTIONS (the same descriptions the model is given)."""
+        the canonical tool-sections registry (the same descriptions the model
+        is given)."""
         import re
 
         def _clean(raw: str) -> str:
@@ -1264,7 +1267,8 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
             return s[:240]
 
         try:
-            from src.agent_loop import TOOL_SECTIONS, get_builtin_overrides
+            from src.tool_sections import TOOL_SECTIONS
+            from src.tool_overrides import get_builtin_overrides
         except Exception as e:
             return {"builtin": [], "count": 0, "error": str(e)}
 
@@ -1289,7 +1293,8 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
         """Full text of a built-in tool's instruction block — the override
         if one is set, plus the shipped default (for the revert button)."""
         try:
-            from src.agent_loop import TOOL_SECTIONS, get_builtin_overrides
+            from src.tool_sections import TOOL_SECTIONS
+            from src.tool_overrides import get_builtin_overrides
         except Exception as e:
             raise HTTPException(500, str(e))
         default = None
@@ -1314,7 +1319,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
         WARNING surfaced in the UI — this changes how the assistant is
         told to use a native tool."""
         require_admin(request)
-        from src.agent_loop import TOOL_SECTIONS
+        from src.tool_sections import TOOL_SECTIONS
         valid = set()
         for key in TOOL_SECTIONS:
             valid.update(key if isinstance(key, tuple) else (key,))
@@ -1629,7 +1634,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
 
         run = job.get("_run") or {}
         transcript = job.pop("_transcript", [])
-        # stream_agent_loop owns its per-round message list internally. Rebuild
+        # The ACI runtime owns its per-round message list internally. Rebuild
         # continuation context from the original untrusted skill plus the
         # accumulated transcript so repeated approvals do not lose earlier
         # approved results, while keeping every transcript byte tainted.

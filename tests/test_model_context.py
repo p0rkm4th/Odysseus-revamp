@@ -105,6 +105,17 @@ class TestIsLocalEndpoint:
 
 
 class TestEstimateTokens:
+    def test_nested_tool_schema_serialization_is_counted(self):
+        schema = {
+            "type": "function",
+            "function": {
+                "name": "inspect_services",
+                "description": "x" * 1000,
+                "parameters": {"type": "object", "properties": {"host": {"type": "string"}}},
+            },
+        }
+        assert estimate_tokens([schema]) > 250
+
     def test_empty_list(self):
         assert estimate_tokens([]) == 0
 

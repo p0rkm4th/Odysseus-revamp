@@ -6,19 +6,15 @@ import json
 import pytest
 
 from src import asset_inventory as inventory
-from src.agent_loop import (
-    _assemble_prompt,
-    _asset_read_request,
-    _canonical_read_action,
-    _is_explicit_continuation,
-    _privileged_action_requires_exact_approval,
-)
+from src.agent_loop import _assemble_prompt, _asset_read_request
+from src.capability_registry import requires_exact_approval
+from src.intent_contracts import canonical_read_action, is_explicit_continuation
 
 
 def test_canonical_read_projection_preserves_setup_integration_view():
-    assert _canonical_read_action("INTEGRATION", {"view": "integrations"}) == "integrations"
-    assert _canonical_read_action("INTEGRATION", {}) == "state"
-    assert _canonical_read_action("WORK", {"view": "attention"}) == "attention"
+    assert canonical_read_action("INTEGRATION", {"view": "integrations"}) == "integrations"
+    assert canonical_read_action("INTEGRATION", {}) == "state"
+    assert canonical_read_action("WORK", {"view": "attention"}) == "attention"
 from src.privileged_broker import (
     peer_is_allowed,
     validate_packages,
@@ -80,6 +76,19 @@ def test_broker_accepts_allowlisted_packages_and_rejects_shell_inputs():
             validate_packages(value)
 
 
+def test_legacy_network_discovery_installer_is_only_a_dependency_projection(monkeypatch):
+    monkeypatch.setattr(inventory.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(inventory, "run", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("legacy installer must not execute")))
+    denied = inventory.maybe_install(False)
+    assert denied["attempted"] is False
+    assert denied["reason"] == "not_authorized"
+    planned = inventory.maybe_install(True)
+    assert planned["attempted"] is False
+    assert planned["installed"] is False
+    assert planned["reason"] == "remediation_requires_canonical_broker_and_approval"
+    assert planned["dependency_plan"]["action"] in {"host_or_remote_package_install", "blocked"}
+
+
 def test_broker_peer_boundary_requires_pid_uid_and_gid():
     assert peer_is_allowed(1, 1000, 1000, 1, 1000, 1000)
     assert not peer_is_allowed(2, 1000, 1000, 1, 1000, 1000)
@@ -93,14 +102,14 @@ def test_privileged_actions_are_action_aware_and_policy_still_wins():
     )
     assert status.known
     assert not status.effects
-    assert not _privileged_action_requires_exact_approval(
+    assert not requires_exact_approval(
         "privileged_action", json.dumps({"action": "status"})
     )
 
     install_content = json.dumps(
         {"action": "install_packages", "packages": ["nmap"]}
     )
-    assert _privileged_action_requires_exact_approval(
+    assert requires_exact_approval(
         "privileged_action", install_content
     )
 
@@ -205,9 +214,87 @@ def test_strict_text_contracts_and_fenced_code_safety():
 def test_explicit_it_asset_reads_select_canonical_domain_without_shell_fallback():
     assert _asset_read_request("Explain my current IT asset inventory, what do I have?")
     assert _asset_read_request("What servers do I have?")
+
+
+def test_grounding_and_summary_corrections_use_replacement_events_not_full_deltas():
+    from pathlib import Path
+
+    root = Path(__file__).parents[1]
+    loop = (root / "src" / "agent_loop.py").read_text(encoding="utf-8")
+    route = (root / "routes" / "chat_routes.py").read_text(encoding="utf-8")
+    browser = (root / "static" / "js" / "chat.js").read_text(encoding="utf-8")
+
+    assert '"type": "response_replace"' in loop
+    assert "json.dumps({'delta': _final_delta})" not in loop
+    assert route.count('data.get("type") == "response_replace"') == 2
+    assert "json.type === 'response_replace'" in browser
+    assert "accumulated = replacement" in browser
     assert _asset_read_request("Show unidentified devices")
     assert _asset_read_request("What do we know about Cerberus?")
     assert not _asset_read_request("Update the asset hostname")
+
+
+def test_browser_owner_acceptance_rejects_tool_success_as_final_answer():
+    """Keep the real-browser regression stronger than a non-empty tool card."""
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "scripts" / "browser_authenticated_acceptance.mjs").read_text(encoding="utf-8")
+    assert "latestTurnAnswers" in source
+    assert "assertHumanCanonicalAnswer" in source
+    assert "final answer appears to be raw structured tool output" in source
+    assert "agent-tool-output[open]" in source
+    assert "answerSource !== 'DETERMINISTIC_RESULT'" in source
+    assert "stream.doneCount !== 1 || stream.abruptEOF" in source
+
+
+@pytest.mark.parametrize("query", [
+    "tell me about my hardware",
+    "what it assets do i have?",
+    "how many 2080 GPUs do i have?",
+])
+def test_owner_asset_reads_are_canonical_and_aggregation_is_bounded(query):
+    from src.deterministic_reads import deterministic_read_concept
+    from src.intent_contracts import compile_intent
+    from src.aci import canonical_read_fast_path_payload
+
+    assert deterministic_read_concept(query) == "TECHNICAL_ASSET"
+    frame = compile_intent(query)
+    if "2080" in query:
+        assert canonical_read_fast_path_payload(
+            "manage_assets", "list", frame.as_dict(),
+        ) == {"action": "list", "query": "2080", "result_projection": "count"}
+
+
+def test_kitchen_mutation_resolves_to_existing_inventory_service_action():
+    from src.intent_contracts import compile_intent, resolve_intent
+
+    resolved = resolve_intent(compile_intent("Add angel hair pasta to my kitchen inventory."))
+    assert resolved.available is True
+    assert resolved.action_id == "add_item"
+    assert resolved.binding_name == "manage_assets"
+    assert resolved.contract.capability_id == "inventory.manage"
+
+
+@pytest.mark.asyncio
+async def test_kitchen_mutation_binding_delegates_to_existing_inventory_service(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeInventoryTool:
+        async def execute(self, content, ctx):
+            assert json.loads(content)["action"] == "add_item"
+            assert ctx["owner"] == "alice"
+            return {"item": {"id": "pasta-1"}, "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageInventoryTool", FakeInventoryTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "add_item", "domain": "kitchen", "name": "angel hair pasta",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+    assert result["provenance"] == "USER_ASSERTED"
 
 
 def test_canonical_asset_reads_are_read_only_and_need_no_approval():
@@ -308,7 +395,7 @@ async def test_manage_assets_read_failure_is_not_zero_inventory(monkeypatch):
     ],
 )
 def test_general_continuation_phrases(text):
-    assert _is_explicit_continuation(text)
+    assert is_explicit_continuation(text)
 
 
 @pytest.mark.parametrize(
@@ -321,4 +408,4 @@ def test_general_continuation_phrases(text):
     ],
 )
 def test_substantive_requests_do_not_inherit_stale_context(text):
-    assert not _is_explicit_continuation(text)
+    assert not is_explicit_continuation(text)

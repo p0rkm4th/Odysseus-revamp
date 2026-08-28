@@ -105,7 +105,9 @@ async def _stop_serve(session_id: str, remote_host: str = "", ssh_port: str = ""
     if remote_host:
         port_flag = f"-p {shlex.quote(str(ssh_port))} " if ssh_port and str(ssh_port) != "22" else ""
         cmd = (
-            f"ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "
+            # Lifecycle cleanup is unattended: unknown or changed host keys
+            # must fail closed rather than prompting or accepting a new key.
+            f"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes "
             f"{port_flag}{shlex.quote(remote_host)} "
             f"'tmux kill-session -t {shlex.quote(session_id)}'"
         )

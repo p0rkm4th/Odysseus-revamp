@@ -9,11 +9,14 @@ import ipaddress
 import logging
 import socket
 import subprocess
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, List
 from urllib.parse import urlparse, urlunparse
 
 from core.database import SessionLocal, ModelEndpoint
-from src.llm_core import _detect_provider, _host_match, _is_kimi_code_url, KIMI_CODE_USER_AGENT, _ollama_api_root
+from src.llm_core import (
+    _detect_provider, _host_match, _is_kimi_code_url, KIMI_CODE_USER_AGENT,
+    _ollama_api_root, _is_ollama_native_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,124 @@ _NON_CHAT_MODEL = (
     "text-embedding", "embedding", "tts-", "whisper", "dall-e",
     "moderation", "rerank", "reranker", "clip", "stable-diffusion",
 )
+
+# Provider/endpoint transport classification belongs with endpoint resolution,
+# not with the orchestration stream. This is a non-authorizing hint: policy and
+# capability registration still decide what may execute.
+API_TOOL_HOSTS = frozenset({
+    "api.openai.com", "api.anthropic.com", "openrouter.ai", "api.groq.com",
+    "api.mistral.ai", "api.cohere.com", "api.deepseek.com", "deepseek.com",
+    "api.together.xyz", "api.fireworks.ai", "api.perplexity.ai", "api.x.ai",
+    "ollama.com", "api.venice.ai", "api.kimi.com", "api.githubcopilot.com",
+})
+
+
+def is_ollama_openai_compat_url(endpoint_url: str) -> bool:
+    """Return True for Ollama's OpenAI-compatible ``/v1`` surface."""
+    try:
+        parsed = urlparse(endpoint_url or "")
+    except Exception:
+        return False
+    path = (parsed.path or "").rstrip("/")
+    return parsed.port == 11434 and (path == "/v1" or path.startswith("/v1/"))
+
+
+def endpoint_lookup_keys(endpoint_url: str) -> List[str]:
+    """Return equivalent ModelEndpoint keys for a runtime chat URL."""
+    raw = (endpoint_url or "").strip()
+    keys: List[str] = []
+
+    def add(value: str) -> None:
+        value = (value or "").strip()
+        if value and value not in keys:
+            keys.append(value)
+        trimmed = value.rstrip("/")
+        if trimmed and trimmed not in keys:
+            keys.append(trimmed)
+        if trimmed and f"{trimmed}/" not in keys:
+            keys.append(f"{trimmed}/")
+
+    add(raw)
+    try:
+        add(normalize_base(raw))
+    except Exception:
+        pass
+    return keys
+
+
+def agent_route_tool_mode(
+    endpoint_url: str,
+    model: str,
+    owner: Optional[str] = None,
+    headers: Optional[Dict] = None,
+) -> tuple[bool, bool, bool]:
+    """Resolve provider transport mode for the active model endpoint.
+
+    Endpoint metadata may opt in/out of native tools. Model-name heuristics are
+    only a compatibility fallback and never grant capability authority.
+    """
+    model_lc = (model or "").lower()
+    endpoint_supports: Optional[bool] = None
+    try:
+        # Resolve the factory at call time so isolated callers/tests can
+        # replace the database session boundary without reloading this module.
+        from core.database import SessionLocal as session_factory
+        db = session_factory()
+        try:
+            endpoints = []
+            seen_ids = set()
+            for key in endpoint_lookup_keys(endpoint_url):
+                query = db.query(ModelEndpoint).filter(ModelEndpoint.base_url == key)
+                if owner:
+                    from src.auth_helpers import owner_filter
+                    query = owner_filter(query, ModelEndpoint, owner)
+                rows = query.all() if hasattr(query, "all") else [query.first()]
+                for row in rows:
+                    row_id = getattr(row, "id", None)
+                    if row is not None and row_id not in seen_ids:
+                        seen_ids.add(row_id)
+                        endpoints.append(row)
+            endpoint = None
+            if headers is not None:
+                expected_headers = {
+                    str(key).lower(): str(value)
+                    for key, value in (headers or {}).items()
+                }
+                for candidate in endpoints:
+                    runtime_base, api_key = resolve_endpoint_runtime(candidate, owner=owner)
+                    candidate_headers = {
+                        str(key).lower(): str(value)
+                        for key, value in build_headers(api_key, runtime_base).items()
+                    }
+                    if candidate_headers == expected_headers:
+                        endpoint = candidate
+                        break
+            elif endpoints:
+                endpoint = endpoints[0]
+            if endpoint is not None:
+                endpoint_supports = endpoint.supports_tools
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.debug("endpoint supports_tools lookup failed: %s", exc)
+
+    model_supports_tools = any(kw in model_lc for kw in (
+        "gpt-4", "gpt-5", "gpt-o", "claude", "gemini", "gemma", "qwen3",
+        "qwen2.5", "mixtral", "mistral", "llama-3.1", "llama-3.2", "llama-3.3",
+        "llama-4", "llama3.1", "llama3.2", "llama3.3", "llama4", "minimax",
+        "kimi", "yi-", "phi-3", "phi-4", "command-r", "glm-4", "internlm",
+        "hermes", "deepseek-v", "deepseek-chat",
+    ))
+    model_no_tools = any(kw in model_lc for kw in ("deepseek-r1", "gpt-oss"))
+    is_ollama_native = _is_ollama_native_url(endpoint_url or "")
+    ollama_openai_compat = is_ollama_openai_compat_url(endpoint_url or "")
+    if endpoint_supports is True:
+        is_api_model = True
+    elif endpoint_supports is False or model_no_tools or is_ollama_native or ollama_openai_compat:
+        is_api_model = False
+    else:
+        is_api_model = any(host in endpoint_url for host in API_TOOL_HOSTS) or model_supports_tools
+    return is_api_model, is_ollama_native, ollama_openai_compat
 
 
 def endpoint_cost_tracked(url: str, endpoint_kind: Optional[str] = None) -> bool:

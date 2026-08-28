@@ -1,0 +1,424 @@
+{
+  "cases": [
+    {
+      "case_id": "owner-hardware-collection-01",
+      "expected": {
+        "concept": "TECHNICAL_ASSET",
+        "entity_reference": false,
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "concept",
+        "failed_action_budget"
+      ],
+      "family": "asset_resolution",
+      "fixture_id": null,
+      "id": "regression-dd19080c6adc005b",
+      "prompt": "tell me about my hardware",
+      "prompt_digest": "213002ca1fd95e72",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-hardware-collection-02",
+      "expected": {
+        "concept": "TECHNICAL_ASSET",
+        "entity_reference": false,
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "failed_action_budget"
+      ],
+      "family": "asset_resolution",
+      "fixture_id": null,
+      "id": "regression-ab894c0e34f73d6b",
+      "prompt": "show me my hardware",
+      "prompt_digest": "b0c13c3ee53ffce3",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-hardware-collection-03",
+      "expected": {
+        "concept": "TECHNICAL_ASSET",
+        "entity_reference": false,
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "failed_action_budget"
+      ],
+      "family": "asset_resolution",
+      "fixture_id": null,
+      "id": "regression-8ad691600043ac91",
+      "prompt": "what computers do i own",
+      "prompt_digest": "a949277719424b10",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-hardware-named-thanatos-01",
+      "expected": {
+        "concept": "TECHNICAL_ASSET",
+        "entity_name": "Thanatos",
+        "entity_reference": true,
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_model_calls": 1,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "answer_present",
+        "decision_budget",
+        "model_budget",
+        "failed_action_budget"
+      ],
+      "family": "asset_resolution",
+      "fixture_id": null,
+      "id": "regression-0a31c2fd0affe4ae",
+      "prompt": "thanatos hardware",
+      "prompt_digest": "1ac8b3646b423b52",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-hardware-named-thanatos-02",
+      "expected": {
+        "concept": "TECHNICAL_ASSET",
+        "entity_name": "Thanatos",
+        "entity_reference": true,
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_model_calls": 1,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "failed_action_budget"
+      ],
+      "family": "asset_resolution",
+      "fixture_id": null,
+      "id": "regression-adf7aee16a372715",
+      "prompt": "tell me about the Thanatos machine",
+      "prompt_digest": "bae66c4998bd48a3",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-current-network-01",
+      "expected": {
+        "concept": "NETWORK",
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "failed_action_budget"
+      ],
+      "family": "network_grounding",
+      "fixture_id": null,
+      "id": "regression-33c5dd36a1ffd606",
+      "prompt": "what network am i on",
+      "prompt_digest": "8f81ec928de13307",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-current-network-02",
+      "expected": {
+        "concept": "NETWORK",
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "failed_action_budget"
+      ],
+      "family": "network_grounding",
+      "fixture_id": null,
+      "id": "regression-c98efb095dc191d1",
+      "prompt": "where am i connected right now",
+      "prompt_digest": "f1bea5f07900a36b",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-current-network-03",
+      "expected": {
+        "concept": "NETWORK",
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "failed_action_budget"
+      ],
+      "family": "network_grounding",
+      "fixture_id": null,
+      "id": "regression-b2346f568a238b87",
+      "prompt": "what's my current network",
+      "prompt_digest": "7439c78f6ce66ffd",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-current-state-grounding-01",
+      "expected": {
+        "concept": "HOMELAB_HOST",
+        "concepts": [
+          "HOMELAB_HOST",
+          "SERVICE"
+        ],
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "failed_action_budget"
+      ],
+      "family": "epistemic_grounding",
+      "fixture_id": null,
+      "id": "regression-8ed00172d601b5c9",
+      "prompt": "what's running in Odysseus",
+      "prompt_digest": "e46598ad4587db5f",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "owner-current-state-grounding-02",
+      "expected": {
+        "concept": "HOMELAB_HOST",
+        "concepts": [
+          "HOMELAB_HOST",
+          "SERVICE"
+        ],
+        "max_decision_calls": 0,
+        "max_failed_actions": 0,
+        "max_tool_index_lookups": 0,
+        "operation": "READ"
+      },
+      "failure_classes": [
+        "failed_action_budget"
+      ],
+      "family": "epistemic_grounding",
+      "fixture_id": null,
+      "id": "regression-56bece74f4c4dc86",
+      "prompt": "anything unhealthy right now",
+      "prompt_digest": "0d0fe52d73f55f19",
+      "scenario": {},
+      "seed": null,
+      "source": "frozen_failure",
+      "variant_id": null
+    },
+    {
+      "case_id": "jarvis-environment-assumption",
+      "expected": {
+        "response_excludes": [
+          "apt-get"
+        ]
+      },
+      "failure_classes": [
+        "response_excludes"
+      ],
+      "family": "prerequisite",
+      "fixture_id": null,
+      "id": "regression-5695ec4aa5b9282c",
+      "prompt": "Install the missing diagnostic dependency",
+      "prompt_digest": "b079cb01d4201200",
+      "scenario": {},
+      "seed": null,
+      "source": "jarvis_control_plane",
+      "variant_id": null
+    },
+    {
+      "case_id": "jarvis-tool-exposure-network",
+      "expected": {
+        "required_tools": [
+          "manage_homelab"
+        ]
+      },
+      "failure_classes": [
+        "required_tools"
+      ],
+      "family": "routing",
+      "fixture_id": null,
+      "id": "regression-9f2e3a3ac6193129",
+      "prompt": "Scan my private network",
+      "prompt_digest": "d7f701534ffbca27",
+      "scenario": {},
+      "seed": null,
+      "source": "jarvis_control_plane",
+      "variant_id": null
+    },
+    {
+      "case_id": "jarvis-model-switch-continuity",
+      "expected": {
+        "requires_recovery": true
+      },
+      "failure_classes": [
+        "recovery"
+      ],
+      "family": "continuity",
+      "fixture_id": null,
+      "id": "regression-a6734f3f479844c5",
+      "prompt": "Continue after switching models",
+      "prompt_digest": "ad12b86243e8e578",
+      "scenario": {},
+      "seed": null,
+      "source": "jarvis_control_plane",
+      "variant_id": null
+    },
+    {
+      "case_id": "jarvis-provider-reconnect",
+      "expected": {
+        "requires_recovery": true
+      },
+      "failure_classes": [
+        "recovery"
+      ],
+      "family": "continuity",
+      "fixture_id": null,
+      "id": "regression-29d2a63c5346c4f8",
+      "prompt": "Continue after provider reconnect",
+      "prompt_digest": "ea2e2d8a780568ce",
+      "scenario": {},
+      "seed": null,
+      "source": "jarvis_control_plane",
+      "variant_id": null
+    },
+    {
+      "case_id": "meta-network_context-01",
+      "expected": {
+        "concept": "NETWORK_CONTEXT",
+        "max_decision_calls": 0,
+        "max_tool_index_lookups": 0
+      },
+      "failure_classes": [
+        "concept"
+      ],
+      "family": "metamorphic",
+      "fixture_id": null,
+      "id": "regression-58965b41cf2e3a6c",
+      "prompt": "What network am I currently connected to?",
+      "prompt_digest": "372cea4933625645",
+      "scenario": {},
+      "seed": null,
+      "source": "metamorphic_reads",
+      "variant_id": null
+    },
+    {
+      "case_id": "meta-network_context-02",
+      "expected": {
+        "concept": "NETWORK_CONTEXT",
+        "max_decision_calls": 0,
+        "max_tool_index_lookups": 0
+      },
+      "failure_classes": [
+        "concept"
+      ],
+      "family": "metamorphic",
+      "fixture_id": null,
+      "id": "regression-e385677fa79475c2",
+      "prompt": "What network am I on?",
+      "prompt_digest": "611b65b9c24426fd",
+      "scenario": {},
+      "seed": null,
+      "source": "metamorphic_reads",
+      "variant_id": null
+    },
+    {
+      "case_id": "meta-network_context-03",
+      "expected": {
+        "concept": "NETWORK_CONTEXT",
+        "max_decision_calls": 0,
+        "max_tool_index_lookups": 0
+      },
+      "failure_classes": [
+        "concept"
+      ],
+      "family": "metamorphic",
+      "fixture_id": null,
+      "id": "regression-f877264fd0d1aae6",
+      "prompt": "Where am I connected right now?",
+      "prompt_digest": "177465fd17e18c8a",
+      "scenario": {},
+      "seed": null,
+      "source": "metamorphic_reads",
+      "variant_id": null
+    },
+    {
+      "case_id": "journey-switch-work-hardware-network-work-02",
+      "expected": {
+        "concept": "TECHNICAL_ASSET",
+        "journey_turn": 2,
+        "max_decision_calls": 1
+      },
+      "failure_classes": [
+        "concept"
+      ],
+      "family": "cross_domain",
+      "fixture_id": null,
+      "id": "regression-3dff2eab0a58aba8",
+      "prompt": "tell me about my hardware",
+      "prompt_digest": "213002ca1fd95e72",
+      "scenario": {},
+      "seed": null,
+      "source": "journey",
+      "variant_id": null
+    },
+    {
+      "case_id": "journey-action-result-return-02",
+      "expected": {
+        "concept": "NETWORK",
+        "journey_turn": 2,
+        "max_decision_calls": 1
+      },
+      "failure_classes": [
+        "answer_present",
+        "concept",
+        "decision_budget"
+      ],
+      "family": "cross_domain",
+      "fixture_id": null,
+      "id": "regression-91b8c05da247b5d1",
+      "prompt": "what did that discovery find",
+      "prompt_digest": "86394cf02949d13b",
+      "scenario": {},
+      "seed": null,
+      "source": "journey",
+      "variant_id": null
+    }
+  ],
+  "schema_version": 1
+}

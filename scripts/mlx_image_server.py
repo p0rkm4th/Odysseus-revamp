@@ -327,7 +327,10 @@ def list_models():
 
 @app.post("/v1/images/generations")
 def generate(req: ImageRequest):
-    model = req.model or _args.model
+    # The process launch configuration is the trust boundary.  Keep accepting
+    # ``model`` for OpenAI wire compatibility, but never let a caller select a
+    # local directory or repository whose generation script we would execute.
+    model = _args.model
     width, height = _size(req.size)
     out_images = []
     count = max(1, min(int(req.n or 1), 4))
@@ -393,7 +396,9 @@ async def edit_image(
     size: str = Form("1024x1024"),
     response_format: str = Form("b64_json"),
 ):
-    active_model = model or _args.model
+    # Pin edits to the model selected at server startup; request.model is only
+    # a compatibility field and must not select an arbitrary model path.
+    active_model = _args.model
     if _is_lama_inpaint(active_model) or _is_ddcolor(active_model):
         image_raw = await image.read()
         mask_raw = await mask.read() if mask is not None else None

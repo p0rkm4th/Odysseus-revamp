@@ -19,7 +19,12 @@ from src.model_context import estimate_tokens, get_context_length
 from src.auth_helpers import effective_user
 from src.prompt_security import untrusted_context_message
 from src.attachment_refs import attachment_ref
-from src.memory_grounding import is_explicit_memory_query, build_explicit_memory_result, render_explicit_memory_context
+from src.memory_grounding import (
+    is_explicit_memory_query,
+    build_explicit_memory_result,
+    build_runtime_self_state,
+    render_explicit_memory_context,
+)
 from routes.prefs_routes import _load_for_user as load_prefs_for_user
 
 from fastapi import HTTPException
@@ -111,6 +116,7 @@ def _durable_work_context(sess, owner: str | None) -> dict[str, Any] | None:
                     WorkRun.owner == owner,
                     WorkRun.session_id == str(sess.id),
                     WorkRun.status.in_(("queued", "running", "awaiting_approval", "awaiting_input", "suspended")),
+                    ~WorkRun.lifecycle_state.in_(("succeeded", "failed", "cancelled")),
                 )
                 .order_by(WorkRun.updated_at.desc())
                 .first()
@@ -176,35 +182,30 @@ def ensure_chat_agent_work_run(
     if not enabled or not owner or not session_id:
         return None
     try:
-        from src.agent_loop import (
-            _classify_agent_request,
-            _normalize_homelab_intent,
-            _normalize_operational_intent_evidence,
+        from src.aci import provisional_intent_projection
+        from src.intent_contracts import (
+            canonical_domain_projection,
+            compile_intent,
+            resolve_intent,
+            resolve_structured_reference,
         )
-        from src.intent_contracts import compile_intent, resolve_intent
-        from src.agent_work_bridge import ensure_agent_run, prepare_action
+        from src.agent_work_bridge import ensure_agent_run, prepare_action, recent_session_reference_context
         query = str(message or "")
-        intent = _classify_agent_request([], query)
-        intent = _normalize_homelab_intent(intent, query)
-        intent = _normalize_operational_intent_evidence(intent, query)
-        domains = set(intent.get("domains") or ())
-        frame = compile_intent(query)
+        # Work-run creation is an ACI projection, not a second pre-router. The
+        # provisional frame only answers whether this concept has a canonical
+        # contract; the final reference-aware frame below remains authoritative.
+        _, aci_owned = provisional_intent_projection([], query)
+        if not aci_owned:
+            return None
+        # Only structured current-turn references may inherit a completed
+        # result. This preserves intentional ordinal/pronoun continuity while
+        # preventing unrelated new topics from inheriting stale domain state.
+        reference_context = None
+        if resolve_structured_reference(query, {}).get("status") != "NOT_REFERENCE":
+            reference_context = recent_session_reference_context(str(owner), str(session_id))
+        frame = compile_intent(query, reference_context=reference_context)
         continuation = frame.operation_class == "CONTINUE"
-        canonical_domains = {
-            "TECHNICAL_ASSET": "asset_inventory", "NETWORK": "network_ops",
-            "HOMELAB_HOST": "homelab", "SERVICE": "homelab",
-            "SECURITY_FINDING": "security_audit", "OSINT_CASE": "osint",
-            "SECURITY_ENGAGEMENT": "security_audit", "SECURITY_EVIDENCE": "security_audit",
-            "RESEARCH": "osint",
-            "MEMORY": "memory", "WORK": "work", "HOUSEHOLD_ITEM": "household",
-            "INTEGRATION": "setup", "CAREER_PROFILE": "career",
-            "JOB_SEARCH": "career", "JOB_OPPORTUNITY": "career",
-            "APPLICATION": "career", "INTERVIEW": "career",
-            "COMMUNICATIONS": "communications",
-            "CONTACT": "communications",
-        }
-        if frame.domain_concept in canonical_domains:
-            domains.add(canonical_domains[frame.domain_concept])
+        domains = set(canonical_domain_projection(frame))
         if not domains.intersection({
             "homelab", "network_ops", "asset_inventory", "security_audit", "osint",
             "memory", "work", "household", "setup", "career",
@@ -232,11 +233,12 @@ def ensure_chat_agent_work_run(
                 "objective": query[:4000],
                 "deliverable": (
                     "verified network discovery and grounded report"
-                    if "network_ops" in domains else "verified homelab result"
+                    if "network_ops" in domains else "canonical read result"
                 ),
-                "completion_mode": "verified_run_terminal_state",
+                "completion_mode": "single_verified_read" if frame.operation_class == "READ" else "verified_run_terminal_state",
                 "intent_frame": frame.as_dict(),
             } if not continuation else None,
+            reference_context=reference_context,
         )
         # Materialize a deterministic read before contacting the model. A
         # provider/stream failure therefore leaves the semantic operation
@@ -245,10 +247,29 @@ def ensure_chat_agent_work_run(
         if run_id and not continuation and frame.operation_class == "READ" and frame.read_explicit:
             resolved = resolve_intent(frame)
             if resolved.available and resolved.binding_name and resolved.action_id:
-                payload = {"action": resolved.action_id}
-                if frame.domain_concept == "MEMORY":
-                    payload["query"] = query
-                prepare_action(str(owner), run_id, resolved.binding_name, payload)
+                # A detail read is only executable when the server has a
+                # strong asset identity.  In particular, do not materialize
+                # ``get`` for an ordinal/pronoun turn before the agent loop
+                # has resolved its reference from the canonical prior result.
+                # The old route-level projection emitted {action: get},
+                # terminalized the Run on the missing ``asset`` argument, and
+                # prevented the later deterministic reference fast path from
+                # running.  Collection reads remain safe to materialize.
+                if (
+                    frame.domain_concept == "TECHNICAL_ASSET"
+                    and resolved.action_id != "list"
+                    and not str(frame.entity_reference or "").strip()
+                ):
+                    logger.info(
+                        "Deferring asset detail read until canonical reference resolution"
+                    )
+                else:
+                    payload = {"action": resolved.action_id}
+                    if frame.domain_concept == "MEMORY":
+                        payload["query"] = query
+                    if frame.entity_reference and frame.domain_concept == "TECHNICAL_ASSET":
+                        payload = {"action": "get", "asset": frame.entity_reference}
+                    prepare_action(str(owner), run_id, resolved.binding_name, payload)
         return run_id
     except Exception:
         logger.warning("Failed to attach actionable chat turn to Work ledger", exc_info=True)
@@ -938,7 +959,11 @@ async def build_chat_context(
     _preface_kwargs = dict(
         message=_ctx_msg,
         session=sess,
-        use_web=use_web and not skip_web,
+        # Agent/ACI turns select web.evidence through the canonical capability
+        # projection. The legacy context prefetch remains only for plain chat
+        # compatibility callers, so an agent turn cannot pay for a second
+        # query-extraction model call and an unplanned web search.
+        use_web=use_web and not skip_web and not agent_mode,
         use_memory=mem_enabled,
         time_filter=time_filter,
         preset_system_prompt=preset.system_prompt,
@@ -964,7 +989,12 @@ async def build_chat_context(
             )
             _memory_context = untrusted_context_message(
                 "saved memory: explicit canonical result",
-                render_explicit_memory_context(explicit_memory_result),
+                render_explicit_memory_context(
+                    explicit_memory_result,
+                    current_self_state=build_runtime_self_state(
+                        getattr(sess, "model", ""), getattr(sess, "endpoint_url", "")
+                    ),
+                ),
             )
             _memory_context["_protected"] = True
             _memory_context["metadata"] = {
@@ -1003,7 +1033,12 @@ async def build_chat_context(
             }
             _memory_context = untrusted_context_message(
                 "saved memory: explicit canonical result",
-                render_explicit_memory_context(explicit_memory_result),
+                render_explicit_memory_context(
+                    explicit_memory_result,
+                    current_self_state=build_runtime_self_state(
+                        getattr(sess, "model", ""), getattr(sess, "endpoint_url", "")
+                    ),
+                ),
             )
             _memory_context["_protected"] = True
             _memory_context["metadata"] = {
@@ -1386,6 +1421,7 @@ def save_assistant_response(
     do_research: bool = False,
     tool_events: list = None,
     incognito: bool = False,
+    turn_id: str | None = None,
 ):
     """Add assistant response to session history.
 
@@ -1394,6 +1430,9 @@ def save_assistant_response(
     private enough.
     """
     md = dict(last_metrics) if last_metrics else {}
+    logical_turn_id = str(turn_id or md.get("turn_id") or "").strip()
+    if logical_turn_id:
+        md["turn_id"] = logical_turn_id
     def _model_value(value) -> str:
         if value is None:
             return ""
@@ -1435,6 +1474,19 @@ def save_assistant_response(
     if incognito:
         _append_incognito_message(session_id, "assistant", _content, md)
         return None
+    if logical_turn_id:
+        for existing in reversed(getattr(sess, "history", []) or []):
+            existing_md = getattr(existing, "metadata", None)
+            if (
+                getattr(existing, "role", None) == "assistant"
+                and isinstance(existing_md, dict)
+                and str(existing_md.get("turn_id") or "").strip() == logical_turn_id
+            ):
+                logger.warning(
+                    "Suppressing duplicate assistant persistence turn_id=%s session=%s",
+                    logical_turn_id[:16], session_id,
+                )
+                return existing_md.get("_db_id")
     sess.add_message(ChatMessage("assistant", _content, metadata=md))
 
     from core.database import update_session_last_accessed

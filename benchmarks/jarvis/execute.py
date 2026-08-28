@@ -24,15 +24,32 @@ def endpoint_is_local(endpoint: str) -> bool:
 async def execute_case(args, case, model_metadata, hardware, headers):
     # Keep metadata validation and --help usable in lightweight environments.
     # The application stack is required only when a model run actually starts.
-    from src.agent_loop import stream_agent_loop
+    from src.aci import stream_aci_turn
 
     collector = SyntheticRunCollector(case, model_metadata, hardware)
     executor = SyntheticToolExecutor(fixtures_for_case(case))
     messages = build_case_messages(case)
+    # Continuity cases must exercise the provider-replacement path. The first
+    # endpoint is deliberately loopback-invalid; the configured endpoint is
+    # the only fallback. This is synthetic harness fault injection and never
+    # touches an owner or work/VPN network.
+    primary_endpoint = args.endpoint
+    fallbacks = None
+    fallback_statuses = None
+    if case.get("expected", {}).get("requires_recovery"):
+        primary_endpoint = "http://127.0.0.1:1/v1"
+        fallbacks = [(args.endpoint, args.model, headers or {})]
+        fallback_statuses = {502, 503, 504}
     try:
+        stream = stream_aci_turn
+        if args.aci_mode != "aci":
+            # Historical H0/shadow comparisons are opt-in; canonical ACI
+            # evaluation must not even import the retired compatibility path.
+            from src.agent_loop import stream_agent_loop
+            stream = stream_agent_loop
         async with asyncio.timeout(args.case_timeout):
-            async for chunk in stream_agent_loop(
-                endpoint_url=args.endpoint,
+            async for chunk in stream(
+                endpoint_url=primary_endpoint,
                 model=args.model,
                 messages=messages,
                 headers=headers,
@@ -43,11 +60,13 @@ async def execute_case(args, case, model_metadata, hardware, headers):
                 max_tool_calls=args.max_tool_calls,
                 owner="__jarvis_synthetic_benchmark__",
                 workload="benchmark",
+                fallbacks=fallbacks,
+                fallback_statuses=fallback_statuses,
                 external_untrusted_context_seen=bool(
                     case.get("external_untrusted_context", False)
                 ),
                 tool_executor=executor,
-                model_capability_profile=args.capability_profile,
+                aci_mode=args.aci_mode,
             ):
                 for event in parse_sse([chunk]):
                     collector.consume(event)
@@ -109,6 +128,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--capability-profile",
         choices=("standard", "local_balanced", "local_small", "auto"),
         default="standard",
+    )
+    parser.add_argument(
+        "--aci-mode",
+        choices=("legacy", "shadow", "aci"),
+        default="aci",
+        help="agent interface protocol for the run; explicit legacy preserves H0",
     )
     parser.add_argument(
         "--acknowledge-provider-costs",

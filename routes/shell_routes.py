@@ -22,6 +22,7 @@ from src.host_docker_access import (
     running_in_container as _running_in_container,
 )
 from src.optional_deps import prepare_optional_dependency_import
+from src.capability_dependencies import artifact_manager, dependency_manager
 
 # POSIX-only: `pty`/`fcntl` transitively import `termios`, which does NOT exist
 # on Windows, so importing them unconditionally crashed app startup there
@@ -83,7 +84,10 @@ def _ssh_base_argv(host: str, ssh_port: str | None) -> list[str]:
     """Build an ssh argv prefix for remote probes without local-shell parsing."""
     if not host or not str(host).strip() or str(host).lstrip().startswith("-"):
         raise ValueError("invalid ssh host")
-    argv = ["ssh", "-o", "ConnectTimeout=6", "-o", "StrictHostKeyChecking=no"]
+    argv = [
+        "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6",
+        "-o", "StrictHostKeyChecking=yes",
+    ]
     if ssh_port and str(ssh_port).strip() not in ("", "22"):
         port = str(ssh_port).strip()
         if not _SSH_PORT_RE.match(port) or not (1 <= int(port) <= 65535):
@@ -1757,7 +1761,14 @@ def setup_shell_routes() -> APIRouter:
                 )
                 pkg["applicable"] = status.applicable
                 pkg["install_hint"] = status.install_hint
-        return {"packages": packages}
+        # Cookbook remains the human-facing view, but its supported artifact,
+        # runtime, installer, and verification vocabulary comes from the same
+        # canonical backend consumed by ACI and Setup Center.
+        return {
+            "packages": packages,
+            "canonical_resource_contracts": dependency_manager.contracts(),
+            "artifact_contracts": artifact_manager.contracts(),
+        }
 
     @router.post("/api/cookbook/packages/install")
     async def install_package(request: Request):
@@ -1769,33 +1780,8 @@ def setup_shell_routes() -> APIRouter:
         pip_name = body.get("pip")
         if not pip_name:
             return {"ok": False, "error": "No package specified"}
-        # Validate against known packages to prevent arbitrary pip install
-        known = {
-            "rembg[gpu]",
-            "hf_transfer",
-            "llama-cpp-python[server]",
-            "sglang[all]",
-            "diffusers",
-            "diffusers[torch]",
-            "git+https://github.com/huggingface/diffusers.git",
-            "mflux",
-            "git+https://github.com/xocialize/boogu-image-mlx.git",
-            "mlx-vlm",
-            "transformers",
-            "TTS",
-            "bark",
-            "faster-whisper",
-            "playwright",
-            "realesrgan",
-            "gfpgan",
-            "insightface",
-            "onnxruntime-gpu",
-            "onnxruntime",
-            "hdbscan",
-            "vllm",
-            "mlx-lm",
-        }
-        if pip_name not in known:
+        package_plan = dependency_manager.plan_user_package(pip_name)
+        if package_plan.get("status") != "READY_FOR_ADAPTER":
             return {"ok": False, "error": f"Unknown package: {pip_name}"}
         cmd = [_sys.executable, "-m", "pip", "install", pip_name]
         proc = await asyncio.create_subprocess_exec(
@@ -1809,7 +1795,7 @@ def setup_shell_routes() -> APIRouter:
     @router.post("/api/cookbook/install-system-deps")
     async def install_system_deps(request: Request):
         """Install OS-level system packages (cmake/build-essential/git/tmux)
-        on a remote target or in the local container. Admin only.
+        on a remote target or the host through the canonical broker. Admin only.
 
         Bounded by a per-package allowlist — anything outside the catalog
         is rejected so the route can't be coerced into installing arbitrary
@@ -1822,48 +1808,59 @@ def setup_shell_routes() -> APIRouter:
         raw = body.get("packages") or []
         host = (body.get("remote_host") or "").strip()
         ssh_port = body.get("ssh_port")
-        # Names users can request — must match canonical names used in the
-        # deps catalog's `system_prereqs` field and on the System rows.
-        ALLOWED = {"cmake", "build-essential", "g++", "gcc", "git", "tmux", "make"}
-        pkgs = [str(p).strip() for p in raw if str(p).strip() in ALLOWED]
+        package_plan = dependency_manager.plan_host_packages(raw)
+        ALLOWED = set(package_plan["allowed_packages"])
+        pkgs = list(package_plan["requested"])
         if not pkgs:
             return {"ok": False, "error": "no installable packages requested (allowlist: " + ", ".join(sorted(ALLOWED)) + ")"}
-        # Re-map to the right package name per OS. apt/dpkg use the names
-        # as-is; pacman has base-devel for build-essential, etc.
-        def _apt(names): return list(names)
-        def _pacman(names):
-            return ["base-devel" if n == "build-essential" else n for n in names]
-        def _dnf(names):
-            out = []
-            for n in names:
-                if n == "build-essential": out += ["gcc", "gcc-c++", "make"]
-                elif n == "g++": out += ["gcc-c++"]
-                else: out.append(n)
-            return out
-        def _apk(names):
-            out = []
-            for n in names:
-                if n == "build-essential": out.append("build-base")
-                else: out.append(n)
-            return out
-        def _zypper(names):
-            out = []
-            for n in names:
-                if n == "build-essential": out += ["gcc-c++", "make"]
-                elif n == "g++": out.append("gcc-c++")
-                else: out.append(n)
-            return out
-        def _brew(names):
-            return [n for n in names if n not in ("build-essential", "g++", "gcc", "make")]
+
+        # Local host installation must use the same privileged broker as the
+        # ACI homelab path.  Keep Cookbook as the owner-facing projection;
+        # it may not become a second local package execution authority.  The
+        # broker performs its own allowlist and execution-profile checks.
+        if not host:
+            from src.privileged_broker import client_request
+            try:
+                result = await asyncio.to_thread(
+                    client_request,
+                    {"action": "install_packages", "packages": pkgs},
+                    timeout=310,
+                )
+            except Exception:
+                return {
+                    "ok": False,
+                    "error": "the privileged package broker is unavailable",
+                    "execution_authority": "privileged_broker",
+                }
+            ok = bool(result.get("ok"))
+            return {
+                "ok": ok,
+                "exit_code": 0 if ok else 1,
+                "output": str(result.get("stdout") or result.get("output") or "")[-1000:],
+                "error": None if ok else str(result.get("error") or "package installation failed")[-1000:],
+                "packages": pkgs,
+                "execution_authority": "privileged_broker",
+            }
+
+        remote_package_plan = dependency_manager.plan_remote_packages(
+            pkgs, target_asset=host,
+        )
+        if remote_package_plan.get("status") != "READY_FOR_ADAPTER":
+            return {
+                "ok": False,
+                "error": "the requested remote package set is not supported by the canonical dependency contract",
+                "dependency_plan": remote_package_plan,
+            }
+        package_maps = package_plan["packages_by_manager"]
         # Build a single shell snippet that detects the package manager and
         # runs the right install. Non-interactive sudo (-n) only — if sudo
         # asks for a password the script reports it instead of hanging.
-        apt_pkgs = " ".join(shlex.quote(p) for p in _apt(pkgs))
-        pac_pkgs = " ".join(shlex.quote(p) for p in _pacman(pkgs))
-        dnf_pkgs = " ".join(shlex.quote(p) for p in _dnf(pkgs))
-        apk_pkgs = " ".join(shlex.quote(p) for p in _apk(pkgs))
-        zypper_pkgs = " ".join(shlex.quote(p) for p in _zypper(pkgs))
-        brew_pkgs = " ".join(shlex.quote(p) for p in _brew(pkgs))
+        apt_pkgs = " ".join(shlex.quote(p) for p in package_maps["apt"])
+        pac_pkgs = " ".join(shlex.quote(p) for p in package_maps["pacman"])
+        dnf_pkgs = " ".join(shlex.quote(p) for p in package_maps["dnf"])
+        apk_pkgs = " ".join(shlex.quote(p) for p in package_maps["apk"])
+        zypper_pkgs = " ".join(shlex.quote(p) for p in package_maps["zypper"])
+        brew_pkgs = " ".join(shlex.quote(p) for p in package_maps["brew"])
         # Error messages go to stderr (>&2) so the route's error field
         # gets populated. Without the redirect, `echo "ERROR…"` on stdout
         # left stderr empty and the frontend toast fell through to a

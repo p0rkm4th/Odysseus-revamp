@@ -1,0 +1,185 @@
+import json
+
+from src.aci import ContextEnvelope
+from src.runtime_profile import (
+    CapabilityEvidence,
+    RuntimeCapabilityProfile,
+    RuntimeProfileCache,
+    runtime_profile_key,
+    select_evidence,
+    characterize_ollama,
+    negotiated_decision_protocol,
+    probe_ollama_decision_json,
+)
+
+
+def test_runtime_key_separates_protocol_runtime_and_model_fingerprint():
+    a = runtime_profile_key(endpoint_id="local", protocol="openai-chat", runtime="ollama", model_id="qwen3:8b", model_digest="a")
+    b = runtime_profile_key(endpoint_id="local", protocol="openai-chat", runtime="llama.cpp", model_id="qwen3:8b", model_digest="a")
+    c = runtime_profile_key(endpoint_id="local", protocol="openai-chat", runtime="ollama", model_id="qwen3:8b", model_digest="b")
+    assert len(a) == 32
+    assert len({a, b, c}) == 3
+
+
+def test_evidence_precedence_prefers_probe_over_heuristic_and_fresh_tie():
+    old = CapabilityEvidence(status="pass", source="heuristic", tested_at=99)
+    probe = CapabilityEvidence(status="fail", source="capability_probe", tested_at=1)
+    assert select_evidence(old, probe) is probe
+    fresh = CapabilityEvidence(status="pass", source="capability_probe", tested_at=2)
+    assert select_evidence(probe, fresh) is fresh
+
+
+def test_profile_cache_round_trip_and_ttl(tmp_path):
+    profile = RuntimeCapabilityProfile(
+        endpoint_id="local", protocol="openai-chat", runtime="ollama", model_id="qwen3:8b",
+        architecture_max_context=40960, runtime_allocated_context=8192,
+        capabilities={"structured_json": CapabilityEvidence(status="pass", source="capability_probe", tested_at=10)},
+        refreshed_at=100, ttl_seconds=20,
+    )
+    cache = RuntimeProfileCache(tmp_path / "profiles.json")
+    cache.save(profile)
+    loaded = cache.load(profile.key)
+    assert loaded is not None
+    assert loaded.supports("structured_json")
+    assert loaded.is_fresh(119)
+    assert not loaded.is_fresh(121)
+    assert json.loads((tmp_path / "profiles.json").read_text())
+
+
+def test_context_envelope_uses_runtime_allocation_not_architecture_maximum():
+    profile = RuntimeCapabilityProfile(
+        endpoint_id="local", protocol="openai-chat", runtime="ollama", model_id="qwen3:8b",
+        architecture_max_context=40960, runtime_allocated_context=8192,
+    )
+    envelope = ContextEnvelope.from_runtime_profile(profile, aci_profile_target=6000, reserved_output_budget=512)
+    assert envelope.effective_context == 6512
+
+
+def test_ollama_characterization_is_metadata_only_and_cacheable(monkeypatch, tmp_path):
+    class Response:
+        headers = {"x-ollama-version": "0.11-test"}
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {
+                "digest": "digest-1",
+                "capabilities": ["completion", "tools", "thinking"],
+                "details": {"context_length": 40960},
+            }
+
+    calls = []
+    def fake_post(url, **kwargs):
+        calls.append((url, kwargs["json"]))
+        return Response()
+
+    class TagsResponse:
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {"models": [{"name": "qwen3:8b", "digest": "digest-1", "details": {"context_length": 40960}}]}
+
+    monkeypatch.setattr("src.runtime_profile.httpx.post", fake_post)
+    monkeypatch.setattr("src.runtime_profile.httpx.get", lambda *args, **kwargs: TagsResponse())
+    cache = RuntimeProfileCache(tmp_path / "profiles.json")
+    first = characterize_ollama("http://127.0.0.1:11434", "qwen3:8b", endpoint_id="test", cache=cache)
+    second = characterize_ollama("http://127.0.0.1:11434", "qwen3:8b", endpoint_id="test", cache=cache)
+    assert first.runtime == "ollama"
+    assert first.protocol == "ollama-chat"
+    assert first.architecture_max_context == 40960
+    assert second.key == first.key
+    assert calls == [("http://127.0.0.1:11434/api/show", {"name": "qwen3:8b"})]
+
+
+def test_runtime_profile_cache_find_fresh_requires_stable_identity(tmp_path):
+    cache = RuntimeProfileCache(tmp_path / "profiles.json")
+    profile = RuntimeCapabilityProfile(
+        endpoint_id="test", protocol="ollama-chat", runtime="ollama",
+        model_id="qwen3:8b", refreshed_at=100, ttl_seconds=20,
+    )
+    cache.save(profile)
+    assert cache.find_fresh(
+        endpoint_id="test", protocol="ollama-chat", runtime="ollama",
+        model_id="qwen3:8b", now=119,
+    ) == profile
+    assert cache.find_fresh(
+        endpoint_id="other", protocol="ollama-chat", runtime="ollama",
+        model_id="qwen3:8b", now=119,
+    ) is None
+    assert cache.find_fresh(
+        endpoint_id="test", protocol="ollama-chat", runtime="ollama",
+        model_id="qwen3:8b", now=121,
+    ) is None
+
+
+def test_probe_record_is_empirical_and_does_not_mutate_original():
+    profile = RuntimeCapabilityProfile("e", "ollama-chat", "ollama", "qwen3:8b")
+    updated = profile.with_probe("decision_json", "pass", evidence={"fixture": "synthetic"})
+    assert "decision_json" not in profile.capabilities
+    assert updated.supports("decision_json")
+    assert updated.capabilities["decision_json"].source == "capability_probe"
+
+
+def test_negotiated_decision_protocol_requires_fresh_empirical_support():
+    now = __import__("time").time()
+    unknown = RuntimeCapabilityProfile("e", "ollama-chat", "ollama", "qwen3:8b")
+    native = RuntimeCapabilityProfile(
+        "e", "ollama-chat", "ollama", "qwen3:8b", refreshed_at=now,
+        capabilities={"native_tools": CapabilityEvidence("pass", "capability_probe", now)},
+    )
+    strict = native.with_probe("decision_json", "pass")
+    assert negotiated_decision_protocol(unknown) == "TEXTUAL_JSON_FALLBACK"
+    assert negotiated_decision_protocol(native) == "VERIFIED_NATIVE_TOOL_CALL"
+    assert negotiated_decision_protocol(strict) == "STRICT_DECISION_JSON"
+
+
+def test_ollama_decision_probe_is_bounded_sanitized_and_cached(monkeypatch, tmp_path):
+    class Response:
+        headers = {"x-ollama-version": "0.11-test"}
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {
+                "digest": "digest-1",
+                "capabilities": ["completion"],
+                "details": {"context_length": 40960},
+            }
+
+    class ProbeResponse(Response):
+        def json(self):
+            return {"message": {"content": '{"decision":"ANSWER"}'}}
+
+    calls = []
+    def fake_post(url, **kwargs):
+        calls.append((url, kwargs.get("json")))
+        return ProbeResponse() if url.endswith("/api/chat") else Response()
+
+    monkeypatch.setattr("src.runtime_profile.httpx.post", fake_post)
+    cache = RuntimeProfileCache(tmp_path / "profiles.json")
+    first = probe_ollama_decision_json(
+        "http://127.0.0.1:11434", "qwen3:8b", endpoint_id="test", cache=cache,
+    )
+    second = probe_ollama_decision_json(
+        "http://127.0.0.1:11434", "qwen3:8b", endpoint_id="test", cache=cache,
+    )
+    assert negotiated_decision_protocol(first) == "STRICT_DECISION_JSON"
+    assert second.key == first.key
+    assert [url for url, _ in calls].count("http://127.0.0.1:11434/api/chat") == 1
+    probe_payload = next(payload for url, payload in calls if url.endswith("/api/chat"))
+    assert probe_payload["think"] is False
+    assert probe_payload["stream"] is False
+    assert probe_payload["options"]["num_predict"] == 16
+    stored = cache.load(first.key)
+    assert stored is not None
+    evidence = stored.capabilities["decision_json"].evidence
+    assert evidence["side_effects"] is False
+    assert "content" not in evidence
+
+
+def test_sanitized_protocol_probe_fixture_has_no_execution_authority():
+    import json
+    with open("benchmarks/hades_aci_protocol_probe.json", encoding="utf-8") as handle:
+        fixture = json.load(handle)
+    assert fixture["synthetic"] is True
+    assert fixture["side_effects"] is False
+    assert fixture["probes"]["native_tools"]["executed"] is False
+    assert fixture["selection"]["authority"] == "canonical_action_registry_and_policy"

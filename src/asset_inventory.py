@@ -11,7 +11,11 @@ def jd(v): return json.dumps(v, sort_keys=True, separators=(",", ":"))
 
 def db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    c = sqlite3.connect(DB_PATH); c.row_factory = sqlite3.Row
+    # Discovery, UI reconciliation, and background projections can write the
+    # same CMDB concurrently. Let SQLite serialize writers predictably rather
+    # than surfacing transient lock errors or racing a unique MAC update.
+    c = sqlite3.connect(DB_PATH, timeout=30); c.row_factory = sqlite3.Row
+    c.execute("PRAGMA busy_timeout=30000")
     c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA foreign_keys=ON")
     c.executescript(
         "CREATE TABLE IF NOT EXISTS assets("
@@ -130,8 +134,12 @@ def cmd_list(a):
     if a.type: sql+=" AND type=?"; p.append(a.type)
     if a.status: sql+=" AND status=?"; p.append(a.status)
     if a.query:
-        sql+=" AND (lower(name) LIKE lower(?) OR lower(coalesce(hostname,'')) LIKE lower(?) OR lower(coalesce(model,'')) LIKE lower(?))"
-        q="%"+a.query+"%"; p += [q,q,q]
+        # Component/model facts may live in the canonical structured
+        # attributes projection (for example ``gpu: RTX 2080``), so asset
+        # aggregation queries must search that projection too.  This remains
+        # an owner-scoped SQL read; it does not infer inventory from prose.
+        sql+=" AND (lower(name) LIKE lower(?) OR lower(coalesce(hostname,'')) LIKE lower(?) OR lower(coalesce(model,'')) LIKE lower(?) OR lower(coalesce(attributes_json,'')) LIKE lower(?))"
+        q="%"+a.query+"%"; p += [q,q,q,q]
     sql+=" ORDER BY updated_at DESC LIMIT ?"; p.append(a.limit)
     print(json.dumps([view(c,r, owner) for r in c.execute(sql,p)],indent=2,sort_keys=True))
 
@@ -269,48 +277,76 @@ def probe(ip,timeout=.18):
     return {"ip": ip, "tcp_responded": responded, "open_ports": opens}
 
 def maybe_install(ok):
-    r={"authorized":bool(ok),"attempted":False,"installed":False}
-    if not ok: r["reason"]="not_authorized"; return r
-    if shutil.which("ip") and shutil.which("nmap"): r.update(reason="already_present",installed=True); return r
-    if os.geteuid()!=0: r["reason"]="non_root_stdlib_fallback"; return r
-    plans=[("apt-get",["sh","-lc","apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq iproute2 nmap"]),
-           ("apk",["apk","add","--no-cache","iproute2","nmap"]),("dnf",["dnf","install","-y","iproute","nmap"]),
-           ("microdnf",["microdnf","install","-y","iproute","nmap"]),("yum",["yum","install","-y","iproute","nmap"]),
-           ("pacman",["pacman","-Sy","--noconfirm","iproute2","nmap"])]
-    for b,cmd in plans:
-        if shutil.which(b):
-            r["attempted"]=True; rc,_,er=run(cmd,120); r.update(package_manager=b,returncode=rc,stderr=er[-500:],installed=rc==0)
-            r["reason"]="installed" if rc==0 else "install_failed_stdlib_fallback"; return r
-    r["reason"]="no_package_manager_stdlib_fallback"; return r
+    """Project network prerequisites without becoming a package authority.
+
+    This command is a compatibility discovery CLI.  Installation belongs to
+    the canonical ActionSpec -> policy/approval -> broker path in
+    ``HomelabOperations``.  Keeping this projection non-mutating prevents a
+    legacy ``--install-authorized`` flag from becoming a second installer.
+    """
+    from src.capability_dependencies import dependency_manager
+
+    available = [name for name in ("ip", "nmap") if shutil.which(name)]
+    plan = dependency_manager.ensure(
+        "network.discover_hosts", available_executables=available,
+        platform_key=os.environ.get("HADES_HOST_PLATFORM") or None,
+    )
+    if not ok:
+        return {
+            "authorized": False, "attempted": False, "installed": False,
+            "status": plan.get("status"), "reason": "not_authorized",
+            "dependency_plan": plan,
+        }
+    if plan.get("status") == "AVAILABLE":
+        return {
+            "authorized": True, "attempted": False, "installed": True,
+            "status": plan.get("status"), "reason": "already_present",
+            "dependency_plan": plan,
+        }
+    return {
+        "authorized": True, "attempted": False, "installed": False,
+        "status": plan.get("status"),
+        "reason": "remediation_requires_canonical_broker_and_approval",
+        "dependency_plan": plan,
+    }
 
 def record_net(rep, owner=None):
     owner = str(owner or "").strip()
     if not owner:
         raise ValueError("network observation recording requires an authenticated owner")
     c=db(); t=now()
-    for h in rep["hosts"]:
-        mac=(h.get("mac") or "").lower(); aid=None
-        if mac and mac!="00:00:00:00:00:00":
-            e=c.execute(
-                "SELECT i.asset_id,a.owner FROM identifiers i JOIN assets a ON a.id=i.asset_id "
-                "WHERE i.kind='mac' AND i.value=?", (mac,),
-            ).fetchone()
-            if e and e["owner"] == owner: aid=e["asset_id"]
-            else:
-                aid=str(uuid.uuid4())
-                # A globally unique legacy identifier cannot be safely reused
-                # for another owner.  Keep the observation unattached when the
-                # MAC belongs to a different owner instead of merging identity.
-                if not e:
-                    c.execute("INSERT INTO assets(id,name,type,status,source,confidence,attributes_json,created_at,updated_at,owner) VALUES(?,?,?,?,?,?,?,?,?,?)",
-                              (aid,"network-device-"+mac.replace(":","")[-6:],"network_device","observed","network_discovery",.65,"{}",t,t,owner))
-                    putid(c,aid,"mac",mac,.9,"network_discovery")
+    try:
+        # Resolve identities only after acquiring the write lock so concurrent
+        # discovery writers cannot both decide that one strong identifier is new.
+        c.execute("BEGIN IMMEDIATE")
+        for h in rep["hosts"]:
+            mac=(h.get("mac") or "").lower(); aid=None
+            if mac and mac!="00:00:00:00:00:00":
+                e=c.execute(
+                    "SELECT i.asset_id,a.owner FROM identifiers i JOIN assets a ON a.id=i.asset_id "
+                    "WHERE i.kind='mac' AND i.value=?", (mac,),
+                ).fetchone()
+                if e and e["owner"] == owner: aid=e["asset_id"]
                 else:
-                    aid = None
-        c.execute("INSERT INTO observations(asset_id,observed_at,source,kind,confidence,owner,data_json) VALUES(?,?,?,?,?,?,?)",
-                  (aid,t,h.get("source") or "network_discovery",h.get("kind") or "network_host",
-                   float(h.get("confidence") or (.75 if mac else .45)),owner,jd(h)))
-    c.commit()
+                    aid=str(uuid.uuid4())
+                    # A globally unique legacy identifier cannot be safely reused
+                    # for another owner.  Keep the observation unattached when the
+                    # MAC belongs to a different owner instead of merging identity.
+                    if not e:
+                        c.execute("INSERT INTO assets(id,name,type,status,source,confidence,attributes_json,created_at,updated_at,owner) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                                  (aid,"network-device-"+mac.replace(":","")[-6:],"network_device","observed","network_discovery",.65,"{}",t,t,owner))
+                        putid(c,aid,"mac",mac,.9,"network_discovery")
+                    else:
+                        aid = None
+            c.execute("INSERT INTO observations(asset_id,observed_at,source,kind,confidence,owner,data_json) VALUES(?,?,?,?,?,?,?)",
+                      (aid,t,h.get("source") or "network_discovery",h.get("kind") or "network_host",
+                       float(h.get("confidence") or (.75 if mac else .45)),owner,jd(h)))
+        c.commit()
+    except Exception:
+        c.rollback()
+        raise
+    finally:
+        c.close()
 
 
 def bind_legacy_owner(owner):
@@ -330,6 +366,98 @@ def bind_legacy_owner(owner):
     ).rowcount
     c.commit()
     return {"owner": owner, "assets_bound": assets, "observations_bound": observations, "preserved": True}
+
+def reconcile_candidate(owner, candidate, decision, *, name=None, asset_type="network_device"):
+    """Apply an explicit owner decision to a network asset candidate.
+
+    Network observations remain evidence and IP addresses remain non-canonical
+    identifiers.  Only an authenticated owner can promote an observed row to
+    an asset, reject it, or attach an unidentified observation to a newly
+    named asset.
+    """
+    owner = str(owner or "").strip()
+    candidate = str(candidate or "").strip()
+    decision = str(decision or "").strip().lower()
+    if not owner:
+        raise ValueError("asset reconciliation requires an authenticated owner")
+    if decision not in {"confirm", "reject", "create"}:
+        raise ValueError("decision must be confirm, reject, or create")
+    if decision == "create" and not str(name or "").strip():
+        raise ValueError("creating an asset requires an owner-supplied name")
+
+    c = db()
+    try:
+        c.execute("BEGIN IMMEDIATE")
+        row = None
+        observation_id = None
+        if candidate.startswith("unidentified:"):
+            ip = candidate.split(":", 1)[1].strip()
+            if not ip:
+                raise ValueError("invalid unidentified candidate")
+            try:
+                ipaddress.ip_address(ip)
+            except ValueError as exc:
+                raise ValueError("invalid unidentified candidate") from exc
+            row = c.execute(
+                "SELECT id, data_json FROM observations "
+                "WHERE owner=? AND asset_id IS NULL AND kind='network_host' "
+                "AND json_extract(data_json, '$.ip')=? ORDER BY id DESC LIMIT 1",
+                (owner, ip),
+            ).fetchone()
+            if row:
+                observation_id = row["id"]
+        else:
+            row = c.execute(
+                "SELECT * FROM assets WHERE id=? AND owner=?", (candidate, owner)
+            ).fetchone()
+        if not row:
+            raise ValueError("asset candidate not found")
+
+        timestamp = now()
+        if decision == "reject":
+            if candidate.startswith("unidentified:"):
+                c.execute(
+                    "UPDATE observations SET kind='network_host_rejected' "
+                    "WHERE id=? AND owner=?", (observation_id, owner)
+                )
+                result = {"decision": "rejected", "candidate": candidate}
+            else:
+                c.execute(
+                    "UPDATE assets SET status='retired', retired_at=?, updated_at=? "
+                    "WHERE id=? AND owner=?", (timestamp, timestamp, candidate, owner)
+                )
+                result = {"decision": "rejected", "asset_id": candidate}
+        else:
+            if candidate.startswith("unidentified:"):
+                asset_id = str(uuid.uuid4())
+                c.execute(
+                    "INSERT INTO assets(id,name,type,status,source,confidence,"
+                    "attributes_json,created_at,updated_at,owner) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    (asset_id, str(name).strip(), asset_type, "active",
+                     "owner_reconciliation", .9, "{}", timestamp, timestamp, owner),
+                )
+                c.execute(
+                    "UPDATE observations SET asset_id=? WHERE id=? AND owner=?",
+                    (asset_id, observation_id, owner),
+                )
+            else:
+                asset_id = candidate
+                c.execute(
+                    "UPDATE assets SET status='active', retired_at=NULL, "
+                    "updated_at=?" + (", name=?" if name else "") +
+                    " WHERE id=? AND owner=?",
+                    ((timestamp, str(name).strip(), asset_id, owner) if name else
+                     (timestamp, asset_id, owner)),
+                )
+            result = {"decision": "confirmed", "asset_id": asset_id,
+                      "name": str(name).strip() if name else None}
+        c.commit()
+        return result
+    except Exception:
+        c.rollback()
+        raise
+    finally:
+        c.close()
 
 def cmd_net(a):
     inst = maybe_install(a.install_authorized)

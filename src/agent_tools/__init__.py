@@ -141,6 +141,7 @@ from src.tool_schemas import (  # noqa: E402, F401
 # Execution
 from src.tool_execution import (  # noqa: E402, F401
     execute_tool_block,
+    stream_tool_execution,
     format_tool_result,
 )
 

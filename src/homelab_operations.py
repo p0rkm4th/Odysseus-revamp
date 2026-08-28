@@ -12,13 +12,15 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import threading
 from typing import Any, Awaitable, Callable
 import xml.etree.ElementTree as ET
 
 from src.constants import DATA_DIR
 from src.execution_profiles import active_execution_profile
-from src.capability_dependencies import capability_health, remediation_handoff
+from src.capability_dependencies import dependency_manager
+from core.platform_compat import run_ssh_command
 
 
 class HomelabOperationError(ValueError):
@@ -26,8 +28,10 @@ class HomelabOperationError(ValueError):
 
 
 _SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.@:-]{0,127}$")
+_SSH_TARGET = re.compile(r"^(?:[A-Za-z0-9][A-Za-z0-9._-]*@)?[A-Za-z0-9][A-Za-z0-9._-]*$")
 _ACTIONS = frozenset({
     "inspect_host", "service_status", "plan_service_restart", "execute_service_restart",
+    "ssh_connect_test", "remote_host_inspect",
     "discovery_status", "read_network_context", "read_network_observations", "list_unidentified_hosts", "infer_role_hypotheses",
     "plan_network_discovery", "execute_network_discovery",
     "plan_network_service_enumeration", "execute_network_service_enumeration",
@@ -346,6 +350,71 @@ class HomelabOperations:
             "network_map_reconciled": True,
         }
 
+    def _remote_asset_target(self, asset_ref: Any, *, owner: str) -> dict[str, Any]:
+        """Resolve an SSH endpoint from the authenticated owner's Asset.
+
+        The request carries only an Asset reference. Host/user/port metadata
+        comes from the canonical owner-scoped CMDB record, so the model cannot
+        turn this read into arbitrary SSH access. Credentials remain outside
+        the Asset projection and are resolved by the existing SSH environment.
+        """
+        reference = str(asset_ref or "").strip()
+        if not reference:
+            raise HomelabOperationError("an owner Asset reference is required")
+        from src.asset_inventory import db, resolve, view
+        connection = db()
+        try:
+            record = resolve(connection, reference, owner=owner)
+            if record is None:
+                raise HomelabOperationError("the requested owner Asset was not found")
+            asset = view(connection, record, owner=owner) or {}
+        finally:
+            connection.close()
+        attributes = asset.get("attributes") if isinstance(asset.get("attributes"), dict) else {}
+        host = str(attributes.get("ssh_host") or asset.get("hostname") or "").strip()
+        user = str(attributes.get("ssh_user") or "").strip()
+        port = attributes.get("ssh_port") or "22"
+        if not host:
+            raise HomelabOperationError("the Asset has no configured SSH target")
+        if not _SSH_TARGET.fullmatch(f"{user}@{host}" if user else host):
+            raise HomelabOperationError("the Asset SSH target is invalid")
+        if not str(port).isdigit() or not 1 <= int(port) <= 65535:
+            raise HomelabOperationError("the Asset SSH port is invalid")
+        remote = f"{user}@{host}" if user else host
+        return {
+            "asset_id": asset.get("id"), "asset_name": asset.get("name"),
+            "remote": remote, "ssh_port": str(port),
+            "target_identity": "canonical_owner_asset",
+        }
+
+    async def _remote_inspect(self, request: dict[str, Any], *, owner: str, action: str) -> dict[str, Any]:
+        target = self._remote_asset_target(request.get("asset"), owner=owner)
+        command = "true" if action == "ssh_connect_test" else (
+            "printf 'hostname='; hostname; printf '\\nos='; uname -srm; "
+            "printf '\\nuptime='; uptime"
+        )
+        try:
+            completed = await asyncio.to_thread(
+                run_ssh_command, target["remote"], target["ssh_port"], command,
+                timeout=20, connect_timeout=5, strict_host_key_checking=True,
+            )
+        except (TimeoutError, subprocess.TimeoutExpired):
+            return {"status": "FAILED", "success": False, "action": action,
+                    "asset_id": target["asset_id"], "target_identity": target["target_identity"],
+                    "error_code": "SSH_TIMEOUT", "error": "the Asset SSH connection timed out"}
+        except Exception as exc:
+            return {"status": "FAILED", "success": False, "action": action,
+                    "asset_id": target["asset_id"], "target_identity": target["target_identity"],
+                    "error_code": "SSH_TRANSPORT_FAILURE", "error": str(exc)[:240]}
+        stdout = completed.stdout if isinstance(completed.stdout, str) else completed.stdout.decode("utf-8", errors="replace")
+        stderr = completed.stderr if isinstance(completed.stderr, str) else completed.stderr.decode("utf-8", errors="replace")
+        success = completed.returncode == 0
+        return {"status": "SUCCESS_WITH_DATA" if success else "FAILED", "success": success,
+                "action": action, "asset_id": target["asset_id"], "asset_name": target["asset_name"],
+                "target_identity": target["target_identity"], "execution_location": "REMOTE_SSH",
+                "stdout": stdout[:12000], "stderr": stderr[:4000],
+                "exit_code": int(completed.returncode), "verification": "ssh_transport_exit_zero"}
+
     async def execute(self, request: dict[str, Any], *, owner: str) -> dict[str, Any]:
         owner = str(owner or "").strip()
         if not owner:
@@ -353,10 +422,12 @@ class HomelabOperations:
         action = str(request.get("action") or "").strip()
         if action not in _ACTIONS:
             raise HomelabOperationError("unsupported homelab action")
+        if action in {"ssh_connect_test", "remote_host_inspect"}:
+            return await self._remote_inspect(request, owner=owner, action=action)
         if action == "inspect_host":
             return await self._read(owner, action, ["uptime"])
         if action == "discovery_status":
-            health = capability_health("network_discovery")
+            health = dependency_manager.inspect_operation("network_discovery")
             broker_scanner = False
             try:
                 from src.privileged_broker import client_request
@@ -503,12 +574,37 @@ class HomelabOperations:
             return await self._network_discovery(request, owner=owner, action=action)
         if action in {"plan_network_service_enumeration", "execute_network_service_enumeration"}:
             return await self._network_service_enumeration(request, owner=owner, action=action)
-        service = _service(request.get("service"))
         if action == "service_status":
+            raw_service = str(request.get("service") or "").strip()
+            if not raw_service:
+                # An unqualified infrastructure-status request describes the
+                # Hades runtime, not an arbitrary host systemd namespace. The
+                # application runs in a container where `systemctl --user`
+                # is commonly unavailable; treating that transport mismatch as
+                # the infrastructure truth caused successful status reads to
+                # become EXECUTION_FAILED. Use the existing bounded service
+                # health collector and keep explicit unit inspection on the
+                # separate, target-qualified path below.
+                from src.service_health import collect_service_health
+                health = await collect_service_health()
+                return {
+                    "status": "SUCCESS_WITH_DATA",
+                    "success": True,
+                    "exit_code": 0,
+                    "action": action,
+                    "target": "hades-runtime",
+                    "source": "canonical_service_health",
+                    "overall": health.get("overall"),
+                    "services": health.get("services", []),
+                    "timestamp": health.get("timestamp"),
+                    "observation_location": "APPLICATION_RUNTIME",
+                }
+            service = _service(raw_service)
             return await self._read(owner, action, [
                 "systemctl", "--user", "show", "--no-pager",
                 "--property=Id,LoadState,ActiveState,SubState,UnitFileState", service,
             ], target=service)
+        service = _service(request.get("service"))
         plan = {
             "action": "execute_service_restart", "target_kind": "local_user_systemd_unit",
             "target": service,
@@ -590,7 +686,14 @@ class HomelabOperations:
                 broker_scanner = bool((await asyncio.to_thread(client_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
             except Exception:
                 pass
-        health = capability_health("network_discovery", available=(["nmap"] if scanner or broker_scanner else []))
+        health = dependency_manager.inspect_operation(
+            "network_discovery",
+            available=["nmap"] if scanner or broker_scanner else [],
+        )
+        health["canonical_dependency"] = dependency_manager.inspect(
+            "network.discover_hosts",
+            available_executables=(["nmap"] if scanner or broker_scanner else []),
+        )
         if action == "plan_network_discovery":
             receipt = {
                 "kind": "plan", "owner": owner, "created_at": _now().isoformat(),
@@ -623,7 +726,7 @@ class HomelabOperations:
             handoff = None
             if request.get("run_id") and request.get("action_id"):
                 try:
-                    handoff = remediation_handoff(
+                    handoff = dependency_manager.resume_receipt(
                         "network_discovery", run_id=str(request["run_id"]),
                         action_id=str(request["action_id"]),
                         approval_reference=request.get("approval_reference"),
@@ -743,7 +846,10 @@ class HomelabOperations:
 
         try:
             capability = str(request.get("capability") or "").strip()
-            dependency = capability_health(capability, available=[]) if capability else None
+            dependency = (
+                dependency_manager.inspect_operation(capability, available=[])
+                if capability else None
+            )
             if capability:
                 if not dependency.get("remediation_available"):
                     raise ValueError("capability has no deterministic approved prerequisite remediation")
@@ -761,7 +867,7 @@ class HomelabOperations:
         handoff = None
         if capability and request.get("run_id") and request.get("action_id"):
             try:
-                handoff = remediation_handoff(
+                handoff = dependency_manager.resume_receipt(
                     capability, run_id=str(request["run_id"]),
                     action_id=str(request["action_id"]),
                     approval_reference=request.get("approval_reference"),
@@ -839,6 +945,14 @@ class HomelabOperations:
             "kind": "read", "owner": owner, "created_at": _now().isoformat(),
             "action": action, "target": target, "command_digest": _digest({"argv": argv}),
             "success": code == 0, "exit_code": code,
+            # Keep subprocess-backed infrastructure reads in the same
+            # canonical result vocabulary as broker-backed reads.  Without a
+            # status, downstream projection had to infer success from an
+            # adapter-shaped receipt and could classify a real read as an
+            # unstructured/failed infrastructure result.
+            "status": "SUCCESS_WITH_DATA" if code == 0 else "FAILED",
+            "source": "host_operator_read",
+            "observation_location": "HOST_OPERATOR",
         }
         await asyncio.to_thread(self.receipts.append, receipt)
         return {**_public(receipt), "output": output, "untrusted_content": True}

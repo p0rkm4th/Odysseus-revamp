@@ -30,7 +30,34 @@ async function openItAsset(id) {
 function openCmdbAsset(node) {
   const el = entityWindow('cmdb-asset', node.id, 'CMDB asset');
   const observations = node.observations || [];
-  el.querySelector('.hades-window-body').innerHTML = `<div><h2>${esc(node.name || node.hostname || node.id)}</h2><p>${esc(node.resolution_state || 'canonical')} · confidence ${esc(node.confidence)}</p><h3>Identifiers</h3><pre>${esc(JSON.stringify(node.identifiers || [], null, 2))}</pre><h3>Observations / provenance</h3><pre>${esc(JSON.stringify(observations, null, 2))}</pre></div>`;
+  const pending = node.resolution_state === 'pending_candidate';
+  const unidentified = node.resolution_state === 'unidentified';
+  const actions = pending || unidentified ? `<section class="hades-detail-section"><h3>Owner reconciliation</h3><p class="muted">This observation is evidence, not canonical identity. Explicit owner confirmation is required.</p><div class="hades-inline-actions"><button class="list-item" data-cmdb-confirm>Confirm${unidentified ? ' and name' : ''}</button><button class="list-item" data-cmdb-reject>Reject</button></div><p class="muted" data-cmdb-message></p></section>` : '';
+  el.querySelector('.hades-window-body').innerHTML = `<div><h2>${esc(node.name || node.hostname || node.id)}</h2><p>${esc(node.resolution_state || 'canonical')} · confidence ${esc(node.confidence)}</p>${actions}<h3>Identifiers</h3><pre>${esc(JSON.stringify(node.identifiers || [], null, 2))}</pre><h3>Observations / provenance</h3><pre>${esc(JSON.stringify(observations, null, 2))}</pre></div>`;
+  const reconcile = async (decision) => {
+    const name = decision === 'reject' ? undefined : (
+      decision === 'create' || (decision === 'confirm' && unidentified)
+        ? window.prompt('Name this asset') : window.prompt('Optional asset name', node.name || '')
+    );
+    if ((decision === 'create' || (decision === 'confirm' && unidentified)) && !name?.trim()) return;
+    const response = await fetch('/api/network/assets/reconcile', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({candidate: node.id, decision, name: name?.trim() || undefined, type: node.type || 'network_device'}),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Asset reconciliation failed');
+    await openNetwork();
+    return result;
+  };
+  el.querySelector('[data-cmdb-confirm]')?.addEventListener('click', async () => {
+    const message = el.querySelector('[data-cmdb-message]');
+    try { await reconcile('confirm'); message.textContent = 'Asset reconciled.'; } catch (error) { message.textContent = error.message; }
+  });
+  el.querySelector('[data-cmdb-reject]')?.addEventListener('click', async () => {
+    const message = el.querySelector('[data-cmdb-message]');
+    try { await reconcile('reject'); message.textContent = 'Candidate rejected.'; } catch (error) { message.textContent = error.message; }
+  });
   return el;
 }
 export async function openHousehold(){
@@ -62,11 +89,11 @@ export async function openItAssets(){
       fetch('/api/inventory/items?domain=it&include_archived=false',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('IT inventory unavailable'))),
       fetch('/api/network/map',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('CMDB projection unavailable'))),
     ]);
-    const userItems=items.items||[], nodes=net.nodes||[], canonical=nodes.filter(x=>x.canonical!==false), unidentified=nodes.filter(x=>x.resolution_state==='unidentified');
+    const userItems=items.items||[], nodes=net.nodes||[], canonical=nodes.filter(x=>x.canonical===true), pending=nodes.filter(x=>x.resolution_state==='pending_candidate'), unidentified=nodes.filter(x=>x.resolution_state==='unidentified');
     const metric=(label,value)=>`<div class="hades-summary-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
     el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
       <header class="hades-module-header"><div><h2>IT Assets</h2><p>Inventory assets, CMDB identities, observations, and reconciliation</p></div><span class="hades-status-badge">Two canonical sources</span></header>
-      <div class="hades-summary-metrics">${metric('Inventory assets',userItems.length)}${metric('CMDB assets',canonical.length)}${metric('Unidentified',unidentified.length)}${metric('Observed nodes',nodes.length)}</div>
+      <div class="hades-summary-metrics">${metric('Inventory assets',userItems.length)}${metric('CMDB assets',canonical.length)}${metric('Pending candidates',pending.length)}${metric('Unidentified',unidentified.length)}${metric('Observed nodes',nodes.length)}</div>
       <section class="hades-detail-section"><h3>Inventory assets</h3><p class="muted">User-entered assets remain in InventoryService; they are not silently merged with CMDB identities.</p><div>${userItems.map(x=>`<button class="list-item hades-entity-link" data-id="${esc(x.id)}"><span>${esc(x.name)}</span><small>${esc(x.model||x.category||'asset')} · ${esc(x.manufacturer||'')}</small></button>`).join('')||'<p class="hades-empty-state">No user-facing IT assets yet.</p>'}</div></section>
       <section class="hades-detail-section"><h3>CMDB-backed devices</h3><p class="muted">${esc(net.identity_rule||'IP addresses remain observations; identity requires stronger evidence.')}</p><div>${nodes.map(x=>`<button class="list-item hades-cmdb-link" data-id="${esc(x.id)}"><span>${esc(x.name||x.hostname||x.id)}</span><small>${esc(x.resolution_state||'unidentified')} · confidence ${esc(x.confidence??'—')}</small></button>`).join('')||'<p class="hades-empty-state">No CMDB observations yet.</p>'}</div></section>
       <p class="muted">CMDB source: ${esc(net.source||'canonical_cmdb')} · unidentified observations remain non-canonical until reconciled.</p>
@@ -83,11 +110,11 @@ export async function openNetwork(){
   const el=panel('network-panel','Network','<p>Loading Network Map…</p>');
   try {
     const d=await fetch('/api/network/map',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('Network map unavailable')));
-    const nodes=d.nodes||[], edges=d.edges||[], canonical=nodes.filter(x=>x.canonical!==false), unidentified=nodes.filter(x=>x.resolution_state==='unidentified');
+    const nodes=d.nodes||[], edges=d.edges||[], canonical=nodes.filter(x=>x.canonical===true), pending=nodes.filter(x=>x.resolution_state==='pending_candidate'), unidentified=nodes.filter(x=>x.resolution_state==='unidentified');
     const metric=(label,value)=>`<div class="hades-summary-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
     el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
       <header class="hades-module-header"><div><h2>Network</h2><p>Devices, observations, topology, and bounded discovery</p></div><span class="hades-status-badge">${esc(d.source||'CMDB')}</span></header>
-      <div class="hades-summary-metrics">${metric('Nodes',nodes.length)}${metric('Canonical',canonical.length)}${metric('Unidentified',unidentified.length)}${metric('Relationships',edges.length)}</div>
+      <div class="hades-summary-metrics">${metric('Nodes',nodes.length)}${metric('Canonical',canonical.length)}${metric('Pending candidates',pending.length)}${metric('Unidentified',unidentified.length)}${metric('Relationships',edges.length)}</div>
       <section class="hades-detail-section"><h3>Identity and provenance</h3><p class="muted">${esc(d.identity_rule||'IP addresses remain observations; no IP-only merge.')}</p></section>
       <section class="hades-detail-section"><h3>Devices</h3><div>${nodes.map(x=>`<button class="list-item hades-cmdb-link" data-id="${esc(x.id)}"><span>${esc(x.name||x.hostname||x.id)}</span><small>${esc(x.resolution_state||'unidentified')} · ${esc(x.status||'observed')} · confidence ${esc(x.confidence??'—')}</small></button>`).join('')||'<p class="hades-empty-state">No CMDB nodes observed yet.</p>'}</div></section>
       <section class="hades-detail-section"><h3>Relationships</h3>${edges.length?`<p>${esc(edges.length)} active evidence-backed relationship${edges.length===1?'':'s'} projected from CMDB.</p>`:'<p class="hades-empty-state">No active relationships are projected.</p>'}</section>

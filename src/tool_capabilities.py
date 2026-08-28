@@ -99,6 +99,11 @@ _register(
     result_integrity=ResultIntegrity.WORKSPACE_UNTRUSTED,
 )
 _register(
+    {"developer_read"},
+    ToolEffect.READ_WORKSPACE,
+    result_integrity=ResultIntegrity.WORKSPACE_UNTRUSTED,
+)
+_register(
     {"web_search"},
     ToolEffect.BROKERED_NETWORK_READ,
     result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
