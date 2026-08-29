@@ -704,6 +704,10 @@ Key settings:
 | `SEARXNG_SECRET` | generated on first Docker boot | Optional SearXNG cookie/CSRF secret. Leave blank unless you need to pin it. |
 | `APP_BIND` | `127.0.0.1` | Docker Compose host bind address for the web UI. Use `0.0.0.0` only for intentional LAN/reverse-proxy access. |
 | `APP_PORT` | `7000` | Docker Compose host port for the web UI. |
+| `SEARXNG_PORT` | `8080` | Docker Compose host port for SearXNG; override for parallel/isolated installs. |
+| `CHROMADB_PORT` | `8100` | Docker Compose host port for ChromaDB; override for parallel/isolated installs. |
+| `NTFY_PORT` | `8091` | Docker Compose host port for ntfy; override for parallel/isolated installs. |
+| `ODYSSEUS_NETWORK_NAME` | `odysseus_default` | Docker Compose network name; set a unique name for parallel/isolated installs. |
 | `APP_DATA_DIR` | `./data` | Docker Compose host directory for application data volumes. |
 | `APP_LOGS_DIR` | `./logs` | Docker Compose host directory for application logs. |
 | `AUTH_ENABLED` | `true` | Enable/disable login |
