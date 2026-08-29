@@ -301,6 +301,11 @@ _register(
     result_integrity=ResultIntegrity.SYSTEM,
 )
 _register(
+    {"manage_work"},
+    ToolEffect.WRITE_PRIVATE,
+    result_integrity=ResultIntegrity.SYSTEM,
+)
+_register(
     {"read_household"},
     ToolEffect.READ_PRIVATE,
     result_integrity=ResultIntegrity.SYSTEM,
