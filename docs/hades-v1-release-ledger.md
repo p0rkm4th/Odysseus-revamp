@@ -320,3 +320,27 @@ were removed; owner deployment was unchanged.
 
 - The authoritative supported-container full regression completed `6938
   passed, 5 skipped, 149 warnings` in `293.80s`, with exit status `0`.
+
+## Productization Work/Recipe checkpoint — `7ea39f04` (2026-08-29)
+
+- Exact disposable authenticated browser acceptance passed the non-empty Work
+  overview against executable source `5c9e1be3465e352463479b698619663cf250be52`:
+  one human-readable deterministic answer, one persisted turn, one `[DONE]`,
+  zero abrupt EOF, and zero duplicate delivery.
+- The browser harness now waits for asynchronous normal-login initialization
+  before submitting the real login form. This is acceptance infrastructure;
+  no auth semantics or owner deployment changed.
+- Exact Recipe URL argument projection was rechecked with mixed read/manage
+  capability visibility. The request resolves to `manage_recipes/commit_import`
+  and carries the explicit requested name plus source URL. Recipe/import
+  focused coverage: `46 passed`; the original `{"action":"add"}` loss was
+  not reproducible on current source.
+- Executable candidate remains `odysseus:candidate-5c9e1be`, image
+  `sha256:96d8f900e19f0f43e2df15d07fe48da147a7d12498740cc50683643cf4cf42b`;
+  OCI/source marker matched, health was healthy, restarts were `0`, and
+  Qwen3:8B was reachable from the candidate namespace. Current branch/docs
+  HEAD is `7ea39f044e0cde88d6d089c7ed020cd10122b2de`; this test-only descendant
+  did not require a rebuild. Owner deployment remains unchanged.
+- Full executable regression: `6932 passed, 5 skipped, 6 known
+  storage-preflight environment failures`; the environment failures remain
+  explicitly isolated.
