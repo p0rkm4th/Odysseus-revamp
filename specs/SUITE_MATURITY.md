@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Recipe composition and false-premise checkpoint — candidate `20d07aef` (2026-08-29)
+
+Recipe shopping requirements, expiring-ingredient composition, and the
+realistic no-RTX-4090 Asset query passed on fresh isolated fixture stacks with
+canonical readback where applicable. No hallucinated entity, false success,
+raw-result, duplicate-delivery, or EOF defect was observed.
+
 ## Continued Tier 1 acceptance checkpoint — candidate `20d07aef` (2026-08-29)
 
 Clean GUI Recipe mutation/readback and empty Work journeys passed. The full
