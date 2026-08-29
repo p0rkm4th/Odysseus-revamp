@@ -22,6 +22,16 @@ reloaded, restarted, and verified Qwen3:8B from the Hades namespace. The
 productization branch remains 303 commits ahead of `origin/main`; merge
 reconciliation and explicit merge authorization remain outstanding.
 
+## Isolated Docker Chroma backup/restore rehearsal — `8da4fe5d` (2026-08-29)
+
+An explicit temporary Docker volume was populated with representative vector
+state, archived with the documented Alpine volume procedure, deliberately
+drifted, and restored. The marker and index entry returned and the drift file
+was absent after restore. The temporary volume/archive were removed. This
+closes the isolated volume-procedure rehearsal; live owner Chroma was not
+touched. Application data and Docker Chroma remain separate backup artifacts,
+as documented in `docs/backup-restore.md`.
+
 ## Isolated fresh-install Compose checkpoint — `2c37478a` (2026-08-29)
 
 The fresh-install rehearsal found and closed a parallel-install/rehearsal

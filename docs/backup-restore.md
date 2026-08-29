@@ -127,3 +127,23 @@ where you run it matters:
 >
 > On native installs ChromaDB lives at `data/chroma/` and is included in the
 > snapshot normally.
+
+### Rehearsing a Docker Chroma restore
+
+For a Docker deployment, stop the application and ChromaDB before restoring a
+volume so no process is writing while the archive is unpacked. Use the exact
+Compose project volume name discovered above; do not restore into an
+unrelated project:
+
+```bash
+docker compose stop odysseus chromadb
+docker run --rm --user 0 \
+  -v <project>_chromadb-data:/data \
+  -v "$PWD":/backup \
+  alpine sh -c 'find /data -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar xzf /backup/chromadb.tar.gz -C /data'
+docker compose start chromadb odysseus
+```
+
+Verify ChromaDB health and that the application can read its collections
+before accepting the restore. Test this procedure in a separate Compose
+project and volume before using it for owner data.
