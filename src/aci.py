@@ -3435,6 +3435,29 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
                 if missing:
                     lines.append(f"  Missing: {missing}")
         return "\n".join(lines)
+    if action == "pantry_candidates":
+        candidates = payload.get("candidates")
+        if not isinstance(candidates, list):
+            return None
+        if not candidates:
+            return "No recorded recipes are available to check against your current stock."
+        makeable = [item for item in candidates if isinstance(item, Mapping) and item.get("can_make") is True]
+        lines = [f"I checked {len(candidates)} recorded recipe{'s' if len(candidates) != 1 else ''} against your current stock."]
+        if makeable:
+            lines.append("You can make:")
+            for candidate in makeable[:20]:
+                lines.append(f"- {str(candidate.get('recipe_name') or 'Unnamed recipe')}")
+        missing = [item for item in candidates if isinstance(item, Mapping) and item.get("can_make") is not True]
+        if missing:
+            if makeable:
+                lines.append("")
+            lines.append("Needs ingredients:")
+            for candidate in missing[:20]:
+                name = str(candidate.get("recipe_name") or "Unnamed recipe")
+                shortages = candidate.get("shortages") if isinstance(candidate.get("shortages"), list) else []
+                names = ", ".join(str(row.get("name") or "ingredient") for row in shortages[:8] if isinstance(row, Mapping))
+                lines.append(f"- {name}" + (f" (missing: {names})" if names else ""))
+        return "\n".join(lines)
     recipes = payload.get("recipes")
     if not isinstance(recipes, list):
         recipe = payload.get("recipe")

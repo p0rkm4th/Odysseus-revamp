@@ -214,6 +214,20 @@ def test_expiring_recipe_result_has_a_human_renderer_distinct_from_raw_result():
     assert not answer.startswith("{")
 
 
+def test_pantry_recipe_candidates_compose_current_stock_without_mutation():
+    service, recipe = _recipe_fixture()
+    result = service.manage_recipes({"action": "pantry_candidates"}, owner="alice")
+    assert result["status"] == "SUCCESS"
+    assert result["result_type"] == "recipe_pantry_candidates"
+    assert result["operation"] == "pantry_candidates"
+    assert len(result["candidates"]) == 1
+    candidate = result["candidates"][0]
+    assert candidate["recipe_id"] == recipe["id"]
+    assert candidate["can_make"] is True
+    assert candidate["shortages"] == []
+    assert service.get_recipe("alice", recipe["id"])["name"] == recipe["name"]
+
+
 def test_recipe_shopping_requirements_renderer_is_human_readable_and_grounded():
     answer = canonical_recipe_read_answer([{
         "tool": "read_recipes", "exit_code": 0,
@@ -226,6 +240,25 @@ def test_recipe_shopping_requirements_renderer_is_human_readable_and_grounded():
     }])
     assert answer == "For Chicken Rice, you still need:\n- 2 cup rice"
     assert not answer.lstrip().startswith("{")
+
+
+def test_pantry_candidates_renderer_groups_makeable_and_missing_recipes():
+    answer = canonical_recipe_read_answer([{
+        "tool": "read_recipes", "exit_code": 0,
+        "command": json.dumps({"action": "pantry_candidates"}),
+        "output": json.dumps({
+            "status": "SUCCESS", "result_type": "recipe_pantry_candidates",
+            "candidates": [
+                {"recipe_name": "Eggs", "can_make": True, "shortages": []},
+                {"recipe_name": "Pasta", "can_make": False, "shortages": [{"name": "tomato sauce"}]},
+            ],
+        }),
+    }])
+    assert answer == (
+        "I checked 2 recorded recipes against your current stock.\n"
+        "You can make:\n- Eggs\n\n"
+        "Needs ingredients:\n- Pasta (missing: tomato sauce)"
+    )
 
 
 def test_recipe_import_prepare_accepts_schema_org_jsonld_without_persisting():
