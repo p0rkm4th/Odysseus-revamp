@@ -29,6 +29,13 @@ readback, and `3` terminal `[DONE]` events. Browser execution used the host
 test harness at branch descendant `87b1f28d`; the executable image remained
 the exact `87dab0ff` candidate.
 
+The supported full regression was rerun from the current checkout after
+recovering space from two exact disposable test trees: `6953 passed, 5
+skipped` in `218.18s`, with no test failures. This is source/evaluator
+evidence for executable source `87dab0ff` plus browser-only evaluator commit
+`87b1f28d`; the branch tip is a documentation-only descendant and the owner
+deployment was not changed.
+
 ## Recipe URL argument projection verification — `4f5c235f` (2026-08-29)
 
 The exact URL request with the explicit display name was recompiled and
