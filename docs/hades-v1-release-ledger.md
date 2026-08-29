@@ -46,6 +46,22 @@ attempted mutation left the canonical count at `1`. The run had zero false
 success, raw final Result, duplicate delivery, or abrupt EOF. The full human
 correction and validated commit workflow remains an open productization gap.
 
+## Editable Recipe review workflow checkpoint — candidate `1ec3689d` (2026-08-29)
+
+Recipe import now renders an editable Hades review panel instead of a browser
+`confirm()` text summary. Name, servings, ingredient names/quantities/units,
+instructions, and source are visible before save. The existing server-side
+`RecipeDraft` validator and canonical import readback remain authoritative.
+
+On exact candidate `odysseus:candidate-1ec3689d6f0b` (source marker
+`1ec3689d6f0b89df577d4e88d03cb500c72a4eac`, image
+`sha256:649e77fd1348b1a0cbf5aa07eae0aedec84376f32f494a9a28f57980b60b7107`),
+a browser probe edited a prepared recipe to `Acceptance Edited Dinner` and
+three cups of rice, committed it, independently read back canonical state,
+and verified visibility after reload. Focused Recipe/UI coverage passed `38`
+tests plus frontend static verification. The current static-test-only follow-up
+is `a78daf1d`; owner runtime remains untouched.
+
 ## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
 
 The exact candidate stack completed normal first-run setup, authenticated
