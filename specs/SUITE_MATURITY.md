@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Qualitative Recipe review-safety checkpoint — `9703eeb4` (2026-08-29)
+
+Incomplete qualitative Recipe text now fails closed through the existing
+mutation boundary with a review-needed, nothing-saved answer instead of an
+empty model payload and low-level validation text. Exact candidate browser
+acceptance verified no canonical mutation across reload; full correction and
+validated commit review UI remains open.
+
 ## Copied Recipe webpage-paste checkpoint — `141e0728` (2026-08-29)
 
 Copied webpage-shaped Recipe text now takes the Recipe owner even when page
