@@ -3580,7 +3580,7 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_work"} or not isinstance(result, Mapping):
+    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_work", "manage_recipes"} or not isinstance(result, Mapping):
         return None
     raw = result.get("output")
     if isinstance(raw, Mapping):
@@ -3592,6 +3592,26 @@ def canonical_tool_result_projection(
             return None
     if not isinstance(payload, Mapping):
         return None
+    if str(tool_name or "").strip() == "manage_recipes":
+        # Recipe commits can contain a large ingredient/instruction payload.
+        # Preserve only the bounded evidence needed by the deterministic
+        # mutation renderer before the diagnostic/UI output envelope truncates
+        # the raw Result.  This is not a second recipe store.
+        recipe = payload.get("recipe")
+        if not isinstance(recipe, Mapping) or not recipe.get("id"):
+            return None
+        return {
+            "status": payload.get("status"),
+            "success": payload.get("success"),
+            "action": payload.get("action"),
+            "canonical_store": payload.get("canonical_store"),
+            "recipe": {
+                "id": recipe.get("id"),
+                "name": recipe.get("name"),
+                "source_url": recipe.get("source_url"),
+            },
+            "verification": payload.get("verification"),
+        }
     if str(tool_name or "").strip() == "manage_assets":
         assets = payload.get("assets")
         if not isinstance(assets, list):
@@ -3856,10 +3876,14 @@ def canonical_recipe_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -
     )
     if event is None or event.get("exit_code") not in (None, 0) or event.get("success") is not True:
         return None
-    try:
-        payload = json.loads(str(event.get("output") or ""))
-    except (TypeError, ValueError):
-        return None
+    projection = event.get("result_projection")
+    if isinstance(projection, Mapping):
+        payload = projection
+    else:
+        try:
+            payload = json.loads(str(event.get("output") or ""))
+        except (TypeError, ValueError):
+            return None
     recipe = payload.get("recipe") if isinstance(payload, Mapping) else None
     if not isinstance(recipe, Mapping) or not recipe.get("id"):
         return None
