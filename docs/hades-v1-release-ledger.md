@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe editor / acceptance readiness — `a3c20aef` (2026-08-29)
+
+The productization branch now presents Recipe creation with repeatable,
+labeled ingredient rows and deterministic client-side quantity validation,
+while retaining the existing InventoryService recipe owner and canonical
+payload. Focused Recipe/UI/owner-contract tests passed `81`; the exact
+candidate image built from `c734628f` matched its OCI revision and source
+marker. A fresh isolated stack showed that FastEmbed initialization can delay
+health beyond the browser runner's former 60-second window; the existing
+runner now has a bounded configurable 30–300 second wait, default 180 seconds.
+The isolated stack was torn down, credentials were temporary, and the owner
+deployment was not changed. Browser acceptance against the branch tip remains
+unverified, so this is not a live product PASS.
+
 ## Owner-language corpus expansion — `0f5a0988` (2026-08-29)
 
 The black-box owner journey corpus now exercises equivalent Work overview

@@ -4,6 +4,23 @@ This ledger records observed owner-journey maturity on the post-merge
 `hades-v1-productization` branch. A registered capability is not evidence that
 the complete journey works.
 
+## Recipe editor and browser readiness checkpoint — `a3c20aef` (2026-08-29)
+
+The Recipe workspace's new-recipe flow now uses repeatable labeled ingredient
+rows for name, numeric quantity, and unit instead of requiring the owner to
+format `name | quantity | unit` lines. The existing canonical `/api/recipes`
+owner and advanced opaque `item_id` preservation remain unchanged. JavaScript
+syntax and focused Recipe/UI/owner-contract coverage passed `81` tests.
+
+An exact candidate was built from source `c734628f` before the browser-runner
+health-wait improvement; its OCI revision and `/app/.odysseus-source-commit`
+matched. A fresh isolated browser attempt reached the application startup
+phase but timed out while FastEmbed initialized; a later isolated startup
+diagnostic reached `/api/health` successfully. The acceptance runner now uses
+a bounded configurable health wait (30–300 seconds, default 180 seconds).
+This is evaluator readiness evidence only; no owner deployment was changed,
+and browser acceptance for the `a3c20aef` branch tip remains unverified.
+
 ## Current evidence boundary — branch `2e58a5fe` (2026-08-29)
 
 The retained exact executable candidates have fresh isolated browser evidence for
