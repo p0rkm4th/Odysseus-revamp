@@ -1846,6 +1846,15 @@ def compile_intent(
     target = None
     if concept != "UNKNOWN":
         pass
+    elif operation == "EXECUTE" and re.fullmatch(
+        r"(?:please\s+)?(?:restart|recover)\s+(?:it|that|this|them)[!.?]*",
+        q,
+    ):
+        # A bare action pronoun is a legitimate conversational reference, not
+        # an unknown domain. Route it to the bounded Service contract so the
+        # existing target-required clarification can ask what to restart
+        # without granting execution authority.
+        concept = "SERVICE"
     elif not re.search(r"\b(?:explain|define|what\s+is|difference\s+between|how\s+does)\b", q) and re.search(
         r"\b(?:search|grep|find|look\s+for|inspect|view|show|list|read|open)\b.*\b(?:code|repo|repository|project|file|symbol|function|class|diagnostic|tree|map|diff|changes?)\b|"
         r"\b(?:code|repo|repository|project|file|symbol|function|class|diagnostic|tree|map|diff|changes?)\b.*\b(?:search|grep|find|inspect|view|show|list|read|open)\b|"
@@ -2187,7 +2196,9 @@ def compile_intent(
             text,
             re.IGNORECASE,
         )
-        if match and match.group(1).casefold() not in {"the", "service", "registered"}:
+        if match and match.group(1).casefold() not in {
+            "the", "service", "registered", "it", "that", "this", "them",
+        }:
             target = match.group(1)
     safety_constraints: list[str] = []
     if re.search(r"\b(?:merge|join|combine|identify)\b", q) and re.search(
