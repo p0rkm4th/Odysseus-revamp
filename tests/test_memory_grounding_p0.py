@@ -6,7 +6,7 @@ from src.memory_grounding import is_explicit_memory_query
 from src.context_compactor import context_trace, tool_projection_trace
 from src.intent_contracts import compile_intent, memory_mutation_payload, resolve_intent
 from src.aci import project_action_selection
-from src.aci import provisional_intent_projection
+from src.aci import provisional_intent_projection, canonical_memory_mutation_answer
 
 
 def test_breakdown_wording_is_an_explicit_canonical_memory_query():
@@ -125,6 +125,17 @@ def test_memory_property_followup_uses_canonical_read_after_correction():
     )
     assert owned is True
     assert intent["retrieval_query"] == "What do you remember about me?"
+
+
+def test_verified_memory_mutation_has_one_human_answer():
+    assert canonical_memory_mutation_answer([
+        {
+            "tool": "manage_memory",
+            "command": '{"action":"delete","memory_id":"m1"}',
+            "output": '{"success":true,"verification":{"status":"VERIFIED"}}',
+            "exit_code": 0,
+        },
+    ]) == "Removed that memory; the canonical Memory readback is verified."
 
 
 def test_tool_projection_trace_explains_route_and_policy_exclusions_without_content():
