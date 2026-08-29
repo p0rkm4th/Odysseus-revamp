@@ -1096,3 +1096,12 @@ pre-login optional probes produced expected unauthenticated `401/403`
 diagnostics, with no post-login uncaught browser errors. The isolated
 principal and stack were cleaned up. This is UI-surface evidence, not chat
 mutation or real-owner evidence.
+## Work workspace owner UX checkpoint — `4c7696a3` (2026-08-29)
+
+The Work workspace now uses the shared Hades styled prompt for goal creation
+and presents readable goal/project/task details before a collapsed technical
+record. Native `prompt()` and raw canonical JSON as the primary detail view
+were removed from this surface. Frontend/static and focused UI/layout checks
+passed (`11`). Exact pushed candidate: `odysseus:candidate-4c7696a3e7aa`,
+image `sha256:5386055c9d2bbe9321f5af5fd00cd19a26f817c1e3f4094a318b2fb0703ae828`.
+The owner deployment was not changed.
