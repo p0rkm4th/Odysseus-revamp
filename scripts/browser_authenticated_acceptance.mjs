@@ -245,13 +245,24 @@ async function seedWorkTaskCreationAcceptanceState(page) {
   // test must enter through natural-language chat and is independently read
   // back from the canonical Work API.
   return page.evaluate(async () => {
-    const response = await fetch('/api/work/projects', {
-      method: 'POST', credentials: 'same-origin',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({title: 'Acceptance Task Project', domain: 'general'}),
-    });
-    if (!response.ok) throw new Error(`work task project setup failed (${response.status})`);
-    const project = await response.json();
+    const listResponse = await fetch('/api/work/projects', {credentials: 'same-origin'});
+    if (!listResponse.ok) throw new Error(`work task project listing failed (${listResponse.status})`);
+    const listed = await listResponse.json();
+    const matches = (listed.projects || []).filter((candidate) =>
+      String(candidate?.title || '').trim() === 'Acceptance Task Project');
+    if (matches.length > 1) {
+      throw new Error('work task fixture is ambiguous: multiple Acceptance Task Project prerequisites already exist');
+    }
+    let project = matches[0];
+    if (!project) {
+      const response = await fetch('/api/work/projects', {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({title: 'Acceptance Task Project', domain: 'general'}),
+      });
+      if (!response.ok) throw new Error(`work task project setup failed (${response.status})`);
+      project = await response.json();
+    }
     if (!project?.id || !project?.title) throw new Error('work task project setup returned no canonical project');
     return {projectId: project.id, projectTitle: project.title};
   });
