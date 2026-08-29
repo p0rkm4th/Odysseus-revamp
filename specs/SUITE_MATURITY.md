@@ -404,3 +404,16 @@ Frontend syntax and affected UI/Recipe/ACI coverage passed (`322` tests); the
 full current checkout regression passed `6930` tests with `5` skips. The exact
 candidate was built and source/OCI/health/Qwen verified in an isolated runtime;
 that disposable runtime was removed without touching owner state.
+
+## Recipe import review surface checkpoint — `a7fe204c`
+
+Incomplete URL/text/media imports now remain in the Import dialog as an
+explicit review state rather than falling into a generic toast. The UI shows
+the bounded reason, missing or ambiguous fields, a `Review Draft` disclosure,
+and a retry path. It cannot commit while `RecipeDraft` validation has failed;
+the canonical owner still requires a validated draft, persistence, and
+readback. Focused UI/Recipe coverage passed `27` tests and the full current
+regression passed `6931` tests with `5` skips. Exact candidate
+`odysseus:candidate-a7fe204ca5a2` was source-matched, healthy, zero-restart,
+and Qwen-reachable in an isolated runtime; the disposable container was
+removed afterward.
