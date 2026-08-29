@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Copied-webpage Recipe mutation checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+The clean exact-candidate Recipe journey accepted webpage-shaped pasted
+content through chat, completed one canonical mutation, and independently
+verified it twice including reload durability. It passed with zero false
+success, raw final Result, duplicate delivery, or abrupt EOF. The stale-lane
+attempt was correctly stopped by the fixture precondition and is recorded as
+environment drift rather than product evidence.
+
 ## Fresh-install Qwen/restart checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Disposable cold deployment evidence now covers normal admin model setup,
