@@ -449,6 +449,11 @@ health was healthy, restarts were `0`, and Qwen3:8B was reachable from the
 container namespace. The disposable container was removed afterward; the
 owner deployment was not changed.
 
+The post-refactor full regression completed at `6933 passed, 5 skipped` with
+no new failures. This confirms the executor-to-service ownership change did
+not regress the broader product tree; browser/live URL mutation acceptance
+against this exact executable remains a separate pending evidence class.
+
 ## Recipe canonical preparation checkpoint — `5c434f06`
 
 URL-backed chat mutations now send fetched evidence through the existing
