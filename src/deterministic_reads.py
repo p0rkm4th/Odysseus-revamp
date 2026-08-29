@@ -94,6 +94,15 @@ _RECIPE_COVERAGE = re.compile(
     r"\b(?:check|show)\b.*\b(?:pantry\s+coverage|missing\s+ingredients?)\b",
     re.IGNORECASE,
 )
+_RECIPE_PANTRY_COVERAGE = re.compile(
+    r"\b(?:can|could)\s+(?:i|we)\s+(?:make|cook|fix|whip\s+up|throw\s+together)\b"
+    r".{0,80}\b(?:with|w|from)\b.{0,50}\b(?:what|whatever)\s+(?:i|we)\s+(?:have|got)\b|"
+    r"\bwhat\s+can\s+(?:i|we)\s+(?:make|cook|fix|whip\s+up|throw\s+together)\b"
+    r".{0,50}\b(?:with|w|from)\b.{0,50}\b(?:what|whatever)\s+(?:i|we)\s+(?:have|got)\b|"
+    r"\banything\s+(?:i|we)\s+can\s+(?:make|cook|fix)\b.{0,50}\b(?:with|w|from)\b"
+    r".{0,50}\b(?:what|whatever)\s+(?:i|we)\s+(?:have|got)\b",
+    re.IGNORECASE,
+)
 _RECIPE_SCALE = re.compile(
     r"\b(?:scale|resize|adjust)\b.{0,40}\b(?:to\s+)?(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b",
     re.IGNORECASE,
@@ -162,6 +171,12 @@ def _normalized(text: str) -> str:
     return _DISCOURSE_PREFIX.sub("", value).strip(" .?!")
 
 
+def is_recipe_pantry_coverage_query(text: str) -> bool:
+    """Recognize a recipe feasibility request expressed through pantry language."""
+    query = _normalized(text)
+    return bool(_RECIPE_COVERAGE.search(query) or _RECIPE_PANTRY_COVERAGE.search(query))
+
+
 def deterministic_read_concept(text: str) -> str | None:
     """Return an existing DomainContract concept for an unambiguous read."""
     query = _normalized(text)
@@ -173,7 +188,7 @@ def deterministic_read_concept(text: str) -> str | None:
         not _READ_REQUEST.search(query)
         and not _INFRASTRUCTURE_STATUS.search(query)
         and not _RECIPE_READ.search(query)
-        and not _RECIPE_COVERAGE.search(query)
+        and not is_recipe_pantry_coverage_query(query)
         and not _RECIPE_SCALE.search(query)
         and not _HOST_INSPECTION.search(query)
         and not (
@@ -197,7 +212,7 @@ def deterministic_read_concept(text: str) -> str | None:
         return "MEMORY"
     # Expiry/stock state is an inventory question even when the phrase starts
     # with the generic "what is" interrogative.
-    if _RECIPE_COVERAGE.search(query) and not re.search(
+    if is_recipe_pantry_coverage_query(query) and not re.search(
         r"\b(?:what\s+is|how\s+does|explain|define)\b", query,
     ):
         return "RECIPE"
