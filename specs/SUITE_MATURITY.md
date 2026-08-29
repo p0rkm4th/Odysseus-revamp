@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Household mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+The exact-candidate household owner journey completed 2 chat-driven mutations
+and independently verified both canonical changes across 4 turns, including
+reload durability. It passed with zero false success, raw final Result,
+duplicate delivery, or abrupt EOF on isolated disposable data.
+
 ## Copied-webpage Recipe mutation checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 The clean exact-candidate Recipe journey accepted webpage-shaped pasted
