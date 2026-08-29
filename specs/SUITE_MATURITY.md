@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Actual-owner Work provenance checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+The actual owner runtime (`34ced247`) returned a generic no-access answer for
+an outstanding-Work read even though owner-scoped Work APIs contained records;
+its stream had tool output but no final answer replacement. The current exact
+candidate auto-escalated the same ordinary prompt from Chat to bounded Work
+read and returned the canonical task summary, and the three-paraphrase Work
+journey passed. The owner runtime was not changed.
+
 ## Recipe review visual usability checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Browser visual review found duplicated source/import fields and a Save footer

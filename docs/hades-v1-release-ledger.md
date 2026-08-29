@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Actual-owner Work provenance checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+Read-only owner dogfood asked “What work is outstanding?” in an existing
+session and received a generic no-access answer, despite owner-scoped Work
+APIs returning canonical records. The stream had tool output but no
+`response_replace`, classified as `ANSWER_FINALIZATION_FAILURE` on the actual
+runtime. The owner container is source `34ced247`, older than the candidate,
+and was not changed.
+
+The same ordinary prompt in plain Chat mode on exact candidate `5fe5bf94`
+auto-escalated through bounded Work read and returned the canonical task
+summary. The candidate three-paraphrase Work journey also passed with zero
+false success, raw final Results, duplicate delivery, or abrupt EOF. This
+separates stale owner-runtime evidence from current-candidate evidence.
+
 ## Recipe review visual usability checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Visual owner testing found two defects in the new review workflow: the body
