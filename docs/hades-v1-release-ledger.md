@@ -1730,3 +1730,27 @@ one natural-language project creation followed by canonical readback and
 reload readback. The mutation entered through chat, not fixture setup; there
 were zero false successes, raw final Results, duplicate delivery, or abrupt
 EOFs.
+
+## Approved-mutation duplicate-delivery checkpoint — executable candidate `a784b35e` (2026-08-29)
+
+An owner task journey exposed a serious approval-continuation defect: the
+approved `manage_work/create_task` Action could be repeated by the resumed
+provider response, creating two canonical tasks while displaying one success.
+This was classified as `DUPLICATE_DELIVERY` at the shared agent-loop mutation
+boundary. The per-turn duplicate guard now covers all canonical mutation
+bindings, while the legacy completion verifier remains unchanged.
+
+Focused approval/work coverage passed 33 tests and the current full regression
+passed `6987 passed, 8 skipped, 186 warnings`. The exact candidate
+`odysseus:candidate-a784b35ed8b6`, image
+`sha256:dc01946bc9416862486ef0c65a349b584db7363aa94bc9a0c0592a69b549e80d`,
+source marker `a784b35e`, ran healthy with zero restarts. Its approved Recipe
+URL import journey passed three turns with one canonical mutation, two
+readbacks including reload, and zero duplicate delivery, false success, raw
+final Result, or abrupt EOF.
+
+The original Work retry also exposed an acceptance-fixture contamination
+problem: repeated setup calls created same-title projects. Hades correctly
+failed closed on the ambiguous reference; no owner data was involved. The
+contaminated disposable data was moved to a recoverable backup before fresh
+verification.
