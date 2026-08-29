@@ -7,7 +7,7 @@ from core import database as cdb
 from core import inventory_models  # noqa: F401 - register inventory tables
 from src.inventory_service import InventoryNotFound, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
-from src.aci import canonical_recipe_read_answer
+from src.aci import canonical_recipe_read_answer, project_action_selection
 from src.intent_contracts import RecipeDraft, recipe_import_draft, recipe_import_review
 from src.intent_contracts import compile_intent, resolve_intent
 from types import SimpleNamespace
@@ -413,6 +413,36 @@ def test_url_recipe_create_resolves_effectful_import_backed_action():
     resolved = resolve_intent(frame)
     assert resolved.action_id == "commit_import"
     assert resolved.binding_name == "manage_recipes"
+
+
+def test_url_recipe_create_projects_user_fields_into_canonical_choice_payload():
+    """The model chooses a card; ACI carries explicit URL/name arguments."""
+    query = (
+        'Add this recipe to my recipe book, for the name, use '
+        '"Chicken Cordon Bleu with Cheese Sauce": '
+        'https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe'
+    )
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    projection = project_action_selection(
+        intent={
+            "intent_frame": frame.__dict__,
+            "resolved_contract": {
+                "binding": resolved.binding_name,
+                "action_id": resolved.action_id,
+                "reason": resolved.reason,
+            },
+        },
+        relevant_tools=["manage_recipes"],
+        disabled_tools=set(), owner="alice", active_run=None, query=query,
+    )
+    payload = projection.choice_map["A"]["payload"]
+    assert projection.mode.value == "DIRECT_ACTION"
+    assert payload == {
+        "action": "commit_import",
+        "requested_name": "Chicken Cordon Bleu with Cheese Sauce",
+        "source_url": "https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe",
+    }
 
 
 def test_recipe_import_prepare_renderer_never_claims_persistence():
