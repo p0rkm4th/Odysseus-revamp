@@ -60,6 +60,12 @@ The exact-candidate populated-memory journey returned the seeded durable fact
 through the browser and passed two independent canonical readbacks. It had
 zero false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+## Current populated-Memory owner-read checkpoint — `1a2b62e5` (2026-08-29)
+
+The populated-memory fixture read passed on the exact isolated Qwen3:8B
+candidate with canonical setup/readback verification, one terminal stream,
+and zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Work task mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 The clean fresh-install lane passed task creation through chat with one
