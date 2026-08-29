@@ -62,6 +62,14 @@ invented. Focused recipe/tool/UI coverage is `44 passed`; full regression is
 `6910 passed, 5 skipped`. Exact candidate image:
 `sha256:9e0325dc681f1a9105e26d08d80c60cffbc0bbb9ce5610b685e164ea287c1cb2`.
 
+The image evidence checkpoint `899faa121b9c95d6acbcd71094a632a4b5a9788e`
+adds owner-checked image upload handling to the same review endpoint. Existing
+VL output is treated as untrusted description text; it is accepted only when
+the conservative RecipeDraft validator finds complete recipe structure.
+Otherwise preparation remains `NEEDS_REVIEW`. No direct image-to-state path was
+introduced. The exact candidate image is
+`sha256:7053c166341d7be8026a8bb9c11902479f2cb43002c1676dbb05abe2f90ba4c0`.
+
 ## Baseline evidence
 
 - Post-merge `main`: `364380ed3f46c1d14d3229e5b7530698cfa22e65`.
