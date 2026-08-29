@@ -2152,7 +2152,8 @@ def compile_intent(
             r"storage|motherboard|os|operating\s+system)\b", q,
         )
         collection_property = bool(re.search(
-            r"\b(?:which|what|how\s+many|how\s+much|show|list|find|search)\b",
+            r"\b(?:which|what|how\s+many|how\s+much|show|list|find|search|across|among)\b"
+            r"|\bfor\s+each\b",
             q,
         ))
         if property_match and (

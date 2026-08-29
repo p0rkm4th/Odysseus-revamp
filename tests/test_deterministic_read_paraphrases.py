@@ -169,6 +169,21 @@ def test_recipe_search_keeps_only_bounded_query_text():
     assert resolve_intent(frame).action_id == "search"
 
 
+@pytest.mark.parametrize("query", [
+    "How much RAM do my computers have?",
+    "What's the RAM in my machines?",
+    "RAM across my PCs?",
+])
+def test_asset_collection_property_paraphrases_preserve_ram_projection(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.operation_class == "READ"
+    assert frame.filters["asset_property"] == "ram"
+    assert resolved.action_id == "list"
+    assert resolved.binding_name == "manage_assets"
+
+
 def test_explicit_recipe_create_projects_structured_draft_into_canonical_action():
     query = (
         "Add this recipe to my recipes: Acceptance Chicken and Rice. "
