@@ -760,3 +760,22 @@ against the same executable candidate: 3 turns, 2 canonical readbacks, 3
 terminal `[DONE]` events, zero false-success claims, raw final results,
 duplicate delivery, or abrupt EOF. This confirms ordinary `add` persistence
 remains separate from URL imports.
+
+## Recipe complete-URL mutation checkpoint — `d1559078` (2026-08-29)
+
+The executable candidate `odysseus:candidate-d1559078` was built from pushed
+source `d1559078a414d7f2e7a8571ebf75028126121632`; image ID was
+`sha256:3ec804a8a516deb0c9bb7e801598c70b1f7191e7a41a4cec9ab052521c38fce8`
+and the OCI revision matched. The candidate was exercised in a fresh,
+isolated authenticated deployment with Qwen3:8B through the container
+namespace; the owner deployment was unchanged.
+
+The URL journey passed through normal browser login and chat approval:
+`commit_import` preserved the requested name and source URL, produced a
+verified canonical Result, and rendered a deterministic success answer. The
+three conversational turns (create, list, show) produced two independent
+canonical readbacks including reload persistence, three `[DONE]` events,
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. The browser harness now aggregates outcome evidence across the
+proposal and approval-continuation streams, while keeping raw tool Results
+secondary and never treating model prose as mutation authority.
