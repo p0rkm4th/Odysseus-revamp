@@ -1958,3 +1958,10 @@ isolated acceptance database. The ordinary owner prompt asking which server
 has an RTX 4090 produced a grounded no-match answer despite incomplete and
 duplicate-like records. The one-turn browser run had zero mutations, false
 success, raw final Result, duplicate delivery, and abrupt EOF.
+
+## Current populated-Memory checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+The disposable populated-memory fixture passed its live Qwen browser read on
+the exact candidate. It produced one human-facing answer with two canonical
+readbacks, including reload verification; false success, raw final Result,
+duplicate delivery, and abrupt EOF were zero.
