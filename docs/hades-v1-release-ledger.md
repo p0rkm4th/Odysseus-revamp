@@ -2,6 +2,28 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe review visual usability checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+Visual owner testing found two defects in the new review workflow: the body
+of the original Import form remained visible beside the review editor because
+the HTML `hidden` attribute was overridden by inventory grid CSS, and the
+critical Save/Cancel actions were below the normal viewport. The shared fix
+keeps only the review surface visible and makes the dialog action footer
+sticky while preserving scroll access to the full form. This was classified
+as `UI_RENDER_FAILURE` / `UX_CONFUSION`; the first scoped CSS attempt was
+caught by computed-style replay and corrected before acceptance.
+
+Exact candidate `odysseus:candidate-5fe5bf94ca79` carries source marker and OCI
+revision `5fe5bf94ca7922b31357f293c07f9a2e33e44a43`, image
+`sha256:5838813a8dcbb9506f91bb0185341a0c98fb1b0ead78711f2d3500d7824c4c46`.
+At 1366×768, the final browser probe showed only the title, review panel, and
+action footer; the footer was `position: sticky` and inside the viewport, and
+the full Instructions field was reachable above it at scroll end. The probe
+edited and committed a recipe, independently read it back, and confirmed the
+edited recipe after reload. Focused UI coverage passed `5` tests, frontend
+static verification passed, and both shared browser dogfood and realistic
+browser acceptance passed. Owner deployment remains untouched.
+
 ## Network owner-read projection checkpoint — candidate `dcf0a95d` (2026-08-29)
 
 Read-only owner smoke against the actual deployment exposed a user-facing
