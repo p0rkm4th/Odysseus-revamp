@@ -1,5 +1,15 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Copied Recipe webpage-paste checkpoint — `141e0728` (2026-08-29)
+
+Copied webpage-shaped Recipe text now takes the Recipe owner even when page
+noise contains household vocabulary, and standalone section headings plus
+serving metadata are extracted without persisting unvalidated data. The exact
+candidate passed two-turn GUI mutation/readback/reload acceptance with one
+mutation, two canonical readbacks, and zero transport, raw-result, duplicate,
+EOF, or false-success defects. Qualitative-only ingredient review remains
+open; owner deployment remains untouched.
+
 ## Work paraphrase routing checkpoint — `9c3d2acb` (2026-08-29)
 
 Personal outstanding/remaining phrasing now resolves to the canonical Work
