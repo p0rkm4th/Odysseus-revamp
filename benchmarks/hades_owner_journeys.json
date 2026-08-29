@@ -95,6 +95,16 @@
       "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_count": 0}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "recipe_count": 0}, "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-recipes",
+      "turns": [
+        {"prompt": "Please save this recipe in my recipe book as \"Acceptance Web Paste Dinner\". I copied it from a cooking site, so there may be page junk mixed in.\n\nAcceptance Web Paste Dinner\n★★★★★ 4.8 from 214 reviews\nAuthor: Kitchen Test\nJump to Recipe | Print | Share\n\nIngredients\nServes 4\n- 2 chicken breasts, boneless and skinless\n- 1½ cups rice\n- 2 tablespoons olive oil\n- 1 teaspoon paprika\n- ½ teaspoon black pepper\n\nInstructions\n1. Season the chicken with paprika and black pepper.\n2. Cook the rice with the oil until tender.\n3. Cook the chicken until done and serve.\n\nNutrition information\nCalories 520 | Protein 38g\nSubscribe for weekly recipes\n", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add", "tool_binding": "manage_recipes", "requires_effect": true, "must_include_all": ["Acceptance Web Paste Dinner"], "forbidden": ["successfully added", "saved"]}},
+        {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "read_recipes", "must_include_all": ["Acceptance Web Paste Dinner"], "forbidden": ["no recipes", "don't have"]}}
+      ],
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Web Paste Dinner", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Web Paste Dinner"}, "terminal": {"done": 2, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-RECIPE-URL-IMPORT-COMPLETE-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "complete-url-recipes",

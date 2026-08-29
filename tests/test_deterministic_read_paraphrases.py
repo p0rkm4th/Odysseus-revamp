@@ -228,6 +228,35 @@ Instructions:
     assert recipe_create_payload(query)["action"] == "add"
 
 
+def test_copied_recipe_page_noise_uses_recipe_owner_without_colons():
+    query = '''Please save this recipe in my recipe book as "Web Dinner". I copied it from a cooking site.
+
+Web Dinner
+★★★★★ 4.8 from 214 reviews
+Jump to Recipe | Print
+
+Ingredients
+Serves 4
+- 2 chicken breasts, boneless and skinless
+- 1½ cups rice
+- 2 tablespoons olive oil
+
+Instructions
+1. Cook the rice.
+2. Cook the chicken and serve.
+
+Nutrition information
+Calories 520'''
+    frame = compile_intent(query)
+    assert frame.domain_concept == "RECIPE"
+    assert resolve_intent(frame).action_id == "add"
+    draft = recipe_create_draft(query)
+    assert draft is not None
+    assert draft.name == "Web Dinner"
+    assert draft.servings == 4
+    assert len(draft.ingredients) == 3
+
+
 def test_recipe_draft_rejects_missing_or_ambiguous_sections_without_mutation():
     assert recipe_create_draft(
         'Add the following to my recipes as "Dinner": Ingredients: chicken. Instructions: cook it.'
