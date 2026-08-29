@@ -47,6 +47,8 @@ def test_asset_detail_followups_resolve_active_referent_and_property():
 
 def test_asset_property_and_model_filter_payloads_are_canonical():
     property_frame = compile_intent("How much RAM do my computers have?")
+    assert deterministic_read_concept("How much RAM do my computers have?") == "TECHNICAL_ASSET"
+    assert property_frame.read_explicit is True
     assert canonical_read_fast_path_payload("manage_assets", "list", property_frame.as_dict()) == {
         "action": "list", "asset_property": "ram", "result_projection": "property",
     }
