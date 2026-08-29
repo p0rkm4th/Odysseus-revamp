@@ -164,7 +164,7 @@ async function seedRecipeCompositionAcceptanceState(page, {expiring = false, sho
   // Establish prerequisite canonical Inventory/Recipe state only. The
   // exercised coverage/read/scale turns still enter through chat; no recipe
   // mutation is performed by the browser fixture itself.
-  return page.evaluate(async ({expiring}) => {
+  return page.evaluate(async ({expiring, shortage}) => {
     const suffix = Date.now().toString(36);
     const createItem = async (name, quantity) => {
       const response = await fetch('/api/inventory/items', {
