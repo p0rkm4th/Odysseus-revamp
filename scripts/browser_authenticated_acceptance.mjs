@@ -354,7 +354,10 @@ function assertHumanCanonicalAnswer(turn, prompt) {
   if (text.length < 12 || /^(done|successfully completed)[.!]?$/i.test(text)) {
     throw new Error(`tool-backed turn has no useful human-readable final answer for ${prompt}`);
   }
-  if (/^\s*[\[{]/.test(text) || /(?:asset_id|observation_id|provenance|freshness|relationships)\s*[:=]/i.test(text)) {
+  // ``freshness`` is an intentional human-facing qualification for canonical
+  // Network answers. Reject serialized/internal fields, but do not mistake
+  // that legitimate prose label for raw Result JSON.
+  if (/^\s*[\[{]/.test(text) || /(?:asset_id|observation_id|provenance|relationships)\s*[:=]/i.test(text)) {
     throw new Error(`final answer appears to be raw structured tool output for ${prompt}`);
   }
   return text;
