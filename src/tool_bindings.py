@@ -336,7 +336,7 @@ Inventory Service. Use `list`, `search`, `get`, deterministic `can_make`,
 read-only `scale` for a requested serving count, or `expiring_candidates` to
 compose expiring inventory with recipe coverage.
 Recipe suggestions never assert inventory possession and never mutate stock.
-`<invoke name="read_recipes"><parameter name="action">list|prepare_import</parameter></invoke>`. `prepare_import` returns an unpersisted RecipeDraft for review.
+`<invoke name="read_recipes"><parameter name="action">list|search|get|can_make|shopping_requirements|scale|expiring_candidates|prepare_import</parameter></invoke>`. `prepare_import` returns an unpersisted RecipeDraft for review; `shopping_requirements` returns deterministic missing-ingredient quantities without mutating inventory.
 '''
 
 _SETUP_READ_CONTRACT = '''### `read_setup`
