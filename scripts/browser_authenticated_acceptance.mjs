@@ -650,9 +650,18 @@ async function main() {
     });
 
     await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded' });
+    // login.html initializes asynchronously (policy/status/version fetches)
+    // before wiring the submit handler.  Waiting for the configured-login
+    // presentation prevents Playwright from triggering native form navigation
+    // before the normal login route is attached.
+    await page.waitForFunction(() => {
+      const remember = document.querySelector('#rememberToggle');
+      const button = document.querySelector('#submitBtn');
+      return button?.textContent?.trim() === 'Sign In' && remember?.style.display !== 'none';
+    }, { timeout: 30000 });
     await page.locator('#username').fill(credentials.username);
     await page.locator('#password').fill(credentials.password);
-    await page.locator('#authForm').evaluate((form) => form.requestSubmit());
+    await page.locator('#submitBtn').click();
     await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
     if (process.env.HADES_BROWSER_SESSION_ENDPOINT_ID) {
       const session = await page.evaluate(async ({ endpointId, model }) => {
