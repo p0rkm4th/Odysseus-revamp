@@ -888,3 +888,22 @@ the previously recorded exact product SHA.
   `odysseus:candidate-451b40cd`, image
   `sha256:3939ca86e5a6cf6542934b7d9345b8c097938d6071aea7b1291a5e6d5268850d`;
   embedded marker matched. The owner deployment remains untouched.
+
+# Recipe chat-mutation acceptance checkpoint — `451b40cd` (2026-08-29)
+
+- Re-ran `OWNER-RECIPE-MUTATION-READBACK-001` through a fresh isolated
+  acceptance deployment using the normal browser login, chat composer, real
+  `/api/chat_stream`, and Qwen3:8B. The mutation was not API-seeded.
+- Natural-language Recipe creation persisted canonical state, the list
+  readback succeeded, and the reload readback still contained the created
+  recipe. The run covered `1` scenario and `3` turns: `3` terminal `[DONE]`,
+  zero abrupt EOF, duplicate delivery, raw final results, and false success.
+- The first rerun was correctly rejected by the fixture precondition after a
+  stale disposable bind-mounted state was reused. A subsequent fresh isolated
+  state exposed an acceptance setup issue: the principal was created while
+  the app process still had the default disabled flag. The app correctly
+  rejected login until the disposable deployment was explicitly configured
+  with `HADES_ACCEPTANCE_PRINCIPAL_ENABLED=true`; no production code change or
+  auth bypass was made.
+- The disposable principal, credential artifact, and stack were revoked/stopped
+  after the run. The owner deployment remains untouched.
