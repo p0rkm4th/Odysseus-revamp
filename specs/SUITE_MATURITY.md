@@ -12,6 +12,14 @@ success, raw final Result, duplicate delivery, or abrupt EOF. The candidate
 was tested on disposable data; the actual owner runtime remains untouched at
 source `34ced247`.
 
+## URL Recipe review-safety replay — candidate `dcf0a95d` (2026-08-29)
+
+The named public URL import journey passed through the expected review/error
+path on an exact candidate. The attempted mutation left the disposable
+canonical Recipe count at zero, with no false success, raw result, duplicate
+delivery, or EOF. A separate fresh fixture lacked a registered model endpoint
+and remains an acceptance/install setup gap.
+
 ## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
 
 The exact candidate completed first-run setup, authenticated browser use,
