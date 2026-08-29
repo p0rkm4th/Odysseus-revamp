@@ -17,7 +17,12 @@ from typing import Any, Mapping
 
 from src.capability_registry import ActionSpec, capability_for_id
 from src.tool_bindings import binding_for_tool
-from src.deterministic_reads import deterministic_read_concept, deterministic_read_view, deterministic_recipe_servings
+from src.deterministic_reads import (
+    deterministic_read_concept,
+    deterministic_read_view,
+    deterministic_recipe_servings,
+    is_recipe_pantry_coverage_query,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -2292,10 +2297,7 @@ def compile_intent(
         query_match = re.search(r"\b(?:find|search|look\s+for)\s+(?:a\s+)?(?:recipes?\s+(?:for\s+)?)?(.+)$", q)
         if query_match and query_match.group(1).strip():
             reference_filters["recipe_query"] = query_match.group(1).strip(" ?.!\n")
-    if concept == "RECIPE" and operation == "READ" and re.search(
-        r"\b(?:can\s+i\s+make|do\s+i\s+have\s+everything|pantry\s+coverage|"
-        r"missing\s+ingredients?)\b", q,
-    ):
+    if concept == "RECIPE" and operation == "READ" and is_recipe_pantry_coverage_query(q):
         reference_filters["recipe_coverage"] = True
     if concept == "RECIPE" and operation == "READ" and re.search(
         r"\b(?:shopping\s+list|shopping\s+requirements?|what\s+(?:do\s+)?i\s+need\s+to\s+buy|what\s+ingredients?\s+are\s+missing|"

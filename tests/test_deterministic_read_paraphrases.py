@@ -363,6 +363,9 @@ def test_expiring_recipe_composition_uses_distinct_canonical_action():
     "can I make this recipe with what I have",
     "do I have everything for this meal",
     "check missing ingredients for the chili recipe",
+    "can i make anything with what we got",
+    "can i cook something w what we have",
+    "what can we make from whatever we have",
 ])
 def test_recipe_pantry_coverage_has_distinct_canonical_result_contract(query):
     frame = compile_intent(query)
