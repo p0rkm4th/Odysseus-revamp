@@ -2,6 +2,18 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Visual/UI owner checkpoint — candidate `20d07aef` (2026-08-29)
+
+The realistic browser acceptance passed on the owner-facing surface: duplicate
+Security/Research navigation checks, one intentional sidebar icon per entry,
+shared Inventory window chrome, empty/list states, desktop containment, narrow
+tab behavior, and mobile window sizing. Frontend static verification and shared
+window dogfood also passed. Screenshots were captured at desktop, narrow, and
+mobile sizes for visual review; no production UI blocker was found. The
+existing fresh-install/restart/Qwen and isolated Chroma backup/restore
+rehearsals remain recorded below as separate release gates. Owner state was not
+changed.
+
 ## Recipe composition and false-premise checkpoint — candidate `20d07aef` (2026-08-29)
 
 Fresh isolated exact-candidate stacks passed `OWNER-RECIPE-SHOPPING-REQUIREMENTS-001`
