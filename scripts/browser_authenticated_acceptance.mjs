@@ -412,6 +412,14 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
     }
     return {phase, kind: spec.kind, found: true};
   }
+  if (spec.kind === 'work' && spec.contains_project_title) {
+    const projects = Array.isArray(result.payload?.projects) ? result.payload.projects : [];
+    const wanted = String(spec.contains_project_title).trim().toLowerCase();
+    if (!projects.some((project) => String(project?.title || '').trim().toLowerCase() === wanted)) {
+      throw new Error(`${scenario.id} work readback missing canonical project`);
+    }
+    return {phase, kind: spec.kind, found: true};
+  }
   throw new Error(`${scenario.id} uses unsupported readback kind`);
 }
 
