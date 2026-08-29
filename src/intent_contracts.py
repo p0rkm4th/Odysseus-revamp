@@ -2109,6 +2109,14 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:
         return ResolvedContract(frame, contract, None, None, contract.binding, False, "target_required")
     action_key = frame.operation_class
+    # URL-backed recipe creation is an import. Route it through the existing
+    # validated import commit instead of an under-specified primitive add.
+    if (
+        frame.domain_concept == "RECIPE"
+        and frame.operation_class == "CREATE"
+        and frame.filters.get("recipe_import") is True
+    ):
+        action_key = "CREATE_IMPORT_COMMIT"
     if frame.domain_concept == "HOMELAB_HOST" and frame.filters.get("remote") and frame.operation_class == "READ":
         action_key = "REMOTE_READ"
     if frame.domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and frame.operation_class == "READ" and frame.entity_reference:

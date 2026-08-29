@@ -196,6 +196,9 @@ def test_url_recipe_create_preserves_import_and_explicit_name_metadata():
     assert frame.filters["recipe_import"] is True
     assert frame.filters["recipe_requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
     assert recipe_requested_name(query) == "Chicken Cordon Bleu with Cheese Sauce"
+    resolved = resolve_intent(frame)
+    assert resolved.action_id == "commit_import"
+    assert resolved.binding_name == "manage_recipes"
 
 
 def test_long_owner_recipe_paste_projects_a_validated_draft_into_add_action():

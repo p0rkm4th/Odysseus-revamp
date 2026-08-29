@@ -228,7 +228,7 @@ def test_url_recipe_create_resolves_effectful_import_backed_action():
         'https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe'
     )
     resolved = resolve_intent(frame)
-    assert resolved.action_id == "add"
+    assert resolved.action_id == "commit_import"
     assert resolved.binding_name == "manage_recipes"
 
 
@@ -287,10 +287,10 @@ async def test_chat_recipe_url_create_fetches_untrusted_source_before_canonical_
     assert tool == "manage_recipes"
     assert result["verified"] is True
     assert captured["owner"] == "alice"
-    assert captured["payload"]["action"] == "add"
-    assert captured["payload"]["name"] == "URL Dinner"
-    assert captured["payload"]["source_url"] == "https://recipes.example.test/chicken"
-    assert captured["payload"]["ingredients"][0]["name"] == "rice"
+    assert captured["payload"]["action"] == "commit_import"
+    assert captured["payload"]["draft"]["name"] == "URL Dinner"
+    assert captured["payload"]["draft"]["source_url"] == "https://recipes.example.test/chicken"
+    assert captured["payload"]["draft"]["ingredients"][0]["name"] == "rice"
 
 
 @pytest.mark.asyncio
@@ -312,7 +312,7 @@ async def test_chat_recipe_url_create_applies_explicit_owner_name_after_import(m
             return {"recipe": {"id": "recipe-named-1"}}
 
         def get_recipe(self, owner, recipe_id):
-            return {"id": recipe_id, "name": captured["payload"]["name"]}
+            return {"id": recipe_id, "name": captured["payload"]["draft"]["name"]}
 
     monkeypatch.setattr("src.recipe_import_sources.fetch_recipe_source", fetch_source)
     monkeypatch.setattr("src.inventory_service.get_inventory_service", lambda: FakeService())
@@ -326,8 +326,8 @@ async def test_chat_recipe_url_create_applies_explicit_owner_name_after_import(m
     )
     assert tool == "manage_recipes"
     assert result["verified"] is True
-    assert captured["payload"]["name"] == "Chicken Cordon Bleu with Cheese Sauce"
-    assert captured["payload"]["source_url"] == "https://recipes.example.test/chicken"
+    assert captured["payload"]["draft"]["name"] == "Chicken Cordon Bleu with Cheese Sauce"
+    assert captured["payload"]["draft"]["source_url"] == "https://recipes.example.test/chicken"
 
 
 @pytest.mark.asyncio
