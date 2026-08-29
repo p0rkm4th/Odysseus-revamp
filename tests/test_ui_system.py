@@ -37,6 +37,8 @@ def test_inventory_uses_shared_window_and_form_primitives():
         "RECIPE_UNITS = ['each', 'count', 'cup', 'tbsp', 'tsp', 'g', 'kg', 'ml', 'l', 'oz', 'lb']",
         'id="recipe-search"',
         "visibleRecipes",
+        "<h4>Ingredients</h4>",
+        "View source",
     ):
         assert marker in source
 

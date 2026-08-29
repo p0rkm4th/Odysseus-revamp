@@ -425,12 +425,14 @@ async function showRecipe(id) {
       api(`/api/recipes/${encodeURIComponent(id)}`),
       api(`/api/recipes/${encodeURIComponent(id)}/shopping-requirements`),
     ]);
+    const ingredients = (recipe.ingredients || []).map(item => `<li>${escapeHtml(item.quantity)} ${escapeHtml(item.unit)} ${escapeHtml(item.name)}${item.optional ? ' <small>(optional)</small>' : ''}</li>`).join('');
     const missing = shopping.missing_ingredients || [];
     const shortages = missing.map(s => `<li>${escapeHtml(s.name)}: need ${escapeHtml(s.quantity)} ${escapeHtml(s.unit)} more</li>`).join('');
     const coverage = missing.length
       ? `<h4>Shopping needs</h4><ul>${shortages}</ul>`
       : '<h4>Shopping needs</h4><p>You have the recorded ingredients needed for this recipe.</p>';
-    modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p>${coverage}`, 'Close', 'view');
+    const source = recipe.source_url ? `<p><a href="${escapeHtml(recipe.source_url)}" target="_blank" rel="noopener noreferrer">View source</a></p>` : '';
+    modalForm(recipe.name, `<h4>Ingredients</h4><ul>${ingredients || '<li>No ingredients recorded.</li>'}</ul><h4>Instructions</h4><p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p>${coverage}${source}`, 'Close', 'view');
     const form = document.querySelector('.inventory-dialog[data-kind="view"]');
     form.querySelector('[type=submit]').type = 'button'; form.querySelector('[type=submit]').dataset.action = 'dismiss-dialog';
   } catch (error) { uiModule.showError?.(error.message); }
