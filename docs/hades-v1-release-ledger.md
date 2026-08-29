@@ -868,3 +868,21 @@ the previously recorded exact product SHA.
   OCI marker matches. The branch tip `65d09299` is evaluator-only readback
   metadata and was not rebuilt. The owner deployment remains untouched at
   source `34ced2478c014cc529775460b5a6d4350b68239c`.
+
+# Recipe import result-projection checkpoint — `451b40cd` (2026-08-29)
+
+- Reproduced a real URL-import failure where `manage_recipes` committed and
+  verified a recipe, but its large Result was truncated before the deterministic
+  mutation renderer parsed it; the owner received an error despite persistence.
+- Added `manage_recipes` to the existing bounded canonical Result projection.
+  The projection retains only verified mutation evidence (recipe id/name/source
+  and verification status); raw ingredient/instruction payloads remain bounded
+  diagnostic output. The false-success guard is unchanged.
+- Focused Recipe/ACI validation: `45 passed, 1 skipped`. Exact isolated
+  browser URL-import journey: `3/3` streams reached DONE, mutation and reload
+  readbacks passed, zero abrupt EOF, duplicate delivery, raw final results, and
+  false success.
+- Exact pushed executable source/candidate: `451b40cdbac39146c460575eaae5574a93c014b6`,
+  `odysseus:candidate-451b40cd`, image
+  `sha256:3939ca86e5a6cf6542934b7d9345b8c097938d6071aea7b1291a5e6d5268850d`;
+  embedded marker matched. The owner deployment remains untouched.
