@@ -209,6 +209,19 @@ def recipe_import_draft(source_text: str | None, *, source_url: str | None = Non
             value: Any = json.loads(json_text) if json_text else None
         except (TypeError, ValueError):
             value = None
+        # A bounded vision extractor may return the validated draft shape
+        # rather than schema.org JSON-LD.  Treat it exactly like any other
+        # untrusted proposal: RecipeDraft.from_payload is the gate and no
+        # persistence occurs here.
+        if isinstance(value, Mapping) and "ingredients" in value and "instructions" in value:
+            try:
+                draft = RecipeDraft.from_payload(value)
+            except (TypeError, ValueError):
+                draft = None
+            if draft:
+                if source_url:
+                    draft = replace(draft, source_url=str(source_url).strip(), provenance="import_evidence")
+                return draft
         candidates = value if isinstance(value, list) else [value]
         if isinstance(value, Mapping) and isinstance(value.get("@graph"), list):
             candidates.extend(value["@graph"])

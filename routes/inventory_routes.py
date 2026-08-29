@@ -214,7 +214,12 @@ def setup_inventory_routes(
             if not mime.startswith("image/") or not isinstance(path, str) or not path:
                 raise HTTPException(400, "recipe preparation attachment must be an available image")
             from src.document_processor import analyze_image_with_vl
-            image_text = await asyncio.to_thread(analyze_image_with_vl, path, owner)
+            image_text = await asyncio.to_thread(
+                analyze_image_with_vl, path, owner,
+                "If this is a recipe, return JSON only with name, servings, ingredients, and instructions. "
+                "Each ingredient needs name, numeric quantity, and unit. Do not guess missing values. "
+                "If it is not a complete recipe, describe only the visible evidence.",
+            )
             source_text = "\n\n".join(part for part in (source_text, image_text) if part)
         if source_url and not source_text:
             from src.recipe_import_sources import fetch_recipe_source

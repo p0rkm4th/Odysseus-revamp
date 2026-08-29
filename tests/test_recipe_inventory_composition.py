@@ -170,6 +170,16 @@ def test_recipe_import_prepare_accepts_schema_org_jsonld_without_persisting():
     assert len(draft.ingredients) == 2
 
 
+def test_recipe_import_prepare_accepts_validated_draft_json_without_persisting():
+    draft = recipe_import_draft(json.dumps({
+        "name": "Photo Dinner", "servings": 2,
+        "ingredients": [{"name": "rice", "quantity": 1, "unit": "cup"}],
+        "instructions": "Cook the rice.",
+    }))
+    assert isinstance(draft, RecipeDraft)
+    assert draft.name == "Photo Dinner"
+
+
 def test_recipe_import_prepare_extracts_jsonld_embedded_in_untrusted_html():
     html = '<html><script type="application/ld+json">{"@type":"Recipe","name":"HTML Dinner",'
     html += '"recipeIngredient":["1 cup rice"],"recipeInstructions":"Steam the rice."}</script></html>'
