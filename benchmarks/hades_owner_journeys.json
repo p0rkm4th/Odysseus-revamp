@@ -12,8 +12,12 @@
       "environment": "deterministic_synthetic",
       "fixture_profile": "assets-atlas-erebus",
       "fixture_setup": "canonical_asset_atlas_erebus",
-      "turns": [{"prompt": "How much RAM do my computers have?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas", "64", "Erebus", "128"], "action": "list", "tool_binding": "manage_assets", "must_include_any": [], "forbidden": ["cannot access", "run lshw", "provide details"]}}],
-      "expected": {"action": "list", "tool_binding": "manage_assets", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
+      "turns": [
+        {"prompt": "How much RAM do my computers have?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas", "64", "Erebus", "128"], "action": "list", "tool_binding": "manage_assets", "must_include_any": [], "forbidden": ["cannot access", "run lshw", "provide details"]}},
+        {"prompt": "What's the RAM in my machines?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas", "64", "Erebus", "128"], "action": "list", "tool_binding": "manage_assets", "must_include_any": [], "forbidden": ["cannot access", "run lshw", "provide details"]}},
+        {"prompt": "RAM across my PCs?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas", "64", "Erebus", "128"], "action": "list", "tool_binding": "manage_assets", "must_include_any": [], "forbidden": ["cannot access", "run lshw", "provide details"]}}
+      ],
+      "expected": {"action": "list", "tool_binding": "manage_assets", "policy": "allowed", "approval": "not_required", "terminal": {"done": 3, "abrupt_eof": false}}
     },
     {
       "id": "OWNER-NETWORK-001",
