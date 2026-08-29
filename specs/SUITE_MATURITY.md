@@ -1,5 +1,15 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Owner Memory mutation/correction checkpoint — candidate `4c5cc103` (2026-08-29)
+
+The exact disposable Qwen3:8B browser journey passed ordinary remember/read/
+forget/read-after-reload behavior. Canonical `manage_memory` Actions executed
+both mutations, independent readback verified presence then absence, and no
+duplicate auto-memory record was created. Four turns, two mutations, zero
+false success, raw final Result, duplicate delivery, or abrupt EOF. This
+closes the narrow Memory mutation path; broader correction, contradiction,
+and reference-chain journeys remain open.
+
 ## Populated Memory live-Qwen checkpoint — candidate `3a0d9555` (2026-08-29)
 
 The populated Memory owner journey passed in the isolated disposable browser

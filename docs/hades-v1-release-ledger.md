@@ -2,6 +2,25 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Owner Memory mutation/correction checkpoint — candidate `4c5cc103` (2026-08-29)
+
+`OWNER-MEMORY-MUTATION-READBACK-001` passed on the exact disposable
+candidate `4c5cc103db2676674779245c1758e0a41f3fc6ba`, image
+`sha256:98276caba36cd08404741b6721b76805e19f015e176f3cd15acce98655ea07b9`,
+with Qwen3:8B. Through the GUI/chat surface, an ordinary owner completed:
+remember a test color, read it, forget it, read it again, then reload. Both
+mutations executed the canonical `manage_memory` Action with successful
+Results; independent `/api/memory` readbacks showed the fact present after
+add and absent after delete, including reload. Four conversational turns,
+two mutations, two independent state checks, zero false successes, raw final
+Results, duplicate delivery, and abrupt EOF.
+
+The journey first exposed and fixed three generalized defects: owner memory
+writes were blocked for non-admin owners, weak-model ACI selection could drop
+the bounded mutation, and automatic extraction duplicated explicit memory
+mutations. The candidate was browser-tested in the isolated fresh lane; the
+actual owner runtime remained untouched.
+
 ## Populated Memory live-Qwen checkpoint — candidate `3a0d9555` (2026-08-29)
 
 `OWNER-MEMORY-POPULATED-001` passed in the isolated disposable deployment on
