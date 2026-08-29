@@ -521,3 +521,15 @@ were removed; owner deployment was unchanged.
 - The acceptance principal, credential, database, volumes, containers, and
   network were removed after the run. This is isolated fresh-install evidence;
   it does not substitute for real-owner data validation.
+
+## Backup/recovery focused validation — `69dc51af` (2026-08-29)
+
+- Existing backup CLI security and recovery ownership tests passed in the
+  supported project environment: `16 passed, 3 warnings`. Coverage includes
+  safe snapshot output placement, symlink/hardlink/path traversal rejection,
+  restore staging of the previous data directory, backup-import owner scope,
+  and setup/readiness behavior.
+- The documented Docker caveat remains: application `data/` is covered by the
+  host snapshot, while Compose-managed Chroma vectors require a separate
+  volume backup. A full live backup/restore rehearsal remains release work and
+  was not represented as passed by this focused result.
