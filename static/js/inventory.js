@@ -275,6 +275,44 @@ function renderRecipeImportReview(form, prepared) {
   if (submit) { submit.disabled = false; submit.textContent = 'Retry import'; }
 }
 
+function recipeReviewIngredientRow(index, ingredient = {}) {
+  return `<div class="recipe-ingredient-row recipe-review-ingredient-row" data-review-ingredient-row>
+    <label class="hades-intake-field"><span>Ingredient ${index + 1}</span><input name="review_ingredient_name" required maxlength="160" value="${escapeHtml(ingredient.name || '')}"></label>
+    <label class="hades-intake-field"><span>Quantity</span><input name="review_ingredient_quantity" required inputmode="decimal" pattern="[0-9]+(?:\\.[0-9]+)?" value="${escapeHtml(ingredient.quantity ?? '')}"></label>
+    <label class="hades-intake-field"><span>Unit</span><select name="review_ingredient_unit">${RECIPE_UNITS.map(u => `<option ${String(ingredient.unit || '').toLowerCase() === u ? 'selected' : ''}>${u}</option>`).join('')}</select></label>
+  </div>`;
+}
+
+function renderRecipeImportDraft(form, draft) {
+  form.dataset.recipeReview = 'true';
+  form._recipeReviewDraft = draft;
+  let panel = form.querySelector('[data-recipe-import-draft]');
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.dataset.recipeImportDraft = '';
+    panel.className = 'inventory-draft-review hades-review-panel';
+    form.querySelector('.hades-dialog-actions')?.before(panel);
+  }
+  [...form.children].forEach(child => {
+    if (child !== panel && !child.classList.contains('hades-dialog-actions')) child.hidden = true;
+  });
+  const ingredients = Array.isArray(draft.ingredients) ? draft.ingredients : [];
+  panel.innerHTML = `<div class="inventory-callout hades-callout"><strong>Review before saving.</strong><p>Check the extracted details and correct anything uncertain. Nothing has been saved yet.</p></div>
+    <div class="hades-intake-grid">
+      <label class="hades-intake-field"><span>Recipe name</span><input name="review_name" required maxlength="200" value="${escapeHtml(draft.name || '')}"></label>
+      <label class="hades-intake-field"><span>Servings</span><input name="review_servings" required inputmode="decimal" value="${escapeHtml(draft.servings ?? '')}"></label>
+      <label class="hades-intake-field inventory-wide"><span>Source</span><input value="${escapeHtml(draft.source_url || 'Pasted recipe evidence')}" readonly></label>
+    </div>
+    <fieldset class="recipe-ingredients-editor"><legend>Ingredients</legend>
+      <p class="inventory-muted">Correct names, quantities, or units. Each quantity must be a positive number before saving.</p>
+      <div data-review-ingredients>${ingredients.map((item, index) => recipeReviewIngredientRow(index, item)).join('')}</div>
+    </fieldset>
+    <label class="hades-intake-field"><span>Instructions</span><textarea name="review_instructions" required maxlength="20000">${escapeHtml(draft.instructions || '')}</textarea></label>`;
+  const submit = form.querySelector('.hades-dialog-actions [type=submit]');
+  if (submit) { submit.disabled = false; submit.textContent = 'Save reviewed recipe'; }
+  panel.querySelector('[name=review_name]')?.focus();
+}
+
 async function onSubmit(event) {
   const form = event.target;
   if (!form.matches('#inventory-intake-form, .inventory-dialog')) return;
@@ -322,6 +360,38 @@ async function onSubmit(event) {
       await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, source_url:data.source_url || null})});
     }
     if (kind === 'recipe-import') {
+      if (form.dataset.recipeReview === 'true') {
+        const names = new FormData(form).getAll('review_ingredient_name');
+        const quantities = new FormData(form).getAll('review_ingredient_quantity');
+        const units = new FormData(form).getAll('review_ingredient_unit');
+        if (!names.length || names.length !== quantities.length || names.length !== units.length) {
+          throw new Error('Add at least one complete ingredient before saving.');
+        }
+        const ingredients = names.map((name, index) => {
+          const quantity = String(quantities[index] || '').trim();
+          const ingredient = {name: String(name || '').trim(), quantity, unit: String(units[index] || '').trim()};
+          if (!ingredient.name || !/^[0-9]+(?:\\.[0-9]+)?$/.test(quantity) || Number(quantity) <= 0) {
+            throw new Error('Each ingredient needs a name and positive numeric quantity.');
+          }
+          return ingredient;
+        });
+        const servings = String(new FormData(form).get('review_servings') || '').trim();
+        if (!/^[0-9]+(?:\\.[0-9]+)?$/.test(servings) || Number(servings) <= 0) {
+          throw new Error('Servings must be a positive number.');
+        }
+        const reviewedDraft = {
+          ...form._recipeReviewDraft,
+          name: String(new FormData(form).get('review_name') || '').trim(),
+          servings, ingredients,
+          instructions: String(new FormData(form).get('review_instructions') || '').trim(),
+        };
+        if (!reviewedDraft.name || !reviewedDraft.instructions) throw new Error('Recipe name and instructions are required.');
+        await api('/api/recipes/import/commit', {method:'POST', body:JSON.stringify({draft:reviewedDraft})});
+        form.closest('.inventory-dialog-backdrop')?.remove();
+        uiModule.showToast?.('Recipe saved');
+        await loadRecipes();
+        return;
+      }
       let attachment_ids = [];
       const image = form.elements.recipe_image?.files?.[0];
       if (image) {
@@ -338,10 +408,8 @@ async function onSubmit(event) {
         renderRecipeImportReview(form, prepared);
         return;
       }
-      const ingredients = prepared.draft.ingredients || [];
-      const summary = `${prepared.draft.name || 'Untitled recipe'}\n${ingredients.length} ingredient(s)\n\n${prepared.draft.instructions || 'No instructions recorded.'}`;
-      if (!window.confirm(`Review this unpersisted recipe draft before saving:\n\n${summary}`)) return;
-      await api('/api/recipes/import/commit', {method:'POST', body:JSON.stringify({draft:prepared.draft})});
+      renderRecipeImportDraft(form, prepared.draft);
+      return;
     }
     form.closest('.inventory-dialog-backdrop')?.remove();
     uiModule.showToast?.('Inventory updated');
