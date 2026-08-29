@@ -279,6 +279,13 @@ function assertHumanCanonicalAnswer(turn, prompt) {
   return text;
 }
 
+function isDiagnosticToolOutput(value) {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  if (/^\s*[\[{]/.test(text)) return true;
+  return /(?:asset_id|observation_id|relationships|serial(?:_number)?|system_identifiers|lsblk|result_projection)\s*[:=]/i.test(text);
+}
+
 function literalPattern(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -458,7 +465,11 @@ async function send(page, prompt, expectation = {}) {
     }
   }
   const rawToolText = turn.tools.map((tool) => tool.rawOutput || '').join('\n').trim();
-  if (rawToolText && (finalText === rawToolText || finalText.includes(rawToolText))) {
+  // A canonical deterministic projection may intentionally be visible in a
+  // secondary tool card as well as the authoritative answer.  Only reject
+  // the final answer when the card contains diagnostic/raw structure; do not
+  // mistake repeated bounded human-readable prose for JSON leakage.
+  if (isDiagnosticToolOutput(rawToolText) && (finalText === rawToolText || finalText.includes(rawToolText))) {
     throw new Error(`final answer is raw tool output for ${prompt}`);
   }
   if (turn.tools.some((tool) => tool.openOutputs > 0)) {

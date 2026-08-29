@@ -3770,6 +3770,17 @@ def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str 
     collections = {str(key): value for key, value in payload.items() if isinstance(value, list)}
     if not collections:
         return None
+    # The overview binding includes durable execution Runs so continuation
+    # remains available to the control plane.  A read asking what work is
+    # outstanding must not present the read's own agent run (or historical
+    # execution runs) as user work.  Explicit list_runs reads still render
+    # their run collection because they ask for that resource directly.
+    work_collections = {
+        key: value for key, value in collections.items()
+        if key in {"goals", "projects", "tasks", "commitments"}
+    }
+    if work_collections:
+        collections = work_collections
     total = sum(len(value) for value in collections.values())
     if total == 0:
         return "No outstanding work is recorded for this owner."
