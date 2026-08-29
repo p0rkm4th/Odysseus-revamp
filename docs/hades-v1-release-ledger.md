@@ -1804,6 +1804,14 @@ approval gate. A truly fresh no-memory Work stack then passed the task journey
 with two turns, one chat mutation, two canonical readbacks including reload,
 and zero false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+## Current Recipe mutation checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+On the same fresh isolated stack before any recipe state existed, the normal
+long-form Recipe mutation passed three owner turns. One canonical Recipe was
+created through chat and independently verified by two readbacks including
+reload; false success, raw final Result, duplicate delivery, and abrupt EOF
+were zero.
+
 An earlier reused-database replay was rejected before chat because its
 recipe-count precondition no longer held. That was disposable fixture
 contamination, not a product result.

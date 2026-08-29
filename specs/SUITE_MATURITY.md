@@ -53,6 +53,12 @@ prior external Memory context correctly escalated the write. The clean fresh
 Work task journey passed mutation, canonical readback, and reload verification
 with zero false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+## Current Recipe mutation maturity — `1a2b62e5` (2026-08-29)
+
+The clean long-form Recipe creation journey passed through owner chat and
+survived two canonical readbacks including reload. False success, raw final
+Result, duplicate delivery, and abrupt EOF were zero.
+
 ## Recipe composition and shopping checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Exact-candidate Recipe composition passed listing, pantry feasibility, and
