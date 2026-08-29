@@ -1813,6 +1813,12 @@ async def _execute_read_work_binding(block, owner=None):
                 models = {"list_goals": (WorkGoal, None), "list_projects": (WorkProject, None), "list_tasks": (WorkTask, None), "list_runs": (WorkRun, None), "list_commitments": (WorkCommitment, "open")}
                 model, status = models[action]
                 result = {action.removeprefix("list_"): service.list_records(owner, model, status=status)}
+        result = {
+            "result_type": f"work_{action}",
+            "operation": action,
+            "canonical_store": "work_engine",
+            **result,
+        }
         result = _with_canonical_read_status(result)
         return "read_work", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
     except Exception as exc:
