@@ -3742,9 +3742,12 @@ def canonical_tool_result_projection(
             nodes.append({
                 "id": node.get("id"),
                 "name": node.get("name"),
+                "status": node.get("status"),
+                "canonical": node.get("canonical"),
+                "resolution_state": node.get("resolution_state"),
                 "attributes": {
                     key: attrs.get(key)
-                    for key in ("hostname", "observed_ip") if attrs.get(key) not in (None, "")
+                    for key in ("hostname", "observed_ip", "ip") if attrs.get(key) not in (None, "")
                 },
             })
         raw_edges = payload.get("edges")

@@ -458,6 +458,26 @@ def test_network_observation_renderer_hides_opaque_ids_and_bounds_repeated_nodes
     assert "Freshness: historical until matched to current context." in answer
 
 
+def test_network_result_projection_preserves_identity_state_for_owner_renderer():
+    projection = canonical_tool_result_projection("manage_homelab", {
+        "output": json.dumps({
+            "status": "SUCCESS", "action": "read_network_observations",
+            "nodes": [{
+                "id": "unidentified:192.168.10.71",
+                "name": "Unidentified device 192.168.10.71",
+                "status": "observed", "canonical": False,
+                "resolution_state": "unidentified",
+                "attributes": {"ip": "192.168.10.71", "large_evidence": "secret"},
+            }], "edges": [],
+        }),
+        "exit_code": 0,
+    })
+    assert projection["nodes"][0]["resolution_state"] == "unidentified"
+    assert projection["nodes"][0]["canonical"] is False
+    assert projection["nodes"][0]["attributes"] == {"ip": "192.168.10.71"}
+    assert "large_evidence" not in json.dumps(projection)
+
+
 def test_homelab_inspection_has_grounded_deterministic_answer():
     projection = canonical_tool_result_projection("manage_homelab", {
         "output": json.dumps({
