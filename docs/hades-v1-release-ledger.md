@@ -32,6 +32,15 @@ session-reload page crashed reproducibly while loading static resources;
 minimal equivalent Playwright login/session/reload smoke passed. This is
 retained as a browser-environment/harness blocker, not a product pass.
 
+The follow-up harness checkpoint `f0198202` adds the standard headless GPU
+disable flag and its source regression passes. A fresh disposable retry still
+crashed at the authenticated session reload before the first chat turn;
+therefore browser acceptance remains `UNVERIFIED` and is not counted as a
+product pass. The same candidate's authenticated HTTP live runner completed
+`3/3` core cases with Qwen3:8B, zero abrupt EOF, zero duplicate delivery,
+zero internal leaks, and one terminal event per case. The browser crash is
+tracked separately from that successful HTTP/SSE evidence.
+
 ## Latest branch checkpoint — `bb27c5c4`
 
 The productization branch is synchronized with `origin/hades-v1-productization`
