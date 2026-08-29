@@ -1569,6 +1569,18 @@ def test_verified_effectful_result_is_terminal_and_cannot_reselect_action():
     assert nested.state.value == "COMPLETE_AFTER_ANSWER"
 
 
+def test_recipe_review_draft_is_terminal_after_result_preparation():
+    completed = project_post_result_transition(
+        {"output": json.dumps({
+            "status": "NEEDS_REVIEW", "success": True,
+            "draft": {"name": "Review Dinner", "ingredients": []},
+        }), "exit_code": 0},
+        selected_action={"binding": "manage_recipes", "action_id": "commit_import"},
+    )
+    assert completed.state.value == "COMPLETE_AFTER_ANSWER"
+    assert completed.answer_only is True
+
+
 def test_composition_only_accepts_registered_primitives_and_acyclic_graphs():
     composite, errors = compile_composite_action(
         owner="owner",
