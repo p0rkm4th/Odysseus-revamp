@@ -224,6 +224,30 @@ function modalForm(title, body, submitLabel, kind, id = '') {
 
 function field(label, name, attrs = '') { return `<label class="hades-intake-field"><span>${escapeHtml(label)}</span><input name="${escapeHtml(name)}" ${attrs}></label>`; }
 
+function renderRecipeImportReview(form, prepared) {
+  let panel = form.querySelector('[data-recipe-import-review]');
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.dataset.recipeImportReview = '';
+    panel.className = 'inventory-callout hades-callout hades-error-state';
+    form.querySelector('.hades-dialog-actions')?.before(panel);
+  }
+  const review = prepared?.review || {};
+  const missing = Array.isArray(review.missing_fields) ? review.missing_fields.filter(Boolean).slice(0, 8) : [];
+  const name = review.requested_name || review.name || '';
+  const message = prepared?.message || 'The source did not contain enough verified recipe structure.';
+  panel.innerHTML = `<strong>Couldn't import recipe.</strong><p>${escapeHtml(message)}</p><p>This needs review before anything can be saved.</p>
+    ${name ? `<p>Recipe name: <strong>${escapeHtml(name)}</strong></p>` : ''}
+    <button type="button" class="hades-btn-secondary" data-action="review-recipe-import">Review Draft</button>
+    <details data-recipe-import-details><summary>Why review is required</summary>
+      ${missing.length ? `<p>Missing or ambiguous: ${escapeHtml(missing.join(', '))}.</p>` : '<p>No complete verified recipe structure was found.</p>'}
+      <p class="muted">Nothing was saved. Add the missing details, then retry.</p>
+    </details>
+    <button type="button" class="hades-btn-secondary" data-action="retry-recipe-import">Retry</button>`;
+  const submit = form.querySelector('[type=submit]');
+  if (submit) { submit.disabled = false; submit.textContent = 'Retry import'; }
+}
+
 async function onSubmit(event) {
   const form = event.target;
   if (!form.matches('#inventory-intake-form, .inventory-dialog')) return;
@@ -276,13 +300,8 @@ async function onSubmit(event) {
       }
       const prepared = await api('/api/recipes/import/prepare', {method:'POST', body:JSON.stringify({source_url:data.source_url || null, requested_name:data.requested_name || null, source_text:data.source_text || null, attachment_ids})});
       if (!prepared.draft) {
-        const review = prepared.review || {};
-        const missing = Array.isArray(review.missing_fields) ? review.missing_fields.slice(0, 5).join(', ') : '';
-        const name = review.name ? ` for “${review.name}”` : '';
-        throw new Error(
-          `I found the recipe source${name}, but it needs review before anything can be saved.`
-          + (missing ? ` Missing or ambiguous: ${missing}.` : '')
-        );
+        renderRecipeImportReview(form, prepared);
+        return;
       }
       const ingredients = prepared.draft.ingredients || [];
       const summary = `${prepared.draft.name || 'Untitled recipe'}\n${ingredients.length} ingredient(s)\n\n${prepared.draft.instructions || 'No instructions recorded.'}`;
@@ -305,6 +324,19 @@ async function onClick(event) {
   const action = button.dataset.action;
   if (action === 'retry') return renderTab();
   if (action === 'dismiss-dialog') return button.closest('.inventory-dialog-backdrop')?.remove();
+  if (action === 'retry-recipe-import') {
+    const form = button.closest('.inventory-dialog');
+    form?.querySelector('[data-recipe-import-review]')?.remove();
+    const submit = form?.querySelector('[type=submit]');
+    if (submit) submit.textContent = 'Prepare draft';
+    form?.querySelector('[name=source_url], [name=source_text]')?.focus();
+    return;
+  }
+  if (action === 'review-recipe-import') {
+    const details = button.closest('[data-recipe-import-review]')?.querySelector('[data-recipe-import-details]');
+    if (details) details.open = true;
+    return;
+  }
   if (action === 'new-item') return modalForm('Add item', `${field('Name','name','required maxlength="200"')}<label>Area<select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT</option></select></label><label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${field('Category','category','maxlength="80"')}`, 'Add item', 'item');
   const card = button.closest('[data-item-id]');
   if (action === 'asset-details') {

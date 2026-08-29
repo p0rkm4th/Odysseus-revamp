@@ -270,6 +270,25 @@ def test_incomplete_recipe_import_returns_bounded_review_diagnostics():
     assert review["missing_fields"] == ["salt and pepper"]
 
 
+def test_incomplete_recipe_prepare_preserves_requested_name_in_review_only():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    result = service.manage_recipes({
+        "action": "prepare_import",
+        "source_url": "https://example.test/seasoned",
+        "requested_name": "Owner Dinner",
+        "source_text": (
+            '<!-- RECIPE_JSONLD:{"@type":"Recipe","name":"Page Dinner",'
+            '"recipeIngredient":["salt and pepper"],'
+            '"recipeInstructions":"Cook it."} -->'
+        ),
+    }, owner="alice")
+    assert result["status"] == "NEEDS_REVIEW"
+    assert result["review"]["requested_name"] == "Owner Dinner"
+    assert result["draft"] is None
+    assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"] == []
+
+
 def test_recipe_import_commit_requires_validated_draft_and_verifies_readback():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
