@@ -134,9 +134,16 @@ def _recipe_ingredients(section: str) -> list[dict[str, Any]] | None:
     ingredients: list[dict[str, Any]] = []
     for raw in raw_lines:
         item = re.sub(r"^(?:[-*•]|\d+[.)])\s*", "", raw).strip().strip(".")
+        # Common recipe sites use Unicode vulgar fractions and a mixed form
+        # such as ``1½ cups``. Normalize those presentation forms before the
+        # conservative quantity parser; this does not invent an amount.
+        fraction_values = {"¼": ".25", "½": ".5", "¾": ".75", "⅓": ".333333", "⅔": ".666667", "⅛": ".125", "⅜": ".375", "⅝": ".625", "⅞": ".875"}
+        for glyph, value in fraction_values.items():
+            item = item.replace(glyph, value if item[:1].isdigit() else value)
+        item = re.sub(r"\bof\s+", "", item, count=1, flags=re.IGNORECASE)
         match = re.match(
-            rf"(?P<quantity>\d+(?:\.\d+)?|\.\d+|\d+\s*/\s*\d+)\s+"
-            rf"(?:(?P<unit>{unit_words})\s+)?(?P<name>.+)$",
+            rf"(?P<quantity>\d+(?:\.\d+)?|\.\d+|\d+\s*/\s*\d+)\s*"
+            rf"(?:(?P<unit>{unit_words})\.?\s+)?(?P<name>.+)$",
             item, re.IGNORECASE,
         )
         if not match:
