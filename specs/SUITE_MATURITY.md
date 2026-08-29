@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## URL Recipe replay-idempotency checkpoint — `4c2c9f23` (2026-08-29)
+
+Approved URL Recipe imports are now idempotent at the canonical mutation
+boundary for an owner/source/name identity, preventing approval-stream replay
+from creating duplicate rows. Fresh exact-candidate browser acceptance passed
+import, list, show, reload, canonical readback, and duplicate-delivery checks.
+Owner deployment remains untouched.
+
 ## Qualitative Recipe review-safety checkpoint — `9703eeb4` (2026-08-29)
 
 Incomplete qualitative Recipe text now fails closed through the existing

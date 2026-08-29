@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## URL Recipe replay-idempotency checkpoint — `4c2c9f23` (2026-08-29)
+
+Owner testing found that an approved URL Recipe import could execute twice
+across stream replay, leaving two canonical rows while the conversation still
+looked successful. `commit_import` now treats owner + source URL + normalized
+recipe name as an idempotent import identity and reuses the verified canonical
+row on replay. Focused Recipe/ACI/replay coverage passed `49` selected tests.
+
+Exact candidate `odysseus:candidate-4c2c9f236d98` carries source marker and OCI
+revision `4c2c9f236d9839826bf720592838d49fb4726c23`. The fresh authenticated
+GUI scenario `OWNER-RECIPE-URL-IMPORT-COMPLETE-001` passed three turns (import,
+list, show), one chat mutation, two independent readbacks including reload,
+and zero false success, duplicate delivery, raw final Result, or abrupt EOF.
+Independent SQLite readback found one `Acceptance Budget Chili` row for the
+source URL. The isolated runtime had zero restarts. Owner runtime remains
+source `34ced247` and was not changed.
+
 ## Qualitative Recipe review-safety checkpoint — `9703eeb4` (2026-08-29)
 
 Owner testing found that an incomplete text Recipe save with “salt to taste”
