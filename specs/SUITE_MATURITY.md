@@ -582,6 +582,19 @@ executor returns failure evidence and cannot produce a mutation success from
 model-facing or source text alone. This test-only checkpoint is `f1ddb4a2`;
 the deployed executable remains `5c434f06`.
 
+## Homelab service-health renderer checkpoint — `65d61e9a`
+
+The canonical `manage_homelab` `service_status` read now has a bounded
+ResultProjection and deterministic owner-facing renderer. Successful runtime
+health results no longer need model synthesis merely to become readable;
+diagnostic metadata is limited to service name, status, and detail. Focused
+ACI/projection coverage passed `99` tests in the supported container. The exact
+candidate `odysseus:candidate-65d61e9a` was built from the pushed SHA, image
+ID `sha256:2aca24361b21f5e9876b25f89c7b4cace7803728e67b0a115a74893b14a1dd0b`,
+and verified in an isolated runtime: OCI marker/runtime source matched,
+health was healthy, restarts were `0`, and Qwen3:8B was reachable from the
+container namespace. The owner deployment was not changed.
+
 ## Recipe canonical preparation checkpoint — `5c434f06`
 
 URL-backed chat mutations now send fetched evidence through the existing

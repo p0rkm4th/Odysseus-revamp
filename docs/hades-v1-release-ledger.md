@@ -185,3 +185,23 @@ E6.
   model call, and zero tools. This is source/live-bridge evidence; deployment
   E4/E5 for this newest adapter commit is still pending storage-approved build
   and authenticated live canary.
+
+## Productization checkpoint — `65d61e9a` (2026-08-29)
+
+- Added deterministic projection/rendering for successful canonical Homelab
+  `service_status` reads, closing the observed gap where non-empty service
+  health could fall through to unconstrained synthesis.
+- Focused supported-container tests: `99 passed`, one SQLAlchemy deprecation
+  warning.
+- Exact candidate: `odysseus:candidate-65d61e9a1b65`, image
+  `sha256:2aca24361b21f5e9876b25f89c7b4cace7803728e67b0a115a74893b14a1dd0b`;
+  OCI marker and running source match the pushed SHA; health healthy; restart
+  count `0`.
+- Qwen3:8B was verified from the candidate container namespace at the
+  configured host-gateway endpoint; digest
+  `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+- The prior authoritative full-regression result remains `6935 passed, 5
+  skipped, 1 environment setup failure`; the isolated affected confinement
+  suite passed `25`. This checkpoint did not rerun the full suite.
+- Owner deployment remains unchanged; browser/live owner acceptance against
+  this candidate remains separate evidence.
