@@ -171,6 +171,19 @@ def test_recipe_import_prepare_accepts_schema_org_jsonld_without_persisting():
     assert len(draft.ingredients) == 2
 
 
+def test_recipe_import_prepare_applies_explicit_name_override_without_persisting():
+    draft = recipe_import_draft(
+        '{"@type":"Recipe","name":"Page Title",'
+        '"recipeIngredient":["1 cup rice"],'
+        '"recipeInstructions":"Cook the rice."}',
+        source_url="https://example.test/recipe",
+        requested_name="Owner Chosen Dinner",
+    )
+    assert isinstance(draft, RecipeDraft)
+    assert draft.name == "Owner Chosen Dinner"
+    assert draft.source_url == "https://example.test/recipe"
+
+
 def test_recipe_import_prepare_accepts_validated_draft_json_without_persisting():
     draft = recipe_import_draft(json.dumps({
         "name": "Photo Dinner", "servings": 2,

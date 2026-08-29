@@ -1895,14 +1895,17 @@ async def _execute_manage_recipes_binding(block, owner=None):
             # the canonical InventoryService mutation.  A missing/insufficient
             # source fails closed instead of producing a model-only success.
             from src.recipe_import_sources import fetch_recipe_source
-            from src.intent_contracts import recipe_import_draft, recipe_import_review, RecipeDraft
+            from src.intent_contracts import recipe_import_draft, recipe_import_review
             source_text, source_error = await fetch_recipe_source(
                 str(payload["source_url"]), owner=owner,
             )
             if source_error:
                 raise ValueError(source_error)
+            requested_name = str(payload.get("requested_name") or "").strip() or None
             draft = recipe_import_draft(
-                source_text, source_url=str(payload["source_url"]),
+                source_text,
+                source_url=str(payload["source_url"]),
+                requested_name=requested_name,
             )
             if draft is None:
                 review = recipe_import_review(source_text, source_url=str(payload["source_url"]))
@@ -1911,12 +1914,6 @@ async def _execute_manage_recipes_binding(block, owner=None):
                     "recipe import needs review; missing verified fields: "
                     + ", ".join(str(item) for item in missing[:8])
                 )
-            requested_name = str(payload.get("requested_name") or "").strip()
-            if requested_name:
-                draft = RecipeDraft.from_payload({
-                    **draft.as_payload(),
-                    "name": requested_name,
-                })
             payload = {"action": "commit_import", "draft": draft.as_payload()}
         created = service.manage_recipes(payload, owner=owner)
         recipe = created.get("recipe") if isinstance(created, dict) else None

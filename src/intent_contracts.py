@@ -194,7 +194,12 @@ def recipe_create_draft(query: str) -> RecipeDraft | None:
     )
 
 
-def recipe_import_draft(source_text: str | None, *, source_url: str | None = None) -> RecipeDraft | None:
+def recipe_import_draft(
+    source_text: str | None,
+    *,
+    source_url: str | None = None,
+    requested_name: str | None = None,
+) -> RecipeDraft | None:
     """Prepare a RecipeDraft from bounded untrusted text or schema.org JSON-LD.
 
     Fetching is intentionally not done here.  Callers may supply evidence from
@@ -236,6 +241,8 @@ def recipe_import_draft(source_text: str | None, *, source_url: str | None = Non
             if draft:
                 if source_url:
                     draft = replace(draft, source_url=str(source_url).strip(), provenance="import_evidence")
+                if requested_name and str(requested_name).strip():
+                    draft = replace(draft, name=str(requested_name).strip()[:200])
                 return draft
         candidates = value if isinstance(value, list) else [value]
         if isinstance(value, Mapping) and isinstance(value.get("@graph"), list):
@@ -273,6 +280,8 @@ def recipe_import_draft(source_text: str | None, *, source_url: str | None = Non
                 )
     if draft and source_url:
         draft = replace(draft, source_url=str(source_url).strip(), provenance="import_evidence")
+    if draft and requested_name and str(requested_name).strip():
+        draft = replace(draft, name=str(requested_name).strip()[:200])
     return draft
 
 

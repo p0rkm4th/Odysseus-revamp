@@ -1068,7 +1068,11 @@ class RecipeService(InventoryService):
         action = str(args.get("action") or "")
         if action == "prepare_import":
             from src.intent_contracts import recipe_import_draft, recipe_import_review
-            draft = recipe_import_draft(args.get("source_text"), source_url=args.get("source_url"))
+            draft = recipe_import_draft(
+                args.get("source_text"),
+                source_url=args.get("source_url"),
+                requested_name=args.get("requested_name"),
+            )
             if draft is None:
                 return {
                     "status": "NEEDS_REVIEW", "draft": None,
