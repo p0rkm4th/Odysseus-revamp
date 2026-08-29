@@ -182,6 +182,8 @@ def test_conceptual_component_question_does_not_become_asset_read():
     "Add angel hair pasta to my kitchen inventory.",
     "What do you know about me?",
     "What work is outstanding?",
+    "What projects do I have?",
+    "What tasks are open?",
 ])
 def test_owner_read_or_mutation_enters_bounded_aci_capability_path(query):
     from src.intent_contracts import is_bounded_owner_capability_turn
