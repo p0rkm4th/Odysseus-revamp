@@ -363,6 +363,18 @@ were removed; owner deployment was unchanged.
   streams for one logical turn; model prose and hidden raw Results remain
   non-authoritative.
 
+## Current productization candidate regression — `d1559078` (2026-08-29)
+
+- Full supported-container regression against the exact executable candidate,
+  with the real storage roots mounted for the storage-preflight tests:
+  `6940 passed, 6 skipped, 149 warnings` in `301.27s`.
+- The same suite without those mounts produced six explicitly classified
+  storage-preflight environment failures (`/home/.docker-data` absent); the
+  six tests pass when the supported fixture paths are present. No product
+  failure was hidden or converted into a pass.
+- The current branch tip is a test/documentation-only descendant of this
+  executable candidate; no owner deployment was changed.
+
 ## Recipe URL import acceptance checkpoint — `1c8c22a7` (2026-08-29)
 
 - The exact isolated authenticated browser request for the named Sunday
