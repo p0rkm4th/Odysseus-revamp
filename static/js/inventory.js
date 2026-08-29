@@ -368,9 +368,16 @@ function onInput(event) {
 
 async function showRecipe(id) {
   try {
-    const [{recipe}, plan] = await Promise.all([api(`/api/recipes/${encodeURIComponent(id)}`), api(`/api/recipes/${encodeURIComponent(id)}/can-make`)]);
-    const shortages = (plan.shortages || []).map(s => `<li>${escapeHtml(s.name)}: need ${escapeHtml(s.missing)} ${escapeHtml(s.unit)} more</li>`).join('');
-    modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p><h4>${plan.can_make ? 'You have everything' : 'Missing stock'}</h4><ul>${shortages}</ul>`, 'Close', 'view');
+    const [{recipe}, shopping] = await Promise.all([
+      api(`/api/recipes/${encodeURIComponent(id)}`),
+      api(`/api/recipes/${encodeURIComponent(id)}/shopping-requirements`),
+    ]);
+    const missing = shopping.missing_ingredients || [];
+    const shortages = missing.map(s => `<li>${escapeHtml(s.name)}: need ${escapeHtml(s.quantity)} ${escapeHtml(s.unit)} more</li>`).join('');
+    const coverage = missing.length
+      ? `<h4>Shopping needs</h4><ul>${shortages}</ul>`
+      : '<h4>Shopping needs</h4><p>You have the recorded ingredients needed for this recipe.</p>';
+    modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p>${coverage}`, 'Close', 'view');
     const form = document.querySelector('.inventory-dialog[data-kind="view"]');
     form.querySelector('[type=submit]').type = 'button'; form.querySelector('[type=submit]').dataset.action = 'dismiss-dialog';
   } catch (error) { uiModule.showError?.(error.message); }

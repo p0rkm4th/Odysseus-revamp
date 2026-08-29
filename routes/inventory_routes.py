@@ -256,6 +256,14 @@ def setup_inventory_routes(
             "shortages": [vars(row) for row in plan.shortages],
         }
 
+    @router.get("/recipes/{recipe_id}/shopping-requirements")
+    async def shopping_requirements(request: Request, recipe_id: str, servings: str | None = None):
+        """Return the canonical, read-only ingredients still needed."""
+        return await call(
+            inventory.shopping_requirements, _owner(request), recipe_id,
+            servings=servings,
+        )
+
     @router.post("/recipes/{recipe_id}/cook")
     async def cook(request: Request, recipe_id: str, payload: dict[str, Any] = Body(...)):
         return {"cook": await call(
