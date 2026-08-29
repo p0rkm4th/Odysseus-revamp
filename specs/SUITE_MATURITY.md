@@ -779,3 +779,14 @@ canonical readbacks including reload persistence, three `[DONE]` events,
 `abruptEOF=0`. The browser harness now aggregates outcome evidence across the
 proposal and approval-continuation streams, while keeping raw tool Results
 secondary and never treating model prose as mutation authority.
+
+## Household chat mutation acceptance checkpoint — `d1559078` (2026-08-29)
+
+The existing isolated authenticated browser journey for adding, consuming,
+and reading back `Acceptance Tomatoes` passed against the exact candidate
+`odysseus:candidate-d1559078`. All four turns entered through natural-language
+chat: two mutations and two canonical readbacks. The run produced two
+independent readbacks, four terminal `[DONE]` events, `falseSuccess=0`,
+`rawFinalResults=0`, `duplicateDelivery=0`, and `abruptEOF=0`. This closes the
+previously listed chat-mutation evidence gap for the seeded Household slice;
+broader fresh-install and cross-suite journeys remain separate work.
