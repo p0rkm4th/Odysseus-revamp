@@ -3090,6 +3090,7 @@ async def stream_aci_runtime(
                 logger.info("[agent] approved bash satisfied hard action before round 1")
         _approved_result_injected = True
 
+    _pending_ask_user_event = None
     for round_num in range(1, max_rounds + 1):
         round_response = ""
         _round_text_buffered = False
@@ -6080,6 +6081,12 @@ async def stream_aci_runtime(
                 if _email_summary:
                     full_response = _email_summary
                 break
+
+    # A pending approval is a control-plane pause, not provisional assistant
+    # prose. Clear the model's approval wording so it cannot create a visible
+    # replacement bubble that obscures the normal approval card.
+    if _pending_ask_user_event:
+        full_response = ""
 
     # ACI owns final answer selection after legacy summaries. The loop emits
     # at most one replacement event for the complete turn.
