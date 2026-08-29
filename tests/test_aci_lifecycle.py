@@ -309,6 +309,19 @@ def test_project_final_answer_owns_failed_network_read_without_model_fallback():
     assert "twelve" not in response
 
 
+def test_project_final_answer_does_not_turn_pending_approval_into_failure():
+    response, answer = project_final_answer(
+        "I can add that recipe.",
+        [{
+            "tool": "manage_recipes", "exit_code": None,
+            "ask_user": {"kind": "tool_approval", "approval_id": "opaque"},
+        }],
+        intent_domains=("recipes",), effectful_request=True,
+    )
+    assert response == ""
+    assert answer is None
+
+
 def test_project_final_answer_owns_malformed_asset_read_without_model_fallback():
     response, answer = project_final_answer(
         "You have several servers, GPUs, and databases.",

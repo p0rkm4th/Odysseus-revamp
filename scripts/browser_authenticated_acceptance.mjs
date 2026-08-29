@@ -390,6 +390,13 @@ async function send(page, prompt, expectation = {}) {
     return [...document.querySelectorAll('#chat-history .msg-user')]
       .some((node) => normalize(node.querySelector('.body')?.innerText || node.innerText).includes(expected));
   }, prompt);
+  if (String(expectation.approval || '').toLowerCase() === 'required') {
+    const approvalCard = page.locator('#chat-history .ask-user-card[data-ask-user-kind="tool_approval"]');
+    await approvalCard.waitFor({state: 'visible', timeout: 30000});
+    const approve = approvalCard.locator('.ask-user-option').filter({hasText: /^allow for this task$/i}).first();
+    await approve.waitFor({state: 'visible', timeout: 10000});
+    await approve.click();
+  }
   const stream = await waitForAnswer(page, beforeAssistant, beforeStreams, prompt);
   const afterAssistant = await assistantCount(page);
   if (afterAssistant !== beforeAssistant + 1) {
@@ -582,6 +589,12 @@ async function main() {
                 if (nested?.success !== undefined && event.success === undefined) event.success = Boolean(nested.success);
                 if (nested?.verified !== undefined && event.verified === undefined) event.verified = Boolean(nested.verified);
                 if (json.answer_source) event.answerSource = String(json.answer_source);
+                if (json.type === 'ask_user' && json.data && typeof json.data === 'object') {
+                  event.askUserKind = String(json.data.kind || '');
+                  event.askUserOptions = Array.isArray(json.data.options)
+                    ? json.data.options.map((option) => String(option?.label || '')).slice(0, 8)
+                    : [];
+                }
                 record.events.push(event);
               } catch (_) {
                 record.events.push({ type: 'malformed' });
