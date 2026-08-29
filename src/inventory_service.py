@@ -976,6 +976,9 @@ class RecipeService(InventoryService):
                     } for row in plan.shortages],
                 })
             return {
+                "status": "SUCCESS",
+                "result_type": "recipe_expiring_candidates",
+                "operation": "expiring_candidates",
                 "candidates": candidates,
                 "expiry_days": horizon,
                 "freshness": {"computed_at": datetime.now(timezone.utc).isoformat()},
