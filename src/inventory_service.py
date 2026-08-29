@@ -1180,6 +1180,10 @@ class RecipeService(InventoryService):
             base = parse_decimal(recipe.get("servings"))
             multiplier = requested / base
             return {
+                "status": "SUCCESS",
+                "result_type": "recipe_scaled_quantities",
+                "operation": "scale",
+                "canonical_store": "inventory_service",
                 "recipe_id": recipe["id"], "recipe_name": recipe["name"],
                 "servings": requested,
                 "scaled_ingredients": [{
