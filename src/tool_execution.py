@@ -1894,7 +1894,7 @@ async def _execute_manage_recipes_binding(block, owner=None):
             # the canonical InventoryService mutation.  A missing/insufficient
             # source fails closed instead of producing a model-only success.
             from src.recipe_import_sources import fetch_recipe_source
-            from src.intent_contracts import recipe_import_draft
+            from src.intent_contracts import recipe_import_draft, RecipeDraft
             source_text, source_error = await fetch_recipe_source(
                 str(payload["source_url"]), owner=owner,
             )
@@ -1905,6 +1905,12 @@ async def _execute_manage_recipes_binding(block, owner=None):
             )
             if draft is None:
                 raise ValueError("recipe source did not contain enough verified structure")
+            requested_name = str(payload.get("requested_name") or "").strip()
+            if requested_name:
+                draft = RecipeDraft.from_payload({
+                    **draft.as_payload(),
+                    "name": requested_name,
+                })
             payload = {"action": "add", **draft.as_payload()}
         created = service.manage_recipes(payload, owner=owner)
         recipe = created.get("recipe") if isinstance(created, dict) else None

@@ -221,6 +221,17 @@ def test_recipe_url_import_prepare_is_a_read_proposal_not_a_write():
     assert resolved.binding_name == "read_recipes"
 
 
+def test_url_recipe_create_resolves_effectful_import_backed_action():
+    frame = compile_intent(
+        'Add this recipe to my recipe book, for the name, use '
+        '"Chicken Cordon Bleu with Cheese Sauce": '
+        'https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe'
+    )
+    resolved = resolve_intent(frame)
+    assert resolved.action_id == "add"
+    assert resolved.binding_name == "manage_recipes"
+
+
 def test_recipe_import_prepare_renderer_never_claims_persistence():
     event = {
         "tool": "read_recipes", "exit_code": 0,
@@ -280,6 +291,43 @@ async def test_chat_recipe_url_create_fetches_untrusted_source_before_canonical_
     assert captured["payload"]["name"] == "URL Dinner"
     assert captured["payload"]["source_url"] == "https://recipes.example.test/chicken"
     assert captured["payload"]["ingredients"][0]["name"] == "rice"
+
+
+@pytest.mark.asyncio
+async def test_chat_recipe_url_create_applies_explicit_owner_name_after_import(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    captured = {}
+
+    async def fetch_source(url, *, owner):
+        return (
+            '{"@type":"Recipe","name":"Page Title","recipeYield":"2 servings",'
+            '"recipeIngredient":["1 cup rice"],"recipeInstructions":"Cook the rice."}',
+            None,
+        )
+
+    class FakeService:
+        def manage_recipes(self, payload, *, owner):
+            captured["payload"] = payload
+            return {"recipe": {"id": "recipe-named-1"}}
+
+        def get_recipe(self, owner, recipe_id):
+            return {"id": recipe_id, "name": captured["payload"]["name"]}
+
+    monkeypatch.setattr("src.recipe_import_sources.fetch_recipe_source", fetch_source)
+    monkeypatch.setattr("src.inventory_service.get_inventory_service", lambda: FakeService())
+    tool, result = await tool_execution._execute_manage_recipes_binding(
+        SimpleNamespace(content=json.dumps({
+            "action": "add",
+            "source_url": "https://recipes.example.test/chicken",
+            "requested_name": "Chicken Cordon Bleu with Cheese Sauce",
+        })),
+        owner="alice",
+    )
+    assert tool == "manage_recipes"
+    assert result["verified"] is True
+    assert captured["payload"]["name"] == "Chicken Cordon Bleu with Cheese Sauce"
+    assert captured["payload"]["source_url"] == "https://recipes.example.test/chicken"
 
 
 @pytest.mark.asyncio

@@ -18,7 +18,7 @@ from src.aci import (
 )
 from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
-from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, inventory_consume_stock_payload, recipe_create_draft, recipe_create_payload, resolve_intent
+from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, inventory_consume_stock_payload, recipe_create_draft, recipe_create_payload, recipe_requested_name, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
@@ -184,6 +184,18 @@ def test_explicit_recipe_create_projects_structured_draft_into_canonical_action(
 
 def test_incomplete_recipe_create_draft_fails_closed():
     assert recipe_create_payload("Add a recipe called Dinner") is None
+
+
+def test_url_recipe_create_preserves_import_and_explicit_name_metadata():
+    query = ('Add this recipe to my recipe book, for the name, use '
+             '"Chicken Cordon Bleu with Cheese Sauce": '
+             'https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe')
+    frame = compile_intent(query)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.operation_class == "CREATE"
+    assert frame.filters["recipe_import"] is True
+    assert frame.filters["recipe_requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
+    assert recipe_requested_name(query) == "Chicken Cordon Bleu with Cheese Sauce"
 
 
 def test_long_owner_recipe_paste_projects_a_validated_draft_into_add_action():
