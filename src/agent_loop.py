@@ -2406,6 +2406,8 @@ async def stream_aci_runtime(
                 _aci_fast_path_block = ToolBlock(
                     _fast_binding, json.dumps(projection.fast_path, sort_keys=True)
                 )
+                if _fast_binding == "manage_memory":
+                    run_security.deterministic_owner_memory_mutation = True
             for _event in projection.framework_events:
                 if _event:
                     _record_aci_framework(_event)
