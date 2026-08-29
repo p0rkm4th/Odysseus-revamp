@@ -3865,7 +3865,7 @@ import { loadPanel } from './panels.js';
                 _cancelThinkingTimer();
                 _removeThinkingSpinner();
                 const _askUserPayload = json.data || {};
-                chatRenderer.renderAskUserCard(_askUserPayload);
+                chatRenderer.renderAskUserCard(json.data || {});
                 // Tool/result finalization can rebuild the adjacent thread in
                 // the same task that delivered ask_user. Retry once after the
                 // DOM settles so a normal approval card cannot disappear
