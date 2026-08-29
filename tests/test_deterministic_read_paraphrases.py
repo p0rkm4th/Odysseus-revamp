@@ -309,6 +309,13 @@ def test_recipe_requested_name_accepts_unquoted_owner_override_before_page_text(
     assert recipe_requested_name(query) == "Acceptance Web Paste Dinner"
 
 
+def test_ordinary_item_quantity_question_routes_to_canonical_household_read():
+    frame = compile_intent("how much Acceptance Oregano we got")
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "READ"
+    assert resolve_intent(frame).action_id == "overview"
+
+
 def test_recipe_draft_rejects_missing_or_ambiguous_sections_without_mutation():
     assert recipe_create_draft(
         'Add the following to my recipes as "Dinner": Ingredients: chicken. Instructions: cook it.'
