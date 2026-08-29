@@ -212,6 +212,15 @@ def _suppress_automatic_skills(text: str, intent: Dict[str, object]) -> bool:
     )
 _is_odysseus_qwen_model = is_odysseus_qwen_model
 _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
+# A provider can repeat an already-approved mutation when the approval
+# continuation is fed back through the model.  Keep the legacy completion
+# verifier's narrower set separate, but deduplicate every canonical mutation
+# binding within this one chat turn.
+_BATCH_EFFECTFUL_TOOLS = frozenset({
+    *_VERIFIER_EFFECTFUL_TOOLS,
+    "manage_assets", "manage_homelab", "manage_memory", "manage_recipes",
+    "manage_work",
+})
 _VERIFIER_MAX_ROUNDS = VERIFIER_MAX_ROUNDS
 _minimal_odysseus_doc_messages = minimal_odysseus_doc_messages
 _minimal_odysseus_general_messages = minimal_odysseus_general_messages
@@ -2888,7 +2897,7 @@ async def stream_aci_runtime(
             for doc_event in _document_stream_events(approved_block):
                 yield f"data: {json.dumps(doc_event)}\n\n"
         if (
-            approved.tool_name in _VERIFIER_EFFECTFUL_TOOLS
+            approved.tool_name in _BATCH_EFFECTFUL_TOOLS
             and isinstance(approved_result, dict)
             and approved_result.get("success") is True
             and not approved_result.get("error")
@@ -4968,7 +4977,7 @@ async def stream_aci_runtime(
 
             _effectful_signature = _effectful_call_signature(block.tool_type, block.content)
             if (
-                block.tool_type in _VERIFIER_EFFECTFUL_TOOLS
+                block.tool_type in _BATCH_EFFECTFUL_TOOLS
                 and _effectful_signature in _successful_effectful_batch_calls
             ):
                 logger.warning(
@@ -5935,7 +5944,7 @@ async def stream_aci_runtime(
                 break
 
             if (
-                block.tool_type in _VERIFIER_EFFECTFUL_TOOLS
+                block.tool_type in _BATCH_EFFECTFUL_TOOLS
                 and isinstance(result, dict)
                 and result.get("success") is True
                 and not result.get("error")
