@@ -395,6 +395,11 @@ def recipe_import_review_draft(
     ingredients: list[dict[str, Any]] = []
     for raw_line in (line.strip() for line in ingredients_text.splitlines() if line.strip()):
         item = re.sub(r"^(?:[-*•]|\d+[.)])\s*", "", raw_line).strip().strip(".")
+        # Copied recipe pages commonly place serving metadata inside the
+        # Ingredients section. It is page chrome, not an ingredient; retain
+        # the actual servings value parsed from the full source instead.
+        if re.fullmatch(r"(?:makes?|yields?|serves?|servings?)\s*[:\-]?\s*\d+(?:\.\d+)?(?:\s+ servings?)?", item, re.IGNORECASE):
+            continue
         parsed = _recipe_ingredients(item, split_compact=False)
         if parsed and len(parsed) == 1:
             ingredients.append(parsed[0])
