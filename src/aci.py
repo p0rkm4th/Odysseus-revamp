@@ -586,6 +586,7 @@ def compile_turn_contract(
     from src.intent_contracts import (
         canonical_domain_projection,
         compile_intent,
+        is_explicit_continuation,
         resolve_continuation,
         resolve_intent,
     )
@@ -595,8 +596,17 @@ def compile_turn_contract(
         if isinstance(active_run, Mapping)
         else reference_context
     )
+    # Compatibility retrieval context may intentionally summarize prior turns,
+    # but it must never replace an explicit operator continuation in the
+    # current turn. Otherwise a bare "Continue." can compile as unrelated
+    # setup/date prose and bypass the durable continuation boundary.
+    query = (
+        str(last_user)
+        if bool(intent.get("continuation")) or is_explicit_continuation(str(last_user))
+        else str(intent.get("retrieval_query") or last_user)
+    )
     frame = compile_intent(
-        str(intent.get("retrieval_query") or last_user),
+        query,
         continuation=bool(intent.get("continuation")),
         run_reference=str(run_reference or "").strip() or None,
         reference_context=durable_reference_context,
