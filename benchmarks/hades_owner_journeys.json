@@ -135,6 +135,17 @@
       "expected": {"action": "manage_work", "tool_binding": "manage_work", "policy": "allowed", "approval": "not_required", "before": {"project_count": 0}, "after": {"project_title": "Acceptance Infrastructure Migration", "readback": true}, "readback": {"kind": "work", "endpoint": "/api/work/projects", "contains_project_title": "Acceptance Infrastructure Migration"}, "terminal": {"done": 2, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-WORK-TASK-MUTATION-READBACK-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "work-task-create",
+      "fixture_setup": "canonical_work_task_create",
+      "turns": [
+        {"prompt": "Create a task called Review the backup plan in project Acceptance Task Project", "expected": {"domain": "TASK", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "create_task", "tool_binding": "manage_work", "requires_effect": true, "forbidden": ["Done", "successfully completed"]}},
+        {"prompt": "What tasks do I have?", "expected": {"domain": "TASK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list_tasks", "tool_binding": "read_work", "must_include_all": ["Review the backup plan"]}}
+      ],
+      "expected": {"action": "manage_work", "tool_binding": "manage_work", "policy": "allowed", "approval": "not_required", "before": {"task_count": 0}, "after": {"task_title": "Review the backup plan", "readback": true}, "readback": {"kind": "work", "endpoint": "/api/work/tasks", "contains_title": "Review the backup plan"}, "terminal": {"done": 2, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-WORK-EMPTY-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-work",

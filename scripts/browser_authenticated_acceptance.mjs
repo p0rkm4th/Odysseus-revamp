@@ -236,6 +236,23 @@ async function seedWorkAcceptanceState(page) {
   });
 }
 
+async function seedWorkTaskCreationAcceptanceState(page) {
+  // Seed only the existing project prerequisite. The task mutation under
+  // test must enter through natural-language chat and is independently read
+  // back from the canonical Work API.
+  return page.evaluate(async () => {
+    const response = await fetch('/api/work/projects', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({title: 'Acceptance Task Project', domain: 'general'}),
+    });
+    if (!response.ok) throw new Error(`work task project setup failed (${response.status})`);
+    const project = await response.json();
+    if (!project?.id || !project?.title) throw new Error('work task project setup returned no canonical project');
+    return {projectId: project.id, projectTitle: project.title};
+  });
+}
+
 function seedCanonicalAssetFixture(scenarios) {
   const setups = [...new Set(scenarios.map((scenario) => scenario.fixture_setup).filter(Boolean))];
   const assetSetups = setups.filter((setup) => ['canonical_asset_atlas_erebus', 'canonical_asset_no_4090'].includes(setup));
@@ -447,6 +464,11 @@ async function verifyScenarioPrecondition(page, scenario) {
       throw new Error(`${scenario.id} inventory precondition quantity mismatch`);
     }
     return {kind: spec.kind, quantity};
+  }
+  if (spec.kind === 'work' && before.task_count !== undefined) {
+    const count = Array.isArray(result.payload?.tasks) ? result.payload.tasks.length : 0;
+    if (count !== Number(before.task_count)) throw new Error(`${scenario.id} task precondition count mismatch`);
+    return {kind: spec.kind, count};
   }
   return null;
 }
@@ -824,6 +846,9 @@ async function main() {
       }
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_overview')) {
         diagnostics.workSeed = await seedWorkAcceptanceState(page);
+      }
+      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_task_create')) {
+        diagnostics.workTaskSeed = await seedWorkTaskCreationAcceptanceState(page);
       }
     }
 
