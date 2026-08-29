@@ -4733,6 +4733,12 @@ async def stream_aci_runtime(
         tool_result_records = []  # aligned structured provenance for next round
         budget_hit = False
         _initial_tool_block_count = len(tool_blocks)
+        # A provider can repeat the same approved effectful call in one
+        # response (observed with recipe import after approval). Once an
+        # identical binding has succeeded, suppress only that duplicate in
+        # this execution batch. Failed calls remain retryable and distinct
+        # payloads are never conflated.
+        _successful_effectful_batch_calls: set[tuple[str, str]] = set()
         for i, block in enumerate(tool_blocks):
             # --- Tool budget check ---
             if max_tool_calls > 0 and total_tool_calls >= max_tool_calls:
@@ -4940,6 +4946,17 @@ async def stream_aci_runtime(
                                 "plan_digest": _alias_digest,
                             }),
                         )
+
+            _effectful_signature = (block.tool_type, block.content)
+            if (
+                block.tool_type in _VERIFIER_EFFECTFUL_TOOLS
+                and _effectful_signature in _successful_effectful_batch_calls
+            ):
+                logger.warning(
+                    "[agent] suppressing duplicate successful effectful binding in one batch: tool=%s",
+                    block.tool_type,
+                )
+                continue
 
             total_tool_calls += 1
             # Build a short display string for the frontend tool bubble.
@@ -5898,7 +5915,16 @@ async def stream_aci_runtime(
                 # model-supplied call from the same batch after this request.
                 break
 
-        # If budget was hit, stop the loop
+            if (
+                block.tool_type in _VERIFIER_EFFECTFUL_TOOLS
+                and isinstance(result, dict)
+                and result.get("success") is True
+                and not result.get("error")
+                and not result.get("approval_required")
+            ):
+                _successful_effectful_batch_calls.add(_effectful_signature)
+
+            # If budget was hit, stop the loop
         if budget_hit:
             break
 
