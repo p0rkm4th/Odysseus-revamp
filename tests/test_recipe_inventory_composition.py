@@ -180,6 +180,16 @@ def test_recipe_import_prepare_accepts_validated_draft_json_without_persisting()
     assert draft.name == "Photo Dinner"
 
 
+def test_recipe_import_prepare_accepts_fenced_validated_draft_json():
+    draft = recipe_import_draft("```json\n" + json.dumps({
+        "name": "Fenced Dinner", "servings": 1,
+        "ingredients": [{"name": "salt", "quantity": 1, "unit": "tsp"}],
+        "instructions": "Season.",
+    }) + "\n```")
+    assert isinstance(draft, RecipeDraft)
+    assert draft.name == "Fenced Dinner"
+
+
 def test_recipe_import_prepare_extracts_jsonld_embedded_in_untrusted_html():
     html = '<html><script type="application/ld+json">{"@type":"Recipe","name":"HTML Dinner",'
     html += '"recipeIngredient":["1 cup rice"],"recipeInstructions":"Steam the rice."}</script></html>'
