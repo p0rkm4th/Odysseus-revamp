@@ -29,7 +29,9 @@ async def fetch_recipe_source(url: str, *, owner: str) -> tuple[str, str | None]
         return transcript[:12000], None
 
     from src.agent_tools.web_tools import WebFetchTool
-    fetched = await WebFetchTool().execute(json.dumps({"url": url}), {"owner": owner})
+    fetched = await WebFetchTool().execute(
+        json.dumps({"url": url, "include_structured_data": True}), {"owner": owner}
+    )
     if fetched.get("exit_code") != 0:
         return "", "The recipe source could not be fetched for review."
     return str(fetched.get("output") or "")[:12000], None

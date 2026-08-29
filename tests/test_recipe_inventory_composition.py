@@ -200,6 +200,21 @@ def test_recipe_import_prepare_extracts_jsonld_embedded_in_untrusted_html():
     assert draft.source_url == "https://example.test/html"
 
 
+def test_recipe_import_prepare_accepts_bounded_fetch_jsonld_projection():
+    evidence = (
+        '<!-- RECIPE_JSONLD:'
+        '{"@type":"Recipe","name":"Source Dinner",'
+        '"recipeIngredient":["2 cups rice"],'
+        '"recipeInstructions":"Cook the rice."}'
+        ' -->\n# Source Dinner\nSource: https://example.test/recipe\n'
+    )
+    draft = recipe_import_draft(evidence, source_url="https://example.test/recipe")
+    assert isinstance(draft, RecipeDraft)
+    assert draft.name == "Source Dinner"
+    assert draft.source_url == "https://example.test/recipe"
+    assert draft.provenance == "import_evidence"
+
+
 def test_recipe_import_commit_requires_validated_draft_and_verifies_readback():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

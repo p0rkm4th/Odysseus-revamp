@@ -85,6 +85,7 @@ class WebFetchTool:
         raw = content.strip()
         url = ""
         max_bytes = None
+        parsed = {}
         if raw.startswith("{"):
             try:
                 parsed = json.loads(raw)
@@ -117,6 +118,10 @@ class WebFetchTool:
                     sig = inspect.signature(fetch_webpage_content)
                     if "max_bytes" in sig.parameters:
                         kwargs["max_bytes"] = max_bytes
+                    if "include_structured_data" in sig.parameters:
+                        kwargs["include_structured_data"] = bool(
+                            isinstance(parsed, dict) and parsed.get("include_structured_data")
+                        )
                 except (TypeError, ValueError):
                     # Some deployed/test shims may not expose a signature.
                     # Prefer compatibility over failing the whole fetch.
@@ -165,7 +170,16 @@ class WebFetchTool:
         if len(title) > 300:
             title = title[:300] + "..."
         header = (f"# {title}\n" if title else "") + f"Source: {url}\n\n"
-        output = size_note + header + text
+        # Recipe imports may request the bounded structured projection. Keep
+        # it first so the ordinary display cap cannot discard canonical
+        # import evidence. It remains untrusted and still must pass the
+        # RecipeDraft validator before persistence.
+        structured = ""
+        if isinstance(parsed, dict) and parsed.get("include_structured_data"):
+            recipes = result.get("recipe_jsonld") or []
+            if recipes:
+                structured = "<!-- RECIPE_JSONLD:" + json.dumps(recipes[:4], separators=(",", ":")) + " -->\n"
+        output = structured + size_note + header + text
         if len(output) > MAX_OUTPUT_CHARS:
             output = output[:MAX_OUTPUT_CHARS] + "\n\n[...truncated]"
         return {"output": output, "exit_code": 0}
