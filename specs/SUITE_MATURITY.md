@@ -1479,3 +1479,10 @@ Canonical Household mutation/readback passed for add and consume flows, plus
 the messy-language equivalents. Both four-turn journeys independently
 verified final quantity after chat mutations and reload, with zero false
 success, raw final Result, duplicate delivery, or abrupt EOF.
+
+## Current Work-empty and Memory-correction maturity — `1a2b62e5` (2026-08-29)
+
+The empty Work read passed with one deterministic answer. The four-turn Memory
+correction journey passed two mutations and two grounded reads through the
+remember/read/correct flow; both journeys recorded zero false success, raw
+final Result, duplicate delivery, or abrupt EOF.

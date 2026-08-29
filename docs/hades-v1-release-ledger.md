@@ -1890,3 +1890,11 @@ The fresh empty-recipe owner journey accepted a webpage-shaped recipe paste
 through chat and review. It passed two turns with one canonical mutation and
 two readbacks including reload; false success, raw final Result, duplicate
 delivery, and abrupt EOF were zero.
+
+## Current Work-empty and Memory-correction checkpoints — executable candidate `1a2b62e5` (2026-08-29)
+
+The empty Work owner read passed with one deterministic answer and zero false
+success, raw final Result, duplicate delivery, or abrupt EOF. The four-turn
+Memory correction journey passed two owner mutations and two grounded reads,
+including the ultraviolet-orange remember/read/correct flow, with the same
+zero-defect result.
