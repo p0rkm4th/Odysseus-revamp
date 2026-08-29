@@ -457,6 +457,8 @@ async function send(page, prompt, expectation = {}) {
   const turn = await latestTurnAnswers(page);
   await page.evaluate((value) => { window.__hadesE2ELastTurn = value; }, { stream, snapshot, turn });
   const finalText = assertHumanCanonicalAnswer(turn, prompt);
+  const turnStreams = await page.evaluate((start) =>
+    (window.__hadesE2EStreams || []).slice(start), beforeStreams);
   const mustInclude = expectation.must_include_any || [];
   if (mustInclude.length && !mustInclude.some((value) => new RegExp(literalPattern(value), 'i').test(finalText))) {
     throw new Error(`semantic answer oracle failed for ${prompt}: expected one of ${mustInclude.join(', ')}`);
@@ -472,8 +474,6 @@ async function send(page, prompt, expectation = {}) {
   }
   const expectedSource = expectation.answer_source;
   if (expectedSource) {
-    const turnStreams = await page.evaluate((start) =>
-      (window.__hadesE2EStreams || []).slice(start), beforeStreams);
     const sources = turnStreams.flatMap((candidate) => candidate.events || [])
       .filter((event) => event.answerSource).map((event) => event.answerSource);
     if (!sources.includes(expectedSource)) {
@@ -520,7 +520,8 @@ async function send(page, prompt, expectation = {}) {
     if (!successfulTool) throw new Error(`effectful journey has no attributable successful Action evidence for ${prompt}`);
   }
   if (expectedSource) {
-    const distinctSources = [...new Set(stream.events.filter((event) => event.answerSource).map((event) => event.answerSource))];
+    const distinctSources = [...new Set(turnStreams.flatMap((candidate) => candidate.events || [])
+      .filter((event) => event.answerSource).map((event) => event.answerSource))];
     if (distinctSources.length !== 1 || distinctSources[0] !== expectedSource) {
       throw new Error(`turn had contradictory or repeated AnswerSource ownership for ${prompt}: ${distinctSources.join(', ') || 'none'}`);
     }
