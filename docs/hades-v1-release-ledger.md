@@ -1007,3 +1007,21 @@ after the run. The owner deployment remains untouched.
   because it lacks a required persisted readback assertion. This is an
   evaluator gap to close before claiming URL-import mutation acceptance, not a
   reason to invent quantities or weaken canonical validation.
+
+# Recipe import acceptance hardening — `53670937` (2026-08-29)
+
+- The existing browser lane now verifies recipe collection-count readbacks, so
+  a review-required import cannot pass without proving its canonical no-write
+  result. Syntax/JSON and focused owner-journey/Recipe tests passed `37`.
+- Exact candidate `odysseus:candidate-536709378507`, image
+  `sha256:cb516194248e65ecab025f5a6f2581399f6aaaf826f3e71cb6176a6678035a1b`,
+  ran with matching OCI/source marker, health healthy, restart count `0`, and
+  Qwen3:8B digest
+  `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+- Complete URL import passed through the real authenticated browser/chat path:
+  `1` mutation, `2` canonical readbacks including reload, `3` streams and
+  `[DONE]`, with zero false success, raw final results, duplicate delivery, or
+  abrupt EOF. The Sunday Supper URL correctly remained `NEEDS_REVIEW` because
+  fetched evidence contained an unquantified ingredient; its canonical count
+  remained zero. Acceptance credentials and isolated deployment were revoked
+  and removed afterward.
