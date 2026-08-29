@@ -184,6 +184,19 @@ def test_asset_collection_property_paraphrases_preserve_ram_projection(query):
     assert resolved.binding_name == "manage_assets"
 
 
+def test_asset_collection_property_does_not_narrow_to_last_asset_reference():
+    frame = compile_intent(
+        "What's the RAM in my machines?",
+        reference_context={
+            "ordered_entities": [{"ref": "asset:atlas", "concept": "TECHNICAL_ASSET"}],
+        },
+    )
+    resolved = resolve_intent(frame)
+    assert frame.reference_resolution["status"] == "NOT_REFERENCE"
+    assert frame.entity_reference is None
+    assert resolved.action_id == "list"
+
+
 def test_explicit_recipe_create_projects_structured_draft_into_canonical_action():
     query = (
         "Add this recipe to my recipes: Acceptance Chicken and Rice. "
