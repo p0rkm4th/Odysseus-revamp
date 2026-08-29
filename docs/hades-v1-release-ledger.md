@@ -561,3 +561,15 @@ were removed; owner deployment was unchanged.
   `assets_reference` failure is an evaluator/session-selection classification:
   a continuation was sampled without its prerequisite context and therefore
   resolved no referent. Neither result supports a production semantic fix.
+
+# Dogfood sampled-trajectory integrity checkpoint — `603b80dc`
+
+The live dogfood selector now preserves the prerequisite turns for a declared
+continuation group when a seeded bounded sample selects a follow-up. Fresh
+session mode continues to strip continuation context deliberately, so it tests
+the no-context behavior instead of manufacturing a reference. This closes an
+evaluator integrity gap exposed by the interrupted bounded Qwen shard: an
+`assets_reference` follow-up must not be scored as a product reference failure
+when its `assets_list` setup turn was omitted by sampling. Focused coverage is
+11 passed. This is evaluator-only; the deployed executable candidate remains
+the previously recorded exact product SHA.
