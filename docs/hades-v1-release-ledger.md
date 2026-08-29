@@ -70,6 +70,18 @@ scenario/turn/read/mutation/readback/DONE/EOF counts. Checkpoint
 
 ## V1 RC fixes and evidence
 
+### Browser acceptance synchronization — `78a79bde`
+
+The empty-state Recipe browser regression passed on the disposable candidate
+after the runner began waiting for the explicitly created session to be
+selected and for application/history hydration to settle before submitting
+the first turn. This is a generic startup synchronization fix; it preserves
+the strict user-message, final-answer, persistence, and terminal-DONE
+assertions. `OWNER-RECIPE-EMPTY-001` completed through normal login and
+`/api/chat_stream` with one human-readable deterministic answer, one persisted
+turn, one `[DONE]`, zero raw-final results, zero duplicate delivery, and zero
+abrupt EOF. The owner deployment was not changed.
+
 | Item | Status | Evidence |
 |---|---|---|
 | Deterministic Memory/Work/Assets/Network/Service reads | green | source tests; deployed Qwen E5 matrices |
