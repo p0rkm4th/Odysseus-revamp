@@ -1547,3 +1547,20 @@ The incomplete/duplicate-like Asset fixture passed the ordinary RTX 4090
 false-premise query on the exact candidate. The answer grounded itself in the
 canonical no-match state, with zero mutations, false success, raw final
 Result, duplicate delivery, or abrupt EOF.
+
+## Current owner network provenance checkpoint — 2026-08-29
+
+Real-owner read-only smoke covered ordinary Asset, Household, Work, and
+Network questions without mutations. The owner remains on older source
+`34ced247`, so its flatter network rendering is not evidence against the
+exact candidate. The exact-candidate `OWNER-NETWORK-001` replay correctly
+failed closed when its disposable stack lacked a CMDB; this is an
+`ENVIRONMENT_FAILURE` fixture gap, not a product pass or candidate regression.
+
+## Corrected exact-candidate Network maturity — `1a2b62e5` (2026-08-29)
+
+With the required owner-scoped disposable CMDB observations supplied,
+`OWNER-NETWORK-001` passed with one deterministic answer, one canonical
+`read_network_observations` Action, and zero false success, raw final Result,
+duplicate delivery, or abrupt EOF. The initial unavailable replay remains
+fixture-wiring evidence only.
