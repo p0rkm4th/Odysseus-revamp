@@ -4247,7 +4247,12 @@ def project_final_answer(
     if canonical is not None:
         return canonical.content, canonical
     if clarification_only:
-        return str(clarification_text or full_response or ""), None
+        content = str(clarification_text or full_response or "")
+        return content, CanonicalAnswer(
+            content=content,
+            source=AnswerSource.CLARIFICATION,
+            provenance="control-plane clarification",
+        )
     # An approval card is a control-plane pause, not a failed mutation. The
     # pending Action must remain available for the normal approval continuation
     # and must not be replaced by a false error answer before the user can act.
