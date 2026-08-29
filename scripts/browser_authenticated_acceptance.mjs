@@ -472,7 +472,10 @@ async function send(page, prompt, expectation = {}) {
   }
   const expectedSource = expectation.answer_source;
   if (expectedSource) {
-    const sources = stream.events.filter((event) => event.answerSource).map((event) => event.answerSource);
+    const turnStreams = await page.evaluate((start) =>
+      (window.__hadesE2EStreams || []).slice(start), beforeStreams);
+    const sources = turnStreams.flatMap((candidate) => candidate.events || [])
+      .filter((event) => event.answerSource).map((event) => event.answerSource);
     if (!sources.includes(expectedSource)) {
       throw new Error(`expected AnswerSource ${expectedSource} was not observed for ${prompt}: ${sources.join(', ') || 'none'}`);
     }
