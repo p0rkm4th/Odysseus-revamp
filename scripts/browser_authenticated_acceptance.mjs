@@ -29,6 +29,10 @@ const externalAcceptance = Boolean(externalCredentialFile);
 const isolatedAcceptance = process.env.HADES_BROWSER_ISOLATED_ACCEPTANCE === 'true';
 const householdAcceptance = process.env.HADES_BROWSER_HOUSEHOLD_ACCEPTANCE === 'true';
 const journeyFile = process.env.HADES_BROWSER_JOURNEY_FILE || '';
+const healthTimeoutMs = Math.min(
+  300000,
+  Math.max(30000, Number(process.env.HADES_BROWSER_HEALTH_TIMEOUT_MS || 180000) || 180000),
+);
 if (householdAcceptance && !externalAcceptance) {
   throw new Error('Household browser acceptance requires an external isolated acceptance deployment');
 }
@@ -702,7 +706,7 @@ async function main() {
   // acceptance facility or touch deployment state.
   const scenarios = loadJourneyScenarios();
   const credentials = provision();
-  await waitForHealth();
+  await waitForHealth(healthTimeoutMs);
   // Keep the unattended browser lane usable in constrained/containerized
   // runners. Chromium may otherwise exhaust its renderer shared-memory
   // budget while loading the application's module surface, producing
