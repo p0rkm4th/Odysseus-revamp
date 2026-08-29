@@ -20,6 +20,13 @@ Status: active engineering release ledger; not a release declaration.
   tests against the current checkout. The last authoritative full regression
   remains `6934 passed, 6 skipped`; it predates this small Work metadata
   change and is not relabeled as current-head evidence.
+- A current-tree full regression run completed `6935 passed, 5 skipped` with
+  one environment setup failure in `test_blocks_symlink_into_ssh`: the
+  source-mounted checkout was intentionally read-only, so the test could not
+  create its temporary `/app/.ssh` target. The same confinement file passed
+  `25 passed` from a temporary writable checkout with isolated data/log/.ssh
+  mounts. This remains an environment classification, not a hidden product
+  pass or a changed security expectation.
 - Owner deployment was not replaced. No owner data, credentials, or volumes
   were changed. The branch remains in productization stabilization; this is
   not a merge or release declaration.
