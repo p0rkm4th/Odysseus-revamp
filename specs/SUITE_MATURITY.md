@@ -1422,6 +1422,12 @@ passed one turn with two canonical readbacks including reload; shopping passed
 two turns with two readbacks. Both recorded zero false success, raw final
 Result, duplicate delivery, or abrupt EOF.
 
+## Current populated-Memory maturity — `1a2b62e5` (2026-08-29)
+
+The populated-memory fixture now has live exact-candidate Qwen browser
+evidence: one read turn, two canonical readbacks including reload, and zero
+false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Current Work task mutation checkpoint — `a784b35e` (2026-08-29)
 
 The exact Work task mutation/readback journey passed on a fresh isolated
