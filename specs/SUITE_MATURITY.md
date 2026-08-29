@@ -1,5 +1,17 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Homelab/Network → Work composition audit — `02690560` (2026-08-29)
+
+The current canonical Work mutation path was audited before adding browser
+coverage. `manage_work.create_task` requires an explicitly named existing Work
+Project, and `WorkTask` has no canonical Asset, Service, or Workload target
+reference. The ACI contracts likewise expose no generalized infrastructure-
+to-Work relation for a task. Consequently, prompts such as “create a task to
+move workload X” cannot yet be accepted as a supported cross-suite journey
+without inventing an unowned relationship or routing shortcut. This is recorded
+as a follow-on gap: add a canonical relation contract only when the suite
+owners define its semantics; no production routing change was made here.
+
 ## Kitchen → Recipe expiring-inventory browser checkpoint — `48f5c01a` (2026-08-29)
 
 `OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed through the isolated
