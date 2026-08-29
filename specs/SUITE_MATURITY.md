@@ -1,5 +1,17 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Work mutation owner-journey checkpoint — `b8b340c0` (2026-08-29)
+
+The browser lane found and closed a generalized Work project mutation result
+boundary: project creation could persist state but crash before returning the
+verified binding Result. The exact candidate passed clean GUI project
+creation/readback/reload; focused Work/ACI/owner-contract coverage passed `18`.
+Clean Household and Recipe mutation journeys also passed with independent
+canonical readbacks. Empty Recipe, Memory, and Work reads passed. Duplicate
+records in reused disposable fixture roots were classified as stale-fixture
+environment failures rather than product evidence; owner deployment remains
+untouched.
+
 ## Homelab/Network → Work composition audit — `02690560` (2026-08-29)
 
 The current canonical Work mutation path was audited before adding browser

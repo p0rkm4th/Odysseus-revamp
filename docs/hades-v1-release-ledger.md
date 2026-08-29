@@ -2,6 +2,33 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Work project mutation result-boundary checkpoint — `b8b340c0` (2026-08-29)
+
+Owner-journey testing found a genuine Work mutation defect: chat project
+creation persisted the canonical project, then failed with
+`UnboundLocalError` before returning its verified Result because the binding
+constructed its result only in the task branch. The generalized binding fix
+and executor regression were pushed at `b8b340c0e49fcde4a0c1fb646637f6059df0d915`.
+Focused Work/ACI/owner-contract coverage passed `18` tests. Exact candidate
+`odysseus:candidate-b8b340c0e49f` has image
+`sha256:b7493580163c12a01e004921b6247d15a34bae9ac1c8ba4e251175b309b03eec`;
+OCI revision, source marker, and pushed source match.
+
+The exact candidate passed clean isolated browser Work project creation with
+one chat mutation, two canonical readbacks including reload, one verified
+human-readable final answer, and zero false success, raw final result,
+duplicate delivery, or abrupt EOF. Clean isolated Household mutation passed
+four turns / two mutations / two independent readbacks; clean Recipe chat
+mutation passed three turns / one mutation / two readbacks. Empty Recipe,
+Memory, and Work reads also passed. An earlier empty-Recipe replay was
+correctly classified as stale fixture state because its disposable database
+contained two prior recipes; an earlier Work task ambiguity was likewise
+caused by duplicate fixture projects. The strict task runner expectation was
+temporarily corrected and restored to the registry's approval-free semantics;
+the clean exact-candidate stream itself showed verified task creation, but that
+invocation is not counted as a formal runner PASS. Owner deployment remains
+unchanged at source `34ced247`; no owner data was touched.
+
 ## Current-head regression and fresh-install isolation — `b2b14765` (2026-08-29)
 
 The supported project environment reran the full current-head regression after
