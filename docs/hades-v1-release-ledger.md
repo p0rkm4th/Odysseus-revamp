@@ -923,3 +923,13 @@ after the run. The owner deployment remains untouched.
   duplicate delivery, raw final results, or false success. The task was
   created through chat; only the prerequisite project was setup-seeded. The
   disposable principal/state were removed afterward.
+
+# Productization evidence-boundary correction — `558d6062` (2026-08-29)
+
+- The suite maturity matrix now distinguishes the current documentation head
+  from the latest executable browser candidates. It no longer reports Work
+  task chat creation as pending: exact candidate `a91c1623` proved a
+  natural-language task mutation, canonical readback, reload persistence, and
+  exactly-once delivery in an isolated authenticated browser run.
+- This is documentation-only. The deployed executable remains the previously
+  recorded candidate; no rebuild or owner-instance deployment was performed.
