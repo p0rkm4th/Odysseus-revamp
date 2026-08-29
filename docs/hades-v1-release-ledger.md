@@ -1914,3 +1914,10 @@ success, raw final Result, duplicate delivery, or abrupt EOF. The four-turn
 Memory correction journey passed two owner mutations and two grounded reads,
 including the ultraviolet-orange remember/read/correct flow, with the same
 zero-defect result.
+
+## Current URL import error checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+The fresh empty-recipe journey for the named Sunday Supper URL passed the
+review/error path without claiming a successful save. Independent API
+readback confirmed the canonical recipe store remained empty; false success,
+raw final Result, duplicate delivery, and abrupt EOF were zero.
