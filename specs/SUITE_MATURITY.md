@@ -448,3 +448,17 @@ and verified in an isolated container: OCI marker/runtime source matched,
 health was healthy, restarts were `0`, and Qwen3:8B was reachable from the
 container namespace. The disposable container was removed afterward; the
 owner deployment was not changed.
+
+## Recipe canonical preparation checkpoint — `5c434f06`
+
+URL-backed chat mutations now send fetched evidence through the existing
+`InventoryService.manage_recipes(prepare_import)` proposal operation before
+the effectful `commit_import` Action. The executor no longer parses a second
+RecipeDraft path; only the service-owned prepared draft can reach commit.
+Focused ACI/Recipe coverage passed `321` tests and the supported full
+regression passed `6933` tests. Candidate `odysseus:candidate-5c434f06` was
+built from the pushed executable SHA, with image ID
+`sha256:17b08b1ab09983ec4acedf0b8828e7dfca2b50743d420f3992e05ca80956d7ae`.
+An isolated runtime matched the OCI marker and source, reported healthy with
+zero restarts, and reached Qwen3:8B from its container namespace. The owner
+deployment was not replaced.
