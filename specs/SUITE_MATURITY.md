@@ -754,3 +754,9 @@ the user received a bounded no-save answer. The run reported one terminal
 and zero abrupt EOF. Requested name and URL remain covered by the canonical
 projection regression. Complete-source persistence remains a separate pending
 acceptance case; owner deployment was unchanged.
+
+The adjacent complete-text Recipe chat mutation/readback journey also passed
+against the same executable candidate: 3 turns, 2 canonical readbacks, 3
+terminal `[DONE]` events, zero false-success claims, raw final results,
+duplicate delivery, or abrupt EOF. This confirms ordinary `add` persistence
+remains separate from URL imports.

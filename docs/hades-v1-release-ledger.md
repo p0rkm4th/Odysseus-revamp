@@ -360,3 +360,12 @@ were removed; owner deployment was unchanged.
   pending. Executable candidate remains `odysseus:candidate-5c9e1be` with image
   `sha256:96d8f900e19f0f43e2df15d07fe48da147a7d12498740cc50683643cf4cf42b`;
   test-only HEAD is `1c8c22a7`, and owner deployment was unchanged.
+
+## Recipe complete-text mutation checkpoint — `359e518e` (2026-08-29)
+
+- The exact isolated authenticated browser journey for a complete pasted
+  recipe passed through normal chat mutation and readback: 3 turns, 2
+  readbacks, and 3 `[DONE]` events.
+- It reported zero false-success claims, raw final results, duplicate
+  delivery, or abrupt EOF. This validates ordinary canonical `add` persistence
+  independently of the URL import review case.
