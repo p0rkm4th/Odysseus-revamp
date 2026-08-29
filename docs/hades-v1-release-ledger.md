@@ -2,6 +2,24 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Qualitative Recipe review-safety checkpoint — `9703eeb4` (2026-08-29)
+
+Owner testing found that an incomplete text Recipe save with “salt to taste”
+and “oil as needed” reached `manage_recipes.add` with an empty model-supplied
+name and exposed a low-level validation error. The mutation boundary now
+marks incomplete text proposals for review and fails closed with an explicit
+“Nothing was saved” explanation; it does not invent quantities or persist
+state. Focused ACI/Recipe/projection coverage passed `113` tests.
+
+Exact candidate `odysseus:candidate-9703eeb42ba6` carries source marker and OCI
+revision `9703eeb42ba6391959e0ee91fe550219815029a1`. The authenticated GUI
+scenario `OWNER-RECIPE-QUALITATIVE-REVIEW-001` passed with one attempted chat
+mutation, two independent canonical count readbacks including reload, and
+zero false success, raw final result, duplicate delivery, or abrupt EOF. The
+isolated runtime had zero restarts. Full human correction/validated commit
+review UI remains open; owner runtime remains source `34ced247` and was not
+changed.
+
 ## Copied Recipe webpage-paste checkpoint — `141e0728` (2026-08-29)
 
 Owner testing found that a normal copied recipe page could route to the
