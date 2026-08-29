@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
+
+The exact candidate completed first-run setup, authenticated browser use,
+model configuration, reload, and app restart. Health remained healthy and the
+canonical Recipe survived independent SQLite/API readback; owner deployment
+remained untouched.
+
 ## Visual/UI owner checkpoint — candidate `20d07aef` (2026-08-29)
 
 Realistic browser acceptance, frontend static verification, and shared-window
