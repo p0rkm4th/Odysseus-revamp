@@ -410,6 +410,21 @@ def test_sectioned_qualitative_recipe_returns_editable_review_draft_without_pers
     assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"] == []
 
 
+def test_review_draft_ignores_serving_metadata_inside_copied_ingredients_section():
+    source = (
+        'Acceptance Web Paste Dinner\n★★★★★ 4.8 from 214 reviews\n\n'
+        'Ingredients\nServes 4\n- 2 chicken breasts, boneless and skinless\n'
+        '- 1½ cups rice\n- salt to taste\n- oil as needed\n\n'
+        'Instructions\nSeason the chicken and cook the rice.\n'
+    )
+    draft = recipe_import_review_draft(source)
+    assert draft is not None
+    assert draft["servings"] == 4
+    assert [item["name"] for item in draft["ingredients"]] == [
+        "chicken breasts, boneless and skinless", "rice", "salt", "oil",
+    ]
+
+
 def test_recipe_import_commit_requires_validated_draft_and_verifies_readback():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
