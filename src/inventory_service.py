@@ -654,6 +654,10 @@ class InventoryService:
                 InventoryItem.archived.is_(False),
             ).order_by(InventoryItem.normalized_name, InventoryItem.id).all()
             item_by_id = {item.id: item for item in items}
+            locations = db.query(InventoryLocation).filter(
+                InventoryLocation.owner == owner,
+            ).order_by(InventoryLocation.normalized_path, InventoryLocation.id).all()
+            location_by_id = {location.id: location for location in locations}
             lots = db.query(InventoryLot).filter(
                 InventoryLot.owner == owner,
                 InventoryLot.item_id.in_(list(item_by_id) or ["__none__"]),
@@ -667,6 +671,10 @@ class InventoryService:
                     expiring.append({
                         "lot": _lot_view(lot),
                         "item": _item_view(item_by_id[lot.item_id]),
+                        "location_name": (
+                            location_by_id[lot.location_id].name
+                            if lot.location_id in location_by_id else None
+                        ),
                         "status": "expired" if lot.expiry_date < today else "expiring",
                     })
             low_stock = []
@@ -685,12 +693,36 @@ class InventoryService:
                 owner=owner, archived=False,
             ).count()
             recent = self._history_rows(db, owner, item_by_id=item_by_id, limit=10)
+            item_rows = []
+            location_totals: dict[str, Decimal] = {}
+            location_item_ids: dict[str, set[str]] = {}
+            for item in items:
+                location_id = item.location_id
+                if location_id in location_by_id:
+                    location_totals[location_id] = location_totals.get(
+                        location_id, Decimal("0")
+                    ) + totals.get(item.id, Decimal("0"))
+                    location_item_ids.setdefault(location_id, set()).add(item.id)
+                item_rows.append(_item_view(item) | {
+                    "stock_quantity": str(totals.get(item.id, Decimal("0"))),
+                    "location_name": (
+                        location_by_id[location_id].name
+                        if location_id in location_by_id else None
+                    ),
+                })
+            location_rows = [{
+                "id": location.id,
+                "name": location.name,
+                "item_count": len(location_item_ids.get(location.id, set())),
+                "stock_quantity": str(location_totals.get(location.id, Decimal("0"))),
+            } for location in locations if location.id in location_item_ids]
             return {
                 "owner": owner,
                 "canonical_store": "inventory_service",
                 "scope": "kitchen_and_household",
                 "item_count": len(items),
-                "items": [_item_view(item) | {"stock_quantity": str(totals.get(item.id, Decimal("0")))} for item in items],
+                "items": item_rows,
+                "locations": location_rows,
                 "low_stock": low_stock,
                 "expiring_lots": expiring,
                 "pending_intake": [{
