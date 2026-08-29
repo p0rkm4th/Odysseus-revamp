@@ -481,3 +481,12 @@ were removed; owner deployment was unchanged.
   before the Recipe turn (`no usable endpoint for qwen3:8b`). This is an
   acceptance-environment readiness failure, not a product PASS. The temporary
   acceptance principal was removed and the disposable deployment was stopped.
+
+## Full regression revalidation — `3af8b2f8` (2026-08-29)
+
+- The complete repository suite ran in the supported project `venv` after the
+  Recipe contract change: `6942 passed, 5 skipped, 186 warnings` in `215.25s`.
+- The current branch tip is documentation-only relative to the executable
+  candidate; no additional image build was required. Browser acceptance remains
+  unverified on this candidate until the isolated deployment has a registered
+  Qwen3:8B chat endpoint.
