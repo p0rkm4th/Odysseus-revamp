@@ -2,6 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Owner-language corpus expansion — `0f5a0988` (2026-08-29)
+
+The black-box owner journey corpus now exercises equivalent Work overview
+phrasing (outstanding work, still working on, and outstanding for me) and
+equivalent Asset RAM phrasing (RAM in machines and RAM across PCs). Each
+variant retains the same canonical action, tool binding, deterministic answer
+source, and fixture facts. The owner-journey/deterministic validation passed
+`83` tests; the preceding RAM corpus change passed `30` tests. These are
+evaluator-only changes and do not require an image rebuild.
+
+The Recipe maturity ledger also records the already-tested bounded YouTube
+metadata/transcript evidence path through the existing RecipeDraft and
+Inventory Service owners; its focused coverage passed `3` tests. The exact
+deployed executable remains source `87dab0ff`; current branch HEAD is
+`0f5a0988` and the owner deployment was not changed.
+
 ## Network freshness renderer checkpoint — `87dab0ff` (2026-08-29)
 
 The authenticated browser lane exposed that a successful canonical
