@@ -55,12 +55,18 @@ def test_recipe_reads_and_pantry_coverage_use_one_persisted_inventory_owner():
     assert coverage["recipe_id"] == recipe["id"]
     assert coverage["shortages"] == []
     assert coverage["deductions"]
+    assert coverage["result_type"] == "recipe_pantry_coverage"
+    assert coverage["operation"] == "can_make"
+    assert coverage["availability_status"] == "AVAILABLE"
+    assert coverage["canonical_store"] == "inventory_service"
 
     missing = service.manage_recipes(
         {"action": "can_make", "recipe_id": recipe["id"], "servings": "4"},
         owner="alice",
     )
     assert missing["can_make"] is False
+    assert missing["status"] == "SUCCESS"
+    assert missing["availability_status"] == "MISSING_INGREDIENTS"
     assert {row["name"] for row in missing["shortages"]} == {"beans", "rice"}
 
 
