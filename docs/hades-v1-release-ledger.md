@@ -1073,3 +1073,13 @@ after the run. The owner deployment remains untouched.
   reload, `3` streams and `[DONE]`, zero false success, raw final results,
   duplicate delivery, or abrupt EOF. The disposable principal and stack were
   revoked and removed afterward; the owner deployment was untouched.
+# Exact Recipe workspace search checkpoint — `9285a7e1` (2026-08-29)
+
+The Recipe workspace now supports bounded client-side search over the
+owner-scoped canonical recipe collection and exposes canonical culinary units
+in its ingredient editor. Focused JavaScript/Recipe/UI coverage passed (`36`
+tests). Candidate `odysseus:candidate-9285a7e1dda2` was built from pushed
+source `9285a7e1dda257414b632722f6f4d2782fd4694f`; image ID is
+`sha256:f13b31e24c27b2f644b290325997e6f712c11e4c423b84fb8b6da5ea64a73171`,
+and OCI/source-marker provenance matched exactly. The candidate was not
+deployed, so this entry is build/focused-test evidence only.
