@@ -464,9 +464,24 @@ def memory_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
         return {"action": "add", "text": value[:5000], "category": "fact"} if value else None
     if operation == "delete":
         match = re.search(r"\b(?:forget|delete|remove)\s+(?:my|the|this|that)?\s*(.+?)\s*[.!?]?$", text, re.IGNORECASE)
-        if not match:
-            return None
-        value = match.group(1).strip()
+        if match:
+            value = match.group(1).strip()
+        else:
+            # A normal correction often refers to the immediately preceding
+            # fact without repeating "forget" ("that's not true anymore").
+            # Recover only the bounded owner-property phrase already present
+            # in the conversation; the executor still resolves it against
+            # exactly one owned canonical record and fails closed otherwise.
+            property_match = re.search(
+                r"\bwhat(?:'s|\s+is)\s+(?:my|our)\s+([a-z][a-z0-9 _-]{1,80}?)(?:\s+now)?\s*[?!.]",
+                text, re.IGNORECASE,
+            ) or re.search(
+                r"\bremember(?:\s+that)?\s+(?:my|our)\s+([a-z][a-z0-9 _-]{1,80}?)\s+is\b",
+                text, re.IGNORECASE,
+            )
+            if not property_match:
+                return None
+            value = property_match.group(1).strip()
         return {"action": "delete", "query": value[:200]} if value else None
     return None
 
@@ -1747,6 +1762,16 @@ def resolve_structured_reference(
 
 def _operation(text: str, *, continuation: bool = False) -> str:
     q = text.lower().strip()
+    # Corrections that invalidate the immediately preceding owner fact are a
+    # canonical Memory mutation, even when the continuation classifier would
+    # otherwise treat the short sentence as a generic follow-up.
+    if re.search(
+        r"\b(?:that(?:'s|\s+isn't)\s+not\s+true(?:\s+anymore)?|"
+        r"no\s+longer\s+true|that(?:'s|\s+is)\s+wrong|"
+        r"i\s+was\s+wrong\s+about\s+(?:that|it))\b",
+        q,
+    ):
+        return "DELETE"
     if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
     if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
@@ -1913,6 +1938,22 @@ def compile_intent(
             r"\b(?:sav(?:e|ed|ing)|similar|find|search)\b", q
         ): concept = "JOB_OPPORTUNITY"
         else: concept = "CAREER_PROFILE"
+    # A short owner correction may contain no Memory noun at all. Its
+    # operation was already classified as DELETE above; the executor remains
+    # bounded by resolving a property from the preceding conversation and
+    # fails closed when no unique owned record can be identified.
+    if concept == "UNKNOWN" and operation == "DELETE" and re.search(
+        r"\b(?:not\s+true|no\s+longer\s+true|wrong)\b", q,
+    ):
+        concept = "MEMORY"
+        read_explicit = False
+    # ``remember`` is both a mutation verb and part of ordinary Memory-read
+    # language ("What do you remember about me?"). The interrogative and the
+    # explicit-read projection disambiguate the latter before Action mapping.
+    if concept == "MEMORY" and operation == "CREATE" and read_explicit and re.match(
+        r"\s*(?:what|which|who|show|tell|how|do\s+you)\b", q,
+    ):
+        operation = "READ"
     # An explicit recipe mutation owns the whole turn even when copied page
     # text contains household vocabulary such as "kitchen" or "pantry".
     # This precedence prevents webpage noise from routing a save request to a
