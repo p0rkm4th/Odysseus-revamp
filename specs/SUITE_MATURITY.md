@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Visual/UI owner checkpoint — candidate `20d07aef` (2026-08-29)
+
+Realistic browser acceptance, frontend static verification, and shared-window
+dogfood passed. Navigation duplicate-icon checks, shared Inventory chrome,
+empty/list states, desktop/narrow containment, and mobile sizing were exercised
+with screenshots captured for review. No production UI blocker was observed;
+owner deployment remains untouched.
+
 ## Recipe composition and false-premise checkpoint — candidate `20d07aef` (2026-08-29)
 
 Recipe shopping requirements, expiring-ingredient composition, and the
