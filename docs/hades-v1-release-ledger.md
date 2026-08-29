@@ -2,6 +2,26 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Qualitative Recipe review workflow checkpoint — candidate `3a0d9555` (2026-08-29)
+
+The qualitative-ingredient owner journey exposed two product defects. The
+initial browser review state was only an error/retry panel, and the first
+editable review implementation rejected decimal corrections because its
+import-specific numeric regex was over-escaped. The generalized repair now
+extracts a reviewable draft for ordinary sectioned recipe text, marks
+qualitative amounts such as “to taste” and “as needed” for review, preserves
+strict validation at canonical commit, and accepts corrected positive decimal
+quantities.
+
+On the exact pushed candidate, a browser owner corrected `salt` to `0.25 tsp`
+and `oil` to `1 tbsp`. The browser sent one `/api/recipes/import/commit`,
+canonical readback contained `Acceptance Taste Test`, and reload rendered the
+saved recipe. The pre-correction review remained non-persistent. This replay
+had one mutation, one independent readback plus reload, and zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF. Disposable
+fixture setup used one direct prerequisite recipe; the behavior under test
+entered through the GUI. Owner runtime was untouched.
+
 ## Empty Memory owner-read checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 `OWNER-MEMORY-EMPTY-001` passed on an isolated fresh principal. The ordinary

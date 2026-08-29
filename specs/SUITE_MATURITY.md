@@ -1,5 +1,15 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Qualitative Recipe review workflow checkpoint — candidate `3a0d9555` (2026-08-29)
+
+Ordinary sectioned recipe text with qualitative amounts now produces an
+editable review draft instead of only a technical error. The review visibly
+marks unresolved amounts, keeps canonical commit strict, and accepts positive
+decimal corrections. A browser replay corrected `salt to taste` and `oil as
+needed`, committed `Acceptance Taste Test`, verified canonical state, and
+confirmed the recipe after reload. The isolated replay had zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF.
+
 ## Empty Memory owner-read checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 The exact-candidate empty-memory first-use journey returned a grounded empty
