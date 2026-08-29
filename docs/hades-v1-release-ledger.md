@@ -2,6 +2,33 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Network freshness renderer checkpoint — `87dab0ff` (2026-08-29)
+
+The authenticated browser lane exposed that a successful canonical
+`read_network_observations` Result was rendered without its freshness
+qualification. The deterministic Network renderer now carries the bounded
+canonical freshness value into readable prose (without exposing raw Result
+keys); if only node-level freshness is available, it uses that single shared
+value. Focused ACI/Recipe coverage passed `58` tests, including the new
+freshness regression.
+
+The exact candidate `odysseus:candidate-87dab0ff5bc0` was built with OCI
+image digest
+`sha256:6d0a1036e7f4ca68004f852bbafbf109ee189aa63ac44da42d5c34c089f73040`.
+The disposable runtime marker matched `87dab0ff5bc0097c46d29628d5e93cfbbb8cc35c`,
+health was healthy, restart count was `0`, and Qwen3:8B was reachable from the
+container namespace. The owner deployment was not changed.
+
+After correcting the browser oracle so legitimate `Freshness:` prose is not
+classified as raw JSON, the authenticated browser smoke passed `7/7` turns
+(`1` Network tool card plus `1` human-readable final answer, `7` `[DONE]`,
+zero raw-final-result, false-success, duplicate-delivery, and abrupt-EOF
+failures). The data-driven URL Recipe import scenario then passed `3/3`
+turns, including normal approval, canonical mutation readback, reload
+readback, and `3` terminal `[DONE]` events. Browser execution used the host
+test harness at branch descendant `87b1f28d`; the executable image remained
+the exact `87dab0ff` candidate.
+
 ## Recipe URL argument projection verification — `4f5c235f` (2026-08-29)
 
 The exact URL request with the explicit display name was recompiled and
