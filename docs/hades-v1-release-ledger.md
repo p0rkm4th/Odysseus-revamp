@@ -1921,3 +1921,12 @@ The fresh empty-recipe journey for the named Sunday Supper URL passed the
 review/error path without claiming a successful save. Independent API
 readback confirmed the canonical recipe store remained empty; false success,
 raw final Result, duplicate delivery, and abrupt EOF were zero.
+
+## Current authenticated UI smoke — executable candidate `1a2b62e5` (2026-08-29)
+
+Authenticated desktop and narrow-width checks passed on the isolated
+candidate. Desktop navigation rendered 27 visible entries with exactly one
+intentional icon each, no horizontal overflow, and one shared Inventory
+titlebar; the Recipe pane rendered one readable empty/list state. A 390px
+viewport also had no document overflow. Screenshots were captured at
+`/tmp/hades-ui-desktop-current.png` and `/tmp/hades-ui-narrow-current.png`.
