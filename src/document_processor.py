@@ -330,7 +330,9 @@ def _resolve_vl_model(configured: str, owner: str | None = None) -> tuple:
     raise ValueError("No vision model available")
 
 
-def analyze_image_with_vl_result(image_path: str, owner: str | None = None) -> dict:
+def analyze_image_with_vl_result(
+    image_path: str, owner: str | None = None, prompt: str = "Describe this image in detail"
+) -> dict:
     """Analyze an image and return both text and the model that produced it."""
     logger.info(f"Analyzing image with VL model: {image_path}")
     try:
@@ -355,7 +357,7 @@ def analyze_image_with_vl_result(image_path: str, owner: str | None = None) -> d
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Describe this image in detail"},
+                    {"type": "text", "text": prompt},
                     {"type": "image_url", "image_url": {"url": f"data:image/{img_format};base64,{img_data}"}},
                 ],
             }
@@ -387,9 +389,11 @@ def analyze_image_with_vl_result(image_path: str, owner: str | None = None) -> d
         return {"text": "[VL model unavailable - image not analyzed]", "model": ""}
 
 
-def analyze_image_with_vl(image_path: str, owner: str | None = None) -> str:
+def analyze_image_with_vl(
+    image_path: str, owner: str | None = None, prompt: str = "Describe this image in detail"
+) -> str:
     """Analyze an image using the admin-configured Vision-Language model."""
-    return analyze_image_with_vl_result(image_path, owner=owner).get("text", "")
+    return analyze_image_with_vl_result(image_path, owner=owner, prompt=prompt).get("text", "")
 
 
 def build_user_content(
