@@ -433,14 +433,22 @@ async function send(page, prompt, expectation = {}) {
     return [...document.querySelectorAll('#chat-history .msg-user')]
       .some((node) => normalize(node.querySelector('.body')?.innerText || node.innerText).includes(expected));
   }, prompt);
+  let streamIndex = beforeStreams;
   if (String(expectation.approval || '').toLowerCase() === 'required') {
     const approvalCard = page.locator('#chat-history .ask-user-card').last();
     await approvalCard.waitFor({state: 'attached', timeout: 30000});
     const approve = approvalCard.locator('.ask-user-option').filter({hasText: /allow for this task/i}).first();
     await approve.waitFor({state: 'visible', timeout: 10000});
     await approve.click();
+    // Approval ends the proposal stream. The normal frontend submits the
+    // sealed approval through a second /api/chat_stream request; grade that
+    // continuation, not the already-terminal proposal stream.
+    await page.waitForFunction((count) =>
+      (window.__hadesE2EStreams?.length || 0) > count,
+    beforeStreams, { timeout: 30000 });
+    streamIndex = await page.evaluate(() => (window.__hadesE2EStreams?.length || 1) - 1);
   }
-  const stream = await waitForAnswer(page, beforeAssistant, beforeStreams, prompt);
+  const stream = await waitForAnswer(page, beforeAssistant, streamIndex, prompt);
   const afterAssistant = await assistantCount(page);
   if (afterAssistant !== beforeAssistant + 1) {
     throw new Error(`expected one assistant answer for ${prompt}, got ${afterAssistant - beforeAssistant}`);
