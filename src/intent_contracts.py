@@ -121,6 +121,10 @@ def _recipe_name(text: str) -> str | None:
     patterns = (
         # Natural owner wording: "as \"Name\":" or "called Name".
         r"\bas\s+[\"'](?P<name>[^\"']{1,200})[\"']\s*[:.]?",
+        # The same owner wording is often typed without quotation marks.
+        # Stop at sentence punctuation/newline so surrounding instructions
+        # are never absorbed into the display name.
+        r"\bas\s+(?P<name>[A-Z][^\.\n]{1,200})\s*\.",
         r"\bfor\s+the\s+name\s*,?\s*use\s+[\"'](?P<name>[^\"']{1,200})[\"']",
         r"\b(?:called|named)\s+[\"']?(?P<name>[^\"'\n:.]{1,200})[\"']?\s*[:.]",
         # Existing compact form: "recipe: Name. Ingredients: ...".
