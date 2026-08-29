@@ -688,3 +688,17 @@ evaluator integrity gap exposed by the interrupted bounded Qwen shard: an
 when its `assets_list` setup turn was omitted by sampling. Focused coverage is
 11 passed. This is evaluator-only; the deployed executable candidate remains
 the previously recorded exact product SHA.
+# Recipe shopping requirements checkpoint — `d772096f` (2026-08-29)
+
+- Added a bounded `recipe.read/shopping_requirements` ActionSpec and explicit
+  result contract over the existing Inventory Service. It computes missing
+  ingredients deterministically from canonical pantry coverage and does not
+  mutate inventory or create a second shopping-list store.
+- Focused contract/composition/paraphrase tests: `264 passed`.
+- Full supported regression: `6950 passed, 5 skipped`.
+- Pushed source and exact candidate: `d772096fef17f4690d0d2e6f4dd5a10aea3f6c0e`,
+  `odysseus:candidate-d772096fef17`,
+  image `sha256:248f9d1d496fdda514796415d412e1958caf969732112dfea5a82476d1b9cb58`.
+- Disposable runtime marker/source matched and `/api/health` was healthy with
+  zero restarts. Qwen live/browser acceptance remains unverified because
+  `host.docker.internal:11434` was unavailable.

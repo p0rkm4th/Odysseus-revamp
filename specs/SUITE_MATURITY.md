@@ -858,3 +858,17 @@ delivery, or abrupt EOF. The initial failed attempt was classified as fixture
 wiring because the seeded CMDB path was outside the mounted container data
 volume; it was then rerun with the matching canonical database. Acceptance
 state was revoked and cleaned up; the owner deployment was untouched.
+## Recipe shopping-requirements read checkpoint — `d772096f` (2026-08-29)
+
+The Recipe read contract now exposes a distinct deterministic
+`shopping_requirements` ActionSpec through the existing Inventory Service.
+It reuses canonical pantry-coverage quantities and returns bounded missing
+ingredient requirements without creating shopping-list state or mutating
+inventory. The result has its own contract and human renderer, preserving the
+Recipe reference and requested serving count. Focused contract, composition,
+and paraphrase coverage passed `264` tests; the full supported regression on
+the pushed source passed `6950` tests with `5` skips. Exact candidate
+`odysseus:candidate-d772096fef17` embeds and runs source `d772096f` in the
+disposable debug lane, healthy with zero restarts. Live Qwen/browser evidence
+is not claimed because the configured container-namespace Ollama endpoint was
+unavailable.
