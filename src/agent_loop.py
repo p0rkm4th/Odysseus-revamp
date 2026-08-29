@@ -2809,6 +2809,15 @@ async def stream_aci_runtime(
         )
 
     _approved_result_injected = False
+    def _effectful_call_signature(tool_name: str, content: str) -> tuple[str, str]:
+        try:
+            payload = json.loads(content or "")
+        except (TypeError, json.JSONDecodeError):
+            return tool_name, content
+        if isinstance(payload, dict):
+            return tool_name, json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+        return tool_name, content
+
     # Persist across the approval replay and subsequent model rounds in this
     # chat turn. A resumed provider response may repeat the already-approved
     # effectful binding in a later round.
@@ -2883,7 +2892,9 @@ async def stream_aci_runtime(
             and not approved_result.get("error")
             and not approved_result.get("approval_required")
         ):
-            _successful_effectful_batch_calls.add((approved.tool_name, approved.content))
+            _successful_effectful_batch_calls.add(
+                _effectful_call_signature(approved.tool_name, approved.content)
+            )
         if approved_result.get("action") == "suggest":
             yield (
                 "data: "
@@ -4953,7 +4964,7 @@ async def stream_aci_runtime(
                             }),
                         )
 
-            _effectful_signature = (block.tool_type, block.content)
+            _effectful_signature = _effectful_call_signature(block.tool_type, block.content)
             if (
                 block.tool_type in _VERIFIER_EFFECTFUL_TOOLS
                 and _effectful_signature in _successful_effectful_batch_calls
