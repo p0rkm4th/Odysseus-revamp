@@ -98,6 +98,20 @@ verified healthy with zero restarts, OCI marker/running source
 `26dac273983ad51c571fba9a1df33e58e14aeeff`, and Qwen3:8B reachability from
 the container namespace. The owner deployment was not replaced.
 
+### Recipe collection/detail result contracts checkpoint — 9584fe4c
+
+The existing Recipe `list`, `search`, and `get` reads now return explicit
+`SUCCESS` status, operation-specific result types, canonical-store metadata,
+and bounded canonical payloads. The change does not alter owner scoping,
+recipe ordering, search semantics, or deterministic answer rendering; it
+makes the read contract observable at the Result boundary alongside pantry
+coverage and scale. Supported-container focused coverage passed `125` tests.
+The exact candidate image
+`sha256:83390cb6b6eab4fa2a7c7692751531ab77637af747889eab59cc32d00dd02d22`
+was verified healthy with zero restarts, OCI marker/running source
+`9584fe4cf86b96ca0f65f63b4b563809a4d063c2`, and Qwen3:8B reachability from
+the container namespace. The owner deployment was not replaced.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
