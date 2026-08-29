@@ -1748,6 +1748,11 @@ def compile_intent(
         concept = "OSINT_CASE"
     elif re.search(r"\b(?:household|pantry|stock|shopping|groceries|kitchen)\b", q):
         concept = "HOUSEHOLD_ITEM"
+    elif re.search(r"\b(?:what(?:'s| is)\s+)?(?:outstanding|left)\s+(?:for\s+)?(?:me|us)\b", q):
+        # Ordinary owner language often omits the noun "work" entirely.
+        # Keep this bounded to personal outstanding/remaining questions so it
+        # does not turn unrelated uses of "left" into Work reads.
+        concept = "WORK"
     elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
         concept = "WORK"
     elif re.search(r"\b(?:work|working|project|task|goal|commitment)\b", q) and not re.search(

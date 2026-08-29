@@ -590,7 +590,9 @@ def test_work_status_continuity_question_is_a_safe_work_read(query):
     assert resolved.action.approval.value == "none"
 
 
-@pytest.mark.parametrize("query", ["Review outstanding work.", "Show my open work."])
+@pytest.mark.parametrize("query", [
+    "Review outstanding work.", "Show my open work.", "What's outstanding for me?",
+])
 def test_outstanding_work_review_is_the_existing_work_read(query):
     resolved = resolve_intent(compile_intent(query))
     assert resolved.available is True
