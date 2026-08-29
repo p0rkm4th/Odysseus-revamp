@@ -124,7 +124,7 @@ def test_memory_property_followup_uses_canonical_read_after_correction():
         "What is my test color now?",
     )
     assert owned is True
-    assert intent["retrieval_query"].startswith("What is my test color now?")
+    assert intent["retrieval_query"] == "What do you remember about me?"
 
 
 def test_tool_projection_trace_explains_route_and_policy_exclusions_without_content():

@@ -2084,8 +2084,11 @@ def provisional_intent_projection(
         and frame.operation_class == "DELETE"
     )
     retrieval_query = (
-        recent_user_context
-        if continuation or retain_memory_context or contextual_memory_read else latest
+        "What do you remember about me?"
+        if contextual_memory_read else (
+            recent_user_context
+            if continuation or retain_memory_context else latest
+        )
     )
     explanatory = bool(re.search(
         r"\b(?:explain|define|teach\s+me|how\s+does|why)\b",
