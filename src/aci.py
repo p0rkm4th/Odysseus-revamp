@@ -3872,6 +3872,11 @@ def project_final_answer(
         return canonical.content, canonical
     if clarification_only:
         return str(full_response or ""), None
+    # An approval card is a control-plane pause, not a failed mutation. The
+    # pending Action must remain available for the normal approval continuation
+    # and must not be replaced by a false error answer before the user can act.
+    if any(isinstance(event, Mapping) and event.get("ask_user") for event in (tool_events or ())):
+        return "", None
     if effectful_request and not any(
         isinstance(event, Mapping)
         and event.get("exit_code") in (None, 0)
