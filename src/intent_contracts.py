@@ -120,7 +120,7 @@ def _recipe_name(text: str) -> str | None:
     return None
 
 
-def _recipe_ingredients(section: str) -> list[dict[str, Any]] | None:
+def _recipe_ingredients(section: str, *, split_compact: bool = True) -> list[dict[str, Any]] | None:
     unit_words = (
         r"teaspoons?|tsp|tablespoons?|tbsp|cups?|ounces?|oz|pounds?|lbs?|"
         r"grams?|g|kilograms?|kg|millilit(?:er|re)s?|ml|lit(?:er|re)s?|l|"
@@ -129,7 +129,7 @@ def _recipe_ingredients(section: str) -> list[dict[str, Any]] | None:
     # Newline-separated recipe lists are the normal long-paste shape.  Keep
     # comma/semicolon splitting for the compact owner acceptance shape.
     raw_lines = [line.strip() for line in section.splitlines() if line.strip()]
-    if len(raw_lines) <= 1:
+    if len(raw_lines) <= 1 and split_compact:
         raw_lines = re.split(r",|\s*;\s*|\s+and\s+(?=\d+(?:\.\d+)?\s)", section)
     ingredients: list[dict[str, Any]] = []
     for raw in raw_lines:
@@ -261,7 +261,11 @@ def recipe_import_draft(
             ingredients: list[dict[str, Any]] = []
             if isinstance(raw_ingredients, list):
                 for item in raw_ingredients:
-                    parsed = _recipe_ingredients(str(item))
+                    # Each schema.org recipeIngredient entry is already one
+                    # ingredient. Preserve descriptive commas ("onion,
+                    # diced") instead of treating them as compact-section
+                    # separators.
+                    parsed = _recipe_ingredients(str(item), split_compact=False)
                     if parsed and len(parsed) == 1:
                         ingredients.extend(parsed)
                     else:

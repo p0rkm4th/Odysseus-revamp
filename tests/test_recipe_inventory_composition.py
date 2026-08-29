@@ -292,6 +292,19 @@ def test_recipe_import_parses_unicode_and_mixed_quantities_without_guessing():
     )
 
 
+def test_recipe_import_keeps_commas_inside_schema_org_ingredient_items():
+    draft = recipe_import_draft(
+        '<!-- RECIPE_JSONLD:{"@type":"Recipe","name":"Comma Dinner",'
+        '"recipeIngredient":["1 onion, finely diced", "2 cups chicken broth"],'
+        '"recipeInstructions":"Cook it."} -->',
+        source_url="https://example.test/comma-dinner",
+    )
+    assert draft is not None
+    assert [item["name"] for item in draft.ingredients] == [
+        "onion, finely diced", "chicken broth",
+    ]
+
+
 def test_incomplete_recipe_import_returns_bounded_review_diagnostics():
     review = recipe_import_review(
         '<!-- RECIPE_JSONLD:{"@type":"Recipe","name":"Seasoned Dinner",'
