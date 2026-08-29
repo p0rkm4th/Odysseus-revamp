@@ -49,6 +49,17 @@
       "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Chicken and Rice", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Chicken and Rice"}, "terminal": {"done": 3, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-URL-IMPORT-NAMED-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-recipes",
+      "turns": [
+        {"prompt": "Add this recipe to my recipe book, for the name, use \"Chicken Cordon Bleu with Cheese Sauce\": https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add", "tool_binding": "manage_recipes", "requires_effect": true, "must_include_all": ["Chicken Cordon Bleu with Cheese Sauce"], "forbidden": ["successfully added", "Done"]}},
+        {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "list", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Chicken Cordon Bleu with Cheese Sauce"]}},
+        {"prompt": "Show me that recipe.", "expected": {"domain": "RECIPE", "operation": "READ", "action": "get", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Chicken Cordon Bleu with Cheese Sauce"]}}
+      ],
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Chicken Cordon Bleu with Cheese Sauce", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Chicken Cordon Bleu with Cheese Sauce"}, "terminal": {"done": 3, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-HOUSEHOLD-MUTATION-READBACK-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-household",
