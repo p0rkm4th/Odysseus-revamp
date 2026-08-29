@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Work paraphrase routing checkpoint — `9c3d2acb` (2026-08-29)
+
+Owner testing found that “What's outstanding for me?” fell through to model
+prose even though equivalent Work questions used the deterministic overview
+read. The shared intent compiler now recognizes bounded personal
+outstanding/remaining phrasing while preserving Household phrases such as
+“what's left in the freezer?”. Paraphrase and owner-contract focused coverage
+passed `147` tests. Exact candidate `odysseus:candidate-9c3d2acb6585`, image
+`sha256:92a05b2f8f31a7b0aa798581e7d619c505761098a71bc0bf054dbaab315acfc5`,
+has matching OCI revision/source marker.
+
+The exact candidate passed the three-turn Work overview journey through the
+authenticated browser with three deterministic final answers, three terminal
+`[DONE]` events, two independent canonical readbacks, and zero false success,
+raw final result, duplicate delivery, or abrupt EOF. Owner runtime remains
+source `34ced247`; it was not rebuilt or changed.
+
 ## Work project mutation result-boundary checkpoint — `b8b340c0` (2026-08-29)
 
 Owner-journey testing found a genuine Work mutation defect: chat project
