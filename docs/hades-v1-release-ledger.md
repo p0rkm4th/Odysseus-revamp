@@ -882,6 +882,8 @@ the previously recorded exact product SHA.
   browser URL-import journey: `3/3` streams reached DONE, mutation and reload
   readbacks passed, zero abrupt EOF, duplicate delivery, raw final results, and
   false success.
+- Full supported regression on this exact executable candidate: `6956 passed,
+  7 skipped, 149 warnings`.
 - Exact pushed executable source/candidate: `451b40cdbac39146c460575eaae5574a93c014b6`,
   `odysseus:candidate-451b40cd`, image
   `sha256:3939ca86e5a6cf6542934b7d9345b8c097938d6071aea7b1291a5e6d5268850d`;
