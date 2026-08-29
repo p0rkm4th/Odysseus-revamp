@@ -1034,3 +1034,15 @@ after the run. The owner deployment remains untouched.
 - Syntax/JSON, UI, owner-journey contract, and Recipe focused tests passed
   `41`. This checkpoint was not separately deployed; the last exact live
   candidate remains `53670937`, so no live result is attributed to `af0c984b`.
+
+# Exact-HEAD Recipe import acceptance — `98728b47` (2026-08-29)
+
+- Candidate `odysseus:candidate-98728b47103`, image
+  `sha256:2bab8b594e27b7fc5b877190ec41e151c6ab6c5aaf1be61a0715a1325181f042`,
+  embedded source `98728b47103e608d391a74baded90a258264d72a`, health healthy,
+  restart count `0`.
+- Complete URL import passed the exact authenticated browser/chat path with
+  persisted `source_url` verification: `1` mutation, `2` readbacks including
+  reload, `3` streams and `[DONE]`, zero false success, raw final results,
+  duplicate delivery, or abrupt EOF. The disposable principal and stack were
+  revoked and removed afterward; the owner deployment was untouched.
