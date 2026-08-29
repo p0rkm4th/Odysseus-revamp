@@ -646,8 +646,20 @@ def test_url_recipe_import_projects_commit_action_and_user_fields():
     )
     selected = next(value for value in projection.choice_map.values()
                     if value["payload"].get("action") == "commit_import")
+    assert list(projection.choice_map) == ["A"]
+    assert [value["payload"].get("action") for value in projection.choice_map.values()] == ["commit_import"]
     assert selected["payload"]["source_url"].startswith("https://sundaysuppermovement.com/")
     assert selected["payload"]["requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
+
+
+def test_url_recipe_import_fields_are_carried_by_intent_frame():
+    query = ('Add this recipe to my recipe book, for the name, use '
+             '"Chicken Cordon Bleu with Cheese Sauce": '
+             'https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe')
+    frame = compile_intent(query)
+    assert frame.filters["recipe_import"] is True
+    assert frame.filters["recipe_source_url"].startswith("https://sundaysuppermovement.com/")
+    assert frame.filters["recipe_requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
 
 
 def test_action_projection_carries_canonical_dependency_plan():

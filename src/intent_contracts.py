@@ -329,6 +329,12 @@ def recipe_requested_name(query: str) -> str | None:
     return _recipe_name(str(query or ""))
 
 
+def recipe_source_url(query: str) -> str | None:
+    """Extract the bounded public source URL from a recipe request."""
+    match = re.search(r"https?://[^\s)>]+", str(query or ""), re.IGNORECASE)
+    return match.group(0).rstrip(".,") if match else None
+
+
 def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
     """Extract explicit item quantity for the canonical inventory CREATE."""
     text = str(query or "").strip()
@@ -2016,8 +2022,14 @@ def compile_intent(
         r"\b(?:import|from)\b.*(?:recipe|https?://)|https?://", q, re.IGNORECASE,
     ):
         reference_filters["recipe_import"] = True
+        source_url = recipe_source_url(text)
+        if source_url:
+            reference_filters["recipe_source_url"] = source_url
     if concept == "RECIPE" and operation == "CREATE" and re.search(r"https?://", q, re.IGNORECASE):
         reference_filters["recipe_import"] = True
+        source_url = recipe_source_url(text)
+        if source_url:
+            reference_filters["recipe_source_url"] = source_url
         requested_name = recipe_requested_name(text)
         if requested_name:
             reference_filters["recipe_requested_name"] = requested_name

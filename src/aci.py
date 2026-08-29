@@ -4214,6 +4214,21 @@ def project_action_selection(
         raw_actions,
         operation_class=str(frame.get("operation_class") or "") or None,
     )
+    # URL-backed Recipe CREATE has one canonical meaning: import and validate
+    # untrusted source material before commit. Do not expose the sibling
+    # primitive ``add`` Action; it cannot carry the import contract and would
+    # silently lose explicit user fields when selected by the model.
+    frame_filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+    if (
+        str(frame.get("domain_concept") or "") == "RECIPE"
+        and str(frame.get("operation_class") or "") == "CREATE"
+        and frame_filters.get("recipe_import") is True
+    ):
+        filtered = [
+            item for item in filtered
+            if item.get("binding") == "manage_recipes"
+            and item.get("action_id") == "commit_import"
+        ]
     if (
         frame.get("domain_concept") == "SERVICE"
         and frame.get("operation_class") == "EXECUTE"
@@ -4247,7 +4262,7 @@ def project_action_selection(
             # The model chooses the already-authorized Action; structured
             # fields come from the user's explicit recipe draft, never from
             # model prose.  InventoryService still validates and verifies it.
-            from src.intent_contracts import recipe_create_payload
+            from src.intent_contracts import recipe_create_payload, recipe_requested_name, recipe_source_url
             draft = recipe_create_payload(query)
             if draft:
                 payload.update(draft)
@@ -4256,15 +4271,13 @@ def project_action_selection(
                 # Action.  The executor acquires the untrusted source,
                 # validates a RecipeDraft, and only then calls InventoryService;
                 # the model never supplies or persists the recipe contents.
-                url_match = re.search(r"https?://[^\s)>]+", query, re.IGNORECASE)
-                if url_match:
-                    payload["source_url"] = url_match.group(0).rstrip(".,")
-                    from src.intent_contracts import recipe_requested_name
-                    requested_name = recipe_requested_name(query)
+                source_url = str(frame_filters.get("recipe_source_url") or "").strip() or recipe_source_url(query)
+                if source_url:
+                    payload["source_url"] = source_url
+                    requested_name = str(frame_filters.get("recipe_requested_name") or "").strip() or recipe_requested_name(query)
                     if requested_name:
                         payload["requested_name"] = requested_name
-                    if str(item.get("action_id") or "") == "commit_import":
-                        payload["action"] = "commit_import"
+                    payload["action"] = "commit_import"
         if (
             str(frame.get("domain_concept") or "") in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"}
             and str(frame.get("operation_class") or "") in {"CREATE", "EXECUTE"}
