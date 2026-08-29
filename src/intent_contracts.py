@@ -1766,7 +1766,7 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     # canonical Memory mutation, even when the continuation classifier would
     # otherwise treat the short sentence as a generic follow-up.
     if re.search(
-        r"\b(?:that(?:'s|\s+isn't)\s+not\s+true(?:\s+anymore)?|"
+        r"\b(?:that(?:'s|\s+is|\s+isn't)\s+not\s+true(?:\s+anymore)?|"
         r"no\s+longer\s+true|that(?:'s|\s+is)\s+wrong|"
         r"i\s+was\s+wrong\s+about\s+(?:that|it))\b",
         q,
