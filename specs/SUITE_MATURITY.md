@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Populated Memory live-Qwen checkpoint — candidate `3a0d9555` (2026-08-29)
+
+The populated Memory owner journey passed in the isolated disposable browser
+deployment with normal login, `qwen3:8b`, one ordinary owner read, and two
+independent canonical readbacks. False success, raw final Result, duplicate
+delivery, and abrupt EOF were zero. Broader recall/correction and reference
+journeys remain the immediate Memory gap.
+
 ## Qualitative Recipe review workflow checkpoint — candidate `3a0d9555` (2026-08-29)
 
 Ordinary sectioned recipe text with qualitative amounts now produces an

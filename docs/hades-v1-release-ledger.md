@@ -2,6 +2,17 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Populated Memory live-Qwen checkpoint — candidate `3a0d9555` (2026-08-29)
+
+`OWNER-MEMORY-POPULATED-001` passed in the isolated disposable deployment on
+the exact candidate. The browser used the normal login and chat surface with
+the configured `qwen3:8b` endpoint, returned the seeded durable Memory fact,
+and completed two independent canonical readbacks. The journey had one
+ordinary owner read and zero false successes, raw final Results, duplicate
+delivery, or abrupt EOF. This closes the previously unverified live-Qwen
+evidence for this narrow populated-Memory read; everyday recall, correction,
+contradiction, and reference-chain journeys remain open.
+
 ## Qualitative Recipe review workflow checkpoint — candidate `3a0d9555` (2026-08-29)
 
 The qualitative-ingredient owner journey exposed two product defects. The
