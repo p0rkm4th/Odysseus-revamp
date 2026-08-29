@@ -742,3 +742,15 @@ Qwen3:8B was reachable from the candidate namespace. The owner deployment was
 not changed. Full regression on the executable checkpoint was `6932 passed,
 5 skipped, 6 known storage-preflight environment failures`; the six failures
 remain classified as fixture/environment failures, not silently passed.
+
+## Recipe URL approval acceptance checkpoint — `1c8c22a7`
+
+The exact isolated authenticated browser request for the Sunday Supper URL
+reached `manage_recipes/commit_import` and completed normal approval
+continuation. The public source had an unquantified `salt and pepper`
+ingredient, so fail-closed review behavior was correct: no recipe persisted and
+the user received a bounded no-save answer. The run reported one terminal
+`[DONE]`, `falseSuccess=0`, zero raw final results, zero duplicate delivery,
+and zero abrupt EOF. Requested name and URL remain covered by the canonical
+projection regression. Complete-source persistence remains a separate pending
+acceptance case; owner deployment was unchanged.

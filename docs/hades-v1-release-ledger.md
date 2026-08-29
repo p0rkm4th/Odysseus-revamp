@@ -344,3 +344,19 @@ were removed; owner deployment was unchanged.
 - Full executable regression: `6932 passed, 5 skipped, 6 known
   storage-preflight environment failures`; the environment failures remain
   explicitly isolated.
+
+## Recipe URL import acceptance checkpoint — `1c8c22a7` (2026-08-29)
+
+- The exact isolated authenticated browser request for the named Sunday
+  Supper recipe reached `manage_recipes/commit_import` and completed normal
+  approval continuation.
+- The source had an unquantified `salt and pepper` ingredient. Review-required
+  fail-closed behavior was correct: no recipe persisted and the answer said no
+  recipe was saved.
+- Browser result: `PASS`, one terminal `[DONE]`, `falseSuccess=0`, zero raw
+  final results, zero duplicate delivery, and zero abrupt EOF.
+- Requested name and source URL remain preserved by the canonical mixed-
+  capability projection regression. Complete-source persistence is still
+  pending. Executable candidate remains `odysseus:candidate-5c9e1be` with image
+  `sha256:96d8f900e19f0f43e2df15d07fe48da147a7d12498740cc50683643cf4cf42b`;
+  test-only HEAD is `1c8c22a7`, and owner deployment was unchanged.
