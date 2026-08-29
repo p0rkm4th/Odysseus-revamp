@@ -1872,6 +1872,12 @@ about me?" read on Qwen3:8B. Canonical setup/readback verification recorded
 two readbacks and one terminal stream; false success, raw final Result,
 duplicate delivery, and abrupt EOF were zero.
 
+## Current Work-overview checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+The disposable Work overview fixture passed three ordinary read turns on the
+exact candidate with two canonical readbacks and three terminal streams. No
+false success, raw final Result, duplicate delivery, or abrupt EOF occurred.
+
 ## Current continuation safety checkpoint — executable candidate `1a2b62e5` (2026-08-29)
 
 Owner testing found two related control-plane defects: bare `Restart it.`

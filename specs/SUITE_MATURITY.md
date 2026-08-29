@@ -1428,6 +1428,12 @@ The populated-memory fixture now has live exact-candidate Qwen browser
 evidence: one read turn, two canonical readbacks including reload, and zero
 false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+## Current Work-overview maturity — `1a2b62e5` (2026-08-29)
+
+Work overview now has exact-candidate Qwen browser evidence across three read
+turns, with two canonical readbacks and zero false success, raw final Result,
+duplicate delivery, or abrupt EOF.
+
 ## Current Work task mutation checkpoint — `a784b35e` (2026-08-29)
 
 The exact Work task mutation/readback journey passed on a fresh isolated
