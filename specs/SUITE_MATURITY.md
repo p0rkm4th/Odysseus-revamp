@@ -4,7 +4,7 @@ This ledger records observed owner-journey maturity on the post-merge
 `hades-v1-productization` branch. A registered capability is not evidence that
 the complete journey works.
 
-## Current evidence boundary — branch `558d6062` (2026-08-29)
+## Current evidence boundary — branch `2e58a5fe` (2026-08-29)
 
 The retained exact executable candidates have fresh isolated browser evidence for
 complete text Recipe create/readback/reload; URL Recipe create/readback/reload;
@@ -16,14 +16,18 @@ do not establish owner-data correctness or imply that the remaining partial
 suites are complete. Network live acceptance and broader cross-suite/fresh-
 install suite coverage remain separate gates. Work task creation through chat is
 also verified on evaluator candidate `a91c1623`; executable and documentation
-evidence boundaries remain distinct below.
+evidence boundaries remain distinct below. Populated Memory coverage is now
+defined in the owner-journey corpus, but its live Qwen browser execution is
+unverified on `2e58a5fe`: the container reached the configured Ollama endpoint
+and exposed `qwen3:8b`, while `/api/models` returned no usable endpoint to the
+browser runner. This is an integration/environment result, not a product pass.
 
 | Suite | Existing canonical owner | Current state | Verified journeys | Immediate gap | V1 disposition |
 |---|---|---|---|---|---|
 | Homelab / Network / Infrastructure | `AssetInventory`, `HomelabOperations`, `NetworkState`, ACI contracts | IMPLEMENTED / PARTIAL | asset list/detail, network context/observations, host inspection, aggregate and target-qualified service status rendering | service target execution/readback and broader browser journeys | Tier 1 active |
 | Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | overview, owner-scoped location/item/list/search/get contracts, natural-language add/use/readback, reload persistence, deterministic stock/expiry rendering, fresh isolated browser mutation/readback | broader fresh-install journeys and wider household coverage | Tier 1 active |
 | Recipes / Meal Planning | existing `InventoryRecipe`, `RecipeService`, stock planner, and Cookbook code | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | canonical list/search/get, pantry coverage, deterministic shopping requirements and serving scale, expiring-inventory candidates, text/URL import, bounded YouTube metadata/transcript evidence, verified persistence/readback/reload, explicit Result contracts, isolated Qwen/browser trajectories | meal-plan mutation and broader fresh-install journeys | Tier 1 active |
-| Memory / Personal Knowledge | Memory store, grounding, `read_memory` | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | deterministic owner reads, stale/current precedence, empty-state authenticated browser read with final answer and reload-safe delivery | broaden everyday recall/correction journeys | Tier 1 next |
+| Memory / Personal Knowledge | Memory store, grounding, `read_memory` | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | deterministic owner reads, stale/current precedence, empty-state authenticated browser read with final answer and reload-safe delivery, populated-memory journey contract with isolated fixture setup | live Qwen execution of populated-memory journey; broaden everyday recall/correction journeys | Tier 1 next |
 | Work / Projects / Tasks | Work Engine, Runs, Actions, `read_work` | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | overview, attention, continuation and persistence tests, empty-state authenticated browser read with final answer and reload-safe delivery, project and task creation through natural-language chat with canonical readback/reload proof | cross-suite remediation/task journeys and broader fresh-install coverage | Tier 1 active |
 | OSINT / Public Research | public web evidence and OSINT contracts | PARTIAL | contract/security characterization | end-to-end case/evidence/report journey | Tier 2 |
 | Security Assessment / Pentest | security engagement/scope/finding contracts | PARTIAL | authorization and policy tests | bounded assessment-to-finding journey | Tier 2 |
