@@ -1,5 +1,16 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Work workspace owner UX checkpoint — `4c7696a3` (2026-08-29)
+
+The Work workspace now uses the shared Hades `styledPrompt` for goal creation;
+native browser prompts are no longer part of the owner flow. Goal, project, and
+task details present readable status/description fields first, with the full
+canonical record retained behind a collapsed `Technical record` disclosure.
+Frontend syntax/static validation and focused UI/layout tests passed (`11`).
+The exact pushed candidate was built as `odysseus:candidate-4c7696a3e7aa`,
+image `sha256:5386055c9d2bbe9321f5af5fd00cd19a26f817c1e3f4094a318b2fb0703ae828`;
+owner deployment was not changed.
+
 This ledger records observed owner-journey maturity on the post-merge
 `hades-v1-productization` branch. A registered capability is not evidence that
 the complete journey works.
