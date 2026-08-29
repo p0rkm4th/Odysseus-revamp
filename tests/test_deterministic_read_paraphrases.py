@@ -286,6 +286,23 @@ Calories 520'''
     assert len(draft.ingredients) == 3
 
 
+def test_sectioned_recipe_with_qualitative_amounts_uses_import_review_path():
+    query = '''Please save this in my recipe book as "Web Review Dinner".
+
+Ingredients
+- 1 cup rice
+- salt to taste
+- oil as needed
+
+Instructions
+Cook the rice and season it.'''
+    frame = compile_intent(query)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.operation_class == "CREATE"
+    assert frame.filters["recipe_import"] is True
+    assert resolve_intent(frame).action_id == "commit_import"
+
+
 def test_recipe_draft_rejects_missing_or_ambiguous_sections_without_mutation():
     assert recipe_create_draft(
         'Add the following to my recipes as "Dinner": Ingredients: chicken. Instructions: cook it.'

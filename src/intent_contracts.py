@@ -2296,6 +2296,19 @@ def compile_intent(
         requested_name = recipe_requested_name(text)
         if requested_name:
             reference_filters["recipe_requested_name"] = requested_name
+    if (
+        concept == "RECIPE"
+        and operation == "CREATE"
+        and not recipe_create_payload(text)
+        and re.search(r"(?is)\b(?:ingredients?|what you need)\b.{0,12000}\b(?:instructions?|directions?|method|steps?)\b", text)
+    ):
+        # Sectioned pasted recipe evidence is an import even without a URL.
+        # Keep it on the validated import path so qualitative or ambiguous
+        # amounts become an editable review draft instead of a generic add.
+        reference_filters["recipe_import"] = True
+        requested_name = recipe_requested_name(text)
+        if requested_name:
+            reference_filters["recipe_requested_name"] = requested_name
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
