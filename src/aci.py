@@ -3886,6 +3886,26 @@ def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
         return "I couldn't retrieve the owner's remembered information. No memory was inferred."
 
 
+def canonical_work_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render only a verified Work mutation; model prose is not evidence."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_work"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0) or event.get("success") is not True:
+        return None
+    try:
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    project = payload.get("project") if isinstance(payload, Mapping) else None
+    if not isinstance(payload, Mapping) or payload.get("status") != "VERIFIED" or not isinstance(project, Mapping) or not project.get("id"):
+        return None
+    title = str(project.get("title") or "the project").strip()
+    return f"Created project {title!r}; the canonical Work readback is verified."
+
+
 def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render a bounded structured Work read without model synthesis."""
     event = next(
@@ -4004,6 +4024,7 @@ def canonical_result_answer(
     candidates = (
         (canonical_recipe_mutation_answer(tool_events), "recipe mutation Result"),
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
+        (canonical_work_mutation_answer(tool_events), "Work mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
@@ -4454,6 +4475,16 @@ def project_action_selection(
                 if str(item.get("action_id") or "") == "add_item"
                 else inventory_consume_stock_payload(query)
             )
+            if draft:
+                payload.update(draft)
+        if (
+            str(frame.get("domain_concept") or "") == "PROJECT"
+            and str(frame.get("operation_class") or "") == "CREATE"
+            and str(item.get("binding") or "") == "manage_work"
+            and str(item.get("action_id") or "") == "create"
+        ):
+            from src.intent_contracts import work_project_create_payload
+            draft = work_project_create_payload(query)
             if draft:
                 payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":

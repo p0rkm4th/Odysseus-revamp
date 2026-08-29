@@ -343,6 +343,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "manage_security_assessment": "security.assessment.read",
     "read_memory": "memory.read",
     "read_work": "work.read",
+    "manage_work": "work.project.manage",
     "read_household": "household.read",
     "read_recipes": "recipe.read",
     "manage_recipes": "recipe.manage",

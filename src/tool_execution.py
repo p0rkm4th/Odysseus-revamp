@@ -1825,6 +1825,40 @@ async def _execute_read_work_binding(block, owner=None):
         return "read_work", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_manage_work_binding(block, owner=None):
+    """Persist a bounded Work project and verify its canonical readback."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        if str(payload.get("action") or "").strip().casefold() != "create":
+            raise ValueError("unsupported Work mutation")
+        if not owner:
+            raise PermissionError("authenticated Work owner is required")
+        title = str(payload.get("title") or "").strip()
+        if not 1 <= len(title) <= 300:
+            raise ValueError("project title is required")
+        from core.database import SessionLocal
+        from core.work_models import WorkProject
+        from src.work_engine import WorkEngine
+        with SessionLocal() as db:
+            service = WorkEngine(db)
+            project = service.create_project(owner, {
+                "title": title,
+                "description": str(payload.get("description") or ""),
+                "domain": str(payload.get("domain") or "general"),
+            })
+            readback = db.query(WorkProject).filter_by(id=project["id"], owner=owner).one_or_none()
+            if readback is None or readback.title != project["title"]:
+                raise ValueError("project readback did not match persisted project")
+            result = {
+                "status": "VERIFIED", "success": True, "action": "create",
+                "project": project, "canonical_store": "work_engine",
+                "verification": {"status": "VERIFIED"},
+            }
+        return "manage_work", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result, "verified": True}
+    except Exception as exc:
+        return "manage_work", {"error": str(exc), "output": str(exc), "exit_code": 1, "success": False}
+
+
 async def _execute_read_household_binding(block, owner=None):
     """Adapt canonical Household Inventory reads to the binding registry."""
     try:
@@ -2160,6 +2194,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "manage_security_assessment": _execute_security_assessment_binding,
     "read_memory": _execute_read_memory_binding,
     "read_work": _execute_read_work_binding,
+    "manage_work": _execute_manage_work_binding,
     "read_household": _execute_read_household_binding,
     "read_recipes": _execute_read_recipes_binding,
     "manage_recipes": _execute_manage_recipes_binding,
