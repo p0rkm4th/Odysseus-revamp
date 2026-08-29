@@ -3586,9 +3586,25 @@ def canonical_tool_result_projection(
             key: value for key, value in payload.items()
             if isinstance(value, list)
         }
+        items = {}
+        for key, values in collections.items():
+            projected_items = []
+            for value in values[:20]:
+                if not isinstance(value, Mapping):
+                    continue
+                title = str(value.get("title") or value.get("name") or "").strip()
+                if not title:
+                    continue
+                row = {"title": title[:200]}
+                status = str(value.get("status") or "").strip()
+                if status:
+                    row["status"] = status[:64]
+                projected_items.append(row)
+            items[key] = projected_items
         return {
             "status": payload.get("status"),
             "collections": {key: len(value) for key, value in collections.items()},
+            "items": items,
             "total": sum(len(value) for value in collections.values()),
         }
     action = str(payload.get("action") or "").strip()
@@ -3862,7 +3878,16 @@ def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str 
             f"{key.replace('_', ' ')}={value}"
             for key, value in sorted(counts.items()) if value
         )
-        return f"I found {total} work record{'s' if total != 1 else ''} ({labels})."
+        lines = [f"I found {total} work record{'s' if total != 1 else ''} ({labels})."]
+        items = projection.get("items")
+        if isinstance(items, Mapping):
+            for key in sorted(items):
+                for item in items[key] if isinstance(items[key], list) else ():
+                    if not isinstance(item, Mapping) or not str(item.get("title") or "").strip():
+                        continue
+                    status = str(item.get("status") or "").strip()
+                    lines.append(f"- {item['title']}" + (f" ({status})" if status else ""))
+        return "\n".join(lines)
     try:
         payload = json.loads(str(event.get("output") or ""))
     except (TypeError, ValueError):

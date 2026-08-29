@@ -156,17 +156,52 @@ async function seedHouseholdAcceptanceState(page) {
   });
 }
 
+async function seedWorkAcceptanceState(page) {
+  // These owner-scoped calls establish prerequisite state only. The tested
+  // read still enters through natural-language chat on the disposable owner.
+  return page.evaluate(async () => {
+    const suffix = Date.now().toString(36);
+    const projectResponse = await fetch('/api/work/projects', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({title: `Acceptance infrastructure ${suffix}`, domain: 'homelab'}),
+    });
+    if (!projectResponse.ok) throw new Error(`work acceptance project setup failed (${projectResponse.status})`);
+    const project = await projectResponse.json();
+    if (!project?.id) throw new Error('work acceptance project setup returned no id');
+    const taskResponse = await fetch('/api/work/tasks', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({
+        project_id: project.id,
+        title: 'Record acceptance service migration',
+        status: 'pending',
+      }),
+    });
+    if (!taskResponse.ok) throw new Error(`work acceptance task setup failed (${taskResponse.status})`);
+    const task = await taskResponse.json();
+    const overviewResponse = await fetch('/api/work/overview', {credentials: 'same-origin'});
+    if (!overviewResponse.ok) throw new Error(`work acceptance readback failed (${overviewResponse.status})`);
+    const overview = await overviewResponse.json();
+    if (!(overview.tasks || []).some((row) => row.id === task.id)) {
+      throw new Error('work acceptance task was not present in canonical overview');
+    }
+    return {projectId: project.id, taskId: task.id, taskTitle: task.title};
+  });
+}
+
 function seedCanonicalAssetFixture(scenarios) {
   const setups = [...new Set(scenarios.map((scenario) => scenario.fixture_setup).filter(Boolean))];
-  if (!setups.length) return null;
-  if (setups.length !== 1 || !['canonical_asset_atlas_erebus', 'canonical_asset_no_4090'].includes(setups[0])) {
+  const assetSetups = setups.filter((setup) => ['canonical_asset_atlas_erebus', 'canonical_asset_no_4090'].includes(setup));
+  if (!assetSetups.length) return null;
+  if (setups.length !== 1 || assetSetups.length !== 1) {
     throw new Error(`unsupported or mixed canonical asset fixture setup: ${setups.join(', ')}`);
   }
   const database = String(process.env.HADES_BROWSER_CANONICAL_ASSET_DB || '').trim();
   if (!database || !externalAcceptance) {
     throw new Error('canonical asset browser fixtures require an explicit disposable external acceptance database');
   }
-  const assets = setups[0] === 'canonical_asset_atlas_erebus'
+  const assets = assetSetups[0] === 'canonical_asset_atlas_erebus'
     ? [
       ['acceptance-atlas', 'Atlas', '64 GB', 'RTX Fixture A'],
       ['acceptance-erebus', 'Erebus', '128 GB', 'RTX Fixture B'],
@@ -319,6 +354,14 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
       throw new Error(`${scenario.id} inventory readback quantity mismatch`);
     }
     return {phase, kind: spec.kind, found: true, quantity};
+  }
+  if (spec.kind === 'work' && spec.contains_title) {
+    const tasks = Array.isArray(result.payload?.tasks) ? result.payload.tasks : [];
+    const wanted = String(spec.contains_title).trim().toLowerCase();
+    if (!tasks.some((task) => String(task?.title || '').trim().toLowerCase() === wanted)) {
+      throw new Error(`${scenario.id} work readback missing canonical task`);
+    }
+    return {phase, kind: spec.kind, found: true};
   }
   throw new Error(`${scenario.id} uses unsupported readback kind`);
 }
@@ -639,6 +682,9 @@ async function main() {
     }
     if (scenarios) {
       diagnostics.assetSeed = seedCanonicalAssetFixture(scenarios);
+      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_overview')) {
+        diagnostics.workSeed = await seedWorkAcceptanceState(page);
+      }
     }
 
     // Start tracing only after the login response, so the password cannot be

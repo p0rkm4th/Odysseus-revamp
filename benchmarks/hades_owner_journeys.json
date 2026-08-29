@@ -84,6 +84,14 @@
       "fixture_profile": "empty-work",
       "turns": [{"prompt": "What work is outstanding?", "expected": {"domain": "WORK", "operation": "READ", "action": "overview", "tool_binding": "read_work", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["no outstanding work", "no work", "nothing outstanding", "no records"]}}],
       "expected": {"action": "overview", "tool_binding": "read_work", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-WORK-OVERVIEW-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "work-overview",
+      "fixture_setup": "canonical_work_overview",
+      "turns": [{"prompt": "What work is outstanding?", "expected": {"domain": "WORK", "operation": "READ", "action": "overview", "tool_binding": "read_work", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Record acceptance service migration"], "must_include_any": []}}],
+      "expected": {"action": "overview", "tool_binding": "read_work", "policy": "allowed", "approval": "not_required", "readback": {"kind": "work", "endpoint": "/api/work/overview", "contains_title": "Record acceptance service migration"}, "terminal": {"done": 1, "abrupt_eof": false}}
     }
   ]
 }

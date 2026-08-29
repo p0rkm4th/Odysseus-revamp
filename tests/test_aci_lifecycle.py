@@ -529,6 +529,7 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     assert projection == {
         "status": "SUCCESS_EMPTY",
         "collections": {"goals": 0, "projects": 0, "tasks": 0, "commitments": 0, "runs": 500},
+        "items": {"goals": [], "projects": [], "tasks": [], "commitments": [], "runs": []},
         "total": 500,
     }
     projected_work = canonical_result_answer([{
@@ -537,6 +538,16 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     }])
     assert projected_work is not None
     assert "No outstanding work" in projected_work.content
+
+    named_projection = canonical_tool_result_projection("read_work", {"output": json.dumps({
+        "status": "SUCCESS_WITH_DATA", "tasks": [{"id": "private", "title": "Review host health", "status": "pending"}],
+    })})
+    named_work = canonical_result_answer([{
+        "tool": "read_work", "exit_code": 0, "result_projection": named_projection,
+    }])
+    assert named_work is not None
+    assert "Review host health" in named_work.content
+    assert "private" not in named_work.content
 
     work_with_execution_history = canonical_result_answer([{
         "tool": "read_work", "exit_code": 0,
