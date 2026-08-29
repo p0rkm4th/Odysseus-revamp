@@ -39,6 +39,16 @@ This full run validates the current source tree; the exact candidate image was
 also independently verified healthy, but the owner deployment was not
 replaced.
 
+The follow-on UI checkpoint `f4227c9a` presents the same canonical location
+projection in the Household workspace: named storage locations show bounded
+item/stock totals, and item rows show their resolved location when available.
+`node --check static/js/intelligence.js` and the focused UI/Household tests
+passed (`9` tests). The exact candidate image
+`sha256:4c32c5bfe61621dd921c7e66fec17560c760bee1e275f991771f6d09ea1929de`
+was verified with OCI/running source `f4227c9a5262a6944b0b1e295d47415f5edf9fa7`,
+healthy status, zero restarts, and in-container Qwen3:8B reachability. The
+owner deployment was not replaced.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
