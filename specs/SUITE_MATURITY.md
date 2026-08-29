@@ -654,3 +654,13 @@ streams, `3` DONE events, `2` readback checks, zero false-success claims, zero
 raw final results, zero duplicate delivery, and zero abrupt EOF. The
 acceptance principal was revoked and its temporary credential removed; owner
 deployment was not changed.
+
+## Asset filter owner-journey checkpoint — `d41c67fc`
+
+The isolated browser/chat journey for `Which of my servers has an RTX 4090?`
+passed against a canonical CMDB containing incomplete and duplicate-like
+synthetic assets but no RTX 4090. The route used `manage_assets/list` and
+returned a bounded deterministic no-match answer rather than raw asset JSON or
+an invented server. It produced one persisted final answer and one `[DONE]`,
+with zero raw-final results, duplicate delivery, or abrupt EOF. This was a
+read-only disposable run; the owner deployment was not changed.

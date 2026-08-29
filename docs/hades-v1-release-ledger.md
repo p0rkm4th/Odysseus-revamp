@@ -255,4 +255,14 @@ E6.
   OCI/source marker matched, health was healthy, and restart count was `0`.
   Qwen3:8B was reachable from the candidate namespace. The disposable
   acceptance principal and credential were revoked/removed; owner deployment
-  remained unchanged.
+remained unchanged.
+
+## Productization Asset filter checkpoint — `d41c67fc` (2026-08-29)
+
+- The exact disposable browser/chat journey for `Which of my servers has an
+  RTX 4090?` passed against incomplete/duplicate-like synthetic canonical
+  assets with no 4090. It used `manage_assets/list` and returned a bounded
+  deterministic no-match answer with no invented server or raw JSON final.
+- The run had one persisted answer, one `[DONE]`, zero raw final results,
+  zero duplicate delivery, and zero abrupt EOF. No executable source changed;
+  owner deployment remained unchanged.
