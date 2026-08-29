@@ -1597,10 +1597,23 @@ def run_post_response_tasks(
     """
     _extraction_jobs: list = []
 
+    # Explicit owner-memory mutations already have a canonical Action and
+    # verified Result. Running the heuristic background extractor on the same
+    # turn can create a second normalized record, making a later Forget leave
+    # apparent stale reality behind. Keep one semantic owner for these turns.
+    _aci_intent = last_metrics.get("aci_intent") if isinstance(last_metrics, dict) else {}
+    _explicit_memory_mutation = (
+        isinstance(_aci_intent, dict)
+        and _aci_intent.get("domain_concept") == "MEMORY"
+        and _aci_intent.get("operation_class") in {"CREATE", "UPDATE", "DELETE"}
+    )
+
     # Memory extraction — only every 4th message pair to avoid excess LLM calls
     _msg_count = len(sess.history) if hasattr(sess, 'history') else 0
     _should_extract = (_msg_count >= 4) and (_msg_count % 4 == 0)
-    if allow_background_extraction and not incognito and not compare_mode and _should_extract and uprefs.get("auto_memory", True):
+    if (allow_background_extraction and not _explicit_memory_mutation
+            and not incognito and not compare_mode and _should_extract
+            and uprefs.get("auto_memory", True)):
         from services.memory.memory_extractor import extract_and_store
         from src.task_endpoint import resolve_task_endpoint
         t_url, t_model, t_headers = resolve_task_endpoint(
