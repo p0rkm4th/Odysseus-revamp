@@ -1354,3 +1354,8 @@ mutation/readback verification, reload persistence, zero false success, zero
 raw final Results, zero duplicate delivery, and zero abrupt EOF. Independent
 SQLite readback confirmed the final quantity was 2. Focused coverage passed
 285 tests; the current full regression passed 6987 tests with 8 skips.
+
+The exact candidate also passed the isolated Work project mutation journey:
+chat-created canonical project state was independently read back and survived
+reload, with zero false success, raw final Result, duplicate delivery, or
+abrupt EOF.

@@ -1724,3 +1724,9 @@ The clean fresh-install stack initially returned HTTP 400 for session creation
 because no model endpoint existed. Registering Qwen3:8B through the normal
 admin model-endpoint setup route resolved it. This remains a fresh-install
 onboarding/release gap to improve, not a feature-acceptance failure.
+
+The same exact candidate also passed the isolated Work project mutation journey:
+one natural-language project creation followed by canonical readback and
+reload readback. The mutation entered through chat, not fixture setup; there
+were zero false successes, raw final Results, duplicate delivery, or abrupt
+EOFs.
