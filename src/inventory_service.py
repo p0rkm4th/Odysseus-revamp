@@ -1147,7 +1147,9 @@ class RecipeService(InventoryService):
         """Dispatch the narrow model-facing recipe action vocabulary."""
         action = str(args.get("action") or "")
         if action == "prepare_import":
-            from src.intent_contracts import recipe_import_draft, recipe_import_review
+            from src.intent_contracts import (
+                recipe_import_draft, recipe_import_review, recipe_import_review_draft,
+            )
             draft = recipe_import_draft(
                 args.get("source_text"),
                 source_url=args.get("source_url"),
@@ -1160,6 +1162,22 @@ class RecipeService(InventoryService):
                 requested_name = str(args.get("requested_name") or "").strip()
                 if requested_name:
                     review["requested_name"] = requested_name[:200]
+                editable = recipe_import_review_draft(
+                    args.get("source_text"),
+                    source_url=args.get("source_url"),
+                    requested_name=requested_name,
+                )
+                if editable is not None:
+                    review = {**review, **editable.get("review", {})}
+                    return {
+                        "status": "NEEDS_REVIEW", "draft": editable,
+                        "source_url": args.get("source_url"),
+                        "message": (
+                            "I found a recipe draft, but some ingredient amounts "
+                            "need your review before anything can be saved."
+                        ),
+                        "review": review,
+                    }
                 return {
                     "status": "NEEDS_REVIEW", "draft": None,
                     "source_url": args.get("source_url"),

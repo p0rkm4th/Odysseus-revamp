@@ -349,6 +349,89 @@ def recipe_import_review(source_text: str | None, *, source_url: str | None = No
     }
 
 
+def recipe_import_review_draft(
+    source_text: str | None,
+    *,
+    source_url: str | None = None,
+    requested_name: str | None = None,
+) -> dict[str, Any] | None:
+    """Build an editable, non-committable draft from sectioned owner text.
+
+    ``RecipeDraft`` intentionally rejects unknown quantities before commit.
+    That is the right persistence boundary, but returning no draft leaves a
+    human with only a Retry button.  For ordinary pasted recipe text, retain
+    the recognizable title, instructions, and ingredient names while leaving
+    uncertain quantities blank for explicit correction in the UI.  This helper
+    returns a plain review payload, not a ``RecipeDraft``; the commit endpoint
+    still runs the strict validator and therefore cannot persist this payload
+    until every amount is repaired.
+    """
+    text = str(source_text or "").strip()
+    ingredients_text = _recipe_section(text, "ingredients", "instructions")
+    instructions = _recipe_section(text, "instructions")
+    if not ingredients_text or not instructions:
+        return None
+
+    name = str(requested_name or "").strip()[:200] or _recipe_name(text)
+    if not name:
+        heading_match = re.search(r"(?mi)^\s*ingredients\s*:?\s*$", text)
+        before_ingredients = text[:heading_match.start()] if heading_match else ""
+        candidates = [line.strip(" #-\t") for line in before_ingredients.splitlines() if line.strip()]
+        if candidates:
+            candidate = candidates[-1].strip("\"'")
+            if 1 <= len(candidate) <= 200:
+                name = candidate
+    if not name:
+        return None
+
+    servings_match = re.search(
+        r"\b(?:serves?|servings?)\s*[:]?\s*(\d+(?:\.\d+)?)",
+        text, re.IGNORECASE,
+    )
+    servings: int | float = float(servings_match.group(1)) if servings_match else 1
+    if isinstance(servings, float) and servings.is_integer():
+        servings = int(servings)
+
+    ingredients: list[dict[str, Any]] = []
+    for raw_line in (line.strip() for line in ingredients_text.splitlines() if line.strip()):
+        item = re.sub(r"^(?:[-*•]|\d+[.)])\s*", "", raw_line).strip().strip(".")
+        parsed = _recipe_ingredients(item, split_compact=False)
+        if parsed and len(parsed) == 1:
+            ingredients.append(parsed[0])
+            continue
+        qualitative = re.match(
+            r"^(?P<name>.+?)\s+(?P<note>to taste|as needed|for .+|for garnish)\s*$",
+            item, re.IGNORECASE,
+        )
+        if not qualitative:
+            return None
+        ingredients.append({
+            "name": qualitative.group("name").strip(),
+            "quantity": "",
+            "unit": "each",
+            "review_note": qualitative.group("note").strip().lower(),
+        })
+    if not ingredients:
+        return None
+    missing = [
+        f"{item['name']} ({item['review_note']})"
+        for item in ingredients if item.get("review_note")
+    ]
+    draft: dict[str, Any] = {
+        "action": "commit_import",
+        "name": name,
+        "servings": servings,
+        "ingredients": ingredients[:200],
+        "instructions": instructions.strip()[:20000],
+        "provenance": "owner_review",
+        "review_required": True,
+        "review": {"missing_fields": missing},
+    }
+    if source_url:
+        draft["source_url"] = str(source_url).strip()
+    return draft
+
+
 def recipe_create_payload(query: str) -> dict[str, Any] | None:
     draft = recipe_create_draft(query)
     return draft.as_payload() if draft else None

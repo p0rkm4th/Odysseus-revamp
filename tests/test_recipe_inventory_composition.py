@@ -8,7 +8,9 @@ from core import inventory_models  # noqa: F401 - register inventory tables
 from src.inventory_service import InventoryNotFound, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
 from src.aci import canonical_recipe_read_answer, project_action_selection
-from src.intent_contracts import RecipeDraft, recipe_import_draft, recipe_import_review
+from src.intent_contracts import (
+    RecipeDraft, recipe_import_draft, recipe_import_review, recipe_import_review_draft,
+)
 from src.intent_contracts import compile_intent, resolve_intent
 from types import SimpleNamespace
 
@@ -380,6 +382,31 @@ def test_incomplete_recipe_prepare_preserves_requested_name_in_review_only():
     assert result["status"] == "NEEDS_REVIEW"
     assert result["review"]["requested_name"] == "Owner Dinner"
     assert result["draft"] is None
+    assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"] == []
+
+
+def test_sectioned_qualitative_recipe_returns_editable_review_draft_without_persistence():
+    source = (
+        'Acceptance Taste Test\n\nIngredients\n'
+        '- 1 cup rice\n- salt to taste\n- oil as needed\n\n'
+        'Instructions\nCook the rice and season it.\n'
+    )
+    draft = recipe_import_review_draft(source)
+    assert draft is not None
+    assert draft["name"] == "Acceptance Taste Test"
+    assert draft["ingredients"][0]["quantity"] == 1.0
+    assert draft["ingredients"][1]["quantity"] == ""
+    assert draft["ingredients"][1]["review_note"] == "to taste"
+    assert draft["ingredients"][2]["quantity"] == ""
+    assert draft["review_required"] is True
+
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    prepared = service.manage_recipes(
+        {"action": "prepare_import", "source_text": source}, owner="alice"
+    )
+    assert prepared["status"] == "NEEDS_REVIEW"
+    assert prepared["draft"]["ingredients"][1]["quantity"] == ""
     assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"] == []
 
 
