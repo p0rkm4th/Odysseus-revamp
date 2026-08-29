@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Household mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+`OWNER-HOUSEHOLD-MUTATION-READBACK-001` passed on the exact candidate in an
+isolated disposable owner lane. The browser/chat journey completed 4 turns,
+including 2 owner-facing household mutations, and independently verified both
+canonical state changes. Reload durability was included; false success, raw
+final Results, duplicate delivery, and abrupt EOF were all zero. The journey
+used ordinary owner language and did not seed the behavior under test through
+an API; no owner data was touched.
+
 ## Copied-webpage Recipe mutation checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 `OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001` passed on a clean disposable Recipe
