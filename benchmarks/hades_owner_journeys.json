@@ -59,6 +59,20 @@
         {"prompt": "How many Acceptance Tomatoes do I have?", "expected": {"domain": "HOUSEHOLD", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_household", "must_include_any": ["2", "two"]}}
       ],
       "expected": {"policy": "allowed", "approval": "not_required", "before": {"quantity": 0}, "after": {"quantity": 2, "readback": true}, "readback": {"kind": "inventory", "endpoint": "/api/inventory/overview?expiry_days=30", "item_name": "Acceptance Tomatoes", "quantity": 2}, "terminal": {"done": 4, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-MEMORY-EMPTY-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-memory",
+      "turns": [{"prompt": "What do you know about me?", "expected": {"domain": "MEMORY", "operation": "READ", "action": "summarize_owner_memory", "tool_binding": "read_memory", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["no applicable", "zero", "no memories", "not found"], "forbidden": ["you are definitely", "I know everything"]}}],
+      "expected": {"action": "summarize_owner_memory", "tool_binding": "read_memory", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-WORK-EMPTY-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-work",
+      "turns": [{"prompt": "What work is outstanding?", "expected": {"domain": "WORK", "operation": "READ", "action": "overview", "tool_binding": "read_work", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["no outstanding work", "no work", "nothing outstanding", "no records"]}}],
+      "expected": {"action": "overview", "tool_binding": "read_work", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
     }
   ]
 }
