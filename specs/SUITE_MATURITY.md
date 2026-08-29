@@ -47,6 +47,12 @@ the normal Inventory UI: incomplete imports identify the source/name and
 bounded missing fields instead of surfacing raw Action validation. The exact
 URL remains non-persisting until its missing quantity is supplied or reviewed.
 
+The exact product candidate `c6f07fdb` passed the supported containerized full
+regression with `6925 passed, 6 skipped, 149 warnings`. The six skips are
+documented test skips; the earlier storage-preflight failures were reproduced
+as an artifact of missing configured host storage mounts and disappear when
+those paths are mounted read-only.
+
 ### Recipe ingestion checkpoint — f29eaff1
 
 Recipe creation now has a bounded validated ingestion seam in the existing
