@@ -818,3 +818,12 @@ one `[DONE]`, and zero raw-final results, false-success claims, duplicate
 delivery, or abrupt EOF. The acceptance principal was revoked afterward and
 the disposable Compose project was stopped; no owner deployment or data was
 used, and no meal-plan mutation was started.
+
+## Work overview browser coverage — `ddff65e8` (2026-08-29)
+
+The seeded canonical Work overview journey now passes through the exact
+`odysseus:candidate-d1559078` browser/chat path: one natural-language read,
+two independent canonical readbacks, one `[DONE]`, and zero raw-final
+results, false-success claims, duplicate delivery, or abrupt EOF. The
+acceptance principal and disposable Compose deployment were removed after the
+run; the owner deployment was unchanged.
