@@ -619,6 +619,19 @@ async function main() {
               try {
                 const json = JSON.parse(data);
                 const event = { type: json.type || (json.delta ? 'delta' : json.error ? 'error' : 'unknown') };
+                const outcome = (value, depth = 0) => {
+                  if (!value || typeof value !== 'object' || depth > 3) return;
+                  if (value.success !== undefined && event.success === undefined) event.success = Boolean(value.success);
+                  if (value.verified !== undefined && event.verified === undefined) event.verified = Boolean(value.verified);
+                  if (value.status && !event.status) event.status = String(value.status).slice(0, 80);
+                  for (const key of ['data', 'result', 'verification', 'payload']) {
+                    if (value[key] && typeof value[key] === 'object') outcome(value[key], depth + 1);
+                  }
+                  if (typeof value.content === 'string' && value.content.trim().startsWith('{')) {
+                    try { outcome(JSON.parse(value.content), depth + 1); } catch (_) { /* prose content */ }
+                  }
+                };
+                outcome(json);
                 if (json.delta) { event.deltaLength = String(json.delta).length; record.deltaCount += 1; }
                 if (json.content) event.contentLength = String(json.content).length;
                 if (json.tool) event.tool = String(json.tool).slice(0, 120);
@@ -632,9 +645,9 @@ async function main() {
                     if (command?.action) event.action = String(command.action).slice(0, 120);
                   } catch (_) { /* malformed command remains observable below */ }
                 }
-                if (json.status) event.status = String(json.status).slice(0, 80);
-                if (json.success !== undefined) event.success = Boolean(json.success);
-                if (json.verified !== undefined) event.verified = Boolean(json.verified);
+                if (json.status && !event.status) event.status = String(json.status).slice(0, 80);
+                if (json.success !== undefined && event.success === undefined) event.success = Boolean(json.success);
+                if (json.verified !== undefined && event.verified === undefined) event.verified = Boolean(json.verified);
                 // Tool completion fields may be nested in the transport's
                 // data envelope.  Preserve only the bounded outcome scalars;
                 // raw Result content remains available only in the DOM
