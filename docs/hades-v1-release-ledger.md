@@ -17,6 +17,21 @@ tests. A bounded 100-seed selector audit found no orphaned declared
 continuation. The current branch is `216` commits ahead of `origin/main` and
 zero behind; no merge is implied by that divergence.
 
+## Isolated fresh-start/restart rehearsal — `d1559078` (2026-08-29)
+
+The exact retained executable candidate `odysseus:candidate-d1559078` was
+started in a new Compose project with empty bind-mounted data, logs, and host
+broker directories. The first attempt was stopped before service creation by
+an environment-only Docker subnet collision (`172.30.0.0/16` was already in
+use). A retry selected an explicit unused `172.40.0.0/16` network and passed:
+the application reported healthy, `/app/.odysseus-source-commit` matched
+`d1559078a414d7f2e7a8571ebf75028126121632`, normal first-run admin login
+succeeded, and the authenticated session remained valid after an application
+restart. Restart count was `0` before and after; post-restart health was
+healthy. Only the disposable Compose project and temporary directories were
+removed. This is fresh-start/bootstrap and restart durability evidence; it
+does not claim empty-state suite journeys or owner-data behavior.
+
 The current-tree supported full regression at this checkpoint completed
 `6945 passed, 5 skipped` in `212.46s`. This run includes the evaluator
 selection regressions above. The five skips remain documented test skips; no
