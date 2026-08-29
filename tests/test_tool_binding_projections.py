@@ -60,6 +60,15 @@ def test_native_action_enums_cover_every_registered_action():
             assert capability.actions[action_id].executor_key == name
 
 
+def test_recipe_import_schema_allows_unprepared_commit_payload():
+    """Import arguments are completed by prepare_import, not the model call."""
+    schema = _schema("manage_recipes")["function"]["parameters"]
+    assert schema["required"] == ["action"]
+    assert "requested_name" in schema["properties"]
+    assert "source_url" in schema["properties"]
+    assert "draft" in schema["properties"]
+
+
 def test_projection_has_no_duplicate_conflicting_bindings():
     assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_recipes", "manage_recipes", "read_setup", "read_career", "read_communications", "developer_read", "web_search", "web_fetch"}
     assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 15
