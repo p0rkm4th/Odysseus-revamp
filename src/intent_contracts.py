@@ -203,6 +203,10 @@ def recipe_import_draft(source_text: str | None, *, source_url: str | None = Non
         )
         if script:
             json_text = script.group("body").strip()
+        if json_text.startswith("```"):
+            lines = json_text.splitlines()
+            if len(lines) >= 3 and lines[-1].strip() == "```":
+                json_text = "\n".join(lines[1:-1]).strip()
         if not json_text.startswith(("{", "[")):
             json_text = ""
         try:
