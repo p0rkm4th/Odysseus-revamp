@@ -5133,17 +5133,30 @@ def classify_post_result(result: Any, *, canonical_read: bool = False,
     """
     if not isinstance(result, Mapping):
         return PostResultState.BLOCKED
-    if result.get("approval_required"):
+    # Registered executors may wrap the canonical Result in the transport
+    # envelope's ``data`` member. Use that shape for completion transitions;
+    # otherwise a successful review draft is fed back for repeated selection.
+    result_shape = result
+    if isinstance(result.get("data"), Mapping):
+        result_shape = result["data"]
+    elif isinstance(result.get("output"), str):
+        try:
+            decoded = json.loads(result["output"])
+            if isinstance(decoded, Mapping):
+                result_shape = decoded
+        except (TypeError, ValueError):
+            pass
+    if result_shape.get("approval_required"):
         return PostResultState.NEEDS_APPROVAL
-    if result.get("blocked") or result.get("error") or result.get("success") is False:
+    if result_shape.get("blocked") or result_shape.get("error") or result_shape.get("success") is False:
         return PostResultState.BLOCKED
     if result.get("exit_code") not in (None, 0):
         return PostResultState.BLOCKED
     if unresolved_required_information:
         return PostResultState.NEEDS_CONTEXT
     if (
-        str(result.get("status") or "").upper() == "NEEDS_REVIEW"
-        and isinstance(result.get("draft"), Mapping)
+        str(result_shape.get("status") or "").upper() == "NEEDS_REVIEW"
+        and isinstance(result_shape.get("draft"), Mapping)
     ):
         # Review preparation is a terminal owner-facing outcome for this
         # turn. Feeding the same uncommittable Action back to a weak model
