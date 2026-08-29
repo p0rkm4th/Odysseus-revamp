@@ -30,6 +30,11 @@ window/layout, Household/Recipe surfaces, long-content containment, and
 responsive narrow/mobile behavior against the local healthy application. It
 does not replace authenticated owner-journey evidence.
 
+The current branch also passed frontend static verification
+(`npm run test:frontend`) and the existing windowed browser smoke
+(`browser_window_dogfood: PASS`). These are UI/release checks only and do not
+claim authenticated owner-state acceptance.
+
 ## Current productization checkpoint — `f60d9334`
 
 - Branch `hades-v1-productization` is synchronized with its remote at docs
