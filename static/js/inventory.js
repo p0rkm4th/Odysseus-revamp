@@ -275,7 +275,15 @@ async function onSubmit(event) {
         if (!attachment_ids.length) throw new Error('The recipe image could not be uploaded.');
       }
       const prepared = await api('/api/recipes/import/prepare', {method:'POST', body:JSON.stringify({source_url:data.source_url || null, source_text:data.source_text || null, attachment_ids})});
-      if (!prepared.draft) throw new Error(prepared.message || 'No verified recipe draft was found.');
+      if (!prepared.draft) {
+        const review = prepared.review || {};
+        const missing = Array.isArray(review.missing_fields) ? review.missing_fields.slice(0, 5).join(', ') : '';
+        const name = review.name ? ` for “${review.name}”` : '';
+        throw new Error(
+          `I found the recipe source${name}, but it needs review before anything can be saved.`
+          + (missing ? ` Missing or ambiguous: ${missing}.` : '')
+        );
+      }
       const ingredients = prepared.draft.ingredients || [];
       const summary = `${prepared.draft.name || 'Untitled recipe'}\n${ingredients.length} ingredient(s)\n\n${prepared.draft.instructions || 'No instructions recorded.'}`;
       if (!window.confirm(`Review this unpersisted recipe draft before saving:\n\n${summary}`)) return;

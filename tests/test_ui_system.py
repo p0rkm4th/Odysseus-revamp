@@ -22,6 +22,8 @@ def test_inventory_uses_shared_window_and_form_primitives():
         "source_url",
         "recipes/import/prepare",
         "recipes/import/commit",
+        "needs review before anything can be saved",
+        "missing_fields",
     ):
         assert marker in source
 
