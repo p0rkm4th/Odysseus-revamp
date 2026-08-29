@@ -301,6 +301,12 @@ Cook the rice and season it.'''
     assert frame.operation_class == "CREATE"
     assert frame.filters["recipe_import"] is True
     assert resolve_intent(frame).action_id == "commit_import"
+    assert recipe_requested_name(query) == "Web Review Dinner"
+
+
+def test_recipe_requested_name_accepts_unquoted_owner_override_before_page_text():
+    query = "Please save this in my recipe book as Acceptance Web Paste Dinner. I copied it from a cooking site."
+    assert recipe_requested_name(query) == "Acceptance Web Paste Dinner"
 
 
 def test_recipe_draft_rejects_missing_or_ambiguous_sections_without_mutation():
