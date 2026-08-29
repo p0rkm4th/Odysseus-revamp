@@ -1782,3 +1782,12 @@ abrupt EOF.
 An earlier reused-database replay was rejected before chat because its
 recipe-count precondition no longer held. That was disposable fixture
 contamination, not a product result.
+
+## Current Recipe composition variants — executable candidate `a784b35e` (2026-08-29)
+
+Two additional fresh disposable Compose projects passed the current-candidate
+owner journeys. Expiring-inventory composition passed one natural-language
+request with two canonical readbacks including reload. Shopping requirements
+passed recipe listing and an ordinary request for ingredients to buy, again
+with two canonical readbacks including reload. Both Qwen3:8B GUI runs recorded
+zero false success, raw final Result, duplicate delivery, or abrupt EOF.
