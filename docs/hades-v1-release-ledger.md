@@ -1138,3 +1138,12 @@ and credentials were removed.
 zero duplicate delivery, and zero abrupt EOF. This verifies expiring Kitchen
 stock feeding Recipe candidate selection and pantry coverage. Temporary state
 and credentials were removed.
+## Homelab/Network → Work composition audit — `02690560` (2026-08-29)
+
+The existing Work mutation path was audited for infrastructure composition.
+`manage_work.create_task` requires an explicitly named existing Project, while
+`WorkTask` and its Action projection have no canonical Asset/Service/Workload
+target reference. The requested infrastructure-to-Work journey is therefore
+not yet a supported product path; implementing it would require a defined
+canonical relation contract rather than another prompt route. No production
+change was made and the gap is deferred explicitly.
