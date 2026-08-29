@@ -1067,13 +1067,14 @@ class RecipeService(InventoryService):
         """Dispatch the narrow model-facing recipe action vocabulary."""
         action = str(args.get("action") or "")
         if action == "prepare_import":
-            from src.intent_contracts import recipe_import_draft
+            from src.intent_contracts import recipe_import_draft, recipe_import_review
             draft = recipe_import_draft(args.get("source_text"), source_url=args.get("source_url"))
             if draft is None:
                 return {
                     "status": "NEEDS_REVIEW", "draft": None,
                     "source_url": args.get("source_url"),
                     "message": "The source did not contain enough verified recipe structure to prepare a draft.",
+                    "review": recipe_import_review(args.get("source_text"), source_url=args.get("source_url")),
                 }
             return {"status": "READY_FOR_REVIEW", "draft": draft.as_payload()}
         if action == "list":

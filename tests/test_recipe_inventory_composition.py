@@ -8,7 +8,7 @@ from core import inventory_models  # noqa: F401 - register inventory tables
 from src.inventory_service import InventoryNotFound, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
 from src.aci import canonical_recipe_read_answer
-from src.intent_contracts import RecipeDraft, recipe_import_draft
+from src.intent_contracts import RecipeDraft, recipe_import_draft, recipe_import_review
 from src.intent_contracts import compile_intent, resolve_intent
 from types import SimpleNamespace
 
@@ -223,6 +223,19 @@ def test_recipe_import_parses_unicode_and_mixed_quantities_without_guessing():
         {"name": "flour", "quantity": 0.75, "unit": "cup"},
         {"name": "milk", "quantity": 1.5, "unit": "cups"},
     )
+
+
+def test_incomplete_recipe_import_returns_bounded_review_diagnostics():
+    review = recipe_import_review(
+        '<!-- RECIPE_JSONLD:{"@type":"Recipe","name":"Seasoned Dinner",'
+        '"recipeIngredient":["1 cup rice", "salt and pepper"],'
+        '"recipeInstructions":"Cook it."} -->',
+        source_url="https://example.test/seasoned",
+    )
+    assert review["status"] == "NEEDS_REVIEW"
+    assert review["name"] == "Seasoned Dinner"
+    assert review["source_url"] == "https://example.test/seasoned"
+    assert review["missing_fields"] == ["salt and pepper"]
 
 
 def test_recipe_import_commit_requires_validated_draft_and_verifies_readback():
