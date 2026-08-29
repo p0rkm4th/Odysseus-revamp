@@ -339,6 +339,7 @@ async def test_chat_recipe_url_create_fetches_untrusted_source_before_canonical_
     import src.tool_execution as tool_execution
 
     captured = {}
+    calls = []
 
     async def fetch_source(url, *, owner):
         assert url == "https://recipes.example.test/chicken"
@@ -351,8 +352,16 @@ async def test_chat_recipe_url_create_fetches_untrusted_source_before_canonical_
 
     class FakeService:
         def manage_recipes(self, payload, *, owner):
+            calls.append((dict(payload), owner))
             captured["payload"] = payload
             captured["owner"] = owner
+            if payload.get("action") == "prepare_import":
+                return {"status": "READY_FOR_REVIEW", "draft": {
+                    "action": "add", "name": "URL Dinner", "servings": 2,
+                    "ingredients": [{"name": "rice", "quantity": 1, "unit": "cup"}],
+                    "instructions": "Cook the rice.",
+                    "source_url": "https://recipes.example.test/chicken",
+                }}
             return {"recipe": {"id": "recipe-url-1"}}
 
         def get_recipe(self, owner, recipe_id):
@@ -376,6 +385,10 @@ async def test_chat_recipe_url_create_fetches_untrusted_source_before_canonical_
     assert tool == "manage_recipes"
     assert result["verified"] is True
     assert captured["owner"] == "alice"
+    assert calls[0][0]["action"] == "prepare_import"
+    assert calls[0][0]["source_url"] == "https://recipes.example.test/chicken"
+    assert calls[0][0]["requested_name"] is None
+    assert calls[1][0]["action"] == "commit_import"
     assert captured["payload"]["action"] == "commit_import"
     assert captured["payload"]["draft"]["name"] == "URL Dinner"
     assert captured["payload"]["draft"]["source_url"] == "https://recipes.example.test/chicken"
@@ -398,6 +411,13 @@ async def test_chat_recipe_url_create_applies_explicit_owner_name_after_import(m
     class FakeService:
         def manage_recipes(self, payload, *, owner):
             captured["payload"] = payload
+            if payload.get("action") == "prepare_import":
+                return {"status": "READY_FOR_REVIEW", "draft": {
+                    "action": "add", "name": "Chicken Cordon Bleu with Cheese Sauce", "servings": 2,
+                    "ingredients": [{"name": "rice", "quantity": 1, "unit": "cup"}],
+                    "instructions": "Cook the rice.",
+                    "source_url": "https://recipes.example.test/chicken",
+                }}
             return {"recipe": {"id": "recipe-named-1"}}
 
         def get_recipe(self, owner, recipe_id):
