@@ -222,3 +222,22 @@ E6.
 - The prior full-regression evidence remains `6935 passed, 5 skipped, 1
   environment setup failure`; this checkpoint did not rerun the full suite.
 - Owner deployment remains unchanged.
+
+## Productization checkpoint — `d41c67fc` (2026-08-29)
+
+- Closed the demonstrated Asset RAM owner-journey defect. `how much` is now
+  included in the shared explicit-read predicate, so collection property reads
+  cannot silently fall through to model-only prose.
+- Focused owner/core suite: `535 passed, 2 skipped`.
+- Full current-source suite: `6931 passed, 6 skipped`, with six
+  storage-preflight environment failures because the source-mounted container
+  did not contain `/home/.docker-data`; no product test failures were observed.
+- Pushed source and candidate: `d41c67fcbc5e04dd932712beaf049389a5e1d4d5`,
+  `odysseus:candidate-d41c67fc`, image
+  `sha256:310bdcb9c37e6f1aa0533593ff2160f60e09a3b92a06319b7a9f90b97784f32c`.
+  OCI marker/source matched; candidate health was healthy; restart count `0`.
+- Browser acceptance against the exact disposable candidate passed the RAM
+  property journey with canonical `manage_assets/list`, deterministic answer,
+  correct Atlas/Erebus values, one persisted answer, and one `[DONE]`.
+  Qwen3:8B was reachable from the candidate namespace. Disposable acceptance
+  principal/container were removed; owner deployment was unchanged.
