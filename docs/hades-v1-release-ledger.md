@@ -2,6 +2,25 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe shopping UI/API checkpoint — `4f5c235f` (2026-08-29)
+
+The existing recipe detail route now exposes the deterministic
+`shopping_requirements` read through the existing Inventory Service owner.
+The Recipe detail UI presents missing ingredients or the recorded
+availability state as a readable secondary section instead of making raw
+structured output the primary surface. No new store, router, or authority was
+added. Focused UI/Recipe/binding/journey coverage passed `71` tests; the full
+current-source regression subsequently passed `6952 passed, 5 skipped`.
+
+The exact disposable candidate `odysseus:candidate-4f5c235f804a` has image
+digest
+`sha256:f0fa9396076c3acfa089afe2d5de92e3122c156ba96008726ba5f9f953df34ac`.
+Its OCI marker and running source match
+`4f5c235f804af36aab0c8327d61879497bdf51c9`, health is healthy, and restart
+count is `0`. The owner deployment was not replaced. Qwen3:8B is currently
+unavailable from the configured Hades container endpoint, so live model and
+browser evidence remain unverified for this checkpoint.
+
 ## Latest branch checkpoint — `bb27c5c4`
 
 The productization branch is synchronized with `origin/hades-v1-productization`
