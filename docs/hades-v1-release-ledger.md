@@ -2,6 +2,29 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Network owner-read projection checkpoint — candidate `dcf0a95d` (2026-08-29)
+
+Read-only owner smoke against the actual deployment exposed a user-facing
+projection defect: “Tell me about my network.” returned repeated opaque node
+IDs and no useful distinction between identified records and observations.
+This was classified as `RESULT_PROJECTION_FAILURE` / `UX_CONFUSION`, not an
+execution or persistence failure. The generalized repair preserves bounded
+identity and resolution metadata through Result projection, groups repeated
+observations, separates named records from unidentified/unconfirmed records,
+and includes freshness plus the saved-observation caveat. The source commits
+are `b9a6b482`, `ec5dff0f`, `06672b29`, and `dcf0a95d`.
+
+Focused network coverage passed `7` tests; the full regression passed `6973`
+tests with `7` skips and `186` warnings in `236.92` seconds. Exact candidate
+`odysseus:candidate-dcf0a95d2371` carries source marker and OCI revision
+`dcf0a95d237162158dbd617856aa6cfc13b54b8c`, image
+`sha256:a5c31d6cc9ec5577ee4293e4a09117de817740fe9715706e256fdffe52a8aeff`.
+`OWNER-NETWORK-001` passed in the disposable accumulated-observation fixture:
+one deterministic response, one tool card, zero false success, raw final
+Results, duplicate delivery, or abrupt EOF. Visible replay showed bounded
+named/unconfirmed sections, no opaque IDs, and freshness language. The actual
+owner container remains source `34ced247` and was not rebuilt or mutated.
+
 ## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
 
 The exact candidate stack completed normal first-run setup, authenticated
