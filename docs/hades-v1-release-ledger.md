@@ -47,6 +47,19 @@ This proves the fresh empty-state Recipe mutation/readback lane on the
 retained executable; it is not owner-data evidence and does not cover all
 empty-state suites.
 
+## Household browser fixture callback correction — `d1559078`
+
+The isolated Household journey initially exposed a browser-harness setup
+defect: `seedHouseholdAcceptanceState` destructured an argument its caller did
+not provide, so the run failed before chat execution. The callback now accepts
+no unused argument, and the static browser regression covers that invocation
+shape. Replayed against the exact retained candidate, the four-turn
+natural-language add/read/use/read journey passed with two canonical mutation
+readbacks, four terminal `[DONE]` events, and zero false-success, raw-final-
+result, duplicate-delivery, or abrupt-EOF failures. The earlier failure was
+evaluator infrastructure, not product behavior; the disposable deployment
+and all temporary credentials/state were removed.
+
 ## Fresh empty-state Memory and Work browser reads — `d1559078` (2026-08-29)
 
 Two additional fresh disposable Compose projects exercised the existing
