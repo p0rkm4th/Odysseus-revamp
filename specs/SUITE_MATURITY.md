@@ -1506,3 +1506,10 @@ An unsupported recipe URL with an explicit display name produced a review-safe
 failure and no canonical Recipe mutation. Independent readback confirmed an
 empty store, with zero false success, raw final Result, duplicate delivery, or
 abrupt EOF.
+
+## Current authenticated UI smoke — `1a2b62e5` (2026-08-29)
+
+Desktop and 390px narrow authenticated checks passed for navigation icon
+uniqueness, viewport containment, shared Inventory chrome, and the Recipe empty
+state. No horizontal overflow or obvious visual blocker was observed; the
+synthetic fixture-only UI harness was not counted as product acceptance.
