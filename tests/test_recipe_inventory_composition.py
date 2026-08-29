@@ -440,6 +440,39 @@ async def test_chat_recipe_url_create_applies_explicit_owner_name_after_import(m
 
 
 @pytest.mark.asyncio
+async def test_chat_recipe_url_prepare_review_never_reaches_commit(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    calls = []
+
+    async def fetch_source(url, *, owner):
+        return "unstructured page evidence", None
+
+    class FakeService:
+        def manage_recipes(self, payload, *, owner):
+            calls.append(payload)
+            return {
+                "status": "NEEDS_REVIEW", "draft": None,
+                "review": {"missing_fields": ["verified recipe structure"]},
+            }
+
+    monkeypatch.setattr("src.recipe_import_sources.fetch_recipe_source", fetch_source)
+    monkeypatch.setattr("src.inventory_service.get_inventory_service", lambda: FakeService())
+    tool, result = await tool_execution._execute_manage_recipes_binding(
+        SimpleNamespace(content=json.dumps({
+            "action": "commit_import",
+            "source_url": "https://recipes.example.test/incomplete",
+        })),
+        owner="alice",
+    )
+
+    assert tool == "manage_recipes"
+    assert result["success"] is False
+    assert "needs review" in result["error"]
+    assert [call["action"] for call in calls] == ["prepare_import"]
+
+
+@pytest.mark.asyncio
 async def test_youtube_recipe_source_uses_existing_transcript_owner(monkeypatch):
     import src.recipe_import_sources as sources
 
