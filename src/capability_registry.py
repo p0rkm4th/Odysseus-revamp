@@ -325,7 +325,10 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
     "work.goal.read": CapabilitySpec("work.goal.read", _actions(*(ActionSpec(action_id=a, effects=("read_private",), executor_key="manage_work") for a in ("list", "get", "context"))), "Read durable work goals and context."),
     "work.goal.manage": CapabilitySpec("work.goal.manage", _actions(*(ActionSpec(action_id=a, effects=("write_private",), executor_key="manage_work") for a in ("create", "update"))), "Manage desired outcomes."),
     "work.project.read": CapabilitySpec("work.project.read", _actions(ActionSpec("list", effects=("read_private",), executor_key="manage_work")), "Read work projects."),
-    "work.project.manage": CapabilitySpec("work.project.manage", _actions(ActionSpec("create", effects=("write_private",), executor_key="manage_work")), "Manage work projects."),
+    "work.project.manage": CapabilitySpec("work.project.manage", _actions(
+        ActionSpec("create", effects=("write_private",), executor_key="manage_work"),
+        ActionSpec("create_task", effects=("write_private",), executor_key="manage_work"),
+    ), "Manage work projects and explicitly scoped tasks."),
     "work.task.read": CapabilitySpec("work.task.read", _actions(ActionSpec("list", effects=("read_private",), executor_key="manage_work")), "Read work tasks."),
     "work.task.manage": CapabilitySpec("work.task.manage", _actions(*(ActionSpec(action_id=a, effects=("write_private",), executor_key="manage_work") for a in ("create", "dependency"))), "Manage bounded task state."),
     "work.run.read": CapabilitySpec("work.run.read", _actions(*(ActionSpec(action_id=a, effects=("read_private",), executor_key="manage_work") for a in ("list", "get", "context"))), "Read durable runs and actions."),

@@ -375,6 +375,31 @@ def test_work_read_binding_is_owner_scoped_and_structured(monkeypatch):
     tmpfile.close()
 
 
+def test_work_task_mutation_uses_existing_engine_and_verifies_readback(monkeypatch):
+    from core.database import Base
+    from tests.helpers.sqlite_db import make_temp_sqlite
+    from src.work_engine import WorkEngine
+    session_factory, engine, tmpfile = make_temp_sqlite(Base.metadata)
+    monkeypatch.setattr("core.database.SessionLocal", session_factory)
+    with session_factory() as db:
+        project = WorkEngine(db).create_project("alice", {"title": "Hades V1"})
+
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="manage_work",
+        payload={"action": "create_task", "title": "Review the backup plan", "project_title": "Hades V1"},
+        owner="alice",
+    ))
+    assert result["success"] is True
+    assert result["verified"] is True
+    assert result["data"]["status"] == "VERIFIED"
+    assert result["data"]["task"]["title"] == "Review the backup plan"
+    with session_factory() as db:
+        tasks = WorkEngine(db).list_records("alice", __import__("core.work_models", fromlist=["WorkTask"]).WorkTask)
+        assert [task["title"] for task in tasks] == ["Review the backup plan"]
+    engine.dispose()
+    tmpfile.close()
+
+
 def test_registered_read_default_is_materialized_before_executor(monkeypatch):
     seen = []
 

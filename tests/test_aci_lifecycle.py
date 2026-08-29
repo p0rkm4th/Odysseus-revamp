@@ -51,7 +51,7 @@ from src.aci import (
     user_turn_count,
     stream_aci_turn,
 )
-from src.intent_contracts import canonical_domain_projection, compile_intent, resolve_intent, work_project_create_payload
+from src.intent_contracts import canonical_domain_projection, compile_intent, resolve_intent, work_project_create_payload, work_task_create_payload
 from src.capability_registry import action_for_tool, capability_for_tool
 from src.tool_capabilities import ToolEffect, capabilities_for_action
 from src.tool_policy import web_access_mode
@@ -832,6 +832,56 @@ def test_work_project_create_projects_explicit_title_and_verified_answer_only():
     assert canonical_work_mutation_answer([{
         "tool": "manage_work", "exit_code": 0, "success": True,
         "output": json.dumps({"status": "SUCCESS", "project": {"id": "p1", "title": "Kitchen renovation"}}),
+    }]) is None
+
+
+def test_work_task_create_requires_explicit_project_and_projects_bounded_payload():
+    query = "Create a task called Review the backup plan in project Hades V1"
+    assert work_task_create_payload(query) == {
+        "action": "create_task",
+        "title": "Review the backup plan",
+        "project_title": "Hades V1",
+    }
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "TASK"
+    assert resolved.contract.concept == "TASK_CREATE"
+    assert resolved.action_id == "create_task"
+    assert resolved.binding_name == "manage_work"
+
+    assert work_task_create_payload("Create a task called Review the backup plan") is None
+
+
+def test_work_task_create_action_projection_preserves_user_arguments():
+    query = "Create a task called Review the backup plan in project Hades V1"
+    projection = project_action_selection(
+        intent=_intent(query),
+        relevant_tools=["manage_work"],
+        disabled_tools=set(),
+        owner="owner",
+        active_run=None,
+        query=query,
+    )
+    assert list(projection.choice_map) == ["A"]
+    assert projection.choice_map["A"]["payload"] == {
+        "action": "create_task",
+        "title": "Review the backup plan",
+        "project_title": "Hades V1",
+    }
+
+
+def test_work_task_mutation_renderer_requires_verified_canonical_task():
+    assert canonical_work_mutation_answer([{
+        "tool": "manage_work", "exit_code": 0, "success": True,
+        "output": json.dumps({
+            "status": "VERIFIED", "action": "create_task",
+            "project_title": "Hades V1",
+            "task": {"id": "t1", "title": "Review the backup plan"},
+        }),
+    }]) == "Created task 'Review the backup plan' in project 'Hades V1'; the canonical Work readback is verified."
+    assert canonical_work_mutation_answer([{
+        "tool": "manage_work", "exit_code": 0, "success": True,
+        "output": json.dumps({"status": "VERIFIED", "action": "create_task"}),
     }]) is None
 
 

@@ -1826,34 +1826,55 @@ async def _execute_read_work_binding(block, owner=None):
 
 
 async def _execute_manage_work_binding(block, owner=None):
-    """Persist a bounded Work project and verify its canonical readback."""
+    """Persist a bounded Work project/task and verify canonical readback."""
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
-        if str(payload.get("action") or "").strip().casefold() != "create":
+        action = str(payload.get("action") or "").strip().casefold()
+        if action not in {"create", "create_task"}:
             raise ValueError("unsupported Work mutation")
         if not owner:
             raise PermissionError("authenticated Work owner is required")
         title = str(payload.get("title") or "").strip()
         if not 1 <= len(title) <= 300:
-            raise ValueError("project title is required")
+            raise ValueError("work title is required")
         from core.database import SessionLocal
-        from core.work_models import WorkProject
+        from core.work_models import WorkProject, WorkTask
         from src.work_engine import WorkEngine
         with SessionLocal() as db:
             service = WorkEngine(db)
-            project = service.create_project(owner, {
-                "title": title,
-                "description": str(payload.get("description") or ""),
-                "domain": str(payload.get("domain") or "general"),
-            })
-            readback = db.query(WorkProject).filter_by(id=project["id"], owner=owner).one_or_none()
-            if readback is None or readback.title != project["title"]:
-                raise ValueError("project readback did not match persisted project")
-            result = {
-                "status": "VERIFIED", "success": True, "action": "create",
-                "project": project, "canonical_store": "work_engine",
-                "verification": {"status": "VERIFIED"},
-            }
+            if action == "create":
+                created = service.create_project(owner, {
+                    "title": title,
+                    "description": str(payload.get("description") or ""),
+                    "domain": str(payload.get("domain") or "general"),
+                })
+                readback = db.query(WorkProject).filter_by(id=created["id"], owner=owner).one_or_none()
+                if readback is None or readback.title != created["title"]:
+                    raise ValueError("project readback did not match persisted project")
+                key = "project"
+            else:
+                project_title = str(payload.get("project_title") or "").strip()
+                if not project_title:
+                    raise ValueError("an existing project is required for task creation")
+                projects = db.query(WorkProject).filter_by(owner=owner, title=project_title).all()
+                if len(projects) != 1:
+                    raise ValueError("project reference is missing or ambiguous")
+                created = service.create_task(owner, {
+                    "project_id": projects[0].id,
+                    "title": title,
+                    "description": str(payload.get("description") or ""),
+                })
+                readback = db.query(WorkTask).filter_by(id=created["id"], owner=owner).one_or_none()
+                if readback is None or readback.title != created["title"] or readback.project_id != projects[0].id:
+                    raise ValueError("task readback did not match persisted task")
+                key = "task"
+                result = {
+                    "status": "VERIFIED", "success": True, "action": action,
+                    key: created, "canonical_store": "work_engine",
+                    "verification": {"status": "VERIFIED"},
+                }
+                if action == "create_task":
+                    result["project_title"] = project_title
         return "manage_work", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result, "verified": True}
     except Exception as exc:
         return "manage_work", {"error": str(exc), "output": str(exc), "exit_code": 1, "success": False}

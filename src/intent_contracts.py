@@ -368,6 +368,29 @@ def work_project_create_payload(query: str) -> dict[str, Any] | None:
     return {"action": "create", "title": title, "domain": "general"}
 
 
+def work_task_create_payload(query: str) -> dict[str, Any] | None:
+    """Project an explicit task title and project reference into one Action.
+
+    Task creation is deliberately bounded to an explicitly named existing
+    project. The executor resolves that title against the authenticated
+    owner's canonical Work state; model prose and an ambiguous project name
+    cannot create a task or select a project.
+    """
+    text = re.sub(r"\s+", " ", str(query or "").strip())
+    match = re.search(
+        r"\b(?:create|add|make)\s+(?:a\s+)?task\s+(?:called|named)\s+(.+?)\s+"
+        r"(?:in|for)\s+(?:the\s+)?project\s+(.+)$",
+        text, re.IGNORECASE,
+    )
+    if not match:
+        return None
+    title = match.group(1).strip(" .:;\"'")
+    project_title = match.group(2).strip(" .:;\"'")
+    if not (1 <= len(title) <= 300 and 1 <= len(project_title) <= 300):
+        return None
+    return {"action": "create_task", "title": title, "project_title": project_title}
+
+
 def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
     """Extract explicit item quantity for the canonical inventory CREATE."""
     text = str(query or "").strip()
@@ -1296,6 +1319,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     "PROJECT": DomainContract("PROJECT", "work.read", {"READ": "list_projects"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_projects"),
     "PROJECT_CREATE": DomainContract("PROJECT_CREATE", "work.project.manage", {"CREATE": "create"}, "manage_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_project_mutation"),
     "TASK": DomainContract("TASK", "work.read", {"READ": "list_tasks"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_tasks"),
+    "TASK_CREATE": DomainContract("TASK_CREATE", "work.project.manage", {"CREATE": "create_task"}, "manage_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_task_mutation"),
     "RUN": DomainContract("RUN", "work.read", {"READ": "list_runs"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_runs"),
     "COMMITMENT": DomainContract("COMMITMENT", "work.read", {"READ": "list_commitments"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_commitments"),
     "MISSION": DomainContract("MISSION", "work.read", {"READ": "list_missions"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_missions"),
@@ -1393,6 +1417,7 @@ CANONICAL_DOMAIN_PROJECTIONS: Mapping[str, str] = {
     "GOAL": "work",
     "PROJECT": "work",
     "TASK": "work",
+    "TASK_CREATE": "work",
     "RUN": "work",
     "COMMITMENT": "work",
     "MISSION": "work",
@@ -1674,6 +1699,8 @@ def compile_intent(
         concept = "WATCH"
     elif re.search(r"\b(?:goal(?:s)?)\b", q):
         concept = "GOAL"
+    elif operation == "CREATE" and re.search(r"\b(?:create|add|make)\s+(?:a\s+)?task\b", q):
+        concept = "TASK"
     elif re.search(r"\b(?:project(?:s)?)\b", q):
         concept = "PROJECT"
     elif re.search(r"\b(?:task(?:s)?)\b", q):
@@ -2213,6 +2240,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         contract_key = "INVENTORY_MUTATION"
     if frame.domain_concept == "PROJECT" and frame.operation_class == "CREATE":
         contract_key = "PROJECT_CREATE"
+    if frame.domain_concept == "TASK" and frame.operation_class == "CREATE":
+        contract_key = "TASK_CREATE"
     contract = DOMAIN_CONTRACTS.get(contract_key)
     if contract is None:
         return ResolvedContract(frame, None, None, None, None, False, "no_domain_contract")
