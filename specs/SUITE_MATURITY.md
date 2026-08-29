@@ -21,6 +21,20 @@ a bounded configurable health wait (30–300 seconds, default 180 seconds).
 This is evaluator readiness evidence only; no owner deployment was changed,
 and browser acceptance for the `a3c20aef` branch tip remains unverified.
 
+## Recipe editor browser checkpoint — candidate `c734628f` (2026-08-29)
+
+The exact candidate image `odysseus:candidate-c734628f` was exercised by the
+isolated authenticated browser lane with normal login, an external
+acceptance-principal credential, real Qwen3:8B chat/SSE, canonical Recipe URL
+import, persistence, and reload readback. The run passed `3` streams and `3`
+terminal `[DONE]` events, with `1` mutation, `2` canonical readbacks,
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. The image OCI revision/source marker matched
+`c734628f787d147f1e5ae0d4efeffc07a1dbd3c6`. The browser runner included the
+later evaluator-only startup-wait descendant `a3c20aef`; no production source
+was changed by that runner distinction, and the owner deployment remained
+untouched.
+
 ## Current evidence boundary — branch `2e58a5fe` (2026-08-29)
 
 The retained exact executable candidates have fresh isolated browser evidence for
