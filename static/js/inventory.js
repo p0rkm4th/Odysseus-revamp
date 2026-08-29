@@ -165,7 +165,7 @@ async function loadRecipes() {
       <div class="inventory-card-main"><h3>${escapeHtml(recipe.name)}</h3><p>${escapeHtml(recipe.servings)} servings · ${(recipe.ingredients || []).length} ingredients</p></div>
       <span class="inventory-ready hades-badge ${plans[i].can_make ? 'hades-badge-success yes' : 'hades-badge-warning no'}">${plans[i].can_make ? 'Ready to make' : `${plans[i].shortages.length} shortage${plans[i].shortages.length === 1 ? '' : 's'}`}</span>
       <button class="hades-btn-secondary" data-action="recipe-details">Details</button>${plans[i].can_make ? '<button class="inventory-primary hades-btn-primary" data-action="cook">Cook</button>' : ''}
-    </article>`).join('') : '<div class="inventory-state hades-empty-state">No recipes yet.</div>';
+    </article>`).join('') : `<div class="inventory-state hades-empty-state">${recipeQuery.trim() ? 'No matching recipes.' : 'No recipes yet.'}</div>`;
   } catch (error) { showInlineError(error); }
 }
 
