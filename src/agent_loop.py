@@ -6158,6 +6158,7 @@ async def stream_aci_runtime(
         intent_domains=_intent_domains,
         stored_evidence=has_stored_canonical_evidence(messages),
         clarification_only=_aci_clarification_only,
+        clarification_text=_aci_clarification_text,
         effectful_request=_intent_frame.operation_class in {"CREATE", "UPDATE", "DELETE", "EXECUTE"},
     )
     if _projected_response.strip() != full_response.strip():

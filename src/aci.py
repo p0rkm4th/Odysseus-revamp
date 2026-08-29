@@ -4239,6 +4239,7 @@ def project_final_answer(
     intent_domains: Sequence[str] = (),
     stored_evidence: bool = False,
     clarification_only: bool = False,
+    clarification_text: str = "",
     effectful_request: bool = False,
 ) -> tuple[str, CanonicalAnswer | None]:
     """Select the authoritative answer before the transport emits it."""
@@ -4246,7 +4247,7 @@ def project_final_answer(
     if canonical is not None:
         return canonical.content, canonical
     if clarification_only:
-        return str(full_response or ""), None
+        return str(clarification_text or full_response or ""), None
     # An approval card is a control-plane pause, not a failed mutation. The
     # pending Action must remain available for the normal approval continuation
     # and must not be replaced by a false error answer before the user can act.
