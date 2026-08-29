@@ -12,6 +12,7 @@ from src.aci import (
     canonical_household_read_answer,
     canonical_network_read_answer,
     canonical_homelab_read_answer,
+    canonical_service_read_answer,
     canonical_tool_result_projection,
     canonical_inventory_mutation_answer,
     canonical_action_failure_answer,
@@ -420,6 +421,45 @@ def test_homelab_inspection_has_grounded_deterministic_answer():
     assert selected is not None
     assert selected.source is AnswerSource.DETERMINISTIC_RESULT
     assert selected.provenance == "canonical Homelab Result"
+
+
+def test_service_health_read_has_grounded_deterministic_answer_and_projection():
+    raw = {
+        "status": "SUCCESS_WITH_DATA",
+        "action": "service_status",
+        "overall": "degraded",
+        "target": "hades-runtime",
+        "source": "canonical_service_health",
+        "services": [
+            {"name": "chromadb", "status": "ok", "detail": "reachable", "meta": {"secret": "omit"}},
+            {"name": "ollama", "status": "degraded", "detail": "probe timed out"},
+        ],
+    }
+    projection = canonical_tool_result_projection("manage_homelab", {"output": json.dumps(raw), "exit_code": 0})
+    assert projection == {
+        "action": "service_status",
+        "status": "SUCCESS_WITH_DATA",
+        "kind": None,
+        "target": "hades-runtime",
+        "observation_location": None,
+        "freshness": None,
+        "overall": "degraded",
+        "services": [
+            {"name": "chromadb", "status": "ok", "detail": "reachable"},
+            {"name": "ollama", "status": "degraded", "detail": "probe timed out"},
+        ],
+        "service_count": 2,
+    }
+    event = {"tool": "manage_homelab", "exit_code": 0, "output": "truncated", "result_projection": projection}
+    assert canonical_service_read_answer([event]) == (
+        "Hades runtime service health: degraded.\n"
+        "- chromadb: ok (reachable)\n"
+        "- ollama: degraded (probe timed out)"
+    )
+    selected = canonical_result_answer([event])
+    assert selected is not None
+    assert selected.source is AnswerSource.DETERMINISTIC_RESULT
+    assert selected.provenance == "canonical Service Result"
 
 
 def test_canonical_inventory_mutation_answer_requires_structured_result_and_readback():
