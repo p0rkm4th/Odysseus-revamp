@@ -126,6 +126,19 @@ was verified healthy with zero restarts, OCI marker/running source
 `bc6781f73947117c908dbed43bc07ce343adc5ce`, and Qwen3:8B reachability from
 the container namespace. The owner deployment was not replaced.
 
+### Work read projection contract checkpoint — 8976228f
+
+The existing `read_work` adapter now marks every canonical Work projection
+with its operation, result type, and `work_engine` store while retaining the
+existing status inference, including `SUCCESS_EMPTY` for empty collections.
+This is metadata at the existing adapter boundary; it does not add a planner,
+workflow engine, or alternate Work store. Focused ACI/binding/intent coverage
+passed `241` tests. Exact candidate image
+`sha256:e92b27ffe5130f510666327881ca128d473183c4c3567065eebcf91ba1d03b40`
+was verified healthy with zero restarts, OCI marker/running source
+`8976228f1f5129db2cc9f2496dbb3d9b39bab7a0`, and Qwen3:8B reachability from
+the container namespace. The owner deployment was not replaced.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
