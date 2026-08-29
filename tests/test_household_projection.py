@@ -63,7 +63,7 @@ def test_household_workspace_uses_canonical_overview_and_common_states():
 
     source = (Path(__file__).resolve().parents[1] / "static/js/intelligence.js").read_text()
     assert "'/api/inventory/overview?expiry_days=30'" in source
-    for label in ("Items", "Recipes", "Low stock", "Expiring", "Reviewable intake", "Recent activity"):
+    for label in ("Items", "Locations", "Recipes", "Low stock", "Expiring", "Reviewable intake", "Recent activity"):
         assert label in source
     assert "canonical_store" in source
     assert "hades-module-header" in source
