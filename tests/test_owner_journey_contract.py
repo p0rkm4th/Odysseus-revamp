@@ -12,7 +12,7 @@ def test_owner_journey_corpus_has_required_black_box_scenarios():
         "deterministic_synthetic", "realistic_messy_synthetic", "actual_owner_read_only",
     }
     scenarios = {case["id"]: case for case in payload["scenarios"]}
-    assert {"OWNER-ASSET-RAM-001", "OWNER-NETWORK-001", "OWNER-ASSET-FILTER-NO-MATCH-001", "OWNER-RECIPE-EMPTY-001", "OWNER-RECIPE-MUTATION-READBACK-001", "OWNER-HOUSEHOLD-MUTATION-READBACK-001"} <= set(scenarios)
+    assert {"OWNER-ASSET-RAM-001", "OWNER-NETWORK-001", "OWNER-ASSET-FILTER-NO-MATCH-001", "OWNER-RECIPE-EMPTY-001", "OWNER-RECIPE-MUTATION-READBACK-001", "OWNER-HOUSEHOLD-MUTATION-READBACK-001", "OWNER-MEMORY-EMPTY-001", "OWNER-WORK-EMPTY-001"} <= set(scenarios)
     for case in scenarios.values():
         assert case["turns"]
         assert case["fixture_profile"]
