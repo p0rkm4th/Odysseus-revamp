@@ -4,6 +4,20 @@ This ledger records observed owner-journey maturity on the post-merge
 `hades-v1-productization` branch. A registered capability is not evidence that
 the complete journey works.
 
+## Recipe workspace search checkpoint — `9285a7e1` (2026-08-29)
+
+The existing Recipe workspace now provides a bounded search field over the
+canonical `/api/recipes` collection. Filtering is client-side presentation of
+the owner-scoped response; it adds no route, store, or semantic classifier.
+Recipe ingredient rows also expose the culinary units already accepted by the
+canonical inventory quantity layer. JavaScript syntax and focused UI/Recipe
+coverage passed (`36` tests). The exact candidate
+`odysseus:candidate-9285a7e1dda2` has OCI revision and source marker
+`9285a7e1dda257414b632722f6f4d2782fd4694f`, with image ID
+`sha256:f13b31e24c27b2f644b290325997e6f712c11e4c423b84fb8b6da5ea64a73171`.
+This candidate was built but not deployed; no live/browser acceptance result is
+claimed for this checkpoint.
+
 ## Recipe editor and browser readiness checkpoint — `a3c20aef` (2026-08-29)
 
 The Recipe workspace's new-recipe flow now uses repeatable labeled ingredient
