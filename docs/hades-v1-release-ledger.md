@@ -1866,3 +1866,11 @@ zero restarts. Separate Qwen3:8B GUI runs for `Restart it.` and `Continue.`
 both passed with one terminal stream, `CLARIFICATION` provenance, zero tool or
 Action execution, zero false success, raw final Result, duplicate delivery, or
 abrupt EOF.
+
+## Current complete URL Recipe import checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+On a fresh empty-recipe isolated stack, the owner-facing URL import with an
+explicit display name passed its three-turn review/approval flow. One
+canonical Recipe mutation was independently verified by two readbacks,
+including reload; the requested name and source URL were retained. False
+success, raw final Result, duplicate delivery, and abrupt EOF were zero.
