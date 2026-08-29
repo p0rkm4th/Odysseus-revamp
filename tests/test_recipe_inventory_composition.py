@@ -78,6 +78,10 @@ def test_recipe_scale_is_read_only_deterministic_arithmetic_over_canonical_recip
         owner="alice",
     )
 
+    assert scaled["status"] == "SUCCESS"
+    assert scaled["result_type"] == "recipe_scaled_quantities"
+    assert scaled["operation"] == "scale"
+    assert scaled["canonical_store"] == "inventory_service"
     assert scaled["recipe_id"] == recipe["id"]
     assert scaled["servings"] == Decimal("6")
     assert [(row["name"], row["quantity"], row["unit"]) for row in scaled["scaled_ingredients"]] == [
