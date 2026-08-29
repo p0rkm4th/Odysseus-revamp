@@ -81,6 +81,19 @@ provisioned through the normal admin-only model-endpoint route and the browser
 used the gated least-privilege acceptance principal. The disposable principal,
 credentials, data, volumes, and containers were revoked and removed afterward.
 
+The URL-backed chat CREATE checkpoint `12b56b8849ed2806c00793fb7073f164c849231d`
+extends the same canonical mutation seam: a URL is carried only as untrusted
+source metadata, fetched through the bounded source adapter, converted by the
+validated `RecipeDraft` gate, and then persisted/read back by `InventoryService`.
+A focused container run passed `240` tests, including proof that the URL path
+cannot call the owner without a validated draft. The exact candidate image is
+`sha256:f6696677c2a2a594919f5ef88c901c197125494dfac70887dcd6e46aea0329eb`,
+with OCI and marker source `12b56b8849ed2806c00793fb7073f164c849231d`. The
+owner runtime was not replaced. The full current-tree run reached `6903
+passed, 6 skipped` with nine environment/setup failures (repository metadata
+absent from the image mount and storage-preflight host paths unavailable), not
+Recipe failures; these remain environment evidence rather than a product pass.
+
 ## Baseline evidence
 
 - Post-merge `main`: `364380ed3f46c1d14d3229e5b7530698cfa22e65`.
