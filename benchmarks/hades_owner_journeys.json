@@ -92,7 +92,7 @@
       "turns": [
         {"prompt": "Add this recipe to my recipe book, for the name, use \"Chicken Cordon Bleu with Cheese Sauce\": https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "ERROR", "action": "commit_import", "tool_binding": "manage_recipes", "approval": "required", "requires_effect": false, "must_include_any": ["couldn't import", "review", "no recipe was saved"], "must_include_all": [], "forbidden": ["successfully added", "saved successfully", "Done"]}}
       ],
-      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_count": 0}, "terminal": {"done": 1, "abrupt_eof": false}}
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_count": 0}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "recipe_count": 0}, "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
       "id": "OWNER-RECIPE-URL-IMPORT-COMPLETE-001",

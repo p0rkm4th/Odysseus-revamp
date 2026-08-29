@@ -433,6 +433,13 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
   if (!result.ok) throw new Error(`${scenario.id} canonical readback failed (${result.status})`);
   if (spec.kind === 'recipes') {
     const recipes = Array.isArray(result.payload?.recipes) ? result.payload.recipes : [];
+    if (spec.recipe_count !== undefined) {
+      const count = recipes.length;
+      if (count !== Number(spec.recipe_count)) {
+        throw new Error(`${scenario.id} recipe readback count mismatch: expected ${spec.recipe_count}, got ${count}`);
+      }
+      return {phase, kind: spec.kind, count};
+    }
     const wanted = String(spec.contains_name || '').trim().toLowerCase();
     const found = recipes.find((recipe) => String(recipe?.name || '').trim().toLowerCase() === wanted);
     if (!found) throw new Error(`${scenario.id} recipe readback missing canonical recipe`);
