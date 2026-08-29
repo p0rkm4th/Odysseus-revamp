@@ -1158,8 +1158,13 @@ class RecipeService(InventoryService):
             )
             recipe = self.get_recipe(owner, _required_text(args.get("recipe_id"), "recipe_id"))
             return {
+                "status": "SUCCESS",
+                "result_type": "recipe_pantry_coverage",
+                "operation": "can_make",
+                "canonical_store": "inventory_service",
                 "recipe_id": recipe["id"], "recipe_name": recipe["name"],
                 "can_make": plan.can_make,
+                "availability_status": "AVAILABLE" if plan.can_make else "MISSING_INGREDIENTS",
                 "deductions": [{
                     "lot_id": row.lot_id, "item_id": row.item_id,
                     "quantity": row.quantity, "unit": row.unit,
