@@ -3322,7 +3322,10 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
     action = str(command.get("action") or "list").strip().casefold() if isinstance(command, Mapping) else "list"
     if action == "prepare_import":
         if status == "NEEDS_REVIEW":
-            return "I found the recipe source, but it does not contain enough verified structure to prepare a draft for review."
+            review = payload.get("review") if isinstance(payload.get("review"), Mapping) else {}
+            missing = review.get("missing_fields") if isinstance(review.get("missing_fields"), list) else []
+            suffix = f" Missing or ambiguous: {', '.join(str(item) for item in missing[:5])}." if missing else ""
+            return "I found the recipe source, but it needs review before anything can be saved." + suffix
         draft = payload.get("draft")
         if not isinstance(draft, Mapping):
             return None

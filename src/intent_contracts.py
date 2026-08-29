@@ -276,6 +276,49 @@ def recipe_import_draft(source_text: str | None, *, source_url: str | None = Non
     return draft
 
 
+def recipe_import_review(source_text: str | None, *, source_url: str | None = None) -> dict[str, Any]:
+    """Describe why an untrusted recipe source needs human review.
+
+    This is a bounded diagnostic projection only. It deliberately does not
+    return a persistence-ready draft, so incomplete source evidence cannot
+    reach InventoryService as a mutation.
+    """
+    text = str(source_text or "").strip()
+    json_text = text
+    marker = re.search(r"<!--\s*RECIPE_JSONLD:(?P<body>.*?)\s*-->", text, re.I | re.S)
+    script = re.search(
+        r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(?P<body>.*?)</script>",
+        text, re.I | re.S,
+    )
+    if marker:
+        json_text = marker.group("body").strip()
+    elif script:
+        json_text = script.group("body").strip()
+    try:
+        value: Any = json.loads(json_text) if json_text.startswith(("{", "[")) else None
+    except (TypeError, ValueError):
+        value = None
+    candidates = value if isinstance(value, list) else [value]
+    if isinstance(value, Mapping) and isinstance(value.get("@graph"), list):
+        candidates.extend(value["@graph"])
+    recipe = next((item for item in candidates if isinstance(item, Mapping) and (
+        item.get("@type") == "Recipe" or "Recipe" in (item.get("@type") or [])
+    )), None)
+    if not recipe:
+        return {"status": "NEEDS_REVIEW", "source_url": source_url, "missing_fields": ["verified recipe structure"]}
+    ingredients = recipe.get("recipeIngredient") if isinstance(recipe.get("recipeIngredient"), list) else []
+    missing = [str(item)[:200] for item in ingredients if not _recipe_ingredients(str(item))]
+    if not recipe.get("name"):
+        missing.insert(0, "recipe name")
+    if not recipe.get("recipeInstructions"):
+        missing.append("instructions")
+    return {
+        "status": "NEEDS_REVIEW", "source_url": source_url,
+        "name": str(recipe.get("name") or "")[:200],
+        "ingredient_count": len(ingredients), "missing_fields": missing[:20],
+    }
+
+
 def recipe_create_payload(query: str) -> dict[str, Any] | None:
     draft = recipe_create_draft(query)
     return draft.as_payload() if draft else None
