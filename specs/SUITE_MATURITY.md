@@ -1520,3 +1520,11 @@ The documented Docker-volume backup/restore procedure passed on a disposable
 volume: original marker data survived deliberate drift and restore, and the
 drift-only file was removed. This does not replace a full production backup
 policy, and no owner data was touched.
+
+## Current exact-candidate fresh-install maturity — `1a2b62e5` (2026-08-29)
+
+An isolated fresh Compose deployment of the exact candidate passed normal
+browser login, authenticated-session persistence across an app restart,
+healthy status, and zero app restarts. Its container source marker matched
+`1a2b62e59e323afe5817fd69e7c271620b7f2efd`; the fresh Hades namespace also
+reached host Ollama and confirmed `qwen3:8b`. Owner data was untouched.
