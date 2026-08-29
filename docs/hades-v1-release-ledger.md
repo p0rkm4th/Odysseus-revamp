@@ -1025,3 +1025,12 @@ after the run. The owner deployment remains untouched.
   fetched evidence contained an unquantified ingredient; its canonical count
   remained zero. Acceptance credentials and isolated deployment were revoked
   and removed afterward.
+
+# Recipe import provenance assertion — `af0c984b` (2026-08-29)
+
+- Successful browser Recipe URL readbacks now verify both the canonical recipe
+  name and persisted `source_url`. This is an evaluator-only assertion and does
+  not alter production routing or persistence.
+- Syntax/JSON, UI, owner-journey contract, and Recipe focused tests passed
+  `41`. This checkpoint was not separately deployed; the last exact live
+  candidate remains `53670937`, so no live result is attributed to `af0c984b`.
