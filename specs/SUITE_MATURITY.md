@@ -1528,3 +1528,10 @@ browser login, authenticated-session persistence across an app restart,
 healthy status, and zero app restarts. Its container source marker matched
 `1a2b62e59e323afe5817fd69e7c271620b7f2efd`; the fresh Hades namespace also
 reached host Ollama and confirmed `qwen3:8b`. Owner data was untouched.
+
+## Current realistic Asset false-premise maturity — `1a2b62e5` (2026-08-29)
+
+The incomplete/duplicate-like Asset fixture passed the ordinary RTX 4090
+false-premise query on the exact candidate. The answer grounded itself in the
+canonical no-match state, with zero mutations, false success, raw final
+Result, duplicate delivery, or abrupt EOF.
