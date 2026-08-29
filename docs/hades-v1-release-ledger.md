@@ -950,3 +950,20 @@ after the run. The owner deployment remains untouched.
   Live browser status is therefore `UNVERIFIED / MODEL_DISCOVERY`, not PASS.
 - The disposable principal, credential, containers, and network were removed;
   the owner deployment was not changed.
+
+# Populated Memory browser acceptance — `2e58a5fe` (2026-08-29)
+
+- `OWNER-MEMORY-POPULATED-001` passed against exact candidate
+  `odysseus:candidate-2e58a5fe` in a fresh isolated deployment. The journey
+  used normal login, Qwen3:8B through the real chat/SSE route, one populated
+  Memory read, canonical `/api/memory` readback, and reload persistence.
+- Result: `1` scenario, `1` turn, `1` deterministic final answer, `1` `[DONE]`,
+  `0` abrupt EOF, duplicate delivery, false success, or raw final results.
+- The first attempt correctly exposed missing endpoint registration in the
+  fresh fixture. Registering the existing `ModelEndpoint` prerequisite with
+  cached `qwen3:8b` metadata allowed the normal session path to proceed; this
+  was fixture setup, not a production routing change. The in-container probe
+  confirmed the configured endpoint and digest
+  `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+- The acceptance principal, credential, containers, and network were removed;
+  the owner deployment remained untouched.
