@@ -1122,3 +1122,11 @@ final results, zero duplicate delivery, and zero abrupt EOF. The run exercised
 Inventory-backed pantry coverage and deterministic serving scaling. A missing
 browser-fixture `shortage` projection was corrected as evaluator-only commit
 `cb34789d`; the product image was unchanged.
+## Expiring inventory → Recipe exact-candidate browser checkpoint — `717a1dd9` (2026-08-29)
+
+`OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed against exact product candidate
+`4c7696a3`: one authenticated chat turn, one final answer, one terminal
+`[DONE]`, two canonical readbacks, zero raw final results, zero false success,
+zero duplicate delivery, and zero abrupt EOF. This covers expiring Inventory
+stock feeding Recipe candidate selection and pantry coverage. Temporary state
+and credentials were removed.
