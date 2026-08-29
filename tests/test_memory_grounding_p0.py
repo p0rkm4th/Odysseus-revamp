@@ -4,6 +4,8 @@ from src.agent_loop import _classify_agent_request, _suppress_automatic_skills
 from src.memory_grounding import minimal_saved_memory_message
 from src.memory_grounding import is_explicit_memory_query
 from src.context_compactor import context_trace, tool_projection_trace
+from src.intent_contracts import compile_intent, memory_mutation_payload, resolve_intent
+from src.aci import project_action_selection
 
 
 def test_breakdown_wording_is_an_explicit_canonical_memory_query():
@@ -57,6 +59,29 @@ def test_provider_context_trace_reports_memory_presence_without_content():
     assert trace["memory"]["retrieved_count"] == 2
     assert trace["memory"]["content_logged"] is False
     assert "CANONICAL MEMORY RESULT" not in str(trace)
+
+
+def test_owner_memory_mutations_resolve_to_bounded_actions_and_user_fields():
+    add_query = "Remember that my test color is ultraviolet orange."
+    add_frame = compile_intent(add_query)
+    add_contract = resolve_intent(add_frame)
+    assert (add_frame.operation_class, add_frame.domain_concept) == ("CREATE", "MEMORY")
+    assert add_contract.action_id == "add"
+    assert add_contract.binding_name == "manage_memory"
+    assert memory_mutation_payload(add_query, "add")["text"] == "my test color is ultraviolet orange"
+
+    delete_query = "Forget my test color."
+    delete_frame = compile_intent(delete_query)
+    delete_contract = resolve_intent(delete_frame)
+    assert (delete_frame.operation_class, delete_frame.domain_concept) == ("DELETE", "MEMORY")
+    assert delete_contract.action_id == "delete"
+    projection = project_action_selection(
+        intent={"intent_frame": delete_frame.as_dict(), "resolved_contract": delete_contract.as_dict()},
+        relevant_tools=None, disabled_tools=set(), owner="fixture", active_run=None,
+        query=delete_query,
+    )
+    selected = next(iter(projection.choice_map.values()))
+    assert selected["payload"] == {"action": "delete", "query": "test color"}
 
 
 def test_tool_projection_trace_explains_route_and_policy_exclusions_without_content():

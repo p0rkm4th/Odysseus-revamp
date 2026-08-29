@@ -98,6 +98,20 @@ READ_MEMORY_SCHEMA = {
     }
 }
 
+MANAGE_MEMORY_SCHEMA = {
+    "type": "function", "function": {
+        "name": "manage_memory",
+        "description": "Manage the authenticated owner's persistent Brain memory. Add, correct, or remove one owner fact; never claim success without canonical persistence.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["add", "edit", "delete"]},
+            "text": {"type": "string", "maxLength": 5000},
+            "memory_id": {"type": "string"},
+            "query": {"type": "string", "maxLength": 200},
+            "category": {"type": "string", "maxLength": 40},
+        }, "required": ["action"]},
+    }
+}
+
 READ_WORK_SCHEMA = {
     "type": "function", "function": {
         "name": "read_work",
@@ -402,6 +416,11 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_osint": ToolBinding("manage_osint", TOOL_CAPABILITY_IDS["manage_osint"], MANAGE_OSINT_SCHEMA, _OSINT_CONTRACT, frozenset({"osint"}), "manage_osint"),
     "manage_security_assessment": ToolBinding("manage_security_assessment", TOOL_CAPABILITY_IDS["manage_security_assessment"], MANAGE_SECURITY_ASSESSMENT_SCHEMA, _SECURITY_CONTRACT, frozenset({"security_audit", "pentest_ops", "network_ops"}), "manage_security_assessment"),
     "read_memory": ToolBinding("read_memory", TOOL_CAPABILITY_IDS["read_memory"], READ_MEMORY_SCHEMA, _MEMORY_READ_CONTRACT, frozenset({"memory"}), "read_memory"),
+    "manage_memory": ToolBinding("manage_memory", TOOL_CAPABILITY_IDS["manage_memory"], MANAGE_MEMORY_SCHEMA, """### `manage_memory`
+Canonical owner-scoped mutation of the Brain memory store. Add, edit, or delete
+one memory record. Success requires persistence and readback verification; a
+model statement is never evidence.
+`<invoke name=\"manage_memory\"><parameter name=\"action\">add|edit|delete</parameter></invoke>`.""", frozenset({"memory"}), "manage_memory"),
     "read_work": ToolBinding("read_work", TOOL_CAPABILITY_IDS["read_work"], READ_WORK_SCHEMA, _WORK_READ_CONTRACT, frozenset({"work"}), "read_work"),
     "manage_work": ToolBinding("manage_work", TOOL_CAPABILITY_IDS["manage_work"], MANAGE_WORK_SCHEMA, """### `manage_work`
 Canonical owner-scoped Work project/task creation through WorkEngine. A task

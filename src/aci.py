@@ -4599,6 +4599,15 @@ def project_action_selection(
             draft = work_task_create_payload(query)
             if draft:
                 payload.update(draft)
+        if (
+            str(frame.get("domain_concept") or "") == "MEMORY"
+            and str(frame.get("operation_class") or "") in {"CREATE", "DELETE"}
+            and str(item.get("binding") or "") == "manage_memory"
+        ):
+            from src.intent_contracts import memory_mutation_payload
+            draft = memory_mutation_payload(query, str(item.get("action_id") or ""))
+            if draft:
+                payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
         if item["binding"] == "read_recipes" and item["action_id"] == "prepare_import":
