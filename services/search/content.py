@@ -127,7 +127,30 @@ def _extract_recipe_jsonld(soup: BeautifulSoup) -> list[dict]:
                 continue
             item_type = item.get("@type")
             if item_type == "Recipe" or (isinstance(item_type, list) and "Recipe" in item_type):
-                recipes.append(item)
+                # Keep only fields useful to RecipeDraft preparation. Full
+                # JSON-LD often carries image renditions, video metadata, and
+                # publisher graphs large enough to truncate the evidence
+                # envelope before the JSON closes.
+                projection = {
+                    key: item[key]
+                    for key in (
+                        "@type", "name", "recipeYield", "recipeIngredient",
+                        "recipeInstructions", "prepTime", "cookTime", "totalTime",
+                        "author", "image", "nutrition", "recipeCategory", "recipeCuisine",
+                    )
+                    if key in item
+                }
+                if isinstance(projection.get("recipeIngredient"), list):
+                    projection["recipeIngredient"] = [
+                        str(value)[:500] for value in projection["recipeIngredient"][:200]
+                    ]
+                if isinstance(projection.get("recipeInstructions"), list):
+                    projection["recipeInstructions"] = projection["recipeInstructions"][:200]
+                if isinstance(projection.get("image"), list):
+                    projection["image"] = projection["image"][:1]
+                if isinstance(projection.get("author"), dict):
+                    projection["author"] = projection["author"].get("name") or projection["author"].get("@id")
+                recipes.append(projection)
                 if len(recipes) >= 4:
                     return recipes
     return recipes
