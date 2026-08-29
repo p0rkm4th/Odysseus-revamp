@@ -3974,7 +3974,7 @@ def canonical_recipe_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -
          if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_recipes"),
         None,
     )
-    if event is None or event.get("exit_code") not in (None, 0) or event.get("success") is not True:
+    if event is None or event.get("exit_code") not in (None, 0):
         return None
     projection = event.get("result_projection")
     if isinstance(projection, Mapping):
@@ -4008,6 +4008,37 @@ def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
         return render_memory_result_projection(projection)
     except Exception:
         return "I couldn't retrieve the owner's remembered information. No memory was inferred."
+
+
+def canonical_memory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render one verified, human-readable owner Memory mutation answer."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_memory"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or "{}"))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or not isinstance(payload, Mapping):
+        return None
+    if event.get("success") is False or payload.get("success") is False:
+        return None
+    verification = payload.get("verification")
+    if not isinstance(verification, Mapping) or verification.get("status") != "VERIFIED":
+        return None
+    action = str(request.get("action") or "").strip().lower()
+    if action == "add":
+        return "Remembered that for you; the canonical Memory readback is verified."
+    if action == "edit":
+        return "Updated that memory; the canonical Memory readback is verified."
+    if action == "delete":
+        return "Removed that memory; the canonical Memory readback is verified."
+    return None
 
 
 def canonical_work_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
@@ -4156,6 +4187,7 @@ def canonical_result_answer(
         (canonical_recipe_mutation_answer(tool_events), "recipe mutation Result"),
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_work_mutation_answer(tool_events), "Work mutation Result"),
+        (canonical_memory_mutation_answer(tool_events), "Memory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
