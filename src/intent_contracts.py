@@ -198,11 +198,14 @@ def recipe_import_draft(source_text: str | None, *, source_url: str | None = Non
     draft = recipe_create_draft(text) if text else None
     if draft is None:
         json_text = text
+        structured_marker = re.search(r"<!--\s*RECIPE_JSONLD:(?P<body>.*?)\s*-->", text, re.I | re.S)
+        if structured_marker:
+            json_text = structured_marker.group("body").strip()
         script = re.search(
             r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(?P<body>.*?)</script>",
             text, re.IGNORECASE | re.DOTALL,
         )
-        if script:
+        if script and not structured_marker:
             json_text = script.group("body").strip()
         if json_text.startswith("```"):
             lines = json_text.splitlines()

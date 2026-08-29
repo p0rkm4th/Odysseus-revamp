@@ -68,6 +68,28 @@ def test_content_fetcher_extracts_og_image_and_body_fallback(module, tmp_path, m
     assert "window.secret" not in result["content"]
 
 
+def test_content_fetcher_keeps_recipe_jsonld_in_opt_in_projection(tmp_path, monkeypatch):
+    module = service_content
+    html = '''
+    <html><head><script type="application/ld+json">
+    {"@type":"Recipe","name":"Structured Dinner",
+     "recipeIngredient":["1 cup rice"],"recipeInstructions":"Cook it."}
+    </script></head><body><main>Recipe page</main></body></html>
+    '''
+    monkeypatch.setattr(module, "CONTENT_CACHE_DIR", tmp_path)
+    module.content_cache_index.clear()
+    monkeypatch.setattr(module, "_get_public_url", lambda url, headers, timeout, **kwargs: _FakeResponse(html))
+
+    ordinary = module.fetch_webpage_content("https://example.com/structured")
+    structured = module.fetch_webpage_content(
+        "https://example.com/structured", include_structured_data=True
+    )
+
+    assert ordinary["recipe_jsonld"] == []
+    assert structured["recipe_jsonld"][0]["name"] == "Structured Dinner"
+    assert "recipeIngredient" not in structured["content"]
+
+
 @pytest.mark.parametrize("status_code", [403, 404])
 def test_fetch_webpage_content_returns_empty_result_on_http_status_error(status_code, tmp_path, monkeypatch):
     """A 403/404 response should degrade to an empty result instead of raising.

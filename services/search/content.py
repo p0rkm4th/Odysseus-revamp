@@ -104,6 +104,35 @@ def _extract_og_image(soup: BeautifulSoup) -> str:
     return ""
 
 
+def _extract_recipe_jsonld(soup: BeautifulSoup) -> list[dict]:
+    """Return bounded schema.org Recipe objects as untrusted fetch evidence.
+
+    The normal content projection deliberately removes scripts.  Recipe
+    import is the one caller that needs this structured public-page evidence,
+    so keep it as a separate, bounded field rather than leaking scripts into
+    ordinary web/model output.
+    """
+    recipes: list[dict] = []
+    for script in soup.find_all("script", attrs={"type": re.compile(r"application/ld\+json", re.I)}):
+        raw = script.string or script.get_text()
+        try:
+            value = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        candidates = value if isinstance(value, list) else [value]
+        if isinstance(value, dict) and isinstance(value.get("@graph"), list):
+            candidates.extend(value["@graph"])
+        for item in candidates:
+            if not isinstance(item, dict):
+                continue
+            item_type = item.get("@type")
+            if item_type == "Recipe" or (isinstance(item_type, list) and "Recipe" in item_type):
+                recipes.append(item)
+                if len(recipes) >= 4:
+                    return recipes
+    return recipes
+
+
 def _extract_lists(soup: BeautifulSoup) -> List[List[str]]:
     """Return a list of lists, each inner list representing a <ul>/<ol>."""
     all_lists = []
@@ -179,7 +208,7 @@ def _empty_result(url: str, error: str = "") -> dict:
 # Main content fetcher
 # ----------------------------------------------------------------------
 def fetch_webpage_content(url: str, timeout: int = 5, retry_attempt: int = 0,
-                          max_bytes: int = None) -> dict:
+                          max_bytes: int = None, include_structured_data: bool = False) -> dict:
     """Fetch and extract meaningful content from a webpage with caching.
 
     ``max_bytes`` raises the download budget per call (clamped to the hard
@@ -190,7 +219,9 @@ def fetch_webpage_content(url: str, timeout: int = 5, retry_attempt: int = 0,
     effective_cap = min(max_bytes or WEB_FETCH_SOFT_MAX_BYTES, WEB_FETCH_HARD_MAX_BYTES)
     # The cap is part of the cache identity: a truncated soft-cap fetch must
     # not be served to a later full-budget request for the same URL.
-    cache_key = generate_cache_key(f"{url}#cap={effective_cap}")
+    cache_key = generate_cache_key(
+        f"{url}#cap={effective_cap}#structured={int(include_structured_data)}"
+    )
     cache_file = CONTENT_CACHE_DIR / f"{cache_key}.cache"
 
     # Check cache
@@ -379,6 +410,7 @@ def fetch_webpage_content(url: str, timeout: int = 5, retry_attempt: int = 0,
         "meta_description": meta_info.get("description", ""),
         "meta_keywords": meta_info.get("keywords", ""),
         "og_image": og_image,
+        "recipe_jsonld": _extract_recipe_jsonld(soup) if include_structured_data else [],
         "js_rendered": js_rendered,
         "js_message": js_message,
         "success": True,
