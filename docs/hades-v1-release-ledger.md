@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Exact Recipe browser verification — candidate `c734628f` (2026-08-29)
+
+The isolated authenticated browser lane exercised the exact candidate image
+`odysseus:candidate-c734628f` through normal login, real `/api/chat_stream`,
+Qwen3:8B, Recipe URL import, canonical persistence, and reload readback. It
+passed `3/3` streams and `[DONE]` events, with `1` mutation, `2` canonical
+readbacks, `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. OCI revision and `/app/.odysseus-source-commit` matched
+`c734628f787d147f1e5ae0d4efeffc07a1dbd3c6`. The host-side runner was the
+evaluator-only health-wait descendant `a3c20aef`; this does not claim that
+candidate's evaluator code was embedded in the product image. The owner
+deployment was not changed.
+
 ## Recipe editor / acceptance readiness — `a3c20aef` (2026-08-29)
 
 The productization branch now presents Recipe creation with repeatable,
