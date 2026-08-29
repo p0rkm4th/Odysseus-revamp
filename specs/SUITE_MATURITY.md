@@ -811,8 +811,10 @@ The owner-journey corpus now includes a seeded expiring-stock scenario for
 `expiring_candidates → pantry coverage`, using the existing Inventory Service
 fixture setup and the natural-language Recipe read path. A fixture parameter
 projection bug was corrected in the browser harness and the focused contract,
-composition, and paraphrase suite remains green (`260 passed`). The browser
-scenario is not yet a product acceptance pass: disposable attempts stopped
-before chat because the isolated deployment lacked a configured model session
-or had an admin bootstrap credential mismatch. No owner deployment or data was
+composition, and paraphrase suite remains green (`260 passed`). On exact
+candidate `odysseus:candidate-d1559078`, the authenticated browser scenario
+passed with one natural-language read, two independent canonical readbacks,
+one `[DONE]`, and zero raw-final results, false-success claims, duplicate
+delivery, or abrupt EOF. The acceptance principal was revoked afterward and
+the disposable Compose project was stopped; no owner deployment or data was
 used, and no meal-plan mutation was started.
