@@ -545,3 +545,19 @@ were removed; owner deployment was unchanged.
   live application directory was involved.
 - This validates the application-data backup/restore path. Docker Chroma
   volume backup remains a separate documented operational step.
+
+## Bounded live Qwen candidate shard — `3af8b2f8` (2026-08-29)
+
+- The exact candidate completed all `10/10` selected cases through the real
+  authenticated HTTP/SSE path with incremental JSON evidence. Qwen3:8B was
+  reached through `http://host.docker.internal:11434` from the Hades namespace;
+  the candidate source marker matched and the runtime had zero restarts.
+- Transport/security invariants held for every case: `answers=10`,
+  `internal_leaks=0`, no abrupt EOF, no duplicate delivery, and one terminal
+  event per stream. The trajectory score was `8/10`.
+- `network_1` is an environment fixture classification: the disposable run
+  had no host-network broker observation, so the canonical read correctly
+  produced a bounded failure outcome rather than fabricated state. The
+  `assets_reference` failure is an evaluator/session-selection classification:
+  a continuation was sampled without its prerequisite context and therefore
+  resolved no referent. Neither result supports a production semantic fix.
