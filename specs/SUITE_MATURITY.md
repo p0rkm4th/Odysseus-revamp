@@ -790,3 +790,14 @@ independent readbacks, four terminal `[DONE]` events, `falseSuccess=0`,
 `rawFinalResults=0`, `duplicateDelivery=0`, and `abruptEOF=0`. This closes the
 previously listed chat-mutation evidence gap for the seeded Household slice;
 broader fresh-install and cross-suite journeys remain separate work.
+
+## Recipe pantry-composition browser coverage — `312113f6` (2026-08-29)
+
+The data-driven owner journey corpus now includes a seeded canonical Recipe and
+Inventory prerequisite path covering `list → can_make → scale` through the
+real authenticated browser/chat route. Fixture setup uses the existing
+Inventory Service only for prerequisite state; all exercised reads remain
+natural-language chat turns and preserve the active Recipe reference. Focused
+Recipe/journey coverage passes `260` tests. Browser execution of this new
+scenario is pending a fresh exact-candidate isolated deployment and is not
+claimed as live evidence yet.
