@@ -1597,7 +1597,7 @@ def compile_intent(
     # a domain noun as a request to inspect state. Keep this as bounded intent
     # metadata rather than a tool-name/route heuristic.
     read_explicit = bool(semantic_read_concept) or bool(re.match(
-        r"\s*(?:what(?:'s| is| are)?|which|who|where|when|how many|show|list|"
+        r"\s*(?:what(?:'s| is| are)?|which|who|where|when|how many|how much|show|list|"
         r"tell me|do you have|are there|is there|find my|what do you)\b",
         q,
     ))

@@ -12,7 +12,7 @@ import re
 
 _READ_REQUEST = re.compile(
     r"^(?:what|what's|whats|which|where|who|how\s+many|show|list|tell|whatcha|describe|summarize|give|provide|"
-    r"review|display|remind|anything|do\s+i|have\s+i|you\s+know)\b",
+    r"review|display|remind|anything|do\s+i|have\s+i|how\s+much|you\s+know)\b",
     re.IGNORECASE,
 )
 _OWNER_SELF = re.compile(
