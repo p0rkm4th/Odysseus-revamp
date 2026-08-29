@@ -619,3 +619,25 @@ with image ID `sha256:1e20b8d3136cc4ea43b978f428ad115351f8bd12886b902fb19bb0a1b6
 OCI marker/runtime source matched, health was healthy, restarts were `0`, and
 Qwen3:8B was reachable from the candidate namespace. The owner deployment was
 not changed.
+
+## Asset property owner-journey checkpoint — `d41c67fc`
+
+The exact browser trace for `How much RAM do my computers have?` showed the
+remaining defect: the compiler populated `asset_property=ram`, but the shared
+deterministic read predicate did not recognize `how much` as an explicit read.
+The turn consequently reached model-only prose with no Action or canonical
+Result. Adding `how much` to the shared read-request predicate closes that
+boundary without adding a phrase-specific route. Focused owner/core coverage
+passed `535` tests with `2` skips; the full current-source regression passed
+`6931` tests with `6` skips and had `6` storage-preflight environment failures
+because the source-mounted test container lacked `/home/.docker-data`.
+
+Exact candidate `odysseus:candidate-d41c67fc` was built from pushed SHA
+`d41c67fcbc5e04dd932712beaf049389a5e1d4d5`, image
+`sha256:310bdcb9c37e6f1aa0533593ff2160f60e09a3b92a06319b7a9f90b97784f32c`.
+OCI/source marker matched, health was healthy, restarts were `0`, and Qwen3:8B
+was reachable from the candidate namespace. Browser acceptance then produced
+one `manage_assets/list`, one deterministic final answer containing Atlas
+`64 GB` and Erebus `128 GB`, one persisted answer, and one `[DONE]`; the
+disposable acceptance container and principal were removed afterward. The
+owner deployment was not changed.
