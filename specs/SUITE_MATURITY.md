@@ -4,6 +4,21 @@ This ledger records observed owner-journey maturity on the post-merge
 `hades-v1-productization` branch. A registered capability is not evidence that
 the complete journey works.
 
+## Recipe workspace authenticated browser checkpoint — candidate `a76af992` (2026-08-29)
+
+An isolated Chromium run against `odysseus:candidate-a76af9922f0d` completed
+normal DOM login with the gated disposable acceptance principal, canonical
+synthetic recipe setup, Recipe workspace search, detail rendering, and reload
+persistence. The run passed the search/detail assertions, including a visible
+recipe name and human-readable Ingredients section. The candidate image
+`sha256:2eb81cba236a083fe681ed554e30971562d2aa5cb8fa7657ebc0a2c557374544`
+matched source `a76af9922f0dcb2a8e4997e208b92f7fb9f36597`. Five diagnostic console
+entries were captured before login: the login page probes unauthenticated
+optional endpoints and received expected `401/403` responses; no post-login
+uncaught error was observed. The disposable stack and principal were revoked
+and removed after the run. This verifies the Recipe workspace surface only,
+not chat mutation or owner-data correctness.
+
 ## Recipe workspace search checkpoint — `9285a7e1` (2026-08-29)
 
 The existing Recipe workspace now provides a bounded search field over the

@@ -1083,3 +1083,16 @@ source `9285a7e1dda257414b632722f6f4d2782fd4694f`; image ID is
 `sha256:f13b31e24c27b2f644b290325997e6f712c11e4c423b84fb8b6da5ea64a73171`,
 and OCI/source-marker provenance matched exactly. The candidate was not
 deployed, so this entry is build/focused-test evidence only.
+# Authenticated Recipe workspace browser checkpoint — candidate `a76af992` (2026-08-29)
+
+The isolated Chromium browser lane logged in through the normal Hades UI using
+the gated disposable acceptance principal, seeded one synthetic canonical
+recipe as prerequisite state, and verified Recipe search, detail rendering,
+ingredient visibility, and reload persistence against
+`odysseus:candidate-a76af9922f0d`. The image ID was
+`sha256:2eb81cba236a083fe681ed554e30971562d2aa5cb8fa7657ebc0a2c557374544`,
+with OCI/source marker `a76af9922f0dcb2a8e4997e208b92f7fb9f36597`. The run passed;
+pre-login optional probes produced expected unauthenticated `401/403`
+diagnostics, with no post-login uncaught browser errors. The isolated
+principal and stack were cleaned up. This is UI-surface evidence, not chat
+mutation or real-owner evidence.
