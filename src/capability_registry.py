@@ -126,6 +126,14 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             for action in ("summarize_owner_memory", "search_memory", "inspect_memory")
         )),
     ),
+    "memory.manage": CapabilitySpec(
+        capability_id="memory.manage",
+        description="Manage the authenticated owner's canonical Brain memory records.",
+        actions=_actions(*(
+            ActionSpec(action_id=action, effects=("write_private",), executor_key="manage_memory")
+            for action in ("add", "edit", "delete")
+        )),
+    ),
     "work.read": CapabilitySpec(
         capability_id="work.read",
         description="Owner-scoped read projections over the canonical Work Engine.",
@@ -345,6 +353,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "manage_osint": "research.public_sources",
     "manage_security_assessment": "security.assessment.read",
     "read_memory": "memory.read",
+    "manage_memory": "memory.manage",
     "read_work": "work.read",
     "manage_work": "work.project.manage",
     "read_household": "household.read",

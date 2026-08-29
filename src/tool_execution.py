@@ -1717,6 +1717,65 @@ async def _execute_read_memory_binding(block, owner=None):
         return "read_memory", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 
+async def _execute_manage_memory_binding(block, owner=None):
+    """Execute one owner-scoped Memory mutation through the existing manager."""
+    try:
+        if not owner:
+            raise ValueError("an authenticated memory owner is required")
+        payload = _ody_v34_json.loads(block.content or "{}")
+        if not isinstance(payload, dict):
+            raise ValueError("memory mutation payload must be an object")
+        action = str(payload.get("action") or "").strip().casefold()
+        if action not in {"add", "edit", "delete"}:
+            raise ValueError("unsupported memory mutation action")
+        memory_id = str(payload.get("memory_id") or "").strip()
+        if action == "delete" and not memory_id:
+            query = str(payload.get("query") or "").strip().casefold()
+            words = [word for word in re.findall(r"[a-z0-9]+", query) if word not in {
+                "my", "the", "this", "that", "personal", "memory", "fact",
+            }]
+            from src import ai_interaction
+            entries = ai_interaction._memory_manager.load(owner=owner)
+            matches = [entry for entry in entries if words and all(
+                word in str(entry.get("text") or "").casefold() for word in words
+            )]
+            if len(matches) != 1:
+                raise ValueError("I couldn't identify exactly one saved memory to remove; nothing was changed.")
+            memory_id = str(matches[0].get("id") or "")
+        lines = [action]
+        if action == "add":
+            lines.extend([str(payload.get("text") or "").strip(), str(payload.get("category") or "fact").strip()])
+        elif action == "edit":
+            lines.extend([memory_id, str(payload.get("text") or "").strip()])
+        else:
+            lines.append(memory_id)
+        from src.ai_interaction import dispatch_ai_tool
+        _desc, result = await dispatch_ai_tool("manage_memory", "\n".join(lines), owner=owner)
+        result = dict(result or {})
+        success = not result.get("error")
+        result.update({
+            "action": action,
+            "canonical_store": "memory",
+            "success": success,
+            "exit_code": 0 if success else 1,
+        })
+        if success:
+            from src import ai_interaction
+            entries = ai_interaction._memory_manager.load(owner=owner)
+            present = any(str(entry.get("id") or "") == memory_id for entry in entries)
+            if action == "add":
+                created_id = str(result.get("memory_id") or "")
+                present = bool(created_id) and any(str(entry.get("id") or "") == created_id for entry in entries)
+            if action == "delete":
+                present = not present
+            result["verification"] = {"status": "VERIFIED" if present else "FAILED", "memory_present": present}
+            if not present:
+                result.update({"success": False, "exit_code": 1, "error": "Memory mutation did not match canonical readback."})
+        return "manage_memory", result
+    except Exception as exc:
+        return "manage_memory", {"error": str(exc), "output": str(exc), "exit_code": 1, "success": False}
+
+
 def _with_canonical_read_status(result: Any) -> dict[str, Any]:
     """Attach an explicit status without changing a domain's payload shape.
 
@@ -2216,6 +2275,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "manage_osint": _execute_manage_osint_binding,
     "manage_security_assessment": _execute_security_assessment_binding,
     "read_memory": _execute_read_memory_binding,
+    "manage_memory": _execute_manage_memory_binding,
     "read_work": _execute_read_work_binding,
     "manage_work": _execute_manage_work_binding,
     "read_household": _execute_read_household_binding,

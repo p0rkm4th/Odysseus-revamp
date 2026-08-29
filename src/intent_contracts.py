@@ -448,6 +448,29 @@ def recipe_source_url(query: str) -> str | None:
     return match.group(0).rstrip(".,") if match else None
 
 
+def memory_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
+    """Project ordinary owner memory mutations into bounded Action fields.
+
+    The text/query remains user-supplied evidence. Resolution of a delete
+    query to an owned record belongs to the memory executor, not the model.
+    """
+    text = re.sub(r"\s+", " ", str(query or "").strip())
+    operation = str(action or "").strip().casefold()
+    if operation == "add":
+        match = re.search(r"\bremember(?:\s+that)?\s+(.+?)\s*[.!?]?$", text, re.IGNORECASE)
+        if not match:
+            return None
+        value = match.group(1).strip()
+        return {"action": "add", "text": value[:5000], "category": "fact"} if value else None
+    if operation == "delete":
+        match = re.search(r"\b(?:forget|delete|remove)\s+(?:my|the|this|that)?\s*(.+?)\s*[.!?]?$", text, re.IGNORECASE)
+        if not match:
+            return None
+        value = match.group(1).strip()
+        return {"action": "delete", "query": value[:200]} if value else None
+    return None
+
+
 def work_project_create_payload(query: str) -> dict[str, Any] | None:
     """Project only an explicit Work project title into a bounded Action.
 
@@ -1410,6 +1433,12 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "explicit_memory_read",
     ),
+    "MEMORY_MUTATION": DomainContract(
+        "MEMORY_MUTATION", "memory.manage",
+        {"CREATE": "add", "UPDATE": "edit", "DELETE": "delete"}, "manage_memory",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "memory_mutation",
+    ),
     "WORK": DomainContract(
         "WORK", "work.read", {"READ": "overview", "READ_ATTENTION": "attention"}, "read_work",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
@@ -1721,6 +1750,7 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
     if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
+    if re.search(r"\b(?:remember|memorize|save this about me)\b", q): return "CREATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:save|store|keep)\b", q) and re.search(r"\b(?:recipe|recipes|cookbook|dish)\b", q):
         return "CREATE"
@@ -1844,7 +1874,9 @@ def compile_intent(
         )
     ):
         concept = "TECHNICAL_ASSET"
-    elif re.search(r"\b(?:memory|remember|brain)\b", q):
+    elif re.search(r"\b(?:memory|remember|brain)\b", q) or re.search(
+        r"\b(?:forget|delete|remove)\b.{0,80}\b(?:my|this|that|personal)\b", q,
+    ):
         concept = "MEMORY"
     elif re.search(r"\b(?:network|lan|subnet|hosts?|devices?)\b", q):
         concept = "NETWORK"
@@ -2368,6 +2400,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         contract_key = "PROJECT_CREATE"
     if frame.domain_concept == "TASK" and frame.operation_class == "CREATE":
         contract_key = "TASK_CREATE"
+    if frame.domain_concept == "MEMORY" and frame.operation_class in {"CREATE", "UPDATE", "DELETE"}:
+        contract_key = "MEMORY_MUTATION"
     contract = DOMAIN_CONTRACTS.get(contract_key)
     if contract is None:
         return ResolvedContract(frame, None, None, None, None, False, "no_domain_contract")
@@ -2382,6 +2416,12 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         and frame.filters.get("recipe_import") is True
     ):
         action_key = "CREATE_IMPORT_COMMIT"
+    if frame.domain_concept == "MEMORY" and frame.operation_class == "CREATE":
+        action_key = "CREATE"
+    elif frame.domain_concept == "MEMORY" and frame.operation_class == "UPDATE":
+        action_key = "UPDATE"
+    elif frame.domain_concept == "MEMORY" and frame.operation_class == "DELETE":
+        action_key = "DELETE"
     if frame.domain_concept == "HOMELAB_HOST" and frame.filters.get("remote") and frame.operation_class == "READ":
         action_key = "REMOTE_READ"
     if frame.domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and frame.operation_class == "READ" and frame.entity_reference and not (frame.domain_concept == "RECIPE" and frame.filters.get("recipe_shopping") is True):
