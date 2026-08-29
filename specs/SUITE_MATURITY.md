@@ -1315,3 +1315,15 @@ zero abrupt EOF, duplicate delivery, false success, or raw final results. The
 fixture used two synthetic owner memories, including a historical entry; the
 acceptance principal and disposable deployment were revoked and removed after
 the run. Broader Memory correction/forgetting journeys remain deferred.
+
+## Memory correction browser checkpoint — `eb9d2ac8` (2026-08-29)
+
+Memory correction is now browser-verified on exact candidate
+`odysseus:candidate-eb9d2ac8`: four natural-language turns, two canonical
+mutations, two deterministic reads, verified deletion, and no remaining owner
+record for the corrected fact after reload. The journey also proved that a
+recent explicit mutation is not re-harvested by background extraction. The
+transport gate now sends ordinary-chat Memory deletions through ACI. Focused
+coverage passed `494` tests; the realistic journey had zero false successes,
+duplicate delivery, raw final Results, or abrupt EOF. Broader Memory correction
+paraphrases and multi-fact conflict handling remain open.

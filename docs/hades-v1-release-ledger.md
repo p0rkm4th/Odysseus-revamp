@@ -1616,3 +1616,29 @@ target reference. The requested infrastructure-to-Work journey is therefore
 not yet a supported product path; implementing it would require a defined
 canonical relation contract rather than another prompt route. No production
 change was made and the gap is deferred explicitly.
+
+## Memory correction and owner transport checkpoint — `eb9d2ac8` (2026-08-29)
+
+Two generalized defects found by the nontechnical owner journey were fixed:
+background Memory extraction now suppresses the recent transcript window after
+an explicit canonical mutation, and the shared plain-chat capability gate now
+routes `DELETE` operations into ACI. Focused coverage passed `494` tests with
+`5` unrelated skips and one SQLAlchemy deprecation warning.
+
+The exact candidate `odysseus:candidate-eb9d2ac8`, image
+`sha256:47f88ae2389061f8102dc0d8c2c71f6b003e75a3d7e7b7b7366620422ad3daf2`,
+embedded source `eb9d2ac87affd8b29e0f37745c28c8aba835ab1f`, matched its OCI
+revision and source marker, and ran healthy with zero restarts in the isolated
+Qwen3:8B deployment. The browser journey passed four natural-language turns:
+remember a fact, read it, say it is no longer true, and read it again. It
+produced two canonical mutations, two reads, zero false successes, zero
+duplicate delivery, zero raw final Results, and zero abrupt EOF. Independent
+durable-state inspection found no remaining owner color record after the
+verified delete. The journey was added to the corpus in follow-up docs/test
+commit `bdfd0fef`; no rebuild was needed for that data-only change.
+
+The Work task mutation/readback journey was also rerun against the same exact
+candidate: two turns, one chat mutation, two canonical readbacks including
+reload, and zero false success, raw final Result, duplicate delivery, or abrupt
+EOF. The actual owner deployment remains untouched and is still running its
+separate older source/image.
