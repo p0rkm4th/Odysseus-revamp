@@ -1359,3 +1359,13 @@ The exact candidate also passed the isolated Work project mutation journey:
 chat-created canonical project state was independently read back and survived
 reload, with zero false success, raw final Result, duplicate delivery, or
 abrupt EOF.
+
+## Approved mutation duplicate-delivery checkpoint — `a784b35e` (2026-08-29)
+
+The owner journey found and fixed a shared approval-replay defect that could
+execute an approved canonical mutation twice. The duplicate guard now covers
+canonical mutation bindings, and the approved Recipe URL journey passed on the
+exact candidate with one mutation, two deterministic readbacks, reload
+durability, and zero duplicate delivery. Full regression passed 6987 tests with
+8 skips. Duplicate-like fixture references remain a test-environment concern;
+ambiguous canonical references fail closed.
