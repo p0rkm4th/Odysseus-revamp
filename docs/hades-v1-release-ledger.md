@@ -1832,6 +1832,13 @@ The ordinary owner question "What do you know about me?" passed on the empty
 Memory fixture with one human-readable terminal answer and one terminal stream;
 false success, raw final Result, duplicate delivery, and abrupt EOF were zero.
 
+## Current populated-Memory owner-read checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+The populated-memory fixture journey passed its ordinary "What do you know
+about me?" read on Qwen3:8B. Canonical setup/readback verification recorded
+two readbacks and one terminal stream; false success, raw final Result,
+duplicate delivery, and abrupt EOF were zero.
+
 ## Current continuation safety checkpoint — executable candidate `1a2b62e5` (2026-08-29)
 
 Owner testing found two related control-plane defects: bare `Restart it.`
