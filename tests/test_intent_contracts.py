@@ -180,8 +180,10 @@ def test_conceptual_component_question_does_not_become_asset_read():
 @pytest.mark.parametrize("query", [
     "Show me what's in the kitchen.",
     "Add angel hair pasta to my kitchen inventory.",
+    "What do you know about me?",
+    "What work is outstanding?",
 ])
-def test_household_owner_turn_enters_bounded_aci_capability_path(query):
+def test_owner_read_or_mutation_enters_bounded_aci_capability_path(query):
     from src.intent_contracts import is_bounded_owner_capability_turn
 
     assert is_bounded_owner_capability_turn(compile_intent(query)) is True
@@ -206,6 +208,16 @@ def test_general_household_explanation_never_resolves_to_mutation():
     assert is_bounded_owner_capability_turn(frame) is True
     assert resolve_intent(frame).action_id == "overview"
     assert resolve_intent(frame).contract.capability_id == "household.read"
+
+
+@pytest.mark.parametrize("query", [
+    "What is memory?",
+    "What is work management?",
+])
+def test_conceptual_memory_and_work_questions_do_not_enter_owner_capability_path(query):
+    from src.intent_contracts import is_bounded_owner_capability_turn
+
+    assert is_bounded_owner_capability_turn(compile_intent(query)) is False
 
 
 def test_continuation_and_depth_are_structured_not_phrase_specific():
