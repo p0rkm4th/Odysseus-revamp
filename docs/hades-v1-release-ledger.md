@@ -241,3 +241,18 @@ E6.
   correct Atlas/Erebus values, one persisted answer, and one `[DONE]`.
   Qwen3:8B was reachable from the candidate namespace. Disposable acceptance
   principal/container were removed; owner deployment was unchanged.
+
+## Productization live Recipe checkpoint — `d41c67fc` (2026-08-29)
+
+- Exact candidate browser acceptance passed the empty Recipe read with one
+  deterministic human answer, one persisted answer, and one `[DONE]`.
+- Chat-driven Recipe mutation/readback passed `3/3` turns: creation entered
+  through natural-language chat, canonical readback found the recipe, and the
+  recipe remained after reload. The run had `2` readback checks, `0` false
+  successes, `0` raw final results, `0` duplicate delivery, and `0` abrupt EOF.
+- Candidate source was `d41c67fcbc5e04dd932712beaf049389a5e1d4d5`, image
+  `sha256:310bdcb9c37e6f1aa0533593ff2160f60e09a3b92a06319b7a9f90b97784f32c`;
+  OCI/source marker matched, health was healthy, and restart count was `0`.
+  Qwen3:8B was reachable from the candidate namespace. The disposable
+  acceptance principal and credential were revoked/removed; owner deployment
+  remained unchanged.
