@@ -1948,6 +1948,8 @@ async def _execute_manage_recipes_binding(block, owner=None):
             raise ValueError("unsupported recipe mutation")
         if not owner:
             raise PermissionError("authenticated recipe owner is required")
+        if payload.get("review_required"):
+            raise ValueError(str(payload.get("review_reason") or "recipe needs review before saving; nothing was saved"))
         from src.inventory_service import get_inventory_service
         service = get_inventory_service()
         if action in {"add", "commit_import"} and payload.get("source_url"):
