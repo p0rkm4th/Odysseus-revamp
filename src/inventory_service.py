@@ -1140,17 +1140,36 @@ class RecipeService(InventoryService):
                 }
             return {"status": "READY_FOR_REVIEW", "draft": draft.as_payload()}
         if action == "list":
-            return {"recipes": self.list_recipes(
-                owner, include_archived=bool(args.get("include_archived", False))
-            )}
+            return {
+                "status": "SUCCESS",
+                "result_type": "recipe_list",
+                "operation": "list",
+                "canonical_store": "inventory_service",
+                "recipes": self.list_recipes(
+                    owner, include_archived=bool(args.get("include_archived", False))
+                ),
+            }
         if action == "search":
             query = normalize_item_name(args.get("query"))
-            return {"recipes": [recipe for recipe in self.list_recipes(owner)
-                                if query in normalize_item_name(recipe["name"])]}
+            return {
+                "status": "SUCCESS",
+                "result_type": "recipe_search",
+                "operation": "search",
+                "canonical_store": "inventory_service",
+                "query": query,
+                "recipes": [recipe for recipe in self.list_recipes(owner)
+                            if query in normalize_item_name(recipe["name"])],
+            }
         if action == "get":
-            return {"recipe": self.get_recipe(
-                owner, _required_text(args.get("recipe_id"), "recipe_id")
-            )}
+            return {
+                "status": "SUCCESS",
+                "result_type": "recipe_detail",
+                "operation": "get",
+                "canonical_store": "inventory_service",
+                "recipe": self.get_recipe(
+                    owner, _required_text(args.get("recipe_id"), "recipe_id")
+                ),
+            }
         if action == "can_make":
             plan = self.can_make(
                 owner, _required_text(args.get("recipe_id"), "recipe_id"),

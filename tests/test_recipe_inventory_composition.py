@@ -43,9 +43,17 @@ def test_recipe_reads_and_pantry_coverage_use_one_persisted_inventory_owner():
     service, recipe = _recipe_fixture()
 
     listed = service.manage_recipes({"action": "list"}, owner="alice")
+    assert listed["status"] == "SUCCESS"
+    assert listed["result_type"] == "recipe_list"
+    assert listed["operation"] == "list"
+    assert listed["canonical_store"] == "inventory_service"
     assert [row["name"] for row in listed["recipes"]] == ["Weeknight Chili"]
 
     searched = service.manage_recipes({"action": "search", "query": "chili"}, owner="alice")
+    assert searched["status"] == "SUCCESS"
+    assert searched["result_type"] == "recipe_search"
+    assert searched["operation"] == "search"
+    assert searched["canonical_store"] == "inventory_service"
     assert searched["recipes"][0]["id"] == recipe["id"]
 
     coverage = service.manage_recipes(
@@ -89,6 +97,20 @@ def test_recipe_scale_is_read_only_deterministic_arithmetic_over_canonical_recip
         ("Rice", Decimal("709.764708"), "ml"),
     ]
     assert service.get_recipe("alice", recipe["id"])["servings"] == Decimal("2")
+
+
+def test_recipe_detail_read_result_identifies_canonical_owner_and_operation():
+    service, recipe = _recipe_fixture()
+
+    result = service.manage_recipes(
+        {"action": "get", "recipe_id": recipe["id"]}, owner="alice"
+    )
+
+    assert result["status"] == "SUCCESS"
+    assert result["result_type"] == "recipe_detail"
+    assert result["operation"] == "get"
+    assert result["canonical_store"] == "inventory_service"
+    assert result["recipe"]["id"] == recipe["id"]
 
 
 def test_recipe_owner_scope_does_not_leak_across_inventory_service_reads():
