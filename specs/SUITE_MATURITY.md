@@ -274,3 +274,21 @@ alone do not advance a suite to IMPLEMENTED.
 - URL/video/image import preparation/commit remains deferred; no unverified
   importer was added. Meal-plan mutation remains gated on that future import
   slice.
+
+## Owner empty-state routing checkpoint — `7570719f`
+
+- The existing transport eligibility predicate now includes canonical `MEMORY`
+  and `WORK` owner reads, while conceptual questions remain outside the
+  bounded ACI path.
+- Focused contract/lifecycle coverage: `214 passed, 2 skipped`.
+- Exact disposable candidate `odysseus:candidate-7570719f` was built from the
+  pushed SHA and deployed with matching OCI marker/running source, healthy
+  status, and zero restarts.
+- Browser replay exposed a remaining shared product defect: the route now
+  logs `chat→agent` and selects `read_memory`, but the execution path sent
+  `tools=0` to Qwen and emitted model prose without a canonical Result; the
+  analogous empty Work journey behaved the same way. Memory and Work browser
+  acceptance therefore remain FAIL, despite one terminal `[DONE]` and no
+  abrupt EOF. This is a product execution integration defect, not an
+  evaluator pass; disposable principal, credentials, containers, and volumes
+  were removed after capture.
