@@ -2,6 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Fresh-install Qwen/restart checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+A disposable empty deployment was started from the exact candidate image
+`odysseus:candidate-5fe5bf94ca79` with fresh application data and isolated
+ports/network. Normal browser-visible admin setup registered the Ollama
+endpoint and `qwen3:8b`, then created a non-admin acceptance user. The user
+logged in through the normal route and ran `OWNER-WORK-EMPTY-001`; the empty
+Work read returned a deterministic human answer with zero false success, raw
+final Results, duplicate delivery, or abrupt EOF.
+
+The same browser journey passed after an app-container restart. Health returned
+healthy, restart count remained `0`, and the image remained
+`sha256:5838813a8dcbb9506f91bb0185341a0c98fb1b0ead78711f2d3500d7824c4c46` with
+source/OCI revision `5fe5bf94ca7922b31357f293c07f9a2e33e44a43`. This is fresh
+install/restart evidence only; no owner deployment or owner data was touched.
+
 ## Actual-owner Work provenance checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Read-only owner dogfood asked “What work is outstanding?” in an existing
