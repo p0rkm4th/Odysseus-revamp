@@ -328,3 +328,22 @@ alone do not advance a suite to IMPLEMENTED.
   abrupt EOF. This is a product execution integration defect, not an
   evaluator pass; disposable principal, credentials, containers, and volumes
   were removed after capture.
+
+## Recipe URL argument-projection checkpoint — `b43742dd`
+
+- URL-backed Recipe CREATE now carries `recipe_source_url` and the explicit
+  `recipe_requested_name` in the compiled IntentFrame. The canonical action
+  projection exposes only `manage_recipes/commit_import` for that intent, so a
+  weak-model selection cannot fall back to the under-specified `add` Action
+  and lose the user's source/name fields.
+- Focused ACI, intent, recipe import, and binding coverage: `343 passed`.
+- Exact candidate `odysseus:candidate-b43742dd` was built and deployed in a
+  fresh isolated Compose project with matching image/OCI source
+  `b43742ddd5a73776317c1385fa3bd164506c6482`, healthy startup, and the
+  acceptance principal enabled only for the run.
+- Browser execution reached the normal login route, but the fresh isolated
+  deployment had no configured model endpoint (`/api/models` returned an empty
+  list), so no chat session could be created. URL-import browser acceptance is
+  therefore `UNVERIFIED / MODEL_ENDPOINT_MISCONFIGURED`; this is not counted
+  as a product routing pass or failure. The false-success guard remained
+  unchanged.
