@@ -1642,3 +1642,16 @@ candidate: two turns, one chat mutation, two canonical readbacks including
 reload, and zero false success, raw final Result, duplicate delivery, or abrupt
 EOF. The actual owner deployment remains untouched and is still running its
 separate older source/image.
+
+## Asset owner-journey checkpoint — executable candidate `eb9d2ac8` (2026-08-29)
+
+The disposable Assets database was wired into the candidate bind mount after
+an initial harness-only fixture mismatch. On exact candidate
+`odysseus:candidate-eb9d2ac8`, the Atlas/Erebus RAM collection journey passed
+three natural-language paraphrases, and the RTX 4090 false-premise journey
+passed one bounded no-match read. Across these four GUI turns there were zero
+false premise claims, raw final Results, duplicate delivery, or abrupt EOF.
+The fixture database was disposable and the actual owner deployment was not
+touched. One earlier run failed before login because its short-lived
+acceptance credential expired; it was classified as `AUTH_SESSION_FAILURE` and
+did not count as a product result.
