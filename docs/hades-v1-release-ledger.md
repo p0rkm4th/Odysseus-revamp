@@ -267,6 +267,18 @@ remained unchanged.
   zero duplicate delivery, and zero abrupt EOF. No executable source changed;
 owner deployment remained unchanged.
 
+## Productization Household checkpoint — `d41c67fc` (2026-08-29)
+
+- Chat-driven Household mutation/readback passed `4/4` turns on the exact
+  candidate: add three synthetic cans, read quantity, consume one, and read
+  the remaining quantity after reload.
+- The run had `2` canonical mutations and `2` readback checks, one persisted
+  answer and one `[DONE]` per turn, zero false successes, zero raw final
+  results, zero duplicate delivery, and zero abrupt EOF.
+- This was isolated synthetic state using the existing Inventory Service; the
+  acceptance principal was revoked/removed and the owner deployment remained
+  unchanged.
+
 ## Productization URL import checkpoint — `d41c67fc` (2026-08-29)
 
 - The live URL Recipe journey reached `manage_recipes/commit_import` through
