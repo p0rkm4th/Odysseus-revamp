@@ -56,6 +56,10 @@ _DEFINITIONS = {
     "pcs": ("count", "count", Decimal("1")),
     "piece": ("count", "count", Decimal("1")),
     "pieces": ("count", "count", Decimal("1")),
+    # Common recipe count units have no volume/mass conversion; canonicalize
+    # them to count rather than rejecting otherwise complete recipe imports.
+    "clove": ("count", "count", Decimal("1")),
+    "cloves": ("count", "count", Decimal("1")),
 }
 
 AMBIGUOUS_UNITS = frozenset({

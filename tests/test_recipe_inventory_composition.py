@@ -305,6 +305,18 @@ def test_recipe_import_keeps_commas_inside_schema_org_ingredient_items():
     ]
 
 
+def test_recipe_inventory_accepts_clove_as_a_deterministic_count_unit():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    result = service.manage_recipes({
+        "action": "add", "name": "Garlic Dinner", "servings": 2,
+        "ingredients": [{"name": "garlic", "quantity": 2, "unit": "cloves"}],
+        "instructions": "Cook it.",
+    }, owner="alice")
+    assert result["recipe"]["ingredients"][0]["unit"] == "count"
+    assert result["recipe"]["ingredients"][0]["quantity"] == 2
+
+
 def test_incomplete_recipe_import_returns_bounded_review_diagnostics():
     review = recipe_import_review(
         '<!-- RECIPE_JSONLD:{"@type":"Recipe","name":"Seasoned Dinner",'
