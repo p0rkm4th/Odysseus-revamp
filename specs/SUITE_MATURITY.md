@@ -357,3 +357,19 @@ alone do not advance a suite to IMPLEMENTED.
   persisted, one bounded `ERROR` answer and one `[DONE]` were delivered, with
   zero abrupt EOF and zero false success. This is a truthful `NEEDS_REVIEW`
   outcome, not permission to invent a quantity.
+
+## Recipe import review UX checkpoint — `0c708f92`
+
+- Failed URL imports now have a canonical owner-facing renderer: it explains
+  that the recipe could not be imported, confirms that no recipe was saved,
+  and asks for missing or ambiguous details. Internal Action and validation
+  data remain diagnostic rather than the primary answer.
+- Focused ACI/Recipe coverage: `316 passed`; full supported regression before
+  this renderer-only slice: `6927 passed, 5 skipped`.
+- The exact candidate image `odysseus:candidate-0c708f92c660` was deployed in
+  an isolated runtime with matching OCI/source marker and Qwen3:8B reachable
+  through the container endpoint. Real browser login, session creation,
+  approval, `/api/chat_stream`, and URL import produced the bounded review
+  answer, one terminal `[DONE]`, and no abrupt EOF. No canonical recipe was
+  persisted because the source lacked a verifiable quantity for `salt and
+  pepper`.
