@@ -17,6 +17,13 @@ tests. A bounded 100-seed selector audit found no orphaned declared
 continuation. The current branch is `216` commits ahead of `origin/main` and
 zero behind; no merge is implied by that divergence.
 
+The current-tree supported full regression at this checkpoint completed
+`6945 passed, 5 skipped` in `212.46s`. This run includes the evaluator
+selection regressions above. The five skips remain documented test skips; no
+product failure was observed. Because this checkpoint changes only tests and
+documentation, the previously verified executable candidate was not rebuilt
+or redeployed.
+
 ## Current productization checkpoint — `f60d9334`
 
 - Branch `hades-v1-productization` is synchronized with its remote at docs
