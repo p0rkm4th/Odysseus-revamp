@@ -7,6 +7,7 @@ from scripts.hades_live_fuzz import (
     authenticate,
     compositional_variants,
 )
+from scripts.hades_live_dogfood import Case, select_cases
 
 
 def test_bootstrap_is_loopback_only():
@@ -112,3 +113,51 @@ def test_bootstrap_rejects_non_loopback_before_setup():
             password=None,
             bootstrap=True,
         )
+
+
+def test_sampled_declared_trajectory_keeps_reference_prerequisite():
+    cases = [
+        Case("asset_list", "what computers do i have", "continuation", "assets"),
+        Case(
+            "asset_first", "tell me about the first one", "continuation", "assets",
+            expect_reference="TECHNICAL_ASSET",
+        ),
+        Case("unrelated", "what is a network?"),
+    ]
+
+    selected = select_cases(cases, sample=1, seed=1)
+
+    assert [case.name for case in selected] == ["asset_list", "asset_first"]
+    assert selected[0].group == selected[1].group == "assets"
+
+
+def test_sampled_declared_selection_is_reproducible_and_does_not_add_later_turns():
+    cases = [
+        Case("start", "review work", "continuation", "work"),
+        Case("followup", "continue", "continuation", "work"),
+        Case("other", "what is dns?"),
+    ]
+
+    first = select_cases(cases, sample=1, seed=3)
+    second = select_cases(cases, sample=1, seed=3)
+
+    assert [case.name for case in first] == [case.name for case in second]
+    if any(case.name == "followup" for case in first):
+        assert any(case.name == "start" for case in first)
+
+
+def test_fresh_sampling_does_not_claim_reference_context_exists():
+    cases = [
+        Case("asset_list", "what computers do i have", "continuation", "assets"),
+        Case(
+            "asset_first", "tell me about the first one", "continuation", "assets",
+            expect_reference="TECHNICAL_ASSET",
+        ),
+    ]
+
+    selected = select_cases(cases, sample=2, seed=0, session_mode="fresh")
+
+    assert len(selected) == 1
+    assert selected[0].name == "asset_list"
+    assert selected[0].mode == "fresh"
+    assert selected[0].group is None
