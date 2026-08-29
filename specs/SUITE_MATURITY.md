@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Recipe review visual usability checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+Browser visual review found duplicated source/import fields and a Save footer
+below the normal viewport. The shared inventory dialog now hides the original
+fields during review and keeps actions sticky while the review body scrolls.
+Exact-candidate replay at 1366×768 showed the corrected surface, committed an
+edited recipe, and verified it after reload. Frontend, shared browser dogfood,
+and realistic browser acceptance passed; owner deployment remains untouched.
+
 ## Network owner-read projection checkpoint — candidate `dcf0a95d` (2026-08-29)
 
 Actual-owner read-only smoke found opaque network IDs and repeated raw
