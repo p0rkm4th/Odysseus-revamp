@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Recipe composition and shopping checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+Exact-candidate Recipe composition passed listing, pantry feasibility, and
+scaling; a fresh principal also passed shopping requirements. Canonical
+readbacks and reload durability passed with zero false success, raw final
+Result, duplicate delivery, or abrupt EOF. A rerun exposed non-idempotent
+fixture seeding, which was isolated from product evidence.
+
 ## Populated Memory owner-read checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 The exact-candidate populated-memory journey returned the seeded durable fact
