@@ -184,6 +184,25 @@ def test_recipe_import_prepare_applies_explicit_name_override_without_persisting
     assert draft.source_url == "https://example.test/recipe"
 
 
+def test_inventory_recipe_prepare_import_preserves_name_override_and_does_not_write():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    result = service.manage_recipes({
+        "action": "prepare_import",
+        "source_url": "https://example.test/recipe",
+        "requested_name": "Owner Chosen Dinner",
+        "source_text": (
+            '{"@type":"Recipe","name":"Page Title",'
+            '"recipeIngredient":["1 cup rice"],'
+            '"recipeInstructions":"Cook the rice."}'
+        ),
+    }, owner="alice")
+    assert result["status"] == "READY_FOR_REVIEW"
+    assert result["draft"]["name"] == "Owner Chosen Dinner"
+    assert result["draft"]["source_url"] == "https://example.test/recipe"
+    assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"] == []
+
+
 def test_recipe_import_prepare_accepts_validated_draft_json_without_persisting():
     draft = recipe_import_draft(json.dumps({
         "name": "Photo Dinner", "servings": 2,
