@@ -351,6 +351,18 @@ def test_project_final_answer_does_not_turn_pending_approval_into_failure():
     assert answer is None
 
 
+def test_project_final_answer_preserves_control_plane_clarification():
+    response, answer = project_final_answer(
+        "I couldn't confirm that change because no successful canonical Action completed.",
+        [],
+        clarification_only=True,
+        clarification_text="Which service or systemd unit should I restart?",
+        effectful_request=True,
+    )
+    assert answer is None
+    assert response == "Which service or systemd unit should I restart?"
+
+
 def test_project_final_answer_owns_malformed_asset_read_without_model_fallback():
     response, answer = project_final_answer(
         "You have several servers, GPUs, and databases.",
