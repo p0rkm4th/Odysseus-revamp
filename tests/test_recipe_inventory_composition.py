@@ -99,6 +99,26 @@ def test_recipe_scale_is_read_only_deterministic_arithmetic_over_canonical_recip
     assert service.get_recipe("alice", recipe["id"])["servings"] == Decimal("2")
 
 
+def test_recipe_shopping_requirements_reuses_canonical_stock_shortages_without_writing():
+    service, recipe = _recipe_fixture()
+
+    result = service.manage_recipes(
+        {"action": "shopping_requirements", "recipe_id": recipe["id"], "servings": "4"},
+        owner="alice",
+    )
+
+    assert result["status"] == "SUCCESS"
+    assert result["result_type"] == "recipe_shopping_requirements"
+    assert result["operation"] == "shopping_requirements"
+    assert result["canonical_store"] == "inventory_service"
+    assert result["recipe_name"] == "Weeknight Chili"
+    assert result["can_make"] is False
+    assert {(row["name"], row["quantity"], row["unit"]) for row in result["missing_ingredients"]} == {
+        ("beans", Decimal("473.176473"), "ml"), ("rice", Decimal("236.588236"), "ml"),
+    }
+    assert service.get_recipe("alice", recipe["id"])["name"] == "Weeknight Chili"
+
+
 def test_recipe_detail_read_result_identifies_canonical_owner_and_operation():
     service, recipe = _recipe_fixture()
 
@@ -190,6 +210,20 @@ def test_expiring_recipe_result_has_a_human_renderer_distinct_from_raw_result():
     )
     assert answer.startswith("Recipes using")
     assert not answer.startswith("{")
+
+
+def test_recipe_shopping_requirements_renderer_is_human_readable_and_grounded():
+    answer = canonical_recipe_read_answer([{
+        "tool": "read_recipes", "exit_code": 0,
+        "command": json.dumps({"action": "shopping_requirements"}),
+        "output": json.dumps({
+            "status": "SUCCESS", "result_type": "recipe_shopping_requirements",
+            "recipe_name": "Chicken Rice", "can_make": False,
+            "missing_ingredients": [{"name": "rice", "quantity": "2", "unit": "cup", "optional": False}],
+        }),
+    }])
+    assert answer == "For Chicken Rice, you still need:\n- 2 cup rice"
+    assert not answer.lstrip().startswith("{")
 
 
 def test_recipe_import_prepare_accepts_schema_org_jsonld_without_persisting():

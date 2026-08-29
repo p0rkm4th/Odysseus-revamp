@@ -3033,7 +3033,7 @@ def canonical_read_fast_path_payload(
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
         reference = str(frame.get("entity_reference") or "").strip()
-        if reference and action in {"get", "can_make", "scale"}:
+        if reference and action in {"get", "can_make", "shopping_requirements", "scale"}:
             payload["recipe_id"] = reference[:500]
         recipe_query = str(filters.get("recipe_query") or "").strip()
         if recipe_query and action == "search":
@@ -3340,6 +3340,21 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
         names = [str(item.get("name") or "ingredient") for item in shortages if isinstance(item, Mapping)]
         suffix = f" Missing: {', '.join(names[:20])}." if names else ""
         return "The canonical pantry check says this recipe cannot be made from the recorded stock." + suffix
+    if action == "shopping_requirements":
+        missing = payload.get("missing_ingredients")
+        if not isinstance(missing, list):
+            return None
+        recipe_name = str(payload.get("recipe_name") or "this recipe").strip()
+        if not missing:
+            return f"You have the recorded ingredients needed for {recipe_name}. Nothing needs to be added to the shopping list."
+        lines = [f"For {recipe_name}, you still need:"]
+        for item in missing[:50]:
+            if isinstance(item, Mapping):
+                quantity = item.get("quantity")
+                unit = str(item.get("unit") or "").strip()
+                name = str(item.get("name") or "ingredient").strip()
+                lines.append(f"- {quantity} {unit} {name}".strip())
+        return "\n".join(lines)
     if action == "scale":
         ingredients = payload.get("scaled_ingredients")
         if not isinstance(ingredients, list) or not payload.get("servings"):

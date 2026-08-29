@@ -799,6 +799,20 @@ def test_protected_aci_state_survives_provider_route_rebuild():
     ])
 
 
+@pytest.mark.parametrize("query", (
+    "Make a shopping list for this recipe.",
+    "What do I need to buy for this recipe?",
+    "What ingredients are missing for this recipe?",
+))
+def test_recipe_shopping_requirements_is_a_distinct_canonical_read(query):
+    frame = compile_intent(query)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["recipe_shopping"] is True
+    assert canonical_read_action("RECIPE", frame.filters, entity_reference="recipe-1") == "shopping_requirements"
+    resolved = resolve_intent(frame)
+    assert resolved.action_id == "shopping_requirements"
+
+
 @pytest.mark.parametrize(
     "query",
     (

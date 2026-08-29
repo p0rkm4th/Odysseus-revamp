@@ -1861,7 +1861,7 @@ async def _execute_read_recipes_binding(block, owner=None):
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
         action = str(payload.get("action") or "").strip().casefold()
-        if action not in {"list", "search", "get", "can_make", "scale", "expiring_candidates", "prepare_import"}:
+        if action not in {"list", "search", "get", "can_make", "shopping_requirements", "scale", "expiring_candidates", "prepare_import"}:
             raise ValueError("unsupported read-only Recipe action")
         if not owner:
             raise PermissionError("authenticated recipe owner is required")
