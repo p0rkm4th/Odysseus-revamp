@@ -158,6 +158,46 @@ async def extract_transcript_async(
     return {"success": False, "error": f"Failed after {max_retries} attempts", "transcript": None}
 
 
+async def extract_video_metadata_async(
+    url: str, *, timeout: int = 20,
+) -> Dict[str, Any]:
+    """Fetch bounded public video metadata/description as untrusted evidence.
+
+    Recipe import uses this as a fallback when captions are unavailable.  It
+    deliberately returns presentation evidence only; callers must still pass
+    any proposed recipe through RecipeDraft validation before persistence.
+    """
+    try:
+        cmd = [
+            _find_ytdlp(), "--skip-download", "--no-playlist",
+            "--dump-single-json", "--socket-timeout", str(max(1, min(timeout, 60))),
+            url,
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=max(1, timeout))
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return {"success": False, "error": "Video metadata timed out"}
+        if proc.returncode != 0:
+            return {"success": False, "error": "Video metadata unavailable"}
+        data = json.loads(stdout.decode("utf-8", errors="replace"))
+        return {
+            "success": True,
+            "title": str(data.get("title") or "").strip()[:300],
+            "description": str(data.get("description") or "").strip()[:8000],
+            "channel": str(data.get("channel") or data.get("uploader") or "").strip()[:200],
+        }
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"success": False, "error": "Video metadata unavailable"}
+    except Exception as exc:
+        logger.warning("Video metadata extraction failed: %s", exc)
+        return {"success": False, "error": "Video metadata unavailable"}
+
+
 def format_transcript_for_context(
     transcript_data: Dict[str, Any], url: str,
     title: str = "", channel: str = ""
