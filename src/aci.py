@@ -3671,6 +3671,15 @@ def canonical_action_failure_answer(
         except (TypeError, ValueError):
             detail = str(event.get("output") or "").strip()
         suffix = f" ({detail[:240]})" if detail else ""
+        if tool == "manage_recipes" and action == "commit_import" and "needs review" in detail.casefold():
+            return CanonicalAnswer(
+                content=(
+                    f"I couldn't import that recipe{suffix}. No recipe was saved. "
+                    "Provide the missing or ambiguous ingredient details and try again."
+                ),
+                source=AnswerSource.ERROR,
+                provenance="recipe import validation failure",
+            )
         return CanonicalAnswer(
             content=f"The requested action could not be completed{suffix}. No successful change is confirmed.",
             source=AnswerSource.ERROR,
