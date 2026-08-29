@@ -4494,6 +4494,16 @@ def project_action_selection(
                     if requested_name:
                         payload["requested_name"] = requested_name
                     payload["action"] = "commit_import"
+                else:
+                    # Do not let a model fill an incomplete pasted recipe
+                    # with invented quantities or an empty name. Keep the
+                    # existing mutation binding, but mark this proposal for
+                    # a truthful review-needed failure at the executor.
+                    payload["review_required"] = True
+                    payload["review_reason"] = (
+                        "Recipe text needs review before saving; one or more "
+                        "ingredients has no exact amount. Nothing was saved."
+                    )
         if (
             str(frame.get("domain_concept") or "") in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"}
             and str(frame.get("operation_class") or "") in {"CREATE", "EXECUTE"}
