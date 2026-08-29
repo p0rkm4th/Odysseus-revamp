@@ -1874,3 +1874,10 @@ explicit display name passed its three-turn review/approval flow. One
 canonical Recipe mutation was independently verified by two readbacks,
 including reload; the requested name and source URL were retained. False
 success, raw final Result, duplicate delivery, and abrupt EOF were zero.
+
+## Current copied-webpage Recipe checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+The fresh empty-recipe owner journey accepted a webpage-shaped recipe paste
+through chat and review. It passed two turns with one canonical mutation and
+two readbacks including reload; false success, raw final Result, duplicate
+delivery, and abrupt EOF were zero.

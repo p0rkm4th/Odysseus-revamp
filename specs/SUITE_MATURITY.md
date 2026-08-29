@@ -60,6 +60,13 @@ The exact-candidate populated-memory journey returned the seeded durable fact
 through the browser and passed two independent canonical readbacks. It had
 zero false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+## Current copied-webpage Recipe maturity — `1a2b62e5` (2026-08-29)
+
+The fresh isolated owner journey accepted webpage-shaped pasted recipe text
+through the review flow. One canonical mutation and two readbacks including
+reload passed with zero false success, raw final Result, duplicate delivery,
+or abrupt EOF.
+
 ## Current populated-Memory owner-read checkpoint — `1a2b62e5` (2026-08-29)
 
 The populated-memory fixture read passed on the exact isolated Qwen3:8B
