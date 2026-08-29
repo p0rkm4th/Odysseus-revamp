@@ -1699,3 +1699,28 @@ inspection found zero canonical rows for `Acceptance Web Paste Dinner`, proving
 review preparation did not write state. The temporary negative readback exposed
 an acceptance-harness gap (`absent_name` is unsupported); it was verified
 independently. The actual owner runtime remains untouched and older.
+
+## Household sloppy-language checkpoint — executable candidate `3147dd01` (2026-08-29)
+
+The Household compiler now recognizes ordinary remaining-quantity phrasing such
+as “how much X is left now” in addition to “how much X we got”, while excluding
+infrastructure terms from the household route. The permanent owner corpus now
+includes a four-turn messy-language mutation/readback journey: add three cans,
+read the quantity, use one, and read the remaining quantity.
+
+On exact candidate `odysseus:candidate-3147dd01`, the clean disposable browser
+journey passed four turns, including two chat mutations and two canonical
+readbacks. Independent SQLite inspection found `Acceptance Thyme` quantity 2.
+There were zero false successes, raw final Results, duplicate delivery, or
+abrupt EOFs. The stack was healthy with zero restarts and source marker
+`3147dd01`; the actual owner deployment was untouched. A prior contaminated
+retry exposed duplicate-like inventory ambiguity; consumption correctly failed
+closed rather than guessing.
+
+The current-source full regression after this executable change is
+`6987 passed, 8 skipped, 186 warnings`.
+
+The clean fresh-install stack initially returned HTTP 400 for session creation
+because no model endpoint existed. Registering Qwen3:8B through the normal
+admin model-endpoint setup route resolved it. This remains a fresh-install
+onboarding/release gap to improve, not a feature-acceptance failure.

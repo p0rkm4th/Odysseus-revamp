@@ -1344,3 +1344,13 @@ exact Qwen3:8B browser journey passed with no false success, raw final Result,
 duplicate delivery, or abrupt EOF. Canonical SQLite readback confirmed the
 uncommitted recipe was absent. The negative readback assertion itself remains
 an acceptance-harness gap because `absent_name` is not yet implemented.
+
+## Household sloppy-language checkpoint — `3147dd01` (2026-08-29)
+
+Messy owner language is now covered by a permanent four-turn browser journey:
+add three pantry cans, ask how many “we got”, consume one, and ask how many
+are “left now”. Exact candidate `3147dd01` passed the journey with canonical
+mutation/readback verification, reload persistence, zero false success, zero
+raw final Results, zero duplicate delivery, and zero abrupt EOF. Independent
+SQLite readback confirmed the final quantity was 2. Focused coverage passed
+285 tests; the current full regression passed 6987 tests with 8 skips.

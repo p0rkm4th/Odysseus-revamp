@@ -137,6 +137,18 @@
       "expected": {"policy": "allowed", "approval": "not_required", "before": {"quantity": 0}, "after": {"quantity": 2, "readback": true}, "readback": {"kind": "inventory", "endpoint": "/api/inventory/overview?expiry_days=30", "item_name": "Acceptance Tomatoes", "quantity": 2}, "terminal": {"done": 4, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001",
+      "environment": "realistic_messy_synthetic",
+      "fixture_profile": "empty-household-sloppy-language",
+      "turns": [
+        {"prompt": "yo add 3 cans of Acceptance Thyme to the pantry", "expected": {"domain": "HOUSEHOLD", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add_item", "tool_binding": "manage_assets", "requires_effect": true, "forbidden": ["successfully added", "saved"]}},
+        {"prompt": "how much Acceptance Thyme we got", "expected": {"domain": "HOUSEHOLD", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_household", "must_include_any": ["3", "three"]}},
+        {"prompt": "use one Acceptance Thyme", "expected": {"domain": "HOUSEHOLD", "operation": "EXECUTE", "answer_source": "DETERMINISTIC_RESULT", "action": "consume_stock", "tool_binding": "manage_assets", "requires_effect": true}},
+        {"prompt": "how much Acceptance Thyme is left now", "expected": {"domain": "HOUSEHOLD", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_household", "must_include_any": ["2", "two"]}}
+      ],
+      "expected": {"policy": "allowed", "approval": "not_required", "before": {"quantity": 0}, "after": {"quantity": 2, "readback": true}, "readback": {"kind": "inventory", "endpoint": "/api/inventory/overview?expiry_days=30", "item_name": "Acceptance Thyme", "quantity": 2}, "terminal": {"done": 4, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-MEMORY-EMPTY-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-memory",
