@@ -1559,6 +1559,35 @@ async def _run_extraction_jobs_sequentially(session_id: str, jobs: list, max_wai
             logger.warning("[bg-extract] %s extraction job failed for session %s", name, session_id, exc_info=True)
 
 
+def _recent_explicit_memory_mutation(sess, last_metrics=None) -> bool:
+    """Return whether the current/recent transcript already owns a Memory mutation.
+
+    Background extraction must not reinterpret an explicit canonical Memory
+    Action as a new user assertion. The four-message window matches the
+    extraction cadence and also covers the common mutation -> readback flow.
+    """
+    intent = last_metrics.get("aci_intent") if isinstance(last_metrics, dict) else None
+    if (
+        isinstance(intent, dict)
+        and intent.get("domain_concept") == "MEMORY"
+        and intent.get("operation_class") in {"CREATE", "UPDATE", "DELETE"}
+    ):
+        return True
+
+    history = getattr(sess, "history", None) or []
+    for item in history[-4:]:
+        metadata = item.get("metadata") if isinstance(item, dict) else getattr(item, "metadata", None)
+        metadata = metadata or {}
+        intent = metadata.get("aci_intent") if isinstance(metadata, dict) else None
+        if (
+            isinstance(intent, dict)
+            and intent.get("domain_concept") == "MEMORY"
+            and intent.get("operation_class") in {"CREATE", "UPDATE", "DELETE"}
+        ):
+            return True
+    return False
+
+
 def run_post_response_tasks(
     sess,
     session_manager,
@@ -1599,19 +1628,16 @@ def run_post_response_tasks(
 
     # Explicit owner-memory mutations already have a canonical Action and
     # verified Result. Running the heuristic background extractor on the same
-    # turn can create a second normalized record, making a later Forget leave
-    # apparent stale reality behind. Keep one semantic owner for these turns.
-    _aci_intent = last_metrics.get("aci_intent") if isinstance(last_metrics, dict) else {}
-    _explicit_memory_mutation = (
-        isinstance(_aci_intent, dict)
-        and _aci_intent.get("domain_concept") == "MEMORY"
-        and _aci_intent.get("operation_class") in {"CREATE", "UPDATE", "DELETE"}
-    )
+    # turn, or on the next extraction checkpoint while that turn is still in
+    # the recent conversation window, can create a second normalized record.
+    # That makes a later Forget leave apparent stale reality behind. Keep one
+    # semantic owner for the whole recent window, not only the terminal turn.
+    _recent_memory_mutation = _recent_explicit_memory_mutation(sess, last_metrics)
 
     # Memory extraction — only every 4th message pair to avoid excess LLM calls
     _msg_count = len(sess.history) if hasattr(sess, 'history') else 0
     _should_extract = (_msg_count >= 4) and (_msg_count % 4 == 0)
-    if (allow_background_extraction and not _explicit_memory_mutation
+    if (allow_background_extraction and not _recent_memory_mutation
             and not incognito and not compare_mode and _should_extract
             and uprefs.get("auto_memory", True)):
         from services.memory.memory_extractor import extract_and_store

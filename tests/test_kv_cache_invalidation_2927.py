@@ -340,6 +340,28 @@ async def test_run_post_response_tasks_does_not_fire_extraction_concurrently(mon
     assert calls == {"memory": 1, "skill": 1}
 
 
+def test_recent_explicit_memory_mutation_blocks_transcript_reextraction(monkeypatch):
+    """A mutation followed by a readback must not re-create deleted facts."""
+    chat_helpers = _install_chat_helpers_stubs(monkeypatch)
+
+    mutation = {"aci_intent": {"domain_concept": "MEMORY", "operation_class": "DELETE"}}
+    sess = SimpleNamespace(history=[{"role": "assistant", "metadata": mutation}])
+
+    assert chat_helpers._recent_explicit_memory_mutation(
+        sess, {"aci_intent": {"domain_concept": "MEMORY", "operation_class": "READ"}}
+    ) is True
+    assert chat_helpers._recent_explicit_memory_mutation(
+        SimpleNamespace(history=[]),
+        {"aci_intent": {"domain_concept": "MEMORY", "operation_class": "CREATE"}},
+    ) is True
+    assert chat_helpers._recent_explicit_memory_mutation(
+        SimpleNamespace(history=[{"role": "assistant", "metadata": {
+            "aci_intent": {"domain_concept": "ASSET", "operation_class": "CREATE"}
+        }}]),
+        {"aci_intent": {"domain_concept": "MEMORY", "operation_class": "READ"}},
+    ) is False
+
+
 # --------------------------------------------------------------------------- #
 # 4. Stable session identifier in the outgoing payload to OpenAI-compatible
 #    (local) endpoints
