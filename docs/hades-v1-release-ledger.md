@@ -25,6 +25,18 @@ Results, duplicate delivery, or abrupt EOF. Visible replay showed bounded
 named/unconfirmed sections, no opaque IDs, and freshness language. The actual
 owner container remains source `34ced247` and was not rebuilt or mutated.
 
+## URL Recipe review-safety replay — candidate `dcf0a95d` (2026-08-29)
+
+`OWNER-RECIPE-URL-IMPORT-NAMED-001` passed on the exact candidate using a
+disposable empty-Recipe fixture with the normal Qwen endpoint. The ordinary
+URL-plus-display-name request took the expected review/error path; one
+mutation was attempted but independent SQLite readback and the harness
+readbacks both confirmed zero canonical Recipes. False success, raw final
+Result, duplicate delivery, and abrupt EOF were all zero. A separate fresh
+fixture could not run this journey because it had no registered model
+endpoint; that remains an install/fixture setup gap, not feature evidence.
+No owner data was touched.
+
 ## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
 
 The exact candidate stack completed normal first-run setup, authenticated
