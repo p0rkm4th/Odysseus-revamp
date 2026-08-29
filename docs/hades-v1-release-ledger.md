@@ -507,3 +507,17 @@ were removed; owner deployment was unchanged.
   marker `3af8b2f8b3c3845ff537233197ee38ac8df05e60`, healthy runtime, and zero
   restarts. The principal, credentials, disposable volumes, and containers were
   removed after both runs; the owner deployment was untouched.
+
+## Fresh Recipe onboarding acceptance — `3af8b2f8` (2026-08-29)
+
+- A clean disposable Compose project was bootstrapped with no application
+  state. A normal first-run admin login registered the Qwen3:8B endpoint through
+  the existing admin endpoint route; the separate gated acceptance principal
+  then authenticated through the normal login UI.
+- The empty Recipe read plus natural-language Recipe mutation/readback journey
+  passed: `2` scenarios, `4` turns, `1` chat mutation, `2` canonical readbacks
+  including reload, and `4` terminal `[DONE]` events. False-success,
+  raw-final-result, duplicate-delivery, and abrupt-EOF counts were all `0`.
+- The acceptance principal, credential, database, volumes, containers, and
+  network were removed after the run. This is isolated fresh-install evidence;
+  it does not substitute for real-owner data validation.
