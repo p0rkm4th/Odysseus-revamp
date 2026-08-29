@@ -263,7 +263,18 @@ async function onSubmit(event) {
       await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, source_url:data.source_url || null})});
     }
     if (kind === 'recipe-import') {
-      const prepared = await api('/api/recipes/import/prepare', {method:'POST', body:JSON.stringify({source_url:data.source_url || null, source_text:data.source_text || null})});
+      let attachment_ids = [];
+      const image = form.elements.recipe_image?.files?.[0];
+      if (image) {
+        const uploadBody = new FormData();
+        uploadBody.append('files', image, image.name);
+        const uploadResponse = await fetch('/api/upload', {method:'POST', credentials:'same-origin', body:uploadBody});
+        const uploadResult = await uploadResponse.json().catch(() => ({}));
+        if (!uploadResponse.ok) throw new Error(apiError(uploadResult, uploadResponse.status));
+        attachment_ids = (uploadResult.files || []).map(file => file.id).filter(Boolean).slice(0, 1);
+        if (!attachment_ids.length) throw new Error('The recipe image could not be uploaded.');
+      }
+      const prepared = await api('/api/recipes/import/prepare', {method:'POST', body:JSON.stringify({source_url:data.source_url || null, source_text:data.source_text || null, attachment_ids})});
       if (!prepared.draft) throw new Error(prepared.message || 'No verified recipe draft was found.');
       const ingredients = prepared.draft.ingredients || [];
       const summary = `${prepared.draft.name || 'Untitled recipe'}\n${ingredients.length} ingredient(s)\n\n${prepared.draft.instructions || 'No instructions recorded.'}`;
@@ -297,7 +308,7 @@ async function onClick(event) {
   }
   if (action === 'stock-add' || action === 'stock-consume') return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
   if (action === 'new-recipe') return modalForm('New recipe', `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div><label class="hades-intake-field"><span>Ingredients <small>one per line: name | quantity | unit</small></span><textarea name="ingredients" required placeholder="rice | 1 | cup"></textarea></label>${field('Source URL','source_url','type="url" maxlength="4000" placeholder="https://…"')}<label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
-  if (action === 'import-recipe') return modalForm('Import recipe', `<div class="inventory-callout hades-callout"><strong>Review before saving.</strong> External text is untrusted; preparation never changes canonical state. Public YouTube URLs use available transcripts; missing quantities or instructions stay unverified.</div>${field('Recipe URL or video','source_url','type="url" maxlength="4000" placeholder="https://example.com/recipe or https://youtu.be/…"')}<label class="hades-intake-field"><span>Or paste recipe text / JSON-LD</span><textarea name="source_text" maxlength="20000" placeholder="Paste a complete recipe or schema.org JSON-LD"></textarea></label>`, 'Prepare draft', 'recipe-import');
+  if (action === 'import-recipe') return modalForm('Import recipe', `<div class="inventory-callout hades-callout"><strong>Review before saving.</strong> External text is untrusted; preparation never changes canonical state. Public YouTube URLs use available transcripts; image descriptions remain review evidence and cannot create a recipe unless the required structure validates.</div>${field('Recipe URL or video','source_url','type="url" maxlength="4000" placeholder="https://example.com/recipe or https://youtu.be/…"')}<label class="hades-intake-field"><span>Or paste recipe text / JSON-LD</span><textarea name="source_text" maxlength="20000" placeholder="Paste a complete recipe or schema.org JSON-LD"></textarea></label><label class="hades-intake-field"><span>Or attach a recipe image</span><input name="recipe_image" type="file" accept="image/*"></label>`, 'Prepare draft', 'recipe-import');
   const recipeCard = button.closest('[data-recipe-id]');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);
   if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button);
