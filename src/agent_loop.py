@@ -2809,6 +2809,10 @@ async def stream_aci_runtime(
         )
 
     _approved_result_injected = False
+    # Persist across the approval replay and subsequent model rounds in this
+    # chat turn. A resumed provider response may repeat the already-approved
+    # effectful binding in a later round.
+    _successful_effectful_batch_calls: set[tuple[str, str]] = set()
     if exact_approval is not None:
         approved = exact_approval.pending
         approved_block = ToolBlock(approved.tool_name, approved.content)
@@ -2872,6 +2876,14 @@ async def stream_aci_runtime(
         if tool_result_is_successful(approved_result):
             for doc_event in _document_stream_events(approved_block):
                 yield f"data: {json.dumps(doc_event)}\n\n"
+        if (
+            approved.tool_name in _VERIFIER_EFFECTFUL_TOOLS
+            and isinstance(approved_result, dict)
+            and approved_result.get("success") is True
+            and not approved_result.get("error")
+            and not approved_result.get("approval_required")
+        ):
+            _successful_effectful_batch_calls.add((approved.tool_name, approved.content))
         if approved_result.get("action") == "suggest":
             yield (
                 "data: "
@@ -4733,12 +4745,6 @@ async def stream_aci_runtime(
         tool_result_records = []  # aligned structured provenance for next round
         budget_hit = False
         _initial_tool_block_count = len(tool_blocks)
-        # A provider can repeat the same approved effectful call in one
-        # response (observed with recipe import after approval). Once an
-        # identical binding has succeeded, suppress only that duplicate in
-        # this execution batch. Failed calls remain retryable and distinct
-        # payloads are never conflated.
-        _successful_effectful_batch_calls: set[tuple[str, str]] = set()
         for i, block in enumerate(tool_blocks):
             # --- Tool budget check ---
             if max_tool_calls > 0 and total_tool_calls >= max_tool_calls:
