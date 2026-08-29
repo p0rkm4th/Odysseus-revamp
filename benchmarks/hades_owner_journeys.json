@@ -60,6 +60,17 @@
       "expected": {"action": "read_recipes", "tool_binding": "read_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 1}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Expiring Pantry Pasta"}, "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-SHOPPING-REQUIREMENTS-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "recipe-shopping-requirements",
+      "fixture_setup": "canonical_recipe_shopping",
+      "turns": [
+        {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "list", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Acceptance Pantry Pasta"]}},
+        {"prompt": "What ingredients do I need to buy for this recipe?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "shopping_requirements", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["missing", "buy", "need"], "forbidden": ["everything you need", "already have all"]}}
+      ],
+      "expected": {"action": "read_recipes", "tool_binding": "read_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 1}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Pantry Pasta"}, "terminal": {"done": 2, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-RECIPE-MUTATION-READBACK-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-recipes",

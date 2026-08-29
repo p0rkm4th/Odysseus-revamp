@@ -156,7 +156,7 @@ async function seedHouseholdAcceptanceState(page) {
   });
 }
 
-async function seedRecipeCompositionAcceptanceState(page, {expiring = false} = {}) {
+async function seedRecipeCompositionAcceptanceState(page, {expiring = false, shortage = false} = {}) {
   // Establish prerequisite canonical Inventory/Recipe state only. The
   // exercised coverage/read/scale turns still enter through chat; no recipe
   // mutation is performed by the browser fixture itself.
@@ -181,7 +181,7 @@ async function seedRecipeCompositionAcceptanceState(page, {expiring = false} = {
       if (!stock.ok) throw new Error(`recipe composition stock setup failed (${stock.status})`);
       return item;
     };
-    const pasta = await createItem('Pasta', 4);
+    const pasta = await createItem('Pasta', shortage ? 1 : 4);
     const sauce = await createItem('Tomato Sauce', 2);
     const recipeResponse = await fetch('/api/recipes', {
       method: 'POST', credentials: 'same-origin',
@@ -199,7 +199,7 @@ async function seedRecipeCompositionAcceptanceState(page, {expiring = false} = {
     const recipe = (await recipeResponse.json()).recipe;
     if (!recipe?.id) throw new Error('recipe composition setup returned no recipe id');
     return {recipeId: recipe.id, recipeName: recipe.name};
-  }, {expiring});
+  }, {expiring, shortage});
 }
 
 async function seedWorkAcceptanceState(page) {
@@ -797,6 +797,9 @@ async function main() {
       diagnostics.assetSeed = seedCanonicalAssetFixture(scenarios);
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_pantry')) {
         diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page);
+      }
+      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_shopping')) {
+        diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page, {shortage: true});
       }
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_expiring')) {
         diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page, {expiring: true});
