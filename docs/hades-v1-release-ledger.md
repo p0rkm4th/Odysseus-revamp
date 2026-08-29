@@ -1779,6 +1779,14 @@ through chat. Canonical readback and reload verification passed with two
 readbacks, zero false success, raw final Result, duplicate delivery, or
 abrupt EOF.
 
+## Current qualitative Recipe review checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+On a fresh isolated stack with exactly one prerequisite recipe, the owner
+paste containing `salt to taste` and `oil as needed` passed through chat as a
+review-safe import. The journey recorded one turn, two canonical readbacks,
+and no recipe-count increase; false success, raw final Result, duplicate
+delivery, and abrupt EOF were zero.
+
 An earlier reused-database replay was rejected before chat because its
 recipe-count precondition no longer held. That was disposable fixture
 contamination, not a product result.
