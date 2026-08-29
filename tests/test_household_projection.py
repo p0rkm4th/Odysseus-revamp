@@ -68,6 +68,8 @@ def test_household_workspace_uses_canonical_overview_and_common_states():
     assert "canonical_store" in source
     assert "hades-module-header" in source
     assert "hades-empty-state" in source
+    assert "JSON.stringify(d.lots" not in source
+    assert "No stock is recorded for this item." in source
 
 
 def test_household_mutations_read_back_from_the_same_canonical_inventory_owner():
