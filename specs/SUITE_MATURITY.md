@@ -4,13 +4,24 @@ This ledger records observed owner-journey maturity on the post-merge
 `hades-v1-productization` branch. A registered capability is not evidence that
 the complete journey works.
 
+## Current evidence boundary — `d1559078` (2026-08-29)
+
+The retained exact executable candidate has fresh isolated browser evidence for
+complete Recipe create/readback/reload; empty Memory read; empty Work read;
+Household add/read/use/readback; positive Asset RAM aggregation; and
+realistic-messy Asset no-match filtering. These journeys used normal login,
+real chat/SSE, canonical readback where applicable, and disposable state. They
+do not establish owner-data correctness or imply that the remaining partial
+suites are complete. Network live acceptance and broader cross-suite/fresh-
+install suite coverage remain separate gates.
+
 | Suite | Existing canonical owner | Current state | Verified journeys | Immediate gap | V1 disposition |
 |---|---|---|---|---|---|
 | Homelab / Network / Infrastructure | `AssetInventory`, `HomelabOperations`, `NetworkState`, ACI contracts | IMPLEMENTED / PARTIAL | asset list/detail, network context/observations, host inspection, aggregate and target-qualified service status rendering | service target execution/readback and broader browser journeys | Tier 1 active |
-| Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / PARTIAL | overview, owner-scoped location/item/list/search/get contracts, mutation/readback suites, isolated authenticated browser mutation/readback, deterministic stock/expiry rendering | broader fresh-install journeys and wider household coverage | Tier 1 active |
-| Recipes / Meal Planning | existing `InventoryRecipe`, `RecipeService`, stock planner, and Cookbook code | IMPLEMENTED / PARTIAL | canonical list/search/get, pantry coverage, serving scale, expiring-inventory candidates, explicit Result contracts, isolated Qwen/browser trajectory | shopping-list/meal-plan projections and broader fresh-install journeys | Tier 1 active |
-| Memory / Personal Knowledge | Memory store, grounding, `read_memory` | IMPLEMENTED | deterministic owner reads, stale/current precedence, browser acceptance | broaden everyday recall/correction journeys | Tier 1 next |
-| Work / Projects / Tasks | Work Engine, Runs, Actions, `read_work` | IMPLEMENTED | overview, attention, continuation and persistence tests | add cross-suite remediation/task journeys | Tier 1 next |
+| Household / Kitchen | `inventory_service`, `read_household`, inventory mutation Actions | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | overview, owner-scoped location/item/list/search/get contracts, natural-language add/use/readback, reload persistence, deterministic stock/expiry rendering, fresh isolated browser mutation/readback | broader fresh-install journeys and wider household coverage | Tier 1 active |
+| Recipes / Meal Planning | existing `InventoryRecipe`, `RecipeService`, stock planner, and Cookbook code | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | canonical list/search/get, pantry coverage, serving scale, expiring-inventory candidates, text/URL import, verified persistence/readback/reload, explicit Result contracts, isolated Qwen/browser trajectories | shopping-list/meal-plan projections and broader fresh-install journeys | Tier 1 active |
+| Memory / Personal Knowledge | Memory store, grounding, `read_memory` | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | deterministic owner reads, stale/current precedence, empty-state authenticated browser read with final answer and reload-safe delivery | broaden everyday recall/correction journeys | Tier 1 next |
+| Work / Projects / Tasks | Work Engine, Runs, Actions, `read_work` | IMPLEMENTED / LIVE_VERIFIED / PARTIAL | overview, attention, continuation and persistence tests, empty-state authenticated browser read with final answer and reload-safe delivery | add cross-suite remediation/task journeys | Tier 1 next |
 | OSINT / Public Research | public web evidence and OSINT contracts | PARTIAL | contract/security characterization | end-to-end case/evidence/report journey | Tier 2 |
 | Security Assessment / Pentest | security engagement/scope/finding contracts | PARTIAL | authorization and policy tests | bounded assessment-to-finding journey | Tier 2 |
 | Developer ACI | canonical ACI workspace/tool bindings | IMPLEMENTED / PARTIAL | bounded search/view/patch/test and confinement tests | production-like browser coding trajectory | Tier 2 |
