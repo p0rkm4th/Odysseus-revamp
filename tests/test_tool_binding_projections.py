@@ -132,6 +132,33 @@ def test_recipe_binding_executes_canonical_shopping_requirements_read(monkeypatc
     assert result["data"]["result_type"] == "recipe_shopping_requirements"
 
 
+def test_recipe_binding_executes_canonical_search_read(monkeypatch):
+    class FakeInventory:
+        def manage_recipes(self, payload, *, owner):
+            assert owner == "alice"
+            assert payload == {"action": "search", "query": "chili"}
+            return {
+                "status": "SUCCESS",
+                "result_type": "recipe_search",
+                "operation": "search",
+                "canonical_store": "inventory_service",
+                "query": "chili",
+                "recipes": [],
+            }
+
+    monkeypatch.setattr(
+        "src.inventory_service.get_inventory_service",
+        lambda: FakeInventory(),
+    )
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="read_recipes",
+        payload={"action": "search", "query": "chili"},
+        owner="alice",
+    ))
+    assert result["success"] is True
+    assert result["data"]["operation"] == "search"
+
+
 def test_network_binding_preserves_host_broker_boundary():
     binding = TOOL_BINDINGS["manage_homelab"]
     assert binding.execution_location == "host_broker"
