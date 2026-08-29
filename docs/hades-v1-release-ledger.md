@@ -463,3 +463,21 @@ were removed; owner deployment was unchanged.
 - It reported zero false-success claims, raw final results, duplicate
   delivery, or abrupt EOF. This validates ordinary canonical `add` persistence
   independently of the URL import review case.
+
+## Recipe import action-contract checkpoint — `3af8b2f8` (2026-08-29)
+
+- The `manage_recipes` native schema now permits the staged `commit_import`
+  payload (`action`, source metadata, and later validated `draft`) without
+  incorrectly requiring primitive `add` fields. `requested_name` is explicitly
+  represented in the contract. This prevents URL imports from being projected
+  as an under-specified `add` action.
+- Focused contract evidence: `357 passed, 1 warning`. Exact candidate image
+  `odysseus:candidate-3af8b2f8` has OCI revision and
+  `/app/.odysseus-source-commit` equal to
+  `3af8b2f8b3c3845ff537233197ee38ac8df05e60`; isolated runtime health was
+  healthy with zero restarts and Qwen3:8B visible from the container namespace.
+- Browser replay was not graded: the isolated fresh data volume had no
+  registered chat model endpoint, so normal session creation failed closed
+  before the Recipe turn (`no usable endpoint for qwen3:8b`). This is an
+  acceptance-environment readiness failure, not a product PASS. The temporary
+  acceptance principal was removed and the disposable deployment was stopped.
