@@ -1675,3 +1675,8 @@ The broad regression immediately before the final compatibility repair was
 `manage_memory` search safety case and passes in the focused repair suite. A
 full rerun after `50a9fdf2` remains required before calling the regression
 green.
+
+The required rerun completed on the same source: `6980 passed, 8 skipped`,
+with `186` existing warnings and no failures. This closes the broad regression
+gate for candidate `50a9fdf2`; the candidate remains the exact browser-tested
+executable and the owner deployment remains untouched.

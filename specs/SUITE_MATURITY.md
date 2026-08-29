@@ -1327,3 +1327,9 @@ transport gate now sends ordinary-chat Memory deletions through ACI. Focused
 coverage passed `494` tests; the realistic journey had zero false successes,
 duplicate delivery, raw final Results, or abrupt EOF. Broader Memory correction
 paraphrases and multi-fact conflict handling remain open.
+
+The capability/schema parity repair was followed by a full supported
+regression on the exact candidate source: `6980 passed, 8 skipped`, with no
+failures. The final candidate also passed a fresh authenticated Asset
+false-premise read and the default seven-turn owner walk. Recipe and
+Household mutation journeys remain the next Tier 1 acceptance work.
