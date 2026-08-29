@@ -830,3 +830,21 @@ the previously recorded exact product SHA.
 - Qwen3:8B remains unverified because the configured
   `host.docker.internal:11434` endpoint is unavailable from the Hades
   namespace; no live model/browser pass is claimed.
+
+# Canonical Work project-create checkpoint — `93655993` (2026-08-29)
+
+- Promoted one bounded Work mutation through the existing control plane:
+  explicit project creation now resolves to `work.project.manage`, projects the
+  user-supplied title, executes through `WorkEngine`, and requires canonical
+  persistence/readback before the deterministic answer claims success.
+- Added the existing capability/security registration and fail-closed result
+  renderer; task creation remains deferred until a canonical project reference
+  path is established.
+- Focused ACI/binding/fence/Recipe validation: `62 passed`; full supported
+  regression on the exact pushed candidate: `6953 passed, 7 skipped, 149
+  warnings`.
+- Exact pushed source/candidate: `9365599353e94f1be8bbbd1aa3579c89a24f9254`,
+  `odysseus:candidate-9365599353e9`, image
+  `sha256:4f49591d696d51bd635c988e77603edf166ab3439797e56f30b6075f4d9a7206`;
+  OCI marker matches the source. This is a productization candidate and has
+  not replaced the owner deployment.
