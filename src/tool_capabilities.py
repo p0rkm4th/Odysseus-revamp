@@ -542,6 +542,17 @@ def capabilities_for_action(tool_name: Any, content: Any) -> ToolCapabilities:
     if not isinstance(tool_name, str):
         return base
 
+    # ``manage_memory`` is now mutation-only in the canonical V1 binding;
+    # retain the legacy line-format read/search classification for older
+    # callers so a harmless private read is not promoted to unknown-high-impact
+    # merely because its read owner moved to ``read_memory``.
+    legacy_action = _action_from_content(tool_name, content)
+    if tool_name == "manage_memory" and legacy_action in _PRIVATE_ACTION_READS.get(tool_name, frozenset()):
+        return _capabilities(
+            ToolEffect.READ_PRIVATE,
+            result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
+        )
+
     # First-class capabilities carry action metadata independently of the LLM
     # transport.  Keep this lazy import to avoid the legacy facade's import
     # cycle while the registry is being projected into schemas.
