@@ -125,6 +125,16 @@
       "expected": {"action": "summarize_owner_memory", "tool_binding": "read_memory", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-WORK-PROJECT-MUTATION-READBACK-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-work",
+      "turns": [
+        {"prompt": "Create a project called Acceptance Infrastructure Migration", "expected": {"domain": "PROJECT", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "create", "tool_binding": "manage_work", "requires_effect": true, "must_include_all": ["Acceptance Infrastructure Migration"], "forbidden": ["Done", "successfully completed"]}},
+        {"prompt": "What projects do I have?", "expected": {"domain": "PROJECT", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list_projects", "tool_binding": "read_work", "must_include_all": ["Acceptance Infrastructure Migration"]}}
+      ],
+      "expected": {"action": "manage_work", "tool_binding": "manage_work", "policy": "allowed", "approval": "not_required", "before": {"project_count": 0}, "after": {"project_title": "Acceptance Infrastructure Migration", "readback": true}, "readback": {"kind": "work", "endpoint": "/api/work/overview", "contains_project_title": "Acceptance Infrastructure Migration"}, "terminal": {"done": 2, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-WORK-EMPTY-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-work",
