@@ -294,7 +294,7 @@ function renderRecipeImportDraft(form, draft) {
     form.querySelector('.hades-dialog-actions')?.before(panel);
   }
   [...form.children].forEach(child => {
-    if (child !== panel && !child.classList.contains('hades-dialog-actions')) child.hidden = true;
+    if (child !== panel && child.tagName !== 'H3' && !child.classList.contains('hades-dialog-actions')) child.hidden = true;
   });
   const ingredients = Array.isArray(draft.ingredients) ? draft.ingredients : [];
   panel.innerHTML = `<div class="inventory-callout hades-callout"><strong>Review before saving.</strong><p>Check the extracted details and correct anything uncertain. Nothing has been saved yet.</p></div>

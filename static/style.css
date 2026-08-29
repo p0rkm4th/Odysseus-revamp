@@ -41679,4 +41679,5 @@ body.settings-sidebar-resize-active {
 .inventory-pane .hades-dialog .hades-intake-grid { gap:var(--hades-space-3); }
 .inventory-pane .hades-dialog-actions { margin-top:var(--hades-space-4); }
 .inventory-dialog-backdrop .inventory-dialog-actions { position:sticky; bottom:-20px; z-index:2; padding:12px 0 20px; margin-bottom:-20px; background:linear-gradient(to bottom, color-mix(in srgb, var(--bg) 0%, transparent), var(--bg) 28%); }
+.inventory-dialog > [hidden] { display:none !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.001ms !important; } }
