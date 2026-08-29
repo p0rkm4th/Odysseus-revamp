@@ -32,6 +32,21 @@ healthy. Only the disposable Compose project and temporary directories were
 removed. This is fresh-start/bootstrap and restart durability evidence; it
 does not claim empty-state suite journeys or owner-data behavior.
 
+## Fresh empty-state browser Recipe journey — `d1559078` (2026-08-29)
+
+Using a separate disposable Compose project and the exact retained candidate,
+the normal first-run admin login registered the local Qwen endpoint, then the
+existing gated non-admin acceptance principal authenticated through the real
+login UI. The browser created a complete Recipe through natural-language chat,
+read it back through chat, reloaded the conversation, and read it back again.
+The result was `3` turns / `3` streams, `1` chat mutation, `2` canonical
+readbacks, and `3` terminal `[DONE]` events. False success, raw final result,
+duplicate delivery, and abrupt EOF counts were all `0`. The disposable
+principal, credential, project, volumes, and temporary state were removed.
+This proves the fresh empty-state Recipe mutation/readback lane on the
+retained executable; it is not owner-data evidence and does not cover all
+empty-state suites.
+
 The current-tree supported full regression at this checkpoint completed
 `6945 passed, 5 skipped` in `212.46s`. This run includes the evaluator
 selection regressions above. The five skips remain documented test skips; no
