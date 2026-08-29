@@ -986,3 +986,24 @@ after the run. The owner deployment remains untouched.
 - The warnings are existing deprecation/runtime warnings; no test failure or
   environment exception was reported. This is source-level current-head
   evidence. The owner deployment was not rebuilt or changed.
+
+# Recipe URL argument-projection checkpoint — `94d324a3` (2026-08-29)
+
+- Added a direct ACI projection regression for the owner URL request. The
+  resolved `manage_recipes/commit_import` choice carries both the explicit
+  `requested_name` and `source_url`; it cannot regress to an under-specified
+  `{"action":"add"}` payload. Recipe/intent/binding focused tests passed
+  `293`.
+- Exact candidate `odysseus:candidate-94d324a3419d`, image
+  `sha256:2b3de614a89dccd4e8e09b04a5c4257997c91f8c160eb7857efcc613859a5b29`,
+  embedded/running source `94d324a3419d9c0b76ed8ef230ba7289b05b4a7b`, health
+  healthy, restart count `0`; Qwen3:8B was reachable from the Hades namespace
+  with digest `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+- The exact authenticated browser URL journey fetched the requested source and
+  preserved the route to `commit_import`, but the source contained an
+  unquantified ingredient and correctly returned bounded review/no-write
+  semantics. Canonical recipe count remained `0`; no false success occurred.
+  The existing browser scenario is therefore not valid mutation PASS evidence
+  because it lacks a required persisted readback assertion. This is an
+  evaluator gap to close before claiming URL-import mutation acceptance, not a
+  reason to invent quantities or weaken canonical validation.
