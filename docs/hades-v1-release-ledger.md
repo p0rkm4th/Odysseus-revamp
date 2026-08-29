@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Work task mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+On the clean fresh-install lane with empty Memory,
+`OWNER-WORK-TASK-MUTATION-READBACK-001` passed through the browser/chat
+surface. One task mutation completed and two independent canonical readbacks
+verified it across 2 turns, including reload durability. False success, raw
+final Results, duplicate delivery, and abrupt EOF were all zero.
+
+A reused lane first stopped on an unexpected approval because an earlier
+project journey had auto-created Memory and armed the external-context safety
+gate. That run did not mutate a task; it was classified as fixture/context
+drift, not used as feature evidence, and the clean replay satisfied the
+scenario's declared no-approval precondition.
+
 ## Household mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 `OWNER-HOUSEHOLD-MUTATION-READBACK-001` passed on the exact candidate in an
