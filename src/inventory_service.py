@@ -1260,6 +1260,26 @@ class RecipeService(InventoryService):
         if action == "commit_import":
             from src.intent_contracts import RecipeDraft
             draft = RecipeDraft.from_payload(args.get("draft") or args)
+            # Import commits can be replayed when an approval stream is
+            # resumed.  Treat the source URL plus owner-visible recipe name
+            # as the import identity so a successful retry cannot create a
+            # second canonical row.
+            if draft.source_url:
+                with self._read() as db:
+                    existing = db.query(InventoryRecipe).filter(
+                        InventoryRecipe.owner == owner,
+                        InventoryRecipe.source_url == draft.source_url,
+                        InventoryRecipe.normalized_name == normalize_item_name(draft.name),
+                        InventoryRecipe.archived.is_(False),
+                    ).order_by(InventoryRecipe.id).first()
+                    if existing is not None:
+                        readback = self._recipe_view(db, existing)
+                        return {
+                            "success": True, "recipe": readback,
+                            "deduplicated": True,
+                            "verification": {"status": "VERIFIED", "recipe_id": readback["id"]},
+                            "source": draft.provenance,
+                        }
             recipe = self.create_recipe(
                 owner, name=draft.name, servings=draft.servings,
                 ingredients=draft.ingredients, instructions=draft.instructions,

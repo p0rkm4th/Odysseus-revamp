@@ -396,6 +396,25 @@ def test_recipe_import_commit_requires_validated_draft_and_verifies_readback():
     assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"][0]["name"] == "Imported Dinner"
 
 
+def test_recipe_import_commit_replay_is_idempotent_for_owner_source_and_name():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    draft = {
+        "name": "Imported Dinner", "servings": 2,
+        "ingredients": [{"name": "rice", "quantity": 1, "unit": "cup"}],
+        "instructions": "Cook it.", "source_url": "https://example.test/recipe",
+    }
+
+    first = service.manage_recipes({"action": "commit_import", "draft": draft}, owner="alice")
+    replay = service.manage_recipes({"action": "commit_import", "draft": draft}, owner="alice")
+
+    assert first["success"] is True
+    assert replay["success"] is True
+    assert replay["deduplicated"] is True
+    assert replay["recipe"]["id"] == first["recipe"]["id"]
+    assert len(service.manage_recipes({"action": "list"}, owner="alice")["recipes"]) == 1
+
+
 def test_recipe_url_import_prepare_is_a_read_proposal_not_a_write():
     frame = compile_intent("import this recipe from https://example.test/recipe")
     assert frame.domain_concept == "RECIPE"
