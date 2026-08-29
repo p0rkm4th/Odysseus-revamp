@@ -17,6 +17,24 @@ the complete journey works.
 | Finance | no promoted read-only canonical ledger yet | DESIGN / DEFERRED | design material only | define read-only owner and provider boundary | Tier 3 |
 | TTRPG / DM | no promoted campaign canonical owner yet | DESIGN / DEFERRED | none | design only; no runtime expansion before Tier 1/2 | Tier 3 |
 
+### Recipe URL import checkpoint — e6734a9c
+
+The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
+projection from the existing SSRF-safe web fetcher. Ordinary web-fetch output
+is unchanged; only recipe import receives up to four recipe objects and the
+validated `RecipeDraft` gate remains the sole path to `InventoryService`.
+Unicode and mixed quantities are parsed deterministically without inventing
+amounts. Focused extraction/import coverage is `33 passed` in the supported
+container test environment.
+
+The exact live Sunday Supper URL remains `NEEDS_REVIEW`, not a mutation success:
+its structured data includes an unquantified `salt and pepper` ingredient, so
+the existing positive-quantity canonical schema correctly refuses commit.
+The live browser trace showed one approval card, one failed canonical Action,
+one bounded error AnswerSource, one `[DONE]`, and no abrupt EOF; no recipe was
+persisted. This is a real remaining Recipe import product gap, not a false
+success.
+
 ### Recipe ingestion checkpoint — f29eaff1
 
 Recipe creation now has a bounded validated ingestion seam in the existing

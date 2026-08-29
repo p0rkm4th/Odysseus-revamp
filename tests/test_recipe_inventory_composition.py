@@ -215,6 +215,16 @@ def test_recipe_import_prepare_accepts_bounded_fetch_jsonld_projection():
     assert draft.provenance == "import_evidence"
 
 
+def test_recipe_import_parses_unicode_and_mixed_quantities_without_guessing():
+    assert recipe_import_draft(
+        'Recipe: Fraction Dinner. Ingredients: ¾ cup flour, 1½ cups milk. '
+        'Instructions: Mix and cook.'
+    ).ingredients == (
+        {"name": "flour", "quantity": 0.75, "unit": "cup"},
+        {"name": "milk", "quantity": 1.5, "unit": "cups"},
+    )
+
+
 def test_recipe_import_commit_requires_validated_draft_and_verifies_readback():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
