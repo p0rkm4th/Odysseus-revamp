@@ -301,6 +301,9 @@ def test_work_read_binding_is_owner_scoped_and_structured(monkeypatch):
         tool_name="read_work", payload={"action": "overview"}, owner="alice"))
     assert result["success"] is True
     assert result["data"]["status"] == "SUCCESS_WITH_DATA"
+    assert result["data"]["result_type"] == "work_overview"
+    assert result["data"]["operation"] == "overview"
+    assert result["data"]["canonical_store"] == "work_engine"
     assert len(result["data"]["goals"]) == 1
     assert result["data"]["goals"][0]["title"] == "Ship the release"
     engine.dispose()
