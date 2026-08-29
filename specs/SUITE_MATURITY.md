@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Fresh-install Qwen/restart checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+Disposable cold deployment evidence now covers normal admin model setup,
+`qwen3:8b` discovery, non-admin first login, an empty Work owner journey, and
+the same journey after app restart. Both browser runs passed with deterministic
+answers and zero false success, raw final Results, duplicate delivery, or
+abrupt EOF. Health recovered cleanly with restart count `0`; the exact
+candidate image/source marker stayed fixed and owner deployment was untouched.
+
 ## Actual-owner Work provenance checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 The actual owner runtime (`34ced247`) returned a generic no-access answer for
