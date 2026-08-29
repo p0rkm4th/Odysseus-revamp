@@ -20,7 +20,7 @@ from src.intent_contracts import (
     network_substantive_fallback_command,
     is_explicit_continuation,
 )
-from src.aci import is_contextual_reference_followup
+from src.aci import compile_turn_contract, is_contextual_reference_followup
 
 
 def test_contract_registry_is_complete_for_registered_contracts():
@@ -45,6 +45,16 @@ def test_explicit_continuation_classifier_is_owned_by_intent_contracts():
     assert is_explicit_continuation("the second one")
     assert is_explicit_continuation("all of them")
     assert not is_explicit_continuation("what is the current network?")
+
+
+def test_turn_contract_keeps_explicit_continuation_out_of_retrieval_context():
+    frame, _resolved, continuation, _domains = compile_turn_contract(
+        {"continuation": False, "retrieval_query": "current date and time setup"},
+        "Continue.",
+        active_run=None,
+    )
+    assert frame.operation_class == "CONTINUE"
+    assert continuation.status == "BLOCKED"
 
 
 @pytest.mark.parametrize("text, expected", [
