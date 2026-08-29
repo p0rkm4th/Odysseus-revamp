@@ -1680,3 +1680,22 @@ The required rerun completed on the same source: `6980 passed, 8 skipped`,
 with `186` existing warnings and no failures. This closes the broad regression
 gate for candidate `50a9fdf2`; the candidate remains the exact browser-tested
 executable and the owner deployment remains untouched.
+
+## Messy recipe review checkpoint — `347d5326` (2026-08-29)
+
+Copied recipe paste handling now classifies sectioned text without a URL as an
+import, ignores serving metadata as page chrome, preserves unquoted owner
+display names, and routes qualitative amounts to the existing editable review
+draft. Strict canonical commit remains unchanged, and successful review
+preparation is terminal so Qwen3:8B cannot repeat the same Action.
+
+Focused coverage passed `379` tests. Exact candidate
+`odysseus:candidate-347d5326`, image
+`sha256:bf8339535013f80a4c978df096de0f1880dea5f563abe739a637728c71429984`,
+embedded source `347d5326`, ran healthy with zero restarts. The browser journey
+passed one messy webpage-shaped recipe review turn with zero false success,
+raw final Result, duplicate delivery, or abrupt EOF. Independent SQLite
+inspection found zero canonical rows for `Acceptance Web Paste Dinner`, proving
+review preparation did not write state. The temporary negative readback exposed
+an acceptance-harness gap (`absent_name` is unsupported); it was verified
+independently. The actual owner runtime remains untouched and older.
