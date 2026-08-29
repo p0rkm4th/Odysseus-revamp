@@ -640,7 +640,21 @@ class InventoryService:
             lots = db.query(InventoryLot).filter_by(owner=owner, item_id=item_id).order_by(
                 InventoryLot.expiry_date.is_(None), InventoryLot.expiry_date, InventoryLot.id
             ).all()
-            return [_lot_view(lot) for lot in lots]
+            location_ids = {lot.location_id for lot in lots if lot.location_id}
+            locations = db.query(InventoryLocation).filter(
+                InventoryLocation.owner == owner,
+                InventoryLocation.id.in_(location_ids or ["__none__"]),
+            ).all()
+            location_by_id = {location.id: location for location in locations}
+            return [
+                _lot_view(lot) | {
+                    "location_name": (
+                        location_by_id[lot.location_id].name
+                        if lot.location_id in location_by_id else None
+                    ),
+                }
+                for lot in lots
+            ]
 
     def household_overview(self, owner: str, *, expiry_days: int = 30) -> dict[str, Any]:
         """Return a read-only projection over canonical household inventory.

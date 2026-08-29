@@ -17,7 +17,9 @@ async function openHouseholdItem(id) {
   const el = entityWindow('household-item', id, 'Household item');
   const d = await fetch(`/api/inventory/items/${encodeURIComponent(id)}`).then(r => r.json());
   const item = d.item || {};
-  el.querySelector('.hades-window-body').innerHTML = `<div><h2>${esc(item.name || 'Household item')}</h2><p>${esc(item.category || 'household')} · ${esc(item.location_name || 'No location')}</p><p>${esc(item.description || 'No description')}</p><h3>Stock</h3><pre>${esc(JSON.stringify(d.lots || [], null, 2))}</pre></div>`;
+  const lots = d.lots || [];
+  const stock = lots.length ? `<ul>${lots.map(lot => `<li><strong>${esc(lot.quantity)} ${esc(lot.unit || item.default_unit || 'each')}</strong>${lot.location_name ? ` · ${esc(lot.location_name)}` : ''}${lot.expiry_date ? ` · expires ${esc(lot.expiry_date)}` : ''}</li>`).join('')}</ul>` : '<p class="hades-empty-state">No stock is recorded for this item.</p>';
+  el.querySelector('.hades-window-body').innerHTML = `<div><h2>${esc(item.name || 'Household item')}</h2><p>${esc(item.category || 'household')} · ${esc(item.location_name || 'No location')}</p><p>${esc(item.description || 'No description')}</p><h3>Stock</h3>${stock}</div>`;
   return el;
 }
 async function openItAsset(id) {
