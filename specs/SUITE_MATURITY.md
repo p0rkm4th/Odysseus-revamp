@@ -393,3 +393,14 @@ isolated runtime was healthy with zero restarts and Qwen3:8B reachable from the
 project Docker namespace. The disposable runtime was removed afterward. The
 real Sunday Supper source remains correctly `NEEDS_REVIEW` until its
 unquantified ingredient is supplied or reviewed; no quantity is invented.
+
+## Recipe import UI continuity checkpoint — `adfbc496`
+
+The authenticated Inventory Import dialog now accepts an optional human-facing
+display name and forwards it to the canonical `prepare_import` endpoint. The
+route passes that value into the same `RecipeDraft` owner used by chat and
+commit, so source presentation names cannot discard an explicit owner choice.
+Frontend syntax and affected UI/Recipe/ACI coverage passed (`322` tests); the
+full current checkout regression passed `6930` tests with `5` skips. The exact
+candidate was built and source/OCI/health/Qwen verified in an isolated runtime;
+that disposable runtime was removed without touching owner state.
