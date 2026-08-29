@@ -70,6 +70,22 @@ This ledger records observed owner-journey maturity on the post-merge
 `hades-v1-productization` branch. A registered capability is not evidence that
 the complete journey works.
 
+## Fresh-install rehearsal — `2c37478a` (2026-08-29)
+
+An isolated literal Compose install was exercised with a new data root,
+project-scoped volumes/network, and a normal first-run account (`fresh-owner`).
+The stack initially exposed a release-isolation defect: SearXNG published a
+fixed host port and the Compose network had a global fixed name. Compose now
+supports `SEARXNG_PORT`, `CHROMADB_PORT`, `NTFY_PORT`, and
+`ODYSSEUS_NETWORK_NAME` overrides across base/NVIDIA/AMD files. The rehearsal
+then booted on separate ports and subnet, reached `/api/health`, completed
+normal DOM login, reloaded into the authenticated app, and survived an app
+restart with zero app restarts. Qwen3:8B was reachable from the fresh Hades
+namespace at `http://host.docker.internal:11434`. The literal Compose build
+embedded `unknown` provenance because it was not an exact-SHA candidate build;
+release acceptance must continue to use the exact candidate build/deploy loop.
+The isolated stack and data were not the owner instance.
+
 ## Recipe workspace authenticated browser checkpoint — candidate `a76af992` (2026-08-29)
 
 An isolated Chromium run against `odysseus:candidate-a76af9922f0d` completed
