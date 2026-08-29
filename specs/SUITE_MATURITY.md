@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Populated Memory owner-read checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+The exact-candidate populated-memory journey returned the seeded durable fact
+through the browser and passed two independent canonical readbacks. It had
+zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Work task mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 The clean fresh-install lane passed task creation through chat with one

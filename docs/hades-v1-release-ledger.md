@@ -2,6 +2,14 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Populated Memory owner-read checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+`OWNER-MEMORY-POPULATED-001` passed on the exact candidate in the isolated
+fresh lane. The browser asked an ordinary question about the acceptance setup;
+Hades returned the seeded durable Memory fact, and the harness independently
+verified the canonical Memory read twice. The journey had 1 turn with zero
+false success, raw final Results, duplicate delivery, or abrupt EOF.
+
 ## Work task mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 On the clean fresh-install lane with empty Memory,
