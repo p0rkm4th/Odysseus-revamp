@@ -699,3 +699,19 @@ returned a bounded deterministic no-match answer rather than raw asset JSON or
 an invented server. It produced one persisted final answer and one `[DONE]`,
 with zero raw-final results, duplicate delivery, or abrupt EOF. This was a
 read-only disposable run; the owner deployment was not changed.
+
+## Work result-projection checkpoint — `7c54a485`
+
+The isolated browser run for `What work is outstanding?` exposed a shared
+large-result boundary: the canonical `read_work` Action completed and emitted
+`[DONE]`, but the browser had no answer because the deterministic renderer was
+reparsing a truncated display payload. `read_work` now receives a bounded
+collection-count projection before UI/history truncation, and its renderer
+consumes that projection. Focused supported-container coverage passed `77`
+tests. Exact candidate `odysseus:candidate-7c54a485` was built from pushed SHA
+`7c54a4859c9503dd264bd2e1459354f16321ef98`; the disposable runtime marker
+matched, health was healthy, restarts were `0`, and Qwen3:8B was reachable
+from the candidate namespace. The browser Work journey then passed with one
+human-readable deterministic answer, one persisted turn, one `[DONE]`, and no
+abrupt EOF or duplicate delivery. Disposable acceptance resources were
+removed; the owner deployment was unchanged.

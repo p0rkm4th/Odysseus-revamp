@@ -300,3 +300,20 @@ owner deployment remained unchanged.
   invented quantity, or persistence claim.
 - This confirms incomplete imported drafts fail closed. Complete URL import
   acceptance remains pending; no executable source or owner deployment changed.
+
+## Productization Work projection checkpoint — `7c54a485` (2026-08-29)
+
+- Fixed the demonstrated Work owner-answer disappearance: a successful
+  `read_work` result could exceed the display envelope and leave the
+  deterministic renderer with truncated JSON. The canonical projection now
+  preserves bounded collection counts before display/history truncation.
+- Focused supported-container tests: `77 passed`.
+- Pushed source: `7c54a4859c9503dd264bd2e1459354f16321ef98`.
+- Exact candidate: `odysseus:candidate-7c54a485`, image
+  `sha256:4c1c70ed79502e482378310c27e6c680182c1a52a8624b579bc063cebac3f78e`;
+  OCI marker/source matched, health was healthy, and restart count was `0`.
+- Exact disposable browser acceptance for the previously failing empty Work
+  journey passed: one deterministic human answer, one persisted answer, one
+  `[DONE]`, zero abrupt EOF, and zero duplicate delivery. Qwen3:8B was
+  reachable from the candidate namespace. Disposable acceptance resources
+  were removed; owner deployment was unchanged.
