@@ -98,13 +98,29 @@ def _recipe_section(text: str, header: str, next_header: str | None = None) -> s
     boundary = rf"\b{header}\s*:\s*"
     tail = rf"(?=\s+\b{next_header}\s*:\s*|\Z)" if next_header else r"\Z"
     match = re.search(boundary + rf"(?P<body>.+?){tail}", text, re.IGNORECASE | re.DOTALL)
+    if match:
+        return match.group("body").strip()
+    # Copied recipe pages usually render section labels as standalone lines,
+    # without the parser-oriented colon.  Keep the compact form above, then
+    # accept only a line heading so ordinary ingredient prose cannot become a
+    # section boundary by accident.
+    heading = rf"(?mi)^\s*{header}\s*:?\s*$"
+    if next_header:
+        pattern = heading + rf"\s*(?P<body>.+?)(?=^\s*{next_header}\s*:?\s*$)"
+    else:
+        # Recipe pages commonly append nutrition, newsletter, and navigation
+        # blocks after the instructions.  Stop at those standalone labels so
+        # copied-page chrome never becomes part of the recipe instructions.
+        page_tail = r"(?:nutrition(?:\s+information)?|notes?|tips?|subscribe(?:\s+for\s+weekly\s+recipes)?|jump\s+to\s+recipe|print|share)"
+        pattern = heading + rf"\s*(?P<body>.+?)(?=^\s*{page_tail}\s*$|\Z)"
+    match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
     return match.group("body").strip() if match else None
 
 
 def _recipe_name(text: str) -> str | None:
     patterns = (
         # Natural owner wording: "as \"Name\":" or "called Name".
-        r"\bas\s+[\"'](?P<name>[^\"']{1,200})[\"']\s*:",
+        r"\bas\s+[\"'](?P<name>[^\"']{1,200})[\"']\s*[:.]?",
         r"\bfor\s+the\s+name\s*,?\s*use\s+[\"'](?P<name>[^\"']{1,200})[\"']",
         r"\b(?:called|named)\s+[\"']?(?P<name>[^\"'\n:.]{1,200})[\"']?\s*[:.]",
         # Existing compact form: "recipe: Name. Ingredients: ...".
@@ -129,6 +145,7 @@ def _recipe_ingredients(section: str, *, split_compact: bool = True) -> list[dic
     # Newline-separated recipe lists are the normal long-paste shape.  Keep
     # comma/semicolon splitting for the compact owner acceptance shape.
     raw_lines = [line.strip() for line in section.splitlines() if line.strip()]
+    raw_lines = [line for line in raw_lines if not re.match(r"^serves?\s+\d", line, re.IGNORECASE)]
     if len(raw_lines) <= 1 and split_compact:
         raw_lines = re.split(r",|\s*;\s*|\s+and\s+(?=\d+(?:\.\d+)?\s)", section)
     ingredients: list[dict[str, Any]] = []
@@ -1618,6 +1635,8 @@ def _operation(text: str, *, continuation: bool = False) -> str:
         return "CONTINUE"
     if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
+    if re.search(r"\b(?:save|store|keep)\b", q) and re.search(r"\b(?:recipe|recipes|cookbook|dish)\b", q):
+        return "CREATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
     if re.search(r"\b(?:restart|recover|execute|run|scan|discover\w*|install|turn on|start|begin)\b", q) and not re.search(
         r"\brun\s+out\s+of\b", q,
@@ -1775,6 +1794,15 @@ def compile_intent(
             r"\b(?:sav(?:e|ed|ing)|similar|find|search)\b", q
         ): concept = "JOB_OPPORTUNITY"
         else: concept = "CAREER_PROFILE"
+    # An explicit recipe mutation owns the whole turn even when copied page
+    # text contains household vocabulary such as "kitchen" or "pantry".
+    # This precedence prevents webpage noise from routing a save request to a
+    # household read.
+    if operation in {"CREATE", "UPDATE", "DELETE"} and re.search(
+        r"\b(?:recipe|recipes|cookbook|dish)\b", q, re.IGNORECASE,
+    ):
+        concept = "RECIPE"
+        read_explicit = False
     # Recipe creation is still owned by the existing Recipe/Inventory Service;
     # distinguish it from read-only recipe cognition before model routing.
     if concept == "UNKNOWN" and operation in {"CREATE", "UPDATE", "DELETE"} and re.search(
