@@ -1821,3 +1821,23 @@ abrupt EOFs. An earlier replay using an expired disposable credential was
 classified as `AUTH_SESSION_FAILURE` before login and was not counted as a
 product result. A fresh principal was provisioned through the normal admin
 route for the successful replay.
+
+## Current continuation safety checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+Owner testing found two related control-plane defects: bare `Restart it.`
+could fall through as unknown/model prose, while bare `Continue.` stayed in
+plain chat mode and could inherit unrelated date/setup retrieval context. The
+generalized repair routes explicit continuations through ACI, preserves the
+literal current turn, and projects ambiguous or no-active-run states as
+human-readable `CLARIFICATION` answers with zero execution authority. The
+browser oracle distinguishes intentional clarification from execution-bearing
+Actions.
+
+The exact pushed candidate `odysseus:candidate-1a2b62e59e32` has image ID
+`sha256:34cbbcfe0f98f84d3bccf02c2f624883d4c9e4115eeb2ae95ff1047642099a7b`,
+source marker `1a2b62e59e323afe5817fd69e7c271620b7f2efd`, and migration head
+`20260825_002_work_run_completion_v6`. The isolated container was healthy with
+zero restarts. Separate Qwen3:8B GUI runs for `Restart it.` and `Continue.`
+both passed with one terminal stream, `CLARIFICATION` provenance, zero tool or
+Action execution, zero false success, raw final Result, duplicate delivery, or
+abrupt EOF.

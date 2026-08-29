@@ -1420,3 +1420,17 @@ turn produced one human answer and one terminal event with zero false success,
 raw final Result, duplicate delivery, or abrupt EOF. An expired disposable
 credential was classified as `AUTH_SESSION_FAILURE` before login and replaced
 through the normal admin flow.
+
+## Current continuation safety maturity — `1a2b62e5` (2026-08-29)
+
+Continuation safety is covered by data-driven owner journeys for an
+ambiguous restart and a no-active-run Continue. Explicit continuation turns
+are promoted from plain chat to the ACI control plane; the current turn is
+preserved over compatibility retrieval context; and blocked/no-active states
+are finalized as human-readable `CLARIFICATION` answers rather than model
+generated setup prose. Clarification expectations intentionally require no
+ToolBinding or Action event.
+
+Independent Qwen3:8B browser replays passed on the exact pushed candidate with
+one terminal stream each and zero false success, raw final Result, duplicate
+delivery, abrupt EOF, or unauthorized execution.
