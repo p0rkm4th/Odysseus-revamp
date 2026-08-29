@@ -584,6 +584,17 @@ weaken import validation. A complete URL import remains a separate acceptance
 case to prove. The disposable principal and container were removed; owner
 deployment was not changed.
 
+## Recipe pantry-coverage owner-journey checkpoint — `d41c67fc`
+
+The stateful browser/chat journey `What recipes do I have?` followed by `Can
+I make that recipe?` passed through the existing Recipe read owner and
+Inventory Service coverage operation. The active recipe reference was resolved
+across turns, `read_recipes/can_make` returned the canonical pantry result, and
+both turns produced deterministic human answers and terminal `[DONE]` events.
+The run had two streams, zero mutations, zero raw final results, duplicate
+delivery, or abrupt EOF. Meal-plan mutation remains deferred until broader
+Recipe read/composition acceptance is complete.
+
 ## Household mutation owner-journey checkpoint — `d41c67fc`
 
 The isolated browser/chat journey for adding three synthetic cans, reading the

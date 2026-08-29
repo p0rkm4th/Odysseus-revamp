@@ -267,6 +267,17 @@ remained unchanged.
   zero duplicate delivery, and zero abrupt EOF. No executable source changed;
 owner deployment remained unchanged.
 
+## Productization Recipe coverage checkpoint — `d41c67fc` (2026-08-29)
+
+- Stateful browser/chat acceptance passed Recipe list followed by the
+  pronoun/reference continuation `Can I make that recipe?`.
+- The second turn used canonical `read_recipes/can_make` pantry coverage and
+  deterministic rendering. Two streams produced two final answers and two
+  `[DONE]` events, with zero raw final results, duplicate delivery, or abrupt
+  EOF. No executable source or owner deployment changed.
+- Meal-plan mutation remains explicitly deferred until Recipe read/composition
+  coverage is broader and green.
+
 ## Productization Household checkpoint — `d41c67fc` (2026-08-29)
 
 - Chat-driven Household mutation/readback passed `4/4` turns on the exact
