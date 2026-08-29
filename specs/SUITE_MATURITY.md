@@ -71,6 +71,20 @@ was verified healthy with zero restarts and source marker/running source
 `015c8e9a9d73f47999c5a0753702629f93cad55b`; Qwen3:8B remained reachable from
 the container namespace. The owner deployment was not replaced.
 
+### Recipe pantry-coverage contract checkpoint — `45f54ef6`
+
+The existing `InventoryService.manage_recipes(can_make)` read now identifies
+its result as `recipe_pantry_coverage` with operation `can_make`, explicit
+`SUCCESS` status, canonical store, and `AVAILABLE` or `MISSING_INGREDIENTS`
+availability. Existing deductions/shortages remain unchanged, so the
+deterministic renderer continues to own the answer and no recipe-list shape
+is overloaded. Focused Recipe/ACI/binding coverage passed `124` tests. Exact
+candidate image
+`sha256:ed14a1b49fbf76601736ccc79ccc977bbb96b40e9c01609f88683093ba88f574`
+was verified healthy with zero restarts, OCI/running source
+`45f54ef6babb8b367ef39988e4d3a032ca03c764`, and Qwen3:8B reachability from
+the container namespace. The owner deployment was not replaced.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
