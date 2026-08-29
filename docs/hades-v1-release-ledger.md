@@ -533,3 +533,15 @@ were removed; owner deployment was unchanged.
   host snapshot, while Compose-managed Chroma vectors require a separate
   volume backup. A full live backup/restore rehearsal remains release work and
   was not represented as passed by this focused result.
+
+## Isolated backup/restore rehearsal — `9d08d75d` (2026-08-29)
+
+- The existing `scripts/odysseus-backup` CLI was exercised against a stand-alone
+  temporary data tree. Snapshot creation and read-only archive verification
+  both succeeded (`2` archive members).
+- After deliberate SQLite/JSON drift and an extra file, `restore --yes`
+  restored the original database row and JSON state, removed the drift file,
+  and retained one `data.before-restore-*` rollback stash. No owner data or
+  live application directory was involved.
+- This validates the application-data backup/restore path. Docker Chroma
+  volume backup remains a separate documented operational step.
