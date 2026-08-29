@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe composition and shopping checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+On the exact candidate and isolated fresh data, `OWNER-RECIPE-COMPOSITION-001`
+passed 3 owner turns covering recipe listing, pantry feasibility, and scaling;
+canonical recipe readback and reload durability passed. A fresh acceptance
+principal then passed `OWNER-RECIPE-SHOPPING-REQUIREMENTS-001` across 2 turns
+with 2 canonical readbacks. Both journeys had zero false success, raw final
+Results, duplicate delivery, or abrupt EOF.
+
+The first shopping replay stopped before chat because the shared fixture
+seeder added a duplicate recipe when rerun; this is test-fixture idempotency
+drift, not product evidence. The clean-principal replay restored the declared
+one-recipe precondition without touching owner data.
+
 ## Populated Memory owner-read checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 `OWNER-MEMORY-POPULATED-001` passed on the exact candidate in the isolated
