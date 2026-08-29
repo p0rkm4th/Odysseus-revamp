@@ -413,6 +413,20 @@ were removed; owner deployment was unchanged.
 - Merge/release is not declared: fresh-install, broader cross-suite, and
   release-candidate gates remain outstanding.
 
+## Isolated fresh-start smoke — `d1559078` (2026-08-29)
+
+- A disposable container was started from the exact candidate with empty
+  data, logs, and broker volumes. The documented entrypoint created the first
+  `admin` account and emitted a temporary credential; no owner state or
+  credential was reused.
+- Headless Chromium reached the real login page, authenticated through the
+  normal form, and landed at `/`. After a container restart, the authenticated
+  session remained valid and `/api/health` was healthy. The isolated instance
+  was removed after the check.
+- This is first-run/bootstrap and session-restart evidence only. Empty-state
+  suite journeys, backup/restore, and a second clean fresh-fresh run remain
+  release work.
+
 ## Recipe URL import acceptance checkpoint — `1c8c22a7` (2026-08-29)
 
 - The exact isolated authenticated browser request for the named Sunday
