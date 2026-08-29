@@ -2165,6 +2165,11 @@ def compile_intent(
             or reference_resolution.get("status") == "RESOLVED"
             or collection_property
         ):
+            # Bare collection phrasing such as "RAM across my PCs" is still
+            # an explicit owner-state read even without an interrogative
+            # opener; preserve the deterministic Result projection gate.
+            if collection_property:
+                read_explicit = True
             property_name = property_match.group(1).replace(" ", "_")
             reference_filters["asset_property"] = {
                 "cpus": "cpu", "processors": "processor", "gpus": "gpu",

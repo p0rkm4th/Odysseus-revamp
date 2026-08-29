@@ -180,6 +180,7 @@ def test_asset_collection_property_paraphrases_preserve_ram_projection(query):
     assert frame.domain_concept == "TECHNICAL_ASSET"
     assert frame.operation_class == "READ"
     assert frame.filters["asset_property"] == "ram"
+    assert frame.read_explicit is True
     assert resolved.action_id == "list"
     assert resolved.binding_name == "manage_assets"
 
