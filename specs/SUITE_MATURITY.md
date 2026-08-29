@@ -798,6 +798,9 @@ Inventory prerequisite path covering `list → can_make → scale` through the
 real authenticated browser/chat route. Fixture setup uses the existing
 Inventory Service only for prerequisite state; all exercised reads remain
 natural-language chat turns and preserve the active Recipe reference. Focused
-Recipe/journey coverage passes `260` tests. Browser execution of this new
-scenario is pending a fresh exact-candidate isolated deployment and is not
-claimed as live evidence yet.
+Recipe/journey coverage passes `260` tests. On exact candidate
+`odysseus:candidate-d1559078`, the fresh isolated browser run passed all three
+turns and both reload readbacks: `3` deterministic streams, `3` `[DONE]`
+events, `2` readbacks, zero raw-final results, false success, duplicate
+delivery, or abrupt EOF. The disposable deployment and acceptance principal
+were removed afterward; the owner deployment was unchanged.
