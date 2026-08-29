@@ -738,8 +738,22 @@ async function main() {
     await page.locator('#password').fill(credentials.password);
     await page.locator('#submitBtn').click();
     await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
-    if (process.env.HADES_BROWSER_SESSION_ENDPOINT_ID) {
+    const shouldCreateSession = Boolean(process.env.HADES_BROWSER_SESSION_ENDPOINT_ID) || Boolean(scenarios);
+    if (shouldCreateSession) {
       const session = await page.evaluate(async ({ endpointId, model }) => {
+        if (!endpointId) {
+          const modelsResponse = await fetch('/api/models', {credentials: 'same-origin'});
+          if (!modelsResponse.ok) throw new Error(`browser acceptance model discovery failed (${modelsResponse.status})`);
+          const catalog = await modelsResponse.json();
+          const items = Array.isArray(catalog?.items) ? catalog.items : [];
+          const modelName = String(model || '').trim();
+          const modelMatches = (item) => (Array.isArray(item?.models) ? item.models : [])
+            .some((entry) => String(entry?.id || entry?.name || entry || '').trim() === modelName);
+          const selected = items.find((item) => item?.endpoint_id && modelMatches(item))
+            || items.find((item) => item?.endpoint_id && item?.online !== false && Array.isArray(item.models) && item.models.length);
+          endpointId = String(selected?.endpoint_id || '').trim();
+          if (!endpointId) throw new Error(`browser acceptance found no usable endpoint for ${modelName || 'requested model'}`);
+        }
         const body = new FormData();
         body.append('name', `browser acceptance ${new Date().toISOString()}`);
         body.append('endpoint_id', endpointId);
@@ -749,7 +763,7 @@ async function main() {
         if (!response.ok) throw new Error(`browser acceptance session create failed (${response.status})`);
         return response.json();
       }, {
-        endpointId: process.env.HADES_BROWSER_SESSION_ENDPOINT_ID,
+        endpointId: process.env.HADES_BROWSER_SESSION_ENDPOINT_ID || '',
         model: process.env.HADES_BROWSER_SESSION_MODEL || 'qwen3:8b',
       });
       if (!session?.id) throw new Error('browser acceptance session response had no id');
