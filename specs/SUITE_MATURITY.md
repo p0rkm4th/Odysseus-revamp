@@ -1395,3 +1395,11 @@ shopping requirements on the exact current candidate. The expiring journey
 passed one turn with two canonical readbacks including reload; shopping passed
 two turns with two readbacks. Both recorded zero false success, raw final
 Result, duplicate delivery, or abrupt EOF.
+
+## Current Work task mutation checkpoint — `a784b35e` (2026-08-29)
+
+The exact Work task mutation/readback journey passed on a fresh isolated
+Qwen3:8B GUI deployment. The task entered through chat, produced one canonical
+mutation, and survived two readbacks including reload. False success, raw final
+Result, duplicate delivery, and abrupt EOF were all zero. This clean replay
+validates the generalized approval-replay duplicate guard.

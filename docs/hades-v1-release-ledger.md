@@ -1791,3 +1791,12 @@ request with two canonical readbacks including reload. Shopping requirements
 passed recipe listing and an ordinary request for ingredients to buy, again
 with two canonical readbacks including reload. Both Qwen3:8B GUI runs recorded
 zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
+## Current Work task mutation checkpoint — executable candidate `a784b35e` (2026-08-29)
+
+A fresh disposable Compose project with normal admin setup and Qwen3:8B passed
+the exact Work task mutation/readback journey. The prerequisite project was
+setup-seeded; the task itself entered through owner chat. One task mutation and
+two canonical readbacks including reload passed with zero false success, raw
+final Result, duplicate delivery, or abrupt EOF. This is the clean replay of
+the journey that originally exposed approval-continuation duplicate delivery.
