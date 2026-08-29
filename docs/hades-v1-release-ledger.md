@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Copied-webpage Recipe mutation checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+`OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001` passed on a clean disposable Recipe
+deployment running the exact candidate. The owner pasted webpage-shaped recipe
+content through chat, Hades completed one canonical mutation, and two
+independent readbacks verified the result and its reload durability. The run
+covered 2 turns with zero false success, raw final Results, duplicate delivery,
+or abrupt EOF. A prior attempt against an accumulated disposable lane stopped
+before chat because its empty-Recipe precondition had drifted; that was
+classified as fixture `ENVIRONMENT_FAILURE`, not feature evidence.
+
+The clean lane used a fresh application state, normal admin model setup, and
+`qwen3:8b`; no owner deployment or owner data was touched.
+
 ## Fresh-install Qwen/restart checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 A disposable empty deployment was started from the exact candidate image
