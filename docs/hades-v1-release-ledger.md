@@ -1930,3 +1930,12 @@ intentional icon each, no horizontal overflow, and one shared Inventory
 titlebar; the Recipe pane rendered one readable empty/list state. A 390px
 viewport also had no document overflow. Screenshots were captured at
 `/tmp/hades-ui-desktop-current.png` and `/tmp/hades-ui-narrow-current.png`.
+
+## Current isolated Chroma volume recovery checkpoint (2026-08-29)
+
+An isolated disposable Chroma volume was populated with marker data, backed
+up using the documented Docker-volume tar procedure, deliberately drifted,
+restored, and independently verified. The original marker values were
+restored and the drift-only file was absent after restore. This was an
+operational recovery rehearsal only; no owner volume or deployment was
+modified.
