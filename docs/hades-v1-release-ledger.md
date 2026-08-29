@@ -1796,6 +1796,14 @@ four turns for Acceptance Thyme using "yo add 3 cans..." and "use one...".
 Both journeys verified canonical state and recorded zero false success, raw
 final Result, duplicate delivery, or abrupt EOF.
 
+## Current Work task mutation checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+The first task replay on a reused stack was classified as fixture contamination:
+prior Memory context correctly triggered the external-untrusted-context exact
+approval gate. A truly fresh no-memory Work stack then passed the task journey
+with two turns, one chat mutation, two canonical readbacks including reload,
+and zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 An earlier reused-database replay was rejected before chat because its
 recipe-count precondition no longer held. That was disposable fixture
 contamination, not a product result.
