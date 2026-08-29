@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe URL argument projection verification — `4f5c235f` (2026-08-29)
+
+The exact URL request with the explicit display name was recompiled and
+projected through the canonical ACI path. The `IntentFrame` retained
+`recipe_source_url` and `recipe_requested_name`; `resolve_intent` selected
+`manage_recipes/commit_import`, and the projected payload retained both
+values. The focused Recipe/ACI suites passed `58` tests. An authenticated
+HTTP/SSE replay against the exact candidate also emitted the sealed payload
+with both fields intact; execution stopped at the normal `write_private`
+approval gate, with no mutation or false success. This disproves the former
+`{"action":"add"}` argument-loss path on the deployed candidate.
+
+The replay had one terminal `[DONE]`, no abrupt EOF, and no duplicate
+finalization. Browser proof remains separately blocked by Chromium
+`ERR_INSUFFICIENT_RESOURCES` before the composer loads, including on a fresh
+disposable data root; no browser product result is inferred from that run.
+
 ## Recipe shopping UI/API checkpoint — `4f5c235f` (2026-08-29)
 
 The existing recipe detail route now exposes the deterministic
