@@ -982,7 +982,12 @@ async def build_chat_context(
     # model shaping/trimming; passive memory may be dropped, but an explicit
     # Brain result must not disappear and turn into a false zero claim.
     explicit_memory_result = None
-    if mem_enabled and is_explicit_memory_query(context_message):
+    # Canonical ACI agent turns execute the existing ``read_memory`` Action
+    # and render its Result deterministically.  The context-only prefetch is
+    # retained for plain-chat compatibility, but in agent mode it would mark
+    # the turn answer-only before the Action projection can run, leaving the
+    # model to answer from prose with no canonical Result.
+    if mem_enabled and not agent_mode and is_explicit_memory_query(context_message):
         try:
             explicit_memory_result = build_explicit_memory_result(
                 chat_processor.memory_manager, user, context_message,
