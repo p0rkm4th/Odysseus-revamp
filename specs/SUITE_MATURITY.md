@@ -17,6 +17,27 @@ the complete journey works.
 | Finance | no promoted read-only canonical ledger yet | DESIGN / DEFERRED | design material only | define read-only owner and provider boundary | Tier 3 |
 | TTRPG / DM | no promoted campaign canonical owner yet | DESIGN / DEFERRED | none | design only; no runtime expansion before Tier 1/2 | Tier 3 |
 
+### Household location projection checkpoint — `17b946a2`
+
+The existing `InventoryService.household_overview` projection now resolves
+owner-scoped `InventoryLocation` records into bounded `location_name` fields
+and deterministic per-location item/stock totals. It does not add location
+routing or a second store; missing and cross-owner locations remain absent.
+The focused Household/Recipe/ACI container run passed `101` tests. The exact
+candidate was built from pushed source `17b946a24938f71051ba2ab57a25b0cf7828f0d6`
+and verified in a disposable runtime: OCI marker and running source matched,
+health was healthy, restarts were `0`, and Qwen3:8B was reachable from the
+container namespace with digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+
+The source-mounted full regression completed `6921 passed, 6 skipped`, with
+`10` failures and `2` setup errors caused by the intentionally read-only
+checkout mount: tests requiring writable `data/`, `tmp_pytest_probe/`, and
+`/home/.docker-data` could not run. This is environment evidence, not a full
+product pass; the prior supported writable-container baseline remains the
+authoritative full-regression evidence until a writable isolated test mount is
+provided.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
