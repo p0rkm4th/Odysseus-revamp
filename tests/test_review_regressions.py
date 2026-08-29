@@ -1164,6 +1164,9 @@ def test_public_agent_policy_hides_sensitive_tools(monkeypatch):
     assert "app_api" in blocked
     assert "serve_preset" in blocked
     assert "manage_tasks" in blocked
+    # The authenticated owner may manage their own private memory. The
+    # canonical ActionSpec still bounds this to owner-scoped memory records.
+    assert "manage_memory" not in blocked
 
 
 def test_presetup_does_not_grant_admin_tools_when_auth_enabled(monkeypatch):
