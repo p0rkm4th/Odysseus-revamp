@@ -444,6 +444,7 @@ def test_service_health_read_has_grounded_deterministic_answer_and_projection():
         "observation_location": None,
         "freshness": None,
         "overall": "degraded",
+        "output": "",
         "services": [
             {"name": "chromadb", "status": "ok", "detail": "reachable"},
             {"name": "ollama", "status": "degraded", "detail": "probe timed out"},
@@ -460,6 +461,21 @@ def test_service_health_read_has_grounded_deterministic_answer_and_projection():
     assert selected is not None
     assert selected.source is AnswerSource.DETERMINISTIC_RESULT
     assert selected.provenance == "canonical Service Result"
+
+
+def test_targeted_service_status_read_renders_bounded_subprocess_result():
+    raw = {
+        "status": "SUCCESS_WITH_DATA",
+        "action": "service_status",
+        "target": "worker.service",
+        "output": "Id=worker.service\nActiveState=active\nSubState=running",
+    }
+    projection = canonical_tool_result_projection("manage_homelab", {"output": json.dumps(raw), "exit_code": 0})
+    event = {"tool": "manage_homelab", "exit_code": 0, "output": "truncated", "result_projection": projection}
+    assert canonical_service_read_answer([event]) == (
+        "Service status for worker.service:\n"
+        "Id=worker.service\nActiveState=active\nSubState=running"
+    )
 
 
 def test_canonical_inventory_mutation_answer_requires_structured_result_and_readback():
