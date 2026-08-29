@@ -664,14 +664,19 @@ async function send(page, prompt, expectation = {}) {
   if (expectation.domain && expectation.operation) {
     // These are black-box expectations: only serialized transport evidence is
     // inspected. They never enter prompts, routing, or executor state.
-    const toolNames = stream.events.filter((event) => event.tool).map((event) => event.tool);
-    if (expectation.tool_binding && !toolNames.some((name) => name === expectation.tool_binding)) {
-      throw new Error(`expected tool binding ${expectation.tool_binding} was not observed for ${prompt}: ${toolNames.join(', ')}`);
-    }
-    if (expectation.action) {
-      const actions = stream.events.filter((event) => event.action).map((event) => event.action);
-      if (!actions.includes(expectation.action)) {
-        throw new Error(`expected canonical action ${expectation.action} was not observed for ${prompt}: ${actions.join(', ')}`);
+    // A clarification pins the intended domain/action semantics but must stop
+    // before any binding or Action is emitted. Binding/action observations
+    // therefore apply only to execution-bearing answers.
+    if (expectation.answer_source !== 'CLARIFICATION') {
+      const toolNames = stream.events.filter((event) => event.tool).map((event) => event.tool);
+      if (expectation.tool_binding && !toolNames.some((name) => name === expectation.tool_binding)) {
+        throw new Error(`expected tool binding ${expectation.tool_binding} was not observed for ${prompt}: ${toolNames.join(', ')}`);
+      }
+      if (expectation.action) {
+        const actions = stream.events.filter((event) => event.action).map((event) => event.action);
+        if (!actions.includes(expectation.action)) {
+          throw new Error(`expected canonical action ${expectation.action} was not observed for ${prompt}: ${actions.join(', ')}`);
+        }
       }
     }
   }
