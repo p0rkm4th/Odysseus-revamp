@@ -314,6 +314,9 @@ def test_ordinary_item_quantity_question_routes_to_canonical_household_read():
     assert frame.domain_concept == "HOUSEHOLD_ITEM"
     assert frame.operation_class == "READ"
     assert resolve_intent(frame).action_id == "overview"
+    left = compile_intent("how much Acceptance Basil is left now")
+    assert left.domain_concept == "HOUSEHOLD_ITEM"
+    assert resolve_intent(left).action_id == "overview"
 
 
 def test_recipe_draft_rejects_missing_or_ambiguous_sections_without_mutation():

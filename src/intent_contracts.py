@@ -1923,7 +1923,7 @@ def compile_intent(
     elif (
         operation == "READ"
         and re.search(r"\bhow\s+much\b", q)
-        and re.search(r"\b(?:we|i)\s+(?:got|have|have\s+left)\b", q)
+        and re.search(r"\b(?:we|i)\s+(?:got|have|have\s+left)\b|\bis\s+left\b", q)
         and not re.search(
             r"\b(?:ram|memory|cpu|gpu|storage|disk|machine|computer|server|host|asset|network)\b",
             q,
