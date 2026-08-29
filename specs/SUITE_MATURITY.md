@@ -1411,3 +1411,12 @@ browser first login, persisted the authenticated browser session across an app
 container restart, and reloaded the home surface with `/api/health` returning
 200. The image digest and source marker matched the candidate; owner data was
 untouched.
+
+## Current Tier 1 read-only walkabout — `a784b35e` (2026-08-29)
+
+Seven ordinary read-only browser turns covering network, homelab, memory,
+Assets, references, and Work overview passed on the exact candidate. Every
+turn produced one human answer and one terminal event with zero false success,
+raw final Result, duplicate delivery, or abrupt EOF. An expired disposable
+credential was classified as `AUTH_SESSION_FAILURE` before login and replaced
+through the normal admin flow.

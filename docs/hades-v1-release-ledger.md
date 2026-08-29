@@ -1810,3 +1810,14 @@ the browser reloaded the authenticated home surface successfully. The
 post-restart `/api/health` response was HTTP 200; the candidate source marker
 matched `a784b35e` and the container restart count was zero after the explicit
 restart. Owner data was not involved.
+
+## Current Tier 1 read-only walkabout — executable candidate `a784b35e` (2026-08-29)
+
+The isolated current candidate passed seven ordinary read-only browser turns
+covering network, homelab, memory, Asset collection/reference questions, and
+Work overview. Each turn produced one human answer and one terminal event;
+there were zero false successes, raw final Results, duplicate delivery, or
+abrupt EOFs. An earlier replay using an expired disposable credential was
+classified as `AUTH_SESSION_FAILURE` before login and was not counted as a
+product result. A fresh principal was provisioned through the normal admin
+route for the successful replay.
