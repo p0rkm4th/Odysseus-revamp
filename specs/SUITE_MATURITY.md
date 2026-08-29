@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Asset collection-property paraphrase checkpoint — `20d07aef` (2026-08-29)
+
+Collection Asset questions now retain their property projection across
+conversational context and bare phrasing. The exact candidate passed the
+three-prompt RAM journey with canonical Atlas/Erebus values and no raw,
+duplicate, false-success, or EOF defects. Owner deployment remains untouched.
+
 ## URL Recipe replay-idempotency checkpoint — `4c2c9f23` (2026-08-29)
 
 Approved URL Recipe imports are now idempotent at the canonical mutation
