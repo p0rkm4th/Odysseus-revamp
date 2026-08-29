@@ -2,6 +2,26 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Current-head regression and fresh-install isolation — `b2b14765` (2026-08-29)
+
+The supported project environment reran the full current-head regression after
+the Compose isolation correction and CI assertion update: `6963 passed, 7
+skipped` in `221.67s`. The earlier single failure was a stale test expectation
+for the intentionally active `hades-v1-productization` push trigger; no
+product behavior failed. The host `pytest` command is absent, but
+`./venv/bin/pytest` is the authoritative project runner.
+
+The exact executable candidate for the Compose change was built from
+`3df6d9d6d6497e5f1445b2c1adaf032e96caf0b7` as
+`odysseus:candidate-3df6d9d6d649`, image
+`sha256:14e6da5cc932ece0bb29cfc6c92aa261dff98d75794a0c00edf916bcd63fe1dd`;
+its OCI revision and `/app/.odysseus-source-commit` matched. A later
+test/documentation-only descendant is `b2b14765`; the owner deployment was
+not changed. The isolated fresh rehearsal was healthy, logged in normally,
+reloaded, restarted, and verified Qwen3:8B from the Hades namespace. The
+productization branch remains 303 commits ahead of `origin/main`; merge
+reconciliation and explicit merge authorization remain outstanding.
+
 ## Isolated fresh-install Compose checkpoint — `2c37478a` (2026-08-29)
 
 The fresh-install rehearsal found and closed a parallel-install/rehearsal
