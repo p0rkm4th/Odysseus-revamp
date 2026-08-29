@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Expiring Recipe composition checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+`OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed on the exact candidate with a
+fresh acceptance principal and isolated canonical fixture. The ordinary owner
+question about recipes makeable from soon-expiring ingredients produced the
+expected canonical read, with 2 independent readbacks including reload
+durability. False success, raw final Results, duplicate delivery, and abrupt
+EOF were all zero.
+
 ## Recipe composition and shopping checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 On the exact candidate and isolated fresh data, `OWNER-RECIPE-COMPOSITION-001`
