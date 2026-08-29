@@ -1,5 +1,17 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Network owner-read projection checkpoint — candidate `dcf0a95d` (2026-08-29)
+
+Actual-owner read-only smoke found opaque network IDs and repeated raw
+observations in the human answer. The shared projection now preserves bounded
+identity/resolution metadata, groups repeats, separates named from
+unidentified/unconfirmed records, and reports freshness. Focused coverage
+passed `7` tests; full regression passed `6973` tests with `7` skips. Exact
+candidate browser acceptance for `OWNER-NETWORK-001` passed with zero false
+success, raw final Result, duplicate delivery, or abrupt EOF. The candidate
+was tested on disposable data; the actual owner runtime remains untouched at
+source `34ced247`.
+
 ## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
 
 The exact candidate completed first-run setup, authenticated browser use,
