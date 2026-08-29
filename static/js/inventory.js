@@ -278,7 +278,7 @@ function renderRecipeImportReview(form, prepared) {
 function recipeReviewIngredientRow(index, ingredient = {}) {
   return `<div class="recipe-ingredient-row recipe-review-ingredient-row" data-review-ingredient-row>
     <label class="hades-intake-field"><span>Ingredient ${index + 1}</span><input name="review_ingredient_name" required maxlength="160" value="${escapeHtml(ingredient.name || '')}"></label>
-    <label class="hades-intake-field"><span>Quantity</span><input name="review_ingredient_quantity" required inputmode="decimal" pattern="[0-9]+(?:\\.[0-9]+)?" value="${escapeHtml(ingredient.quantity ?? '')}"></label>
+    <label class="hades-intake-field"><span>Quantity${ingredient.review_note ? ` <small class="inventory-review-warning">Needs review: ${escapeHtml(ingredient.review_note)}</small>` : ''}</span><input name="review_ingredient_quantity" required inputmode="decimal" pattern="[0-9]+(?:\\.[0-9]+)?" value="${escapeHtml(ingredient.quantity ?? '')}"></label>
     <label class="hades-intake-field"><span>Unit</span><select name="review_ingredient_unit">${RECIPE_UNITS.map(u => `<option ${String(ingredient.unit || '').toLowerCase() === u ? 'selected' : ''}>${u}</option>`).join('')}</select></label>
   </div>`;
 }
