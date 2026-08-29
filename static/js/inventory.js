@@ -5,6 +5,7 @@ if (typeof window !== 'undefined') {
 
 const DOMAINS = ['all', 'it', 'kitchen', 'household'];
 const UNITS = ['each', 'g', 'kg', 'ml', 'l', 'oz', 'lb'];
+const RECIPE_UNITS = ['each', 'count', 'cup', 'tbsp', 'tsp', 'g', 'kg', 'ml', 'l', 'oz', 'lb'];
 let open = false;
 let tab = 'stock';
 let domain = 'all';
@@ -228,7 +229,7 @@ function recipeIngredientRow(index = 0) {
   return `<div class="recipe-ingredient-row" data-ingredient-row>
     <label class="hades-intake-field"><span>Ingredient ${index + 1}</span><input name="ingredient_name" required maxlength="160" placeholder="e.g. chicken breast"></label>
     <label class="hades-intake-field"><span>Quantity</span><input name="ingredient_quantity" required inputmode="decimal" pattern="[0-9]+(?:\\.[0-9]+)?" placeholder="1"></label>
-    <label class="hades-intake-field"><span>Unit</span><select name="ingredient_unit">${UNITS.map(u => `<option>${u}</option>`).join('')}</select></label>
+    <label class="hades-intake-field"><span>Unit</span><select name="ingredient_unit">${RECIPE_UNITS.map(u => `<option>${u}</option>`).join('')}</select></label>
     <button type="button" class="hades-btn-secondary recipe-remove-ingredient" data-action="remove-recipe-ingredient" aria-label="Remove ingredient ${index + 1}">Remove</button>
   </div>`;
 }
