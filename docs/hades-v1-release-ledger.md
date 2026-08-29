@@ -205,3 +205,20 @@ E6.
   suite passed `25`. This checkpoint did not rerun the full suite.
 - Owner deployment remains unchanged; browser/live owner acceptance against
   this candidate remains separate evidence.
+
+## Productization checkpoint — `fe7b6b74` (2026-08-29)
+
+- Extended the existing canonical Homelab service renderer to target-qualified
+  `service_status` reads, preserving bounded subprocess evidence instead of
+  falling through to model synthesis.
+- Focused supported-container tests: `100 passed`, one SQLAlchemy deprecation
+  warning.
+- Exact candidate image: `odysseus:candidate-fe7b6b74`,
+  `sha256:1e20b8d3136cc4ea43b978f428ad115351f8bd12886b902fb19bb0a1b63c955f`;
+  marker/OCI label/running source matched the pushed SHA; health healthy;
+  restart count `0`.
+- Qwen3:8B remained reachable from the candidate container namespace with
+  digest `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+- The prior full-regression evidence remains `6935 passed, 5 skipped, 1
+  environment setup failure`; this checkpoint did not rerun the full suite.
+- Owner deployment remains unchanged.
