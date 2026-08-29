@@ -373,3 +373,23 @@ alone do not advance a suite to IMPLEMENTED.
   answer, one terminal `[DONE]`, and no abrupt EOF. No canonical recipe was
   persisted because the source lacked a verifiable quantity for `salt and
   pepper`.
+
+## Recipe import projection checkpoint — `5d3a047a`
+
+The shared `RecipeDraft` import contract now accepts an explicit
+`requested_name` override for both `prepare_import` and `commit_import`.
+Schema.org/page presentation names cannot overwrite the owner's explicit name;
+the source URL and import provenance remain attached to the draft. The service
+boundary regression also proves preparation remains read-only. Focused Recipe,
+ACI, and deterministic-intent coverage is `317 passed`; the full current
+checkout regression is `6930 passed, 5 skipped` at test/docs head
+`95584a83`.
+
+The executable candidate `odysseus:candidate-5d3a047a960e` was built from
+`5d3a047a960ef91420b6c14b041e2262ae28da46` with image
+`sha256:5c18e05727eb1accd887535eb5bfcc5fdbdc8946a9ae3a2259a6c7dbeb9b8d93`.
+OCI revision, `/app/.odysseus-source-commit`, and running source matched; the
+isolated runtime was healthy with zero restarts and Qwen3:8B reachable from the
+project Docker namespace. The disposable runtime was removed afterward. The
+real Sunday Supper source remains correctly `NEEDS_REVIEW` until its
+unquantified ingredient is supplied or reviewed; no quantity is invented.
