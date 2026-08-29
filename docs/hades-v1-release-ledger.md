@@ -265,4 +265,15 @@ remained unchanged.
   deterministic no-match answer with no invented server or raw JSON final.
 - The run had one persisted answer, one `[DONE]`, zero raw final results,
   zero duplicate delivery, and zero abrupt EOF. No executable source changed;
-  owner deployment remained unchanged.
+owner deployment remained unchanged.
+
+## Productization URL import checkpoint — `d41c67fc` (2026-08-29)
+
+- The live URL Recipe journey reached `manage_recipes/commit_import` through
+  normal authenticated browser/chat execution and approval handling.
+- The source contained an unquantified `salt and pepper` ingredient, so the
+  canonical importer correctly returned review-required failure and explicitly
+  said no recipe was saved. It emitted one `[DONE]` with no false success,
+  invented quantity, or persistence claim.
+- This confirms incomplete imported drafts fail closed. Complete URL import
+  acceptance remains pending; no executable source or owner deployment changed.

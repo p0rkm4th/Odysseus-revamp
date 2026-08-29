@@ -571,6 +571,19 @@ health was healthy, restarts were `0`, and Qwen3:8B was reachable from the
 container namespace. The disposable container was removed afterward; the
 owner deployment was not changed.
 
+## URL Recipe import live checkpoint — `d41c67fc`
+
+The exact owner-like URL import journey reached canonical
+`manage_recipes/commit_import` and normal approval handling. The source page
+was fetched as untrusted evidence, but its structured ingredients included an
+unquantified `salt and pepper` field. Validation therefore returned a bounded
+review/failure answer stating that no recipe was saved, with one terminal
+`[DONE]`; no false success, invented quantity, or persistence claim occurred.
+This is the intended fail-closed incomplete-draft behavior, not evidence to
+weaken import validation. A complete URL import remains a separate acceptance
+case to prove. The disposable principal and container were removed; owner
+deployment was not changed.
+
 The post-refactor full regression completed at `6933 passed, 5 skipped` with
 no new failures. This confirms the executor-to-service ownership change did
 not regress the broader product tree; browser/live URL mutation acceptance
