@@ -429,3 +429,22 @@ persistence-ready `RecipeDraft`; the review projection returned
 behavior: the URL and requested display name reach the import projection, but
 the canonical owner does not invent a quantity or persist an incomplete
 recipe. No further executable change is justified by this evidence.
+
+## Recipe video evidence checkpoint — `5369b5d9`
+
+The existing YouTube source adapter now obtains bounded public metadata and
+description evidence alongside the existing transcript path. If captions are
+missing but the description is available, that description can still reach
+RecipeDraft preparation; if neither source has usable evidence, the importer
+returns a bounded unavailable/review outcome. Metadata and transcript remain
+untrusted input, and persistence still requires validated RecipeDraft,
+canonical `manage_recipes`, and readback verification.
+
+Focused Recipe/ACI/UI coverage passed `255` tests. The full supported
+regression at this executable checkpoint passed `6933` tests with `5` skips.
+The exact candidate `odysseus:candidate-5369b5d9` was built from the pushed
+SHA, image ID `sha256:8e29abd778c0bef043316e401e31273551dd7b7e5c010e9c8e10295a04d723b0`,
+and verified in an isolated container: OCI marker/runtime source matched,
+health was healthy, restarts were `0`, and Qwen3:8B was reachable from the
+container namespace. The disposable container was removed afterward; the
+owner deployment was not changed.
