@@ -763,7 +763,7 @@ class ToolRunSecurityContext:
         if self.approval_gate_bypassed:
             return ToolGateDecision(True)
         if self.deterministic_owner_memory_mutation and tool_name == "manage_memory":
-            action = action_from_content(tool_name, content)
+            action = _action_from_content(tool_name, content)
             if action in _PRIVATE_ACTION_WRITES.get(tool_name, frozenset()):
                 return ToolGateDecision(True)
         if not self.external_untrusted_context_seen:
