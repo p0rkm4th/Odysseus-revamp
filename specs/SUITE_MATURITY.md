@@ -1,5 +1,16 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Kitchen → Recipe exact-candidate browser composition checkpoint — `cb34789d` (2026-08-29)
+
+`OWNER-RECIPE-COMPOSITION-001` passed in an isolated browser deployment using
+the exact product candidate `4c7696a3`. Three authenticated chat turns covered
+canonical Recipe listing, Inventory-backed pantry coverage, and deterministic
+serving scaling. The run produced three human-readable final answers and three
+terminal `[DONE]` events, with two canonical readbacks, zero raw final results,
+zero duplicate delivery, and zero abrupt EOF. The browser fixture had a
+missing `shortage` parameter projection; that evaluator-only defect was fixed
+and pushed as `cb34789d` without changing the product image.
+
 ## Populated Memory exact-candidate browser checkpoint — `4c7696a3` (2026-08-29)
 
 `OWNER-MEMORY-POPULATED-001` passed through an isolated disposable container
