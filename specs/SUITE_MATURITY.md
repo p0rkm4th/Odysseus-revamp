@@ -70,6 +70,17 @@ Otherwise preparation remains `NEEDS_REVIEW`. No direct image-to-state path was
 introduced. The exact candidate image is
 `sha256:7053c166341d7be8026a8bb9c11902479f2cb43002c1676dbb05abe2f90ba4c0`.
 
+The executable checkpoint `d7c406abfcf7aa9df320bc59d8ee93aab27f33b1` also
+accepts fenced JSON RecipeDraft proposals by stripping the presentation fence
+before the existing validator runs; it does not make model text authoritative.
+On an isolated fresh deployment of the exact candidate, the normal login route,
+chat-driven long-text Recipe CREATE, two independent readbacks, reload, and a
+third readback all passed: `3` streams, `3` terminal `[DONE]` events, zero
+false-success, zero duplicate delivery, and zero abrupt EOF. The endpoint was
+provisioned through the normal admin-only model-endpoint route and the browser
+used the gated least-privilege acceptance principal. The disposable principal,
+credentials, data, volumes, and containers were revoked and removed afterward.
+
 ## Baseline evidence
 
 - Post-merge `main`: `364380ed3f46c1d14d3229e5b7530698cfa22e65`.
