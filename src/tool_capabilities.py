@@ -563,6 +563,8 @@ def capabilities_for_action(tool_name: Any, content: Any) -> ToolCapabilities:
             (value for value in ResultIntegrity if value.value == first_class.result_integrity),
             ResultIntegrity.SYSTEM,
         )
+        if first_class.action_id in _ACTION_DESTRUCTIVE.get(tool_name, ()):
+            effects = frozenset(set(effects) | {ToolEffect.DESTRUCTIVE})
         return ToolCapabilities(effects, integrity, known=True)
 
     action = _action_from_content(tool_name, content)
@@ -737,6 +739,10 @@ class ToolRunSecurityContext:
     # The bypass affects only this automatic gate; current tool policy, ownership,
     # workspace confinement, and execution/sandbox restrictions still apply.
     approval_gate_bypassed: bool = False
+    # Set only by the canonical server-projected owner-memory fast path. This
+    # is narrower than chat/task approval bypass: it authorizes one bounded
+    # private-memory mutation while retaining all other tainted-run gates.
+    deterministic_owner_memory_mutation: bool = False
 
     def observe_messages(self, messages: Iterable[dict]) -> None:
         """Apply server-owned chat scope and promote untrusted prompt context."""
@@ -756,6 +762,10 @@ class ToolRunSecurityContext:
     def decision_for(self, tool_name: Any, content: Any = None) -> ToolGateDecision:
         if self.approval_gate_bypassed:
             return ToolGateDecision(True)
+        if self.deterministic_owner_memory_mutation and tool_name == "manage_memory":
+            action = action_from_content(tool_name, content)
+            if action in _PRIVATE_ACTION_WRITES.get(tool_name, frozenset()):
+                return ToolGateDecision(True)
         if not self.external_untrusted_context_seen:
             return ToolGateDecision(True)
         capabilities = capabilities_for_action(tool_name, content)

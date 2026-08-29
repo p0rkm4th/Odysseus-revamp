@@ -130,8 +130,13 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="memory.manage",
         description="Manage the authenticated owner's canonical Brain memory records.",
         actions=_actions(*(
-            ActionSpec(action_id=action, effects=("write_private",), executor_key="manage_memory")
-            for action in ("add", "edit", "delete")
+            ActionSpec(
+                action_id=action,
+                effects=("read_private",) if action in {"list", "search"} else ("write_private",),
+                result_integrity="external_untrusted",
+                executor_key="manage_memory",
+            )
+            for action in ("list", "search", "add", "edit", "delete")
         )),
     ),
     "work.read": CapabilitySpec(
@@ -403,6 +408,11 @@ def action_from_content(tool_name: str, content: Any) -> str | None:
     if isinstance(content, Mapping):
         payload = dict(content)
     elif isinstance(content, str):
+        raw = content.strip()
+        # The mature memory/session transports accept a line-oriented body:
+        # first line is the action, remaining lines are its query/content.
+        if tool_name in {"manage_memory", "manage_session"} and raw and not raw.startswith("{"):
+            return raw.splitlines()[0].strip().replace("-", "_").casefold() or None
         try:
             payload = json.loads(content or "{}")
         except (TypeError, ValueError):
