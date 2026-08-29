@@ -447,6 +447,13 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     assert work.source.value == "DETERMINISTIC_RESULT"
     assert "No outstanding work" in work.content
 
+    work_with_execution_history = canonical_result_answer([{
+        "tool": "read_work", "exit_code": 0,
+        "output": '{"status":"SUCCESS_WITH_DATA","goals":[],"projects":[],"tasks":[],"commitments":[],"runs":[{"id":"run_read"}]}',
+    }])
+    assert work_with_execution_history is not None
+    assert "No outstanding work" in work_with_execution_history.content
+
     empty_service = canonical_result_answer([{
         "tool": "manage_homelab", "exit_code": 0,
         "output": '{"services": [], "status": "SUCCESS_EMPTY"}',
