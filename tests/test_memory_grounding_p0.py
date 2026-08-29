@@ -133,6 +133,7 @@ def test_verified_memory_mutation_has_one_human_answer():
             "tool": "manage_memory",
             "command": '{"action":"delete","memory_id":"m1"}',
             "output": '{"success":true,"verification":{"status":"VERIFIED"}}',
+            "result_projection": {"success": True, "action": "delete", "verification": {"status": "VERIFIED"}},
             "exit_code": 0,
         },
     ]) == "Removed that memory; the canonical Memory readback is verified."
