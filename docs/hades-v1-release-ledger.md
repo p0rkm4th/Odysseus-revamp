@@ -402,6 +402,17 @@ were removed; owner deployment was unchanged.
   `d1559078a414d7f2e7a8571ebf75028126121632`; subsequent branch commits are
   documentation/test-only and did not change the product image.
 
+## Productization branch reconciliation — `38f2d048` (2026-08-29)
+
+- `origin/main` is `364380ed3f46c1d14d3229e5b7530698cfa22e65`, the merge base
+  of the productization branch, with no main-only commits. The branch is
+  `190` commits ahead and `0` behind; no reconciliation conflict is pending.
+- Current branch HEAD is `38f2d048`; worktree is clean and the branch matches
+  `origin/hades-v1-productization`. The deployed owner runtime remains a
+  separate older source and was not changed during productization acceptance.
+- Merge/release is not declared: fresh-install, broader cross-suite, and
+  release-candidate gates remain outstanding.
+
 ## Recipe URL import acceptance checkpoint — `1c8c22a7` (2026-08-29)
 
 - The exact isolated authenticated browser request for the named Sunday
