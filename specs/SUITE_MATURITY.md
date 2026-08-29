@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Complete URL Recipe import checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+Exact-candidate URL import passed required approval, canonical commit, name and
+source-URL preservation, list/detail follow-ups, and reload durability. It
+had zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Expiring Recipe composition checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 The exact-candidate expiring-ingredients Recipe journey passed with a fresh

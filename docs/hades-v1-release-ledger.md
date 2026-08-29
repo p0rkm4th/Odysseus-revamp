@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Complete URL Recipe import checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+`OWNER-RECIPE-URL-IMPORT-COMPLETE-001` passed on an empty disposable Recipe
+store with a fresh principal. The browser/chat flow used the required approval,
+completed one canonical `commit_import`, preserved the requested display name
+and source URL, then listed and opened the recipe in follow-up turns. Two
+independent readbacks, including reload durability, passed. False success, raw
+final Results, duplicate delivery, and abrupt EOF were all zero.
+
 ## Expiring Recipe composition checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 `OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed on the exact candidate with a
