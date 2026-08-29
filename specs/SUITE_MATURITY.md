@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Expiring Recipe composition checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+The exact-candidate expiring-ingredients Recipe journey passed with a fresh
+principal, canonical readback, and reload durability. It had zero false
+success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Recipe composition and shopping checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Exact-candidate Recipe composition passed listing, pantry feasibility, and
