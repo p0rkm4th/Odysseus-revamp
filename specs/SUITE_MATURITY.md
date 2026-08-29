@@ -417,3 +417,15 @@ regression passed `6931` tests with `5` skips. Exact candidate
 `odysseus:candidate-a7fe204ca5a2` was source-matched, healthy, zero-restart,
 and Qwen-reachable in an isolated runtime; the disposable container was
 removed afterward.
+
+### Live importer evidence — 2026-08-28
+
+The bounded public fetch for the owner-requested Sunday Supper URL completed
+successfully (`10,016` bytes, no fetch error). Schema.org extraction found the
+page recipe and `11` ingredients, but one ingredient was the unquantified
+phrase `salt and pepper`. `recipe_import_draft()` therefore returned no
+persistence-ready `RecipeDraft`; the review projection returned
+`NEEDS_REVIEW` with that field identified. This is the intended fail-closed
+behavior: the URL and requested display name reach the import projection, but
+the canonical owner does not invent a quantity or persist an incomplete
+recipe. No further executable change is justified by this evidence.
