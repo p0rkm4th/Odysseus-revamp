@@ -199,6 +199,7 @@ def setup_inventory_routes(
         owner = _owner(request)
         source_url = str(payload.get("source_url") or "").strip() or None
         source_text = str(payload.get("source_text") or "").strip() or None
+        requested_name = str(payload.get("requested_name") or "").strip()[:200] or None
         attachment_ids = payload.get("attachment_ids")
         if not source_url and not source_text and not attachment_ids:
             raise HTTPException(400, "source_url, source_text, or an image attachment is required")
@@ -229,7 +230,8 @@ def setup_inventory_routes(
                         "message": error}
         return await call(
             inventory.manage_recipes,
-            {"action": "prepare_import", "source_text": source_text, "source_url": source_url},
+            {"action": "prepare_import", "source_text": source_text,
+             "source_url": source_url, "requested_name": requested_name},
             owner=owner,
         )
 
