@@ -47,6 +47,8 @@ def test_inventory_uses_shared_window_and_form_primitives():
         "View source",
     ):
         assert marker in source
+    assert "Review this unpersisted recipe draft" not in source
+    assert "data-recipe-import-draft" in source
 
 
 def test_work_uses_shared_prompt_and_keeps_canonical_records_secondary():
