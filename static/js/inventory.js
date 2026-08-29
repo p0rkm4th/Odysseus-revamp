@@ -10,6 +10,7 @@ let open = false;
 let tab = 'stock';
 let domain = 'all';
 let query = '';
+let recipeQuery = '';
 let requestGeneration = 0;
 let editingDraft = null;
 
@@ -145,7 +146,7 @@ async function loadStock() {
 }
 
 function renderRecipesScaffold() {
-  return `<div class="inventory-toolbar hades-list-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><div class="inventory-toolbar-actions"><button class="hades-btn-secondary" data-action="import-recipe">Import</button><button class="inventory-primary hades-btn-primary" data-action="new-recipe">+ Recipe</button></div></div><div id="inventory-recipe-list">${loading()}</div>`;
+  return `<div class="inventory-toolbar hades-list-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><div class="inventory-toolbar-actions"><input id="recipe-search" type="search" maxlength="200" value="${escapeHtml(recipeQuery)}" placeholder="Search recipes" aria-label="Search recipes"><button class="hades-btn-secondary" data-action="import-recipe">Import</button><button class="inventory-primary hades-btn-primary" data-action="new-recipe">+ Recipe</button></div></div><div id="inventory-recipe-list">${loading()}</div>`;
 }
 
 async function loadRecipes() {
@@ -154,9 +155,13 @@ async function loadRecipes() {
   content.innerHTML = renderRecipesScaffold();
   try {
     const {recipes = []} = await api('/api/recipes');
-    const plans = await Promise.all(recipes.map(recipe => api(`/api/recipes/${encodeURIComponent(recipe.id)}/can-make`)));
+    const normalizedQuery = recipeQuery.trim().toLocaleLowerCase();
+    const visibleRecipes = normalizedQuery
+      ? recipes.filter(recipe => String(recipe.name || '').toLocaleLowerCase().includes(normalizedQuery))
+      : recipes;
+    const plans = await Promise.all(visibleRecipes.map(recipe => api(`/api/recipes/${encodeURIComponent(recipe.id)}/can-make`)));
     const list = document.getElementById('inventory-recipe-list');
-    list.innerHTML = recipes.length ? recipes.map((recipe, i) => `<article class="inventory-card hades-record-card inventory-recipe" data-recipe-id="${escapeHtml(recipe.id)}">
+    list.innerHTML = visibleRecipes.length ? visibleRecipes.map((recipe, i) => `<article class="inventory-card hades-record-card inventory-recipe" data-recipe-id="${escapeHtml(recipe.id)}">
       <div class="inventory-card-main"><h3>${escapeHtml(recipe.name)}</h3><p>${escapeHtml(recipe.servings)} servings · ${(recipe.ingredients || []).length} ingredients</p></div>
       <span class="inventory-ready hades-badge ${plans[i].can_make ? 'hades-badge-success yes' : 'hades-badge-warning no'}">${plans[i].can_make ? 'Ready to make' : `${plans[i].shortages.length} shortage${plans[i].shortages.length === 1 ? '' : 's'}`}</span>
       <button class="hades-btn-secondary" data-action="recipe-details">Details</button>${plans[i].can_make ? '<button class="inventory-primary hades-btn-primary" data-action="cook">Cook</button>' : ''}
@@ -402,6 +407,12 @@ async function onClick(event) {
 
 let searchTimer;
 function onInput(event) {
+  if (event.target.id === 'recipe-search') {
+    recipeQuery = event.target.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadRecipes, 250);
+    return;
+  }
   if (event.target.id !== 'inventory-search') return;
   query = event.target.value;
   clearTimeout(searchTimer);
