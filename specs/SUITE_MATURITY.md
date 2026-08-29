@@ -1377,3 +1377,13 @@ and `128 GB`) and a false-premise RTX 4090 query. Answers were grounded in
 canonical state with zero false premises, raw final Results, duplicate
 delivery, or abrupt EOF. An initial unmounted fixture-path replay was recorded
 as an environment/fixture-wiring failure and corrected before product grading.
+
+## Current Recipe composition checkpoint — `a784b35e` (2026-08-29)
+
+A fresh disposable Compose deployment with normal admin setup and registered
+Qwen3:8B passed the three-turn GUI Recipe composition journey: list, pantry
+feasibility, and six-serving scale. Canonical recipe/inventory readbacks and
+reload verification passed; the journey recorded zero false success, raw final
+Result, duplicate delivery, or abrupt EOF. A reused-database precondition
+failure was kept as fixture-contamination evidence and was not counted as a
+product result.
