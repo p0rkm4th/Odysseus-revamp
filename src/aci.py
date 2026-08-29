@@ -3467,15 +3467,6 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             return None
         if not nodes:
             return "No persisted network observations are recorded for this owner."
-        lines = [f"I found {len(nodes)} persisted network observation{'s' if len(nodes) != 1 else ''}:"]
-        for node in nodes[:50]:
-            if not isinstance(node, Mapping):
-                continue
-            attrs = node.get("attributes") if isinstance(node.get("attributes"), Mapping) else {}
-            label = node.get("name") or attrs.get("hostname") or attrs.get("observed_ip") or node.get("id") or "Unnamed node"
-            lines.append(f"- {label}")
-        if len(nodes) > 50:
-            lines.append(f"- …and {len(nodes) - 50} more")
         freshness = payload.get("freshness")
         if not freshness:
             node_freshness = {
@@ -3485,6 +3476,66 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             }
             if len(node_freshness) == 1:
                 freshness = next(iter(node_freshness))
+        # A normal owner should not have to interpret CMDB UUIDs, discovery
+        # placeholders, or repeated observations. Keep the full structured
+        # Result available in technical details, but make the primary answer
+        # a bounded summary with honest identity/freshness language.
+        if len(nodes) == 1:
+            node = nodes[0] if isinstance(nodes[0], Mapping) else {}
+            attrs = node.get("attributes") if isinstance(node.get("attributes"), Mapping) else {}
+            label = node.get("name") or attrs.get("hostname") or attrs.get("observed_ip") or node.get("id") or "Unnamed node"
+            lines = ["I found 1 persisted network observation:", f"- {label}"]
+        else:
+            named: dict[str, int] = {}
+            unresolved: dict[str, int] = {}
+
+            def display_label(node: Mapping[str, Any]) -> tuple[str, bool]:
+                attrs = node.get("attributes") if isinstance(node.get("attributes"), Mapping) else {}
+                raw_name = str(node.get("name") or "").strip()
+                hostname = str(attrs.get("hostname") or node.get("hostname") or "").strip()
+                address = str(
+                    attrs.get("observed_ip") or attrs.get("ip") or node.get("observed_ip") or ""
+                ).strip()
+                opaque = bool(
+                    raw_name
+                    and (
+                        re.fullmatch(r"network-device-[a-z0-9-]+", raw_name, re.IGNORECASE)
+                        or re.fullmatch(r"[0-9a-f]{8,}(?:-[0-9a-f-]+)?", raw_name, re.IGNORECASE)
+                        or raw_name == str(node.get("id") or "").strip()
+                    )
+                )
+                label = address or (hostname if hostname and not opaque else "") or (raw_name if raw_name and not opaque else "")
+                reviewable = str(node.get("resolution_state") or "").casefold() in {
+                    "unidentified", "pending_candidate"
+                } or node.get("canonical") is False
+                if not label:
+                    label = "Unidentified observed device"
+                if reviewable and address:
+                    label = f"Unidentified device {address}"
+                return label, reviewable
+
+            for node in nodes:
+                if not isinstance(node, Mapping):
+                    continue
+                label, reviewable = display_label(node)
+                bucket = unresolved if reviewable else named
+                bucket[label] = bucket.get(label, 0) + 1
+            lines = [f"I found {len(nodes)} persisted network observations."]
+            if named:
+                lines.append("Named or identified records:")
+                for label, count in list(named.items())[:12]:
+                    lines.append(f"- {label}" + (f" ({count} observations)" if count > 1 else ""))
+                if len(named) > 12:
+                    lines.append(f"- …and {len(named) - 12} more named records")
+            if unresolved:
+                lines.append("Unidentified or unconfirmed records:")
+                for label, count in list(unresolved.items())[:12]:
+                    lines.append(f"- {label}" + (f" ({count} observations)" if count > 1 else ""))
+                if len(unresolved) > 12:
+                    lines.append(f"- …and {len(unresolved) - 12} more unidentified records")
+            if not named and not unresolved:
+                lines.append("The observations do not contain readable host identities.")
+            lines.append("These are saved observations, not confirmation that a device is online right now.")
         if line := freshness_line(freshness):
             lines.append(line)
         return "\n".join(lines)

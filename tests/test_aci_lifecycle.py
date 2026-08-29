@@ -434,6 +434,30 @@ def test_network_observation_renderer_preserves_canonical_freshness():
     )
 
 
+def test_network_observation_renderer_hides_opaque_ids_and_bounds_repeated_nodes():
+    answer = canonical_network_read_answer([{
+        "tool": "manage_homelab", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA", "action": "read_network_observations",
+            "nodes": [
+                {"id": "uuid-1", "name": "network-device-443594", "canonical": False,
+                 "resolution_state": "pending_candidate"},
+                {"id": "thanatos-1", "name": "Thanatos", "canonical": True},
+                {"id": "thanatos-2", "name": "Thanatos", "canonical": True},
+                {"id": "unresolved-1", "name": "Unidentified device 192.168.10.71",
+                 "canonical": False, "resolution_state": "unidentified",
+                 "attributes": {"ip": "192.168.10.71"}},
+            ], "edges": [], "freshness": "historical_until_matched_to_current_context",
+        }),
+    }])
+    assert "uuid-1" not in answer
+    assert "network-device-443594" not in answer
+    assert "Thanatos (2 observations)" in answer
+    assert "Unidentified device 192.168.10.71" in answer
+    assert "not confirmation that a device is online right now" in answer
+    assert "Freshness: historical until matched to current context." in answer
+
+
 def test_homelab_inspection_has_grounded_deterministic_answer():
     projection = canonical_tool_result_projection("manage_homelab", {
         "output": json.dumps({
