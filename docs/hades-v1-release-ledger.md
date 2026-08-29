@@ -345,6 +345,24 @@ were removed; owner deployment was unchanged.
   storage-preflight environment failures`; the environment failures remain
   explicitly isolated.
 
+## Recipe complete-URL mutation acceptance — `d1559078` (2026-08-29)
+
+- Executable candidate: `odysseus:candidate-d1559078`, source
+  `d1559078a414d7f2e7a8571ebf75028126121632`, image
+  `sha256:3ec804a8a516deb0c9bb7e801598c70b1f7191e7a41a4cec9ab052521c38fce8`;
+  OCI revision matched. This was an isolated disposable deployment; the
+  owner deployment was not changed.
+- Browser acceptance passed the complete URL journey through normal login,
+  approval, chat-driven `commit_import`, list, and show. Requested name and
+  source URL survived projection; canonical readback verified persistence
+  before the deterministic success answer. Two readbacks (including reload),
+  three terminal `[DONE]` events, `falseSuccess=0`, `rawFinalResults=0`,
+  `duplicateDelivery=0`, and `abruptEOF=0`.
+- The live SSE envelope now exposes only bounded `success`, `verified`, and
+  `status` outcome scalars. Acceptance aggregates proposal and continuation
+  streams for one logical turn; model prose and hidden raw Results remain
+  non-authoritative.
+
 ## Recipe URL import acceptance checkpoint — `1c8c22a7` (2026-08-29)
 
 - The exact isolated authenticated browser request for the named Sunday

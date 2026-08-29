@@ -502,7 +502,7 @@ async function send(page, prompt, expectation = {}) {
     // can be reported as missing merely because its result is nested in the
     // tool card.  This remains attributable evidence: it must be the current
     // turn's tool output and carry an explicit successful/verified outcome.
-    const successfulToolEvent = stream.events.some((event) => event.tool &&
+    const successfulToolEvent = turnStreams.flatMap((candidate) => candidate.events || []).some((event) => event.tool &&
       (event.success === true || event.verified === true || /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(event.status || '')));
     const successfulToolCard = turn.tools.some((tool) => {
       if (!tool.rawOutput) return false;
