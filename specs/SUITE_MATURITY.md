@@ -835,3 +835,15 @@ The empty canonical Memory journey passed through the exact
 bounded human-readable empty-state answer, one `[DONE]`, and zero raw-final
 results, false-success claims, duplicate delivery, or abrupt EOF. The
 acceptance principal and disposable deployment were cleaned up afterward.
+
+## Asset property and negative-filter browser coverage — `481cd4ab` (2026-08-29)
+
+The canonical Asset browser regressions now pass on exact candidate
+`odysseus:candidate-d1559078`: `How much RAM do my computers have?` rendered
+the seeded Atlas/Erebus values, and the realistic messy `RTX 4090` query
+returned a bounded no-match answer. Both used one natural-language read and
+one `[DONE]`, with zero raw-final results, false-success claims, duplicate
+delivery, or abrupt EOF. The initial failed attempt was classified as fixture
+wiring because the seeded CMDB path was outside the mounted container data
+volume; it was then rerun with the matching canonical database. Acceptance
+state was revoked and cleaned up; the owner deployment was untouched.
