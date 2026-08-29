@@ -1513,3 +1513,10 @@ Desktop and 390px narrow authenticated checks passed for navigation icon
 uniqueness, viewport containment, shared Inventory chrome, and the Recipe empty
 state. No horizontal overflow or obvious visual blocker was observed; the
 synthetic fixture-only UI harness was not counted as product acceptance.
+
+## Current isolated Chroma recovery maturity — 2026-08-29
+
+The documented Docker-volume backup/restore procedure passed on a disposable
+volume: original marker data survived deliberate drift and restore, and the
+drift-only file was removed. This does not replace a full production backup
+policy, and no owner data was touched.
