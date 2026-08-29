@@ -3531,11 +3531,15 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
                 if len(named) > 12:
                     lines.append(f"- …and {len(named) - 12} more named records")
             if unresolved:
+                if named:
+                    lines.append("")
                 lines.append("Unidentified or unconfirmed records:")
                 for label, count in list(unresolved.items())[:12]:
                     lines.append(f"- {label}" + (f" ({count} observations)" if count > 1 else ""))
                 if len(unresolved) > 12:
                     lines.append(f"- …and {len(unresolved) - 12} more unidentified records")
+            if named or unresolved:
+                lines.append("")
             if not named and not unresolved:
                 lines.append("The observations do not contain readable host identities.")
             lines.append("These are saved observations, not confirmation that a device is online right now.")
