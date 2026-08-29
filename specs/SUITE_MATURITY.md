@@ -59,6 +59,18 @@ was verified healthy with zero restarts and OCI/running source matching
 `9e2d62dceea7dcffa74a76b1c22579067c97c4f6`; the owner deployment remains
 unchanged.
 
+### Household detail presentation checkpoint — `015c8e9a`
+
+Household item detail now renders canonical stock lots as readable rows with
+quantity, unit, expiry, and owner-scoped location instead of exposing raw JSON
+as the primary surface. `InventoryService.list_lots` supplies the bounded
+location projection used by the existing detail endpoint. JS syntax and the
+focused Household/UI/binding suite passed `37` tests. Exact candidate image
+`sha256:abbc965417f07e116430bfe551fd919551f26d53381a6f779b354cfab21cda3b`
+was verified healthy with zero restarts and source marker/running source
+`015c8e9a9d73f47999c5a0753702629f93cad55b`; Qwen3:8B remained reachable from
+the container namespace. The owner deployment was not replaced.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
