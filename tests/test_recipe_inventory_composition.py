@@ -435,6 +435,46 @@ async def test_youtube_recipe_source_uses_existing_transcript_owner(monkeypatch)
     assert "Cook the rice" in text
 
 
+@pytest.mark.asyncio
+async def test_youtube_recipe_source_composes_description_and_transcript_evidence(monkeypatch):
+    import src.recipe_import_sources as sources
+
+    async def transcript(url, video_id):
+        return {"success": True, "transcript": "Ingredients: 2 cups rice\nInstructions: Cook the rice."}
+
+    async def metadata(url):
+        return {"success": True, "title": "Rice Dinner", "description": "A quick rice recipe."}
+
+    monkeypatch.setattr("src.youtube_handler.extract_youtube_id", lambda url: "abc123")
+    monkeypatch.setattr("src.youtube_handler.is_youtube_url", lambda url: True)
+    monkeypatch.setattr("src.youtube_handler.extract_transcript_async", transcript)
+    monkeypatch.setattr("src.youtube_handler.extract_video_metadata_async", metadata)
+    text, error = await sources.fetch_recipe_source("https://youtu.be/abc123", owner="alice")
+    assert error is None
+    assert "Video title: Rice Dinner" in text
+    assert "A quick rice recipe" in text
+    assert "Cook the rice" in text
+
+
+@pytest.mark.asyncio
+async def test_youtube_recipe_source_accepts_description_when_transcript_unavailable(monkeypatch):
+    import src.recipe_import_sources as sources
+
+    async def transcript(url, video_id):
+        return {"success": False, "error": "captions unavailable"}
+
+    async def metadata(url):
+        return {"success": True, "title": "Recipe video", "description": "Ingredients are listed below."}
+
+    monkeypatch.setattr("src.youtube_handler.extract_youtube_id", lambda url: "abc123")
+    monkeypatch.setattr("src.youtube_handler.is_youtube_url", lambda url: True)
+    monkeypatch.setattr("src.youtube_handler.extract_transcript_async", transcript)
+    monkeypatch.setattr("src.youtube_handler.extract_video_metadata_async", metadata)
+    text, error = await sources.fetch_recipe_source("https://youtu.be/abc123", owner="alice")
+    assert error is None
+    assert "Ingredients are listed below" in text
+
+
 def test_household_add_item_can_atomically_seed_requested_initial_stock():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
