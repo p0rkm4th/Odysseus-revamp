@@ -85,6 +85,19 @@ was verified healthy with zero restarts, OCI/running source
 `45f54ef6babb8b367ef39988e4d3a032ca03c764`, and Qwen3:8B reachability from
 the container namespace. The owner deployment was not replaced.
 
+### Recipe scale result contract checkpoint — 26dac273
+
+The existing deterministic `scale` read now returns explicit `SUCCESS`,
+`recipe_scaled_quantities`, `scale`, and `inventory_service` metadata while
+preserving the existing canonical recipe identity, requested serving count,
+and quantity arithmetic. The result remains read-only and is rendered by the
+existing canonical Recipe answer owner. Supported-container focused coverage
+passed `124` tests. Exact candidate image
+`sha256:720773cb97d2cc1c0e274b52eaf720809601c5a3efde696db66714ee2c190cb9` was
+verified healthy with zero restarts, OCI marker/running source
+`26dac273983ad51c571fba9a1df33e58e14aeeff`, and Qwen3:8B reachability from
+the container namespace. The owner deployment was not replaced.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
