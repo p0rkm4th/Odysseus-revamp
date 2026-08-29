@@ -608,3 +608,14 @@ built from the pushed executable SHA, with image ID
 An isolated runtime matched the OCI marker and source, reported healthy with
 zero restarts, and reached Qwen3:8B from its container namespace. The owner
 deployment was not replaced.
+
+## Homelab targeted service checkpoint — `fe7b6b74`
+
+Target-qualified `service_status` Results from the existing host-operator read
+now receive the same bounded projection and deterministic human renderer as
+aggregate service health. Focused supported-container coverage passed `100`
+tests. Candidate `odysseus:candidate-fe7b6b74` was built from the pushed SHA,
+with image ID `sha256:1e20b8d3136cc4ea43b978f428ad115351f8bd12886b902fb19bb0a1b63c955f`;
+OCI marker/runtime source matched, health was healthy, restarts were `0`, and
+Qwen3:8B was reachable from the candidate namespace. The owner deployment was
+not changed.
