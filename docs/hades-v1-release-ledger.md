@@ -1113,3 +1113,12 @@ one turn, one final answer, one terminal `[DONE]`, two canonical readbacks,
 zero false success, zero raw final result, zero duplicate delivery, and zero
 abrupt EOF. The disposable runtime reached Qwen3:8B via
 `http://host.docker.internal:11434`; temporary principal and state were removed.
+## Kitchen → Recipe exact-candidate browser composition checkpoint — `cb34789d` (2026-08-29)
+
+The isolated authenticated browser lane passed `OWNER-RECIPE-COMPOSITION-001`
+against exact product candidate `4c7696a3`: three chat turns, three final
+answers, three terminal `[DONE]` events, two canonical readbacks, zero raw
+final results, zero duplicate delivery, and zero abrupt EOF. The run exercised
+Inventory-backed pantry coverage and deterministic serving scaling. A missing
+browser-fixture `shortage` projection was corrected as evaluator-only commit
+`cb34789d`; the product image was unchanged.
