@@ -1822,6 +1822,16 @@ classified as `AUTH_SESSION_FAILURE` before login and was not counted as a
 product result. A fresh principal was provisioned through the normal admin
 route for the successful replay.
 
+The subsequent full supported regression on branch head `35be6afd` passed
+`6991 passed, 8 skipped, 186 warnings` in 248.35 seconds. The branch-head
+change after executable candidate `1a2b62e5` was documentation-only.
+
+## Current empty-Memory owner-read checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+The ordinary owner question "What do you know about me?" passed on the empty
+Memory fixture with one human-readable terminal answer and one terminal stream;
+false success, raw final Result, duplicate delivery, and abrupt EOF were zero.
+
 ## Current continuation safety checkpoint — executable candidate `1a2b62e5` (2026-08-29)
 
 Owner testing found two related control-plane defects: bare `Restart it.`
