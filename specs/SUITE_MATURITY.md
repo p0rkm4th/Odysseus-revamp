@@ -827,3 +827,11 @@ two independent canonical readbacks, one `[DONE]`, and zero raw-final
 results, false-success claims, duplicate delivery, or abrupt EOF. The
 acceptance principal and disposable Compose deployment were removed after the
 run; the owner deployment was unchanged.
+
+## Memory empty-state browser coverage — `370d8e59` (2026-08-29)
+
+The empty canonical Memory journey passed through the exact
+`odysseus:candidate-d1559078` authenticated browser/chat path. It produced one
+bounded human-readable empty-state answer, one `[DONE]`, and zero raw-final
+results, false-success claims, duplicate delivery, or abrupt EOF. The
+acceptance principal and disposable deployment were cleaned up afterward.
