@@ -1074,11 +1074,17 @@ class RecipeService(InventoryService):
                 requested_name=args.get("requested_name"),
             )
             if draft is None:
+                review = recipe_import_review(
+                    args.get("source_text"), source_url=args.get("source_url")
+                )
+                requested_name = str(args.get("requested_name") or "").strip()
+                if requested_name:
+                    review["requested_name"] = requested_name[:200]
                 return {
                     "status": "NEEDS_REVIEW", "draft": None,
                     "source_url": args.get("source_url"),
                     "message": "The source did not contain enough verified recipe structure to prepare a draft.",
-                    "review": recipe_import_review(args.get("source_text"), source_url=args.get("source_url")),
+                    "review": review,
                 }
             return {"status": "READY_FOR_REVIEW", "draft": draft.as_payload()}
         if action == "list":
