@@ -1468,9 +1468,14 @@ async def stream_aci_runtime(
                 # A bare continuation with no durable active Run is a
                 # conversational completion/clarification case, not a reason
                 # to ask the model for an Action. Keep authority at zero and
-                # let the answer phase explain that there is nothing active
-                # to resume.
+                # route the bounded answer through the canonical clarification
+                # finalizer; a weak model must not replace it with unrelated
+                # setup/date prose.
                 _aci_answer_only = True
+                _aci_clarification_only = True
+                _aci_clarification_text = (
+                    "There is no active task or run to continue right now."
+                )
                 _aci_completion_contract_satisfied = True
                 _record_aci_framework("continuation_without_active_run")
                 messages.append({
