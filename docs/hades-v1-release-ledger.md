@@ -490,3 +490,20 @@ were removed; owner deployment was unchanged.
   candidate; no additional image build was required. Browser acceptance remains
   unverified on this candidate until the isolated deployment has a registered
   Qwen3:8B chat endpoint.
+
+## Recipe URL browser revalidation — `3af8b2f8` (2026-08-29)
+
+- A fresh disposable deployment registered its Qwen3:8B endpoint through the
+  normal admin endpoint flow, then authenticated the gated acceptance principal
+  through the normal login UI. The complete URL-import journey passed: `3`
+  turns, `1` chat mutation, `2` canonical readbacks including reload, and `3`
+  terminal `[DONE]` events. False-success, raw-final-result,
+  duplicate-delivery, and abrupt-EOF counts were all `0`.
+- The exact named Sunday Supper request also passed its review-required lane:
+  `1` turn, `1` bounded failure, `1` `[DONE]`, no persisted recipe, and zero
+  false-success/raw-result/duplicate/abrupt-EOF failures. The explicit name and
+  source URL were retained through the projected import contract.
+- Candidate image `odysseus:candidate-3af8b2f8` had OCI revision and source
+  marker `3af8b2f8b3c3845ff537233197ee38ac8df05e60`, healthy runtime, and zero
+  restarts. The principal, credentials, disposable volumes, and containers were
+  removed after both runs; the owner deployment was untouched.
