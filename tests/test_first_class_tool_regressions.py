@@ -254,6 +254,7 @@ def test_browser_owner_acceptance_rejects_tool_success_as_final_answer():
     assert "exactly one deterministic finalization" in source
     assert "return page.evaluate(async () => {" in source
     assert "--disable-dev-shm-usage" in source
+    assert "--disable-gpu" in source
 
 
 @pytest.mark.parametrize("query", [

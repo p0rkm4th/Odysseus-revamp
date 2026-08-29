@@ -627,7 +627,7 @@ async function main() {
   // ERR_INSUFFICIENT_RESOURCES before the first chat turn.
   const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-dev-shm-usage'],
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
   });
   let context;
   let page;
