@@ -100,17 +100,15 @@ def test_owner_memory_mutations_resolve_to_bounded_actions_and_user_fields():
 
 
 def test_owner_memory_correction_without_forget_invalidates_prior_property():
-    query = "Actually, that's not true anymore."
-    frame = compile_intent(query, continuation=True)
-    contract = resolve_intent(frame)
-    assert (frame.operation_class, frame.domain_concept) == ("DELETE", "MEMORY")
-    assert contract.action_id == "delete"
-    assert memory_mutation_payload(
-        f"{query} What is my test color? Remember that my test color is ultraviolet orange.",
-        "delete",
-    ) == {
-        "action": "delete", "query": "test color",
-    }
+    for correction in ("Actually, that's not true anymore.", "Actually, that is not true anymore."):
+        frame = compile_intent(correction, continuation=True)
+        contract = resolve_intent(frame)
+        assert (frame.operation_class, frame.domain_concept) == ("DELETE", "MEMORY")
+        assert contract.action_id == "delete"
+        assert memory_mutation_payload(
+            f"{correction} What is my test color? Remember that my test color is ultraviolet orange.",
+            "delete",
+        ) == {"action": "delete", "query": "test color"}
 
 
 def test_tool_projection_trace_explains_route_and_policy_exclusions_without_content():
