@@ -1800,3 +1800,13 @@ setup-seeded; the task itself entered through owner chat. One task mutation and
 two canonical readbacks including reload passed with zero false success, raw
 final Result, duplicate delivery, or abrupt EOF. This is the clean replay of
 the journey that originally exposed approval-continuation duplicate delivery.
+
+## Current fresh-install restart checkpoint — executable candidate `a784b35e` (2026-08-29)
+
+A fresh disposable Compose project using the exact candidate image booted with
+empty application state. A normal browser first login reached Hades, the
+authenticated browser state was saved, and after restarting the app container
+the browser reloaded the authenticated home surface successfully. The
+post-restart `/api/health` response was HTTP 200; the candidate source marker
+matched `a784b35e` and the container restart count was zero after the explicit
+restart. Owner data was not involved.

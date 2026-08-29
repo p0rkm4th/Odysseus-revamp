@@ -1403,3 +1403,11 @@ Qwen3:8B GUI deployment. The task entered through chat, produced one canonical
 mutation, and survived two readbacks including reload. False success, raw final
 Result, duplicate delivery, and abrupt EOF were all zero. This clean replay
 validates the generalized approval-replay duplicate guard.
+
+## Current fresh-install restart checkpoint — `a784b35e` (2026-08-29)
+
+An empty disposable Compose deployment using the exact candidate passed normal
+browser first login, persisted the authenticated browser session across an app
+container restart, and reloaded the home surface with `/api/health` returning
+200. The image digest and source marker matched the candidate; owner data was
+untouched.
