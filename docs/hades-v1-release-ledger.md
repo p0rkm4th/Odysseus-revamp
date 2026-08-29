@@ -22,6 +22,11 @@ ingredients remain a separate review-flow acceptance gap; no quantity was
 invented. Owner runtime remains source `34ced247`; it was not rebuilt or
 changed.
 
+The post-fix shared regression completed at the docs-only descendant with
+`6966 passed, 7 skipped`; frontend static verification, realistic browser
+acceptance, and window dogfood also passed. This does not close the remaining
+qualitative-ingredient or fresh-install acceptance work.
+
 ## Work paraphrase routing checkpoint — `9c3d2acb` (2026-08-29)
 
 Owner testing found that “What's outstanding for me?” fell through to model
