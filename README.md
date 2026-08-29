@@ -6,6 +6,9 @@
 
 Odysseus Revamp is an experimental rework of the Odysseus project focused on agent architecture, durable state, local-model reliability, infrastructure awareness, and supervised execution.
 
+For installation, first-run setup, local-model configuration, Docker networking,
+GPU options, and troubleshooting, see the [Setup Guide](docs/setup.md).
+
 ![Odysseus browser preview](docs/odysseus-browser.jpg)
 
 The long-term goal is simple to describe and annoyingly difficult to build:
