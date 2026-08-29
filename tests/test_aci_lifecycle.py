@@ -741,6 +741,28 @@ def test_url_recipe_import_projects_commit_action_and_user_fields():
     assert selected["payload"]["requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
 
 
+def test_url_recipe_import_keeps_arguments_when_read_and_manage_capabilities_are_visible():
+    query = ('Add this recipe to my recipe book, for the name, use '
+             '"Chicken Cordon Bleu with Cheese Sauce": '
+             'https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe')
+    projection = project_action_selection(
+        intent=_intent(query),
+        relevant_tools=["read_recipes", "manage_recipes"],
+        disabled_tools=set(),
+        owner="owner",
+        active_run=None,
+        query=query,
+    )
+    assert list(projection.choice_map) == ["A"]
+    selected = projection.choice_map["A"]
+    assert selected["binding"] == "manage_recipes"
+    assert selected["payload"] == {
+        "action": "commit_import",
+        "source_url": "https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe",
+        "requested_name": "Chicken Cordon Bleu with Cheese Sauce",
+    }
+
+
 def test_url_recipe_import_fields_are_carried_by_intent_frame():
     query = ('Add this recipe to my recipe book, for the name, use '
              '"Chicken Cordon Bleu with Cheese Sauce": '
