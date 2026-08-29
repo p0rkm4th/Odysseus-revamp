@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Isolated fresh-install Compose checkpoint — `2c37478a` (2026-08-29)
+
+The fresh-install rehearsal found and closed a parallel-install/rehearsal
+failure in Compose: SearXNG, ChromaDB, and ntfy host bindings were not all
+overridable, and the default network name was shared across Compose projects.
+Base and GPU Compose files now expose port overrides and
+`ODYSSEUS_NETWORK_NAME`. A new isolated project with separate data, volumes,
+network, ports, and a normal first-run `fresh-owner` account booted healthy,
+logged in through the real browser login route, reloaded successfully, and
+survived an app restart with zero app restarts. Qwen3:8B was verified from the
+Hades container namespace at `http://host.docker.internal:11434`. This is
+fresh-install evidence only; the literal Compose build carried `unknown`
+source provenance, so exact release evidence still requires the candidate
+build loop with an embedded pushed SHA. Owner data/deployment was untouched.
+
 ## Exact Recipe browser verification — candidate `c734628f` (2026-08-29)
 
 The isolated authenticated browser lane exercised the exact candidate image
