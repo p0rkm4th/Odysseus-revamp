@@ -1882,13 +1882,14 @@ async def _execute_manage_recipes_binding(block, owner=None):
     """Persist recipe mutations through Inventory Service and verify readback."""
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
-        if str(payload.get("action") or "").casefold() not in {"add", "commit_import"}:
+        action = str(payload.get("action") or "").casefold()
+        if action not in {"add", "commit_import"}:
             raise ValueError("unsupported recipe mutation")
         if not owner:
             raise PermissionError("authenticated recipe owner is required")
         from src.inventory_service import get_inventory_service
         service = get_inventory_service()
-        if str(payload.get("action") or "").casefold() == "add" and payload.get("source_url"):
+        if action in {"add", "commit_import"} and payload.get("source_url"):
             # URL recipe creation is an effectful Action, but source
             # acquisition and structuring remain untrusted and validated before
             # the canonical InventoryService mutation.  A missing/insufficient
@@ -1911,7 +1912,7 @@ async def _execute_manage_recipes_binding(block, owner=None):
                     **draft.as_payload(),
                     "name": requested_name,
                 })
-            payload = {"action": "add", **draft.as_payload()}
+            payload = {"action": "commit_import", "draft": draft.as_payload()}
         created = service.manage_recipes(payload, owner=owner)
         recipe = created.get("recipe") if isinstance(created, dict) else None
         if not isinstance(recipe, dict) or not recipe.get("id"):

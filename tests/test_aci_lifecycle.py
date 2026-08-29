@@ -619,6 +619,24 @@ def test_canonical_projection_does_not_depend_on_route_tool_preparation():
     assert set(item["binding"] for item in projection.choice_map.values()) == {"manage_homelab"}
 
 
+def test_url_recipe_import_projects_commit_action_and_user_fields():
+    query = ('Add this recipe to my recipe book, for the name, use '
+             '"Chicken Cordon Bleu with Cheese Sauce": '
+             'https://sundaysuppermovement.com/best-chicken-cordon-bleu-recipe/#recipe')
+    projection = project_action_selection(
+        intent=_intent(query),
+        relevant_tools=["manage_recipes"],
+        disabled_tools=set(),
+        owner="owner",
+        active_run=None,
+        query=query,
+    )
+    selected = next(value for value in projection.choice_map.values()
+                    if value["payload"].get("action") == "commit_import")
+    assert selected["payload"]["source_url"].startswith("https://sundaysuppermovement.com/")
+    assert selected["payload"]["requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
+
+
 def test_action_projection_carries_canonical_dependency_plan():
     intent = _intent("discover hosts on 192.168.10.0/24")
     projection = project_action_selection(

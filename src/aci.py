@@ -4234,7 +4234,7 @@ def project_action_selection(
             str(frame.get("domain_concept") or "") == "RECIPE"
             and str(frame.get("operation_class") or "") == "CREATE"
             and str(item.get("binding") or "") == "manage_recipes"
-            and str(item.get("action_id") or "") == "add"
+            and str(item.get("action_id") or "") in {"add", "commit_import"}
         ):
             # The model chooses the already-authorized Action; structured
             # fields come from the user's explicit recipe draft, never from
@@ -4255,6 +4255,8 @@ def project_action_selection(
                     requested_name = recipe_requested_name(query)
                     if requested_name:
                         payload["requested_name"] = requested_name
+                    if str(item.get("action_id") or "") == "commit_import":
+                        payload["action"] = "commit_import"
         if (
             str(frame.get("domain_concept") or "") in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"}
             and str(frame.get("operation_class") or "") in {"CREATE", "EXECUTE"}
