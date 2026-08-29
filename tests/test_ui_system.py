@@ -29,6 +29,11 @@ def test_inventory_uses_shared_window_and_form_primitives():
         "Couldn't import recipe",
         "Review Draft",
         "Retry import",
+        "recipeIngredientRow",
+        "add-recipe-ingredient",
+        "ingredient_name",
+        "ingredient_quantity",
+        "ingredient_unit",
     ):
         assert marker in source
 

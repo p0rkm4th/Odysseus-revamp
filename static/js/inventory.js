@@ -224,6 +224,27 @@ function modalForm(title, body, submitLabel, kind, id = '') {
 
 function field(label, name, attrs = '') { return `<label class="hades-intake-field"><span>${escapeHtml(label)}</span><input name="${escapeHtml(name)}" ${attrs}></label>`; }
 
+function recipeIngredientRow(index = 0) {
+  return `<div class="recipe-ingredient-row" data-ingredient-row>
+    <label class="hades-intake-field"><span>Ingredient ${index + 1}</span><input name="ingredient_name" required maxlength="160" placeholder="e.g. chicken breast"></label>
+    <label class="hades-intake-field"><span>Quantity</span><input name="ingredient_quantity" required inputmode="decimal" pattern="[0-9]+(?:\\.[0-9]+)?" placeholder="1"></label>
+    <label class="hades-intake-field"><span>Unit</span><select name="ingredient_unit">${UNITS.map(u => `<option>${u}</option>`).join('')}</select></label>
+    <button type="button" class="hades-btn-secondary recipe-remove-ingredient" data-action="remove-recipe-ingredient" aria-label="Remove ingredient ${index + 1}">Remove</button>
+  </div>`;
+}
+
+function recipeIngredientEditor() {
+  return `<fieldset class="recipe-ingredients-editor"><legend>Ingredients</legend>
+    <p class="inventory-muted">Add each ingredient as a named, measured row. Canonical inventory matching happens after save.</p>
+    <div data-recipe-ingredients>${recipeIngredientRow()}</div>
+    <button type="button" class="hades-btn-secondary" data-action="add-recipe-ingredient">+ Add ingredient</button>
+  </fieldset>`;
+}
+
+function recipeFormBody() {
+  return `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div>${recipeIngredientEditor()}${field('Source URL','source_url','type="url" maxlength="4000"')}<label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label>`;
+}
+
 function renderRecipeImportReview(form, prepared) {
   let panel = form.querySelector('[data-recipe-import-review]');
   if (!panel) {
@@ -272,10 +293,18 @@ async function onSubmit(event) {
     if (kind === 'stock') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/stock`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, idempotency_key:makeIdempotencyKey('stock')})});
     if (kind === 'consume') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/consume`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, reason:data.reason, idempotency_key:makeIdempotencyKey('consume')})});
     if (kind === 'recipe') {
-      const ingredients = data.ingredients.split('\n').filter(Boolean).map(line => {
-        const match = line.trim().match(/^(.+?)\s*\|\s*([0-9.]+)\s*\|\s*([\w ]+)$/);
-        if (!match) throw new Error('Use one ingredient per line: name | quantity | unit');
-        const ingredient = {name:match[1].trim(), quantity:match[2], unit:match[3].trim()};
+      const formData = new FormData(form);
+      const names = formData.getAll('ingredient_name');
+      const quantities = formData.getAll('ingredient_quantity');
+      const units = formData.getAll('ingredient_unit');
+      if (!names.length || names.length !== quantities.length || names.length !== units.length) {
+        throw new Error('Add a name, quantity, and unit for each ingredient.');
+      }
+      const ingredients = names.map((name, index) => {
+        const ingredient = {name:String(name).trim(), quantity:String(quantities[index]).trim(), unit:String(units[index]).trim()};
+        if (!ingredient.name || !/^[0-9]+(?:\.[0-9]+)?$/.test(ingredient.quantity)) {
+          throw new Error('Each ingredient needs a name and numeric quantity.');
+        }
         // Preserve canonical references for advanced users while making the
         // normal human workflow name-based.
         if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ingredient.name)) {
@@ -347,8 +376,20 @@ async function onClick(event) {
     } catch (error) { uiModule.showError?.(error.message); return; }
   }
   if (action === 'stock-add' || action === 'stock-consume') return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
+  if (action === 'new-recipe') return modalForm('New recipe', recipeFormBody(), 'Save recipe', 'recipe');
   if (action === 'new-recipe') return modalForm('New recipe', `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div><label class="hades-intake-field"><span>Ingredients <small>one per line: name | quantity | unit</small></span><textarea name="ingredients" required placeholder="rice | 1 | cup"></textarea></label>${field('Source URL','source_url','type="url" maxlength="4000" placeholder="https://…"')}<label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
   if (action === 'import-recipe') return modalForm('Import recipe', `<div class="inventory-callout hades-callout"><strong>Review before saving.</strong> External text is untrusted; preparation never changes canonical state. Public YouTube URLs use available transcripts; image descriptions remain review evidence and cannot create a recipe unless the required structure validates.</div>${field('Recipe URL or video','source_url','type="url" maxlength="4000" placeholder="https://example.com/recipe or https://youtu.be/…"')}${field('Display name (optional)','requested_name','maxlength="200" placeholder="Use the source name if blank"')}<label class="hades-intake-field"><span>Or paste recipe text / JSON-LD</span><textarea name="source_text" maxlength="20000" placeholder="Paste a complete recipe or schema.org JSON-LD"></textarea></label><label class="hades-intake-field"><span>Or attach a recipe image</span><input name="recipe_image" type="file" accept="image/*"></label>`, 'Prepare draft', 'recipe-import');
+  if (action === 'add-recipe-ingredient') {
+    const rows = button.closest('.recipe-ingredients-editor')?.querySelector('[data-recipe-ingredients]');
+    if (rows) rows.insertAdjacentHTML('beforeend', recipeIngredientRow(rows.querySelectorAll('[data-ingredient-row]').length));
+    return;
+  }
+  if (action === 'remove-recipe-ingredient') {
+    const editor = button.closest('.recipe-ingredients-editor');
+    const rows = editor?.querySelectorAll('[data-ingredient-row]');
+    if (rows?.length > 1) button.closest('[data-ingredient-row]')?.remove();
+    return;
+  }
   const recipeCard = button.closest('[data-recipe-id]');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);
   if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button);
