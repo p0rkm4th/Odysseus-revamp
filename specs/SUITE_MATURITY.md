@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Work task mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+The clean fresh-install lane passed task creation through chat with one
+canonical mutation and two independent readbacks, including reload
+durability. False success, raw final Result, duplicate delivery, and abrupt
+EOF were zero. A contaminated-lane approval was isolated as fixture/context
+drift and was not treated as feature evidence.
+
 ## Household mutation/readback checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 The exact-candidate household owner journey completed 2 chat-driven mutations
