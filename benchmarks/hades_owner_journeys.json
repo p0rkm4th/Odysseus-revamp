@@ -103,7 +103,7 @@
         {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "approval": "not_required", "action": "list", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Acceptance Budget Chili"], "forbidden": ["no recipes"]}},
         {"prompt": "Show me that recipe.", "expected": {"domain": "RECIPE", "operation": "READ", "approval": "not_required", "action": "get", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Acceptance Budget Chili"]}}
       ],
-      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Budget Chili", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Budget Chili"}, "terminal": {"done": 3, "abrupt_eof": false}}
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Budget Chili", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Budget Chili", "contains_source_url": "https://www.budgetbytes.com/slow-cooker-white-chicken-chili/"}, "terminal": {"done": 3, "abrupt_eof": false}}
     },
     {
       "id": "OWNER-HOUSEHOLD-MUTATION-READBACK-001",
