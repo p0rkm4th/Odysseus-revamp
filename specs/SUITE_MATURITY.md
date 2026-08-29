@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Empty Memory owner-read checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+The exact-candidate empty-memory first-use journey returned a grounded empty
+state through the browser with zero false success, raw final Result, duplicate
+delivery, or abrupt EOF.
+
 ## Complete URL Recipe import checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Exact-candidate URL import passed required approval, canonical commit, name and

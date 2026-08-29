@@ -2,6 +2,13 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Empty Memory owner-read checkpoint — candidate `5fe5bf94` (2026-08-29)
+
+`OWNER-MEMORY-EMPTY-001` passed on an isolated fresh principal. The ordinary
+first-use Memory question returned a grounded empty-state answer through the
+browser with one clean stream. False success, raw final Results, duplicate
+delivery, and abrupt EOF were all zero.
+
 ## Complete URL Recipe import checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 `OWNER-RECIPE-URL-IMPORT-COMPLETE-001` passed on an empty disposable Recipe
