@@ -1,5 +1,15 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Kitchen → Recipe expiring-inventory browser checkpoint — `48f5c01a` (2026-08-29)
+
+`OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed through the isolated
+authenticated browser lane against exact product candidate `4c7696a3`.
+Canonical expiring Kitchen stock fed Recipe candidate selection and pantry
+coverage. The run produced one human-readable final answer, one terminal
+`[DONE]`, two canonical readbacks, zero raw final results, zero false success,
+zero duplicate delivery, and zero abrupt EOF. Temporary state and credentials
+were removed after the run.
+
 ## Expiring inventory → Recipe exact-candidate browser checkpoint — `717a1dd9` (2026-08-29)
 
 `OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed in an isolated browser
