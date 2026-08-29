@@ -1105,3 +1105,11 @@ were removed from this surface. Frontend/static and focused UI/layout checks
 passed (`11`). Exact pushed candidate: `odysseus:candidate-4c7696a3e7aa`,
 image `sha256:5386055c9d2bbe9321f5af5fd00cd19a26f817c1e3f4094a318b2fb0703ae828`.
 The owner deployment was not changed.
+## Populated Memory exact-candidate browser checkpoint — `4c7696a3` (2026-08-29)
+
+`OWNER-MEMORY-POPULATED-001` passed through the isolated authenticated browser
+lane on exact candidate `4c7696a3e7aaafcc760bde8fad205b51bbdd1ffe`: one scenario,
+one turn, one final answer, one terminal `[DONE]`, two canonical readbacks,
+zero false success, zero raw final result, zero duplicate delivery, and zero
+abrupt EOF. The disposable runtime reached Qwen3:8B via
+`http://host.docker.internal:11434`; temporary principal and state were removed.

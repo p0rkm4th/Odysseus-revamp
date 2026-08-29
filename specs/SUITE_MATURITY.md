@@ -1,5 +1,17 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Populated Memory exact-candidate browser checkpoint — `4c7696a3` (2026-08-29)
+
+`OWNER-MEMORY-POPULATED-001` passed through an isolated disposable container
+running the exact candidate `4c7696a3e7aaafcc760bde8fad205b51bbdd1ffe`.
+The lane used normal login, seeded only the disposable acceptance principal's
+canonical Memory records, read them through natural-language chat, and verified
+one final answer, one terminal `[DONE]`, persistence/readback, zero raw final
+results, zero duplicate delivery, and zero abrupt EOF. The container reached
+Qwen3:8B through `http://host.docker.internal:11434`; the temporary container,
+credentials, and data were removed after the run. This closes the previously
+unverified populated-Memory browser evidence gap for this candidate.
+
 ## Work workspace owner UX checkpoint — `4c7696a3` (2026-08-29)
 
 The Work workspace now uses the shared Hades `styledPrompt` for goal creation;
