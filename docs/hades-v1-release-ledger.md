@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Continued Tier 1 acceptance checkpoint — candidate `20d07aef` (2026-08-29)
+
+The isolated candidate also passed clean Recipe mutation/readback (3 turns,
+one mutation, two canonical reload readbacks), empty Work (1 turn), and the
+full regression after the latest shared Asset compiler changes: `6971 passed,
+7 skipped, 186 warnings` in 231.51 seconds. A named URL-import replay was
+not executed because the reused disposable stack already contained the Recipe
+from the preceding mutation journey; its empty-state precondition correctly
+classified the attempt as `ENVIRONMENT_FAILURE`. No owner state was touched.
+
 ## Tier 1 owner-journey sweep — candidate `20d07aef` (2026-08-29)
 
 On the isolated exact candidate, additional nontechnical GUI journeys passed:

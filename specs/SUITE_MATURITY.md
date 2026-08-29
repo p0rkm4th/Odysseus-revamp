@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Continued Tier 1 acceptance checkpoint — candidate `20d07aef` (2026-08-29)
+
+Clean GUI Recipe mutation/readback and empty Work journeys passed. The full
+regression after the shared Asset intent changes passed `6971` tests with `7`
+skips. A reused-stack URL-import attempt was rejected by its empty-state
+precondition and remains an environment setup issue, not product evidence.
+
 ## Tier 1 owner-journey sweep — candidate `20d07aef` (2026-08-29)
 
 Isolated browser evidence now covers empty/populated Memory, Household
