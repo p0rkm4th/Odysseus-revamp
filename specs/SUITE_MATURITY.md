@@ -35,6 +35,13 @@ one bounded error AnswerSource, one `[DONE]`, and no abrupt EOF; no recipe was
 persisted. This is a real remaining Recipe import product gap, not a false
 success.
 
+The complete natural-language Recipe mutation journey was subsequently
+verified on candidate `c490b61557550c44b73e1ecceac801328a16a6a4`: 3 turns,
+including two independent readbacks across reload, with one canonical chat
+mutation, `false_success=0`, `raw_final_results=0`, `duplicate_delivery=0`,
+`abrupt_eof=0`, and `DONE=3`. This separates the healthy canonical mutation
+path from the incomplete-source URL case above.
+
 ### Recipe ingestion checkpoint — f29eaff1
 
 Recipe creation now has a bounded validated ingestion seam in the existing
