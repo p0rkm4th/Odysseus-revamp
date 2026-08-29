@@ -30,13 +30,14 @@ health was healthy, restarts were `0`, and Qwen3:8B was reachable from the
 container namespace with digest
 `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
 
-The source-mounted full regression completed `6921 passed, 6 skipped`, with
-`10` failures and `2` setup errors caused by the intentionally read-only
-checkout mount: tests requiring writable `data/`, `tmp_pytest_probe/`, and
-`/home/.docker-data` could not run. This is environment evidence, not a full
-product pass; the prior supported writable-container baseline remains the
-authoritative full-regression evidence until a writable isolated test mount is
-provided.
+The corrected source-mounted full regression used isolated writable mounts for
+`data/`, `logs/`, `tmp_pytest_probe/`, and pytest cache, plus the existing
+Docker storage fixture. It completed `6934 passed, 6 skipped, 149 warnings` in
+`363.42s`. The earlier `6921 passed` result with `10` failures and `2` setup
+errors is retained as invalid read-only-mount evidence, not a product result.
+This full run validates the current source tree; the exact candidate image was
+also independently verified healthy, but the owner deployment was not
+replaced.
 
 ### Recipe URL import checkpoint — e6734a9c
 
