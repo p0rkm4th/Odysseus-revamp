@@ -607,6 +607,8 @@ def test_qualified_service_restart_language_resolves_to_safe_canonical_preflight
 @pytest.mark.parametrize("query", [
     "Restart the registered service",
     "Restart the service",
+    "Restart it.",
+    "Please recover that!",
 ])
 def test_unqualified_service_restart_requires_target_clarification(query):
     resolved = resolve_intent(compile_intent(query))

@@ -1446,6 +1446,11 @@ async def stream_aci_runtime(
                 # without inventing a retry or claiming execution.
                 _aci_answer_only = True
                 _aci_completion_contract_satisfied = True
+                if active_run is None:
+                    _aci_clarification_only = True
+                    _aci_clarification_text = (
+                        "There is no active task or run to continue right now."
+                    )
                 _record_aci_framework("continuation_terminal_or_blocked")
                 messages.append({
                     "role": "system",
@@ -1464,7 +1469,7 @@ async def stream_aci_runtime(
                 # automatic read-only path below may use it only after the
                 # planner has marked the next Action safe_auto_continue.
                 _intent["continuation_next_step"] = active_run["next_step"]
-            if active_run is None:
+            if active_run is None and not _aci_clarification_only:
                 # A bare continuation with no durable active Run is a
                 # conversational completion/clarification case, not a reason
                 # to ask the model for an Action. Keep authority at zero and
