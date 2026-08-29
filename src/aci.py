@@ -4708,6 +4708,50 @@ def project_action_selection(
                 if desired_action == "summarize_owner_memory":
                     fast_path["query"] = query
             mode = SelectionMode.DIRECT_ACTION
+    # Memory mutations are fully projected from the owner's ordinary request
+    # above.  Do not ask a weak model to rediscover a bounded add/delete
+    # choice from prose: that can turn a valid mutation into an apparent
+    # success with no Action at all.  The normal Action, policy, executor,
+    # verification, and Result paths still apply to this deterministic
+    # selection.
+    if (
+        frame.get("domain_concept") == "MEMORY"
+        and frame.get("operation_class") in {"CREATE", "UPDATE", "DELETE"}
+        and desired_binding == "manage_memory"
+        and desired_action in {"add", "edit", "delete"}
+        and desired_binding not in disabled
+    ):
+        selected_memory = next(
+            (
+                value for value in choices.values()
+                if value.get("binding") == desired_binding
+                and value.get("payload", {}).get("action") == desired_action
+            ),
+            None,
+        )
+        memory_payload = dict(selected_memory.get("payload") or {}) if selected_memory else {}
+        payload_complete = (
+            desired_action == "add" and bool(str(memory_payload.get("text") or "").strip())
+            or desired_action == "delete" and bool(
+                str(memory_payload.get("memory_id") or "").strip()
+                or str(memory_payload.get("query") or "").strip()
+            )
+            or desired_action == "edit" and bool(
+                str(memory_payload.get("memory_id") or "").strip()
+                and str(memory_payload.get("text") or "").strip()
+            )
+        )
+        spec = action_for_tool(desired_binding, {"action": desired_action})
+        if (
+            selected_memory is not None
+            and payload_complete
+            and spec
+            and spec.known
+            and spec.approval.value == "none"
+            and set(spec.effects).issubset({"write_private"})
+        ):
+            fast_path = memory_payload
+            mode = SelectionMode.DIRECT_ACTION
     if mode is SelectionMode.NEED_CONTEXT:
         return ActionProjection(None, {}, None, mode, reason, clarification_instruction, "Which service or systemd unit should I restart?", ("action_target_clarification",))
     safety_messages = {
@@ -4734,7 +4778,11 @@ def project_action_selection(
         + json.dumps(packet.model_projection(), ensure_ascii=False, separators=(",", ":"))
     )
     return ActionProjection(packet, choices, fast_path, mode, reason, instruction, "", (
-        "action_hard_filter", "deterministic_read_selection" if fast_path else "",
+        "action_hard_filter",
+        "deterministic_read_selection" if fast_path and frame.get("operation_class") == "READ" else "",
+        "deterministic_memory_mutation_selection"
+        if fast_path and frame.get("domain_concept") == "MEMORY"
+        and frame.get("operation_class") in {"CREATE", "UPDATE", "DELETE"} else "",
     ))
 
 
