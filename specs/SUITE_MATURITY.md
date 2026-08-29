@@ -1333,3 +1333,14 @@ regression on the exact candidate source: `6980 passed, 8 skipped`, with no
 failures. The final candidate also passed a fresh authenticated Asset
 false-premise read and the default seven-turn owner walk. Recipe and
 Household mutation journeys remain the next Tier 1 acceptance work.
+
+## Recipe paste review checkpoint — `347d5326` (2026-08-29)
+
+Messy sectioned recipe paste is now routed through validated import review:
+page serving metadata is ignored, qualitative amounts remain explicit review
+fields, owner display-name overrides survive, and review preparation ends the
+turn without repeating the Action. Focused coverage passed `379` tests and the
+exact Qwen3:8B browser journey passed with no false success, raw final Result,
+duplicate delivery, or abrupt EOF. Canonical SQLite readback confirmed the
+uncommitted recipe was absent. The negative readback assertion itself remains
+an acceptance-harness gap because `absent_name` is not yet implemented.
