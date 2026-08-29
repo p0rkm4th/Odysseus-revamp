@@ -375,6 +375,19 @@ were removed; owner deployment was unchanged.
 - The current branch tip is a test/documentation-only descendant of this
   executable candidate; no owner deployment was changed.
 
+## Household chat mutation acceptance — `d1559078` (2026-08-29)
+
+- The isolated authenticated browser journey added three synthetic
+  `Acceptance Tomatoes`, consumed one, and read the quantity back after each
+  mutation through the normal chat route. No mutation was performed by a
+  direct setup API.
+- Result: `4` turns, `2` mutations, `2` canonical readbacks, `4` `[DONE]`,
+  `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+  `abruptEOF=0`, against the exact candidate image and source recorded above.
+- This validates the existing Inventory Service owner for the seeded
+  Household journey; fresh-install and broader Recipe/Household composition
+  remain distinct release work.
+
 ## Recipe URL import acceptance checkpoint — `1c8c22a7` (2026-08-29)
 
 - The exact isolated authenticated browser request for the named Sunday
