@@ -47,6 +47,17 @@ This proves the fresh empty-state Recipe mutation/readback lane on the
 retained executable; it is not owner-data evidence and does not cover all
 empty-state suites.
 
+## Fresh empty-state Memory and Work browser reads — `d1559078` (2026-08-29)
+
+Two additional fresh disposable Compose projects exercised the existing
+authenticated browser harness after normal first-run admin setup and Qwen
+endpoint registration. The empty Memory journey and empty Work journey each
+completed one natural-language owner read with one human-readable final
+answer and one terminal `[DONE]`. Both reported zero raw final results, false
+success, duplicate delivery, and abrupt EOF. Acceptance credentials, volumes,
+and projects were removed after each run. These are isolated empty-state
+product checks, not evidence about the owner's accumulated data.
+
 The current-tree supported full regression at this checkpoint completed
 `6945 passed, 5 skipped` in `212.46s`. This run includes the evaluator
 selection regressions above. The five skips remain documented test skips; no
