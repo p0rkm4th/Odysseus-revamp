@@ -497,7 +497,7 @@ def test_canonical_inventory_mutation_answer_requires_structured_result_and_read
 
 
 def test_canonical_memory_and_work_reads_have_terminal_answers():
-    from src.aci import canonical_result_answer
+    from src.aci import canonical_result_answer, canonical_tool_result_projection
 
     memory = canonical_result_answer([{
         "tool": "read_memory", "exit_code": 0,
@@ -516,6 +516,27 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     assert work is not None
     assert work.source.value == "DETERMINISTIC_RESULT"
     assert "No outstanding work" in work.content
+
+    # Work, like Network, may contain enough durable history to exceed the
+    # display envelope.  The answer owner must consume its bounded projection,
+    # not reparsed/truncated tool text.
+    work_payload = {
+        "status": "SUCCESS_EMPTY",
+        "goals": [], "projects": [], "tasks": [],
+        "commitments": [], "runs": [{"id": f"run-{i}"} for i in range(500)],
+    }
+    projection = canonical_tool_result_projection("read_work", {"output": json.dumps(work_payload)})
+    assert projection == {
+        "status": "SUCCESS_EMPTY",
+        "collections": {"goals": 0, "projects": 0, "tasks": 0, "commitments": 0, "runs": 500},
+        "total": 500,
+    }
+    projected_work = canonical_result_answer([{
+        "tool": "read_work", "exit_code": 0, "result_projection": projection,
+        "output": json.dumps(work_payload)[:80],
+    }])
+    assert projected_work is not None
+    assert "No outstanding work" in projected_work.content
 
     work_with_execution_history = canonical_result_answer([{
         "tool": "read_work", "exit_code": 0,
