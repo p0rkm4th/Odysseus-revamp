@@ -933,3 +933,20 @@ after the run. The owner deployment remains untouched.
   exactly-once delivery in an isolated authenticated browser run.
 - This is documentation-only. The deployed executable remains the previously
   recorded candidate; no rebuild or owner-instance deployment was performed.
+
+# Populated Memory journey checkpoint — `2e58a5fe` (2026-08-29)
+
+- Added `OWNER-MEMORY-POPULATED-001` to the existing data-driven browser
+  corpus. It seeds two unmistakably synthetic memories through the normal
+  authenticated Memory API, then grades the read through chat, canonical
+  `/api/memory` readback, and reload persistence.
+- Focused owner-journey contract suite: `65 passed`.
+- An exact candidate was built with OCI/source marker `2e58a5fe` and started
+  in a fresh isolated Compose project. The browser reached normal login but
+  `/api/models` reported no usable endpoint, so no chat turn was graded.
+  An in-container probe did reach `http://host.docker.internal:11434` and
+  reported `qwen3:8b` digest
+  `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+  Live browser status is therefore `UNVERIFIED / MODEL_DISCOVERY`, not PASS.
+- The disposable principal, credential, containers, and network were removed;
+  the owner deployment was not changed.
