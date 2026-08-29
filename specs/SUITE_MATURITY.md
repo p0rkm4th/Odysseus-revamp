@@ -112,6 +112,20 @@ was verified healthy with zero restarts, OCI marker/running source
 `9584fe4cf86b96ca0f65f63b4b563809a4d063c2`, and Qwen3:8B reachability from
 the container namespace. The owner deployment was not replaced.
 
+### Recipe expiring-candidate contract checkpoint — bc6781f7
+
+The existing expiring-inventory → recipe coverage projection now identifies
+itself as a successful `recipe_expiring_candidates` operation owned by the
+Inventory Service. Existing deterministic expiry horizon, freshness,
+candidate, shortage, and non-mutation semantics are unchanged; the metadata
+makes the cross-suite read boundary explicit for downstream rendering and
+acceptance. Supported-container focused coverage passed `125` tests. Exact
+candidate image
+`sha256:5d0a4bc45a135edff719a9771c21acaa7f7d963c57db64d401915013b0d4a80d`
+was verified healthy with zero restarts, OCI marker/running source
+`bc6781f73947117c908dbed43bc07ce343adc5ce`, and Qwen3:8B reachability from
+the container namespace. The owner deployment was not replaced.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
