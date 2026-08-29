@@ -2,6 +2,28 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Current productization checkpoint — `f60d9334`
+
+- Branch `hades-v1-productization` is synchronized with its remote at docs
+  head `f60d93341dec4212701a5c014bcd940c9aec2e4e`; the worktree is clean.
+- The latest executable checkpoint is `8976228f1f5129db2cc9f2496dbb3d9b39bab7a0`.
+  Its exact candidate `odysseus:candidate-8976228f` was verified in a
+  disposable runtime as image
+  `sha256:e92b27ffe5130f510666327881ca128d473183c4c3567065eebcf91ba1d03b40`.
+  OCI marker, image label, and running source matched; health was healthy and
+  restart count was zero. Qwen3:8B was reachable from the Hades container
+  namespace.
+- The executable change exposes explicit operation/result/store metadata for
+  canonical Work reads while preserving WorkEngine status inference and empty
+  results. Supported-container focused ACI/binding/intent coverage passed
+  `241` tests. A later Tier 1 cross-suite source-mounted run passed `65`
+  tests against the current checkout. The last authoritative full regression
+  remains `6934 passed, 6 skipped`; it predates this small Work metadata
+  change and is not relabeled as current-head evidence.
+- Owner deployment was not replaced. No owner data, credentials, or volumes
+  were changed. The branch remains in productization stabilization; this is
+  not a merge or release declaration.
+
 ## V1 blockers
 
 None currently evidenced in the deployed core control plane. Security, owner
