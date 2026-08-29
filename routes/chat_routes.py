@@ -1097,15 +1097,15 @@ def setup_chat_routes(
             try:
                 from src.intent_contracts import (
                     compile_intent, is_bounded_owner_capability_turn,
+                    is_explicit_continuation,
                 )
                 _owner_frame = compile_intent(message)
-                if is_bounded_owner_capability_turn(_owner_frame):
+                if is_bounded_owner_capability_turn(_owner_frame) or is_explicit_continuation(message):
                     chat_mode = "agent"
                     auto_escalated = True
                     logger.info(
-                        "chat→agent auto-escalation: bounded owner capability concept=%s operation=%s",
-                        _owner_frame.domain_concept,
-                        _owner_frame.operation_class,
+                        "chat→agent auto-escalation: bounded owner capability/continuation concept=%s operation=%s",
+                        _owner_frame.domain_concept, _owner_frame.operation_class,
                     )
             except Exception:
                 logger.debug("owner capability auto-escalation unavailable", exc_info=True)
