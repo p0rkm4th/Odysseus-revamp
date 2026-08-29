@@ -902,3 +902,20 @@ principal had been created while the application still had
 closed. The disposable deployment was explicitly enabled, the test completed,
 and the principal/credential/stack were revoked and removed afterward. No
 production code or owner state was changed.
+
+## Work task mutation checkpoint — `a91c1623` (2026-08-29)
+
+The existing Work Engine task owner is now promoted through the shared
+`manage_work` binding for one bounded chat journey. An explicit task title and
+existing project title project to `TASK_CREATE/create_task`; the executor
+resolves the project against the authenticated owner's canonical Work state,
+persists through `WorkEngine.create_task`, and requires task readback before
+rendering success. Missing or ambiguous project context produces no mutation
+payload.
+
+The exact candidate `odysseus:candidate-a91c16236f1c` passed the isolated
+authenticated browser journey: task creation through natural-language chat,
+canonical task readback, reload readback, `2/2` terminal `[DONE]` events, zero
+abrupt EOF, duplicate delivery, raw final results, or false-success claims.
+The prerequisite project was setup-only; the task itself was not API-seeded.
+The disposable principal and state were removed after the run.
