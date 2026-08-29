@@ -702,3 +702,15 @@ the previously recorded exact product SHA.
 - Disposable runtime marker/source matched and `/api/health` was healthy with
   zero restarts. Qwen live/browser acceptance remains unverified because
   `host.docker.internal:11434` was unavailable.
+# Recipe adapter parity checkpoint — `7ca4f8b1` (2026-08-29)
+
+- The existing `ManageRecipesTool` now exposes Recipe `search` and
+  `shopping_requirements` actions consistently with the canonical capability,
+  schema, service, and executor.
+- Focused binding/Recipe/owner-journey validation: `66 passed`.
+- Exact candidate: `odysseus:candidate-7ca4f8b13245`, image
+  `sha256:b0518b578b6ea97949759cce17edf579d797e76f06ab2deb6c7a021d9263c956`;
+  embedded and running source `7ca4f8b132454206b68ffc6345d44eb59d303b84`.
+- Disposable runtime health was healthy with zero restarts. Qwen was not
+  available at `host.docker.internal:11434`, so live model/browser acceptance
+  is not claimed.

@@ -872,3 +872,13 @@ the pushed source passed `6950` tests with `5` skips. Exact candidate
 disposable debug lane, healthy with zero restarts. Live Qwen/browser evidence
 is not claimed because the configured container-namespace Ollama endpoint was
 unavailable.
+## Recipe adapter parity checkpoint — `7ca4f8b1` (2026-08-29)
+
+The existing owner-scoped `ManageRecipesTool` adapter now accepts the full
+canonical Recipe read vocabulary, including `search` and deterministic
+`shopping_requirements`. This closes an adapter-level projection gap without
+adding a router or persistence owner. Binding, Recipe composition, and owner
+journey tests passed `66`; the exact candidate
+`odysseus:candidate-7ca4f8b13245` embeds and runs `7ca4f8b1`, is healthy, and
+has zero restarts in the disposable lane. Qwen/browser evidence remains
+unverified because the configured Ollama endpoint was unavailable.
