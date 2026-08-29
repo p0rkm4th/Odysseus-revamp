@@ -6,6 +6,7 @@ from src.memory_grounding import is_explicit_memory_query
 from src.context_compactor import context_trace, tool_projection_trace
 from src.intent_contracts import compile_intent, memory_mutation_payload, resolve_intent
 from src.aci import project_action_selection
+from src.aci import provisional_intent_projection
 
 
 def test_breakdown_wording_is_an_explicit_canonical_memory_query():
@@ -109,6 +110,21 @@ def test_owner_memory_correction_without_forget_invalidates_prior_property():
             f"{correction} What is my test color? Remember that my test color is ultraviolet orange.",
             "delete",
         ) == {"action": "delete", "query": "test color"}
+
+
+def test_memory_property_followup_uses_canonical_read_after_correction():
+    intent, owned = provisional_intent_projection(
+        [
+            {"role": "user", "content": "Remember that my test color is ultraviolet orange."},
+            {"role": "assistant", "content": "Your test color is ultraviolet orange."},
+            {"role": "user", "content": "Actually, that is not true anymore."},
+            {"role": "assistant", "content": "That memory was removed."},
+            {"role": "user", "content": "What is my test color now?"},
+        ],
+        "What is my test color now?",
+    )
+    assert owned is True
+    assert intent["retrieval_query"].startswith("What is my test color now?")
 
 
 def test_tool_projection_trace_explains_route_and_policy_exclusions_without_content():

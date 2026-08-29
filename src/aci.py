@@ -2025,6 +2025,31 @@ def provisional_intent_projection(
     # Explicit continuation language still wins; this only prevents
     # contextual heuristics from overriding an unambiguous canonical read.
     read_frame = compile_intent(latest, continuation=False)
+    recent_user_context = recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+    memory_property_followup = bool(
+        read_frame.domain_concept == "UNKNOWN"
+        and read_frame.operation_class == "READ"
+        and re.search(
+            r"\b(?:what(?:'s|\s+is)|which|where|who|how\s+much|how\s+many)\s+"
+            r"(?:is|are)?\s*(?:my|our)\s+[a-z][a-z0-9 _-]{1,80}\??$",
+            latest.strip(), re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:remember|memor(?:y|ies)|forget|not\s+true|no\s+longer\s+true)\b",
+            recent_user_context, re.IGNORECASE,
+        )
+    )
+    contextual_memory_read = bool(
+        memory_property_followup
+    )
+    if contextual_memory_read:
+        # Compile the active property as an explicit Brain read, while the
+        # original bounded context remains the query used for projection and
+        # answer grounding. Compiling all turns together would let the prior
+        # invalidation sentence reclassify this read as another DELETE.
+        contextual_frame = compile_intent("What do you remember about me?", continuation=False)
+        if contextual_frame.domain_concept == "MEMORY" and contextual_frame.operation_class == "READ":
+            read_frame = contextual_frame
     # A substantive operation remains a new operation even when it contains a
     # deictic word such as "this" (for example, "add this recipe ...").
     # Treating that language as conversational continuation causes the
@@ -2038,13 +2063,16 @@ def provisional_intent_projection(
     continuation = explicit_continuation or (
         contextual_continuation
         and not substantive_operation
+        and not memory_property_followup
         and not (
             read_frame.operation_class == "READ"
             and read_frame.domain_concept in DOMAIN_CONTRACTS
             and read_frame.read_explicit
         )
     )
-    frame = compile_intent(latest, continuation=continuation)
+    frame = read_frame if contextual_memory_read and not continuation else compile_intent(
+        latest, continuation=continuation,
+    )
     if frame.domain_concept not in DOMAIN_CONTRACTS:
         return None, False
     # A substantive Memory invalidation is a new mutation, but terse owner
@@ -2056,8 +2084,8 @@ def provisional_intent_projection(
         and frame.operation_class == "DELETE"
     )
     retrieval_query = (
-        recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
-        if continuation or retain_memory_context else latest
+        recent_user_context
+        if continuation or retain_memory_context or contextual_memory_read else latest
     )
     explanatory = bool(re.search(
         r"\b(?:explain|define|teach\s+me|how\s+does|why)\b",
