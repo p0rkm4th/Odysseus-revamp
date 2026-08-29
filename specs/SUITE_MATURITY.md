@@ -46,6 +46,13 @@ The exact-candidate expiring-ingredients Recipe journey passed with a fresh
 principal, canonical readback, and reload durability. It had zero false
 success, raw final Result, duplicate delivery, or abrupt EOF.
 
+## Current Work task mutation maturity — `1a2b62e5` (2026-08-29)
+
+A reused-stack approval mismatch was classified as fixture contamination after
+prior external Memory context correctly escalated the write. The clean fresh
+Work task journey passed mutation, canonical readback, and reload verification
+with zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Recipe composition and shopping checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Exact-candidate Recipe composition passed listing, pantry feasibility, and
