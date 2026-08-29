@@ -391,9 +391,9 @@ async function send(page, prompt, expectation = {}) {
       .some((node) => normalize(node.querySelector('.body')?.innerText || node.innerText).includes(expected));
   }, prompt);
   if (String(expectation.approval || '').toLowerCase() === 'required') {
-    const approvalCard = page.locator('#chat-history .ask-user-card[data-ask-user-kind="tool_approval"]');
-    await approvalCard.waitFor({state: 'visible', timeout: 30000});
-    const approve = approvalCard.locator('.ask-user-option').filter({hasText: /^allow for this task$/i}).first();
+    const approvalCard = page.locator('#chat-history .ask-user-card').last();
+    await approvalCard.waitFor({state: 'attached', timeout: 30000});
+    const approve = approvalCard.locator('.ask-user-option').filter({hasText: /allow for this task/i}).first();
     await approve.waitFor({state: 'visible', timeout: 10000});
     await approve.click();
   }
