@@ -2047,9 +2047,17 @@ def provisional_intent_projection(
     frame = compile_intent(latest, continuation=continuation)
     if frame.domain_concept not in DOMAIN_CONTRACTS:
         return None, False
+    # A substantive Memory invalidation is a new mutation, but terse owner
+    # corrections such as "that's not true anymore" still need the bounded
+    # preceding user turns to identify the property being invalidated. Keep
+    # this context handoff separate from generic continuation semantics.
+    retain_memory_context = (
+        frame.domain_concept == "MEMORY"
+        and frame.operation_class == "DELETE"
+    )
     retrieval_query = (
         recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
-        if continuation else latest
+        if continuation or retain_memory_context else latest
     )
     explanatory = bool(re.search(
         r"\b(?:explain|define|teach\s+me|how\s+does|why)\b",
