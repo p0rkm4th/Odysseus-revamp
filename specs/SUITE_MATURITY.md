@@ -1421,6 +1421,16 @@ raw final Result, duplicate delivery, or abrupt EOF. An expired disposable
 credential was classified as `AUTH_SESSION_FAILURE` before login and replaced
 through the normal admin flow.
 
+The subsequent full supported regression passed `6991 passed, 8 skipped, 186
+warnings` on branch head `35be6afd`; the post-candidate change was
+documentation-only, so the executable candidate remained `1a2b62e5`.
+
+## Current empty-Memory owner-read checkpoint — `1a2b62e5` (2026-08-29)
+
+The empty-memory journey for "What do you know about me?" passed on the exact
+isolated Qwen3:8B candidate with one human answer, one terminal stream, and
+zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Current continuation safety maturity — `1a2b62e5` (2026-08-29)
 
 Continuation safety is covered by data-driven owner journeys for an
