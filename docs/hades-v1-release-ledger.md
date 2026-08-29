@@ -714,3 +714,13 @@ the previously recorded exact product SHA.
 - Disposable runtime health was healthy with zero restarts. Qwen was not
   available at `host.docker.internal:11434`, so live model/browser acceptance
   is not claimed.
+# Current full-regression checkpoint — `cee5372e` (2026-08-29)
+
+- Full supported project regression on the exact executable source passed
+  `6952 passed, 5 skipped` with `186` warnings.
+- The candidate remains `odysseus:candidate-cee5372e81e7`, image
+  `sha256:fb8e69155d12c7d38e81d6e2131b4100df0fcbddb3411d5a602b8554798c7e9f`,
+  with matching embedded/running source, healthy status, and zero restarts.
+- Qwen3:8B remains unverified because the configured
+  `host.docker.internal:11434` endpoint is unavailable from the Hades
+  namespace; no live model/browser pass is claimed.
