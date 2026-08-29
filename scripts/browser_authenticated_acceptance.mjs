@@ -446,6 +446,13 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
     }
     const wanted = String(spec.contains_name || '').trim().toLowerCase();
     const found = recipes.find((recipe) => String(recipe?.name || '').trim().toLowerCase() === wanted);
+    if (spec.absent_name !== undefined) {
+      const absent = String(spec.absent_name || '').trim().toLowerCase();
+      if (recipes.some((recipe) => String(recipe?.name || '').trim().toLowerCase() === absent)) {
+        throw new Error(`${scenario.id} recipe readback unexpectedly found canonical recipe`);
+      }
+      return {phase, kind: spec.kind, absent: true};
+    }
     if (!found) throw new Error(`${scenario.id} recipe readback missing canonical recipe`);
     if (spec.contains_source_url) {
       const expectedURL = String(spec.contains_source_url).trim();
