@@ -641,3 +641,16 @@ one `manage_assets/list`, one deterministic final answer containing Atlas
 `64 GB` and Erebus `128 GB`, one persisted answer, and one `[DONE]`; the
 disposable acceptance container and principal were removed afterward. The
 owner deployment was not changed.
+
+## Live owner-journey checkpoint — `d41c67fc`
+
+Against the exact disposable candidate, normal login and browser/chat passed
+`OWNER-RECIPE-EMPTY-001`: the empty canonical Recipe collection produced one
+human-readable deterministic answer, one persisted answer, and one terminal
+`[DONE]`. `OWNER-RECIPE-MUTATION-READBACK-001` passed all three turns through
+chat: the mutation executed through the canonical owner, the recipe was
+independently read back, and it remained after reload. The run reported `3`
+streams, `3` DONE events, `2` readback checks, zero false-success claims, zero
+raw final results, zero duplicate delivery, and zero abrupt EOF. The
+acceptance principal was revoked and its temporary credential removed; owner
+deployment was not changed.
