@@ -1787,6 +1787,15 @@ review-safe import. The journey recorded one turn, two canonical readbacks,
 and no recipe-count increase; false success, raw final Result, duplicate
 delivery, and abrupt EOF were zero.
 
+## Current Household mutation checkpoints — executable candidate `1a2b62e5` (2026-08-29)
+
+The fresh isolated Household journey passed four owner turns with two chat
+mutations and two independent readbacks: Acceptance Tomatoes moved from 0 to
+3 and then to 2 after consumption. The messy-language variant likewise passed
+four turns for Acceptance Thyme using "yo add 3 cans..." and "use one...".
+Both journeys verified canonical state and recorded zero false success, raw
+final Result, duplicate delivery, or abrupt EOF.
+
 An earlier reused-database replay was rejected before chat because its
 recipe-count precondition no longer held. That was disposable fixture
 contamination, not a product result.

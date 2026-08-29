@@ -1472,3 +1472,10 @@ to taste` and `oil as needed` into a review-safe path without inventing
 quantities or creating an unvalidated canonical Recipe. Two canonical
 readbacks passed with zero false success, raw final Result, duplicate delivery,
 or abrupt EOF.
+
+## Current Household mutation maturity — `1a2b62e5` (2026-08-29)
+
+Canonical Household mutation/readback passed for add and consume flows, plus
+the messy-language equivalents. Both four-turn journeys independently
+verified final quantity after chat mutations and reload, with zero false
+success, raw final Result, duplicate delivery, or abrupt EOF.
