@@ -32,6 +32,7 @@ def test_inventory_uses_shared_window_and_form_primitives():
         "renderRecipeImportDraft",
         "recipe-review-ingredient-row",
         "Save reviewed recipe",
+        "positive numeric quantity",
         "recipeReviewDraft",
         "Nothing has been saved yet",
         "recipes/import/commit",
@@ -49,6 +50,7 @@ def test_inventory_uses_shared_window_and_form_primitives():
         assert marker in source
     assert "Review this unpersisted recipe draft" not in source
     assert "data-recipe-import-draft" in source
+    assert "(?:\\\\.[0-9]+)?$/.test(quantity)" not in source
 
 
 def test_work_uses_shared_prompt_and_keeps_canonical_records_secondary():
