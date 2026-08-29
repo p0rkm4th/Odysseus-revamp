@@ -20,7 +20,7 @@ name: Container scan
 on:
   pull_request:
   push:
-    branches: [main, hades-aci-v1]
+    branches: [main, hades-aci-v1, hades-v1-productization]
   workflow_dispatch:
 
 permissions: {}
