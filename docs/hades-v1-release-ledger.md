@@ -978,3 +978,11 @@ after the run. The owner deployment remains untouched.
 - The verifier never builds, deploys, stops, mutates, or reads credentials.
   Shell syntax and a read-only image-marker check passed; the current owner
   container was not changed.
+
+# Current-head full regression — `4e30c0a4` (2026-08-29)
+
+- The supported project suite ran against the current branch head and passed
+  `6961 passed, 7 skipped, 186 warnings` in `219.73s`.
+- The warnings are existing deprecation/runtime warnings; no test failure or
+  environment exception was reported. This is source-level current-head
+  evidence. The owner deployment was not rebuilt or changed.
