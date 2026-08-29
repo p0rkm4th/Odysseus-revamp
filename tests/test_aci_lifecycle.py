@@ -14,6 +14,7 @@ from src.aci import (
     canonical_homelab_read_answer,
     canonical_tool_result_projection,
     canonical_inventory_mutation_answer,
+    canonical_action_failure_answer,
     canonical_result_answer,
     is_aci_general_fallback_candidate,
     project_final_answer,
@@ -660,6 +661,20 @@ def test_url_recipe_import_fields_are_carried_by_intent_frame():
     assert frame.filters["recipe_import"] is True
     assert frame.filters["recipe_source_url"].startswith("https://sundaysuppermovement.com/")
     assert frame.filters["recipe_requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
+
+
+def test_failed_recipe_import_explains_review_without_claiming_persistence():
+    answer = canonical_action_failure_answer([{
+        "tool": "manage_recipes",
+        "command": '{"action":"commit_import"}',
+        "output": "recipe import needs review; missing verified fields: salt and pepper",
+        "exit_code": 1,
+    }])
+    assert answer is not None
+    assert answer.source is AnswerSource.ERROR
+    assert "couldn't import" in answer.content
+    assert "No recipe was saved" in answer.content
+    assert "try again" in answer.content
 
 
 def test_action_projection_carries_canonical_dependency_plan():
