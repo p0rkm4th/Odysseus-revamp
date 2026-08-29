@@ -49,6 +49,16 @@ was verified with OCI/running source `f4227c9a5262a6944b0b1e295d47415f5edf9fa7`,
 healthy status, zero restarts, and in-container Qwen3:8B reachability. The
 owner deployment was not replaced.
 
+The follow-up executable checkpoint `9e2d62dc` keeps the location projection
+consistent in item detail: `InventoryService.get_item` now adds an
+owner-scoped `location_name`, so the Household detail window cannot discard a
+location present in the overview. Focused Household/Recipe/binding coverage
+passed `59` tests. Candidate image
+`sha256:358935cb9a15790abf3f2695c120bd9f433ef8d143be7f0c6fd20cbce429b282`
+was verified healthy with zero restarts and OCI/running source matching
+`9e2d62dceea7dcffa74a76b1c22579067c97c4f6`; the owner deployment remains
+unchanged.
+
 ### Recipe URL import checkpoint — e6734a9c
 
 The public recipe fetch path now requests a bounded, opt-in schema.org Recipe
