@@ -1872,6 +1872,16 @@ about me?" read on Qwen3:8B. Canonical setup/readback verification recorded
 two readbacks and one terminal stream; false success, raw final Result,
 duplicate delivery, and abrupt EOF were zero.
 
+## Current actual-owner read-only smoke — 2026-08-29
+
+Against the real healthy owner deployment, a browser session completed three
+ordinary read-only prompts covering computers, food, and current work. No
+mutation was attempted. The separate window-management dogfood also passed
+open, deduplicate, focus, snap, minimize, restore, maximize, reload, and
+narrow-viewport checks. The owner runtime remained on source `34ced247` with
+zero restarts; this evidence is read-only owner smoke, not candidate feature
+acceptance.
+
 ## Current Work-overview checkpoint — executable candidate `1a2b62e5` (2026-08-29)
 
 The disposable Work overview fixture passed three ordinary read turns on the
@@ -1971,3 +1981,23 @@ The disposable populated-memory fixture passed its live Qwen browser read on
 the exact candidate. It produced one human-facing answer with two canonical
 readbacks, including reload verification; false success, raw final Result,
 duplicate delivery, and abrupt EOF were zero.
+
+## Current actual-owner and network provenance checkpoint (2026-08-29)
+
+The real owner deployment completed ordinary read-only Asset, Household, Work,
+and Network prompts with no mutation attempted. Its network answer came from
+older source `34ced247` and was flatter than the current candidate renderer,
+so it is not evidence against the candidate. Replaying `OWNER-NETWORK-001`
+against the exact candidate was classified `ENVIRONMENT_FAILURE` because the
+disposable stack lacked its CMDB; the transport and bounded unavailable-state
+answer still completed without false success, raw final Result, duplicate
+delivery, or abrupt EOF.
+
+## Corrected exact-candidate Network checkpoint — `1a2b62e5` (2026-08-29)
+
+After adding the required owner-scoped network observations to the disposable
+CMDB fixture, `OWNER-NETWORK-001` passed on the exact candidate. The browser
+run produced one deterministic human answer and one `read_network_observations`
+Action with zero mutations, false success, raw final Result, duplicate
+delivery, or abrupt EOF. The earlier `UNAVAILABLE` result was retained as
+fixture-wiring evidence and is not counted as a product failure.
