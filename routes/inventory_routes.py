@@ -199,10 +199,23 @@ def setup_inventory_routes(
         owner = _owner(request)
         source_url = str(payload.get("source_url") or "").strip() or None
         source_text = str(payload.get("source_text") or "").strip() or None
-        if not source_url and not source_text:
-            raise HTTPException(400, "source_url or source_text is required")
+        attachment_ids = payload.get("attachment_ids")
+        if not source_url and not source_text and not attachment_ids:
+            raise HTTPException(400, "source_url, source_text, or an image attachment is required")
         if source_url and not re.match(r"^https?://", source_url, re.IGNORECASE):
             raise HTTPException(400, "source_url must use http or https")
+        if attachment_ids:
+            resolved = await asyncio.to_thread(resolve_attachments, owner, attachment_ids)
+            if len(resolved) != 1:
+                raise HTTPException(400, "recipe image preparation requires exactly one image attachment")
+            image = resolved[0]
+            mime = str(image.get("mime") or image.get("content_type") or "")
+            path = image.get("path")
+            if not mime.startswith("image/") or not isinstance(path, str) or not path:
+                raise HTTPException(400, "recipe preparation attachment must be an available image")
+            from src.document_processor import analyze_image_with_vl
+            image_text = await asyncio.to_thread(analyze_image_with_vl, path, owner)
+            source_text = "\n\n".join(part for part in (source_text, image_text) if part)
         if source_url and not source_text:
             from src.recipe_import_sources import fetch_recipe_source
             source_text, error = await fetch_recipe_source(source_url, owner=owner)
