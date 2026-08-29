@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Latest branch checkpoint — `bb27c5c4`
+
+The productization branch is synchronized with `origin/hades-v1-productization`
+at `bb27c5c4601299461be76de2f9d8350ced305de9`; the worktree is clean. This
+latest checkpoint is evaluator/documentation-only: it adds seeded sampling
+coverage proving declared continuation groups retain their prerequisite turns
+and fresh-session runs do not manufacture reference context. The deployed
+executable remains the previously recorded exact product candidate, so this
+checkpoint has not been rebuilt or presented as new runtime evidence.
+
+The focused Recipe/owner/evaluator slice after the checkpoint passed `266`
+tests. A bounded 100-seed selector audit found no orphaned declared
+continuation. The current branch is `216` commits ahead of `origin/main` and
+zero behind; no merge is implied by that divergence.
+
 ## Current productization checkpoint — `f60d9334`
 
 - Branch `hades-v1-productization` is synchronized with its remote at docs
