@@ -1451,6 +1451,13 @@ Independent Qwen3:8B browser replays passed on the exact pushed candidate with
 one terminal stream each and zero false success, raw final Result, duplicate
 delivery, abrupt EOF, or unauthorized execution.
 
+## Current complete URL Recipe import maturity — `1a2b62e5` (2026-08-29)
+
+The fresh isolated owner journey imported the public recipe URL with an
+explicit display name through review and approval. Canonical mutation and two
+readbacks including reload passed; the name and source URL were preserved, with
+zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Current qualitative Recipe review maturity — `1a2b62e5` (2026-08-29)
 
 The fresh isolated owner journey accepted qualitative amounts such as `salt
