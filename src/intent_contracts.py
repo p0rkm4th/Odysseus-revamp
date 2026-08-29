@@ -348,6 +348,26 @@ def recipe_source_url(query: str) -> str | None:
     return match.group(0).rstrip(".,") if match else None
 
 
+def work_project_create_payload(query: str) -> dict[str, Any] | None:
+    """Project only an explicit Work project title into a bounded Action.
+
+    This is argument projection, not general Work classification.  Ambiguous
+    requests deliberately return no payload so the canonical executor fails
+    closed instead of inventing a project title.
+    """
+    text = re.sub(r"\s+", " ", str(query or "").strip())
+    match = re.search(
+        r"\bcreate\s+(?:a\s+)?project\s+(?:called|named|for|about)\s+(.+)$",
+        text, re.IGNORECASE,
+    )
+    if not match:
+        return None
+    title = match.group(1).strip(" .:;\"'")
+    if not 1 <= len(title) <= 300:
+        return None
+    return {"action": "create", "title": title, "domain": "general"}
+
+
 def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
     """Extract explicit item quantity for the canonical inventory CREATE."""
     text = str(query or "").strip()
@@ -1273,6 +1293,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     ),
     "GOAL": DomainContract("GOAL", "work.read", {"READ": "list_goals"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_goals"),
     "PROJECT": DomainContract("PROJECT", "work.read", {"READ": "list_projects"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_projects"),
+    "PROJECT_CREATE": DomainContract("PROJECT_CREATE", "work.project.manage", {"CREATE": "create"}, "manage_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_project_mutation"),
     "TASK": DomainContract("TASK", "work.read", {"READ": "list_tasks"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_tasks"),
     "RUN": DomainContract("RUN", "work.read", {"READ": "list_runs"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_runs"),
     "COMMITMENT": DomainContract("COMMITMENT", "work.read", {"READ": "list_commitments"}, "read_work", {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "work_commitments"),
@@ -2189,6 +2210,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         contract_key = "RECIPE_MUTATION"
     if frame.domain_concept == "HOUSEHOLD_ITEM" and frame.operation_class in {"CREATE", "UPDATE", "EXECUTE"}:
         contract_key = "INVENTORY_MUTATION"
+    if frame.domain_concept == "PROJECT" and frame.operation_class == "CREATE":
+        contract_key = "PROJECT_CREATE"
     contract = DOMAIN_CONTRACTS.get(contract_key)
     if contract is None:
         return ResolvedContract(frame, None, None, None, None, False, "no_domain_contract")

@@ -110,6 +110,19 @@ READ_WORK_SCHEMA = {
     }
 }
 
+MANAGE_WORK_SCHEMA = {
+    "type": "function", "function": {
+        "name": "manage_work",
+        "description": "Create a bounded owner-scoped Work project through the canonical Work Engine. Success requires persistence and readback verification.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["create"]},
+            "title": {"type": "string", "minLength": 1, "maxLength": 300},
+            "description": {"type": "string", "maxLength": 20000},
+            "domain": {"type": "string", "maxLength": 64},
+        }, "required": ["action", "title"]},
+    }
+}
+
 READ_HOUSEHOLD_SCHEMA = {
     "type": "function", "function": {
         "name": "read_household",
@@ -389,6 +402,11 @@ TOOL_BINDINGS: Mapping[str, ToolBinding] = MappingProxyType({
     "manage_security_assessment": ToolBinding("manage_security_assessment", TOOL_CAPABILITY_IDS["manage_security_assessment"], MANAGE_SECURITY_ASSESSMENT_SCHEMA, _SECURITY_CONTRACT, frozenset({"security_audit", "pentest_ops", "network_ops"}), "manage_security_assessment"),
     "read_memory": ToolBinding("read_memory", TOOL_CAPABILITY_IDS["read_memory"], READ_MEMORY_SCHEMA, _MEMORY_READ_CONTRACT, frozenset({"memory"}), "read_memory"),
     "read_work": ToolBinding("read_work", TOOL_CAPABILITY_IDS["read_work"], READ_WORK_SCHEMA, _WORK_READ_CONTRACT, frozenset({"work"}), "read_work"),
+    "manage_work": ToolBinding("manage_work", TOOL_CAPABILITY_IDS["manage_work"], MANAGE_WORK_SCHEMA, """### `manage_work`
+Canonical owner-scoped Work project creation through WorkEngine. The title must
+come from the user's request; model prose is not persistence evidence. Success
+requires a canonical write and readback verification.
+`<invoke name=\"manage_work\"><parameter name=\"action\">create</parameter></invoke>`.""", frozenset({"work"}), "manage_work"),
     "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
     "read_recipes": ToolBinding("read_recipes", TOOL_CAPABILITY_IDS["read_recipes"], READ_RECIPES_SCHEMA, _RECIPE_READ_CONTRACT, frozenset({"household", "recipes", "cooking"}), "read_recipes"),
     "manage_recipes": ToolBinding("manage_recipes", TOOL_CAPABILITY_IDS["manage_recipes"], MANAGE_RECIPES_SCHEMA, """### `manage_recipes`

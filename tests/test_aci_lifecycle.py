@@ -27,6 +27,7 @@ from src.aci import (
     compile_composite_action,
     ground_action_completion,
     canonical_recipe_mutation_answer,
+    canonical_work_mutation_answer,
     project_action_selection,
     project_post_result_transition,
     project_result_observation,
@@ -50,7 +51,7 @@ from src.aci import (
     user_turn_count,
     stream_aci_turn,
 )
-from src.intent_contracts import canonical_domain_projection, compile_intent, resolve_intent
+from src.intent_contracts import canonical_domain_projection, compile_intent, resolve_intent, work_project_create_payload
 from src.capability_registry import action_for_tool, capability_for_tool
 from src.tool_capabilities import ToolEffect, capabilities_for_action
 from src.tool_policy import web_access_mode
@@ -788,6 +789,24 @@ def test_url_recipe_import_fields_are_carried_by_intent_frame():
     assert frame.filters["recipe_import"] is True
     assert frame.filters["recipe_source_url"].startswith("https://sundaysuppermovement.com/")
     assert frame.filters["recipe_requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
+
+
+def test_work_project_create_projects_explicit_title_and_verified_answer_only():
+    query = "Create a project called Kitchen renovation"
+    assert work_project_create_payload(query) == {
+        "action": "create", "title": "Kitchen renovation", "domain": "general",
+    }
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.action_id == "create"
+    assert resolved.binding_name == "manage_work"
+    assert canonical_work_mutation_answer([{
+        "tool": "manage_work", "exit_code": 0, "success": True,
+        "output": json.dumps({"status": "VERIFIED", "project": {"id": "p1", "title": "Kitchen renovation"}}),
+    }]) == "Created project 'Kitchen renovation'; the canonical Work readback is verified."
+    assert canonical_work_mutation_answer([{
+        "tool": "manage_work", "exit_code": 0, "success": True,
+        "output": json.dumps({"status": "SUCCESS", "project": {"id": "p1", "title": "Kitchen renovation"}}),
+    }]) is None
 
 
 def test_failed_recipe_import_explains_review_without_claiming_persistence():
