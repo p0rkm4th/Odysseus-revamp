@@ -906,4 +906,20 @@ the previously recorded exact product SHA.
   with `HADES_ACCEPTANCE_PRINCIPAL_ENABLED=true`; no production code change or
   auth bypass was made.
 - The disposable principal, credential artifact, and stack were revoked/stopped
-  after the run. The owner deployment remains untouched.
+after the run. The owner deployment remains untouched.
+
+# Work task chat acceptance checkpoint — `a91c1623` (2026-08-29)
+
+- Promoted one explicit Work task mutation through the existing `manage_work`
+  binding and `WorkEngine`; project resolution is owner-scoped and requires a
+  unique existing project title. Canonical task persistence/readback is
+  required before success is rendered.
+- Exact candidate `odysseus:candidate-a91c16236f1c`, image
+  `sha256:97425212ad750284393793ad0d46f7f040937c961cd3f849d9f72b876275962c`,
+  embedded/running source `a91c16236f1c65e59ae5b45e85a59b1dc678aac7`, health
+  healthy, restarts `0`.
+- Isolated authenticated browser acceptance passed `2/2` turns with canonical
+  task readbacks before and after reload, `2` `[DONE]`, zero abrupt EOF,
+  duplicate delivery, raw final results, or false success. The task was
+  created through chat; only the prerequisite project was setup-seeded. The
+  disposable principal/state were removed afterward.
