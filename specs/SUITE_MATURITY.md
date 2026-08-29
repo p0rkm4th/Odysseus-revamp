@@ -347,3 +347,13 @@ alone do not advance a suite to IMPLEMENTED.
   therefore `UNVERIFIED / MODEL_ENDPOINT_MISCONFIGURED`; this is not counted
   as a product routing pass or failure. The false-success guard remained
   unchanged.
+- A follow-up exact-candidate browser run with a normally registered
+  container-reachable Qwen3:8B endpoint exercised the real login, session,
+  approval, `/api/chat_stream`, and import path. The selected Action was the
+  sole `commit_import` projection; the explicit URL/name therefore survived
+  the routing boundary. The run correctly failed closed at
+  `RECIPE_DRAFT_VALIDATION`: the page's Schema.org data contains the
+  ingredient `salt and pepper` without a verifiable quantity. Result was not
+  persisted, one bounded `ERROR` answer and one `[DONE]` were delivered, with
+  zero abrupt EOF and zero false success. This is a truthful `NEEDS_REVIEW`
+  outcome, not permission to invent a quantity.
