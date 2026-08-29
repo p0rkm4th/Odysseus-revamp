@@ -1920,6 +1920,19 @@ def compile_intent(
         concept = "OSINT_CASE"
     elif re.search(r"\b(?:household|pantry|stock|shopping|groceries|kitchen)\b", q):
         concept = "HOUSEHOLD_ITEM"
+    elif (
+        operation == "READ"
+        and re.search(r"\bhow\s+much\b", q)
+        and re.search(r"\b(?:we|i)\s+(?:got|have|have\s+left)\b", q)
+        and not re.search(
+            r"\b(?:ram|memory|cpu|gpu|storage|disk|machine|computer|server|host|asset|network)\b",
+            q,
+        )
+    ):
+        # Owner inventory questions often name only the item: "how much
+        # oregano we got". Route that ordinary phrasing to the canonical
+        # household read instead of allowing model-only quantity claims.
+        concept = "HOUSEHOLD_ITEM"
     elif re.search(r"\b(?:what(?:'s| is)\s+)?(?:outstanding|left)\s+(?:for\s+)?(?:me|us)\b", q):
         # Ordinary owner language often omits the noun "work" entirely.
         # Keep this bounded to personal outstanding/remaining questions so it
