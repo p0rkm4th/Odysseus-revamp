@@ -526,6 +526,37 @@ async function verifyScenarioPrecondition(page, scenario) {
   return null;
 }
 
+async function verifyRecipeWorkspace(page, recipeName) {
+  const expectedName = String(recipeName || '').trim();
+  if (!expectedName) return {checked: false};
+  await page.locator('#tool-inventory-btn').click();
+  const pane = page.locator('#inventory-pane');
+  await pane.waitFor({state: 'visible'});
+  await pane.locator('[data-tab="recipes"]').click();
+  await pane.locator('#inventory-recipe-list').waitFor();
+  const card = pane.locator('#inventory-recipe-list .inventory-recipe', {hasText: expectedName}).first();
+  await card.waitFor({state: 'visible', timeout: 30000});
+  const search = pane.locator('#recipe-search');
+  await search.fill(expectedName);
+  await page.waitForTimeout(350);
+  const filtered = pane.locator('#inventory-recipe-list .inventory-recipe');
+  if (await filtered.count() !== 1 || !(await filtered.first().innerText()).includes(expectedName)) {
+    throw new Error(`recipe workspace search did not isolate ${expectedName}`);
+  }
+  await filtered.first().locator('[data-action="recipe-details"]').click();
+  const details = page.locator('.inventory-dialog[data-kind="view"]');
+  await details.waitFor({state: 'visible'});
+  if (await details.locator('h4', {hasText: 'Ingredients'}).count() !== 1) {
+    throw new Error(`recipe workspace details omitted ingredients for ${expectedName}`);
+  }
+  if (!(await details.innerText()).includes(expectedName)) {
+    throw new Error(`recipe workspace details omitted recipe name ${expectedName}`);
+  }
+  await details.locator('[data-action="dismiss-dialog"]').click();
+  await pane.locator('[data-close]').click();
+  return {checked: true, recipeName: expectedName};
+}
+
 async function waitForAnswer(page, beforeAssistant, streamIndex, prompt) {
   await page.waitForFunction(() => !document.querySelector('#chat-history .msg-ai.streaming'));
   await page.waitForFunction(({ before }) => {
@@ -974,6 +1005,14 @@ async function main() {
       for (const scenario of scenarios) {
         const readback = await verifyScenarioReadback(page, scenario);
         if (readback) diagnostics.readbacks.push(readback);
+      }
+      const recipeScenario = scenarios.find((scenario) =>
+        String(scenario.expected?.readback?.kind || '') === 'recipes' &&
+        scenario.expected?.readback?.contains_name);
+      if (recipeScenario) {
+        diagnostics.recipeWorkspace = await verifyRecipeWorkspace(
+          page, recipeScenario.expected.readback.contains_name,
+        );
       }
       const beforeReload = await assistantCount(page);
       await page.reload({ waitUntil: 'domcontentloaded' });
