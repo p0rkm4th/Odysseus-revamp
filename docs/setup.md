@@ -705,7 +705,6 @@ Key settings:
 | `APP_BIND` | `127.0.0.1` | Docker Compose host bind address for the web UI. Use `0.0.0.0` only for intentional LAN/reverse-proxy access. |
 | `APP_PORT` | `7000` | Docker Compose host port for the web UI. |
 | `SEARXNG_PORT` | `8080` | Docker Compose host port for SearXNG; override for parallel/isolated installs. |
-| `CHROMADB_PORT` | `8100` | Docker Compose host port for ChromaDB; override for parallel/isolated installs. |
 | `NTFY_PORT` | `8091` | Docker Compose host port for ntfy; override for parallel/isolated installs. |
 | `ODYSSEUS_NETWORK_NAME` | `odysseus_default` | Docker Compose network name; set a unique name for parallel/isolated installs. |
 | `APP_DATA_DIR` | `./data` | Docker Compose host directory for application data volumes. |
@@ -716,7 +715,7 @@ Key settings:
 | `SECURE_COOKIES` | derived from the request scheme | Marks session cookies `Secure` on HTTPS requests. Set true to force it on, false to force it off. |
 | `DATABASE_URL` | `sqlite:///./data/app.db` | Database connection string |
 | `CHROMADB_HOST` | `localhost` | ChromaDB host for vector memory. Docker overrides this to `chromadb`. |
-| `CHROMADB_PORT` | `8100` | ChromaDB port for manual host runs. Docker overrides this to `8000`. |
+| `CHROMADB_PORT` | `8100` | Docker Compose host port for ChromaDB; override for parallel/isolated installs. Docker-internal access remains port `8000`. |
 | `EMBEDDING_URL` | -- | OpenAI-compatible embeddings endpoint |
 | `ODYSSEUS_CHAT_UPLOAD_MAX_BYTES` | `10485760` | Chat/agent attachment cap in bytes. Raise for larger local PDFs or text documents. |
 | `ODYSSEUS_GALLERY_UPLOAD_MAX_BYTES` | `104857600` | Gallery image upload cap in bytes (100 MB). |
