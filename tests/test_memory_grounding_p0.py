@@ -82,6 +82,21 @@ def test_owner_memory_mutations_resolve_to_bounded_actions_and_user_fields():
     )
     selected = next(iter(projection.choice_map.values()))
     assert selected["payload"] == {"action": "delete", "query": "test color"}
+    assert projection.fast_path == {"action": "delete", "query": "test color"}
+
+    add_query = "Remember that my test color is ultraviolet orange."
+    add_frame = compile_intent(add_query)
+    add_contract = resolve_intent(add_frame)
+    add_projection = project_action_selection(
+        intent={"intent_frame": add_frame.as_dict(), "resolved_contract": add_contract.as_dict()},
+        relevant_tools=None, disabled_tools=set(), owner="fixture", active_run=None,
+        query=add_query,
+    )
+    assert add_projection.fast_path == {
+        "action": "add",
+        "text": "my test color is ultraviolet orange",
+        "category": "fact",
+    }
 
 
 def test_tool_projection_trace_explains_route_and_policy_exclusions_without_content():
