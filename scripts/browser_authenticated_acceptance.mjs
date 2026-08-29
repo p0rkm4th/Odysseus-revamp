@@ -156,6 +156,49 @@ async function seedHouseholdAcceptanceState(page) {
   });
 }
 
+async function seedRecipeCompositionAcceptanceState(page) {
+  // Establish prerequisite canonical Inventory/Recipe state only. The
+  // exercised coverage/read/scale turns still enter through chat; no recipe
+  // mutation is performed by the browser fixture itself.
+  return page.evaluate(async () => {
+    const suffix = Date.now().toString(36);
+    const createItem = async (name, quantity) => {
+      const response = await fetch('/api/inventory/items', {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({name: `Acceptance ${name}`, domain: 'kitchen', item_kind: 'ingredient', default_unit: 'cup', category: 'pantry'}),
+      });
+      if (!response.ok) throw new Error(`recipe composition item setup failed (${response.status})`);
+      const item = (await response.json()).item;
+      const stock = await fetch(`/api/inventory/items/${encodeURIComponent(item.id)}/stock`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({quantity, unit: 'cup', idempotency_key: `recipe-composition-${suffix}-${name}`}),
+      });
+      if (!stock.ok) throw new Error(`recipe composition stock setup failed (${stock.status})`);
+      return item;
+    };
+    const pasta = await createItem('Pasta', 4);
+    const sauce = await createItem('Tomato Sauce', 2);
+    const recipeResponse = await fetch('/api/recipes', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({
+        name: 'Acceptance Pantry Pasta', servings: 2,
+        ingredients: [
+          {item_id: pasta.id, quantity: 2, unit: 'cup'},
+          {item_id: sauce.id, quantity: 1, unit: 'cup'},
+        ],
+        instructions: 'Combine the pasta and sauce, then serve.',
+      }),
+    });
+    if (!recipeResponse.ok) throw new Error(`recipe composition recipe setup failed (${recipeResponse.status})`);
+    const recipe = (await recipeResponse.json()).recipe;
+    if (!recipe?.id) throw new Error('recipe composition setup returned no recipe id');
+    return {recipeId: recipe.id, recipeName: recipe.name};
+  });
+}
+
 async function seedWorkAcceptanceState(page) {
   // These owner-scoped calls establish prerequisite state only. The tested
   // read still enters through natural-language chat on the disposable owner.
@@ -735,6 +778,9 @@ async function main() {
     }
     if (scenarios) {
       diagnostics.assetSeed = seedCanonicalAssetFixture(scenarios);
+      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_pantry')) {
+        diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page);
+      }
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_overview')) {
         diagnostics.workSeed = await seedWorkAcceptanceState(page);
       }
