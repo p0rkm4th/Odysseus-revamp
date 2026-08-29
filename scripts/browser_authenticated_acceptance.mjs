@@ -156,7 +156,7 @@ async function seedHouseholdAcceptanceState(page) {
   });
 }
 
-async function seedRecipeCompositionAcceptanceState(page) {
+async function seedRecipeCompositionAcceptanceState(page, {expiring = false} = {}) {
   // Establish prerequisite canonical Inventory/Recipe state only. The
   // exercised coverage/read/scale turns still enter through chat; no recipe
   // mutation is performed by the browser fixture itself.
@@ -173,7 +173,10 @@ async function seedRecipeCompositionAcceptanceState(page) {
       const stock = await fetch(`/api/inventory/items/${encodeURIComponent(item.id)}/stock`, {
         method: 'POST', credentials: 'same-origin',
         headers: {'content-type': 'application/json'},
-        body: JSON.stringify({quantity, unit: 'cup', idempotency_key: `recipe-composition-${suffix}-${name}`}),
+        body: JSON.stringify({
+          quantity, unit: 'cup', idempotency_key: `recipe-composition-${suffix}-${name}`,
+          ...(expiring ? {expiry_date: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)} : {}),
+        }),
       });
       if (!stock.ok) throw new Error(`recipe composition stock setup failed (${stock.status})`);
       return item;
@@ -184,7 +187,7 @@ async function seedRecipeCompositionAcceptanceState(page) {
       method: 'POST', credentials: 'same-origin',
       headers: {'content-type': 'application/json'},
       body: JSON.stringify({
-        name: 'Acceptance Pantry Pasta', servings: 2,
+        name: expiring ? 'Acceptance Expiring Pantry Pasta' : 'Acceptance Pantry Pasta', servings: 2,
         ingredients: [
           {item_id: pasta.id, quantity: 2, unit: 'cup'},
           {item_id: sauce.id, quantity: 1, unit: 'cup'},
@@ -780,6 +783,9 @@ async function main() {
       diagnostics.assetSeed = seedCanonicalAssetFixture(scenarios);
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_pantry')) {
         diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page);
+      }
+      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_expiring')) {
+        diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page, {expiring: true});
       }
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_overview')) {
         diagnostics.workSeed = await seedWorkAcceptanceState(page);

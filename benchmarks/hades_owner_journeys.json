@@ -50,6 +50,16 @@
       "expected": {"action": "read_recipes", "tool_binding": "read_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 1}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Pantry Pasta"}, "terminal": {"done": 3, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-EXPIRING-COMPOSITION-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "recipe-expiring-composition",
+      "fixture_setup": "canonical_recipe_expiring",
+      "turns": [
+        {"prompt": "What recipes can I make with ingredients expiring soon?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "expiring_candidates", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Acceptance Expiring Pantry Pasta"], "must_include_any": ["expiring", "missing"]}}
+      ],
+      "expected": {"action": "read_recipes", "tool_binding": "read_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 1}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Expiring Pantry Pasta"}, "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-RECIPE-MUTATION-READBACK-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-recipes",
