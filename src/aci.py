@@ -4232,6 +4232,14 @@ def project_action_selection(
             draft = recipe_create_payload(query)
             if draft:
                 payload.update(draft)
+            else:
+                # URL-backed CREATE still uses the canonical recipe mutation
+                # Action.  The executor acquires the untrusted source,
+                # validates a RecipeDraft, and only then calls InventoryService;
+                # the model never supplies or persists the recipe contents.
+                url_match = re.search(r"https?://[^\s)>]+", query, re.IGNORECASE)
+                if url_match:
+                    payload["source_url"] = url_match.group(0).rstrip(".,")
         if (
             str(frame.get("domain_concept") or "") in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"}
             and str(frame.get("operation_class") or "") in {"CREATE", "EXECUTE"}

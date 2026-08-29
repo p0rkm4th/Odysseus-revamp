@@ -1888,6 +1888,24 @@ async def _execute_manage_recipes_binding(block, owner=None):
             raise PermissionError("authenticated recipe owner is required")
         from src.inventory_service import get_inventory_service
         service = get_inventory_service()
+        if str(payload.get("action") or "").casefold() == "add" and payload.get("source_url"):
+            # URL recipe creation is an effectful Action, but source
+            # acquisition and structuring remain untrusted and validated before
+            # the canonical InventoryService mutation.  A missing/insufficient
+            # source fails closed instead of producing a model-only success.
+            from src.recipe_import_sources import fetch_recipe_source
+            from src.intent_contracts import recipe_import_draft
+            source_text, source_error = await fetch_recipe_source(
+                str(payload["source_url"]), owner=owner,
+            )
+            if source_error:
+                raise ValueError(source_error)
+            draft = recipe_import_draft(
+                source_text, source_url=str(payload["source_url"]),
+            )
+            if draft is None:
+                raise ValueError("recipe source did not contain enough verified structure")
+            payload = {"action": "add", **draft.as_payload()}
         created = service.manage_recipes(payload, owner=owner)
         recipe = created.get("recipe") if isinstance(created, dict) else None
         if not isinstance(recipe, dict) or not recipe.get("id"):

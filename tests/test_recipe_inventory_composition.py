@@ -10,6 +10,7 @@ from tests.helpers.sqlite_db import make_temp_sqlite
 from src.aci import canonical_recipe_read_answer
 from src.intent_contracts import RecipeDraft, recipe_import_draft
 from src.intent_contracts import compile_intent, resolve_intent
+from types import SimpleNamespace
 
 
 def _recipe_fixture():
@@ -231,6 +232,54 @@ def test_recipe_import_prepare_renderer_never_claims_persistence():
     answer = canonical_recipe_read_answer([event])
     assert answer == "Prepared 'Review Dinner' as an unpersisted draft with 1 ingredient(s). Review it before committing."
     assert "saved" not in answer.lower()
+
+
+@pytest.mark.asyncio
+async def test_chat_recipe_url_create_fetches_untrusted_source_before_canonical_mutation(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    captured = {}
+
+    async def fetch_source(url, *, owner):
+        assert url == "https://recipes.example.test/chicken"
+        assert owner == "alice"
+        return (
+            '{"@type":"Recipe","name":"URL Dinner","recipeYield":"2 servings",'
+            '"recipeIngredient":["1 cup rice"],"recipeInstructions":"Cook the rice."}',
+            None,
+        )
+
+    class FakeService:
+        def manage_recipes(self, payload, *, owner):
+            captured["payload"] = payload
+            captured["owner"] = owner
+            return {"recipe": {"id": "recipe-url-1"}}
+
+        def get_recipe(self, owner, recipe_id):
+            assert owner == "alice"
+            assert recipe_id == "recipe-url-1"
+            return {"id": recipe_id, "name": "URL Dinner"}
+
+    monkeypatch.setattr("src.recipe_import_sources.fetch_recipe_source", fetch_source)
+    monkeypatch.setattr("src.inventory_service.get_inventory_service", lambda: FakeService())
+
+    tool, result = await tool_execution._execute_manage_recipes_binding(
+        SimpleNamespace(
+            content=json.dumps({
+                "action": "add",
+                "source_url": "https://recipes.example.test/chicken",
+            })
+        ),
+        owner="alice",
+    )
+
+    assert tool == "manage_recipes"
+    assert result["verified"] is True
+    assert captured["owner"] == "alice"
+    assert captured["payload"]["action"] == "add"
+    assert captured["payload"]["name"] == "URL Dinner"
+    assert captured["payload"]["source_url"] == "https://recipes.example.test/chicken"
+    assert captured["payload"]["ingredients"][0]["name"] == "rice"
 
 
 @pytest.mark.asyncio
