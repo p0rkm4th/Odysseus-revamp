@@ -454,6 +454,12 @@ no new failures. This confirms the executor-to-service ownership change did
 not regress the broader product tree; browser/live URL mutation acceptance
 against this exact executable remains a separate pending evidence class.
 
+The follow-up regression `test_chat_recipe_url_prepare_review_never_reaches_commit`
+proves an incomplete canonical proposal stops before `commit_import`; the
+executor returns failure evidence and cannot produce a mutation success from
+model-facing or source text alone. This test-only checkpoint is `f1ddb4a2`;
+the deployed executable remains `5c434f06`.
+
 ## Recipe canonical preparation checkpoint — `5c434f06`
 
 URL-backed chat mutations now send fetched evidence through the existing
