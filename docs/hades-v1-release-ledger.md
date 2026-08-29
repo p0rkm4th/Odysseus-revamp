@@ -2,6 +2,26 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Copied Recipe webpage-paste checkpoint — `141e0728` (2026-08-29)
+
+Owner testing found that a normal copied recipe page could route to the
+Household read path when its surrounding text mentioned a cooking site, and
+standalone `Ingredients`/`Instructions` headings were not accepted by the
+text extractor. The shared intent precedence and bounded page-text extractor
+were repaired; numeric ingredients remain validated before persistence.
+Focused Recipe/owner coverage passed `60` tests. Exact candidate
+`odysseus:candidate-141e072873af` has source marker and OCI revision
+`141e072873afd48ec6d213ddef9c624a8509f66d`.
+
+The exact candidate passed the authenticated GUI scenario
+`OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001`: two turns, one chat mutation, two
+independent canonical readbacks including reload, two terminal `[DONE]`
+events, and zero false success, raw final result, duplicate delivery, or
+abrupt EOF. The isolated runtime had zero restarts. Qualitative-only
+ingredients remain a separate review-flow acceptance gap; no quantity was
+invented. Owner runtime remains source `34ced247`; it was not rebuilt or
+changed.
+
 ## Work paraphrase routing checkpoint — `9c3d2acb` (2026-08-29)
 
 Owner testing found that “What's outstanding for me?” fell through to model
