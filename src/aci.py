@@ -3991,6 +3991,18 @@ def canonical_recipe_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -
             payload = json.loads(str(event.get("output") or ""))
         except (TypeError, ValueError):
             return None
+    if (
+        isinstance(payload, Mapping)
+        and str(payload.get("status") or "").strip().upper() == "NEEDS_REVIEW"
+        and isinstance(payload.get("draft"), Mapping)
+    ):
+        draft = payload["draft"]
+        name = str(draft.get("name") or "the recipe").strip()
+        ingredients = draft.get("ingredients") if isinstance(draft.get("ingredients"), list) else []
+        review = draft.get("review") if isinstance(draft.get("review"), Mapping) else {}
+        missing = review.get("missing_fields") if isinstance(review.get("missing_fields"), list) else []
+        suffix = f" Needs review: {', '.join(str(item) for item in missing[:5])}." if missing else ""
+        return f"Prepared {name!r} for review with {len(ingredients)} ingredient(s). Nothing has been saved yet." + suffix
     recipe = payload.get("recipe") if isinstance(payload, Mapping) else None
     if not isinstance(recipe, Mapping) or not recipe.get("id"):
         return None
@@ -4640,10 +4652,14 @@ def project_action_selection(
                     payload["action"] = "commit_import"
                 else:
                     # Do not let a model fill an incomplete pasted recipe
-                    # with invented quantities or an empty name. Keep the
-                    # existing mutation binding, but mark this proposal for
-                    # a truthful review-needed failure at the executor.
+                    # with invented quantities or an empty name. Preserve the
+                    # owner text as untrusted review evidence; the executor
+                    # routes it through prepare_import.
                     payload["review_required"] = True
+                    payload["source_text"] = query
+                    requested_name = str(frame_filters.get("recipe_requested_name") or "").strip() or recipe_requested_name(query)
+                    if requested_name:
+                        payload["requested_name"] = requested_name
                     payload["review_reason"] = (
                         "Recipe text needs review before saving; one or more "
                         "ingredients has no exact amount. Nothing was saved."
