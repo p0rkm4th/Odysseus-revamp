@@ -5622,6 +5622,14 @@ async def stream_aci_runtime(
 
             # Emit tool_output (include ui_event data if present)
             tool_output_data = {"type": "tool_output", "tool": block.tool_type, "command": cmd_display, "output": output_text, "exit_code": result.get("exit_code")}
+            # Preserve bounded canonical outcome evidence for authenticated
+            # clients and acceptance tooling.  The raw Result remains
+            # secondary diagnostic content; these scalars let a client prove
+            # that an effectful Action actually succeeded without treating
+            # model prose or a hidden tool card as authority.
+            for _outcome_key in ("success", "verified", "status"):
+                if _outcome_key in result and isinstance(result[_outcome_key], (bool, str)):
+                    tool_output_data[_outcome_key] = result[_outcome_key]
             if is_doc_tool and "action" in result:
                 tool_output_data.update({
                     "doc_id": result.get("doc_id"),
