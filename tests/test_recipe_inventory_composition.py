@@ -152,6 +152,9 @@ def test_expiring_inventory_composes_with_recipe_coverage_without_mutation():
         {"action": "expiring_candidates", "expiry_days": 7}, owner="alice",
     )
 
+    assert result["status"] == "SUCCESS"
+    assert result["result_type"] == "recipe_expiring_candidates"
+    assert result["operation"] == "expiring_candidates"
     assert result["canonical_store"] == "inventory_service"
     assert result["expiry_days"] == 7
     assert len(result["candidates"]) == 1
