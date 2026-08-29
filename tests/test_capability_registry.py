@@ -47,6 +47,13 @@ def test_first_class_read_defaults_are_safe_and_canonical():
     assert canonicalize_action_content("read_work", "{}") == '{"action": "overview"}'
 
 
+def test_recipe_pantry_candidates_is_a_known_safe_read_action():
+    action = action_for_tool("read_recipes", {"action": "pantry_candidates"})
+    assert action and action.action_id == "pantry_candidates"
+    assert action.known is True
+    assert action.approval is ApprovalMode.NONE
+
+
 def test_consequential_actions_have_no_implicit_default():
     action = action_for_tool("privileged_action", {})
     assert action.known is False
