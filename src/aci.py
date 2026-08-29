@@ -3507,9 +3507,12 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
                 label = address or (hostname if hostname and not opaque else "") or (raw_name if raw_name and not opaque else "")
                 reviewable = str(node.get("resolution_state") or "").casefold() in {
                     "unidentified", "pending_candidate"
-                } or node.get("canonical") is False
+                } or node.get("canonical") is False or str(node.get("status") or "").casefold() in {
+                    "observed", "pending", "pending_review"
+                }
                 if not label:
                     label = "Unidentified observed device"
+                    reviewable = True
                 if reviewable and address:
                     label = f"Unidentified device {address}"
                 return label, reviewable
