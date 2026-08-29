@@ -718,3 +718,27 @@ removed; the owner deployment was unchanged.
 
 The supported-container full regression at this checkpoint completed `6938
 passed, 5 skipped, 149 warnings` in `293.80s`, with exit status `0`.
+
+## Work answer and Recipe argument checkpoint — `7ea39f04`
+
+The exact non-empty Work browser journey now passes against executable source
+`5c9e1be3465e352463479b698619663cf250be52`: one canonical Work readback,
+one human-readable answer, one persisted turn, one `[DONE]`, and no abrupt EOF
+or duplicate delivery. The renderer includes bounded task titles without
+exposing private IDs. The browser harness also now waits for asynchronous
+normal-login initialization before clicking the real submit control.
+
+The reported Recipe URL argument loss is not reproducible on current source.
+The exact request resolves to `RECIPE CREATE → manage_recipes.commit_import`
+and preserves both the explicit requested name and source URL, including when
+read and manage capabilities are simultaneously visible. Focused Recipe/import
+coverage is `46 passed`; the mixed-shortlist regression is included. This
+checkpoint adds no production authority or alternate recipe store.
+
+Executable candidate: `odysseus:candidate-5c9e1be`, image
+`sha256:96d8f900e19f0f43e2df15d07fe48da147a7d12498740cc50683643cf4cf42b`;
+OCI marker matched the executable SHA, candidate health was healthy, and
+Qwen3:8B was reachable from the candidate namespace. The owner deployment was
+not changed. Full regression on the executable checkpoint was `6932 passed,
+5 skipped, 6 known storage-preflight environment failures`; the six failures
+remain classified as fixture/environment failures, not silently passed.
