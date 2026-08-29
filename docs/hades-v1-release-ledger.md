@@ -388,6 +388,20 @@ were removed; owner deployment was unchanged.
   Household journey; fresh-install and broader Recipe/Household composition
   remain distinct release work.
 
+## Frozen Qwen3:8B quick revalidation — `d1559078` (2026-08-29)
+
+- The exact executable candidate ran the bounded `quick` tier from the Hades
+  container namespace against `qwen3:8b`: `62/62` functional, `62/62`
+  architectural, `62/62` security, duplicate rate `0`, and reference
+  resolution `1.0`.
+- Measured `model_calls/task=0.2581`, `decision_calls/task=0`,
+  `failed_actions/task=0.0161`, median latency `0.0271s`, and P95 latency
+  `3.9145s`. All 62 cases completed with incremental evidence; no timeout or
+  provider-unavailability classification occurred.
+- The report was generated against executable source
+  `d1559078a414d7f2e7a8571ebf75028126121632`; subsequent branch commits are
+  documentation/test-only and did not change the product image.
+
 ## Recipe URL import acceptance checkpoint — `1c8c22a7` (2026-08-29)
 
 - The exact isolated authenticated browser request for the named Sunday
