@@ -43,6 +43,15 @@ def test_inventory_uses_shared_window_and_form_primitives():
         assert marker in source
 
 
+def test_work_uses_shared_prompt_and_keeps_canonical_records_secondary():
+    source = (ROOT / "static/js/work.js").read_text()
+    assert "import { styledPrompt } from './ui.js';" in source
+    assert "window.prompt(" not in source
+    assert "readableRecord" in source
+    assert "work-technical-record" in source
+    assert "Technical record" in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]
