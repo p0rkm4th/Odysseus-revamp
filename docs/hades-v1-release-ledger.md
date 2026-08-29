@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
+
+The exact candidate stack completed normal first-run setup, authenticated
+browser use with model configuration, browser reloads, and an app restart.
+After restart `/api/health` was healthy with restart count `0`; the image and
+embedded source marker remained `20d07aefc170ebd80219a97055939c549cfe5654`.
+Independent SQLite and authenticated API readback both retained the one
+canonical `Acceptance Expiring Pantry Pasta` Recipe. This was disposable
+state; the owner deployment remained untouched.
+
 ## Visual/UI owner checkpoint — candidate `20d07aef` (2026-08-29)
 
 The realistic browser acceptance passed on the owner-facing surface: duplicate
