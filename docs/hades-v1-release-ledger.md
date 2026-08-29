@@ -967,3 +967,14 @@ after the run. The owner deployment remains untouched.
   `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
 - The acceptance principal, credential, containers, and network were removed;
   the owner deployment remained untouched.
+
+# Read-only candidate verifier — `0a9f3802` (2026-08-29)
+
+- Added `scripts/verify_candidate.sh <sha>` for repeatable provenance checks.
+  It reports local/remote source, worktree state, expected candidate tag, OCI
+  revision and source marker, matching running container/source, configured
+  Ollama endpoint, Qwen3:8B digest when a matching container is running, and
+  an optional `/api/health` probe via `HADES_VERIFY_BASE_URL`.
+- The verifier never builds, deploys, stops, mutates, or reads credentials.
+  Shell syntax and a read-only image-marker check passed; the current owner
+  container was not changed.
