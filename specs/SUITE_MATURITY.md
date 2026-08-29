@@ -584,6 +584,17 @@ weaken import validation. A complete URL import remains a separate acceptance
 case to prove. The disposable principal and container were removed; owner
 deployment was not changed.
 
+## Household mutation owner-journey checkpoint — `d41c67fc`
+
+The isolated browser/chat journey for adding three synthetic cans, reading the
+quantity, consuming one, and reading it again passed all `4/4` turns. Both
+mutations entered through natural-language chat, and the canonical Inventory
+Service readbacks verified the resulting quantity and reload durability. The
+run reported `2` mutations, `2` readbacks, one final answer and one `[DONE]`
+per turn, with zero false-success claims, raw final results, duplicate
+delivery, or abrupt EOF. The disposable acceptance principal was revoked and
+removed; owner deployment was not changed.
+
 The post-refactor full regression completed at `6933 passed, 5 skipped` with
 no new failures. This confirms the executor-to-service ownership change did
 not regress the broader product tree; browser/live URL mutation acceptance
