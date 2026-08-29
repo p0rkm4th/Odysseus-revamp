@@ -60,6 +60,15 @@ result, duplicate-delivery, or abrupt-EOF failures. The earlier failure was
 evaluator infrastructure, not product behavior; the disposable deployment
 and all temporary credentials/state were removed.
 
+The same exact retained candidate also passed the fresh realistic-messy Asset
+browser journey `OWNER-ASSET-FILTER-NO-MATCH-001`. Its disposable canonical
+fixture included incomplete and duplicate-like records; the natural-language
+RTX 4090 filter completed with one human-readable answer and one `[DONE]`,
+with zero raw final results, false success, duplicate delivery, or abrupt EOF.
+The fixture database, acceptance principal, and disposable deployment were
+removed. This is isolated Asset product evidence, not owner-inventory
+evidence.
+
 ## Fresh empty-state Memory and Work browser reads — `d1559078` (2026-08-29)
 
 Two additional fresh disposable Compose projects exercised the existing
