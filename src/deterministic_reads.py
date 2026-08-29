@@ -177,6 +177,14 @@ def is_recipe_pantry_coverage_query(text: str) -> bool:
     return bool(_RECIPE_COVERAGE.search(query) or _RECIPE_PANTRY_COVERAGE.search(query))
 
 
+def is_recipe_pantry_candidates_query(text: str) -> bool:
+    """Recognize pantry feasibility requests that do not name one recipe."""
+    query = _normalized(text)
+    return bool(_RECIPE_PANTRY_COVERAGE.search(query)) and not bool(
+        re.search(r"\b(?:this|that|the|a|one|named)\s+(?:recipe|meal|dish)\b", query)
+    )
+
+
 def deterministic_read_concept(text: str) -> str | None:
     """Return an existing DomainContract concept for an unambiguous read."""
     query = _normalized(text)

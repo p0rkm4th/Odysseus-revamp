@@ -1011,6 +1011,40 @@ class RecipeService(InventoryService):
                 "owner_scope": owner,
             }
 
+    def pantry_recipe_candidates(self, owner: str) -> dict[str, Any]:
+        """Check every recorded recipe against current stock without writing.
+
+        This is the canonical projection for owner requests such as "what can
+        I make with what I have?". Suggestions remain honest: every recipe
+        includes its deterministic coverage result and any shortages.
+        """
+        owner = _required_text(owner, "owner", maximum=255)
+        with self._read() as db:
+            recipes = db.query(InventoryRecipe).filter_by(
+                owner=owner, archived=False,
+            ).order_by(InventoryRecipe.normalized_name, InventoryRecipe.id).all()
+            candidates = []
+            for recipe in recipes:
+                plan = self._stock_plan(db, owner, recipe, recipe.servings)
+                candidates.append({
+                    "recipe_id": recipe.id,
+                    "recipe_name": recipe.name,
+                    "can_make": plan.can_make,
+                    "shortages": [{
+                        "name": row.name, "missing": row.missing,
+                        "unit": row.unit, "optional": row.optional,
+                    } for row in plan.shortages],
+                })
+            return {
+                "status": "SUCCESS",
+                "result_type": "recipe_pantry_candidates",
+                "operation": "pantry_candidates",
+                "candidates": candidates,
+                "freshness": {"computed_at": datetime.now(timezone.utc).isoformat()},
+                "canonical_store": "inventory_service",
+                "owner_scope": owner,
+            }
+
     def cook(
         self, owner: str, recipe_id: str, *, servings: Any | None = None,
         idempotency_key: str,
@@ -1267,6 +1301,8 @@ class RecipeService(InventoryService):
             return self.expiring_recipe_candidates(
                 owner, expiry_days=args.get("expiry_days", 30),
             )
+        if action == "pantry_candidates":
+            return self.pantry_recipe_candidates(owner)
         if action == "add":
             return {"recipe": self.create_recipe(
                 owner, name=args.get("name"), servings=args.get("servings") or "1",

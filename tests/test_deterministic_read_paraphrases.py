@@ -363,9 +363,6 @@ def test_expiring_recipe_composition_uses_distinct_canonical_action():
     "can I make this recipe with what I have",
     "do I have everything for this meal",
     "check missing ingredients for the chili recipe",
-    "can i make anything with what we got",
-    "can i cook something w what we have",
-    "what can we make from whatever we have",
 ])
 def test_recipe_pantry_coverage_has_distinct_canonical_result_contract(query):
     frame = compile_intent(query)
@@ -373,6 +370,21 @@ def test_recipe_pantry_coverage_has_distinct_canonical_result_contract(query):
     assert frame.domain_concept == "RECIPE"
     assert frame.filters["recipe_coverage"] is True
     assert resolved.action_id == "can_make"
+    assert resolved.binding_name == "read_recipes"
+
+
+@pytest.mark.parametrize("query", [
+    "can i make anything with what we got",
+    "can i cook something w what we have",
+    "what can we make from whatever we have",
+])
+def test_generic_pantry_recipe_questions_use_candidate_projection(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["recipe_pantry_candidates"] is True
+    assert "recipe_coverage" not in frame.filters
+    assert resolved.action_id == "pantry_candidates"
     assert resolved.binding_name == "read_recipes"
 
 
