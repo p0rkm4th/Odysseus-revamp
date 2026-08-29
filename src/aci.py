@@ -3544,7 +3544,7 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets"} or not isinstance(result, Mapping):
+    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_work"} or not isinstance(result, Mapping):
         return None
     raw = result.get("output")
     if isinstance(raw, Mapping):
@@ -3580,6 +3580,16 @@ def canonical_tool_result_projection(
             "query": payload.get("query"),
             "result_projection": payload.get("result_projection"),
             "asset_property": payload.get("asset_property"),
+        }
+    if str(tool_name or "").strip() == "read_work":
+        collections = {
+            key: value for key, value in payload.items()
+            if isinstance(value, list)
+        }
+        return {
+            "status": payload.get("status"),
+            "collections": {key: len(value) for key, value in collections.items()},
+            "total": sum(len(value) for value in collections.values()),
         }
     action = str(payload.get("action") or "").strip()
     common = {
@@ -3833,6 +3843,26 @@ def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str 
     )
     if event is None or event.get("exit_code") not in (None, 0):
         return None
+    projection = event.get("result_projection")
+    if isinstance(projection, Mapping) and isinstance(projection.get("collections"), Mapping):
+        status = str(projection.get("status") or "").strip().upper()
+        if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
+            return None
+        counts = {str(key): int(value or 0) for key, value in projection["collections"].items()}
+        work_counts = {
+            key: value for key, value in counts.items()
+            if key in {"goals", "projects", "tasks", "commitments"}
+        }
+        if work_counts:
+            counts = work_counts
+        total = sum(counts.values())
+        if total == 0:
+            return "No outstanding work is recorded for this owner."
+        labels = ", ".join(
+            f"{key.replace('_', ' ')}={value}"
+            for key, value in sorted(counts.items()) if value
+        )
+        return f"I found {total} work record{'s' if total != 1 else ''} ({labels})."
     try:
         payload = json.loads(str(event.get("output") or ""))
     except (TypeError, ValueError):
