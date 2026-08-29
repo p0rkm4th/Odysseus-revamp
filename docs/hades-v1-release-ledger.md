@@ -1939,3 +1939,14 @@ restored, and independently verified. The original marker values were
 restored and the drift-only file was absent after restore. This was an
 operational recovery rehearsal only; no owner volume or deployment was
 modified.
+
+## Current exact-candidate fresh-install checkpoint — `1a2b62e5` (2026-08-29)
+
+An isolated fresh Compose deployment of the exact candidate booted on a free
+project-specific network and ports. Normal browser login succeeded, the
+authenticated session survived an app-container restart, health returned
+`healthy`, and the app restart count remained zero. The running container
+reported image `odysseus:candidate-1a2b62e59e32` and source marker
+`1a2b62e59e323afe5817fd69e7c271620b7f2efd`. From inside that fresh Hades
+namespace, the host Ollama endpoint was reachable and exposed `qwen3:8b`.
+The isolated data, volumes, and network were separate from the owner lane.
