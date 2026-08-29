@@ -1950,3 +1950,11 @@ reported image `odysseus:candidate-1a2b62e59e32` and source marker
 `1a2b62e59e323afe5817fd69e7c271620b7f2efd`. From inside that fresh Hades
 namespace, the host Ollama endpoint was reachable and exposed `qwen3:8b`.
 The isolated data, volumes, and network were separate from the owner lane.
+
+## Current realistic Asset false-premise checkpoint — executable candidate `1a2b62e5` (2026-08-29)
+
+The `assets-incomplete-duplicate-like` fixture was seeded only in the
+isolated acceptance database. The ordinary owner prompt asking which server
+has an RTX 4090 produced a grounded no-match answer despite incomplete and
+duplicate-like records. The one-turn browser run had zero mutations, false
+success, raw final Result, duplicate delivery, and abrupt EOF.
