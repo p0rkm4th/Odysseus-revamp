@@ -359,7 +359,9 @@ def test_project_final_answer_preserves_control_plane_clarification():
         clarification_text="Which service or systemd unit should I restart?",
         effectful_request=True,
     )
-    assert answer is None
+    assert answer is not None
+    assert answer.source is AnswerSource.CLARIFICATION
+    assert answer.provenance == "control-plane clarification"
     assert response == "Which service or systemd unit should I restart?"
 
 

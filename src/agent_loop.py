@@ -6161,7 +6161,7 @@ async def stream_aci_runtime(
         clarification_text=_aci_clarification_text,
         effectful_request=_intent_frame.operation_class in {"CREATE", "UPDATE", "DELETE", "EXECUTE"},
     )
-    if _projected_response.strip() != full_response.strip():
+    if _projected_response.strip() != full_response.strip() or _aci_clarification_only:
         if _canonical_answer is None:
             logger.warning(
                 "[agent-grounding] suppressed ungrounded completion claim domains=%s text=%r",
