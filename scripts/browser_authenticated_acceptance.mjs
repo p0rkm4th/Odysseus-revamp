@@ -621,7 +621,14 @@ async function main() {
   const scenarios = loadJourneyScenarios();
   const credentials = provision();
   await waitForHealth();
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+  // Keep the unattended browser lane usable in constrained/containerized
+  // runners. Chromium may otherwise exhaust its renderer shared-memory
+  // budget while loading the application's module surface, producing
+  // ERR_INSUFFICIENT_RESOURCES before the first chat turn.
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-dev-shm-usage'],
+  });
   let context;
   let page;
   let tracing = false;

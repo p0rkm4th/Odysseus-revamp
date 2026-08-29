@@ -21,6 +21,17 @@ count is `0`. The owner deployment was not replaced. Qwen3:8B is currently
 unavailable from the configured Hades container endpoint, so live model and
 browser evidence remain unverified for this checkpoint.
 
+The endpoint was subsequently verified from the candidate namespace after a
+disposable-only bridge correction: `host.docker.internal` was mapped to the
+host's actual Ollama listener at `172.18.0.1:11434`. Qwen3:8B was listed with
+digest `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`,
+and the existing authenticated HTTP live runner completed `3/3` core cases
+with `0` abrupt EOF, `0` duplicate delivery, `0` internal leaks, and exactly
+one terminal event per case. The full Playwright lane remains unverified: its
+session-reload page crashed reproducibly while loading static resources;
+minimal equivalent Playwright login/session/reload smoke passed. This is
+retained as a browser-environment/harness blocker, not a product pass.
+
 ## Latest branch checkpoint — `bb27c5c4`
 
 The productization branch is synchronized with `origin/hades-v1-productization`
