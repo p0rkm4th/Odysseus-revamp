@@ -3512,7 +3512,14 @@ def canonical_service_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         return None
     services = payload.get("services")
     if not isinstance(services, list):
-        return None
+        output = str(payload.get("output") or "").strip()
+        target = str(payload.get("target") or "the requested service").strip()
+        if not output:
+            return f"No status details were returned for {target}."
+        return f"Service status for {target}:\n{output[:2000]}"
+    if not services and str(payload.get("output") or "").strip():
+        target = str(payload.get("target") or "the requested service").strip()
+        return f"Service status for {target}:\n{str(payload.get('output')).strip()[:2000]}"
     if not services:
         return "No service health observations are recorded for the Hades runtime."
     overall = str(payload.get("overall") or "unknown").strip()
@@ -3619,6 +3626,7 @@ def canonical_tool_result_projection(
         services = payload.get("services")
         common.update({
             "overall": payload.get("overall"),
+            "output": str(payload.get("output") or "")[:2000],
             "services": [
                 {
                     "name": service.get("name"),
