@@ -41628,6 +41628,13 @@ body.settings-sidebar-resize-active {
 .work-grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); }
 .work-grid > *, .osint-dossier > *, .osint-dossier pre, .osint-known-information { min-width:0; max-width:100%; box-sizing:border-box; overflow-wrap:anywhere; word-break:break-word; }
 .work-grid > section { overflow:hidden; }
+.work-record-summary { min-width:0; max-width:72ch; }
+.work-record-summary h2 { margin-top:0; overflow-wrap:anywhere; }
+.work-record-summary p { margin:.65em 0; overflow-wrap:anywhere; }
+.work-record-summary strong { color:var(--hades-text-muted); }
+.work-technical-record { margin-top:var(--hades-space-4); }
+.work-technical-record summary { cursor:pointer; color:var(--hades-text-muted); }
+.work-technical-record pre { max-height:36rem; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
 .osint-dossier { min-width:0; }
 .osint-dossier .work-grid { align-items:start; }
 .osint-dossier .work-grid > section { min-height:0; }

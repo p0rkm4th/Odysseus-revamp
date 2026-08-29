@@ -1,8 +1,18 @@
 let pane = null;
 let windowEl = null;
 import { openWindow, close as closeWindow, registerView } from './workspaceWindowManager.js';
+import { styledPrompt } from './ui.js';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path, options={}) { const r=await fetch(path,{credentials:'same-origin',headers:options.body?{'Content-Type':'application/json'}:undefined,...options}); const d=await r.json().catch(()=>({})); if(!r.ok) throw Error(d.detail||`Request failed (${r.status})`); return d; }
+function readableRecord(kind, row, title) {
+  const fields = kind === 'goal'
+    ? [['Status', row.status], ['Desired outcome', row.desired_outcome], ['Created', row.created_at], ['Updated', row.updated_at]]
+    : kind === 'project'
+      ? [['Status', row.status], ['Description', row.description], ['Created', row.created_at], ['Updated', row.updated_at]]
+      : [['Status', row.status], ['Description', row.description], ['Due', row.due_at], ['Priority', row.priority], ['Created', row.created_at], ['Updated', row.updated_at]];
+  const visible = fields.filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '');
+  return `<div class="work-record-summary"><h2>${esc(title)}</h2>${visible.map(([label, value]) => `<p><strong>${esc(label)}:</strong> ${esc(value)}</p>`).join('') || '<p class="muted">No additional details are recorded yet.</p>'}</div><details class="work-technical-record"><summary>Technical record</summary><pre>${esc(JSON.stringify(row, null, 2))}</pre></details>`;
+}
 async function openWorkEntity(kind, id, title) {
   const el = openWindow({id:`work:${kind}:${id}`, view:`work-${kind}`, title, content:'<p>Loading…</p>'});
   const body = el.querySelector('.hades-window-body');
@@ -19,7 +29,7 @@ async function openWorkEntity(kind, id, title) {
     const list = (items, empty='None recorded.') => items?.length ? `<ul>${items.map(x => `<li>${esc(typeof x === 'string' ? x : JSON.stringify(x))}</li>`).join('')}</ul>` : `<p class="muted">${empty}</p>`;
     const actions = (preview?.actions || []).map(a => `<article class="work-card"><strong>${esc(a.operation || a.action_id || 'Unknown action')}</strong><span>${esc(a.contract?.effect_class || 'unknown')} · ${esc(a.contract?.risk_level || 'unknown')}</span><small>${esc(a.contract?.execution_location || '')} ${a.contract?.irreversible ? '· IRREVERSIBLE' : ''}</small></article>`).join('') || '<p class="muted">No planned actions.</p>';
     body.innerHTML = `<div><div class="work-header"><div><h2>${esc(title)}</h2><p>Status: ${esc(row.status || '—')} · Lifecycle: ${esc(row.lifecycle_state || '—')}</p></div><span class="hades-badge ${validation?.valid ? 'hades-badge-success' : 'hades-badge-warning'}">${validation?.valid ? 'Validated' : 'Needs review'}</span></div><section class="work-grid"><section><h3>What Hades intends to do</h3><p>${esc(JSON.stringify(preview?.objective || row.intent || {}, null, 2))}</p><h3>Targets</h3>${list(preview?.targets, 'No canonical targets declared.')}<h3>Actions</h3>${actions}<p class="muted">Effects: ${esc((preview?.effect_classes || []).join(', ') || 'unknown')}</p></section><section><h3>Reads / writes</h3><p>Reads</p>${list(preview?.reads)}<p>Writes</p>${list(preview?.writes)}<h3>Resources / locks</h3>${list(preview?.resources)}</section><section><h3>Assumptions / unknown state</h3>${list(preview?.assumptions)}${list(preview?.knowledge_gaps, 'No stale or unknown prerequisites.')}<h3>Prechecks</h3>${list(preview?.prechecks, 'No declared prechecks.')}<h3>Capability health</h3>${list(preview?.capability_health)}</section><section><h3>Approvals</h3>${list(preview?.approvals)}<h3>Reversibility / compensation</h3>${list(preview?.reversibility)}<h3>Verification</h3>${list(preview?.verification ? [preview.verification] : [])}</section><section><h3>Validation</h3>${validation?.valid ? '<p>Plan is structurally valid.</p>' : list(validation?.failures)}${list(validation?.warnings)}</section></section><details><summary>Canonical Run record</summary><pre>${esc(JSON.stringify(row, null, 2))}</pre></details>${row.task_id ? `<button class="work-related-task" data-id="${esc(row.task_id)}">Open task</button>` : ''}</div>`;
-  } else body.innerHTML = `<div><h2>${esc(title)}</h2><p>Status: ${esc(row.status || '—')}</p><pre>${esc(JSON.stringify(row, null, 2))}</pre></div>`;
+  } else body.innerHTML = readableRecord(kind, row, title);
   body.querySelector('.work-related-task')?.addEventListener('click', () => openWorkEntity('task', row.task_id, 'Work task'));
   return el;
 }
@@ -38,7 +48,14 @@ function render(d) {
   pane.querySelectorAll('.work-entity-link').forEach(button => button.onclick = () => openWorkEntity(button.dataset.kind, button.dataset.id, `Work ${button.dataset.kind}`));
 }
 async function load(){try{const [overview,review]=await Promise.all([api('/api/work/overview'),api('/api/work/review')]);render({...overview,review});}catch(e){if(pane)pane.innerHTML=`<p class="security-error">${esc(e.message)}</p>`;}}
-async function createGoal(){const title=prompt('Goal title'); if(!title?.trim())return; const outcome=prompt('Desired outcome')||''; try{await api('/api/work/goals',{method:'POST',body:JSON.stringify({title:title.trim(),desired_outcome:outcome})});await load();}catch(e){alert(e.message);}}
+async function createGoal(){
+  const title = await styledPrompt('Give this goal a clear, human-readable title.', {title:'New goal', placeholder:'e.g. Prepare the Hades V1 release', confirmText:'Continue', maxLength:200});
+  if (!title) return;
+  const outcome = await styledPrompt('What outcome would make this goal complete? (Optional)', {title:'Desired outcome', placeholder:'e.g. A tested release candidate is ready', confirmText:'Create', maxLength:500});
+  if (outcome === null) return;
+  try { await api('/api/work/goals',{method:'POST',body:JSON.stringify({title,desired_outcome:outcome})}); await load(); }
+  catch(e) { alert(e.message); }
+}
 function close(){closeWindow('work-overview');pane=null;windowEl=null;document.getElementById('tool-work-btn')?.classList.remove('active');}
 export function togglePanel(){if(pane)close();else{windowEl=openWindow({id:'work-overview',view:'work',title:'Work',content:''});pane=windowEl.querySelector('.hades-window-body');document.getElementById('tool-work-btn')?.classList.add('active');load();}}
 registerView('work', () => { if (!pane) togglePanel(); });
