@@ -38,6 +38,18 @@
       "expected": {"action": "read_recipes", "tool_binding": "read_recipes", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-COMPOSITION-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "recipe-pantry-composition",
+      "fixture_setup": "canonical_recipe_pantry",
+      "turns": [
+        {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "list", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["Pantry Pasta"], "forbidden": ["no recipes", "don't have"]}},
+        {"prompt": "Can I make that recipe with what I have?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "can_make", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["can", "available", "enough", "missing"]}},
+        {"prompt": "Scale it to six servings.", "expected": {"domain": "RECIPE", "operation": "READ", "action": "scale", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["6", "six", "scaled"]}}
+      ],
+      "expected": {"action": "read_recipes", "tool_binding": "read_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 1}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Pantry Pasta"}, "terminal": {"done": 3, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-RECIPE-MUTATION-READBACK-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-recipes",
