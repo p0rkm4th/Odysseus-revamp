@@ -1655,3 +1655,23 @@ The fixture database was disposable and the actual owner deployment was not
 touched. One earlier run failed before login because its short-lived
 acceptance credential expired; it was classified as `AUTH_SESSION_FAILURE` and
 did not count as a product result.
+
+## Capability schema parity checkpoint — executable candidate `50a9fdf2` (2026-08-29)
+
+The canonical V1 capability projection now replaces shadowing legacy native
+schemas, keeping `manage_memory` mutation-only (`add/edit/delete`) while
+preserving legacy line-format Memory reads as read-private compatibility
+classification. Binding, capability, approval, and external-context focused
+coverage passed `51` tests after the repair. The exact candidate
+`odysseus:candidate-50a9fdf2`, image
+`sha256:01491af25a791567f7b7f92060c70ab215dffffd322663b78db2aad5f35bb4d6`,
+matched its OCI revision and `/app/.odysseus-source-commit`, ran Qwen3:8B with
+zero restarts, and passed a fresh authenticated Asset false-premise browser
+read plus one default owner walk read. Both had zero false success, raw final
+Results, duplicate delivery, or abrupt EOF.
+
+The broad regression immediately before the final compatibility repair was
+`6979 passed, 8 skipped, 1 failed`; the sole failure was the legacy
+`manage_memory` search safety case and passes in the focused repair suite. A
+full rerun after `50a9fdf2` remains required before calling the regression
+green.
