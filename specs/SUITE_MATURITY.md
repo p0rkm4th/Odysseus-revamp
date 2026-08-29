@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Work paraphrase routing checkpoint — `9c3d2acb` (2026-08-29)
+
+Personal outstanding/remaining phrasing now resolves to the canonical Work
+overview read. The exact candidate passed the three-variant Work overview
+browser journey with deterministic answers, canonical readbacks, and no
+transport or raw-result defects. The bounded compiler change does not capture
+Household freezer language as Work.
+
 ## Work mutation owner-journey checkpoint — `b8b340c0` (2026-08-29)
 
 The browser lane found and closed a generalized Work project mutation result
