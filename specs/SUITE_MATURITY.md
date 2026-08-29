@@ -1499,3 +1499,10 @@ The empty Work read passed with one deterministic answer. The four-turn Memory
 correction journey passed two mutations and two grounded reads through the
 remember/read/correct flow; both journeys recorded zero false success, raw
 final Result, duplicate delivery, or abrupt EOF.
+
+## Current URL import error maturity — `1a2b62e5` (2026-08-29)
+
+An unsupported recipe URL with an explicit display name produced a review-safe
+failure and no canonical Recipe mutation. Independent readback confirmed an
+empty store, with zero false success, raw final Result, duplicate delivery, or
+abrupt EOF.
