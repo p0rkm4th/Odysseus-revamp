@@ -844,8 +844,17 @@ async function main() {
     const readJourneys = turns - mutations;
     const falseSuccess = diagnostics.prompts.filter(({turn, stream, operation}) => {
       const effectful = ['CREATE', 'UPDATE', 'DELETE', 'EXECUTE'].includes(String(operation || '').toUpperCase());
-      if (!effectful || !turn?.answers?.some(({text}) =>
-        /\b(?:added|created|saved|updated|deleted|removed|moved|restarted|sent|changed|completed)\b/i.test(text))) return false;
+      const effectClaim = (text) => {
+        const value = String(text || '');
+        if (!/\b(?:added|created|saved|updated|deleted|removed|moved|restarted|sent|changed|completed)\b/i.test(value)) {
+          return false;
+        }
+        // A bounded failure/review answer may mention the effect verb while
+        // explicitly denying it (for example, "No recipe was saved").
+        // Count only an affirmative claim as false-success evidence.
+        return !/\b(?:no|not|never|didn['’]?t|did not|couldn['’]?t|could not|wasn['’]?t|was not|without|failed to)\b[^.!?\n]{0,80}\b(?:added|created|saved|updated|deleted|removed|moved|restarted|sent|changed|completed)\b/i.test(value);
+      };
+      if (!effectful || !turn?.answers?.some(({text}) => effectClaim(text))) return false;
       const eventSuccess = (stream?.events || []).some((event) =>
         event.success === true || event.verified === true ||
         /^(SUCCESS|VERIFIED|EXECUTED|RESULT_PERSISTED)$/i.test(event.status || '')
