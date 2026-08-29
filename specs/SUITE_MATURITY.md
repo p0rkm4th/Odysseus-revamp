@@ -4,10 +4,11 @@ This ledger records observed owner-journey maturity on the post-merge
 `hades-v1-productization` branch. A registered capability is not evidence that
 the complete journey works.
 
-## Current evidence boundary — `d1559078` (2026-08-29)
+## Current evidence boundary — `451b40cd` (2026-08-29)
 
 The retained exact executable candidate has fresh isolated browser evidence for
-complete Recipe create/readback/reload; empty Memory read; empty Work read;
+complete text Recipe create/readback/reload; URL Recipe create/readback/reload;
+empty Memory read; empty Work read;
 Household add/read/use/readback; positive Asset RAM aggregation; and
 realistic-messy Asset no-match filtering. These journeys used normal login,
 real chat/SSE, canonical readback where applicable, and disposable state. They
@@ -882,3 +883,22 @@ journey tests passed `66`; the exact candidate
 `odysseus:candidate-7ca4f8b13245` embeds and runs `7ca4f8b1`, is healthy, and
 has zero restarts in the disposable lane. Qwen/browser evidence remains
 unverified because the configured Ollama endpoint was unavailable.
+
+## Recipe chat-mutation checkpoint — `451b40cd` (2026-08-29)
+
+The complete natural-language Recipe mutation journey was rerun against a
+fresh isolated deployment of exact executable candidate `451b40cd`, using the
+normal browser login and `/api/chat_stream` path with Qwen3:8B. The mutation
+was not API-seeded. The canonical recipe was persisted by the existing
+Inventory Service, listed by a canonical read, and still present after a
+browser reload. Three turns produced three terminal `[DONE]` events with zero
+abrupt EOF, duplicate delivery, raw final results, or false-success claims.
+
+The first retry was rejected before execution because stale disposable
+bind-mounted state violated the empty-recipes precondition. A fresh isolated
+state then exposed and corrected only the deployment setup: the acceptance
+principal had been created while the application still had
+`HADES_ACCEPTANCE_PRINCIPAL_ENABLED=false`, so normal login correctly failed
+closed. The disposable deployment was explicitly enabled, the test completed,
+and the principal/credential/stack were revoked and removed afterward. No
+production code or owner state was changed.
