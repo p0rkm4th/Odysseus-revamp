@@ -804,3 +804,15 @@ turns and both reload readbacks: `3` deterministic streams, `3` `[DONE]`
 events, `2` readbacks, zero raw-final results, false success, duplicate
 delivery, or abrupt EOF. The disposable deployment and acceptance principal
 were removed afterward; the owner deployment was unchanged.
+
+## Recipe expiring-inventory composition coverage — `12534d79` (2026-08-29)
+
+The owner-journey corpus now includes a seeded expiring-stock scenario for
+`expiring_candidates → pantry coverage`, using the existing Inventory Service
+fixture setup and the natural-language Recipe read path. A fixture parameter
+projection bug was corrected in the browser harness and the focused contract,
+composition, and paraphrase suite remains green (`260 passed`). The browser
+scenario is not yet a product acceptance pass: disposable attempts stopped
+before chat because the isolated deployment lacked a configured model session
+or had an admin bootstrap credential mismatch. No owner deployment or data was
+used, and no meal-plan mutation was started.
