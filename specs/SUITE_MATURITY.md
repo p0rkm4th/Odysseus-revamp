@@ -1387,3 +1387,11 @@ reload verification passed; the journey recorded zero false success, raw final
 Result, duplicate delivery, or abrupt EOF. A reused-database precondition
 failure was kept as fixture-contamination evidence and was not counted as a
 product result.
+
+## Current Recipe composition variants — `a784b35e` (2026-08-29)
+
+Fresh isolated Qwen3:8B GUI runs passed expiring-inventory composition and
+shopping requirements on the exact current candidate. The expiring journey
+passed one turn with two canonical readbacks including reload; shopping passed
+two turns with two readbacks. Both recorded zero false success, raw final
+Result, duplicate delivery, or abrupt EOF.
