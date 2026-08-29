@@ -42,6 +42,11 @@ mutation, `false_success=0`, `raw_final_results=0`, `duplicate_delivery=0`,
 `abrupt_eof=0`, and `DONE=3`. This separates the healthy canonical mutation
 path from the incomplete-source URL case above.
 
+Candidate `36de0bec` also promotes the existing `NEEDS_REVIEW` response into
+the normal Inventory UI: incomplete imports identify the source/name and
+bounded missing fields instead of surfacing raw Action validation. The exact
+URL remains non-persisting until its missing quantity is supplied or reviewed.
+
 ### Recipe ingestion checkpoint — f29eaff1
 
 Recipe creation now has a bounded validated ingestion seam in the existing
