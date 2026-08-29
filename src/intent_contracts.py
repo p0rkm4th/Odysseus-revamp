@@ -1569,6 +1569,10 @@ def resolve_structured_reference(
         r"graphics\s+cards?|storage|motherboard|os|operating\s+system)\b",
         query,
     )) and bool(re.search(r"\b(?:tell|show|what|which|give|list|describe)\b", query))
+    plural_collection_noun = bool(re.search(
+        r"\b(?:machines?|computers?|pcs?|servers?|hosts?|assets?|devices?)\b",
+        query,
+    )) and bool(re.search(r"\b(?:machines|computers|pcs|servers|hosts|assets|devices)\b", query))
     other = bool(re.search(r"\b(?:the\s+)?other\s+one\b", query))
     # ``it assets`` is the common lower-case/voice-transcription spelling of
     # ``IT assets``. It is an owner-scope noun phrase, not a pronoun referring
@@ -1576,7 +1580,7 @@ def resolve_structured_reference(
     # read to one record.
     it_assets = bool(re.search(r"\bit\s+assets?\b", query))
     pronoun = bool(re.search(r"\b(?:it|its|that|this|that\s+one|their)\b", query)) and not it_assets
-    singular = pronoun or bool(ordinal_match) or other or implicit_detail
+    singular = pronoun or bool(ordinal_match) or other or (implicit_detail and not plural_collection_noun)
     if not plural and not singular:
         return {"status": "NOT_REFERENCE", "refs": [], "reason": "no structured reference phrase"}
     if not candidates:
