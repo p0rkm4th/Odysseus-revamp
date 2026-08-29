@@ -105,6 +105,7 @@ def _recipe_name(text: str) -> str | None:
     patterns = (
         # Natural owner wording: "as \"Name\":" or "called Name".
         r"\bas\s+[\"'](?P<name>[^\"']{1,200})[\"']\s*:",
+        r"\bfor\s+the\s+name\s*,?\s*use\s+[\"'](?P<name>[^\"']{1,200})[\"']",
         r"\b(?:called|named)\s+[\"']?(?P<name>[^\"'\n:.]{1,200})[\"']?\s*[:.]",
         # Existing compact form: "recipe: Name. Ingredients: ...".
         r"\brecipe\b(?:\s+(?:to\s+)?(?:my\s+)?recipes?)?\s*:\s*"
@@ -268,6 +269,11 @@ def recipe_import_draft(source_text: str | None, *, source_url: str | None = Non
 def recipe_create_payload(query: str) -> dict[str, Any] | None:
     draft = recipe_create_draft(query)
     return draft.as_payload() if draft else None
+
+
+def recipe_requested_name(query: str) -> str | None:
+    """Extract an explicit owner naming override for an import proposal."""
+    return _recipe_name(str(query or ""))
 
 
 def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
@@ -1957,6 +1963,11 @@ def compile_intent(
         r"\b(?:import|from)\b.*(?:recipe|https?://)|https?://", q, re.IGNORECASE,
     ):
         reference_filters["recipe_import"] = True
+    if concept == "RECIPE" and operation == "CREATE" and re.search(r"https?://", q, re.IGNORECASE):
+        reference_filters["recipe_import"] = True
+        requested_name = recipe_requested_name(text)
+        if requested_name:
+            reference_filters["recipe_requested_name"] = requested_name
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
@@ -2116,7 +2127,7 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_SEARCH"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_expiring") is True:
         action_key = "READ_EXPIRING"
-    elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_import") is True:
+    elif frame.domain_concept == "RECIPE" and frame.operation_class == "READ" and frame.filters.get("recipe_import") is True:
         action_key = "READ_IMPORT_PREPARE"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_coverage") is True:
         action_key = "READ_COVERAGE"

@@ -4251,6 +4251,10 @@ def project_action_selection(
                 url_match = re.search(r"https?://[^\s)>]+", query, re.IGNORECASE)
                 if url_match:
                     payload["source_url"] = url_match.group(0).rstrip(".,")
+                    from src.intent_contracts import recipe_requested_name
+                    requested_name = recipe_requested_name(query)
+                    if requested_name:
+                        payload["requested_name"] = requested_name
         if (
             str(frame.get("domain_concept") or "") in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"}
             and str(frame.get("operation_class") or "") in {"CREATE", "EXECUTE"}
@@ -4271,6 +4275,10 @@ def project_action_selection(
             url_match = re.search(r"https?://[^\s)>]+", query, re.IGNORECASE)
             if url_match:
                 payload["source_url"] = url_match.group(0).rstrip(".,")
+            from src.intent_contracts import recipe_requested_name
+            requested_name = recipe_requested_name(query)
+            if requested_name:
+                payload["requested_name"] = requested_name
         if item["binding"] == "web_search":
             payload["query"] = query
         if item["binding"] == "web_fetch":
