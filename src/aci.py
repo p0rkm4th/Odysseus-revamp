@@ -3923,11 +3923,18 @@ def canonical_work_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> 
         payload = json.loads(str(event.get("output") or ""))
     except (TypeError, ValueError):
         return None
-    project = payload.get("project") if isinstance(payload, Mapping) else None
-    if not isinstance(payload, Mapping) or payload.get("status") != "VERIFIED" or not isinstance(project, Mapping) or not project.get("id"):
+    if not isinstance(payload, Mapping) or payload.get("status") != "VERIFIED":
         return None
-    title = str(project.get("title") or "the project").strip()
-    return f"Created project {title!r}; the canonical Work readback is verified."
+    project = payload.get("project")
+    if isinstance(project, Mapping) and project.get("id"):
+        title = str(project.get("title") or "the project").strip()
+        return f"Created project {title!r}; the canonical Work readback is verified."
+    task = payload.get("task")
+    if isinstance(task, Mapping) and task.get("id"):
+        title = str(task.get("title") or "the task").strip()
+        project_title = str(payload.get("project_title") or "the named project").strip()
+        return f"Created task {title!r} in project {project_title!r}; the canonical Work readback is verified."
+    return None
 
 
 def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
@@ -4509,6 +4516,16 @@ def project_action_selection(
         ):
             from src.intent_contracts import work_project_create_payload
             draft = work_project_create_payload(query)
+            if draft:
+                payload.update(draft)
+        if (
+            str(frame.get("domain_concept") or "") == "TASK"
+            and str(frame.get("operation_class") or "") == "CREATE"
+            and str(item.get("binding") or "") == "manage_work"
+            and str(item.get("action_id") or "") == "create_task"
+        ):
+            from src.intent_contracts import work_task_create_payload
+            draft = work_task_create_payload(query)
             if draft:
                 payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
