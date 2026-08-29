@@ -27,6 +27,15 @@ amounts in the browser journey: the disposable canonical Recipe count stayed
 at `1`, with no false success, raw result, duplicate delivery, or EOF. A
 human-editable review and validated commit workflow remains open.
 
+## Editable Recipe review workflow checkpoint — candidate `1ec3689d` (2026-08-29)
+
+Recipe imports now show an editable review panel before canonical commit,
+including name, servings, ingredient fields, instructions, and source. Exact
+candidate browser verification edited and saved a prepared recipe, independently
+read it back, and confirmed visibility after reload. Server-side validation and
+readback remain authoritative; owner deployment was not changed. The current
+static-test-only follow-up is `a78daf1d`.
+
 ## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
 
 The exact candidate completed first-run setup, authenticated browser use,
