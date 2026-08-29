@@ -24,6 +24,12 @@ product failure was observed. Because this checkpoint changes only tests and
 documentation, the previously verified executable candidate was not rebuilt
 or redeployed.
 
+The existing non-mutating realistic browser acceptance lane also passed at
+this checkpoint (`browser_realistic_acceptance: PASS`). It exercises shared
+window/layout, Household/Recipe surfaces, long-content containment, and
+responsive narrow/mobile behavior against the local healthy application. It
+does not replace authenticated owner-journey evidence.
+
 ## Current productization checkpoint — `f60d9334`
 
 - Branch `hades-v1-productization` is synchronized with its remote at docs
