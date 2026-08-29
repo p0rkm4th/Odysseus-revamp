@@ -7,7 +7,7 @@ from core import database as cdb
 from core import inventory_models  # noqa: F401 - register inventory tables
 from src.inventory_service import InventoryNotFound, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
-from src.aci import canonical_recipe_read_answer, project_action_selection
+from src.aci import canonical_recipe_mutation_answer, canonical_recipe_read_answer, project_action_selection
 from src.intent_contracts import (
     RecipeDraft, recipe_import_draft, recipe_import_review, recipe_import_review_draft,
 )
@@ -640,6 +640,73 @@ async def test_chat_recipe_url_prepare_review_never_reaches_commit(monkeypatch):
     assert result["success"] is False
     assert "needs review" in result["error"]
     assert [call["action"] for call in calls] == ["prepare_import"]
+
+
+@pytest.mark.asyncio
+async def test_chat_incomplete_paste_returns_editable_review_draft_without_commit(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    calls = []
+    source = (
+        "Acceptance Web Paste Dinner\n\nIngredients\n"
+        "- 1 cup rice\n- salt to taste\n- oil as needed\n\n"
+        "Instructions\nCook the rice and season it.\n"
+    )
+
+    class FakeService:
+        def manage_recipes(self, payload, *, owner):
+            calls.append((payload, owner))
+            return {
+                "status": "NEEDS_REVIEW",
+                "draft": {
+                    "action": "commit_import", "name": "Acceptance Web Paste Dinner",
+                    "servings": 1,
+                    "ingredients": [
+                        {"name": "rice", "quantity": 1, "unit": "cup"},
+                        {"name": "salt", "quantity": "", "unit": "each", "review_note": "to taste"},
+                    ],
+                    "instructions": "Cook the rice and season it.",
+                    "review_required": True,
+                    "review": {"missing_fields": ["salt (to taste)"]},
+                },
+            }
+
+    monkeypatch.setattr("src.inventory_service.get_inventory_service", lambda: FakeService())
+    tool, result = await tool_execution._execute_manage_recipes_binding(
+        SimpleNamespace(content=json.dumps({
+            "action": "commit_import", "review_required": True,
+            "source_text": source,
+        })),
+        owner="alice",
+    )
+
+    assert tool == "manage_recipes"
+    assert result["success"] is True
+    assert result["data"]["status"] == "NEEDS_REVIEW"
+    assert result["data"]["draft"]["review_required"] is True
+    assert calls == [({
+        "action": "prepare_import", "source_text": source,
+        "source_url": None, "requested_name": None,
+    }, "alice")]
+
+
+def test_chat_review_draft_answer_is_truthful_and_not_a_recipe_mutation_claim():
+    answer = canonical_recipe_mutation_answer([{
+        "tool": "manage_recipes", "exit_code": 0,
+        "command": '{"action":"commit_import"}',
+        "output": json.dumps({
+            "status": "NEEDS_REVIEW", "success": True,
+            "action": "prepare_import", "draft": {
+                "name": "Acceptance Web Paste Dinner",
+                "ingredients": [{"name": "salt", "quantity": "", "review_note": "to taste"}],
+                "review": {"missing_fields": ["salt (to taste)"]},
+            },
+        }),
+    }])
+    assert answer is not None
+    assert "Prepared 'Acceptance Web Paste Dinner' for review" in answer
+    assert "Nothing has been saved" in answer
+    assert "Recorded recipe" not in answer
 
 
 @pytest.mark.asyncio

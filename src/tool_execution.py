@@ -2007,10 +2007,29 @@ async def _execute_manage_recipes_binding(block, owner=None):
             raise ValueError("unsupported recipe mutation")
         if not owner:
             raise PermissionError("authenticated recipe owner is required")
-        if payload.get("review_required"):
-            raise ValueError(str(payload.get("review_reason") or "recipe needs review before saving; nothing was saved"))
         from src.inventory_service import get_inventory_service
         service = get_inventory_service()
+        if payload.get("review_required"):
+            # Preserve the strict commit boundary while giving incomplete
+            # owner-pasted recipes the existing editable review projection.
+            prepared = service.manage_recipes({
+                "action": "prepare_import",
+                "source_text": str(payload.get("source_text") or ""),
+                "source_url": payload.get("source_url"),
+                "requested_name": payload.get("requested_name"),
+            }, owner=owner)
+            draft_payload = prepared.get("draft") if isinstance(prepared, dict) else None
+            if not isinstance(draft_payload, dict):
+                raise ValueError(str(payload.get("review_reason") or "recipe needs review before saving; nothing was saved"))
+            result = {
+                "status": "NEEDS_REVIEW", "success": True,
+                "action": "prepare_import", "draft": draft_payload,
+                "canonical_store": "inventory_service",
+            }
+            return "manage_recipes", {
+                "output": _ody_v34_json.dumps(result, default=str, sort_keys=True),
+                "exit_code": 0, "success": True, "data": result,
+            }
         if action in {"add", "commit_import"} and payload.get("source_url"):
             # URL recipe creation is an effectful Action, but source
             # acquisition and structuring remain untrusted and validated before
