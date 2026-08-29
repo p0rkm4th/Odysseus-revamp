@@ -69,6 +69,16 @@ The fixture database, acceptance principal, and disposable deployment were
 removed. This is isolated Asset product evidence, not owner-inventory
 evidence.
 
+The paired positive Asset property journey `OWNER-ASSET-RAM-001` also passed
+against the exact retained candidate in a fresh isolated deployment. The
+Atlas/Erebus canonical fixture was seeded through the existing Asset owner;
+the natural-language RAM aggregation returned one human-readable answer and
+one `[DONE]`, with zero raw final results, false success, duplicate delivery,
+or abrupt EOF. Together with the no-match RTX 4090 journey, this covers both
+bounded positive property projection and fail-closed negative filtering in the
+browser lane. The disposable database, principal, credentials, and containers
+were removed afterward.
+
 ## Fresh empty-state Memory and Work browser reads — `d1559078` (2026-08-29)
 
 Two additional fresh disposable Compose projects exercised the existing
