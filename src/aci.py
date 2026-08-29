@@ -3488,6 +3488,45 @@ def canonical_homelab_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     return f"Host inspection for {target} (observed via {source}):\n{output[:2000]}"
 
 
+def canonical_service_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render the bounded canonical service-health Result for owner reads."""
+    event = next(
+        (
+            item for item in reversed(tuple(tool_events or ()))
+            if isinstance(item, Mapping)
+            and str(item.get("tool") or "").strip() == "manage_homelab"
+        ),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    payload = event.get("result_projection")
+    if not isinstance(payload, Mapping):
+        try:
+            payload = json.loads(str(event.get("output") or ""))
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(payload, Mapping) or str(payload.get("action") or "").strip() != "service_status":
+        return None
+    if str(payload.get("status") or "").strip().upper() in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
+        return None
+    services = payload.get("services")
+    if not isinstance(services, list):
+        return None
+    if not services:
+        return "No service health observations are recorded for the Hades runtime."
+    overall = str(payload.get("overall") or "unknown").strip()
+    lines = [f"Hades runtime service health: {overall}."]
+    for service in services[:50]:
+        if not isinstance(service, Mapping):
+            continue
+        name = str(service.get("name") or "unnamed service").strip()
+        status = str(service.get("status") or "unknown").strip()
+        detail = str(service.get("detail") or "").strip()
+        lines.append(f"- {name}: {status}" + (f" ({detail})" if detail else ""))
+    return "\n".join(lines)
+
+
 def canonical_tool_result_projection(
     tool_name: str,
     result: Mapping[str, Any],
@@ -3575,6 +3614,22 @@ def canonical_tool_result_projection(
         return common
     if action == "inspect_host":
         common["output"] = str(payload.get("output") or "")[:2000]
+        return common
+    if action == "service_status":
+        services = payload.get("services")
+        common.update({
+            "overall": payload.get("overall"),
+            "services": [
+                {
+                    "name": service.get("name"),
+                    "status": service.get("status"),
+                    "detail": service.get("detail"),
+                }
+                for service in (services[:50] if isinstance(services, list) else [])
+                if isinstance(service, Mapping)
+            ],
+            "service_count": len(services) if isinstance(services, list) else 0,
+        })
         return common
     return None
 
@@ -3854,6 +3909,7 @@ def canonical_result_answer(
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
         (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
+        (canonical_service_read_answer(tool_events), "canonical Service Result"),
         (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
         (canonical_household_read_answer(tool_events), "canonical Household Result"),
         (canonical_recipe_read_answer(tool_events), "canonical Recipe Result"),
