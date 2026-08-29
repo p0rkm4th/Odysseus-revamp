@@ -1324,7 +1324,7 @@ def is_bounded_owner_capability_turn(frame: IntentFrame | None) -> bool:
         return False
     return bool(
         frame.read_explicit
-        or frame.operation_class in {"CREATE", "UPDATE", "EXECUTE", "RESEARCH"}
+        or frame.operation_class in {"CREATE", "UPDATE", "DELETE", "EXECUTE", "RESEARCH"}
     )
 
 

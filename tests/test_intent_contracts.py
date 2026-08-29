@@ -181,6 +181,7 @@ def test_conceptual_component_question_does_not_become_asset_read():
     "Show me what's in the kitchen.",
     "Add angel hair pasta to my kitchen inventory.",
     "What do you know about me?",
+    "Actually, that is not true anymore.",
     "What work is outstanding?",
     "What projects do I have?",
     "What tasks are open?",
