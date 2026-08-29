@@ -123,7 +123,7 @@ async function seedHouseholdAcceptanceState(page) {
   // Seed only the disposable, already-authenticated acceptance principal via
   // the normal owner-scoped API.  This is setup for browser reads, not a
   // second persistence path and never runs against the owner instance.
-  return page.evaluate(async ({expiring}) => {
+  return page.evaluate(async () => {
     const suffix = Date.now().toString(36);
     const create = await fetch('/api/inventory/items', {
       method: 'POST', credentials: 'same-origin',
