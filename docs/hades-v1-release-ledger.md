@@ -79,6 +79,15 @@ bounded positive property projection and fail-closed negative filtering in the
 browser lane. The disposable database, principal, credentials, and containers
 were removed afterward.
 
+## Recovery and backup focused gate — `c1a5e4e4` (2026-08-29)
+
+The current branch recovery slice passed `31` focused tests: backup import
+ownership/deduplication, archive/restore CLI security, skill import handling,
+unreadable-memory preservation, scheduler restart behavior, and task
+cancellation. This supplements the isolated application-data backup/restore
+rehearsal already recorded above. No owner data or volumes were used, and no
+executable source changed, so the exact product image was not rebuilt.
+
 ## Fresh empty-state Memory and Work browser reads — `d1559078` (2026-08-29)
 
 Two additional fresh disposable Compose projects exercised the existing
