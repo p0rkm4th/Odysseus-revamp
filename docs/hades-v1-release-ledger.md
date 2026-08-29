@@ -1130,3 +1130,11 @@ browser-fixture `shortage` projection was corrected as evaluator-only commit
 zero duplicate delivery, and zero abrupt EOF. This covers expiring Inventory
 stock feeding Recipe candidate selection and pantry coverage. Temporary state
 and credentials were removed.
+## Kitchen → Recipe expiring-inventory browser checkpoint — `48f5c01a` (2026-08-29)
+
+`OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed against exact product candidate
+`4c7696a3`: one authenticated chat turn, one final answer, one terminal
+`[DONE]`, two canonical readbacks, zero raw final results, zero false success,
+zero duplicate delivery, and zero abrupt EOF. This verifies expiring Kitchen
+stock feeding Recipe candidate selection and pantry coverage. Temporary state
+and credentials were removed.
