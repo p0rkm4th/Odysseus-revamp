@@ -123,7 +123,7 @@ async function seedHouseholdAcceptanceState(page) {
   // Seed only the disposable, already-authenticated acceptance principal via
   // the normal owner-scoped API.  This is setup for browser reads, not a
   // second persistence path and never runs against the owner instance.
-  return page.evaluate(async () => {
+  return page.evaluate(async ({expiring}) => {
     const suffix = Date.now().toString(36);
     const create = await fetch('/api/inventory/items', {
       method: 'POST', credentials: 'same-origin',
@@ -160,7 +160,7 @@ async function seedRecipeCompositionAcceptanceState(page, {expiring = false} = {
   // Establish prerequisite canonical Inventory/Recipe state only. The
   // exercised coverage/read/scale turns still enter through chat; no recipe
   // mutation is performed by the browser fixture itself.
-  return page.evaluate(async () => {
+  return page.evaluate(async ({expiring}) => {
     const suffix = Date.now().toString(36);
     const createItem = async (name, quantity) => {
       const response = await fetch('/api/inventory/items', {
@@ -199,7 +199,7 @@ async function seedRecipeCompositionAcceptanceState(page, {expiring = false} = {
     const recipe = (await recipeResponse.json()).recipe;
     if (!recipe?.id) throw new Error('recipe composition setup returned no recipe id');
     return {recipeId: recipe.id, recipeName: recipe.name};
-  });
+  }, {expiring});
 }
 
 async function seedWorkAcceptanceState(page) {
