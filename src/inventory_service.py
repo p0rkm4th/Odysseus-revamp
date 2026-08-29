@@ -307,7 +307,13 @@ class InventoryService:
 
     def get_item(self, owner: str, item_id: str) -> dict[str, Any]:
         with self._read() as db:
-            return _item_view(self._item(db, owner, item_id))
+            item = self._item(db, owner, item_id)
+            result = _item_view(item)
+            location = db.query(InventoryLocation).filter_by(
+                id=item.location_id, owner=owner,
+            ).one_or_none() if item.location_id else None
+            result["location_name"] = location.name if location else None
+            return result
 
     @staticmethod
     def _require_asset(db: Session, owner: str, item_id: str) -> InventoryItem:

@@ -139,3 +139,4 @@ def test_household_overview_projects_owner_scoped_location_names_and_totals():
         "stock_quantity": "2000.000000",
     }]
     assert all(row["id"] != "pantry-bob" for row in result["locations"])
+    assert service.get_item("alice", rice["id"])["location_name"] == "Pantry"
