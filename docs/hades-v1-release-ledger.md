@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Asset collection-property paraphrase checkpoint — `20d07aef` (2026-08-29)
+
+Owner testing found two related Asset usability defects. “What's the RAM in my
+machines?” narrowed to the last Asset through conversational detail-reference
+logic, and “RAM across my PCs?” produced model prose instead of the
+deterministic canonical projection. Collection nouns now suppress singular
+reference narrowing, and bare collection-property phrasing is marked as an
+explicit owner-state read. Focused intent coverage passed `332` tests.
+
+Exact candidate `odysseus:candidate-20d07aefc170` carries source marker and OCI
+revision `20d07aefc170ebd80219a97055939c549cfe5654`. Fresh authenticated GUI
+acceptance for `OWNER-ASSET-RAM-001` passed all three natural prompts with
+three deterministic canonical reads: Atlas 64 GB and Erebus 128 GB. It had
+zero false success, raw final Result, duplicate delivery, or abrupt EOF; the
+isolated runtime had zero restarts. Owner runtime remains source `34ced247`
+and was not changed.
+
 ## URL Recipe replay-idempotency checkpoint — `4c2c9f23` (2026-08-29)
 
 Owner testing found that an approved URL Recipe import could execute twice
