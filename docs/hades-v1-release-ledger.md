@@ -1767,3 +1767,18 @@ final Results, duplicate delivery, or abrupt EOFs.
 The first RAM replay used an unmounted host fixture path and was correctly
 classified as `ENVIRONMENT_FAILURE`/fixture wiring, not a product result. The
 replay was corrected to grade the container's canonical mounted Asset database.
+
+## Current Recipe composition checkpoint — executable candidate `a784b35e` (2026-08-29)
+
+A fresh disposable Compose project was bootstrapped with normal admin setup,
+Qwen3:8B endpoint registration, and the gated acceptance principal. The exact
+candidate passed the three-turn GUI composition journey: list the recipe, ask
+whether it can be made with available pantry stock, and scale it to six
+servings. Fixtures were setup prerequisites; all exercised behavior entered
+through chat. Canonical readback and reload verification passed with two
+readbacks, zero false success, raw final Result, duplicate delivery, or
+abrupt EOF.
+
+An earlier reused-database replay was rejected before chat because its
+recipe-count precondition no longer held. That was disposable fixture
+contamination, not a product result.
