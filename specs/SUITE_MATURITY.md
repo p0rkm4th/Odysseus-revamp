@@ -925,3 +925,13 @@ canonical task readback, reload readback, `2/2` terminal `[DONE]` events, zero
 abrupt EOF, duplicate delivery, raw final results, or false-success claims.
 The prerequisite project was setup-only; the task itself was not API-seeded.
 The disposable principal and state were removed after the run.
+
+## Populated Memory browser checkpoint — `2e58a5fe` (2026-08-29)
+
+The populated-memory owner journey now passes on the exact candidate through
+normal login, real Qwen chat/SSE, canonical `/api/memory` readback, and reload
+persistence. It produced one deterministic final answer and one `[DONE]`, with
+zero abrupt EOF, duplicate delivery, false success, or raw final results. The
+fixture used two synthetic owner memories, including a historical entry; the
+acceptance principal and disposable deployment were revoked and removed after
+the run. Broader Memory correction/forgetting journeys remain deferred.
