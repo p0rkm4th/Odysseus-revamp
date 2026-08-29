@@ -370,7 +370,7 @@ async function onSubmit(event) {
         const ingredients = names.map((name, index) => {
           const quantity = String(quantities[index] || '').trim();
           const ingredient = {name: String(name || '').trim(), quantity, unit: String(units[index] || '').trim()};
-          if (!ingredient.name || !/^[0-9]+(?:\\.[0-9]+)?$/.test(quantity) || Number(quantity) <= 0) {
+          if (!ingredient.name || !/^[0-9]+(?:\.[0-9]+)?$/.test(quantity) || Number(quantity) <= 0) {
             throw new Error('Each ingredient needs a name and positive numeric quantity.');
           }
           return ingredient;
