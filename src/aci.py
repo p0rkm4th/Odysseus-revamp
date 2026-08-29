@@ -5141,6 +5141,15 @@ def classify_post_result(result: Any, *, canonical_read: bool = False,
         return PostResultState.BLOCKED
     if unresolved_required_information:
         return PostResultState.NEEDS_CONTEXT
+    if (
+        str(result.get("status") or "").upper() == "NEEDS_REVIEW"
+        and isinstance(result.get("draft"), Mapping)
+    ):
+        # Review preparation is a terminal owner-facing outcome for this
+        # turn. Feeding the same uncommittable Action back to a weak model
+        # causes repeated identical preparation calls instead of presenting
+        # the draft for correction.
+        return PostResultState.COMPLETE_AFTER_ANSWER
     if deterministic_next_step:
         return PostResultState.CONTINUE_DETERMINISTICALLY
     _verification = result.get("verification")
