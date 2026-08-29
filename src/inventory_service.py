@@ -903,6 +903,31 @@ class RecipeService(InventoryService):
             recipe = self._recipe(db, owner, recipe_id)
             return self._stock_plan(db, owner, recipe, servings if servings is not None else recipe.servings)
 
+    def shopping_requirements(self, owner: str, recipe_id: str, *, servings: Any | None = None) -> dict[str, Any]:
+        """Return deterministic missing ingredients for one canonical recipe.
+
+        This is a read-only projection over the same stock planner used by
+        ``can_make``.  It deliberately creates no shopping-list state and
+        never treats a recipe suggestion as proof of possession.
+        """
+        recipe = self.get_recipe(owner, recipe_id)
+        requested = servings if servings is not None else recipe["servings"]
+        plan = self.can_make(owner, recipe_id, servings=requested)
+        return {
+            "status": "SUCCESS",
+            "result_type": "recipe_shopping_requirements",
+            "operation": "shopping_requirements",
+            "canonical_store": "inventory_service",
+            "recipe_id": recipe["id"],
+            "recipe_name": recipe["name"],
+            "servings": requested,
+            "can_make": plan.can_make,
+            "missing_ingredients": [{
+                "name": row.name, "quantity": row.missing,
+                "unit": row.unit, "optional": row.optional,
+            } for row in plan.shortages],
+        }
+
     def expiring_recipe_candidates(self, owner: str, *, expiry_days: Any = 30) -> dict[str, Any]:
         """Compose expiring canonical stock with deterministic recipe coverage.
 
@@ -1196,6 +1221,11 @@ class RecipeService(InventoryService):
                     "unit": row.unit, "optional": row.optional,
                 } for row in plan.shortages],
             }
+        if action == "shopping_requirements":
+            return self.shopping_requirements(
+                owner, _required_text(args.get("recipe_id"), "recipe_id"),
+                servings=args.get("servings"),
+            )
         if action == "scale":
             recipe = self.get_recipe(owner, _required_text(args.get("recipe_id"), "recipe_id"))
             requested = parse_decimal(args.get("servings"))

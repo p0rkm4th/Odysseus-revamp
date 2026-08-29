@@ -1285,7 +1285,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     ),
     "RECIPE": DomainContract(
         "RECIPE", "recipe.read",
-        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make", "READ_SCALE": "scale", "READ_EXPIRING": "expiring_candidates", "READ_IMPORT_PREPARE": "prepare_import"},
+        {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make", "READ_SHOPPING": "shopping_requirements", "READ_SCALE": "scale", "READ_EXPIRING": "expiring_candidates", "READ_IMPORT_PREPARE": "prepare_import"},
         "read_recipes",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "recipe_read",
@@ -1407,7 +1407,7 @@ def canonical_read_action(
         return None
     view = dict(filters or {}).get("view")
     operation = "READ"
-    if domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and str(entity_reference or "").strip():
+    if domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and str(entity_reference or "").strip() and not (domain_concept == "RECIPE" and dict(filters or {}).get("recipe_shopping") is True):
         operation = "READ_DETAIL"
     elif domain_concept == "WORK" and view == "attention":
         operation = "READ_ATTENTION"
@@ -1425,6 +1425,8 @@ def canonical_read_action(
         operation = "READ_EXPIRING"
     elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_coverage") is True:
         operation = "READ_COVERAGE"
+    elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_shopping") is True:
+        operation = "READ_SHOPPING"
     elif domain_concept == "RECIPE" and dict(filters or {}).get("recipe_scale") is True:
         operation = "READ_SCALE"
     return contract.actions.get(operation)
@@ -2021,6 +2023,12 @@ def compile_intent(
     ):
         reference_filters["recipe_coverage"] = True
     if concept == "RECIPE" and operation == "READ" and re.search(
+        r"\b(?:shopping\s+list|shopping\s+requirements?|what\s+(?:do\s+)?i\s+need\s+to\s+buy|what\s+ingredients?\s+are\s+missing|"
+        r"ingredients?\s+(?:do\s+)?i\s+need|missing\s+ingredients?)\b.*\b(?:for|from)\s+(?:this|the)\s+recipe\b|"
+        r"\b(?:shopping\s+list|shopping\s+requirements?)\b", q,
+    ):
+        reference_filters["recipe_shopping"] = True
+    if concept == "RECIPE" and operation == "READ" and re.search(
         r"\b(?:scale|resize|adjust)\b.{0,40}\b(?:to\s+)?(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b", q,
     ):
         serving_target = deterministic_recipe_servings(q)
@@ -2197,7 +2205,7 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "CREATE_IMPORT_COMMIT"
     if frame.domain_concept == "HOMELAB_HOST" and frame.filters.get("remote") and frame.operation_class == "READ":
         action_key = "REMOTE_READ"
-    if frame.domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and frame.operation_class == "READ" and frame.entity_reference:
+    if frame.domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and frame.operation_class == "READ" and frame.entity_reference and not (frame.domain_concept == "RECIPE" and frame.filters.get("recipe_shopping") is True):
         action_key = "READ_DETAIL"
     if frame.domain_concept == "WORK" and frame.filters.get("view") == "attention":
         action_key = "READ_ATTENTION"
@@ -2217,6 +2225,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_IMPORT_PREPARE"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_coverage") is True:
         action_key = "READ_COVERAGE"
+    elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_shopping") is True:
+        action_key = "READ_SHOPPING"
     elif frame.domain_concept == "RECIPE" and frame.filters.get("recipe_scale") is True:
         action_key = "READ_SCALE"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "file":
@@ -2355,6 +2365,9 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
         elif frame.filters.get("recipe_coverage") is True:
             if not isinstance(result.get("can_make"), bool) or not isinstance(result.get("shortages"), list):
                 return False, "INVALID_RESULT"
+        elif frame.filters.get("recipe_shopping") is True:
+            if not isinstance(result.get("can_make"), bool) or not isinstance(result.get("missing_ingredients"), list):
+                return False, "INVALID_RESULT"
         elif frame.filters.get("recipe_scale") is True:
             if not isinstance(result.get("scaled_ingredients"), list) or not result.get("servings"):
                 return False, "INVALID_RESULT"
@@ -2391,7 +2404,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
         for operation, registered_action in contract.actions.items():
             if registered_action != action_id:
                 continue
-            if operation in {"READ", "READ_SEARCH", "READ_DETAIL", "READ_COVERAGE", "READ_SCALE", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
+            if operation in {"READ", "READ_SEARCH", "READ_DETAIL", "READ_COVERAGE", "READ_SHOPPING", "READ_SCALE", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
                 filters = {}
                 if operation == "READ_INTEGRATIONS":
                     filters["view"] = "integrations"
@@ -2403,6 +2416,8 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     filters["recipe_query"] = "search"
                 elif operation == "READ_COVERAGE":
                     filters["recipe_coverage"] = True
+                elif operation == "READ_SHOPPING":
+                    filters["recipe_shopping"] = True
                 elif operation == "READ_SCALE":
                     filters["recipe_scale"] = True
                 if operation == "READ_DETAIL":

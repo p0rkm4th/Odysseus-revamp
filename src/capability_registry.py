@@ -147,7 +147,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         description="Owner-scoped recipe and pantry-coverage reads over Inventory Service.",
         actions=_actions(*(
             ActionSpec(action_id=action, effects=("read_private",), executor_key="read_recipes")
-            for action in ("list", "search", "get", "can_make", "scale", "expiring_candidates", "prepare_import")
+            for action in ("list", "search", "get", "can_make", "shopping_requirements", "scale", "expiring_candidates", "prepare_import")
         )),
     ),
     "recipe.manage": CapabilitySpec(
