@@ -1753,4 +1753,17 @@ The original Work retry also exposed an acceptance-fixture contamination
 problem: repeated setup calls created same-title projects. Hades correctly
 failed closed on the ambiguous reference; no owner data was involved. The
 contaminated disposable data was moved to a recoverable backup before fresh
-verification.
+ verification.
+
+## Asset owner-read checkpoint — executable candidate `a784b35e` (2026-08-29)
+
+The exact candidate passed three natural-language Asset RAM reads against the
+Atlas/Erebus fixture (`64 GB` and `128 GB`), including paraphrases such as
+"what's the memory in my machines?" and "which machine has the most memory?".
+It also passed the false-premise query "Which of my servers has an RTX 4090?"
+without inventing an entity. The journeys produced zero false premises, raw
+final Results, duplicate delivery, or abrupt EOFs.
+
+The first RAM replay used an unmounted host fixture path and was correctly
+classified as `ENVIRONMENT_FAILURE`/fixture wiring, not a product result. The
+replay was corrected to grade the container's canonical mounted Asset database.

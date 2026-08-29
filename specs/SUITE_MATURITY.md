@@ -1369,3 +1369,11 @@ exact candidate with one mutation, two deterministic readbacks, reload
 durability, and zero duplicate delivery. Full regression passed 6987 tests with
 8 skips. Duplicate-like fixture references remain a test-environment concern;
 ambiguous canonical references fail closed.
+
+## Asset owner-read checkpoint — `a784b35e` (2026-08-29)
+
+Asset reads passed three ordinary RAM paraphrases against Atlas/Erebus (`64 GB`
+and `128 GB`) and a false-premise RTX 4090 query. Answers were grounded in
+canonical state with zero false premises, raw final Results, duplicate
+delivery, or abrupt EOF. An initial unmounted fixture-path replay was recorded
+as an environment/fixture-wiring failure and corrected before product grading.
