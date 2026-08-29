@@ -3677,8 +3677,15 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_work", "manage_recipes"} or not isinstance(result, Mapping):
+    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_work", "manage_recipes", "manage_memory"} or not isinstance(result, Mapping):
         return None
+    if str(tool_name or "").strip() == "manage_memory":
+        return {
+            "success": result.get("success"),
+            "action": result.get("action"),
+            "canonical_store": result.get("canonical_store"),
+            "verification": result.get("verification"),
+        }
     raw = result.get("output")
     if isinstance(raw, Mapping):
         payload = raw
@@ -4021,9 +4028,14 @@ def canonical_memory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -
         return None
     try:
         request = json.loads(str(event.get("command") or "{}"))
-        payload = json.loads(str(event.get("output") or "{}"))
     except (TypeError, ValueError):
-        return None
+        request = {}
+    payload = event.get("result_projection")
+    if not isinstance(payload, Mapping):
+        try:
+            payload = json.loads(str(event.get("output") or "{}"))
+        except (TypeError, ValueError):
+            payload = {}
     if not isinstance(request, Mapping) or not isinstance(payload, Mapping):
         return None
     if event.get("success") is False or payload.get("success") is False:
