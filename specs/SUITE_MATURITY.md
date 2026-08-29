@@ -1450,3 +1450,11 @@ ToolBinding or Action event.
 Independent Qwen3:8B browser replays passed on the exact pushed candidate with
 one terminal stream each and zero false success, raw final Result, duplicate
 delivery, abrupt EOF, or unauthorized execution.
+
+## Current qualitative Recipe review maturity — `1a2b62e5` (2026-08-29)
+
+The fresh isolated owner journey accepted qualitative amounts such as `salt
+to taste` and `oil as needed` into a review-safe path without inventing
+quantities or creating an unvalidated canonical Recipe. Two canonical
+readbacks passed with zero false success, raw final Result, duplicate delivery,
+or abrupt EOF.
