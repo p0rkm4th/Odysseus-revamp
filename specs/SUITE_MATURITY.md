@@ -20,6 +20,13 @@ canonical Recipe count at zero, with no false success, raw result, duplicate
 delivery, or EOF. A separate fresh fixture lacked a registered model endpoint
 and remains an acceptance/install setup gap.
 
+## Qualitative Recipe review replay — candidate `dcf0a95d` (2026-08-29)
+
+The current exact candidate preserved fail-closed handling for qualitative
+amounts in the browser journey: the disposable canonical Recipe count stayed
+at `1`, with no false success, raw result, duplicate delivery, or EOF. A
+human-editable review and validated commit workflow remains open.
+
 ## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
 
 The exact candidate completed first-run setup, authenticated browser use,

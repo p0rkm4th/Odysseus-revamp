@@ -37,6 +37,15 @@ fixture could not run this journey because it had no registered model
 endpoint; that remains an install/fixture setup gap, not feature evidence.
 No owner data was touched.
 
+## Qualitative Recipe review replay — candidate `dcf0a95d` (2026-08-29)
+
+The current exact candidate replayed `OWNER-RECIPE-QUALITATIVE-REVIEW-001`
+against a disposable one-Recipe fixture. Ordinary qualitative amounts such
+as “salt to taste” and “oil as needed” remained a review-safe error path; the
+attempted mutation left the canonical count at `1`. The run had zero false
+success, raw final Result, duplicate delivery, or abrupt EOF. The full human
+correction and validated commit workflow remains an open productization gap.
+
 ## Exact-candidate restart durability checkpoint — `20d07aef` (2026-08-29)
 
 The exact candidate stack completed normal first-run setup, authenticated
