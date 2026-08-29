@@ -132,11 +132,11 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         actions=_actions(*(
             ActionSpec(
                 action_id=action,
-                effects=("read_private",) if action in {"list", "search"} else ("write_private",),
+                effects=("write_private",),
                 result_integrity="external_untrusted",
                 executor_key="manage_memory",
             )
-            for action in ("list", "search", "add", "edit", "delete")
+            for action in ("add", "edit", "delete")
         )),
     ),
     "work.read": CapabilitySpec(

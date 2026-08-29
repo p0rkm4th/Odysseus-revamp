@@ -1590,12 +1590,22 @@ def function_call_to_tool_block(
 # callers that import this module through older compatibility paths.
 from src.tool_bindings import projected_schemas as _projected_capability_schemas
 
-_ody_v34_schema_names = {
-    schema.get("function", {}).get("name")
-    for schema in FUNCTION_TOOL_SCHEMAS
-    if isinstance(schema, dict)
-}
 for _capability_schema in _projected_capability_schemas():
     _capability_schema_name = _capability_schema.get("function", {}).get("name")
-    if _capability_schema_name not in _ody_v34_schema_names:
+    _existing_index = next(
+        (
+            _index
+            for _index, _schema in enumerate(FUNCTION_TOOL_SCHEMAS)
+            if isinstance(_schema, dict)
+            and _schema.get("function", {}).get("name") == _capability_schema_name
+        ),
+        None,
+    )
+    if _existing_index is None:
         FUNCTION_TOOL_SCHEMAS.append(dict(_capability_schema))
+    else:
+        # A legacy schema with the same transport name must not shadow the
+        # canonical capability projection. In particular, replacing the old
+        # broad manage_memory schema keeps native function calls bounded to
+        # the Action set exposed by the V1 contract.
+        FUNCTION_TOOL_SCHEMAS[_existing_index] = dict(_capability_schema)
