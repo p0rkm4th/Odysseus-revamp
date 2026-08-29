@@ -848,3 +848,23 @@ the previously recorded exact product SHA.
   `sha256:4f49591d696d51bd635c988e77603edf166ab3439797e56f30b6075f4d9a7206`;
   OCI marker matches the source. This is a productization candidate and has
   not replaced the owner deployment.
+
+# Work owner-read routing checkpoint — `da4f55ef` (2026-08-29)
+
+- Reproduced the isolated browser failure where project creation succeeded but
+  the follow-up `What projects do I have?` was submitted as plain chat and
+  bypassed canonical ACI. The shared transport eligibility predicate now
+  includes first-class Work read concepts (`PROJECT`, `TASK`, `GOAL`, `RUN`,
+  `COMMITMENT`, `MISSION`, and `WATCH`); no phrase-specific route was added.
+- Exact isolated browser journey passed on the candidate: natural-language
+  create, canonical verified readback, follow-up canonical `read_work/list_projects`,
+  reload persistence, `2/2` terminal DONE, zero abrupt EOF, zero duplicate
+  delivery, and zero false success.
+- Focused intent/ACI/binding validation: `251 passed, 3 skipped`. Full
+  supported regression: `6955 passed, 7 skipped, 149 warnings`.
+- Exact executable source/candidate: `da4f55efa0feedd3cacc8370ec30e5221513ef2c`,
+  `odysseus:candidate-da4f55ef`, image
+  `sha256:75adb96c1bc998282d7da603ed788e5338473fc9c86df45021db99a5afc84cd8`;
+  OCI marker matches. The branch tip `65d09299` is evaluator-only readback
+  metadata and was not rebuilt. The owner deployment remains untouched at
+  source `34ced2478c014cc529775460b5a6d4350b68239c`.
