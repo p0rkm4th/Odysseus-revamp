@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe composition and false-premise checkpoint — candidate `20d07aef` (2026-08-29)
+
+Fresh isolated exact-candidate stacks passed `OWNER-RECIPE-SHOPPING-REQUIREMENTS-001`
+(2 turns, canonical readbacks including reload),
+`OWNER-RECIPE-EXPIRING-COMPOSITION-001` (1 turn, canonical readback including
+reload), and `OWNER-ASSET-FILTER-NO-MATCH-001` (1 realistic messy prompt).
+The RTX 4090 false premise produced no invented entity, and all three runs had
+zero false success, raw final Result, duplicate delivery, or abrupt EOF. These
+journeys used separate disposable fixture databases; no owner state changed.
+
 ## Continued Tier 1 acceptance checkpoint — candidate `20d07aef` (2026-08-29)
 
 The isolated candidate also passed clean Recipe mutation/readback (3 turns,
