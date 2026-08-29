@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from core import database as cdb
 from core import inventory_models  # noqa: F401 - register inventory tables
+from core.inventory_models import InventoryLocation
 from src.inventory_service import InsufficientStock, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
 
@@ -106,3 +107,35 @@ def test_household_mutations_read_back_from_the_same_canonical_inventory_owner()
     else:
         raise AssertionError("over-consumption must fail closed")
     assert service.household_overview("alice")["items"][0]["stock_quantity"] == "0"
+
+
+def test_household_overview_projects_owner_scoped_location_names_and_totals():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    with session_factory() as db:
+        db.add(InventoryLocation(
+            id="pantry-alice", owner="alice", name="Pantry",
+            normalized_name="pantry", normalized_path="pantry",
+        ))
+        db.add(InventoryLocation(
+            id="pantry-bob", owner="bob", name="Pantry",
+            normalized_name="pantry", normalized_path="pantry",
+        ))
+        db.commit()
+    rice = service.create_item(
+        "alice", name="Rice", domain="kitchen", item_kind="ingredient",
+        default_unit="kg", location_id="pantry-alice",
+    )
+    service.add_stock(
+        "alice", rice["id"], quantity="2", unit="kg",
+        idempotency_key="alice-rice", location_id="pantry-alice",
+    )
+
+    result = service.household_overview("alice")
+
+    assert result["items"][0]["location_name"] == "Pantry"
+    assert result["locations"] == [{
+        "id": "pantry-alice", "name": "Pantry", "item_count": 1,
+        "stock_quantity": "2000.000000",
+    }]
+    assert all(row["id"] != "pantry-bob" for row in result["locations"])
