@@ -630,6 +630,9 @@ async function main() {
                   if (typeof value.content === 'string' && value.content.trim().startsWith('{')) {
                     try { outcome(JSON.parse(value.content), depth + 1); } catch (_) { /* prose content */ }
                   }
+                  if (typeof value.output === 'string' && value.output.trim().startsWith('{')) {
+                    try { outcome(JSON.parse(value.output), depth + 1); } catch (_) { /* bounded tool prose */ }
+                  }
                 };
                 outcome(json);
                 if (json.delta) { event.deltaLength = String(json.delta).length; record.deltaCount += 1; }
