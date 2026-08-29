@@ -253,6 +253,34 @@ async function seedWorkTaskCreationAcceptanceState(page) {
   });
 }
 
+async function seedMemoryAcceptanceState(page) {
+  // Establish disposable owner memory through the existing authenticated
+  // memory API. The journey itself reads Memory through natural-language chat;
+  // this setup never touches the owner's store.
+  return page.evaluate(async () => {
+    const entries = [
+      {text: 'For this acceptance run, the owner prefers a dark Hades interface.', category: 'preference'},
+      {text: 'Historical acceptance note: the owner previously used a light interface.', category: 'historical'},
+    ];
+    for (const entry of entries) {
+      const response = await fetch('/api/memory/add', {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({...entry, source: 'acceptance-fixture'}),
+      });
+      if (!response.ok) throw new Error(`memory acceptance setup failed (${response.status})`);
+    }
+    const response = await fetch('/api/memory', {credentials: 'same-origin'});
+    if (!response.ok) throw new Error(`memory acceptance readback failed (${response.status})`);
+    const payload = await response.json();
+    const memories = Array.isArray(payload?.memory) ? payload.memory : [];
+    if (!entries.every((entry) => memories.some((memory) => memory?.text === entry.text))) {
+      throw new Error('memory acceptance setup did not persist canonical entries');
+    }
+    return {count: memories.length};
+  });
+}
+
 function seedCanonicalAssetFixture(scenarios) {
   const setups = [...new Set(scenarios.map((scenario) => scenario.fixture_setup).filter(Boolean))];
   const assetSetups = setups.filter((setup) => ['canonical_asset_atlas_erebus', 'canonical_asset_no_4090'].includes(setup));
@@ -434,6 +462,14 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
     const wanted = String(spec.contains_project_title).trim().toLowerCase();
     if (!projects.some((project) => String(project?.title || '').trim().toLowerCase() === wanted)) {
       throw new Error(`${scenario.id} work readback missing canonical project`);
+    }
+    return {phase, kind: spec.kind, found: true};
+  }
+  if (spec.kind === 'memory' && spec.contains_text) {
+    const memories = Array.isArray(result.payload?.memory) ? result.payload.memory : [];
+    const wanted = String(spec.contains_text).trim().toLowerCase();
+    if (!memories.some((memory) => String(memory?.text || '').trim().toLowerCase().includes(wanted))) {
+      throw new Error(`${scenario.id} memory readback missing canonical memory`);
     }
     return {phase, kind: spec.kind, found: true};
   }
@@ -849,6 +885,9 @@ async function main() {
       }
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_task_create')) {
         diagnostics.workTaskSeed = await seedWorkTaskCreationAcceptanceState(page);
+      }
+      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_memory_preference')) {
+        diagnostics.memorySeed = await seedMemoryAcceptanceState(page);
       }
     }
 
