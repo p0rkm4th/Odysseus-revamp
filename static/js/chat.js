@@ -3864,7 +3864,19 @@ import { loadPanel } from './panels.js';
                 // versions have identical behavior.
                 _cancelThinkingTimer();
                 _removeThinkingSpinner();
-                chatRenderer.renderAskUserCard(json.data || {});
+                const _askUserPayload = json.data || {};
+                chatRenderer.renderAskUserCard(_askUserPayload);
+                // Tool/result finalization can rebuild the adjacent thread in
+                // the same task that delivered ask_user. Retry once after the
+                // DOM settles so a normal approval card cannot disappear
+                // between the SSE event and terminal delivery.
+                if (_askUserPayload.kind === 'tool_approval' && _askUserPayload.approval_id) {
+                  requestAnimationFrame(() => {
+                    if (!document.querySelector('#chat-history .ask-user-card[data-ask-user-kind="tool_approval"]')) {
+                      chatRenderer.renderAskUserCard(_askUserPayload);
+                    }
+                  });
+                }
 
               } else if (json.type === 'plan_update') {
                 if (_isBg) continue;
