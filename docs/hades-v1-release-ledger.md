@@ -2,11 +2,11 @@
 
 Status: active engineering release ledger; not a release declaration.
 
-## Owner Memory mutation/correction checkpoint — candidate `4c5cc103` (2026-08-29)
+## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
 `OWNER-MEMORY-MUTATION-READBACK-001` passed on the exact disposable
-candidate `4c5cc103db2676674779245c1758e0a41f3fc6ba`, image
-`sha256:98276caba36cd08404741b6721b76805e19f015e176f3cd15acce98655ea07b9`,
+candidate `0ae8d463f5a6f7770f9a4ca6fbc7b560ebf48971`, image
+`sha256:fe832ff567816995ea7e8b5ec2773be0af84df5300364e4b761cb3f7475b4672`,
 with Qwen3:8B. Through the GUI/chat surface, an ordinary owner completed:
 remember a test color, read it, forget it, read it again, then reload. Both
 mutations executed the canonical `manage_memory` Action with successful
