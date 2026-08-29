@@ -400,6 +400,30 @@ def test_work_task_mutation_uses_existing_engine_and_verifies_readback(monkeypat
     tmpfile.close()
 
 
+def test_work_project_mutation_uses_existing_engine_and_verifies_readback(monkeypatch):
+    from core.database import Base
+    from tests.helpers.sqlite_db import make_temp_sqlite
+    from src.work_engine import WorkEngine
+    session_factory, engine, tmpfile = make_temp_sqlite(Base.metadata)
+    monkeypatch.setattr("core.database.SessionLocal", session_factory)
+
+    result = asyncio.run(tool_execution.execute_registered_binding(
+        tool_name="manage_work",
+        payload={"action": "create", "title": "Acceptance Infrastructure Migration", "domain": "general"},
+        owner="alice",
+    ))
+
+    assert result["success"] is True
+    assert result["verified"] is True
+    assert result["data"]["status"] == "VERIFIED"
+    assert result["data"]["project"]["title"] == "Acceptance Infrastructure Migration"
+    with session_factory() as db:
+        projects = WorkEngine(db).list_records("alice", __import__("core.work_models", fromlist=["WorkProject"]).WorkProject)
+        assert [project["title"] for project in projects] == ["Acceptance Infrastructure Migration"]
+    engine.dispose()
+    tmpfile.close()
+
+
 def test_registered_read_default_is_materialized_before_executor(monkeypatch):
     seen = []
 

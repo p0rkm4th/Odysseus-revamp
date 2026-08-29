@@ -1868,13 +1868,13 @@ async def _execute_manage_work_binding(block, owner=None):
                 if readback is None or readback.title != created["title"] or readback.project_id != projects[0].id:
                     raise ValueError("task readback did not match persisted task")
                 key = "task"
-                result = {
-                    "status": "VERIFIED", "success": True, "action": action,
-                    key: created, "canonical_store": "work_engine",
-                    "verification": {"status": "VERIFIED"},
-                }
-                if action == "create_task":
-                    result["project_title"] = project_title
+            result = {
+                "status": "VERIFIED", "success": True, "action": action,
+                key: created, "canonical_store": "work_engine",
+                "verification": {"status": "VERIFIED"},
+            }
+            if action == "create_task":
+                result["project_title"] = project_title
         return "manage_work", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result, "verified": True}
     except Exception as exc:
         return "manage_work", {"error": str(exc), "output": str(exc), "exit_code": 1, "success": False}
