@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Tier 1 owner-journey sweep — candidate `20d07aef` (2026-08-29)
+
+On the isolated exact candidate, additional nontechnical GUI journeys passed:
+empty Recipe read (1 turn), Household mutation/readback (4 turns, 2
+mutations), Work task mutation/readback (2 turns, 1 mutation), Recipe pantry
+composition (3 turns), empty Memory (1 turn), and populated Memory (1 turn).
+Across these runs there were zero false successes, raw final Results, duplicate
+delivery, or abrupt EOFs; mutation readbacks and reload checks passed wherever
+required. A Recipe expiring-composition attempt was correctly classified as
+`ENVIRONMENT_FAILURE` because the reused disposable stack already contained a
+different seeded recipe and its precondition rejected the contaminated count.
+No owner deployment or owner data was changed.
+
 ## Asset collection-property paraphrase checkpoint — `20d07aef` (2026-08-29)
 
 Owner testing found two related Asset usability defects. “What's the RAM in my

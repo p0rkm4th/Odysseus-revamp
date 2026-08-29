@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Tier 1 owner-journey sweep — candidate `20d07aef` (2026-08-29)
+
+Isolated browser evidence now covers empty/populated Memory, Household
+mutation/readback, Work task mutation/readback, Recipe empty/composition, and
+Asset RAM paraphrases in addition to the Recipe import paths. No false-success,
+raw-result, duplicate-delivery, or abrupt-EOF defects were observed. One
+expiring-Recipe run was rejected before execution due to reused fixture state;
+it remains an environment setup gap, not a product pass.
+
 ## Asset collection-property paraphrase checkpoint — `20d07aef` (2026-08-29)
 
 Collection Asset questions now retain their property projection across
