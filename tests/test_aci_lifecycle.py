@@ -152,6 +152,32 @@ def test_recipe_mutation_answer_requires_verified_canonical_result():
     assert canonical_recipe_mutation_answer([]) is None
 
 
+def test_large_recipe_mutation_uses_bounded_projection_after_raw_output_truncation():
+    from src.aci import canonical_tool_result_projection
+
+    projection = canonical_tool_result_projection("manage_recipes", {
+        "output": json.dumps({
+            "status": "VERIFIED", "success": True, "action": "commit_import",
+            "canonical_store": "inventory_service",
+            "recipe": {
+                "id": "recipe-1", "name": "Acceptance Dinner",
+                "source_url": "https://example.test/recipe",
+                "instructions": "x" * 100_000,
+                "ingredients": [{"name": "rice"}] * 200,
+            },
+            "verification": {"status": "VERIFIED", "recipe_id": "recipe-1"},
+        }),
+        "exit_code": 0,
+    })
+    assert projection is not None
+    assert "instructions" not in json.dumps(projection)
+    assert canonical_recipe_mutation_answer([{
+        "tool": "manage_recipes", "exit_code": 0, "success": True,
+        "output": '{"status":"VERIFIED"} ... truncated',
+        "result_projection": projection,
+    }]) == "Recorded recipe 'Acceptance Dinner'; the canonical recipe readback is verified."
+
+
 def test_canonical_asset_read_answer_counts_only_structured_filtered_rows():
     answer = canonical_asset_read_answer([{
         "tool": "manage_assets", "exit_code": 0,
