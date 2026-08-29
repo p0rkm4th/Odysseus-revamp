@@ -136,8 +136,12 @@
       "environment": "deterministic_synthetic",
       "fixture_profile": "work-overview",
       "fixture_setup": "canonical_work_overview",
-      "turns": [{"prompt": "What work is outstanding?", "expected": {"domain": "WORK", "operation": "READ", "action": "overview", "tool_binding": "read_work", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Record acceptance service migration"], "must_include_any": []}}],
-      "expected": {"action": "overview", "tool_binding": "read_work", "policy": "allowed", "approval": "not_required", "readback": {"kind": "work", "endpoint": "/api/work/overview", "contains_title": "Record acceptance service migration"}, "terminal": {"done": 1, "abrupt_eof": false}}
+      "turns": [
+        {"prompt": "What work is outstanding?", "expected": {"domain": "WORK", "operation": "READ", "action": "overview", "tool_binding": "read_work", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Record acceptance service migration"], "must_include_any": []}},
+        {"prompt": "What am I still working on?", "expected": {"domain": "WORK", "operation": "READ", "action": "overview", "tool_binding": "read_work", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Record acceptance service migration"], "must_include_any": []}},
+        {"prompt": "What's outstanding for me?", "expected": {"domain": "WORK", "operation": "READ", "action": "overview", "tool_binding": "read_work", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Record acceptance service migration"], "must_include_any": []}}
+      ],
+      "expected": {"action": "overview", "tool_binding": "read_work", "policy": "allowed", "approval": "not_required", "readback": {"kind": "work", "endpoint": "/api/work/overview", "contains_title": "Record acceptance service migration"}, "terminal": {"done": 3, "abrupt_eof": false}}
     }
   ]
 }
