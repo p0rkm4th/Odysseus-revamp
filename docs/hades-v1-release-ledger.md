@@ -315,5 +315,8 @@ owner deployment remained unchanged.
 - Exact disposable browser acceptance for the previously failing empty Work
   journey passed: one deterministic human answer, one persisted answer, one
   `[DONE]`, zero abrupt EOF, and zero duplicate delivery. Qwen3:8B was
-  reachable from the candidate namespace. Disposable acceptance resources
-  were removed; owner deployment was unchanged.
+reachable from the candidate namespace. Disposable acceptance resources
+were removed; owner deployment was unchanged.
+
+- The authoritative supported-container full regression completed `6938
+  passed, 5 skipped, 149 warnings` in `293.80s`, with exit status `0`.

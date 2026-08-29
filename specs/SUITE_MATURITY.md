@@ -715,3 +715,6 @@ from the candidate namespace. The browser Work journey then passed with one
 human-readable deterministic answer, one persisted turn, one `[DONE]`, and no
 abrupt EOF or duplicate delivery. Disposable acceptance resources were
 removed; the owner deployment was unchanged.
+
+The supported-container full regression at this checkpoint completed `6938
+passed, 5 skipped, 149 warnings` in `293.80s`, with exit status `0`.
