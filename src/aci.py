@@ -3427,6 +3427,14 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
     }:
         return None
+
+    def freshness_line(value: Any) -> str | None:
+        """Expose canonical freshness without leaking internal field names."""
+        normalized = " ".join(str(value or "").replace("_", " ").split()).strip()
+        if not normalized:
+            return None
+        return f"Freshness: {normalized}."
+
     action = str(payload.get("action") or "").strip()
     if action == "read_network_context":
         interfaces = payload.get("interfaces")
@@ -3449,6 +3457,8 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             lines.append(f"Default route gateway: {', '.join(gateways)}." if gateways else "A default route was observed; gateway details are unavailable.")
         else:
             lines.append("No default route was observed.")
+        if line := freshness_line(payload.get("freshness")):
+            lines.append(line)
         return "\n".join(lines)
     if action == "read_network_observations":
         nodes = payload.get("nodes")
@@ -3466,6 +3476,17 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             lines.append(f"- {label}")
         if len(nodes) > 50:
             lines.append(f"- …and {len(nodes) - 50} more")
+        freshness = payload.get("freshness")
+        if not freshness:
+            node_freshness = {
+                str(node.get("freshness") or "").strip()
+                for node in nodes
+                if isinstance(node, Mapping) and str(node.get("freshness") or "").strip()
+            }
+            if len(node_freshness) == 1:
+                freshness = next(iter(node_freshness))
+        if line := freshness_line(freshness):
+            lines.append(line)
         return "\n".join(lines)
     return None
 

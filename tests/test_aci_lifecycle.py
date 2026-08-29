@@ -390,6 +390,23 @@ def test_large_network_result_is_projected_before_truncated_transport_output():
     assert answer == "I found 1 persisted network observation:\n- Thanatos"
 
 
+def test_network_observation_renderer_preserves_canonical_freshness():
+    answer = canonical_network_read_answer([{
+        "tool": "manage_homelab", "exit_code": 0,
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA", "action": "read_network_observations",
+            "nodes": [{"name": "Acceptance server", "freshness": "UNKNOWN"}],
+            "edges": [],
+            "freshness": "historical_until_matched_to_current_context",
+        }),
+    }])
+    assert answer == (
+        "I found 1 persisted network observation:\n"
+        "- Acceptance server\n"
+        "Freshness: historical until matched to current context."
+    )
+
+
 def test_homelab_inspection_has_grounded_deterministic_answer():
     projection = canonical_tool_result_projection("manage_homelab", {
         "output": json.dumps({
