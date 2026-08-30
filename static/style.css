@@ -41566,6 +41566,10 @@ body.settings-sidebar-resize-active {
 .hades-module-tab { flex:0 0 auto; border:0; background:transparent; color:var(--hades-text-muted); padding:7px 10px; border-radius:var(--hades-radius-sm); cursor:pointer; font:inherit; }
 .hades-module-tab:hover, .hades-module-tab.active { background:color-mix(in srgb, var(--accent-primary, #6aa7ff) 15%, transparent); color:inherit; }
 .hades-overview-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--hades-space-3); margin:var(--hades-space-4) 0; }
+.hades-summary-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--hades-space-3); margin:var(--hades-space-4) 0; }
+.hades-summary-metric { display:grid; gap:4px; min-width:0; box-sizing:border-box; padding:var(--hades-space-3); background:var(--hades-surface-raised); border:1px solid var(--hades-border-subtle); border-radius:var(--hades-radius-md); }
+.hades-summary-metric small { color:var(--hades-text-muted); overflow-wrap:anywhere; }
+.hades-summary-metric strong { font-size:1.25rem; overflow-wrap:anywhere; }
 .hades-summary-card, .hades-record-card, .hades-callout, .hades-intake-panel, .hades-attachment-box { min-width:0; box-sizing:border-box; background:var(--hades-surface-raised); border:1px solid var(--hades-border-subtle); border-radius:var(--hades-radius-md); padding:var(--hades-space-4); }
 .hades-summary-card { display:grid; gap:4px; }
 .hades-summary-card span, .hades-summary-card small, .hades-record-card small { color:var(--hades-text-muted); }
@@ -41619,8 +41623,8 @@ body.settings-sidebar-resize-active {
 .hades-success-state { color:var(--hades-success); }
 .hades-nav-icon { display:inline-grid; place-items:center; width:14px; color:var(--accent-primary, #6aa7ff); font-weight:700; }
 @keyframes hades-pulse { 50% { opacity:.3; transform:scale(.75); } }
-@media (max-width: 900px) { .hades-overview-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width: 700px) { .hades-module-header, .hades-callout { align-items:stretch; flex-direction:column; } .hades-module-actions { justify-content:flex-start; } .hades-overview-grid, .hades-intake-grid { grid-template-columns:1fr; } .hades-record-card { align-items:flex-start; flex-direction:column; } }
+@media (max-width: 900px) { .hades-overview-grid, .hades-summary-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width: 700px) { .hades-module-header, .hades-callout { align-items:stretch; flex-direction:column; } .hades-module-actions { justify-content:flex-start; } .hades-overview-grid, .hades-summary-metrics, .hades-intake-grid { grid-template-columns:1fr; } .hades-record-card { align-items:flex-start; flex-direction:column; } }
 
 /* Variable-content contract: cards and dossier prose must never force a
    sibling track wider than the available window. */
