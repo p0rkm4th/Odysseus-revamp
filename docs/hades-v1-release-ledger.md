@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Memory correction replay and disposable credential-expiry classification (2026-08-30)
+
+The first `OWNER-MEMORY-CORRECTION-READBACK-001` attempt remained on login
+because the disposable current-lane credential had expired, producing 401s;
+this was classified as `AUTH_SESSION_FAILURE`, not a Memory behavior result.
+After rotating only that credential, the same journey passed four GUI turns
+covering two Memory mutations and two reads. The acceptance oracle reported
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. Owner deployment and data were untouched.
+
 ## Recovery artifact verification continuation (2026-08-30)
 
 The retained disposable recovery artifact was independently verified with the
