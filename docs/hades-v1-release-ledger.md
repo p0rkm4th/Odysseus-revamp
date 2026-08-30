@@ -3643,6 +3643,9 @@ fail closed with a useful explanation rather than guessing. Focused routing,
 binding, household, and recipe verification passed 293 and 56 tests
 respectively.
 
+The full supported regression after this shared repair passed 7057 tests, 8
+skipped, and 149 warnings in 5m09s.
+
 Exact candidate `f6300d260f9c5b520cea7a05f619d9392e8f0264` was built as
 `odysseus:candidate-f6300d26`, image
 `sha256:030f78855539158df5a84fd2cf0c4ec33165fc52f3be70e45f3996adaf351bc6`,
