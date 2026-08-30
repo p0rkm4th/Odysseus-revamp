@@ -3551,6 +3551,13 @@ telemetry, corrected it conversationally, and confirmed it absent afterward.
 Canonical Memory state and reload durability were checked independently; no
 false success, raw final Result, duplicate delivery, or abrupt EOF occurred.
 
+An attempted broad read-only walkabout on the recipe URL lane later stopped at
+the network turn because that lane has no dedicated network-observation
+fixture/broker. Logs show `read_network_observations` failed before canonical
+evidence was produced, so this is classified as `ENVIRONMENT_FAILURE`, not a
+Memory regression. The dedicated network acceptance lane remains the valid
+source for network-read evidence.
+
 Video import coverage also passed on the disposable URL lane. A video with no
 verified recipe data required approval, returned a review-safe answer, and
 left the canonical Recipe count unchanged. A positive public cooking video
