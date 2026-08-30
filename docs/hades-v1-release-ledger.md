@@ -2,6 +2,26 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Shared owner-error surface checkpoint — exact candidate `c4cc63cf` (2026-08-30)
+
+Several normal recovery paths still fell back to native browser alerts after
+an error: chat follow-up, Work goal creation, RAG deletion, Document export,
+Cookbook task cleanup, Settings contact import/export, and Email attachment
+opening. These now use the shared Hades error/toast surfaces directly, so
+failures remain readable and non-blocking in the product chrome. Focused
+cross-suite coverage passed 76 tests. Exact candidate
+`odysseus:candidate-c4cc63cf` has image ID
+`sha256:f9fccc5bf26f6b0e74703b50914a4725bd3e9cacf6e9106fd77bc4aadf15c6cc`
+and source marker `c4cc63cf73649fbcb412fe325dee49ce9312cf2f`; isolated runtime
+was healthy with 0 restarts. The first browser attempt hit a bounded startup
+race (`ERR_CONNECTION_RESET`) before readiness; after health returned, the
+authenticated responsive browser gate passed. The prior broad regression on
+the immediately preceding executable passed `7041 passed, 8 skipped, 149
+warnings`; this frontend-only slice has fresh focused and exact-candidate
+browser evidence. Native text-entry paths in Presets, Memory, Cookbook
+hardware-fit, Gallery, and related legacy surfaces remain the next UX slice.
+Owner deployment and data remain untouched.
+
 ## Admin endpoint cleanup dialog checkpoint — exact candidate `319b530c` (2026-08-30)
 
 Admin endpoint cleanup still retained a native confirmation fallback when
