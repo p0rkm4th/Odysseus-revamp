@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## OSINT visual fixture fidelity correction (2026-08-30)
+
+Screenshot review of the realistic OSINT walkabout found that its synthetic
+fixture rendered the literal text `OSINT` as both an icon and heading, creating
+a misleading `OSINTOSINT` artifact. Production `osint.js` already uses the
+shared SVG-backed `moduleHeader`; the fixture was corrected to model that
+primitive. The walkabout was replayed successfully, and the desktop screenshot
+now shows one icon, readable hierarchy, and no apparent overflow. This was a
+test-only correction; no product runtime or owner data changed.
+
 ## Owner-safety ambiguity checkpoint (2026-08-30)
 
 The combined realistic `OWNER-AMBIGUOUS-RESTART-001` and
