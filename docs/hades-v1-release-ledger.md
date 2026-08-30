@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe shopping-requirements checkpoint — exact candidate `6a713675` (2026-08-30)
+
+`OWNER-RECIPE-SHOPPING-REQUIREMENTS-001` passed in a fresh isolated
+Compose/Qwen3:8B project with a canonical pantry shortage. The owner asked
+what recipes were available and then what was needed to make one; the final
+answer remained grounded in the shortage rather than claiming full pantry
+coverage. Evidence: two turns, two read journeys, two canonical readbacks,
+and zero mutations, false successes, raw final Results, duplicate delivery,
+or abrupt EOF.
+
 ## Current-head recovery/setup focused gate — `2026-08-30`
 
 The current branch passed 40 focused tests covering application backup/restore
