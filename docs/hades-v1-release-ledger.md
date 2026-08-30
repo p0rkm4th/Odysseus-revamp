@@ -63,6 +63,15 @@ delivery, or abrupt EOF. The disposable runtime was source-marked
 `806fc3ba0a16f754df8f4d82a8802dd11a3dca73`; the actual owner runtime remains
 untouched.
 
+## Work project mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
+
+`OWNER-WORK-PROJECT-MUTATION-READBACK-001` passed in the deterministic
+synthetic fixture mode: two owner turns, one GUI mutation, and two independent
+canonical readbacks. False successes, raw final Results, duplicate delivery,
+and abrupt EOF were all zero. This is deterministic Work evidence; Qwen
+reliability remains separately scoped, and the actual owner runtime remains
+untouched.
+
 ## Copied webpage-shaped Recipe paste checkpoint — exact candidate `806fc3ba` (2026-08-30)
 
 A normal owner paste containing ratings, author/CTA text, bullets, unicode
