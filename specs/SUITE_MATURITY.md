@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Full regression checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+The supported regression is green after the owner-journey corpus correction:
+7,022 passed, 8 skipped, 149 warnings. This is broad regression evidence and
+does not replace fresh-install, recovery, or actual-owner read-only evidence.
+
 ## Household sloppy-language mutation/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 Informal owner language successfully drove household add/consume mutations
