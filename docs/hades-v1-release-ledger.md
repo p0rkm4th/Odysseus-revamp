@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Work project mutation checkpoint — exact candidate `6a713675` (2026-08-30)
+
+`OWNER-WORK-PROJECT-MUTATION-READBACK-001` passed in a fresh isolated
+Compose project with normal login/model setup and Qwen3:8B. The owner created
+an ordinary project through chat, followed up with a read, and the canonical
+Work API confirmed the project before and after reload. Evidence: two turns,
+one mutation, two canonical readbacks, and zero false successes, raw final
+Results, duplicate delivery, or abrupt EOF. This proves the basic project
+mutation path; task creation and cross-suite relationships remain open.
+
 ## Qualitative recipe fixture replay checkpoint — harness commit `76210b81` (2026-08-30)
 
 The qualitative-amount review journey was initially blocked before the owner
