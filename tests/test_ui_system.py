@@ -62,6 +62,13 @@ def test_work_uses_shared_prompt_and_keeps_canonical_records_secondary():
     assert "Technical record" in source
 
 
+def test_asset_reconciliation_uses_shared_prompt_dialog():
+    source = (ROOT / "static/js/intelligence.js").read_text()
+    assert "import uiModule from './ui.js';" in source
+    assert "uiModule.styledPrompt" in source
+    assert "window.prompt(" not in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]

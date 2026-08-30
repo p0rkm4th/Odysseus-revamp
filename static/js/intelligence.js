@@ -1,5 +1,6 @@
 const esc = (v) => String(v ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 import { openView, setOwner, registerView } from './workspaceWindowManager.js';
+import uiModule from './ui.js';
 fetch('/api/intelligence/profiles', {credentials:'same-origin'}).then(r=>r.json()).then(d=>setOwner(d.owner)).catch(()=>{});
 function panel(id, title, html) {
   return openView(id, null, title, `<div><h2>${title}</h2>${html}</div>`);
@@ -37,10 +38,23 @@ function openCmdbAsset(node) {
   const actions = pending || unidentified ? `<section class="hades-detail-section"><h3>Owner reconciliation</h3><p class="muted">This observation is evidence, not canonical identity. Explicit owner confirmation is required.</p><div class="hades-inline-actions"><button class="list-item" data-cmdb-confirm>Confirm${unidentified ? ' and name' : ''}</button><button class="list-item" data-cmdb-reject>Reject</button></div><p class="muted" data-cmdb-message></p></section>` : '';
   el.querySelector('.hades-window-body').innerHTML = `<div><h2>${esc(node.name || node.hostname || node.id)}</h2><p>${esc(node.resolution_state || 'canonical')} · confidence ${esc(node.confidence)}</p>${actions}<h3>Identifiers</h3><pre>${esc(JSON.stringify(node.identifiers || [], null, 2))}</pre><h3>Observations / provenance</h3><pre>${esc(JSON.stringify(observations, null, 2))}</pre></div>`;
   const reconcile = async (decision) => {
-    const name = decision === 'reject' ? undefined : (
-      decision === 'create' || (decision === 'confirm' && unidentified)
-        ? window.prompt('Name this asset') : window.prompt('Optional asset name', node.name || '')
-    );
+    let name;
+    if (decision === 'reject') {
+      name = undefined;
+    } else {
+      name = await uiModule.styledPrompt(
+        decision === 'create' || (decision === 'confirm' && unidentified)
+          ? 'Give this discovered asset a recognizable name.'
+          : 'Optionally update the asset name.',
+        {
+          title: decision === 'create' || (decision === 'confirm' && unidentified)
+            ? 'Name asset' : 'Update asset name',
+          defaultValue: node.name || '',
+          placeholder: 'e.g. Living room server',
+          confirmText: 'Continue',
+        },
+      );
+    }
     if ((decision === 'create' || (decision === 'confirm' && unidentified)) && !name?.trim()) return;
     const response = await fetch('/api/network/assets/reconcile', {
       method: 'POST', credentials: 'same-origin',
