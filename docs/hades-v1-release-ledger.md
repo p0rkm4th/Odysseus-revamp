@@ -4698,3 +4698,13 @@ restored and the app restarted; `MemoryVectorStore initialized` and normal
 application startup were observed. This validates graceful unaffected
 canonical behavior during dependency loss and recovery without touching owner
 deployment/data.
+
+## Post-fix full regression — candidate source `616be82c` (2026-08-30)
+
+The full supported regression after the task-capability safety repair passed
+`7,095` tests with `9` skipped and `149` warnings in `334.73` seconds. This
+replaces the pre-fix `7,091 passed / 4 failed` checkpoint; no failures remained
+in the affected capability, policy, projection, or semantic-generator areas.
+The exact browser candidate remained `odysseus:candidate-616be82c`, healthy
+with zero restarts and source/branch-matched metadata. Owner deployment/data
+remained untouched.
