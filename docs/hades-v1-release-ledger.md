@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Shared summary-metric UI fix — exact candidate `b8f49186` (2026-08-30)
+
+An isolated Security walkabout exposed a production UI defect: every
+`.hades-summary-metrics` group lacked layout styling, so the empty Security
+summary rendered as `Engagements0 Authorized0 BoundaryScoped`. The shared
+primitive now provides spaced responsive metric cards, fixing all current
+consumers rather than Security alone. Focused UI/security coverage passed 6
+tests. Exact candidate `odysseus:candidate-b8f49186` has image ID
+`sha256:c7492cd9173fba1ded52fe5b204b74fc3ff54520519e06d6d9f98adfab058cd6`.
+The visual gate passed at desktop, narrow, and mobile sizes; the corrected
+Security screenshot was inspected and showed three distinct readable cards.
+The candidate runtime was source-marked `b8f49186c7161291a0807ac6e3df498750064331`
+with 0 restarts; the actual owner runtime remains untouched.
+
 ## Recipe pantry-composition checkpoint — exact candidate `04d05854` (2026-08-30)
 
 `OWNER-RECIPE-COMPOSITION-001` passed in deterministic fixture mode across
