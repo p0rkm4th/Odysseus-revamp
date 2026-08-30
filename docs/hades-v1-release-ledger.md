@@ -2,16 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
-## Current-candidate recovery rehearsal and fresh-fresh auth finding (2026-08-30)
+## Current-candidate recovery rehearsal and fresh-fresh acceptance (2026-08-30)
 
 The current executable candidate `8c620bf438bd` was deployed into the
 isolated fresh-fresh Compose lane and verified with matching image/OCI/source
-markers, healthy startup, zero restarts, and Qwen3:8B availability. A browser
-replay was then blocked at login: both the newly provisioned disposable
-acceptance principal and the lane's recorded `freshadmin` password returned
-401. This is classified as `AUTH_SESSION_FAILURE` in the disposable lane;
-feature acceptance was not claimed from it, and owner authentication/data were
-untouched.
+markers, healthy startup, zero restarts, and Qwen3:8B availability. An initial
+browser attempt exposed two acceptance setup errors: credentials were written
+under the wrong host data-root level, then a stale pinned endpoint ID caused
+session creation HTTP 400. These were classified as `ENVIRONMENT_FAILURE` /
+`AUTH_SESSION_FAILURE`, corrected only in the disposable lane, and not counted
+as product acceptance.
+
+After correcting the mount-aligned credential path and allowing endpoint
+discovery, the normal authenticated browser flow passed the empty Work journey
+on the current candidate: one GUI read, one terminal completion, and zero
+false successes, raw final Results, duplicate delivery, or abrupt EOF. Owner
+authentication/data were untouched.
 
 Separately, the documented application backup path was rehearsed in the
 isolated `/tmp/hades-recovery-gHuNV6` root. Snapshot and archive verification
