@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Document Editor shared-dialog checkpoint — exact candidate `26c68c5f` (2026-08-30)
+
+Document Editor’s AI-fill instruction prompt, multi-file zip choice, and active
+document deletion retained native prompt/confirm fallbacks. These owner-facing
+actions now use shared Hades prompt/confirmation surfaces with review-oriented
+copy, explicit attachment choices, and a clear keep action for deletion.
+Focused document/UI coverage passed 222 tests. Exact candidate
+`odysseus:candidate-26c68c5f` has image ID
+`sha256:e6d68582a12671a139eece32f1f029f1510e7e2ba77a5ca5f22c8e0a97d35d4a`
+and source marker `26c68c5feaafb8ee1b0e1f0c5a529ad09c42af30`; isolated runtime
+was healthy with 0 restarts. Authenticated responsive browser acceptance and
+the broad regression passed `7035 passed, 8 skipped, 149 warnings` in 297.32
+seconds. Owner deployment and data remain untouched.
+
 ## Document Library shared-confirmation checkpoint — exact candidate `f153493b` (2026-08-30)
 
 Document Library single and bulk deletion retained native browser confirmation

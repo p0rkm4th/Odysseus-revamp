@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Document Editor shared-dialog checkpoint — exact candidate `26c68c5f` (2026-08-30)
+
+Document Editor AI-fill, multi-file attachment, and deletion actions now use
+shared Hades prompt/confirmation surfaces without native fallbacks. Focused
+coverage passed 222 tests, responsive browser acceptance passed, and the
+broad regression passed 7,035 tests with 8 skipped and 149 warnings. Owner
+deployment state was not modified.
+
 ## Document Library shared-confirmation checkpoint — exact candidate `f153493b` (2026-08-30)
 
 Document Library single and bulk destructive deletion now use shared Hades
