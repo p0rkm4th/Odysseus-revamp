@@ -4843,7 +4843,7 @@ def project_action_selection(
         domain=str(frame.get("domain_concept") or "UNKNOWN"),
         operation=str(frame.get("operation_class") or "UNKNOWN"),
         action_count=len(selected),
-        context_required=contract.get("reason") == "target_required",
+        context_required=contract.get("reason") in {"target_required", "recipe_reference_required"},
     )
     reason = None
     if mode is SelectionMode.NEED_CONTEXT:
@@ -4856,6 +4856,7 @@ def project_action_selection(
         frame.get("operation_class") == "READ" and frame.get("read_explicit") is True
         and desired_binding and desired_action and desired_binding in candidate_bindings
         and desired_binding not in disabled
+        and contract.get("reason") not in {"target_required", "recipe_reference_required"}
     ):
         spec = action_for_tool(desired_binding, {"action": desired_action})
         if spec and spec.known and spec.approval.value == "none" and not set(spec.effects) & {
@@ -4917,7 +4918,11 @@ def project_action_selection(
             fast_path = memory_payload
             mode = SelectionMode.DIRECT_ACTION
     if mode is SelectionMode.NEED_CONTEXT:
-        return ActionProjection(None, {}, None, mode, reason, clarification_instruction, "Which service or systemd unit should I restart?", ("action_target_clarification",))
+        if str(frame.get("domain_concept") or "") == "RECIPE":
+            question = "Which recipe should I check for missing ingredients?"
+        else:
+            question = "Which service or systemd unit should I restart?"
+        return ActionProjection(None, {}, None, mode, reason, clarification_instruction, question, ("action_target_clarification",))
     safety_messages = {
         "strong_identity_required": "I can't merge or identify assets by IP address alone; I need a strong identity such as a system UUID, serial, or MAC.",
         "public_scope_requires_authorization": "I can't scan a public or external range without an explicitly authorized target scope.",

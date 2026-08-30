@@ -2568,7 +2568,15 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     binding = binding_for_tool(contract.binding or "") if contract.binding else None
     if binding is None or binding.capability_id != contract.capability_id:
         return ResolvedContract(frame, contract, action_id, action, contract.binding, False, "tool_binding_unavailable")
-    return ResolvedContract(frame, contract, action_id, action, binding.transport_name, True)
+    reason = (
+        "recipe_reference_required"
+        if frame.domain_concept == "RECIPE"
+        and frame.operation_class == "READ"
+        and frame.filters.get("recipe_shopping") is True
+        and not frame.entity_reference
+        else None
+    )
+    return ResolvedContract(frame, contract, action_id, action, binding.transport_name, True, reason)
 
 
 def validate_contracts() -> list[str]:
