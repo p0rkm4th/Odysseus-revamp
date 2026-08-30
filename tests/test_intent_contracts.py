@@ -19,6 +19,7 @@ from src.intent_contracts import (
     explicitly_allows_diagnostic_install,
     network_substantive_fallback_command,
     is_explicit_continuation,
+    is_bounded_owner_capability_turn,
 )
 from src.aci import compile_turn_contract, is_contextual_reference_followup
 
@@ -141,6 +142,21 @@ def test_natural_reminder_projects_title_and_due_date_without_model_arguments():
         "title": "Review the backup plan",
         "due_date": "tomorrow",
     }
+
+
+@pytest.mark.parametrize("query", [
+    "Actually, cancel that reminder.",
+    "Cancel that reminder.",
+    "Please remove that note.",
+])
+def test_natural_reminder_cancellation_is_a_bounded_notes_mutation(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.operation_class == "DELETE"
+    assert frame.domain_concept == "NOTES_MUTATION"
+    assert is_bounded_owner_capability_turn(frame)
+    assert resolved.action_id == "delete"
+    assert resolved.binding_name == "manage_notes"
 
 
 @pytest.mark.parametrize("query", [

@@ -2036,15 +2036,18 @@ def _operation(text: str, *, continuation: bool = False) -> str:
         q,
     ):
         return "DELETE"
-    if continuation or _is_continuation_phrase(q):
-        return "CONTINUE"
-    if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
+    if re.search(r"\b(?:delete|remove|retire|forget|cancel)\b", q): return "DELETE"
     if re.search(r"\bremind\s+me\b", q): return "CREATE"
     if re.search(r"\b(?:remember|memorize|save this about me)\b", q): return "CREATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm|move)\b", q): return "UPDATE"
     if re.search(r"\b(?:save|store|keep)\b", q) and re.search(r"\b(?:recipe|recipes|cookbook|dish)\b", q):
         return "CREATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
+    # Continuation language is a modifier, not a stronger signal than an
+    # explicit mutation. Keep it ahead of broad execution vocabulary such as
+    # "run" in "keep going with the current Run".
+    if continuation or _is_continuation_phrase(q):
+        return "CONTINUE"
     if re.search(r"\b(?:restart|recover|execute|run|scan|discover\w*|install|turn on|start|begin)\b", q) and not re.search(
         r"\brun\s+out\s+of\b", q,
     ): return "EXECUTE"
@@ -2147,7 +2150,7 @@ def compile_intent(
         concept = "GOAL"
     elif operation == "CREATE" and re.search(r"\b(?:create|add|make)\s+(?:a\s+)?task\b", q):
         concept = "TASK"
-    elif operation == "CREATE" and looks_like_notes_request(q):
+    elif operation in {"CREATE", "UPDATE", "DELETE"} and looks_like_notes_request(q):
         concept = "NOTES_MUTATION"
     elif looks_like_notes_request(q):
         concept = "NOTES"

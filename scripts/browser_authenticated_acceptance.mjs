@@ -717,6 +717,14 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
     }
     return {phase, kind: spec.kind, found: true, due_date: found.due_date || null};
   }
+  if (spec.kind === 'notes' && spec.absent_title) {
+    const notes = Array.isArray(result.payload?.notes) ? result.payload.notes : [];
+    const wanted = String(spec.absent_title).trim().toLowerCase();
+    if (notes.some((note) => String(note?.title || '').trim().toLowerCase() === wanted)) {
+      throw new Error(`${scenario.id} notes readback unexpectedly found canonical reminder`);
+    }
+    return {phase, kind: spec.kind, absent: true};
+  }
   throw new Error(`${scenario.id} uses unsupported readback kind`);
 }
 

@@ -5004,12 +5004,17 @@ def project_action_selection(
                 payload.update(draft)
         if (
             str(frame.get("domain_concept") or "") == "NOTES_MUTATION"
-            and str(frame.get("operation_class") or "") == "CREATE"
+            and str(frame.get("operation_class") or "") in {"CREATE", "UPDATE", "DELETE"}
             and str(item.get("binding") or "") == "manage_notes"
-            and str(item.get("action_id") or "") == "add"
+            and str(item.get("action_id") or "") in {"add", "update", "delete"}
         ):
             from src.intent_contracts import note_mutation_payload
             draft = note_mutation_payload(query, str(item.get("action_id") or ""))
+            if not draft and str(item.get("action_id") or "") in {"update", "delete"}:
+                reference_resolution = frame.get("reference_resolution") if isinstance(frame, Mapping) else {}
+                reference_refs = reference_resolution.get("refs") if isinstance(reference_resolution, Mapping) else None
+                if isinstance(reference_refs, list) and len(reference_refs) == 1 and str(reference_refs[0]).strip():
+                    draft = {"action": str(item.get("action_id") or ""), "id": str(reference_refs[0])}
             if draft:
                 payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
