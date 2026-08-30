@@ -69,3 +69,26 @@ def test_chromadb_health_reports_down_for_unhealthy_vector_store():
     assert sh.chromadb_health(None, None)["status"] == sh.DISABLED
     assert sh.chromadb_health(None, store)["status"] == sh.DOWN
     assert sh.chromadb_health(healthy_rag, store)["status"] == sh.DEGRADED
+
+
+def test_memory_vector_startup_retries_transient_dependency(monkeypatch, tmp_path):
+    _neutralize_collaborators(monkeypatch)
+    attempts = []
+
+    class _EventuallyHealthyVectorStore(_UnhealthyVectorStore):
+        def __init__(self, *args, **kwargs):
+            attempts.append(1)
+            self.healthy = len(attempts) >= 2
+
+        def rebuild(self, _memories):
+            return None
+
+    monkeypatch.setattr(
+        memory_vector_mod, "MemoryVectorStore", _EventuallyHealthyVectorStore,
+    )
+    monkeypatch.setattr(app_init.time, "sleep", lambda _seconds: None)
+
+    result = app_init.initialize_managers(str(tmp_path), rag_manager=None)
+
+    assert result["memory_vector"].healthy is True
+    assert len(attempts) == 2
