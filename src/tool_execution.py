@@ -2074,7 +2074,30 @@ async def _execute_manage_recipes_binding(block, owner=None):
                     + ", ".join(str(item) for item in missing[:8])
                 )
             payload = {"action": "commit_import", "draft": draft_payload}
-        created = service.manage_recipes(payload, owner=owner)
+        try:
+            created = service.manage_recipes(payload, owner=owner)
+        except (TypeError, ValueError) as exc:
+            # A model may emit a recognizably useful import draft with one or
+            # more unresolved quantities.  Keep the strict canonical commit
+            # boundary, but route that proposal into the existing owner
+            # review dialog instead of exposing a dead-end validation error.
+            if action != "commit_import" or not isinstance(payload.get("draft"), dict):
+                raise
+            from src.intent_contracts import recipe_import_review_draft_from_payload
+            draft_payload = recipe_import_review_draft_from_payload(payload["draft"])
+            if draft_payload is None:
+                raise exc
+            result = {
+                "status": "NEEDS_REVIEW", "success": True,
+                "action": "prepare_import", "draft": draft_payload,
+                "ui_event": "recipe_import_review",
+                "canonical_store": "inventory_service",
+            }
+            return "manage_recipes", {
+                "output": _ody_v34_json.dumps(result, default=str, sort_keys=True),
+                "exit_code": 0, "success": True, "data": result,
+                "ui_event": "recipe_import_review", "draft": draft_payload,
+            }
         recipe = created.get("recipe") if isinstance(created, dict) else None
         if not isinstance(recipe, dict) or not recipe.get("id"):
             raise ValueError("recipe mutation returned no canonical recipe")

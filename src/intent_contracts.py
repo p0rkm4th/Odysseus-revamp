@@ -500,6 +500,76 @@ def recipe_import_review_draft(
     return draft
 
 
+def recipe_import_review_draft_from_payload(
+    payload: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Turn an incomplete model import proposal into an editable review draft.
+
+    Import proposals are untrusted model output.  A proposal that has the
+    shape of a recipe but fails strict quantity validation should remain
+    useful to the owner, while never being treated as commit-ready state.
+    Return ``None`` for proposals too malformed to review safely.
+    """
+    if not isinstance(payload, Mapping):
+        return None
+    name = str(payload.get("name") or "").strip()[:200]
+    instructions = str(payload.get("instructions") or "").strip()[:20000]
+    raw_ingredients = payload.get("ingredients")
+    if not name or not instructions or not isinstance(raw_ingredients, list) or not raw_ingredients:
+        return None
+
+    ingredients: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for item in raw_ingredients[:200]:
+        if not isinstance(item, Mapping):
+            return None
+        item_name = str(item.get("name") or "").strip()[:200]
+        if not item_name:
+            return None
+        unit = str(item.get("unit") or "").strip().lower()[:40]
+        quantity_value = item.get("quantity")
+        try:
+            quantity = float(quantity_value)
+        except (TypeError, ValueError):
+            quantity = 0
+        if not unit or quantity <= 0:
+            review_note = str(item.get("review_note") or "quantity unspecified").strip()[:120]
+            ingredients.append({
+                "name": item_name, "quantity": "", "unit": unit or "each",
+                "optional": bool(item.get("optional", False)),
+                "review_note": review_note,
+            })
+            missing.append(f"{item_name} ({review_note})")
+        else:
+            ingredients.append({
+                "name": item_name, "quantity": quantity, "unit": unit,
+                "optional": bool(item.get("optional", False)),
+            })
+    if not ingredients:
+        return None
+
+    try:
+        servings = float(payload.get("servings", 1))
+    except (TypeError, ValueError):
+        servings = 1
+        missing.append("servings")
+    if servings <= 0:
+        servings = 1
+        missing.append("servings")
+    if servings.is_integer():
+        servings = int(servings)
+    draft: dict[str, Any] = {
+        "action": "commit_import", "name": name, "servings": servings,
+        "ingredients": ingredients, "instructions": instructions,
+        "provenance": str(payload.get("provenance") or "owner_review")[:80],
+        "review_required": True, "review": {"missing_fields": missing[:20]},
+    }
+    source_url = str(payload.get("source_url") or "").strip()
+    if source_url and re.match(r"^https?://", source_url, re.IGNORECASE):
+        draft["source_url"] = source_url
+    return draft
+
+
 def recipe_create_payload(query: str) -> dict[str, Any] | None:
     draft = recipe_create_draft(query)
     return draft.as_payload() if draft else None

@@ -15,6 +15,7 @@ from src.aci import (
 )
 from src.intent_contracts import (
     RecipeDraft, recipe_import_draft, recipe_import_review, recipe_import_review_draft,
+    recipe_import_review_draft_from_payload,
 )
 from src.intent_contracts import compile_intent, resolve_intent
 from types import SimpleNamespace
@@ -809,6 +810,62 @@ async def test_chat_incomplete_paste_returns_editable_review_draft_without_commi
         "action": "prepare_import", "source_text": source,
         "source_url": None, "requested_name": None,
     }, "alice")]
+
+
+def test_incomplete_model_import_payload_becomes_review_draft_without_commit():
+    draft = recipe_import_review_draft_from_payload({
+        "name": "Acceptance Video Pancakes", "servings": 2,
+        "ingredients": [
+            {"name": "banana", "quantity": 1, "unit": "each"},
+            {"name": "olive oil spray", "quantity": None, "unit": ""},
+        ],
+        "instructions": "Mix and cook.", "source_url": "https://www.youtube.com/watch?v=example",
+    })
+    assert draft is not None
+    assert draft["review_required"] is True
+    assert draft["ingredients"][1]["quantity"] == ""
+    assert "olive oil spray" in draft["review"]["missing_fields"][0]
+    assert draft["source_url"].startswith("https://")
+
+
+@pytest.mark.asyncio
+async def test_incomplete_model_import_is_routed_to_review_before_canonical_write(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    calls = []
+
+    class FakeService:
+        def manage_recipes(self, payload, *, owner):
+            calls.append(payload)
+            raise ValueError("each recipe ingredient needs a numeric quantity")
+
+    monkeypatch.setattr("src.inventory_service.get_inventory_service", lambda: FakeService())
+    tool, result = await tool_execution._execute_manage_recipes_binding(
+        SimpleNamespace(content=json.dumps({
+            "action": "commit_import",
+            "draft": {
+                "name": "Acceptance Video Pancakes", "servings": 2,
+                "ingredients": [
+                    {"name": "banana", "quantity": 1, "unit": "each"},
+                    {"name": "olive oil spray", "quantity": None, "unit": ""},
+                ], "instructions": "Mix and cook.",
+            },
+        })),
+        owner="alice",
+    )
+
+    assert tool == "manage_recipes"
+    assert result["success"] is True
+    assert result["data"]["status"] == "NEEDS_REVIEW"
+    assert result["ui_event"] == "recipe_import_review"
+    assert result["draft"]["ingredients"][1]["review_note"] == "quantity unspecified"
+    assert calls == [{"action": "commit_import", "draft": {
+        "name": "Acceptance Video Pancakes", "servings": 2,
+        "ingredients": [
+            {"name": "banana", "quantity": 1, "unit": "each"},
+            {"name": "olive oil spray", "quantity": None, "unit": ""},
+        ], "instructions": "Mix and cook.",
+    }}]
 
 
 def test_chat_review_draft_answer_is_truthful_and_not_a_recipe_mutation_claim():
