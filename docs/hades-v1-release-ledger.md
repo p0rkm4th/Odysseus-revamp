@@ -21,6 +21,13 @@ owner deployment was not touched. The corrected Compose candidate still needs
 commit, exact-image build/provenance, and a release checkpoint; owner-data
 migration remains a separately controlled operation.
 
+The acceptance harness now refuses to run unless `APP_DATA_DIR` is set to a
+disposable directory distinct from the repository's `data/` directory. A
+manual persistence-health check exposed that the Compose overlay's comment
+alone was insufficient protection; no browser mutation was run in that stack,
+and it was stopped and removed before further testing. The owner container
+remained running with zero restarts.
+
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
 `OWNER-MEMORY-MUTATION-READBACK-001` passed on the exact disposable
