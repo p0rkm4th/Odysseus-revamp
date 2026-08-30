@@ -19,6 +19,10 @@ numpy
 chromadb-client
 fastembed
 youtube-transcript-api
+# Public YouTube metadata fallback used by recipe imports and bounded video
+# context. Keep this in the core image because video URLs are a supported
+# owner-facing recipe source, not an optional developer integration.
+yt-dlp==2026.8.19
 # Markdown rendering for research reports (src/visual_report.py).
 # Imported at module-top so it's a hard core dep, not optional.
 markdown
