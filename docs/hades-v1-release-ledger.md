@@ -4610,3 +4610,15 @@ ACI runtime emitted no `manage_tasks` Action and canonical `scheduled_tasks`
 remained unchanged. This is an unresolved `ACI_RUNTIME/EXECUTION_GATE`
 failure, not a passing scheduler journey. Owner deployment/data remained
 untouched.
+
+## Current daily-driver replay — exact candidate `4c873549` (2026-08-30)
+
+The promoted Today empty-state journey passed `2` owner turns covering a
+canonical Work attention read and an unavailable Calendar read; no calendar
+events were fabricated. The accumulated `OWNER-TIER1-LIVED-IN-WALKABOUT-001`
+journey also passed on the same exact candidate: `20` turns and `20` streams
+across Today, commitments, reminders, Household, Recipes, Assets, Network,
+Memory, and cross-domain asset-reference switching. Both replays recorded
+zero false successes, raw final Results, duplicate delivery, or abrupt EOF.
+These are read-only disposable acceptance replays; owner deployment/data
+remained untouched.
