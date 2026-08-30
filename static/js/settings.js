@@ -5298,9 +5298,9 @@ async function initUnifiedIntegrations() {
     el('uf-codex-revoke')?.addEventListener('click', async () => {
       const tokenId = formEl.dataset.createdTokenId;
       if (!tokenId) return;
-      const ok = window.styledConfirm
-        ? await window.styledConfirm(`Revoke this ${cfg.word} agent token? Integrations using it will lose access.`, { confirmText: 'Revoke', danger: true })
-        : confirm(`Revoke this ${cfg.word} agent token? Integrations using it will lose access.`);
+      const ok = await uiModule.styledConfirm(`Revoke this ${cfg.word} agent token? Integrations using it will lose access.`, {
+        title: 'Revoke agent token', confirmText: 'Revoke token', cancelText: 'Keep token', danger: true,
+      });
       if (!ok) return;
       const msg = el('uf-codex-msg');
       try {
