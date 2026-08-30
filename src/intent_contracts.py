@@ -181,8 +181,15 @@ def _recipe_ingredients(section: str, *, split_compact: bool = True) -> list[dic
             quantity: float = float(numerator) / float(denominator)
         else:
             quantity = float(quantity_text)
+        ingredient_name = match.group("name").strip()
+        # Recipe sites sometimes append display-only prices and footnote
+        # markers to schema.org ingredient strings. Strip only those
+        # unambiguous trailing artifacts; meaningful preparation text such as
+        # ``(about 3/4 lb.)`` remains intact.
+        ingredient_name = re.sub(r"\s+\(\s*\$\s*[\d,.]+\s*\)\s*$", "", ingredient_name)
+        ingredient_name = re.sub(r"[*†‡]+\s*$", "", ingredient_name).strip()
         ingredients.append({
-            "name": match.group("name").strip(),
+            "name": ingredient_name,
             "quantity": quantity,
             "unit": (match.group("unit") or "each").strip().lower(),
         })
