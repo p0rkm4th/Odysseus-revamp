@@ -319,6 +319,16 @@
       "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "absent_title": "Cancel the test appointment"}, "terminal": {"done": 3, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-REMINDER-HOURLY-READBACK-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-daily-driver",
+      "turns": [
+        {"prompt": "Could you remind me in an hour to check the laundry?", "expected": {"domain": "NOTES", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add", "tool_binding": "manage_notes", "requires_effect": true, "must_include_any": ["reminder", "laundry", "hour"], "forbidden": ["Done", "successfully completed"]}},
+        {"prompt": "What reminders do I have?", "expected": {"domain": "NOTES", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_notes", "must_include_any": ["laundry", "reminder"]}}
+      ],
+      "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "approval": "not_required", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "contains_title": "Check the laundry", "requires_due_date": true}, "terminal": {"done": 2, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-TIER1-LIVED-IN-WALKABOUT-001",
       "environment": "realistic_messy_synthetic",
       "fixture_profile": "lived-in-daily-driver",
