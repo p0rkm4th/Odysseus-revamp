@@ -4394,6 +4394,21 @@ def canonical_structured_empty_read_answer(tool_events: Sequence[Mapping[str, An
     return None
 
 
+def canonical_communications_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Return the bounded calendar projection from a communications read."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "read_communications"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    text = str(event.get("output") or "").strip()
+    if text.startswith(("You have no calendar events", "Your calendar is not connected", "You have ")):
+        return text
+    return None
+
+
 def canonical_result_answer(
     tool_events: Sequence[Mapping[str, Any]],
 ) -> CanonicalAnswer | None:
@@ -4411,6 +4426,7 @@ def canonical_result_answer(
         (canonical_memory_mutation_answer(tool_events), "Memory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
+        (canonical_communications_read_answer(tool_events), "canonical Calendar Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
         (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
         (canonical_service_read_answer(tool_events), "canonical Service Result"),
