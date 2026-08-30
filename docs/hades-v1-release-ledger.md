@@ -112,6 +112,27 @@ The focused recipe/execution slice passed `143` tests, and the full supported
 regression at the pushed documentation checkpoint passed `7016` tests with
 `8` skips and `186` warnings in `330.32s`.
 
+## Positive YouTube recipe import checkpoint — exact candidate `68beec69` (2026-08-30)
+
+The exact candidate `68beec697780510f2e9e0108d6d22211929571fc`, image
+`sha256:a241f019bc811e4b15a476a337698e2291c5701685b11bac1a43c28d2e6f28cd`,
+was tested in a fresh isolated Compose project after normal admin login and
+Qwen3:8B endpoint registration. The owner request used the public cooking
+video `5YcsrFC2h5U` and a display-name override. Its description contained
+headinged instructions and two quantified ingredients but no parser-specific
+owner syntax. Through GUI/chat, Hades fetched the untrusted video evidence,
+created the canonical Recipe, preserved the requested name and source URL,
+and independently read it back twice, including reload durability. One turn,
+one mutation, two readbacks, one terminal completion, and zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF. The
+disposable project, volumes, and credentials were removed; the owner runtime
+was not touched.
+
+This closes the previously open positive YouTube extraction gate for a
+complete quantified description. Qualitative/missing-amount video evidence,
+review correction UX, broader video variants, and meal-plan composition remain
+separate Recipe release work.
+
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
 `OWNER-MEMORY-MUTATION-READBACK-001` passed on the exact disposable
