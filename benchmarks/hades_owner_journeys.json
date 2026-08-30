@@ -161,6 +161,15 @@
       "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Homemade Pasta", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Homemade Pasta", "contains_source_url": "https://www.youtube.com/watch?v=5YcsrFC2h5U"}, "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-VIDEO-TITLE-DEFAULT-001",
+      "environment": "realistic_messy_synthetic",
+      "fixture_profile": "empty-recipes-video-title-default",
+      "turns": [
+        {"prompt": "Save this recipe from the cooking video to my recipe book: https://www.youtube.com/watch?v=5YcsrFC2h5U", "expected": {"domain": "RECIPES", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "commit_import", "tool_binding": "manage_recipes", "requires_effect": true, "requires_approval": true}}
+      ],
+      "expected": {"policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_name": "2-Ingredient Homemade Pasta | Easy recipe", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "2-Ingredient Homemade Pasta | Easy recipe", "contains_source_url": "https://www.youtube.com/watch?v=5YcsrFC2h5U"}, "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-HOUSEHOLD-MUTATION-READBACK-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-household",
