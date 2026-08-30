@@ -2,6 +2,25 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
+
+The video no-evidence journey remains open. Server-side evidence showed the
+sealed approval in both `tool_output.ask_user` and the persisted assistant
+metadata, while an owner browser could lose the live card during rich-stream
+history reload (`UI_RENDER_FAILURE`/`UX_CONFUSION`). The chat client now keeps
+the pending approval payload through that reload and restores it only if the
+canonical history response briefly omits it; approval resolution clears the
+snapshot. Focused coverage passed `2 passed`. Executable source commit
+`1a24a12f560eb5fbe7f7b1200399fc83f06322da` was built as
+`odysseus:candidate-1a24a12f`, image ID
+`sha256:54c9ffa7313c25f1f297b8c86200ef99d10e7d3d858efe9d6aeca9c3a5a8f6ae`,
+with matching OCI revision and source marker; disposable runtime was healthy
+with 0 restarts and Qwen3:8B available. A filtered replay after deployment
+was blocked by the shared provider taking the stream past the 120-second
+approval wait, so this repair is not yet browser-green. The later test-only
+head is `ef58496d`; no rebuild is required for that test-only change. Owner
+deployment and data remain untouched.
+
 ## Household add false-success fix and replay — exact candidate `701eff7e` (2026-08-30)
 
 The owner prompt “Add 3 cans of Acceptance Beans.” previously produced a
