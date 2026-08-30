@@ -2,6 +2,37 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Household add false-success fix and replay — exact candidate `701eff7e` (2026-08-30)
+
+The owner prompt “Add 3 cans of Acceptance Beans.” previously produced a
+success claim while canonical inventory remained unchanged. Classification:
+`FALSE_SUCCESS` caused by `UNKNOWN` intent bypassing the bounded inventory
+Action, despite the existing quantity extractor being correct. The shared
+compiler now recognizes quantity-plus-item imperatives as Household mutations
+and routes them through `manage_assets.add_item`. On the exact Qwen3:8B
+candidate, the GUI answer reported a verified canonical readback; independent
+`/api/inventory/overview` changed from two items to three and found
+`Acceptance Beans` at quantity `3 count`. A GUI follow-up, “How many Acceptance
+Beans do I have?”, returned all three canonical items. Focused coverage passed
+`20 passed`; the exact image is `odysseus:candidate-701eff7e`, image ID
+`sha256:6d77b2ed7fd5406eaa7ab8af63a2eebd5eeac17374803318e2f19eb5406d55f7`,
+source marker `701eff7eb6e01c4c7dad6356f6bf6ed7b84a4d6c`, healthy with 0
+restarts. Owner deployment and data remain untouched.
+
+## Immediate first-chat bootstrap replay — exact candidate `78640e6a` (2026-08-30)
+
+Fresh authenticated browser acceptance submitted “what food we got” as soon
+as the visible composer appeared, without an artificial post-login wait. The
+candidate’s bounded default-chat retry closed the prior startup race: the
+request completed in 340 ms and returned the two canonical household items;
+no “No chat session active” message appeared. Focused frontend coverage passed
+`1 passed`, JavaScript syntax and diff checks passed, and the exact image is
+`odysseus:candidate-78640e6a`, image ID
+`sha256:54793cd595dfea4f6365c0b13921a6139db1da1f67f04f5d2cc4603d977bd92a`,
+with source marker `78640e6a9073e13f2f09373c8ed38193fc937968`; disposable
+runtime was healthy with 0 restarts. Owner deployment and data remain
+untouched.
+
 ## Ordinary Work overview language replay — exact candidate `b1671aee` (2026-08-30)
 
 On the exact Qwen3:8B candidate, the owner prompts “whats left”, “what should
