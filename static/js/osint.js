@@ -4,6 +4,7 @@
  */
 import { openView, close as closeWindow, registerView } from './workspaceWindowManager.js';
 import { emptyState, errorState, intakeField, loadingState, moduleHeader, provenanceBadge, statusBadge } from './ui-components.js';
+import uiModule from './ui.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api = async (path, options={}) => { const response = await fetch(path, {credentials:'same-origin', headers: options.body ? {'Content-Type':'application/json'} : undefined, ...options}); const data = await response.json().catch(() => ({})); if (!response.ok) throw Error(data.detail || `Request failed (${response.status})`); return data; };
@@ -56,7 +57,9 @@ async function caseDossier(sessionId) {
 
 async function reviewClaimButton(button, body) {
   const decision = button.dataset.osintReview;
-  if (decision === 'retracted' && !window.confirm('Retract this claim from the current projection? Prior evidence will be retained.')) return;
+  if (decision === 'retracted' && !await uiModule.styledConfirm('Retract this claim from the current projection? Prior evidence will be retained.', {
+    title: 'Retract claim', confirmText: 'Retract claim', cancelText: 'Keep claim', danger: true,
+  })) return;
   const dossier = button.closest('[data-osint-session]');
   const sessionId = dossier?.dataset.osintSession;
   if (!sessionId) return;
