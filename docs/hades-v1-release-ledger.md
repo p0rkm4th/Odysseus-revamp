@@ -2051,3 +2051,16 @@ The same candidate also passed Work read variants `what am i working on?`,
 answer. Reload preserved the conversation. No mutation, false success, raw
 final Result, duplicate delivery, abrupt EOF, or browser page error was
 observed. The real owner deployment remained on older source `34ced247`.
+
+## Qualitative Recipe review checkpoint — exact candidate `1e950047` (2026-08-29)
+
+An ordinary pasted recipe containing `salt to taste`, `oil as needed`, and
+`parsley for garnish` initially exposed a technical approval card even though
+the operation was only preparing an unpersisted review draft. The generalized
+security-boundary repair recognizes the explicit review-only payload and
+allows the existing `prepare_import` path to run without weakening validated
+commit approval. On the exact candidate, the browser returned a readable
+review answer naming all three ambiguous ingredients, exposed no raw Action
+JSON or approval card, and an independent `/api/recipes` read confirmed that
+nothing was saved. Page errors were zero. The candidate source marker matched
+`1e950047`; the real owner deployment remained on older source `34ced247`.

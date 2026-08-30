@@ -1596,3 +1596,11 @@ journey corpus does not match the tainted-run safety gate and remains an
 acceptance-policy mismatch. Work empty-state reads passed for three ordinary,
 sloppy variants and survived reload. Tier 1 is still not release-ready because
 Recipe import/review and household approval semantics remain under pressure.
+
+## Qualitative Recipe review maturity — exact candidate `1e950047` (2026-08-29)
+
+Recipe text with qualitative amounts now fails safely into a human-readable
+review response rather than a raw approval payload. No canonical Recipe is
+created before amounts are corrected, and the existing validated commit path
+remains protected. Chat still does not expose an inline editable draft card;
+that handoff remains a UX gap for the broader Recipe V1 bar.
