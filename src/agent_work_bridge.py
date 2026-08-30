@@ -459,7 +459,12 @@ def reference_context_for_turn(
     reference = active.get("reference_context") if isinstance(active, dict) else None
     entities = reference.get("entities", []) if isinstance(reference, dict) else []
     active_entities = entities if isinstance(entities, list) else []
-    if owner and session_id and not active_entities and structured_reference:
+    # For explicit conversational references, the newest completed session
+    # Result is the authoritative visible context. An active Run may still
+    # carry an older detail target (for example before the user corrected
+    # "second" to "first"); do not let that stale context shadow the newer
+    # selected-reference metadata.
+    if owner and session_id and structured_reference:
         try:
             session = recent_session_reference_context(str(owner), str(session_id))
         except Exception:
