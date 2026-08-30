@@ -4753,10 +4753,13 @@ def project_action_selection(
             and str(item.get("action_id") or "") in {"add_item", "consume_stock"}
         ):
             from src.intent_contracts import inventory_add_item_payload, inventory_consume_stock_payload
+            reference_resolution = frame.get("reference_resolution") if isinstance(frame, Mapping) else {}
+            reference_refs = reference_resolution.get("refs") if isinstance(reference_resolution, Mapping) else None
+            item_reference = reference_refs[0] if isinstance(reference_refs, list) and len(reference_refs) == 1 else None
             draft = (
                 inventory_add_item_payload(query)
                 if str(item.get("action_id") or "") == "add_item"
-                else inventory_consume_stock_payload(query)
+                else inventory_consume_stock_payload(query, item_reference=item_reference)
             )
             if draft:
                 payload.update(draft)
