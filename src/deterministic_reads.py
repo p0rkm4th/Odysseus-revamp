@@ -113,6 +113,11 @@ _RECIPE_SCALE = re.compile(
     r"\b(?:scale|resize|adjust)\b.{0,40}\b(?:to\s+)?(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b",
     re.IGNORECASE,
 )
+_RECIPE_SHOPPING_FOLLOWUP = re.compile(
+    r"\bwhat\s+(?:do\s+)?i\s+need\s+to\s+buy\s+for\s+(?:this|that|it)\b|"
+    r"\bwhat\s+ingredients?\s+do\s+i\s+need\s+for\s+(?:this|that|it)\b",
+    re.IGNORECASE,
+)
 _SERVING_NUMBER = re.compile(
     r"\b(?:to\s+)?(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b",
     re.IGNORECASE,
@@ -237,6 +242,7 @@ def deterministic_read_concept(text: str) -> str | None:
         and not _RECIPE_READ.search(query)
         and not is_recipe_pantry_coverage_query(query)
         and not _RECIPE_SCALE.search(query)
+        and not _RECIPE_SHOPPING_FOLLOWUP.search(query)
         and not _HOST_INSPECTION.search(query)
         and not (
             _NETWORK_SUBJECT.search(query)
@@ -258,6 +264,8 @@ def deterministic_read_concept(text: str) -> str | None:
     ):
         return "MEMORY"
     if _RECIPE_COOKING_HISTORY.search(query):
+        return "RECIPE"
+    if _RECIPE_SHOPPING_FOLLOWUP.search(query):
         return "RECIPE"
     # Expiry/stock state is an inventory question even when the phrase starts
     # with the generic "what is" interrogative.
