@@ -778,6 +778,8 @@ async def test_chat_incomplete_paste_returns_editable_review_draft_without_commi
     assert result["data"]["status"] == "NEEDS_REVIEW"
     assert result["data"]["draft"]["review_required"] is True
     assert result["data"]["ui_event"] == "recipe_import_review"
+    assert result["ui_event"] == "recipe_import_review"
+    assert result["draft"]["name"] == "Acceptance Web Paste Dinner"
     assert calls == [({
         "action": "prepare_import", "source_text": source,
         "source_url": None, "requested_name": None,
