@@ -2209,3 +2209,8 @@ false success, raw final Results, duplicate delivery, and abrupt EOF were all
 zero. Failed predecessor replays exposed real projection and mutation
 resolution defects; disposable fixture residue is tracked separately as
 acceptance-harness cleanup debt.
+
+Recipe clean mutation/readback is also green on exact candidate `4da73504`:
+one owner-facing creation, two canonical readbacks, and zero false success,
+raw final Result, duplicate delivery, or abrupt EOF. Earlier precondition
+failure was disposable acceptance residue, not a feature result.

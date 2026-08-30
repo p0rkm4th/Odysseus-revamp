@@ -3724,3 +3724,10 @@ with matching OCI revision and source marker. The clean GUI replay completed
 `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
 `abruptEOF=0`. Earlier candidates failed the same journey and remain recorded
 as reproducible evidence, not hidden by the later pass.
+
+The same exact candidate also passed `OWNER-RECIPE-MUTATION-READBACK-001`
+after removing three explicitly named `Acceptance` recipes from the disposable
+fixture lane. The browser journey completed 3 turns with 1 GUI mutation and 2
+independent canonical readbacks; `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0`. The precondition residue is tracked
+as acceptance-lane isolation debt rather than a Recipe product failure.
