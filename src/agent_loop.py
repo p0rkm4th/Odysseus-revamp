@@ -6171,6 +6171,13 @@ async def stream_aci_runtime(
         clarification_text=_aci_clarification_text,
         effectful_request=_intent_frame.operation_class in {"CREATE", "UPDATE", "DELETE", "EXECUTE"},
     )
+    logger.info(
+        "[hades-aci] final_projection tools=%s full_chars=%s projected_chars=%s canonical=%s",
+        [(str(event.get("tool") or ""), str(event.get("command") or "")[:120], event.get("exit_code"))
+         for event in tool_events[-8:] if isinstance(event, Mapping)],
+        len(full_response), len(_projected_response),
+        _canonical_answer.provenance if _canonical_answer else None,
+    )
     if _projected_response.strip() != full_response.strip() or _aci_clarification_only:
         if _canonical_answer is None:
             logger.warning(
