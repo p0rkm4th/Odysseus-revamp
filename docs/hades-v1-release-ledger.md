@@ -20,6 +20,16 @@ saved yet” was previously counted as an affirmative save claim. This is
 test-oracle evidence only; no executable image rebuild was required and the
 owner deployment/data were untouched.
 
+## Sloppy-language Household mutation/readback checkpoint (2026-08-30)
+
+The realistic `OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` journey passed
+through the GUI with four turns: two ordinary-language stock mutations and two
+canonical readbacks. Both mutations were independently verified; the four
+streams completed with exactly one terminal event each. The acceptance oracle
+reported `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. This confirms the current candidate handles a nontechnical
+Household phrasing path without seeding the behavior through an API.
+
 ## Current-candidate recovery rehearsal and fresh-fresh acceptance (2026-08-30)
 
 The current executable candidate `8c620bf438bd` was deployed into the
