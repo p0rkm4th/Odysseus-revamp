@@ -5724,6 +5724,12 @@ async def stream_aci_runtime(
             for _outcome_key in ("success", "verified", "status"):
                 if _outcome_key in result and isinstance(result[_outcome_key], (bool, str)):
                     tool_output_data[_outcome_key] = result[_outcome_key]
+            if (
+                block.tool_type == "manage_notes"
+                and result.get("exit_code") == 0
+                and not result.get("error")
+            ):
+                tool_output_data["success"] = True
             if is_doc_tool and "action" in result:
                 tool_output_data.update({
                     "doc_id": result.get("doc_id"),
