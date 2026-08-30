@@ -1182,12 +1182,10 @@ let _libraryArchivedView = false;   // Documents tab showing archived docs?
   }
 
   async function libraryDeleteSingle(docId, card) {
-    if (uiModule && uiModule.styledConfirm) {
-      const ok = await uiModule.styledConfirm('Delete this document?', { confirmText: 'Delete', danger: true });
-      if (!ok) return;
-    } else if (!confirm('Delete this document?')) {
-      return;
-    }
+    const ok = await uiModule.styledConfirm('Delete this document?', {
+      title: 'Delete document', confirmText: 'Delete', cancelText: 'Keep document', danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`${API_BASE}/api/document/${docId}`, { method: 'DELETE', credentials: 'same-origin' });
       if (!res.ok) {
@@ -1210,15 +1208,11 @@ let _libraryArchivedView = false;   // Documents tab showing archived docs?
   async function libraryBulkDelete() {
     if (_librarySelectedIds.size === 0) return;
     const count = _librarySelectedIds.size;
-    if (uiModule && uiModule.styledConfirm) {
-      const ok = await uiModule.styledConfirm(
-        `Delete ${count} document${count !== 1 ? 's' : ''}?`,
-        { confirmText: 'Delete', danger: true }
-      );
-      if (!ok) return;
-    } else if (!confirm(`Delete ${count} document${count !== 1 ? 's' : ''}?`)) {
-      return;
-    }
+    const ok = await uiModule.styledConfirm(
+      `Delete ${count} document${count !== 1 ? 's' : ''}?`,
+      { title: 'Delete documents', confirmText: 'Delete', cancelText: 'Keep documents', danger: true }
+    );
+    if (!ok) return;
 
     let deleted = 0;
     let failed = 0;
