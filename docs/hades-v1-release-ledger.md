@@ -3402,3 +3402,25 @@ and no-active-context continuation journeys also passed 2 turns without false
 execution claims, duplicate delivery, or abrupt EOF. These are safety/read
 evidence only; active homelab/security execution remains separately approval-
 scoped.
+
+## Household quantity-only follow-up checkpoint — exact candidate `3455c766` (2026-08-30)
+
+Owner-style browser replay exposed a false success in the prior candidate:
+after `Add 4 cans of Acceptance Peas.`, the follow-up `Use one.` produced
+mutation prose but no `consume_stock` Action or inventory movement; canonical
+quantity remained 4 after reload. This was classified as a shared
+`REFERENCE_FAILURE` / `FALSE_SUCCESS`, not a fixture issue.
+
+The repair promotes quantity-only consumption from a generic continuation to
+the bounded household mutation when a unique prior item reference exists, and
+teaches the transport to request durable references for `use`/`consume`
+follow-ups. Focused compiler, ACI, and reference tests passed (4 tests).
+
+On the disposable Qwen3:8B stack, exact candidate `3455c766` passed the GUI
+journey `Add 4 cans of Acceptance Turnip2.` → `Use one.` → read → reload:
+the second turn selected canonical `consume_stock`, independent readback
+changed quantity 4 to 3, and reload preserved 3. Candidate source marker was
+`3455c766`; image ID was
+`sha256:7367c18603ca354eca10387af76105e35f682277cfb59e82fd5ad79cfedb4444`;
+the app was healthy with zero restarts. The real owner deployment remains
+untouched at source `34ced247`.
