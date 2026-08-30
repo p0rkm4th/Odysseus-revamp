@@ -79,6 +79,9 @@ candidate container had marker `f726b16b` and zero restarts. The actual owner
 runtime remained on source `34ced247` with zero restarts and was not touched.
 Positive video extraction followed by validated canonical commit remains open;
 this checkpoint closes the unsafe/dead-end review-boundary defect only.
+The focused recipe/execution slice passed `143` tests, and the full supported
+regression at the pushed documentation checkpoint passed `7016` tests with
+`8` skips and `186` warnings in `330.32s`.
 
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
