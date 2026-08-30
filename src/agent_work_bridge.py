@@ -471,7 +471,7 @@ def reference_context_for_turn(
                     "ordered_entities": refs,
                     "eligible_entities": refs,
                     "entities": refs,
-                    "last": refs[-1],
+                    "last": next((item for item in refs if item.get("last")), refs[-1]),
                     "source_run_id": None,
                 }
     return active, session, active_entities
