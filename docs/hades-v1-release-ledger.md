@@ -3627,3 +3627,32 @@ read walkabout passed across network, homelab, memory, assets, reference
 continuity, and Work: 7 streams, 7 terminal `[DONE]` events, 0 mutations, 0
 false successes, 0 raw final Results, 0 duplicate deliveries, and 0 abrupt
 EOFs. The lane reported image/source parity and zero restarts.
+
+## Household replenishment identity — exact candidate `f6300d26` (2026-08-30)
+
+An owner-style mutation exposed a Priority 0 false-success defect. Asking
+“Add 3 cans of Acceptance Beans to my pantry” left the existing canonical item
+at zero and created a new item whose name included “to my pantry”. Hades then
+claimed verified success for the wrong entity. This was classified as
+`WRONG_ENTITY` / `FALSE_SUCCESS`.
+
+The generalized repair splits trailing location language from item names,
+resolves an exact existing kitchen item to `add_stock`, preserves its
+canonical unit, and assigns the requested location. Ambiguous duplicate items
+fail closed with a useful explanation rather than guessing. Focused routing,
+binding, household, and recipe verification passed 293 and 56 tests
+respectively.
+
+Exact candidate `f6300d260f9c5b520cea7a05f619d9392e8f0264` was built as
+`odysseus:candidate-f6300d26`, image
+`sha256:030f78855539158df5a84fd2cf0c4ec33165fc52f3be70e45f3996adaf351bc6`,
+and deployed only to the disposable current lane with explicit `/tmp`
+data/log mounts, matching source marker, healthy status, and zero restarts.
+The GUI mutation created no duplicate, changed the intended item from 0 to 3,
+and placed it in `pantry`; the owner answer reported verified readback. A
+fresh standard Qwen3:8B seven-turn read walkabout then passed with 7 streams,
+7 DONE events, 0 mutations, 0 false successes, 0 raw final Results, 0
+duplicate deliveries, and 0 abrupt EOFs. A separate reload probe produced an
+empty provider completion under a long context; provider health was available,
+and the standard retry passed, so that observation remains classified as a
+transient `PROVIDER_FAILURE`/context flake rather than a product pass.
