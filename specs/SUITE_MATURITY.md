@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Tasks shared-confirmation checkpoint — exact candidate `5dcbf204` (2026-08-30)
+
+Task bulk deletion, history deletion, built-in-task revert, cache clearing,
+and bulk pause/resume now use shared Hades confirmation dialogs without native
+fallbacks. Focused coverage passed 98 tests, responsive browser acceptance
+passed, and the broad regression passed 7,036 tests with 8 skipped and 149
+warnings. Owner deployment state was not modified.
+
 ## Dialog fallback cleanup follow-up — exact candidate `accf9531` (2026-08-30)
 
 Document Library research-report deletion and Settings agent-token revocation
