@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Critical no-evidence Recipe replay and provenance check (2026-08-30)
+
+The realistic `OWNER-RECIPE-VIDEO-NO-EVIDENCE-001` journey passed again on the
+isolated Qwen3:8B candidate: one approval-gated GUI mutation-shaped turn, two
+independent empty canonical Recipe readbacks, and a bounded human error answer.
+The oracle reported `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0`.
+
+Both disposable app lanes returned healthy `/api/health` responses with zero
+restarts. Their image digest, OCI revision, `ODYSSEUS_SOURCE_COMMIT`, and
+`/app/.odysseus-source-commit` all matched executable source
+`8c620bf438bd53cab21e44d73a64b65e60495c6c`. The owner runtime remained
+stopped and was not modified.
+
 ## Memory correction replay and disposable credential-expiry classification (2026-08-30)
 
 The first `OWNER-MEMORY-CORRECTION-READBACK-001` attempt remained on login
