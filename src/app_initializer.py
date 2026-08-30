@@ -2,6 +2,7 @@
 """Initialize all application components and dependencies."""
 import os
 import logging
+import time
 from typing import Dict, Any
 
 from src.constants import (
@@ -25,6 +26,9 @@ from src.tool_utils import set_upload_handler
 from src.search import update_search_config
 
 logger = logging.getLogger(__name__)
+
+MEMORY_VECTOR_STARTUP_ATTEMPTS = 4
+MEMORY_VECTOR_STARTUP_RETRY_SECONDS = 1
 
 def create_directories():
     """Create necessary directories if they don't exist."""
@@ -61,7 +65,15 @@ def initialize_managers(base_dir: str, rag_manager=None) -> Dict[str, Any]:
     try:
         from src.memory_vector import MemoryVectorStore
         embedding_model = getattr(rag_manager, '_model', None) if rag_manager else None
-        memory_vector = MemoryVectorStore(DATA_DIR, embedding_model=embedding_model)
+        for attempt in range(1, MEMORY_VECTOR_STARTUP_ATTEMPTS + 1):
+            memory_vector = MemoryVectorStore(DATA_DIR, embedding_model=embedding_model)
+            if memory_vector.healthy or attempt == MEMORY_VECTOR_STARTUP_ATTEMPTS:
+                break
+            logger.warning(
+                "MemoryVectorStore startup dependency is not ready; retrying "
+                "(%s/%s)", attempt, MEMORY_VECTOR_STARTUP_ATTEMPTS,
+            )
+            time.sleep(MEMORY_VECTOR_STARTUP_RETRY_SECONDS)
         if memory_vector.healthy:
             # Rebuild index from existing memories if empty
             if memory_vector.count() == 0:
