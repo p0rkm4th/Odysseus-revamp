@@ -10,6 +10,15 @@ readbacks, and zero false successes, raw final Results, duplicate delivery, or
 abrupt EOF. The exact candidate runtime remained healthy and the actual owner
 runtime was untouched.
 
+## Populated Memory read checkpoint — exact candidate `04d05854` (2026-08-30)
+
+`OWNER-MEMORY-POPULATED-001` passed in deterministic fixture mode. One owner
+read turn returned grounded saved-memory facts with two canonical readback
+checks and zero false successes, raw final Results, duplicate delivery, or
+abrupt EOF. Current-candidate Qwen Memory mutation/correction evidence is
+recorded separately; historical fresh-install evidence remains tied to its
+older executable candidate.
+
 ## Asset false-premise filter checkpoint — exact candidate `04d05854` (2026-08-30)
 
 `OWNER-ASSET-FILTER-NO-MATCH-001` passed in the realistic messy fixture. The
