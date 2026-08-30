@@ -274,7 +274,7 @@ def test_recipe_shopping_requirements_renderer_is_human_readable_and_grounded():
             "missing_ingredients": [{"name": "rice", "quantity": "2", "unit": "cup", "optional": False}],
         }),
     }])
-    assert answer == "For Chicken Rice, you still need:\n- 2 cup rice"
+    assert answer == "For Chicken Rice, you still need:\n- rice — 2 cup"
     assert not answer.lstrip().startswith("{")
 
 
