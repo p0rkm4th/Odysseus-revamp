@@ -4669,3 +4669,21 @@ recreation briefly used default Compose paths because required environment
 variables were omitted; login failed before any journey or mutation. The
 container was removed and recreated with explicit isolated paths and gate;
 repository owner data was not modified.
+
+## Capability safety and exact post-build replay — `616be82c` (2026-08-30)
+
+The shared capability classifier now treats an omitted `manage_tasks` action
+as the safe private list read rather than broad unknown effects. Registry and
+policy regression expectations were synchronized with the owner-scoped
+scheduled-task capability; semantic generator coverage now includes all
+required thin families after registry growth. The full regression had `7,091`
+passes, `9` skips, and `4` stale-contract failures before this repair; the
+affected focused set passed `12` tests afterward.
+
+Exact candidate `odysseus:candidate-616be82c` was built from pushed source
+`616be82c340b17318cac4a7e5f58cfaf56f94ede`, image
+`sha256:93b523c6cc3f7d96c1259917ebec08aa5ce0ab22986e59eb74ee0269a4a71d88`,
+and deployed with matching branch/revision metadata, explicit disposable
+mounts, and zero restarts. Realistic visual/navigation acceptance passed, and
+the recurring reminder GUI journey passed `2` turns with one canonical
+mutation and two readbacks. Owner deployment/data remained untouched.
