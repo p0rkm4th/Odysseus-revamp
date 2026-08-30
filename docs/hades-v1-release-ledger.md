@@ -3427,3 +3427,9 @@ untouched at source `34ced247`.
 
 Focused and broad verification after the follow-up repair is complete: the
 full source regression passed `7052 tests, 8 skipped, 149 warnings` in 5m06s.
+
+The same exact disposable candidate also passed the authenticated Recipe
+read slice (4 natural-language read/reference turns; zero mutations, false
+successes, raw final Results, duplicate delivery, or abrupt EOFs) and
+`browser_realistic_acceptance.mjs` at its desktop/narrow/mobile visual smoke
+widths. The latter reported no layout or duplicate-navigation failure.
