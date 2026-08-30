@@ -3451,3 +3451,29 @@ overview Action and produced no useful final answer. This is classified as
 InventoryService explicitly rejects `move_stock`, so the request must not be
 silently mapped to stock addition or allowed to claim a location change.
 Location ownership and a bounded move Action remain an open Tier 1 target.
+
+## Household location moves — generalized repair and replay (2026-08-30)
+
+The move gap was repaired at the shared canonical projection boundary. A
+household `move_item` is an UPDATE-class action, so the projector now retains
+the parser-owned item reference and destination for UPDATE actions instead of
+leaving the model's `{action: "move_item"}` stub to reach execution. Target
+resolution errors also identify the requested move rather than reporting a
+misleading consumption failure.
+
+Focused verification passed 343 tests with 1 warning; the full source
+regression passed 7055 tests, 8 skipped, and 149 warnings in 5m04s.
+
+On disposable Compose project `hades-fresh-current`, exact executable commit
+`195c99aec5c37e53e2a15b71a4f9fa6e8a55313e` (short `195c99ae`) was browser
+replayed through the normal authenticated GUI with Qwen3:8B. `Move Acceptance
+Turnip2 to the pantry.` changed canonical location to `pantry` while quantity
+remained 3. `Move it to the freezer.` resolved the conversational reference
+and changed the same item to `freezer`; reload preserved `freezer`. Both final
+answers were concise and stated canonical readback verification. No false
+success, raw final Result, duplicate answer, or abrupt EOF was observed.
+
+Candidate image is `sha256:0c4c40adbfa57131905e5d9eeabf8c266b14e7cbb327b95f236a5f05a14eb175`;
+embedded source marker matches the full executable SHA, health is healthy, and
+restart count is 0. The branch HEAD is later test-only commit `7c8e6266`; the
+real owner deployment remains untouched at source `34ced247` and stopped.
