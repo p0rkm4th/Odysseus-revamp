@@ -21,6 +21,18 @@ healthy with 0 restarts and Qwen3:8B available; owner deployment and data
 remain untouched. This closes the previously open video approval browser
 journey, but is not a V1 release declaration.
 
+## Post-repair regression and visual checkpoint — candidate `8c620bf438bd` (2026-08-30)
+
+The full supported Python regression after the stream/continuation repair
+passed `7063 passed, 8 skipped, 149 warnings` in 5m14s. The current exact
+candidate also passed the external visual browser walkabout
+(`browser_realistic_acceptance: PASS`) at the disposable deployment. The
+walkabout covered shared Hades window chrome, Household/Recipe navigation,
+empty/list states, narrow viewport behavior, modal close behavior, scroll and
+overflow checks, sidebar icon uniqueness, and screenshot/tracing assertions.
+This is release evidence for the isolated candidate only; the actual owner
+container remains stopped and is not represented by this result.
+
 ## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
 
 The video no-evidence journey remains open. Server-side evidence showed the
