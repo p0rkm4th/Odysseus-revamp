@@ -94,6 +94,9 @@ def test_frontend_uses_one_renderer_for_live_and_restored_cards():
     assert "chatRenderer.renderAskUserCard(json.data || {})" in chat
     assert "if (json.ask_user && !json.ask_user.resolved)" in chat
     assert "chatRenderer.renderAskUserCard(_embeddedAskUser);" in chat
+    assert "let _livePendingAskUser = null;" in chat
+    assert "_livePendingAskUser === pendingAskUser" in chat
+    assert "chatRenderer.renderAskUserCard(pendingAskUser" in chat
     assert "export function renderAskUserCard" in renderer
     assert "renderAskUserCard(pendingAskUser" in renderer
     assert "if (role === 'user') removeAskUserCards(box)" in renderer
