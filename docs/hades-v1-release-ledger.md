@@ -71,6 +71,15 @@ independent canonical readbacks passed; the oracle reported
 `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
 `abruptEOF=0`. No mutation was attempted.
 
+## Qualitative Recipe review checkpoint — candidate `8c620bf438bd` (2026-08-30)
+
+The GUI review journey accepted a pasted recipe containing `salt to taste` and
+`oil as needed`. One mutation entered through chat produced two independent
+canonical readbacks; the scenario passed with
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. This confirms qualitative amounts remain reviewable without
+inventing quantities.
+
 ## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
 
 The video no-evidence journey remains open. Server-side evidence showed the
