@@ -4281,6 +4281,9 @@ def canonical_notes_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     action = str(request.get("action") or "").strip().lower() if isinstance(request, Mapping) else ""
     title = str(event.get("note_title") or "").strip()
     due = str(event.get("due_date") or "").strip()
+    if isinstance(request, Mapping):
+        title = title or str(request.get("title") or "").strip()
+        due = due or str(request.get("due_date") or "").strip()
     if action == "add" and title:
         suffix = f" for {due}" if due else ""
         return f'Reminder created: "{title}"{suffix}. It is saved.'
