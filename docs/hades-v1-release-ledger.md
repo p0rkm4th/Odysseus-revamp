@@ -15,6 +15,15 @@ count was `1`. After restarting the services, authenticated Hades
 source-marked `04d05854790856719b71e69f6fc27f72da29b66a` with 0 restarts; no
 owner volume or deployment was touched.
 
+## Current-head application backup/restore checkpoint — `2026-08-30`
+
+A disposable application-data root was snapshotted and verified with the
+standard `scripts/odysseus-backup` tool. JSON/text state was deliberately
+drifted and a drift-only file added; `restore --yes` returned the original
+state, removed the drift-only file, and retained the pre-restore directory as
+a safety stash. The archive contained two files and verified successfully.
+No repository `data/`, owner data, or deployment was used.
+
 ## Fresh-fresh install/restart checkpoint — exact candidate `04d05854` (2026-08-30)
 
 A new empty disposable Compose state completed normal first-run admin setup,
