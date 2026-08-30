@@ -3483,7 +3483,17 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
         lines = [f"Scaled {str(payload.get('recipe_name') or 'recipe')} to {payload['servings']} servings:"]
         for ingredient in ingredients[:100]:
             if isinstance(ingredient, Mapping):
-                lines.append(f"- {ingredient.get('quantity')} {ingredient.get('unit') or ''} {ingredient.get('name') or 'ingredient'}".strip())
+                kind = str(ingredient.get("amount_kind") or "EXACT").upper()
+                name = str(ingredient.get("name") or "ingredient").strip()
+                source = str(ingredient.get("source_text") or "").strip()
+                if kind in {"TO_TASTE", "AS_NEEDED", "OPTIONAL", "UNSPECIFIED", "NOMINAL"}:
+                    amount = source or str(ingredient.get("modifier") or kind.lower().replace("_", " "))
+                elif kind == "RANGE" and ingredient.get("quantity_min") is not None and ingredient.get("quantity_max") is not None:
+                    amount = f"{ingredient['quantity_min']}-{ingredient['quantity_max']} {ingredient.get('unit') or ''}".strip()
+                else:
+                    amount = f"{ingredient.get('quantity')} {ingredient.get('unit') or ''}".strip()
+                    if kind == "APPROXIMATE": amount = f"about {amount}"
+                lines.append(f"- {amount} {name}".strip())
         return "\n".join(lines)
     if action == "expiring_candidates":
         candidates = payload.get("candidates")
