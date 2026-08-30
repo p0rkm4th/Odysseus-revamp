@@ -5,6 +5,7 @@ from scripts.hades_live_fuzz import (
     _is_loopback_url,
     _acceptance_password,
     authenticate,
+    bootstrap_acceptance_user,
     compositional_variants,
 )
 from scripts.hades_live_dogfood import Case, select_cases
@@ -65,6 +66,20 @@ class _Session:
     def get(self, url, **kwargs):
         self.calls.append(("GET", url, kwargs))
         return _Response(body=self.status_body)
+
+
+def test_bootstrap_uses_configured_admin_for_entrypoint_provisioned_instance(monkeypatch):
+    session = _Session({"configured": True})
+    monkeypatch.setenv("ODYSSEUS_ADMIN_USER", "admin")
+    monkeypatch.setattr("scripts.hades_live_fuzz._acceptance_password", lambda: "synthetic-password")
+    user, password, endpoint_id = bootstrap_acceptance_user(
+        session, "http://127.0.0.1:7000",
+        bootstrap_admin_password="admin-password",
+        model_endpoint_url=None,
+    )
+    assert (user, password, endpoint_id) == (ACCEPTANCE_USER, "synthetic-password", "")
+    login_payload = session.calls[1][2]["json"]
+    assert login_payload["username"] == "admin"
 
 
 def test_authenticate_uses_normal_login_and_checks_synthetic_principal():
