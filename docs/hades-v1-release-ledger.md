@@ -2,6 +2,28 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Natural Work project/task mutation replay — exact candidate `4148710e` (2026-08-30)
+
+An outside-in GUI replay against disposable Qwen3:8B acceptance state found and
+closed two Work argument-projection defects. On the prior exact candidate,
+“Start a project called Acceptance Sloppy Project” was misclassified as
+execution and persisted nothing (`WRONG_OPERATION`/`BAD_ARGUMENT`); the new
+bounded compiler projection treats start/begin project language as creation.
+The same candidate now created the project and independently verified it via
+`/api/work/projects`. A follow-up, “Add a task to review the backup plan”, then
+created `review the backup plan` under the sole non-terminal owner project;
+the task was independently verified via `/api/work/tasks`, remained present
+after browser reload, and was retrieved by “What tasks do I have?”.
+
+Focused Work/ACI tests passed `3 passed`; the exact candidate image is
+`odysseus:candidate-4148710e`, image ID
+`sha256:c37cf4df9e59c11fc49ed2e07070f377157346e05ec2138da70939c7e18ed410`,
+with source marker
+`4148710edfe532f6ab720943b97c3545aac80999`; disposable runtime was healthy
+with 0 restarts. Project and task mutations were GUI-originated; API calls
+were readback only. Owner deployment and data remain untouched. Broader
+Work paraphrase/ambiguity and full regression evidence remain open.
+
 ## Sloppy Work read replay — exact candidate `23e51370` (2026-08-30)
 
 The read-only owner prompt `whats outsanding` reached the bounded Work read
