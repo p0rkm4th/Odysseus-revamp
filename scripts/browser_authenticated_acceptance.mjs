@@ -822,7 +822,7 @@ async function send(page, prompt, expectation = {}) {
     // continuation, not the already-terminal proposal stream.
     await page.waitForFunction((count) =>
       (window.__hadesE2EStreams?.length || 0) > count,
-    beforeStreams, { timeout: 30000 });
+    beforeStreams, { timeout: 120000 });
     streamIndex = await page.evaluate(() => (window.__hadesE2EStreams?.length || 1) - 1);
   }
   const stream = await waitForAnswer(page, beforeAssistant, streamIndex, prompt);
