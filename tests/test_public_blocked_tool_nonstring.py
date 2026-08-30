@@ -23,3 +23,9 @@ def test_none_or_empty_is_not_gated():
 
 def test_real_tool_names_still_classified():
     assert is_public_blocked_tool("mcp__whatever") is True
+
+
+def test_owner_scoped_scheduled_tasks_are_available_to_normal_owners():
+    # Scheduling a private reminder is a core daily-driver capability; it does
+    # not grant shell, external-network, or cross-owner authority.
+    assert is_public_blocked_tool("manage_tasks") is False
