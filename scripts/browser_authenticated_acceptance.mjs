@@ -362,9 +362,16 @@ function seedCanonicalAssetFixture(scenarios) {
   if (setups.length !== 1 || assetSetups.length !== 1) {
     throw new Error(`unsupported or mixed canonical asset fixture setup: ${setups.join(', ')}`);
   }
-  const database = String(process.env.HADES_BROWSER_CANONICAL_ASSET_DB || '').trim();
+  const dataDirectory = String(process.env.APP_DATA_DIR || '').trim();
+  const configuredDatabase = String(process.env.HADES_BROWSER_CANONICAL_ASSET_DB || '').trim();
+  const database = configuredDatabase || path.join(dataDirectory, 'assets', 'assets.db');
   if (!database || !externalAcceptance) {
     throw new Error('canonical asset browser fixtures require an explicit disposable external acceptance database');
+  }
+  const resolvedDataDirectory = path.resolve(dataDirectory);
+  const resolvedDatabase = path.resolve(database);
+  if (resolvedDatabase !== resolvedDataDirectory && !resolvedDatabase.startsWith(`${resolvedDataDirectory}${path.sep}`)) {
+    throw new Error('canonical asset fixture database must be inside APP_DATA_DIR so the container can read it');
   }
   const assets = assetSetups[0] === 'canonical_asset_atlas_erebus'
     ? [
@@ -387,7 +394,7 @@ function seedCanonicalAssetFixture(scenarios) {
       '--attributes', JSON.stringify(attributes, Object.keys(attributes).sort()),
     ], {
       cwd: process.cwd(),
-      env: {...process.env, ODY_ASSET_DB: database},
+      env: {...process.env, ODY_ASSET_DB: resolvedDatabase},
       encoding: 'utf8',
     });
     if (result.status !== 0) throw new Error(`canonical asset fixture setup failed for ${id}`);
