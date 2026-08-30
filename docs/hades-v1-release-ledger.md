@@ -2,6 +2,14 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe pantry-composition checkpoint — exact candidate `04d05854` (2026-08-30)
+
+`OWNER-RECIPE-COMPOSITION-001` passed in deterministic fixture mode across
+three owner turns: listing recipes, checking whether the selected recipe was
+makeable from stock, and scaling it to six servings. Canonical reads remained
+grounded, with zero false successes, raw final Results, duplicate delivery, or
+abrupt EOF. The isolated runtime and actual owner deployment were unchanged.
+
 ## Current-candidate visual acceptance checkpoint — exact candidate `04d05854` (2026-08-30)
 
 The authenticated visual acceptance passed at desktop, narrow, and mobile

@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Recipe pantry-composition checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The Recipe pantry-composition journey passed three deterministic owner reads
+for listing, pantry coverage, and six-serving scaling. Answers remained
+grounded with zero false success, raw Result, duplicate delivery, or abrupt
+EOF.
+
 ## Current-candidate visual acceptance checkpoint — exact candidate `04d05854` (2026-08-30)
 
 Authenticated desktop, narrow, and mobile visual acceptance passed with
