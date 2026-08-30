@@ -3,9 +3,20 @@ import fs from 'node:fs';
 import process from 'node:process';
 import { chromium } from 'playwright';
 
-const sessions = JSON.parse(fs.readFileSync('data/sessions.json', 'utf8'));
-const token = Object.keys(sessions)[0];
 const baseURL = process.env.HADES_BROWSER_BASE_URL || 'http://127.0.0.1:7000';
+const externalCredentialFile = process.env.HADES_BROWSER_EXTERNAL_CREDENTIAL_FILE || '';
+const externalAcceptance = Boolean(externalCredentialFile);
+if (externalAcceptance && (process.env.HADES_BROWSER_ACCEPTANCE_ENABLE !== 'true'
+    || process.env.HADES_BROWSER_ISOLATED_ACCEPTANCE !== 'true'
+    || !String(process.env.APP_DATA_DIR || '').trim())) {
+  throw new Error('external visual acceptance requires explicit isolated acceptance settings');
+}
+const credentials = externalAcceptance
+  ? JSON.parse(fs.readFileSync(externalCredentialFile, 'utf8'))
+  : null;
+const token = externalAcceptance
+  ? null
+  : Object.keys(JSON.parse(fs.readFileSync('data/sessions.json', 'utf8')))[0];
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 const errors = [];
 const fixture = `
@@ -40,13 +51,22 @@ function assertOrdered(boxes, label) {
 
 async function openPage(viewport) {
   const context = await browser.newContext({ viewport });
-  await context.addCookies([{ name: 'odysseus_session', value: token, url: baseURL }]);
   const page = await context.newPage();
   page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
   page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
   page.on('requestfailed', request => errors.push(`request: ${request.url()} ${request.failure()?.errorText || ''}`));
   page.on('response', response => { if (response.status() >= 500) errors.push(`http${response.status()}: ${response.url()}`); });
-  await page.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded' });
+  if (externalAcceptance) {
+    await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => document.querySelector('#submitBtn')?.textContent?.trim() === 'Sign In', { timeout: 30000 });
+    await page.locator('#username').fill(credentials.username);
+    await page.locator('#password').fill(credentials.password);
+    await page.locator('#submitBtn').click();
+    await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
+  } else {
+    await context.addCookies([{ name: 'odysseus_session', value: token, url: baseURL }]);
+    await page.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded' });
+  }
   await page.waitForFunction(() => !!window.hadesWindowManager && !!document.querySelector('#icon-rail'));
   const sidebarEntries = page.locator('#sidebar .list-item[id^="tool-"]:visible');
   for (let i = 0; i < await sidebarEntries.count(); i += 1) {
