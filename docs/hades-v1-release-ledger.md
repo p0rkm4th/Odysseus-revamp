@@ -2,6 +2,25 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Video recipe no-evidence approval — exact executable candidate `8c620bf438bd` (2026-08-30)
+
+The isolated owner journey now passes through the real GUI on exact candidate
+`odysseus:candidate-8c620bf438bd` (source
+`8c620bf438bd53cab21e44d73a64b65e60495c6c`, image ID
+`sha256:ab3b44f65747783bbe2f63f5db61b298d18eb9c74a86cff7fcac3584debff74b`).
+The request stayed visible as `preparing` during slow transcript acquisition,
+the approval card was rendered and approved in the browser, and the sealed
+continuation completed without re-fetching the video. Canonical recipe
+readback remained empty, as required for a video with no usable recipe
+evidence. One mutation-shaped approval journey produced two independent
+readbacks; the oracle reported `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0`. The fix combines early active-stream
+registration, skipping duplicate preprocessing on approval continuations, and
+a 120-second acceptance budget for the second stream. Disposable runtime was
+healthy with 0 restarts and Qwen3:8B available; owner deployment and data
+remain untouched. This closes the previously open video approval browser
+journey, but is not a V1 release declaration.
+
 ## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
 
 The video no-evidence journey remains open. Server-side evidence showed the
