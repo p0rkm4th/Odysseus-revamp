@@ -2,6 +2,26 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Provider-backed OSINT GUI intake checkpoint (2026-08-30)
+
+The isolated candidate `1d3c255ec7ffd7284c95bb6c5d5c874dc1698797` was
+deployed with its exact OCI image `sha256:74a1e7d24b08d12cab72ddc90cbf9632da174cb4e9850177745a14cc87a898fe`,
+the `/app/.odysseus-source-commit` marker matched, the research acceptance
+principal was explicitly enabled, and the data mount was
+`/tmp/hades-fresh-current` rather than owner data. A normal authenticated
+browser journey opened OSINT, entered an ordinary organization/domain intake
+for `Acceptance Public Org` / `example.org`, and received the human-readable
+confirmation `Investigation started` with case `rp-eb8fdf333149`. The case
+reached the detail endpoint while running; logs show Qwen3:8B calls and
+bounded public-source fetches, including a handled 403 response. The
+disposable case was independently deleted through the isolated authenticated
+API and no owner container or owner data was touched. The first replay's
+grader used stale field IDs and the second grader initially treated the
+library object as an array; both were harness defects corrected in the
+replay, not product claims. Focused acceptance/auth coverage passed `2
+passed, 7 deselected, 1 warning`; the full regression then passed `7063
+passed, 8 skipped, 149 warnings` in 6m19s.
+
 ## Fresh-fresh post-restart Recipe durability checkpoint (2026-08-30)
 
 After rotating the disposable fresh-fresh credential and restarting the exact
