@@ -5766,7 +5766,7 @@ async def stream_aci_runtime(
                 if _outcome_key in result and isinstance(result[_outcome_key], (bool, str)):
                     tool_output_data[_outcome_key] = result[_outcome_key]
             if (
-                block.tool_type == "manage_notes"
+                block.tool_type in {"manage_notes", "manage_tasks"}
                 and result.get("exit_code") == 0
                 and not result.get("error")
             ):
