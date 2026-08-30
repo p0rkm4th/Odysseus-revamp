@@ -2135,3 +2135,16 @@ candidate probe retrieved public YouTube metadata successfully. A video with
 recipe titles but no verified structure still failed safely into review with
 no invented or persisted recipe; positive extraction remains subject to the
 existing validation bar.
+
+## Recipe import display-cleanliness checkpoint — exact candidate `f3d847fa` (2026-08-29)
+
+The public Budget Bytes URL journey was replayed through GUI/chat on the exact
+candidate after adding a narrow parser sanitizer for trailing schema.org site
+price and footnote artifacts. After visible approval, the requested recipe
+name and source URL persisted, and independent `/api/recipes` readback found
+12 ingredients with no trailing `($...)`, `*`, `†`, or `‡` display artifacts.
+Meaningful preparation text, including parenthetical amounts, was retained.
+Reload preserved the row; the final answer reported verified canonical
+readback, with zero page errors and no raw technical binding. Positive YouTube
+extraction remains unverified. The real owner deployment remained on source
+`34ced247`.
