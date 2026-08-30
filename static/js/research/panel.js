@@ -6,6 +6,7 @@ import themeModule from '../theme.js';
 import createResearchSynapse from '../researchSynapse.js';
 import spinnerModule from '../spinner.js';
 import { sortModelIds } from '../modelSort.js';
+import uiModule from '../ui.js';
 
 // Rotating research textarea placeholders — pick one at random each
 // time the panel is rendered so the example keeps feeling fresh.
@@ -1240,7 +1241,7 @@ async function _chatAboutResearch(researchId, btn) {
     }
   } catch (e) {
     if (btn) { btn.disabled = false; btn.innerHTML = origLabel; }
-    alert('Could not start follow-up chat: ' + e.message);
+    uiModule.showError('Could not start follow-up chat: ' + e.message);
   }
 }
 
