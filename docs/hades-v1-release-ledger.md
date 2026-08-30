@@ -2241,3 +2241,21 @@ duplicate delivery, or abrupt EOF. The four-turn realistic Memory correction
 journey also passed: remember, read, correct/delete, and read again completed
 with two canonical mutations and zero false success, raw final Result,
 duplicate delivery, or abrupt EOF.
+
+## Expiring Recipe result-contract checkpoint — exact candidate `7cbd7666` (2026-08-30)
+
+Fresh Qwen3:8B browser testing found that a valid canonical
+`expiring_candidates` payload was being rejected as `INVALID_RESULT`: the
+binding validator omitted the `READ_EXPIRING` filter and fell through to the
+ordinary recipe-list contract. The generalized contract mapping now validates
+the `candidates` collection and preserves the deterministic owner-facing
+projection. Focused Recipe/intent/projection coverage passed `226 tests, 5
+skipped`; the full fresh replay passed the expiring-Recipe journey with one
+turn, two canonical readbacks including reload, and zero false successes, raw
+final Results, duplicate delivery, or abrupt EOF.
+
+On a separate fresh application-data project, the exact same candidate passed
+the Recipe shopping-requirements journey across 2 turns with 2 canonical
+readbacks and reload durability. Both disposable stacks were healthy with
+zero restarts and Qwen3:8B configured through the normal model endpoint flow.
+The real owner deployment remains untouched at source `34ced247`.
