@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Asset reconciliation shared-dialog follow-up — exact candidate `ca206716` (2026-08-30)
+
+The next owner-facing dialog audit found CMDB candidate reconciliation still
+used native `window.prompt()` for required and optional asset naming. The
+flow now uses the shared Hades styled prompt, preserving the explicit reject
+branch and defaulting optional edits to the observed name. Focused UI/network
+coverage passed 13 tests, and the authenticated visual gate passed on the
+exact candidate at desktop, narrow, and mobile sizes. The candidate image is
+`odysseus:candidate-ca206716`, image ID
+`sha256:db37588d99cd844d4d93822b584faa780f869a49f97bac75c9a19e29af5e3388`,
+with source marker `ca20671658bbfa28fcd15ae29cee031ba886f79e`; isolated
+runtime port `7002` had 0 restarts. This focused checkpoint does not claim a
+new broad regression; the preceding shared-UI checkpoint recorded the full
+suite. Owner deployment and data remain untouched.
+
 ## Security shared-dialog checkpoint — exact candidate `79d377cb` (2026-08-30)
 
 An owner walkabout found that Security creation used native `window.prompt()`
