@@ -2260,6 +2260,12 @@ readbacks and reload durability. Both disposable stacks were healthy with
 zero restarts and Qwen3:8B configured through the normal model endpoint flow.
 The real owner deployment remains untouched at source `34ced247`.
 
+Focused and broad verification for this contract repair is complete: the
+current source full regression passed `7011 tests, 8 skipped, 186 warnings`
+in 5m31s. The candidate image used for browser replays remains
+`odysseus:candidate-7cbd7666`; the branch head after documentation-only
+checkpoints is tracked separately.
+
 The same disposable stack passed `OWNER-WORK-OVERVIEW-001` across 3 owner
 turns with 2 canonical readbacks and reload durability. The ambiguous restart
 and no-active-context continuation journeys also passed 2 turns without false
