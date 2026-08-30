@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Natural reminder lifecycle replay (2026-08-30)
+
+The owner-facing journey `Remind me tomorrow to review the backup plan.` then
+`Show my reminders.` was replayed through the authenticated GUI on exact
+candidate `7efc755b`. The existing `manage_notes` owner was exposed through
+the canonical capability/tool registry, the ordinary request was projected
+into a bounded title and due date, duplicate submission remained idempotent,
+and final answers were owned by deterministic notes projections. The replay
+passed two GUI turns with one mutation, two independent readbacks, and zero
+`falseSuccess`, `rawFinalResults`, `duplicateDelivery`, or `abruptEOF` counts.
+The reminder persisted with title `Review the backup plan` and a timezone-aware
+tomorrow due date. Image ID was
+`sha256:371616b5d17d4dda83e87f25f500cf8d5ba81e9b268c839f64b9197b7cc2c1fd`,
+with zero restarts; only disposable `/tmp/hades-fresh-current` data was used.
+
 ## Today/calendar empty-state replay (2026-08-30)
 
 The expanded Tier 1 minimal pair was replayed through the authenticated GUI on
