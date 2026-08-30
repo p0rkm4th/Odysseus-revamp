@@ -2,6 +2,18 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Household canonical mutation and visual walkabout continuation (2026-08-30)
+
+The deterministic `OWNER-HOUSEHOLD-MUTATION-READBACK-001` journey passed four
+GUI turns: two stock mutations and two canonical readbacks. Both mutations
+were independently verified; `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0`.
+
+The existing realistic browser walkabout then passed against the disposable
+candidate, covering shared window chrome, navigation, empty/error surfaces,
+narrow layout, modal behavior, overflow, and duplicate-icon checks. This is
+isolated-candidate evidence only; owner deployment and data remain untouched.
+
 ## Recipe copied-webpage and complete-URL ingestion replay (2026-08-30)
 
 The deterministic `OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001` journey passed with
