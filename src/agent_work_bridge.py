@@ -818,6 +818,10 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
             collections = (
                 (safe_data.get("assets"), "TECHNICAL_ASSET"),
                 (safe_data.get("recipes"), "RECIPE"),
+                # Detail reads retain the ordered collection separately so
+                # follow-up ordinals can be corrected without changing the
+                # human-facing detail projection.
+                (safe_data.get("reference_entities"), "TECHNICAL_ASSET"),
             )
             for items, concept in collections:
                 if not isinstance(items, list):

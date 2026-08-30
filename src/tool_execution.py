@@ -1567,6 +1567,30 @@ async def _execute_manage_assets_binding(block, owner=None, run_id=None):
                 "source": "canonical_it_asset_cmdb",
                 "owner_scope": str(owner or "authenticated_owner"),
             }
+            # Preserve the ordered owner-scoped collection that gave meaning
+            # to an ordinal target.  A correction such as "I meant the first
+            # one" must be able to revisit the list the user was referring
+            # to, even though the detail Result itself contains only the
+            # selected asset.  This is compact reference metadata; the human
+            # answer remains the selected detail projection.
+            try:
+                reference_cp = await _ody_v34_asyncio.to_thread(
+                    _ody_v34_subprocess.run,
+                    _ody_v34_asset_argv({"action": "list", "type": "computer", "limit": 500}, owner=owner),
+                    cwd="/app", text=True, capture_output=True, timeout=45, check=False,
+                )
+                reference_assets = _ody_v34_json.loads(reference_cp.stdout or "")
+                if reference_cp.returncode == 0 and isinstance(reference_assets, list):
+                    data["reference_entities"] = [
+                        {"id": item.get("id"), "name": item.get("name")}
+                        for item in reference_assets
+                        if isinstance(item, dict) and item.get("id")
+                    ][:500]
+            except Exception:
+                # The detail read is still valid if optional continuity
+                # metadata cannot be assembled; it must never turn a read
+                # into a false failure.
+                pass
         elif action == "summary" and isinstance(parsed, dict):
             data = {
                 "status": "SUCCESS",
