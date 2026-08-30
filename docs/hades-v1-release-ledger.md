@@ -38,6 +38,19 @@ completed with one terminal event, with `falseSuccess=0`, `rawFinalResults=0`,
 `duplicateDelivery=0`, and `abruptEOF=0`. No mutation was attempted and no
 owner data was touched.
 
+## Network read-only replay and credential-expiry classification (2026-08-30)
+
+The first `OWNER-NETWORK-001` attempt never reached the prompt: the disposable
+acceptance credential had expired, the browser remained on `/login`, and the
+session bootstrap returned 401 responses. This was classified as
+`AUTH_SESSION_FAILURE`; only the disposable credential was rotated and its
+container restarted.
+
+The replay then passed the read-only Network journey on the isolated candidate:
+one GUI read and one human final answer, with `falseSuccess=0`,
+`rawFinalResults=0`, `duplicateDelivery=0`, and `abruptEOF=0`. No Network
+mutation or owner deployment change was performed.
+
 ## Current-candidate recovery rehearsal and fresh-fresh acceptance (2026-08-30)
 
 The current executable candidate `8c620bf438bd` was deployed into the
