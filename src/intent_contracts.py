@@ -2855,7 +2855,7 @@ def compile_intent(
         reference_filters["recipe_cooking_history"] = True
     if concept == "RECIPE" and operation == "READ" and re.search(
         r"\b(?:shopping\s+list|shopping\s+requirements?|what\s+(?:do\s+)?i\s+need\s+to\s+buy|what\s+(?:am|do)\s+i\s+missing|what\s+ingredients?\s+are\s+missing|"
-        r"ingredients?\s+(?:do\s+)?i\s+need|missing\s+ingredients?)\b.*\b(?:for|from)\s+(?:this|that|the)\s+recipe\b|"
+        r"ingredients?\s+(?:do\s+)?i\s+need|missing\s+ingredients?)\b.*\b(?:for|from)\s+(?:this|that|the|it)\s+recipe\b|"
         r"\b(?:shopping\s+list|shopping\s+requirements?)\b", q,
     ):
         reference_filters["recipe_shopping"] = True
