@@ -2266,6 +2266,13 @@ in 5m31s. The candidate image used for browser replays remains
 `odysseus:candidate-7cbd7666`; the branch head after documentation-only
 checkpoints is tracked separately.
 
+Narrow visual smoke on the disposable Qwen stack reached the authenticated
+shell at 1024×700 and 768×600. Both widths had zero horizontal document/body
+overflow and zero page errors; the sidebar, Hades chrome, model selector, and
+composer remained visible and visually coherent. The first 1024 replay hit a
+post-login `waitForURL` timeout, but the DOM-content-loaded retry passed, so it
+is classified as harness timing rather than a product failure.
+
 The same disposable stack passed `OWNER-WORK-OVERVIEW-001` across 3 owner
 turns with 2 canonical readbacks and reload durability. The ambiguous restart
 and no-active-context continuation journeys also passed 2 turns without false
