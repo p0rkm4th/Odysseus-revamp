@@ -465,6 +465,16 @@ def reference_context_for_turn(
     # "second" to "first"); do not let that stale context shadow the newer
     # selected-reference metadata.
     if owner and session_id and structured_reference:
+        refs = _history_result_references(history)
+        if refs:
+            session = {
+                "ordered_entities": refs,
+                "eligible_entities": refs,
+                "entities": refs,
+                "last": next((item for item in refs if item.get("last")), refs[-1]),
+                "source_run_id": None,
+            }
+            return active, session, active_entities
         try:
             session = recent_session_reference_context(str(owner), str(session_id))
         except Exception:
