@@ -1658,3 +1658,12 @@ URL recipe, independently verified 12 clean ingredient names, retained
 meaningful preparation parentheses, and survived reload. Final output was
 owner-readable with no raw binding or browser errors. Positive YouTube
 extraction remains unverified.
+
+## Household approval policy follow-up — 2026-08-30
+
+Sloppy-language add/consume/readback passed canonically (`3 -> 2`) and
+survived reload, but ordinary household mutations displayed approval. The
+registry marks these Actions `ApprovalMode.NONE`; the observed card is caused
+by the editable Agent-mode skill index being deliberately marked untrusted and
+arming the run taint gate. Keep this as a release UX/policy follow-up: do not
+disable the taint gate or allow skill text to authorize private writes.

@@ -2148,3 +2148,18 @@ Reload preserved the row; the final answer reported verified canonical
 readback, with zero page errors and no raw technical binding. Positive YouTube
 extraction remains unverified. The real owner deployment remained on source
 `34ced247`.
+
+## Household approval-gate classification — candidate `f3d847fa` (2026-08-30)
+
+A fresh-chat owner replay used sloppy language to add three cans, read the
+quantity, consume one, read again, and reload. Canonical inventory readback
+verified `3 -> 2`, with zero page errors and readable owner-facing answers.
+Both mutations nevertheless displayed exact approval cards, including when a
+new chat was created before the prompt. Trace inspection found the shared
+cause: Agent-mode context injects the editable `skills` index as an untrusted
+user-role block (`tool_gate_untrusted=true`), so the run-level taint gate
+requires approval before private writes. The canonical `manage_assets`
+`add_item` and `consume_stock` ActionSpecs are `ApprovalMode.NONE`; therefore
+this is classified as a security-policy/UX friction mismatch, not a routing or
+false-success failure. The safety gate remains intact pending a scoped repair
+that cannot let editable skill text authorize mutations.
