@@ -55,6 +55,16 @@ reload check passed. Work task mutation remains bounded to Work ownership;
 no cross-suite Asset/Service relationship was fabricated. Owner deployment
 and data remain untouched.
 
+## Copied-webpage Recipe mutation/readback — exact executable candidate `1a24a12f` (2026-08-30)
+
+The owner-like copied webpage paste journey, including non-parser-friendly
+recipe text and web-page formatting noise, completed through the GUI. One
+chat-originated Recipe mutation was independently confirmed by two canonical
+readbacks, including the follow-up recipe lookup. The two streams reported
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`; the disposable state remained durable through the scenario
+reload check. Owner deployment and data remain untouched.
+
 ## Household add false-success fix and replay — exact candidate `701eff7e` (2026-08-30)
 
 The owner prompt “Add 3 cans of Acceptance Beans.” previously produced a
