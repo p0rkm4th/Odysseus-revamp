@@ -996,6 +996,27 @@ def test_video_description_with_requested_name_can_be_commit_ready():
     assert draft.source_url.endswith("5YcsrFC2h5U")
 
 
+def test_video_description_uses_source_title_when_owner_does_not_rename_recipe():
+    source = (
+        "Video title: 2-Ingredient Homemade Pasta | Easy recipe\n\n"
+        "Video description:\n"
+        "Whipping up homemade pasta.\n\n"
+        "Ingredients (for 2 people):\n"
+        "* 160 g flour (1 cup + 1/4 cup)\n"
+        "* 2 eggs\n\n"
+        "Instructions:\n"
+        "1. Create a well in the flour and crack in the eggs.\n"
+        "2. Knead, rest, roll, cut, and cook the pasta."
+    )
+
+    draft = recipe_import_draft(
+        source, source_url="https://www.youtube.com/watch?v=5YcsrFC2h5U"
+    )
+
+    assert draft is not None
+    assert draft.name == "2-Ingredient Homemade Pasta | Easy recipe"
+
+
 def test_household_add_item_can_atomically_seed_requested_initial_stock():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

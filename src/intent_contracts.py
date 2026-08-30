@@ -125,6 +125,10 @@ def _recipe_section(text: str, header: str, next_header: str | None = None) -> s
 
 def _recipe_name(text: str) -> str | None:
     patterns = (
+        # Public video imports carry the trusted source title separately from
+        # the description.  Use it when the owner says only "save this" and
+        # does not provide a display-name override.
+        r"(?mi)^\s*video\s+title\s*:\s*(?P<name>[^\n]{1,200})\s*$",
         # Natural owner wording: "as \"Name\":" or "called Name".
         r"\bas\s+[\"'](?P<name>[^\"']{1,200})[\"']\s*[:.]?",
         # The same owner wording is often typed without quotation marks.
