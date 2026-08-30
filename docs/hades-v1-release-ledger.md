@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## OSINT shared-confirmation checkpoint — exact candidate `dad9e7c5` (2026-08-30)
+
+OSINT claim retraction now uses the shared Hades confirmation dialog, keeping
+the warning that prior evidence is retained and applying danger styling to the
+irreversible projection change. Focused OSINT/UI coverage passed 12 tests.
+The exact candidate `odysseus:candidate-dad9e7c5` was built with image ID
+`sha256:bc5d9f8e3e9930cc36e4fb8743421529c5a375ee9a030e7aeb72680e131acd44`
+and source marker `dad9e7c5ec786888e8953bb902e8cd5d7bcbe02d`. The responsive
+browser gate was attempted against the candidate but failed on an unrelated
+startup `GET /api/cookbook/state` 403: the disposable authenticated account
+is deliberately non-admin while that endpoint requires admin. This is
+classified `AUTH_SESSION_FAILURE`/acceptance-fixture mismatch; no OSINT
+journey failure was observed, and no owner deployment or data was touched.
+
 ## World Model shared-error checkpoint — exact candidate `251828bb` (2026-08-30)
 
 World Model’s owner-facing “Sync CMDB” failure path used a native alert. It
