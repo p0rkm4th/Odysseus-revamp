@@ -4453,3 +4453,8 @@ and deployed only to the disposable current lane. The reminder replay passed
 passed 20 turns and 20 streams. Both had zero false success, raw final
 Results, duplicate delivery, and abrupt EOF. Owner deployment/data remained
 untouched.
+
+The repaired-source broad regression then passed `7083` tests with `9`
+skipped and `149` warnings in 5m24s. This closes the previously observed
+11-test red checkpoint for the current branch state; the warnings are existing
+datetime/API deprecations and are not being counted as product acceptance.
