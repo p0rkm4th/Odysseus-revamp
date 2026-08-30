@@ -51,6 +51,13 @@ instructions. This adds a green mutation/readback result for webpage-shaped
 Recipe input on the isolated Qwen3:8B candidate; the owner runtime was not
 modified.
 
+## Work project mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The Work project owner journey passed two deterministic turns with one GUI
+mutation, two canonical readbacks, and zero false success, raw Result,
+duplicate delivery, or abrupt EOF. This is deterministic fixture evidence;
+Qwen reliability remains separately scoped.
+
 ## URL Recipe import approval and durability checkpoint — exact candidate `806fc3ba` (2026-08-30)
 
 A public URL with an explicit display-name override reached the visible sealed
