@@ -4553,3 +4553,7 @@ with `2` turns, `1` GUI mutation, and `2` independent `/api/notes` readbacks
 including due-date evidence. False success, raw final Results, duplicate
 delivery, and abrupt EOF were all zero. Owner deployment/data remained
 untouched.
+
+The replay was repeated after the current branch’s subsequent documentation
+and corpus updates with the same exact executable candidate and retained the
+same result. No rebuild was needed for those docs/benchmark-only changes.
