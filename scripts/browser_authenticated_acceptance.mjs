@@ -823,13 +823,25 @@ async function send(page, prompt, expectation = {}) {
     await approvalCard.waitFor({state: 'attached', timeout: 120000});
     const approve = approvalCard.locator('.ask-user-option').filter({hasText: /allow for this task/i}).first();
     await approve.waitFor({state: 'visible', timeout: 10000});
+    // Observe the actual continuation request as well as the stream registry.
+    // A stream-count race can otherwise make a stalled approval look like a
+    // completed answer (or make a later unrelated stream look like approval).
+    const approvalContinuation = page.waitForRequest((request) =>
+      request.url().includes('/api/chat_stream')
+      && String(request.postData() || '').includes('tool_approval_id'),
+    { timeout: 120000 });
     await approve.click();
+    await approvalContinuation;
     // Approval ends the proposal stream. The normal frontend submits the
     // sealed approval through a second /api/chat_stream request; grade that
     // continuation, not the already-terminal proposal stream.
+    // The proposal stream is already present by the time the approval card
+    // attaches. Waiting only for `length > beforeStreams` can therefore pass
+    // immediately and grade the approval prompt as the final answer without
+    // ever observing the continuation submitted by the UI.
     await page.waitForFunction((count) =>
       (window.__hadesE2EStreams?.length || 0) > count,
-    beforeStreams, { timeout: 120000 });
+    beforeStreams + 1, { timeout: 120000 });
     streamIndex = await page.evaluate(() => (window.__hadesE2EStreams?.length || 1) - 1);
   }
   const stream = await waitForAnswer(page, beforeAssistant, streamIndex, prompt);
