@@ -593,4 +593,4 @@ export function closePanel() {
 
 export function togglePanel() { open ? closePanel() : openPanel(); }
 
-export default {openPanel, closePanel, togglePanel};
+export default {openPanel, closePanel, togglePanel, openRecipeImportDraft};
