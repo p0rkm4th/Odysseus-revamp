@@ -306,6 +306,17 @@
         {"prompt": "Show my reminders.", "expected": {"domain": "NOTES", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_notes", "must_include_any": ["backup plan", "reminder"], "forbidden": ["no reminders", "don't have"]}}
       ],
       "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "approval": "not_required", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "contains_title": "Review the backup plan", "requires_due_date": true}, "terminal": {"done": 2, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-REMINDER-CANCEL-REFERENCE-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-daily-driver",
+      "turns": [
+        {"prompt": "Remind me tomorrow to cancel the test appointment.", "expected": {"domain": "NOTES", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add", "tool_binding": "manage_notes", "requires_effect": true, "must_include_any": ["reminder", "test appointment", "tomorrow"]}},
+        {"prompt": "Actually, cancel that reminder.", "expected": {"domain": "NOTES", "operation": "DELETE", "answer_source": "DETERMINISTIC_RESULT", "action": "delete", "tool_binding": "manage_notes", "requires_effect": true, "must_include_any": ["cancel", "deleted", "removed"], "forbidden": ["created", "saved"]}},
+        {"prompt": "Show my reminders.", "expected": {"domain": "NOTES", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_notes", "must_include_any": ["no notes", "no reminders", "empty"]}}
+      ],
+      "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "absent_title": "Cancel the test appointment"}, "terminal": {"done": 3, "abrupt_eof": false}}
     }
   ]
 }
