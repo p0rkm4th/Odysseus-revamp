@@ -2282,6 +2282,17 @@ import { loadPanel } from './panels.js';
         'deep_research': 'Researching',
         'list_models': 'Browsing',
         'ui_control': 'Adjusting',
+        // Owner-facing labels for canonical capability bindings.  Keep the
+        // Action/ToolBinding identifiers inside the collapsed details rather
+        // than making normal conversation read like a developer trace.
+        'manage_recipes': 'Saving recipe',
+        'read_recipes': 'Checking recipes',
+        'manage_assets': 'Updating household',
+        'read_household': 'Checking household',
+        'read_assets': 'Checking assets',
+        'read_network': 'Checking network',
+        'manage_work': 'Updating work',
+        'read_work': 'Checking work',
       };
       const _toolIcons = {
         'web_search': _searchIcon,
@@ -3744,7 +3755,8 @@ import { loadPanel } from './panels.js';
                   // bottom of file) so no per-node listener needed.
                   const _wasOpen = currentToolBubble.classList.contains('open');
                   currentToolBubble.className = 'agent-thread-node' + (ok ? '' : ' error') + (_wasOpen ? ' open' : '');
-                  currentToolBubble.innerHTML = `<div class="agent-thread-dot"></div><div class="agent-thread-header"><span class="agent-thread-icon">${ok ? '\u2713' : '\u2717'}</span><span class="agent-thread-tool">${esc(json.tool)}</span><span class="agent-thread-status">${ok ? 'done' : 'failed'}</span><span class="agent-thread-chevron">\u25B6</span></div><div class="agent-thread-content">${cmdHtml2}${outHtml}${diffHtml}</div>`;
+                  const toolLabel = _toolLabels[String(json.tool || '').toLowerCase()] || String(json.tool || '').replace(/_/g, ' ');
+                  currentToolBubble.innerHTML = `<div class="agent-thread-dot"></div><div class="agent-thread-header"><span class="agent-thread-icon">${ok ? '\u2713' : '\u2717'}</span><span class="agent-thread-tool">${esc(toolLabel)}</span><span class="agent-thread-status">${ok ? 'done' : 'failed'}</span><span class="agent-thread-chevron">\u25B6</span></div><div class="agent-thread-content">${cmdHtml2}${outHtml}${diffHtml}</div>`;
                   // Reset so thinking spinner between tools says "Thinking" not the old tool's label
                   _lastToolName = '';
                   uiModule.scrollHistory();
