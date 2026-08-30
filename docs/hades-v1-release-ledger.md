@@ -3513,3 +3513,9 @@ journey required approval, created the requested canonical Recipe, listed it,
 retrieved it by reference, and preserved it through reload. Together these
 covered 4 turns, 2 GUI mutation attempts, and 4 canonical readbacks with zero
 false successes, raw final Results, duplicate delivery, or abrupt EOF.
+
+The disposable current lane also passed the standard authenticated read-only
+owner walkabout across 7 natural-language turns covering network, homelab,
+memory, assets, reference continuity, and Work. Each stream terminated once;
+the run had 7 read journeys, 0 mutations, 0 false successes, 0 raw final
+Results, 0 duplicate deliveries, and 0 abrupt EOFs.
