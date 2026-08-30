@@ -4499,3 +4499,16 @@ host operation, inference, network probe, job scheduling, or mutation. The
 integration projection kept Telegram and Home Assistant `NOT_CONFIGURED`,
 Calendar connected-but-provider-unprobed, and Email configured-but-unprobed.
 No owner deployment or owner data was modified.
+
+The same readiness audit found a second shared projection defect: the Contacts
+contract had a bare string where a one-item permission tuple was required, so
+the Setup and Integration Center projected `contacts read/write` as individual
+characters. The contract shape was corrected and a semantic projection
+regression added. Focused Setup Center verification passed `14` tests. Exact
+candidate `odysseus:candidate-4fa8152d` was built from pushed source
+`4fa8152d` (image `sha256:46623825cb3d1bcb11c4bc47d797771e5f08b23f277b27afa4697016990dc3f5`),
+deployed to the disposable lane with zero restarts, and browser readback
+returned `capabilities: ["contacts read/write"]`. The first immediate browser
+attempt hit a startup race before the app listened (`ERR_SOCKET_NOT_CONNECTED`);
+retry after readiness passed. This was classified `ENVIRONMENT_FAILURE`, not
+a Contacts product failure. Owner deployment/data remained untouched.
