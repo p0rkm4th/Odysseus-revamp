@@ -1396,7 +1396,7 @@ async function main() {
         // A bounded failure/review answer may mention the effect verb while
         // explicitly denying it (for example, "No recipe was saved").
         // Count only an affirmative claim as false-success evidence.
-        return !/\b(?:no|not|never|didn['’]?t|did not|couldn['’]?t|could not|wasn['’]?t|was not|without|failed to)\b[^.!?\n]{0,80}\b(?:added|created|saved|updated|deleted|removed|moved|restarted|sent|changed|completed)\b/i.test(value);
+        return !/\b(?:no|nothing|not|never|didn['’]?t|did not|couldn['’]?t|could not|wasn['’]?t|was not|without|failed to)\b[^.!?\n]{0,80}\b(?:added|created|saved|updated|deleted|removed|moved|restarted|sent|changed|completed)\b/i.test(value);
       };
       if (!effectful || !turn?.answers?.some(({text}) => effectClaim(text))) return false;
       const eventSuccess = (stream?.events || []).some((event) =>

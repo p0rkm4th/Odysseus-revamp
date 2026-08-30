@@ -2,6 +2,24 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Insufficient-evidence video review and false-success oracle checkpoint (2026-08-30)
+
+The realistic `OWNER-RECIPE-VIDEO-INSUFFICIENT-EVIDENCE-001` journey initially
+failed because the corpus expected `AnswerSource=ERROR` even though the video
+contained enough structured recipe evidence for the correct non-mutating review
+workflow. The GUI answer was explicit that nothing had been saved and named an
+unresolved quantity; canonical recipe readback remained empty. The scenario was
+corrected to expect the deterministic review projection, while the separate
+no-evidence video journey continues to require `ERROR`.
+
+Replay on the isolated Qwen3:8B candidate passed with one GUI mutation-shaped
+turn, two independent canonical readbacks, `falseSuccess=0`,
+`rawFinalResults=0`, `duplicateDelivery=0`, and `abruptEOF=0`. The replay also
+exposed and fixed a generalized acceptance-oracle defect: “Nothing has been
+saved yet” was previously counted as an affirmative save claim. This is
+test-oracle evidence only; no executable image rebuild was required and the
+owner deployment/data were untouched.
+
 ## Current-candidate recovery rehearsal and fresh-fresh acceptance (2026-08-30)
 
 The current executable candidate `8c620bf438bd` was deployed into the
