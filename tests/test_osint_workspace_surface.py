@@ -59,6 +59,13 @@ def test_osint_intake_keeps_public_source_and_review_boundaries_visible():
     assert "data-osint-delta-compare" in osint
 
 
+def test_osint_claim_retraction_uses_shared_confirmation_dialog():
+    osint = (ROOT / "static/js/osint.js").read_text()
+    assert "import uiModule from './ui.js';" in osint
+    assert "uiModule.styledConfirm" in osint
+    assert "window.confirm(" not in osint
+
+
 def test_shared_ui_grammar_exposes_reusable_states_headers_and_provenance():
     components = (ROOT / "static/js/ui-components.js").read_text()
     stylesheet = (ROOT / "static/style.css").read_text()
