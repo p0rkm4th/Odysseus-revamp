@@ -111,8 +111,12 @@ def setup_setup_center_routes(*, session_factory=SessionLocal) -> APIRouter:
                     detail = "model routing metadata and configured model endpoint are reachable; no inference was requested" if available else "model routing metadata or configured model endpoint is unavailable; no inference was requested"
                     checks = {"owner_scoped": True, "capability_registry": capability_available, "model_endpoint_read": True, "endpoint_reachable": endpoint_reachable, "inference_performed": False}
                 elif module_id == "core.memory":
-                    from src.memory_grounding import summarize_owner_memory
-                    available = callable(summarize_owner_memory)
+                    # The canonical memory owner is MemoryManager.  Do not
+                    # import a projection helper here: setup health must
+                    # validate the service that the application actually
+                    # initializes, without reading owner data.
+                    from src.memory import MemoryManager
+                    available = callable(MemoryManager)
                     detail = "canonical owner-scoped memory service is importable; no retrieval was performed"
                     checks = {"owner_scoped": True, "canonical_memory_service": available, "retrieval_performed": False}
                 elif module_id == "investigation.osint":
