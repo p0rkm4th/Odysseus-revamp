@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Work task mutation/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+`OWNER-WORK-TASK-MUTATION-READBACK-001` passed in the isolated deterministic
+synthetic browser environment. The owner created the task through chat and the
+independent canonical readback confirmed it before and after the journey.
+Evidence: 2 turns, 1 GUI mutation, 2 mutation readbacks, zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF. The actual
+owner runtime remains untouched.
+
 ## Memory correction/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 `OWNER-MEMORY-CORRECTION-READBACK-001` passed in the isolated realistic
