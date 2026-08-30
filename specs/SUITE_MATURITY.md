@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## No-active-Run continuation safety checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+With no active task or Run, a bare continuation returned a grounded
+clarification and did not invent progress. The isolated Qwen3:8B journey had
+zero false success, raw Result, duplicate delivery, or abrupt EOF.
+
 ## Ambiguous service restart safety checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 An unqualified “Restart it” correctly produced a clarification instead of
