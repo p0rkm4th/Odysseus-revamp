@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Memory correction/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+The isolated realistic owner journey passed remember/read/correct/read-after-
+correction through ordinary chat with Qwen3:8B. The final read excluded the
+corrected stale value; all four turns had deterministic canonical routing and
+zero false success, raw Result, duplicate delivery, or abrupt EOF. Separate
+mutation-readback counters were not emitted by this harness scenario.
+
 ## Asset ordinal correction/reference-chain checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 The isolated realistic owner journey now passes a three-turn Asset chain:
