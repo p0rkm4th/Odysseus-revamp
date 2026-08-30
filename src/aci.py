@@ -5015,6 +5015,17 @@ def project_action_selection(
                 reference_refs = reference_resolution.get("refs") if isinstance(reference_resolution, Mapping) else None
                 if isinstance(reference_refs, list) and len(reference_refs) == 1 and str(reference_refs[0]).strip():
                     draft = {"action": str(item.get("action_id") or ""), "id": str(reference_refs[0])}
+            elif draft and str(item.get("action_id") or "") in {"update", "delete"}:
+                # A deterministic field projector may supply the changed
+                # value while the model supplies the conversational target.
+                # Preserve the unique server-resolved reference alongside
+                # that field; otherwise an update becomes a targetless
+                # partial Action and fails closed after the user asked for a
+                # legitimate correction.
+                reference_resolution = frame.get("reference_resolution") if isinstance(frame, Mapping) else {}
+                reference_refs = reference_resolution.get("refs") if isinstance(reference_resolution, Mapping) else None
+                if isinstance(reference_refs, list) and len(reference_refs) == 1 and str(reference_refs[0]).strip():
+                    draft["id"] = str(reference_refs[0])
             if draft:
                 payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
