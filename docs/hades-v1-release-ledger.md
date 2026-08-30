@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Populated Memory recall checkpoint — exact candidate `6a713675` (2026-08-30)
+
+`OWNER-MEMORY-POPULATED-001` passed in a fresh isolated Compose/Qwen3:8B
+project. The owner asked what Hades knew about the acceptance setup; the
+fixture-provided preference was returned with grounded Memory context, and
+the canonical Memory readback remained correct after reload. Evidence: one
+read turn, two canonical readbacks, and zero false successes, raw final
+Results, duplicate delivery, or abrupt EOF. Broader contradiction and
+reference-chain journeys remain open.
+
 ## Asset false-premise checkpoint — exact candidate `6a713675` (2026-08-30)
 
 `OWNER-ASSET-FILTER-NO-MATCH-001` passed in a fresh isolated Compose project
