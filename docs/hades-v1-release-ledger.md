@@ -2,6 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Inventory shared-confirmation checkpoint — exact candidate `4f420ba4` (2026-08-30)
+
+The Household/Recipe walkabout found three owner-facing inventory mutation
+confirmations still used native browser `confirm()`: cooking a recipe,
+applying reviewed stock changes, and resuming an interrupted idempotent
+draft. All now use the shared Hades confirmation dialog, with explicit
+cancel wording and danger styling for stock-changing actions. Focused
+coverage passed 63 tests. The exact candidate is
+`odysseus:candidate-4f420ba4`, image ID
+`sha256:db32fe50ba785fbdc8fb9423deaf58ed698e603d93dd5f7bd6d3455ff9847ac1`,
+with source marker `4f420ba4fefdcb2789b5cfbbd1e1e7102a1cb111`; isolated
+runtime port `7002` was healthy with 0 restarts. The authenticated visual
+gate passed at desktop, narrow, and mobile sizes. The full regression passed
+`7030 passed, 8 skipped, 149 warnings` in 296.23 seconds. Owner deployment
+and data remain untouched.
+
 ## Asset reconciliation shared-dialog follow-up — exact candidate `ca206716` (2026-08-30)
 
 The next owner-facing dialog audit found CMDB candidate reconciliation still
