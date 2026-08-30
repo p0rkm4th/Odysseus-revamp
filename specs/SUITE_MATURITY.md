@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Full regression after Memory correction fix — exact candidate `04d05854` (2026-08-30)
+
+The supported full regression after the shared Memory delete-resolution fix
+passed 7,026 tests, with 8 skipped and 149 warnings, in 301.36 seconds. The
+exact executable candidate and isolated runtime were source-matched; the
+actual owner runtime was not modified.
+
 ## Memory correction reference-resolution fix — exact candidate `04d05854` (2026-08-30)
 
 Real Qwen3:8B GUI testing reproduced a failed natural Memory correction when

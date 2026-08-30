@@ -2,6 +2,13 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Full regression after Memory correction fix — exact candidate `04d05854` (2026-08-30)
+
+The supported full regression after the shared Memory executor change passed
+`7026 passed, 8 skipped, 149 warnings` in 301.36 seconds. The exact candidate
+was source-marked `04d05854790856719b71e69f6fc27f72da29b66a`; the isolated
+runtime had 0 restarts. The actual owner runtime remains untouched.
+
 ## Memory correction reference-resolution fix — exact candidate `04d05854` (2026-08-30)
 
 Owner testing found a real false-negative mutation: after saving
