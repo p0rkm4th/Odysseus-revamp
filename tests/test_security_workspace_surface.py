@@ -25,3 +25,12 @@ def test_shared_summary_metrics_have_layout_and_spacing():
     assert "grid-template-columns:repeat(3,minmax(0,1fr))" in source
     assert ".hades-summary-metric" in source
     assert "gap:var(--hades-space-3)" in source
+
+
+def test_security_creation_uses_shared_prompt_and_error_surface():
+    source = (Path(__file__).resolve().parents[1] / "static/js/security.js").read_text()
+    assert "import uiModule from './ui.js';" in source
+    assert "uiModule.styledPrompt" in source
+    assert "window.prompt" not in source
+    assert "window.alert" not in source
+    assert "uiModule.showError" in source
