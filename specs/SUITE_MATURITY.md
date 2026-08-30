@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Current-candidate visual acceptance checkpoint — exact candidate `04d05854` (2026-08-30)
+
+Authenticated desktop, narrow, and mobile visual acceptance passed with
+shared Inventory/Recipe chrome, unique navigation icons, responsive
+containment, wrapping, tab behavior, and no horizontal overflow. Captured
+screenshots were inspected; the repeated OSINT label belongs to synthetic
+fixture content rather than production navigation.
+
 ## Current-candidate Docker Chroma backup/restore checkpoint — exact candidate `04d05854` (2026-08-30)
 
 The corrected disposable Chroma volume was archived, deliberately drifted,
