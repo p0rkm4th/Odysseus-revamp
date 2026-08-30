@@ -316,6 +316,13 @@ function renderRecipeImportDraft(form, draft) {
 
 export function openRecipeImportDraft(draft) {
   if (!draft || typeof draft !== 'object') return;
+  const reviewKey = [draft.name || '', draft.source_url || '', draft.instructions || ''].join('\u0000');
+  const existing = [...document.querySelectorAll('.inventory-dialog[data-kind="recipe-import"]')]
+    .find(form => form.dataset.recipeReviewKey === reviewKey);
+  if (existing) {
+    existing.closest('.inventory-dialog-backdrop')?.scrollIntoView({block: 'nearest'});
+    return;
+  }
   openPanel();
   const form = modalForm(
     'Review recipe',
@@ -323,7 +330,10 @@ export function openRecipeImportDraft(draft) {
     'Save reviewed recipe',
     'recipe-import',
   );
-  if (form) renderRecipeImportDraft(form, draft);
+  if (form) {
+    form.dataset.recipeReviewKey = reviewKey;
+    renderRecipeImportDraft(form, draft);
+  }
 }
 
 async function onSubmit(event) {
