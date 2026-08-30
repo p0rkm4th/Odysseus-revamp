@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Current-candidate Docker Chroma backup/restore checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The corrected disposable Chroma volume was archived, deliberately drifted,
+restored while services were stopped, and independently verified. Drift was
+removed, the Chroma collection count returned to one, heartbeat succeeded, and
+the Hades Memory API still returned the marker after service restart. This is
+current-candidate vector-state recovery evidence; owner volumes were not
+modified.
+
 ## Fresh-fresh install/restart checkpoint — exact candidate `04d05854` (2026-08-30)
 
 An empty disposable Compose state passed first-run setup, Qwen3:8B endpoint
