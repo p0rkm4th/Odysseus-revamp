@@ -1,4 +1,8 @@
 import io
+import json
+import os
+import subprocess
+import sys
 import tarfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,7 +18,9 @@ def _load_backup_cli():
 
 def _patch_repo(module, monkeypatch, root: Path):
     monkeypatch.setattr(module, "_REPO_ROOT", root)
+    monkeypatch.setattr(module, "_BACKUP_ROOT", root)
     monkeypatch.setattr(module, "_DATA_DIR", root / "data")
+    monkeypatch.setattr(module, "_BACKUP_DIR", root / "backups")
 
 
 def _restore_args(path: Path):
@@ -164,3 +170,36 @@ def test_restore_extracts_regular_files_without_extractall(tmp_path, monkeypatch
     assert (repo / "data" / "nested" / "new.txt").read_text(encoding="utf-8") == "new"
     assert not (repo / "data" / "old.txt").exists()
     assert list(repo.glob("data.before-restore-*"))
+
+
+def test_cli_can_snapshot_and_restore_an_explicit_isolated_root(tmp_path):
+    root = tmp_path / "isolated"
+    data = root / "data"
+    data.mkdir(parents=True)
+    state = data / "state.json"
+    state.write_text(json.dumps({"value": "before"}), encoding="utf-8")
+    archive = tmp_path / "isolated.tar.gz"
+    script = Path(__file__).resolve().parents[1] / "scripts" / "odysseus-backup"
+    env = {**os.environ, "ODYSSEUS_BACKUP_ROOT": str(root)}
+
+    subprocess.run(
+        [sys.executable, str(script), "snapshot", "--out", str(archive)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    state.write_text(json.dumps({"value": "drifted"}), encoding="utf-8")
+    (data / "unexpected.txt").write_text("drift", encoding="utf-8")
+
+    subprocess.run(
+        [sys.executable, str(script), "restore", str(archive), "--yes"],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert json.loads(state.read_text(encoding="utf-8"))["value"] == "before"
+    assert not (data / "unexpected.txt").exists()
+    assert list(root.glob("data.before-restore-*"))
