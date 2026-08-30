@@ -2,6 +2,18 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Fresh-install restart durability checkpoint — exact candidate `6a713675` (2026-08-30)
+
+A fresh disposable Compose project completed normal admin setup, registered
+the host Qwen3:8B endpoint through the model-settings flow, and passed an
+authenticated empty-Work browser read. The app container was then restarted;
+health returned with the same image and source marker, Docker restart count
+remained zero, and the same authenticated browser journey passed again.
+Evidence: two isolated browser runs, one before and one after restart, with
+zero false successes, raw final Results, duplicate delivery, or abrupt EOF.
+This is fresh-install/restart evidence only; the actual owner deployment is
+still stopped and was not touched.
+
 ## Recipe shopping-requirements checkpoint — exact candidate `6a713675` (2026-08-30)
 
 `OWNER-RECIPE-SHOPPING-REQUIREMENTS-001` passed in a fresh isolated
