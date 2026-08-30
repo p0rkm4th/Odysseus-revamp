@@ -4088,7 +4088,14 @@ def canonical_recipe_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -
 
 
 def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Render the already-projected owner Memory Result exactly once."""
+    """Render the projected Memory Result as an owner-facing answer.
+
+    ``render_memory_result_projection`` is intentionally technical because it
+    is also used as protected model context. Never expose that context format
+    as the normal final answer: it includes query/status/telemetry fields that
+    are useful for grounding but not useful to a person asking what Hades
+    remembers.
+    """
     event = next(
         (item for item in reversed(tuple(tool_events or ()))
          if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "read_memory"),
@@ -4099,11 +4106,26 @@ def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
     projection = event.get("result_projection")
     if not isinstance(projection, Mapping):
         return None
-    try:
-        from src.memory_grounding import render_memory_result_projection
-        return render_memory_result_projection(projection)
-    except Exception:
-        return "I couldn't retrieve the owner's remembered information. No memory was inferred."
+    status = str(projection.get("status") or "retrieval_failed").strip().casefold()
+    if status == "retrieval_failed":
+        return "I couldn't retrieve your remembered information, so I won't infer any personal facts."
+    if status == "owner_required":
+        return "I need your authenticated owner session to retrieve remembered information."
+    records = [record for record in (projection.get("records") or []) if isinstance(record, Mapping)]
+    if status == "zero_result" or not records:
+        return "I don't have any applicable memories recorded for you."
+
+    lines = ["Here's what I remember:"]
+    for record in records[:100]:
+        text = str(record.get("text") or "").strip()
+        if not text:
+            continue
+        marker = "Previously recorded" if str(record.get("epistemic_type") or "").upper() == "HISTORICAL" else "Remembered"
+        lines.append(f"- {marker}: {text}")
+    omitted = int(projection.get("omitted_count") or 0)
+    if omitted:
+        lines.append(f"- {omitted} more remembered item{'s' if omitted != 1 else ''} are available.")
+    return "\n".join(lines) if len(lines) > 1 else "I don't have any applicable memories recorded for you."
 
 
 def canonical_memory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
