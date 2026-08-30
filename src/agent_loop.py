@@ -5928,7 +5928,11 @@ async def stream_aci_runtime(
                 "command": cmd_display,
                 "output": output_text,
                 "exit_code": result.get("exit_code"),
-                "success": result.get("success") is True or str(result.get("status") or "").upper() in {
+                "success": result.get("success") is True or (
+                    block.tool_type == "manage_notes"
+                    and result.get("exit_code") == 0
+                    and not result.get("error")
+                ) or str(result.get("status") or "").upper() in {
                     "SUCCESS", "SUCCESS_WITH_DATA", "SUCCESS_EMPTY", "VERIFIED",
                 },
                 "evidence_class": "CURRENT_ACTION_RESULT",
@@ -5936,6 +5940,10 @@ async def stream_aci_runtime(
                     "MEMORY" if block.tool_type == "read_memory" else None
                 ),
             }
+            if block.tool_type == "manage_notes":
+                for key in ("note_id", "note_title", "due_date"):
+                    if result.get(key):
+                        tool_event[key] = result[key]
             if block.tool_type == "read_communications":
                 _calendar_summary = communications_calendar_summary_from_tool_output(
                     result.get("output") if isinstance(result.get("output"), str) else ""

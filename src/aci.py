@@ -4265,6 +4265,32 @@ def canonical_memory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -
     return None
 
 
+def canonical_notes_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render one successful notes/reminder mutation without model prose."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_notes"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0) or not event.get("note_id"):
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+    except (TypeError, ValueError):
+        request = {}
+    action = str(request.get("action") or "").strip().lower() if isinstance(request, Mapping) else ""
+    title = str(event.get("note_title") or "").strip()
+    due = str(event.get("due_date") or "").strip()
+    if action == "add" and title:
+        suffix = f" for {due}" if due else ""
+        return f'Reminder created: "{title}"{suffix}. It is saved.'
+    if action == "update" and title:
+        return f'Reminder updated: "{title}". It is saved.'
+    if action == "delete":
+        return "Reminder deleted."
+    return None
+
+
 def canonical_work_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render only a verified Work mutation; model prose is not evidence."""
     event = next(
@@ -4442,6 +4468,7 @@ def canonical_result_answer(
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_work_mutation_answer(tool_events), "Work mutation Result"),
         (canonical_memory_mutation_answer(tool_events), "Memory mutation Result"),
+        (canonical_notes_mutation_answer(tool_events), "notes mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
         (canonical_communications_read_answer(tool_events), "canonical Calendar Result"),
@@ -5107,6 +5134,35 @@ def project_action_selection(
             and set(spec.effects).issubset({"write_private"})
         ):
             fast_path = memory_payload
+            mode = SelectionMode.DIRECT_ACTION
+    # Natural reminders already carry a bounded title and due phrase from the
+    # owner request. Project the complete existing notes Action directly so a
+    # weak model cannot drop fields or repeat the mutation while answering.
+    if (
+        str(frame.get("domain_concept") or "") == "NOTES_MUTATION"
+        and frame.get("operation_class") in {"CREATE", "UPDATE", "DELETE"}
+        and desired_binding == "manage_notes"
+        and desired_action in {"add", "update", "delete"}
+        and desired_binding not in disabled
+    ):
+        selected_notes = next(
+            (value for value in choices.values()
+             if value.get("binding") == desired_binding
+             and value.get("payload", {}).get("action") == desired_action),
+            None,
+        )
+        notes_payload = dict(selected_notes.get("payload") or {}) if selected_notes else {}
+        complete = (
+            desired_action == "add"
+            and str(notes_payload.get("title") or "").strip()
+            and str(notes_payload.get("due_date") or "").strip()
+        ) or (
+            desired_action in {"update", "delete"}
+            and str(notes_payload.get("id") or "").strip()
+        )
+        spec = action_for_tool(desired_binding, {"action": desired_action})
+        if selected_notes is not None and complete and spec and spec.known and spec.approval.value == "none":
+            fast_path = notes_payload
             mode = SelectionMode.DIRECT_ACTION
     # Recipe import semantics are already explicit in the owner request and
     # the server has projected the bounded URL/name or review-only payload
