@@ -845,6 +845,26 @@ def test_url_recipe_import_projects_commit_action_and_user_fields():
     assert projection.fast_path == selected["payload"]
 
 
+def test_household_move_projects_named_item_and_location_for_update_actions():
+    query = "Move Acceptance Turnip2 to the pantry."
+    projection = project_action_selection(
+        intent=_intent(query),
+        relevant_tools=["manage_assets"],
+        disabled_tools=set(),
+        owner="owner",
+        active_run=None,
+        query=query,
+    )
+    selected = next(value for value in projection.choice_map.values()
+                    if value["payload"].get("action") == "move_item")
+    assert selected["payload"] == {
+        "action": "move_item",
+        "item_name": "Acceptance Turnip2",
+        "location_name": "pantry",
+    }
+    assert projection.fast_path == selected["payload"]
+
+
 def test_qualitative_recipe_import_projects_review_only_fast_path():
     query = '''Please save this in my recipe book as "Web Review Dinner".
 

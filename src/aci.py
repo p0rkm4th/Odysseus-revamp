@@ -4749,7 +4749,10 @@ def project_action_selection(
                     )
         if (
             str(frame.get("domain_concept") or "") in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"}
-            and str(frame.get("operation_class") or "") in {"CREATE", "EXECUTE"}
+            # Household moves are canonical updates: preserve the same
+            # bounded parser payload used by add/consume even when the
+            # model's action shortlist classifies the request as UPDATE.
+            and str(frame.get("operation_class") or "") in {"CREATE", "UPDATE", "EXECUTE"}
             and str(item.get("binding") or "") == "manage_assets"
             and str(item.get("action_id") or "") in {"add_item", "consume_stock", "move_item"}
         ):
