@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Exact-candidate qualitative Recipe GUI replay — `8136af69` (2026-08-30)
+
+An outside-in browser replay used the visible Inventory → Recipes → Import
+surface and pasted ordinary recipe text containing `salt to taste` and `oil as
+needed`. The exact candidate opened the editable review surface, preserved all
+three ingredients, visibly marked both qualitative amounts as needing review,
+and stated that nothing had been saved. No canonical mutation was attempted.
+Two earlier attempts were correctly classified as harness selector defects:
+the visible label is “Add from text or media” for Stock, recipe import is under
+the Recipes tab, and the global Chat submit button must not be confused with
+the recipe form submit. This is current GUI evidence for review/no-save, not
+evidence that every correction-and-commit variant is complete.
+
 ## Legacy owner-entry dialog checkpoint — exact candidate `8136af69` (2026-08-30)
 
 The remaining legacy owner-facing text-entry paths in Memory, Cookbook

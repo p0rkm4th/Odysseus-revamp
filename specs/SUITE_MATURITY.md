@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Exact-candidate qualitative Recipe GUI replay — `8136af69` (2026-08-30)
+
+Visible Inventory → Recipes → Import replay with ordinary qualitative amounts
+opened the editable review surface, marked `to taste` and `as needed` for
+review, preserved the ingredients, and confirmed that nothing was saved.
+Earlier selector failures were harness defects, not UI rendering failures.
+Correction-and-commit variants remain open.
+
 ## Legacy owner-entry dialog checkpoint — exact candidate `8136af69` (2026-08-30)
 
 Memory, Cookbook hardware-fit, Gallery, and Presets text-entry paths now use
