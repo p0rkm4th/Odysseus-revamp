@@ -4687,3 +4687,14 @@ and deployed with matching branch/revision metadata, explicit disposable
 mounts, and zero restarts. Realistic visual/navigation acceptance passed, and
 the recurring reminder GUI journey passed `2` turns with one canonical
 mutation and two readbacks. Owner deployment/data remained untouched.
+
+## Chroma partial-failure and recovery replay — candidate `616be82c` (2026-08-30)
+
+In the disposable lane, Chroma was stopped before an app restart. The app
+reported the vector dependency as degraded after its bounded retries, while
+the owner-facing empty Memory read still completed deterministically with no
+fabricated state, raw Result, false success, or abrupt EOF. Chroma was then
+restored and the app restarted; `MemoryVectorStore initialized` and normal
+application startup were observed. This validates graceful unaffected
+canonical behavior during dependency loss and recovery without touching owner
+deployment/data.
