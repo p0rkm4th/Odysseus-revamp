@@ -2036,8 +2036,8 @@ def _operation(text: str, *, continuation: bool = False) -> str:
         q,
     ):
         return "DELETE"
-    if re.search(r"\b(?:delete|remove|retire|forget|cancel)\b", q): return "DELETE"
     if re.search(r"\bremind\s+me\b", q): return "CREATE"
+    if re.search(r"\b(?:delete|remove|retire|forget|cancel)\b", q): return "DELETE"
     if re.search(r"\b(?:remember|memorize|save this about me)\b", q): return "CREATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm|move)\b", q): return "UPDATE"
     if re.search(r"\b(?:save|store|keep)\b", q) and re.search(r"\b(?:recipe|recipes|cookbook|dish)\b", q):
