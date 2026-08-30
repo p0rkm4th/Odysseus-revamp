@@ -2,6 +2,30 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Approved Recipe URL failure-path repair and replay (2026-08-30)
+
+An owner-like named URL import on the prior candidate exposed a control-plane
+defect: after approval, Qwen3:8B repeatedly reselected the already-executed
+`commit_import` action until the loop breaker fired. This was classified as
+`WRONG_ACTION`/`EXECUTION_ORCHESTRATION`. The generalized duplicate-approved-
+mutation guard now forces one tool-free Result-grounded answer while retaining
+exactly-once execution. Focused approval/loop coverage passed `23 passed, 10
+deselected, 1 warning`; the full regression before this source change was
+`7063 passed, 8 skipped, 149 warnings`.
+
+The exact pushed candidate `421fcd13d15cfaa9cec2db9c06d5490e57505268` was
+built as `odysseus:candidate-421fcd13d15c`, image
+`sha256:74a9068cee672fcd5f63b18cb0e54eb855e011fa97c6b80387c4ab3c81034545`,
+and deployed only to the isolated current lane. A direct normal-browser
+replay entered the named URL and clicked the visible “Allow for this task”
+control; the browser sent the approval-bearing continuation, Hades returned
+“I couldn't import that recipe ... No recipe was saved,” and an independent
+authenticated `/api/recipes` readback returned `recipes: []`. No loop-breaker
+message or duplicate mutation occurred. The data-driven corpus harness still
+has an intermittent click-wait/setup race on this approval path and is kept
+red rather than converting proposal-only evidence into a pass. Owner
+deployment/data were not used.
+
 ## Provider-backed OSINT GUI intake checkpoint (2026-08-30)
 
 The isolated candidate `1d3c255ec7ffd7284c95bb6c5d5c874dc1698797` was
