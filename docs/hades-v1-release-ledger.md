@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe expiring-inventory composition checkpoint — exact candidate `6a713675` (2026-08-30)
+
+`OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed in a fresh isolated
+Compose/Qwen3:8B project with a canonical expiring pantry fixture. The owner
+asked what could be made with ingredients expiring soon; the response was a
+grounded recipe candidate, and canonical Recipe readback remained correct
+after reload. Evidence: one read turn, two canonical readbacks, and zero
+mutations, false successes, raw final Results, duplicate delivery, or abrupt
+EOF.
+
 ## Recipe pantry composition checkpoint — exact candidate `6a713675` (2026-08-30)
 
 `OWNER-RECIPE-COMPOSITION-001` passed in a fresh isolated Compose/Qwen3:8B
