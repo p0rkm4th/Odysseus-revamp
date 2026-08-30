@@ -5976,7 +5976,7 @@ async def stream_aci_runtime(
                 "output": output_text,
                 "exit_code": result.get("exit_code"),
                 "success": result.get("success") is True or (
-                    block.tool_type == "manage_notes"
+                    block.tool_type in {"manage_notes", "manage_tasks"}
                     and result.get("exit_code") == 0
                     and not result.get("error")
                 ) or str(result.get("status") or "").upper() in {
@@ -5998,6 +5998,16 @@ async def stream_aci_runtime(
                         value = _note_request.get({"note_id": "id", "note_title": "title", "due_date": "due_date"}[key])
                     if value:
                         tool_event[key] = value
+            if block.tool_type == "manage_tasks":
+                try:
+                    _task_request = json.loads(block.content or "{}")
+                except (TypeError, ValueError):
+                    _task_request = {}
+                if isinstance(_task_request, dict):
+                    if result.get("task_id"):
+                        tool_event["task_id"] = result["task_id"]
+                    if result.get("name") or _task_request.get("name"):
+                        tool_event["task_name"] = result.get("name") or _task_request.get("name")
             if block.tool_type == "read_communications":
                 _calendar_summary = communications_calendar_summary_from_tool_output(
                     result.get("output") if isinstance(result.get("output"), str) else ""
