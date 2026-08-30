@@ -153,6 +153,20 @@ def test_owner_text_entry_paths_use_shared_prompts_without_native_fallbacks():
         assert "styledPrompt" in source, name
 
 
+def test_remaining_owner_error_and_preset_paths_use_shared_ui():
+    expectations = {
+        "rag.js": "uiModule.showError",
+        "signature.js": "uiModule.showError",
+        "research/panel.js": "uiModule.showError",
+        "cookbookDownload.js": "uiModule.styledPrompt",
+    }
+    for name, marker in expectations.items():
+        source = (ROOT / "static/js" / name).read_text()
+        assert marker in source, name
+        assert "alert(" not in source, name
+        assert "prompt(" not in source, name
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]

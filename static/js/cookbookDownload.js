@@ -309,9 +309,12 @@ export function _wirePanelEvents(panel, model, backend) {
   // Save button
   const saveBtn = panel.querySelector('.hwfit-save-btn');
   if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
+    saveBtn.addEventListener('click', async () => {
       const shortName = model.name.split('/').pop() || model.name;
-      const name = prompt('Preset name:', shortName);
+      const name = await uiModule.styledPrompt('Preset name:', {
+        title: 'Save model preset', defaultValue: shortName,
+        placeholder: 'Preset name', confirmText: 'Save', maxLength: 200,
+      });
       if (!name) return;
       const fields = _getPanelFields(panel);
       const presets = _loadPresets();

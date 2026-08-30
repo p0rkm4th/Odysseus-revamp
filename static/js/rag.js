@@ -132,7 +132,7 @@ export async function uploadRagFiles(fileList) {
   } catch (e) {
     console.error('Upload failed:', e);
     if (zone) zone.textContent = 'Drop files here or click to upload';
-    alert('Upload failed: ' + e.message);
+    uiModule.showError('Upload failed: ' + e.message);
   }
 }
 

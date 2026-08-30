@@ -1,4 +1,6 @@
 // static/js/signature.js
+
+import uiModule from './ui.js';
 //
 // Reusable signature module. Two entry points:
 //   capture(opts)  — open a drawing modal, return Promise<Signature|null>
@@ -449,7 +451,7 @@ export function capture(opts = {}) {
         setLastUsed(out);
         close(out);
       } catch (e) {
-        alert('Failed to save signature: ' + e.message);
+        uiModule.showError('Failed to save signature: ' + e.message);
         saveBtn.disabled = false;
       }
     };
