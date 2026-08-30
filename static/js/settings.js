@@ -1577,12 +1577,10 @@ function initAppearance() {
       if (key === 'sidebar-settings-btn' && !chk.checked) {
         var ok = true;
         try {
-          ok = await (uiModule && uiModule.styledConfirm
-            ? uiModule.styledConfirm(
-                'Hide the Settings cog?\n\nYou can re-open this panel any time by typing /settings in the chat input.',
-                { confirmText: 'Hide', cancelText: 'Cancel' }
-              )
-            : Promise.resolve(window.confirm('Hide the Settings cog?\n\nYou can re-open this panel any time by typing /settings in the chat input.')));
+          ok = await uiModule.styledConfirm(
+            'Hide the Settings cog?\n\nYou can re-open this panel any time by typing /settings in the chat input.',
+            { title: 'Hide Settings cog', confirmText: 'Hide', cancelText: 'Cancel' }
+          );
         } catch (_) { ok = false; }
         if (!ok) {
           chk.checked = true;
@@ -4210,9 +4208,9 @@ async function initUnifiedIntegrations() {
         await _renderContactsManager();
       });
       row.querySelector('.contact-del')?.addEventListener('click', async () => {
-        const ok = uiModule.styledConfirm
-          ? await uiModule.styledConfirm('Delete this contact?', { confirmText: 'Delete', danger: true })
-          : window.confirm('Delete this contact?');
+        const ok = await uiModule.styledConfirm('Delete this contact?', {
+          title: 'Delete contact', confirmText: 'Delete', cancelText: 'Keep contact', danger: true,
+        });
         if (!ok) return;
         try {
           await fetch('/api/contacts/' + encodeURIComponent(uid), { method: 'DELETE', credentials: 'same-origin' });

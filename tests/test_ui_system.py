@@ -84,6 +84,14 @@ def test_cookbook_state_sync_is_gated_by_admin_privilege():
     assert "!_canSyncServerState()" in source
 
 
+def test_settings_uses_shared_confirmation_dialogs_without_native_fallbacks():
+    source = (ROOT / "static/js/settings.js").read_text()
+    assert "uiModule.styledConfirm" in source
+    assert "window.confirm(" not in source
+    assert "Hide Settings cog" in source
+    assert "Delete contact" in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]
