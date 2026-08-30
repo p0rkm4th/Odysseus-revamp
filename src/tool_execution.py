@@ -1975,7 +1975,7 @@ async def _execute_read_recipes_binding(block, owner=None):
     try:
         payload = _ody_v34_json.loads(block.content or "{}")
         action = str(payload.get("action") or "").strip().casefold()
-        if action not in {"list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale", "expiring_candidates", "prepare_import"}:
+        if action not in {"list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale", "expiring_candidates", "cooking_history", "prepare_import"}:
             raise ValueError("unsupported read-only Recipe action")
         if not owner:
             raise PermissionError("authenticated recipe owner is required")
@@ -1994,6 +1994,10 @@ async def _execute_read_recipes_binding(block, owner=None):
             payload["source_text"] = source_text
         if action == "pantry_candidates":
             result = get_inventory_service().pantry_recipe_candidates(owner)
+            result = _with_canonical_read_status(result)
+            return "read_recipes", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+        if action == "cooking_history":
+            result = get_inventory_service().recipe_cooking_history(owner)
             result = _with_canonical_read_status(result)
             return "read_recipes", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
         result = get_inventory_service().manage_recipes(payload, owner=owner)

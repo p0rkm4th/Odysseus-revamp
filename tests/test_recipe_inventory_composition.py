@@ -261,6 +261,15 @@ def test_pantry_candidates_renderer_groups_makeable_and_missing_recipes():
     )
 
 
+def test_cooking_history_renderer_fails_closed_without_events():
+    answer = canonical_recipe_read_answer([{
+        "tool": "read_recipes", "exit_code": 0,
+        "command": json.dumps({"action": "cooking_history"}),
+        "output": json.dumps({"status": "SUCCESS_EMPTY", "events": []}),
+    }])
+    assert answer == "I don't have any recorded cooking history, so I can't identify a recipe cooked last night."
+
+
 def test_recipe_import_prepare_accepts_schema_org_jsonld_without_persisting():
     draft = recipe_import_draft(
         '{"@type":"Recipe","name":"JSON Dinner","recipeYield":"4 servings",'

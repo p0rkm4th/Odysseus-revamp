@@ -157,7 +157,7 @@ READ_RECIPES_SCHEMA = {
         "name": "read_recipes",
         "description": "Read authenticated owner-scoped recipes and deterministic pantry coverage. Recipe suggestions never change inventory state.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale", "expiring_candidates", "prepare_import"]},
+            "action": {"type": "string", "enum": ["list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale", "expiring_candidates", "cooking_history", "prepare_import"]},
             "query": {"type": "string", "maxLength": 200},
             "source_text": {"type": "string", "maxLength": 20000},
             "source_url": {"type": "string", "maxLength": 4000},
@@ -364,7 +364,7 @@ Inventory Service. Use `list`, `search`, `get`, deterministic `can_make`,
 read-only `scale` for a requested serving count, or `expiring_candidates` to
 compose expiring inventory with recipe coverage.
 Recipe suggestions never assert inventory possession and never mutate stock.
-`<invoke name="read_recipes"><parameter name="action">list|search|get|can_make|pantry_candidates|shopping_requirements|scale|expiring_candidates|prepare_import</parameter></invoke>`. `prepare_import` returns an unpersisted RecipeDraft for review; `pantry_candidates` checks every recorded recipe against current stock without mutating inventory; `shopping_requirements` returns deterministic missing-ingredient quantities without mutating inventory.
+`<invoke name="read_recipes"><parameter name="action">list|search|get|can_make|pantry_candidates|shopping_requirements|scale|expiring_candidates|cooking_history|prepare_import</parameter></invoke>`. `prepare_import` returns an unpersisted RecipeDraft for review; `pantry_candidates` checks every recorded recipe against current stock without mutating inventory; `shopping_requirements` returns deterministic missing-ingredient quantities without mutating inventory; `cooking_history` reports whether Hades has recorded any cooking events.
 '''
 
 _SETUP_READ_CONTRACT = '''### `read_setup`

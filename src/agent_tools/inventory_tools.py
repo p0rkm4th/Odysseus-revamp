@@ -21,7 +21,7 @@ INVENTORY_ACTIONS = frozenset({
 })
 RECIPE_ACTIONS = frozenset({
     "list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale",
-    "expiring_candidates", "prepare_import", "add", "commit_import", "cook",
+    "expiring_candidates", "cooking_history", "prepare_import", "add", "commit_import", "cook",
 })
 
 

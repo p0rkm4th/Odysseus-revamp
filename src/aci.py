@@ -3458,6 +3458,13 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
                 names = ", ".join(str(row.get("name") or "ingredient") for row in shortages[:8] if isinstance(row, Mapping))
                 lines.append(f"- {name}" + (f" (missing: {names})" if names else ""))
         return "\n".join(lines)
+    if action == "cooking_history":
+        events = payload.get("events")
+        if not isinstance(events, list):
+            return None
+        if not events:
+            return "I don't have any recorded cooking history, so I can't identify a recipe cooked last night."
+        return f"I found {len(events)} recorded cooking event{'s' if len(events) != 1 else ''}."
     recipes = payload.get("recipes")
     if not isinstance(recipes, list):
         recipe = payload.get("recipe")

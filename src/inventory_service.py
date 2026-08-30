@@ -1177,6 +1177,22 @@ class RecipeService(InventoryService):
             raise InventoryError(f"{action} is not available in this service version")
         raise InventoryError("unsupported inventory action")
 
+    def recipe_cooking_history(self, owner: str) -> dict[str, Any]:
+        """Return the bounded history projection owned by the recipe service.
+
+        Recipe preparation events are not yet recorded as canonical state. An
+        explicit empty projection lets the owner receive an honest answer
+        instead of having a recipe list mistaken for cooking history.
+        """
+        return {
+            "status": "SUCCESS_EMPTY",
+            "result_type": "recipe_cooking_history",
+            "operation": "cooking_history",
+            "events": [],
+            "canonical_store": "inventory_service",
+            "owner_scope": owner,
+        }
+
     def manage_recipes(self, args: dict[str, Any], *, owner: str) -> dict[str, Any]:
         """Dispatch the narrow model-facing recipe action vocabulary."""
         action = str(args.get("action") or "")

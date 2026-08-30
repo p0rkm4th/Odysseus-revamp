@@ -88,6 +88,11 @@ _RECIPE_READ = re.compile(
     r"\brecipes?\b.*\b(?:do\s+(?:i|we)\s+have|saved|stored|on\s+file)\b",
     re.IGNORECASE,
 )
+_RECIPE_COOKING_HISTORY = re.compile(
+    r"\b(?:which|what)\s+recipes?\s+(?:did|have)\s+(?:i|we)\s+(?:cook|make|prepare)\b|"
+    r"\b(?:what|which)\s+(?:did|have)\s+(?:i|we)\s+(?:cook|make|prepare)\b.*\b(?:last|yesterday|earlier|recently)\b",
+    re.IGNORECASE,
+)
 _RECIPE_COVERAGE = re.compile(
     r"\b(?:can\s+i\s+make|do\s+i\s+have\s+everything|pantry\s+coverage|"
     r"missing\s+ingredients?)\b.*\b(?:recipe|meal|chili|dinner|dish)\b|"
@@ -218,6 +223,8 @@ def deterministic_read_concept(text: str) -> str | None:
         query,
     ):
         return "MEMORY"
+    if _RECIPE_COOKING_HISTORY.search(query):
+        return "RECIPE"
     # Expiry/stock state is an inventory question even when the phrase starts
     # with the generic "what is" interrogative.
     if is_recipe_pantry_coverage_query(query) and not re.search(
