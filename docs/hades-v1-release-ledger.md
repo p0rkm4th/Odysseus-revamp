@@ -3619,3 +3619,11 @@ duplicate delivery, or abrupt EOF occurred. A transient network-subnet and
 published-port collision during disposable redeployment was classified as
 `ENVIRONMENT_FAILURE`; no recipe mutation was run during the unsafe mount
 attempt, which was stopped and replaced with the explicitly isolated lane.
+
+The exact candidate was then promoted to the disposable current lane using
+explicit `/tmp/hades-fresh-current` data and log mounts. Visual acceptance
+passed at desktop, narrow, and mobile widths. The seven-turn Qwen3:8B owner
+read walkabout passed across network, homelab, memory, assets, reference
+continuity, and Work: 7 streams, 7 terminal `[DONE]` events, 0 mutations, 0
+false successes, 0 raw final Results, 0 duplicate deliveries, and 0 abrupt
+EOFs. The lane reported image/source parity and zero restarts.
