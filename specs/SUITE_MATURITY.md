@@ -25,6 +25,15 @@ journey had one GUI mutation and two canonical readbacks, with zero false
 success, raw Result, duplicate delivery, or abrupt EOF. The actual owner
 runtime was not modified.
 
+## Copied webpage-shaped Recipe paste checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+Owner chat accepted a long paste containing page ratings, headings, bullets,
+unicode fractions, nutrition text, and CTA garbage. Canonical readback found
+the requested four-serving recipe with five grounded ingredients and its
+instructions. This adds a green mutation/readback result for webpage-shaped
+Recipe input on the isolated Qwen3:8B candidate; the owner runtime was not
+modified.
+
 ## Recipe review browser boundary — `2026-08-30`
 
 The next Recipe review replay did not reach a chat turn: isolated setup first

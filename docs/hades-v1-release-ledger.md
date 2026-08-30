@@ -39,6 +39,18 @@ delivery, or abrupt EOF. The disposable runtime was source-marked
 `806fc3ba0a16f754df8f4d82a8802dd11a3dca73`; the actual owner runtime remains
 untouched.
 
+## Copied webpage-shaped Recipe paste checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+A normal owner paste containing ratings, author/CTA text, bullets, unicode
+fractions, nutrition text, and a named recipe was submitted through chat in
+the disposable Qwen3:8B environment. Independent canonical readback found
+`Acceptance Web Paste Dinner Exact` with four servings, five ingredients,
+and the pasted instructions; the stored quantities were normalized without
+inventing an ingredient from the page junk. This was one GUI mutation and one
+independent canonical readback. The exact candidate remains source-marked
+`806fc3ba0a16f754df8f4d82a8802dd11a3dca73`; the actual owner runtime remains
+untouched.
+
 ## Recipe review replay boundary — browser harness `2026-08-30`
 
 Two disposable Compose attempts reached different pre-chat acceptance
