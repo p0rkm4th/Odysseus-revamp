@@ -2152,6 +2152,16 @@ def compile_intent(
         concept = "SECURITY_ENGAGEMENT"
     elif re.search(r"\b(?:security\s+evidence|evidence\s+for\s+security|security\s+artifacts?)\b", q):
         concept = "SECURITY_EVIDENCE"
+    elif re.search(
+        r"\b(?:is|are|was|were)\b.{0,32}\b(?:anything|something|anyone|hosts?|devices?|servers?|services?)\b"
+        r".{0,16}\b(?:down|offline|unreachable|broken|not\s+working)\b|"
+        r"\b(?:anything|something|anyone)\b.{0,16}\b(?:down|offline|unreachable|broken|not\s+working)\b|"
+        r"\bwhat(?:'s|\s+is)?\b.{0,32}\b(?:down|offline|unreachable|broken|not\s+working)\b",
+        q,
+    ):
+        # Vague owner outage questions still require a bounded canonical
+        # network/homelab status read rather than model-only speculation.
+        concept = "NETWORK"
     elif re.search(r"\b(?:service(?:s)?|daemon(?:s)?)\b", q) and re.search(r"\b(?:status|running|active|homelab|server|restart|recover|logs?|errors?)\b", q):
         concept = "SERVICE"
     elif re.search(r"\b(?:homelab|container(?:s)?|storage|remote host(?:s)?)\b", q) and not re.search(
@@ -2363,6 +2373,16 @@ def compile_intent(
         read_explicit = True
     if concept == "UNKNOWN" and _network_discovery_language and operation in {"EXECUTE", "RESEARCH"}:
         concept = "NETWORK"
+    if re.search(
+        r"\b(?:is|are|was|were)\b.{0,32}\b(?:anything|something|anyone|hosts?|devices?|servers?|services?)\b"
+        r".{0,16}\b(?:down|offline|unreachable|broken|not\s+working)\b|"
+        r"\b(?:anything|something|anyone)\b.{0,16}\b(?:down|offline|unreachable|broken|not\s+working)\b|"
+        r"\bwhat(?:'s|\s+is)?\b.{0,32}\b(?:down|offline|unreachable|broken|not\s+working)\b",
+        q,
+    ):
+        concept = "NETWORK"
+        operation = "READ"
+        read_explicit = True
     # Safe host inspection is a first-class read even when the user phrases
     # it as exploration or a hardware scan.  It never selects shell access.
     if (
@@ -2612,6 +2632,13 @@ def compile_intent(
         q,
     )):
         reference_filters["view"] = "context"
+    elif concept == "NETWORK" and operation == "READ" and re.search(
+        r"\b(?:down|offline|unreachable|broken|not\s+working)\b", q,
+    ):
+        # Status/outage questions need persisted observations, even when the
+        # wording also names a server or device (which otherwise selects role
+        # hypotheses).
+        reference_filters["view"] = "observations"
     elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
         reference_filters["view"] = "roles"
     if concept == "RECIPE" and operation == "READ" and re.search(
