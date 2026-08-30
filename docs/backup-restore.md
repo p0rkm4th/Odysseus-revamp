@@ -128,6 +128,16 @@ where you run it matters:
 > On native installs ChromaDB lives at `data/chroma/` and is included in the
 > snapshot normally.
 
+> **Existing Docker deployments.** Hades now mounts the Compose volume at
+> Chroma's actual `/data` persistence path. Deployments created with an older
+> Compose file may have their live `chroma.sqlite3` and HNSW files in the old
+> container layer while `chromadb-data` is empty. Before recreating such a
+> Chroma container, copy its `/data` contents to a temporary host directory,
+> recreate it with the current Compose file, and copy those contents into the
+> corrected volume. Verify collections through the Chroma API before removing
+> the temporary copy. Do not perform this migration against owner data without
+> a separately verified backup.
+
 ### Rehearsing a Docker Chroma restore
 
 For a Docker deployment, stop the application and ChromaDB before restoring a

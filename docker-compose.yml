@@ -105,7 +105,9 @@ services:
     ports:
       - "${CHROMADB_BIND:-127.0.0.1}:${CHROMADB_PORT:-8100}:8000"
     volumes:
-      - chromadb-data:/chroma/chroma
+      # Chroma's image config persists to /data. Mounting elsewhere leaves
+      # chroma.sqlite3 in the container layer and makes volume backups empty.
+      - chromadb-data:/data
     environment:
       - ANONYMIZED_TELEMETRY=FALSE
     restart: unless-stopped

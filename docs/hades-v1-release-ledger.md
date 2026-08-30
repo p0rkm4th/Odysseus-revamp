@@ -2,6 +2,25 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Docker Chroma persistence checkpoint — pending candidate (2026-08-29)
+
+Release testing found a product/recovery defect in all three Docker Compose
+variants: the Chroma image persists to `/data`, but the named volume had been
+mounted at `/chroma/chroma`. A disposable shopping stack confirmed that the
+volume was empty while the live container layer contained `chroma.sqlite3` and
+HNSW index files, so a volume archive did not contain the actual vector state.
+
+The Compose mounts are corrected to `chromadb-data:/data` in the standard,
+NVIDIA, and AMD files, with a regression test guarding the image/config
+contract. In an isolated disposable project, the live vector files were
+staged before recreation, copied into the corrected named volume, and the
+collections API returned the existing collection. A tar backup of that volume
+was unpacked into a separate restore volume; a fresh Chroma container mounted
+on the restore volume returned the same collections API response. The actual
+owner deployment was not touched. The corrected Compose candidate still needs
+commit, exact-image build/provenance, and a release checkpoint; owner-data
+migration remains a separately controlled operation.
+
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
 `OWNER-MEMORY-MUTATION-READBACK-001` passed on the exact disposable
