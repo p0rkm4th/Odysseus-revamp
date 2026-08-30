@@ -76,6 +76,14 @@ def test_inventory_mutations_use_shared_confirmation_dialogs():
     assert "Apply stock changes" in source
 
 
+def test_cookbook_state_sync_is_gated_by_admin_privilege():
+    source = (ROOT / "static/js/cookbookRunning.js").read_text()
+    assert "function _canSyncServerState()" in source
+    assert "return window._isAdmin === true;" in source
+    assert "if (!_canSyncServerState()) return false;" in source
+    assert "!_canSyncServerState()" in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]
