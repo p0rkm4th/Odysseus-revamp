@@ -36,6 +36,21 @@ refused because `APP_DATA_DIR` was not explicit; rerunning with
 candidate remained source-matched and healthy; owner deployment/data were not
 used.
 
+## Fresh-fresh isolation correction and exact-candidate replay (2026-08-30)
+
+Reconciliation found that the older fresh-fresh container had isolated
+application data but repository-owned `logs` and `data/host-broker` mounts;
+this was classified as `ENVIRONMENT_FAILURE` and the lane was stopped before
+feature testing. Compose was recreated with all three paths under
+`/tmp/hades-fresh-fresh`, the exact candidate
+`1d3c255ec7ffd7284c95bb6c5d5c874dc1698797`, and explicit acceptance
+configuration. A first browser attempt then expired on login
+(`AUTH_SESSION_FAILURE`); rotating only the disposable credential and
+restarting the lane corrected it. `OWNER-WORK-EMPTY-001` subsequently passed
+with one GUI read stream and zero `falseSuccess`, `rawFinalResults`,
+`duplicateDelivery`, and `abruptEOF`. Health was green with zero restarts;
+owner deployment/data were not used.
+
 ## Fresh-fresh post-restart Recipe durability checkpoint (2026-08-30)
 
 After rotating the disposable fresh-fresh credential and restarting the exact
