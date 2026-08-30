@@ -1530,12 +1530,13 @@ function initEndpointForm() {
       const confirmMsg = ids.length === 1
         ? 'Remove 1 offline endpoint?'
         : `Remove ${ids.length} offline endpoints?`;
-      if (uiModule && uiModule.styledConfirm) {
-        const ok = await uiModule.styledConfirm(confirmMsg, { confirmText: 'Remove', danger: true });
-        if (!ok) return;
-      } else if (!confirm(confirmMsg)) {
-        return;
-      }
+      const ok = await uiModule.styledConfirm(confirmMsg, {
+        title: 'Clear offline endpoints',
+        confirmText: 'Remove',
+        cancelText: 'Keep endpoints',
+        danger: true,
+      });
+      if (!ok) return;
       clearOfflineBtn.disabled = true;
       // Optimistic UI: pull rows immediately, then fire the DELETEs.
       offlineBtns.forEach(b => {
