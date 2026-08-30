@@ -923,6 +923,14 @@ async def build_chat_context(
     if casual_low_signal:
         mem_enabled = False
         skills_enabled = False
+    # ACI turns have an explicit canonical memory capability for owner memory
+    # questions. Do not also inject opportunistic recalled memories into every
+    # action route: those records are untrusted context and can incorrectly
+    # taint unrelated private mutations (for example creating a Work project)
+    # with an approval requirement. Explicit memory reads remain handled below
+    # and through the canonical read_memory Action.
+    if agent_mode:
+        mem_enabled = False
     logger.debug(
         "Memory enabled=%s for user=%s (incognito=%s, no_memory=%s, pref=%s)",
         mem_enabled, user, incognito, no_memory, uprefs.get("memory_enabled", "NOT_SET"),
