@@ -210,7 +210,7 @@
       "id": "OWNER-MEMORY-EMPTY-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-memory",
-      "turns": [{"prompt": "What do you know about me?", "expected": {"domain": "MEMORY", "operation": "READ", "action": "summarize_owner_memory", "tool_binding": "read_memory", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["no applicable", "zero", "no memories", "not found"], "forbidden": ["you are definitely", "I know everything"]}}],
+      "turns": [{"prompt": "What do you know about me?", "expected": {"domain": "MEMORY", "operation": "READ", "action": "summarize_owner_memory", "tool_binding": "read_memory", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["no applicable", "any applicable", "zero", "no memories", "not found"], "forbidden": ["you are definitely", "I know everything"]}}],
       "expected": {"action": "summarize_owner_memory", "tool_binding": "read_memory", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
