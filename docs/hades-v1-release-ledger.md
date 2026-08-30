@@ -63,6 +63,16 @@ and one reload readback, with no false success or invented source claim. The
 disposable runtime remains source-marked `806fc3ba`; the actual owner runtime
 was not modified.
 
+## Household sloppy-language mutation/readback checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+`OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` passed through the authenticated
+browser harness in the isolated realistic Qwen3:8B environment. The journey
+covered four owner turns, two GUI mutations, two independent inventory
+readbacks, and durable conversational flow. The acceptance result reported
+zero false successes, raw final Results, duplicate delivery, or abrupt EOF.
+The candidate runtime remained source-marked `806fc3ba`; the actual owner
+runtime remains untouched.
+
 ## Recipe review replay boundary — browser harness `2026-08-30`
 
 Two disposable Compose attempts reached different pre-chat acceptance

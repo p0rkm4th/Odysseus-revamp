@@ -43,6 +43,13 @@ browser reload confirmed durability. This is green isolated Qwen3:8B evidence
 for URL import, approval UX, and persistence. The actual owner runtime was
 not modified.
 
+## Household sloppy-language mutation/readback checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+The realistic isolated browser journey passed four owner turns using sloppy
+language, with two GUI mutations and two independent inventory readbacks.
+False success, raw Result, duplicate delivery, and abrupt EOF counts were all
+zero. Household mutation/readback remains green on this candidate.
+
 ## Recipe review browser boundary — `2026-08-30`
 
 The next Recipe review replay did not reach a chat turn: isolated setup first
