@@ -539,6 +539,19 @@ def test_url_recipe_create_projects_user_fields_into_canonical_choice_payload():
     }
 
 
+def test_generic_pantry_question_projects_direct_canonical_read():
+    query = "can i make anything w what we got"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    projection = project_action_selection(
+        intent={"intent_frame": frame.as_dict(), "resolved_contract": resolved.as_dict()},
+        relevant_tools=["read_recipes"], disabled_tools=set(), owner="alice",
+        active_run=None, query=query,
+    )
+    assert projection.mode.value == "DIRECT_ACTION"
+    assert projection.fast_path == {"action": "pantry_candidates"}
+
+
 def test_recipe_import_prepare_renderer_never_claims_persistence():
     event = {
         "tool": "read_recipes", "exit_code": 0,
