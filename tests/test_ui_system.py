@@ -125,6 +125,13 @@ def test_cookbook_actions_use_shared_confirmation_dialogs():
     assert "Reinstall package" in source
 
 
+def test_cookbook_hardware_fit_uses_shared_server_removal_confirmation():
+    source = (ROOT / "static/js/cookbook-hwfit.js").read_text()
+    assert "uiModule.styledConfirm" in source
+    assert "window.confirm(" not in source
+    assert "Remove server profile" in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]

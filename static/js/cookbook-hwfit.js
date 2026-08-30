@@ -2617,12 +2617,9 @@ export function _hwfitInit() {
       const name = entry.querySelector('.cookbook-srv-name')?.value?.trim()
                 || entry.querySelector('.cookbook-srv-host')?.value?.trim()
                 || 'this server';
-      let ok = true;
-      if (uiModule && uiModule.styledConfirm) {
-        ok = await uiModule.styledConfirm(`Remove "${name}"?`, { confirmText: 'Remove', danger: true });
-      } else {
-        ok = confirm(`Remove "${name}"?`);
-      }
+      const ok = await uiModule.styledConfirm(`Remove "${name}"?`, {
+        title: 'Remove server profile', confirmText: 'Remove', cancelText: 'Keep profile', danger: true,
+      });
       if (!ok) return;
       entry.remove();
       _syncServers();
