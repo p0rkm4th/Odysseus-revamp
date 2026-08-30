@@ -685,6 +685,30 @@ def note_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
     return {"action": "add", "title": title, "due_date": when[:200]}
 
 
+def scheduled_task_create_payload(query: str) -> dict[str, Any] | None:
+    """Project ordinary recurring-reminder language into the scheduler Action."""
+    text = re.sub(r"\s+", " ", str(query or "").strip())
+    match = re.search(
+        r"\b(?:every|each)\s+(?P<period>morning|afternoon|evening|day|weekday|week)\b"
+        r".{0,80}?\bremind\s+me\s+to\s+(?P<title>.+?)\s*[.!?]?$",
+        text, re.IGNORECASE,
+    )
+    if not match:
+        return None
+    period = match.group("period").lower()
+    title = match.group("title").strip(" .:;\"'")
+    if not title:
+        return None
+    title = title[:500]
+    title = title[:1].upper() + title[1:]
+    return {
+        "action": "create", "name": title, "prompt": title,
+        "task_type": "llm", "trigger_type": "schedule",
+        "schedule": "weekly" if period == "week" else "daily",
+        "scheduled_time": "09:00",
+    }
+
+
 def work_project_create_payload(query: str) -> dict[str, Any] | None:
     """Project only an explicit Work project title into a bounded Action.
 
@@ -1809,6 +1833,12 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "YES"},
         "notes_and_reminders_mutation",
     ),
+    "SCHEDULED_TASK": DomainContract(
+        "SCHEDULED_TASK", "automation.task.manage",
+        {"READ": "list", "CREATE": "create"}, "manage_tasks",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "YES"},
+        "scheduled_reminders",
+    ),
     "CONTACT": DomainContract(
         "CONTACT", "communications.read", {"READ": "contacts"}, "read_communications",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
@@ -2242,6 +2272,14 @@ def compile_intent(
         concept = "WATCH"
     elif re.search(r"\b(?:goal(?:s)?)\b", q):
         concept = "GOAL"
+    elif re.search(r"\b(?:scheduled|recurring|repeating)\s+(?:reminders?|tasks?)\b", q):
+        concept = "SCHEDULED_TASK"
+    elif re.search(
+        r"\b(?:every|each)\s+(?:morning|afternoon|evening|day|weekday|week)\b"
+        r".{0,100}?\bremind\s+me\b",
+        q,
+    ):
+        concept = "SCHEDULED_TASK"
     elif operation == "CREATE" and re.search(r"\b(?:create|add|make)\s+(?:a\s+)?task\b", q):
         concept = "TASK"
     elif operation in {"CREATE", "UPDATE", "DELETE"} and (

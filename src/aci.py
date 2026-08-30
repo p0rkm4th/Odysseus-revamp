@@ -5029,6 +5029,16 @@ def project_action_selection(
                     draft["id"] = str(reference_refs[0])
             if draft:
                 payload.update(draft)
+        if (
+            str(frame.get("domain_concept") or "") == "SCHEDULED_TASK"
+            and str(frame.get("operation_class") or "") == "CREATE"
+            and str(item.get("binding") or "") == "manage_tasks"
+            and str(item.get("action_id") or "") == "create"
+        ):
+            from src.intent_contracts import scheduled_task_create_payload
+            draft = scheduled_task_create_payload(query)
+            if draft:
+                payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
         if item["binding"] == "read_recipes" and item["action_id"] == "prepare_import":
@@ -5202,6 +5212,29 @@ def project_action_selection(
         spec = action_for_tool(desired_binding, {"action": desired_action})
         if selected_notes is not None and complete and spec and spec.known and spec.approval.value == "none":
             fast_path = notes_payload
+            mode = SelectionMode.DIRECT_ACTION
+    if (
+        str(frame.get("domain_concept") or "") == "SCHEDULED_TASK"
+        and frame.get("operation_class") == "CREATE"
+        and desired_binding == "manage_tasks"
+        and desired_action == "create"
+        and desired_binding not in disabled
+    ):
+        selected_task = next(
+            (value for value in choices.values()
+             if value.get("binding") == desired_binding
+             and value.get("payload", {}).get("action") == desired_action),
+            None,
+        )
+        task_payload = dict(selected_task.get("payload") or {}) if selected_task else {}
+        spec = action_for_tool(desired_binding, {"action": desired_action})
+        if (
+            selected_task is not None
+            and str(task_payload.get("prompt") or "").strip()
+            and str(task_payload.get("schedule") or "").strip()
+            and spec and spec.known and spec.approval.value == "none"
+        ):
+            fast_path = task_payload
             mode = SelectionMode.DIRECT_ACTION
     # Recipe import semantics are already explicit in the owner request and
     # the server has projected the bounded URL/name or review-only payload
