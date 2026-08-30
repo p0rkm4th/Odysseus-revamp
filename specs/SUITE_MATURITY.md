@@ -1,5 +1,16 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Security shared-dialog checkpoint — exact candidate `79d377cb` (2026-08-30)
+
+Security engagement creation now uses the shared Hades styled prompt and
+shared error surface instead of native browser prompt/alert calls. Focused
+Security coverage passed 116 tests. On the exact source-marked candidate
+`79d377cbb1d59d15212baf2b6a6794155d4652c6`, browser acceptance opened the
+dialog, observed no native dialogs, created an engagement through the GUI,
+and independently confirmed the canonical record. The broad regression then
+passed 7,028 tests, with 8 skipped and 149 warnings. Owner deployment state
+was not modified.
+
 ## Full regression after shared summary-metric UI fix — exact candidate `b8f49186` (2026-08-30)
 
 The supported broad regression after the shared summary-metric CSS change

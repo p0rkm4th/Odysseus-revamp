@@ -2,6 +2,27 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Security shared-dialog checkpoint — exact candidate `79d377cb` (2026-08-30)
+
+An owner walkabout found that Security creation used native `window.prompt()`
+and error paths used native alerts, making a normal workflow browser-dependent
+and inconsistent with Hades chrome. The shared `uiModule.styledPrompt` and
+`uiModule.showError` surfaces now own this flow. Focused Security coverage
+passed 116 tests. The exact pushed candidate is
+`odysseus:candidate-79d377cb`, image ID
+`sha256:bb7f0df6c9225910150d67fe4b2de3128e043ef3422b565f709f66fe8abc88e7`,
+with OCI/source marker
+`79d377cbb1d59d15212baf2b6a6794155d4652c6`; isolated runtime port `7002`
+was healthy with 0 restarts. Browser replay opened the styled dialog at
+desktop size, observed zero native dialogs, created an engagement through the
+GUI, and independently read the canonical record back through the
+authenticated API. The initial stale-port attempt was classified
+`ENVIRONMENT_FAILURE`; no owner deployment or data was touched.
+
+The broad regression after this shared frontend behavior change passed
+`7028 passed, 8 skipped, 149 warnings` in 294.15 seconds. Actual owner
+runtime remains the stopped source-marked `34ced2478c014cc529775460b5a6d4350b68239c` deployment and was not modified.
+
 ## Full regression after shared summary-metric UI fix — exact candidate `b8f49186` (2026-08-30)
 
 The supported full regression after the shared CSS primitive change passed
