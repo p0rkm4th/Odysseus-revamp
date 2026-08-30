@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Settings shared-confirmation checkpoint — exact candidate `ceb9bd9f` (2026-08-30)
+
+Settings hide-cog and contact-delete flows now use the shared Hades dialog
+without native confirmation fallbacks, with clearer titles and cancel labels.
+Focused coverage passed 35 tests, the authenticated responsive gate passed,
+and the broad regression passed 7,034 tests with 8 skipped and 149 warnings.
+Owner deployment state was not modified.
+
 ## Cookbook non-admin sync checkpoint — exact candidate `df353edf` (2026-08-30)
 
 Cookbook’s admin-only state endpoint is no longer probed by legitimate
