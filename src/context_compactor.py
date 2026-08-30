@@ -697,12 +697,20 @@ async def maybe_compact(
 
 
 def apply_compaction_state(session, compaction_state: Optional[Dict[str, Any]]) -> bool:
-    """Persist a route-specific compaction after that route commits output.
+    """Apply a route-specific compaction after that route commits output.
 
     Candidate prompts may be compacted speculatively while an explicit
-    foreground fallback chain is being tried.  Persisting at construction time
-    would let an unavailable route rewrite history before another route answers,
-    so callers hold this small plan and apply only the winning route's plan.
+    foreground fallback chain is being tried.  Applying at construction time
+    would let an unavailable route rewrite the active model context before
+    another route answers, so callers hold this small plan and apply only the
+    winning route's plan.
+
+    Compaction is a model-context projection, not transcript deletion. The
+    complete owner-visible conversation remains in ``chat_messages`` through
+    the normal per-message persistence path, so reloads and later hydration do
+    not lose earlier turns merely because the local model needed a shorter
+    prompt. ``_update_session_history`` therefore updates the in-memory
+    working context only.
     """
 
     state = compaction_state if isinstance(compaction_state, dict) else None
@@ -770,12 +778,8 @@ def _update_session_history(session, split_point: int, summary: str,
         metadata={"compacted": True, "summarized_count": split_point},
     )
     new_history = system_prefix + [summary_msg] + recent_history
-    try:
-        from core.models import get_session_manager_instance
-        manager = get_session_manager_instance()
-    except Exception:
-        manager = None
-    if manager and getattr(session, "id", None):
-        if manager.replace_messages(session.id, new_history):
-            return
+    # Do not call SessionManager.replace_messages here. That operation is
+    # intentionally destructive for explicit transcript editing, but using it
+    # for context compaction would erase the owner's visible history on reload.
     session.history = new_history
+    session._history = session.history
