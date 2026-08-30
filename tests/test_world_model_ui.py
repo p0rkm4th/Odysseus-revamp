@@ -25,6 +25,13 @@ def test_world_model_is_visible_and_uses_canonical_projection():
     assert "Sync CMDB" in module
 
 
+def test_world_model_sync_uses_shared_error_surface():
+    module = (ROOT / "static/js/worldModel.js").read_text()
+    assert "import uiModule from './ui.js';" in module
+    assert "uiModule.showError" in module
+    assert "window.alert(" not in module
+
+
 def test_control_center_is_visible_and_inspects_durable_run_state():
     index = (ROOT / "static/index.html").read_text()
     app = (ROOT / "static/app.js").read_text()
