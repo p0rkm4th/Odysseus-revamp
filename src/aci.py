@@ -3335,6 +3335,9 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     )
     if event is None or event.get("exit_code") not in (None, 0):
         return None
+    explicit_summary = str(event.get("calendar_summary") or "").strip()
+    if explicit_summary:
+        return explicit_summary
     projection = event.get("result_projection")
     if isinstance(projection, Mapping):
         payload = projection
