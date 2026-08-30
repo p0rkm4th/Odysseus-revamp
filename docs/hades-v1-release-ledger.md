@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe video, Memory, and Work overview continuation (2026-08-30)
+
+On the isolated Qwen3:8B candidate, the positive video Recipe mutation journey
+passed with one GUI mutation and two independent canonical readbacks. The
+source-derived video-title journey also passed with the same evidence. Both
+reported `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`.
+
+The populated Memory read journey and Work overview journey passed afterward;
+Memory produced one read with two readback checks, while Work produced three
+GUI reads with two readback checks. All streams completed with one terminal
+event and the same zero-defect transport/oracle counts. Owner deployment and
+data were untouched.
+
 ## Insufficient-evidence video review and false-success oracle checkpoint (2026-08-30)
 
 The realistic `OWNER-RECIPE-VIDEO-INSUFFICIENT-EVIDENCE-001` journey initially
