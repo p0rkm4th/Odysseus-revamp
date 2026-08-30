@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Memory deterministic final-answer replay — exact candidate `23e51370` (2026-08-30)
+
+Rendered-bubble inspection of a completed narrow Memory read confirmed that
+the deterministic canonical answer is present as the sole assistant result:
+`QUERY TYPE: specific`, `STATUS: ZERO_RESULT`, and “No applicable
+owner-scoped memories were found.” An earlier vague model response was a
+transient bubble captured before finalization, not a result-projection defect.
+No production change was required; the exact candidate remained healthy with
+0 restarts and owner deployment/data were untouched.
+
 ## Memory specific-query full-regression checkpoint — exact candidate `23e51370` (2026-08-30)
 
 The supported full regression after the specific Memory routing/relevance fix
