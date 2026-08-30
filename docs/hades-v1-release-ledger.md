@@ -4458,3 +4458,11 @@ The repaired-source broad regression then passed `7083` tests with `9`
 skipped and `149` warnings in 5m24s. This closes the previously observed
 11-test red checkpoint for the current branch state; the warnings are existing
 datetime/API deprecations and are not being counted as product acceptance.
+
+The same exact candidate passed additional mutation-adversarial replays:
+`OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` completed 4 turns with 2 GUI
+mutations and 2 independent readbacks, and
+`OWNER-RECIPE-MUTATION-READBACK-001` completed 3 turns with 1 GUI mutation
+and 2 independent readbacks. Both passed reload/readback checks with zero
+false success, raw final Results, duplicate delivery, and abrupt EOF. These
+remain disposable acceptance fixtures; owner data was not touched.
