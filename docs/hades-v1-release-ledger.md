@@ -58,6 +58,28 @@ review draft. Unresolved qualitative lines remain explicitly marked for human
 correction; strict canonical commit still refuses them. Focused parser
 coverage passed `4` tests before browser replay of this follow-up.
 
+## Video import review-boundary checkpoint — exact candidate `f726b16b` (2026-08-30)
+
+The exact pushed candidate `f726b16b5dfd0e3e587816f59c790d77c923751c`, image
+`sha256:066fb2d33ffd677496a00c871a25ee209525b6d2469d45d3f6c6086ff652e938`,
+was replayed through the isolated normal-login/browser/chat lane against the
+public video URL in `OWNER-RECIPE-VIDEO-REVIEW-DRAFT-001`. The weak-model
+proposal contained a recognizable recipe but an unresolved `olive oil spray`
+quantity. The executor now routes that untrusted proposal to the existing
+editable review event; it does not call a successful canonical mutation. The
+owner-facing answer was deterministic, explicitly required review, and did
+not claim the recipe was saved. Canonical recipe count remained zero across
+two independent readbacks. One turn, one attempted mutation, two readbacks,
+zero false successes, raw final Results, duplicate delivery, or abrupt EOF.
+
+The browser replay initially found an acceptance-environment login failure
+because the recreated disposable stack had its acceptance gate disabled; the
+stack was restarted with the explicit gate and the journey then passed. The
+candidate container had marker `f726b16b` and zero restarts. The actual owner
+runtime remained on source `34ced247` with zero restarts and was not touched.
+Positive video extraction followed by validated canonical commit remains open;
+this checkpoint closes the unsafe/dead-end review-boundary defect only.
+
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
 `OWNER-MEMORY-MUTATION-READBACK-001` passed on the exact disposable
