@@ -6,6 +6,13 @@ The clean Household journey passed four deterministic owner turns with two GUI
 mutations, two canonical readbacks, and zero false success, raw Result,
 duplicate delivery, or abrupt EOF. Owner deployment state was not modified.
 
+## Populated Memory read checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The populated Memory journey passed one deterministic grounded read turn with
+two canonical readback checks and zero false success, raw Result, duplicate
+delivery, or abrupt EOF. Fresh-install evidence remains separately scoped to
+older candidate lineages.
+
 ## Asset false-premise filter checkpoint — exact candidate `04d05854` (2026-08-30)
 
 The realistic messy Asset journey correctly handled a nonexistent hardware
