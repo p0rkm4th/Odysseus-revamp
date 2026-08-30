@@ -6447,7 +6447,11 @@ async def stream_aci_runtime(
         metrics["aci_answer_synthesis_count"] = int(
             _aci_model_burden.get("answer_synthesis", 0)
         )
-    yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
+    # Canonical projections may contain Decimal quantities (for example
+    # household stock). Metrics are transport telemetry, so preserve the
+    # completed owner answer even when a projection includes a non-JSON-native
+    # scalar; never let telemetry serialization truncate the SSE stream.
+    yield f"data: {json.dumps({'type': 'metrics', 'data': metrics}, default=str)}\n\n"
 
     # Teacher-escalation: inline takeover visible in the chat stream.
     # The student just finished; if Tier 1 flags failure, the teacher
