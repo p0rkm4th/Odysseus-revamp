@@ -2937,6 +2937,24 @@ passed recipe listing and an ordinary request for ingredients to buy, again
 with two canonical readbacks including reload. Both Qwen3:8B GUI runs recorded
 zero false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+## Acceptance fixture isolation repair — browser harness (2026-08-30)
+
+Repeated owner runs showed that active disposable Recipe rows and kitchen
+fixtures survived between scenario invocations, causing valid profiles to stop
+at their declared precondition before reaching the GUI. The existing
+data-driven browser runner now performs a bounded pre-seed reset only when an
+external isolated acceptance deployment is explicitly configured: active
+recipes are archived, pending intake drafts are rejected, and prior kitchen
+fixture items are archived. Historical rows remain intact; owner deployments
+are refused by the existing isolated-data guard.
+
+Verification ran two consecutive `OWNER-RECIPE-MUTATION-READBACK-001` journeys
+and then `OWNER-RECIPE-COMPOSITION-001` against the same disposable data
+directory without manual database cleanup. All passed with zero false
+success, raw final Result, duplicate delivery, or abrupt EOF. This closes the
+observed precondition-contamination loop while keeping fixture cleanup outside
+the behavior under test.
+
 Additional exact-candidate owner evidence: populated Memory passed 1 turn with
 two canonical readbacks; the no-RTX-4090 false-premise asset query passed one
 read turn without inventing an entity; realistic UI acceptance passed desktop,
