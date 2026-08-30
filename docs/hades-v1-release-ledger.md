@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe pantry composition checkpoint — exact candidate `6a713675` (2026-08-30)
+
+`OWNER-RECIPE-COMPOSITION-001` passed in a fresh isolated Compose/Qwen3:8B
+project. With a canonical pantry fixture, the owner listed recipes, asked
+whether the recipe was makeable from available stock, and scaled it to six
+servings. All three turns produced deterministic semantic answers; canonical
+recipe readback remained valid across reload. Evidence: three turns, three
+read journeys, two independent readbacks, and zero mutations, false
+successes, raw final Results, duplicate delivery, or abrupt EOF.
+
 ## Populated Memory recall checkpoint — exact candidate `6a713675` (2026-08-30)
 
 `OWNER-MEMORY-POPULATED-001` passed in a fresh isolated Compose/Qwen3:8B
