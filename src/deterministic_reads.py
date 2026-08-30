@@ -7,6 +7,7 @@ ordinary paraphrases converge on the existing DomainContracts.
 
 from __future__ import annotations
 
+import difflib
 import re
 
 
@@ -161,6 +162,38 @@ _DISCOURSE_PREFIX = re.compile(
     re.IGNORECASE,
 )
 
+# Owner language often contains a single dropped, transposed, or duplicated
+# character (for example ``outsanding``).  Normalize only words that belong to
+# this module's routing vocabulary; arbitrary item names, hostnames, and
+# recipe text must remain unchanged.  This keeps typo tolerance compositional
+# instead of accumulating one regex per observed prompt.
+_FUZZY_ROUTING_WORDS = frozenset({
+    "about", "active", "assets", "computers", "connected", "current",
+    "expire", "food", "freezer", "got", "have", "household", "ingredient",
+    "ingredients", "kitchen", "machine", "machines", "memory", "network",
+    "outstanding", "pantry", "project", "projects", "recipe", "recipes",
+    "remember", "storage", "tasks", "work", "working", "currently",
+})
+
+
+def _normalize_routing_typos(value: str) -> str:
+    """Correct bounded edit-distance slips in known routing vocabulary."""
+    def replace(match: re.Match[str]) -> str:
+        token = match.group(0)
+        if len(token) < 5 or token in _FUZZY_ROUTING_WORDS:
+            return token
+        candidates = [word for word in _FUZZY_ROUTING_WORDS if abs(len(token) - len(word)) <= 2]
+        best = max(
+            candidates,
+            key=lambda word: difflib.SequenceMatcher(None, token, word).ratio(),
+            default=None,
+        )
+        if best is not None and difflib.SequenceMatcher(None, token, best).ratio() >= 0.84:
+            return best
+        return token
+
+    return re.sub(r"\b[a-z][a-z'-]*\b", replace, value)
+
 
 def _normalized(text: str) -> str:
     value = str(text or "").strip().casefold().replace("’", "'")
@@ -173,7 +206,8 @@ def _normalized(text: str) -> str:
     }
     value = re.sub(r"\b[^\s]+\b", lambda match: tokens.get(match.group(0), match.group(0)), value)
     value = re.sub(r"\s+", " ", value).strip(" .?!")
-    return _DISCOURSE_PREFIX.sub("", value).strip(" .?!")
+    value = _DISCOURSE_PREFIX.sub("", value).strip(" .?!")
+    return _normalize_routing_typos(value)
 
 
 def is_recipe_pantry_coverage_query(text: str) -> bool:
@@ -297,6 +331,8 @@ def deterministic_read_concept(text: str) -> str | None:
     ):
         return "HOUSEHOLD_ITEM"
     if re.search(r"\b(?:review|show|list|summarize)\b.*\b(?:outstanding|open|active)\s+work\b", query):
+        return "WORK"
+    if re.search(r"\bwhat(?:'s|s|\s+is)?\s+(?:outstanding|open|active)\b", query):
         return "WORK"
     if (
         _WORK_SUBJECT.search(query)
