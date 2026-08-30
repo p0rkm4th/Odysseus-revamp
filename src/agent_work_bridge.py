@@ -429,7 +429,7 @@ def recent_session_reference_context(owner: str, session_id: str, *, limit: int 
                     "ordered_entities": refs,
                     "eligible_entities": refs,
                     "entities": refs,
-                    "last": refs[-1],
+                    "last": next((item for item in refs if item.get("last")), refs[-1]),
                     "source_run_id": run.id,
                 }
     return None
@@ -499,6 +499,12 @@ def _latest_result_references(results: list[Any]) -> list[dict[str, Any]]:
         if not refs and isinstance(data.get("refs"), list):
             refs = [{"ref": ref.strip()[:500]} for ref in data["refs"] if isinstance(ref, str) and ref.strip()]
         if refs:
+            last_ref = str(data.get("last_reference") or "").strip()
+            if last_ref:
+                for item in refs:
+                    if item["ref"] == last_ref:
+                        item["last"] = True
+                        break
             return refs
     return []
 
@@ -530,14 +536,15 @@ def _history_result_references(history: list[Any] | None) -> list[dict[str, Any]
             if not isinstance(payload, dict):
                 continue
             refs: list[dict[str, Any]] = []
-            for items, concept in ((payload.get("assets"), "TECHNICAL_ASSET"), (payload.get("recipes"), "RECIPE")):
+            for items, concept in ((payload.get("reference_entities"), "TECHNICAL_ASSET"), (payload.get("assets"), "TECHNICAL_ASSET"), (payload.get("recipes"), "RECIPE")):
                 if not isinstance(items, list):
                     continue
                 for item in items[:500]:
                     if isinstance(item, dict):
                         ref = str(item.get("id") or item.get("asset_id") or "").strip()
                         if ref:
-                            refs.append({"ref": ref[:500], "concept": concept})
+                            if not any(item["ref"] == ref for item in refs):
+                                refs.append({"ref": ref[:500], "concept": concept})
             for key, concept in (("asset", "TECHNICAL_ASSET"), ("recipe", "RECIPE")):
                 item = payload.get(key)
                 if isinstance(item, dict):
@@ -549,6 +556,12 @@ def _history_result_references(history: list[Any] | None) -> list[dict[str, Any]
                 if ref:
                     refs.append({"ref": ref[:500], "concept": concept})
             if refs:
+                last_ref = str(payload.get("last_reference") or "").strip()
+                if last_ref:
+                    for item in refs:
+                        if item["ref"] == last_ref:
+                            item["last"] = True
+                            break
                 return refs
     return []
 

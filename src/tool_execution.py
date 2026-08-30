@@ -1566,6 +1566,7 @@ async def _execute_manage_assets_binding(block, owner=None, run_id=None):
                 "asset_count": 1,
                 "source": "canonical_it_asset_cmdb",
                 "owner_scope": str(owner or "authenticated_owner"),
+                "last_reference": str(parsed.get("id") or "")[:500],
             }
             # Preserve the ordered owner-scoped collection that gave meaning
             # to an ordinal target.  A correction such as "I meant the first
