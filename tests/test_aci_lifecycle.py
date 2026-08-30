@@ -949,6 +949,12 @@ def test_work_task_create_requires_explicit_project_and_projects_bounded_payload
     assert work_task_create_payload("Create a task called Review the backup plan") is None
 
 
+def test_work_task_followup_projects_title_and_defers_unique_project_resolution():
+    assert work_task_create_payload("Add a task to review the backup plan") == {
+        "action": "create_task", "title": "review the backup plan",
+    }
+
+
 def test_work_task_create_action_projection_preserves_user_arguments():
     query = "Create a task called Review the backup plan in project Hades V1"
     projection = project_action_selection(

@@ -677,13 +677,24 @@ def work_task_create_payload(query: str) -> dict[str, Any] | None:
         r"(?:in|for)\s+(?:the\s+)?project\s+(.+)$",
         text, re.IGNORECASE,
     )
+    if match:
+        title = match.group(1).strip(" .:;\"'")
+        project_title = match.group(2).strip(" .:;\"'")
+        if not (1 <= len(title) <= 300 and 1 <= len(project_title) <= 300):
+            return None
+        return {"action": "create_task", "title": title, "project_title": project_title}
+    # In a normal conversation the immediately preceding project can be the
+    # active context: "Add a task to review the backup plan." Leave project
+    # resolution to the authenticated executor, which accepts this only when
+    # exactly one non-terminal owner project exists.
+    match = re.search(
+        r"\b(?:create|add|make)\s+(?:a\s+)?task\s+(?:to|for|about)\s+(.+)$",
+        text, re.IGNORECASE,
+    )
     if not match:
         return None
     title = match.group(1).strip(" .:;\"'")
-    project_title = match.group(2).strip(" .:;\"'")
-    if not (1 <= len(title) <= 300 and 1 <= len(project_title) <= 300):
-        return None
-    return {"action": "create_task", "title": title, "project_title": project_title}
+    return {"action": "create_task", "title": title} if 1 <= len(title) <= 300 else None
 
 
 def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
