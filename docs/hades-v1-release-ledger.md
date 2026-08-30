@@ -44,6 +44,17 @@ reported `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
 quantity-plus-item Household mutation path generalizes beyond canonical
 wording. Owner deployment and data remain untouched.
 
+## Work task mutation/readback — exact executable candidate `1a24a12f` (2026-08-30)
+
+The data-driven GUI journey created a task with ordinary owner wording and
+then asked what tasks exist. The mutation entered through chat, and two
+independent canonical readbacks confirmed the task and its persisted owner
+relationship. The two streams completed with `falseSuccess=0`,
+`rawFinalResults=0`, `duplicateDelivery=0`, and `abruptEOF=0`; the scenario’s
+reload check passed. Work task mutation remains bounded to Work ownership;
+no cross-suite Asset/Service relationship was fabricated. Owner deployment
+and data remain untouched.
+
 ## Household add false-success fix and replay — exact candidate `701eff7e` (2026-08-30)
 
 The owner prompt “Add 3 cans of Acceptance Beans.” previously produced a
