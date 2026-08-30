@@ -718,7 +718,7 @@ def test_work_status_continuity_question_is_a_safe_work_read(query):
 
 @pytest.mark.parametrize("query", [
     "Review outstanding work.", "Show my open work.", "What's outstanding for me?",
-    "whats outsanding",
+    "whats outsanding", "whts outsanding",
 ])
 def test_outstanding_work_review_is_the_existing_work_read(query):
     resolved = resolve_intent(compile_intent(query))
