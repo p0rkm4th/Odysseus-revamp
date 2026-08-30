@@ -5671,7 +5671,9 @@ async def stream_aci_runtime(
                 # the owner-facing tool bubble and final answer grounded in
                 # that bounded projection rather than a generic model fallback.
                 output_text = _truncate(
-                    communications_calendar_summary_from_tool_output(json.dumps(result))
+                    communications_calendar_summary_from_tool_output(
+                        result.get("output") if isinstance(result.get("output"), str) else json.dumps(result)
+                    )
                 )
             elif is_doc_tool and "action" in result:
                 action = result["action"]
