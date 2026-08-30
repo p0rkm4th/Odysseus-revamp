@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, MetaData, PrimaryKeyConstraint, String, Table, UniqueConstraint, inspect, select, text
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, MetaData, PrimaryKeyConstraint, String, Table, UniqueConstraint, inspect, select, text
 from sqlalchemy.engine import Connection
 
 from core.inventory_models import INVENTORY_TABLES
@@ -90,12 +90,16 @@ def apply_inventory_v3(connection: Connection) -> None:
             Column("substitution_group", old.c.substitution_group.type, nullable=True),
             Column("preparation", old.c.preparation.type, nullable=True),
             Column("sort_order", old.c.sort_order.type, nullable=False, default=0),
-            Column("created_at", old.c.created_at.type, nullable=False),
-            Column("updated_at", old.c.updated_at.type, nullable=False),
+            # Early V1 databases predate timestamps on recipe ingredients.
+            # Keep the rebuilt schema compatible with the current model and
+            # synthesize timestamps only for those legacy rows.
+            Column("created_at", getattr(old.c, "created_at", Column("created_at", DateTime)).type, nullable=False),
+            Column("updated_at", getattr(old.c, "updated_at", Column("updated_at", DateTime)).type, nullable=False),
             CheckConstraint("quantity IS NULL OR quantity > 0", name="ck_inventory_recipe_ingredient_quantity_positive"),
-            Index("ix_inventory_recipe_ingredients_owner_recipe", "owner", "recipe_id", "sort_order"),
         )
         rebuilt.create(connection)
+        created_at = "created_at" if "created_at" in existing else "CURRENT_TIMESTAMP"
+        updated_at = "updated_at" if "updated_at" in existing else "CURRENT_TIMESTAMP"
         connection.exec_driver_sql(
             "INSERT INTO inventory_recipe_ingredients_v3 "
             "(id, owner, recipe_id, item_id, ingredient_name, quantity, unit, amount_kind, "
@@ -103,11 +107,15 @@ def apply_inventory_v3(connection: Connection) -> None:
             "preparation, sort_order, created_at, updated_at) "
             "SELECT id, owner, recipe_id, item_id, ingredient_name, quantity, unit, 'EXACT', "
             "NULL, NULL, NULL, ingredient_name, optional, substitution_group, preparation, "
-            "sort_order, created_at, updated_at FROM inventory_recipe_ingredients"
+            f"sort_order, {created_at}, {updated_at} FROM inventory_recipe_ingredients"
         )
         connection.exec_driver_sql("DROP TABLE inventory_recipe_ingredients")
         connection.exec_driver_sql(
             "ALTER TABLE inventory_recipe_ingredients_v3 RENAME TO inventory_recipe_ingredients"
+        )
+        connection.exec_driver_sql(
+            "CREATE INDEX ix_inventory_recipe_ingredients_owner_recipe "
+            "ON inventory_recipe_ingredients (owner, recipe_id, sort_order)"
         )
         existing = {column["name"] for column in inspect(connection).get_columns("inventory_recipe_ingredients")}
     additions = {
