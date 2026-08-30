@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe copied-webpage and complete-URL ingestion replay (2026-08-30)
+
+The deterministic `OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001` journey passed with
+messy webpage-shaped text entered through chat, one canonical mutation, and two
+independent readbacks. The complete URL import journey then passed three GUI
+turns with one approved mutation, two canonical readbacks, and reload/follow-up
+coverage. Both journeys reported `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0`; owner deployment/data were untouched.
+
 ## Recipe video, Memory, and Work overview continuation (2026-08-30)
 
 On the isolated Qwen3:8B candidate, the positive video Recipe mutation journey
