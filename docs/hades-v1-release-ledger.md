@@ -2,6 +2,24 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Tier 1 daily-driver composition and visual replay (2026-08-30)
+
+On the isolated candidate `7efc755b`, the realistic messy Household journey
+(`OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001`) passed four GUI turns with two
+chat mutations, two independent canonical inventory readbacks, and zero
+`falseSuccess`, `rawFinalResults`, `duplicateDelivery`, or `abruptEOF` counts.
+The combined daily-driver run (`OWNER-TODAY-EMPTY-001` plus
+`OWNER-REMINDER-CREATE-READBACK-001`) passed four turns with three reads, one
+reminder mutation, two independent readbacks, and the same zero-failure
+counts. This exercised Work attention, disconnected/empty Calendar truth,
+and Notes reminder state in one authenticated disposable session without
+cross-domain reference bleed. The existing visual acceptance also passed
+desktop, 390px narrow, and 375px mobile checks for shared window chrome,
+sidebar icon uniqueness, inventory/recipe empty states, tab overflow, and
+viewport containment; screenshots were inspected at
+`/tmp/hades-osint-realistic-{desktop,narrow,mobile}.png`. No owner data was
+used.
+
 ## Natural reminder lifecycle replay (2026-08-30)
 
 The owner-facing journey `Remind me tomorrow to review the backup plan.` then
