@@ -355,6 +355,54 @@ async function clearMemoryAcceptanceState(page) {
   });
 }
 
+function resetDisposableCanonicalFixture(scenarios) {
+  if (!externalAcceptance || !scenarios?.length) return null;
+  const profiles = new Set(scenarios.map((scenario) => String(scenario.fixture_profile || '').trim()));
+  const recipeFixture = [...profiles].some((profile) =>
+    profile === 'empty-recipes' || profile.startsWith('empty-recipes-') ||
+    profile.startsWith('recipe-') || profile === 'qualitative-review-existing-recipe' ||
+    profile === 'complete-url-recipes'
+  );
+  const householdFixture = [...profiles].some((profile) => profile.startsWith('empty-household'));
+  const kitchenFixture = householdFixture || [...profiles].some((profile) => profile.startsWith('recipe-'));
+  if (!recipeFixture && !kitchenFixture) return null;
+  const dataDirectory = path.resolve(process.cwd(), String(process.env.APP_DATA_DIR || '').trim());
+  const database = path.join(dataDirectory, 'app.db');
+  const resetScript = String.raw`
+import json, sqlite3, sys
+database, owner, recipes, household = sys.argv[1:]
+connection = sqlite3.connect(database)
+try:
+    counts = {}
+    if recipes == '1':
+        counts['recipes'] = connection.execute(
+            "select count(*) from inventory_recipes where owner=? and archived=0", (owner,)
+        ).fetchone()[0]
+        # Preserve recipe/cook history while keeping active scenario state
+        # isolated. The acceptance owner is disposable by construction.
+        connection.execute(
+            "update inventory_recipes set archived=1 where owner=?", (owner,)
+        )
+        if connection.execute("select 1 from sqlite_master where type='table' and name='inventory_drafts'").fetchone():
+            connection.execute(
+                "update inventory_drafts set status='rejected' where owner=? and status='pending'", (owner,)
+            )
+    if household == '1':
+        counts['kitchen_items'] = connection.execute(
+            "select count(*) from inventory_items where owner=? and domain='kitchen' and archived=0", (owner,)
+        ).fetchone()[0]
+        connection.execute(
+            "update inventory_items set archived=1 where owner=? and domain='kitchen'", (owner,)
+        )
+    connection.commit()
+    print(json.dumps(counts, sort_keys=True))
+finally:
+    connection.close()
+`;
+  return JSON.parse(run(python, ['-c', resetScript, database, acceptanceUsername,
+    recipeFixture ? '1' : '0', kitchenFixture ? '1' : '0'], process.env).trim() || '{}');
+}
+
 function seedCanonicalAssetFixture(scenarios) {
   const setups = [...new Set(scenarios.map((scenario) => scenario.fixture_setup).filter(Boolean))];
   const assetSetups = setups.filter((setup) => ['canonical_asset_atlas_erebus', 'canonical_asset_no_4090'].includes(setup));
@@ -1078,6 +1126,7 @@ async function main() {
       diagnostics.householdSeed = await seedHouseholdAcceptanceState(page);
     }
     if (scenarios) {
+      diagnostics.fixtureReset = resetDisposableCanonicalFixture(scenarios);
       if (scenarios.some((scenario) => scenario.fixture_profile === 'empty-memory')) {
         diagnostics.memorySeed = await clearMemoryAcceptanceState(page);
       }

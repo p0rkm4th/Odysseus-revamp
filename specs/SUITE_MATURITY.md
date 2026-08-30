@@ -1924,6 +1924,12 @@ Work overview now has exact-candidate Qwen browser evidence across three read
 turns, with two canonical readbacks and zero false success, raw final Result,
 duplicate delivery, or abrupt EOF.
 
+The browser acceptance harness now isolates reusable disposable Recipe and
+kitchen fixtures before scenario seeding. Two consecutive Recipe mutation
+runs and a subsequent pantry-composition run passed without manual database
+cleanup; the reset is restricted to explicitly external isolated acceptance
+data and preserves historical rows.
+
 Fresh exact-candidate evidence also covers populated Memory, the no-RTX-4090
 false-premise asset query, responsive UI acceptance, and Recipe pantry
 composition. Each completed without false success, raw final Result, duplicate
