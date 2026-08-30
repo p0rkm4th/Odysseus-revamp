@@ -4466,3 +4466,10 @@ mutations and 2 independent readbacks, and
 and 2 independent readbacks. Both passed reload/readback checks with zero
 false success, raw final Results, duplicate delivery, and abrupt EOF. These
 remain disposable acceptance fixtures; owner data was not touched.
+
+Recipe ingestion follow-up replays also passed on the same candidate:
+`OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001` completed 2 turns with one GUI
+mutation and 2 independent readbacks, while
+`OWNER-RECIPE-QUALITATIVE-REVIEW-001` completed its review path with one GUI
+mutation and 2 readbacks. Both had zero false success, raw final Results,
+duplicate delivery, and abrupt EOF.
