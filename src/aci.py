@@ -4403,6 +4403,21 @@ def canonical_communications_read_answer(tool_events: Sequence[Mapping[str, Any]
     )
     if event is None or event.get("exit_code") not in (None, 0):
         return None
+    projection = event.get("result_projection")
+    calendar = projection.get("calendar") if isinstance(projection, Mapping) else None
+    if isinstance(calendar, Mapping):
+        events = calendar.get("events") if isinstance(calendar.get("events"), list) else []
+        if not events:
+            if int(calendar.get("calendars") or 0) > 0:
+                return "You have no calendar events scheduled in the next 14 days."
+            return "Your calendar is not connected, so I can't check today's schedule."
+        lines = [f"You have {len(events)} calendar event{'s' if len(events) != 1 else ''} coming up:"]
+        for item in events[:20]:
+            if isinstance(item, Mapping):
+                summary = str(item.get("summary") or "(untitled event)").strip()
+                when = str(item.get("dtstart") or "").strip()
+                lines.append(f"- {summary}" + (f" — {when}" if when else ""))
+        return "\n".join(lines)
     text = str(event.get("output") or "").strip()
     if text.startswith(("You have no calendar events", "Your calendar is not connected", "You have ")):
         return text
