@@ -139,7 +139,6 @@ def test_household_inventory_variants_use_canonical_read_owner(query):
 
 @pytest.mark.parametrize("query", [
     "what is running on Erebus",
-    "what services are down",
     "what's running in the homelab",
 ])
 def test_infrastructure_status_variants_use_canonical_service_read(query):
@@ -147,6 +146,19 @@ def test_infrastructure_status_variants_use_canonical_service_read(query):
     assert resolved.frame.domain_concept == "SERVICE"
     assert resolved.frame.operation_class == "READ"
     assert resolved.action_id == "service_status"
+    assert resolved.binding_name == "manage_homelab"
+
+
+@pytest.mark.parametrize("query", [
+    "what services are down",
+    "Anything broken?",
+    "anything down right now",
+])
+def test_vague_outage_questions_use_canonical_network_observation_read(query):
+    resolved = resolve_intent(compile_intent(query))
+    assert resolved.frame.domain_concept == "NETWORK"
+    assert resolved.frame.operation_class == "READ"
+    assert resolved.action_id in {"read_network_observations", "read_network_context"}
     assert resolved.binding_name == "manage_homelab"
 
 
@@ -828,7 +840,6 @@ def test_outstanding_work_review_is_the_existing_work_read(query):
     "What services are alive?",
     "Are my services alive?",
     "Is everything healthy?",
-    "Anything broken?",
 ])
 def test_infrastructure_status_paraphrases_use_safe_service_read(query):
     resolved = resolve_intent(compile_intent(query))
@@ -842,7 +853,6 @@ def test_infrastructure_status_paraphrases_use_safe_service_read(query):
     "whats running",
     "hows Hades doing",
     "anything dead",
-    "anything down right now",
     "what the hell is busted",
     "are we good",
     "how is the stack",

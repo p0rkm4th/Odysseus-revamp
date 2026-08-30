@@ -575,7 +575,14 @@ def test_private_manager_read_results_taint_before_host_actions(tool_name, conte
     capabilities = capabilities_for_action(tool_name, content)
 
     assert capabilities.effects == frozenset({ToolEffect.READ_PRIVATE})
-    assert capabilities.result_integrity is ResultIntegrity.EXTERNAL_UNTRUSTED
+    # First-class canonical owners are system-integrity projections. Legacy
+    # multiplexed managers remain externally tainted; manage_notes reads now
+    # resolve through the notes capability registry.
+    expected_integrity = (
+        ResultIntegrity.SYSTEM if tool_name == "manage_notes"
+        else ResultIntegrity.EXTERNAL_UNTRUSTED
+    )
+    assert capabilities.result_integrity is expected_integrity
 
     context = ToolRunSecurityContext()
     context.observe_tool_result(
@@ -583,8 +590,12 @@ def test_private_manager_read_results_taint_before_host_actions(tool_name, conte
         {"output": "stored attacker-controlled content", "exit_code": 0},
         content,
     )
-    assert context.external_untrusted_context_seen is True
-    assert context.decision_for("bash").allowed is False
+    if tool_name == "manage_notes":
+        assert context.external_untrusted_context_seen is False
+        assert context.decision_for("bash").allowed is True
+    else:
+        assert context.external_untrusted_context_seen is True
+        assert context.decision_for("bash").allowed is False
 
 
 @pytest.mark.parametrize(
@@ -663,9 +674,9 @@ def test_multiplexed_non_destructive_actions_do_not_claim_destructive_effect(
 def test_ambiguous_private_manager_action_fails_high():
     capabilities = capabilities_for_action("manage_notes", "not json")
 
-    assert capabilities.effects == frozenset(
-        {ToolEffect.READ_PRIVATE, ToolEffect.WRITE_PRIVATE}
-    )
+    assert capabilities.known is False
+    assert ToolEffect.DESTRUCTIVE in capabilities.effects
+    assert ToolEffect.WRITE_PRIVATE in capabilities.effects
     assert capabilities.result_integrity is ResultIntegrity.EXTERNAL_UNTRUSTED
 
 
