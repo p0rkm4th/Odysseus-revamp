@@ -1488,9 +1488,11 @@ async def _execute_manage_assets_binding(block, owner=None, run_id=None):
                 item_name = str(payload.get("item_name") or "").strip()
                 matches = get_inventory_service().search_items(owner, item_name, domain="kitchen") if item_name else []
                 if len(matches) != 1:
+                    target_label = "Move target" if payload.get("action") == "move_item" else "Consumption target"
+                    message = f"{target_label} was not uniquely resolved in canonical inventory."
                     return "manage_assets", {
-                        "error": "Consumption target was not uniquely resolved in canonical inventory.",
-                        "output": "Consumption target was not uniquely resolved in canonical inventory.",
+                        "error": message,
+                        "output": message,
                         "exit_code": 1, "success": False,
                     }
                 payload["item_id"] = matches[0]["id"]
