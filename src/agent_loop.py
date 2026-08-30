@@ -6254,7 +6254,10 @@ async def stream_aci_runtime(
         len(full_response), len(_projected_response),
         _canonical_answer.provenance if _canonical_answer else None,
     )
-    if _projected_response.strip() != full_response.strip() or _aci_clarification_only:
+    # A canonical answer may already equal the postprocessed buffer while the
+    # browser has rendered an earlier model delta. Always emit replacement for
+    # authoritative answers so stale model prose cannot remain visible.
+    if _projected_response.strip() != full_response.strip() or _aci_clarification_only or _canonical_answer is not None:
         if _canonical_answer is None:
             logger.warning(
                 "[agent-grounding] suppressed ungrounded completion claim domains=%s text=%r",
