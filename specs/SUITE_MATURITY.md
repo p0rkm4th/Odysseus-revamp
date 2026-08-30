@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Cookbook GPU-preflight dialog checkpoint — exact candidate `b95c04f8` (2026-08-30)
+
+GPU-preflight launch warnings now use a shared Hades confirmation with clear
+launch/cancel choices and no native fallback, while remaining advisory and
+bounded. Focused coverage passed 234 tests, responsive browser acceptance
+passed, and the broad regression passed 7,040 tests with 8 skipped and 149
+warnings. Owner deployment state was not modified.
+
 ## Cookbook hardware-fit dialog checkpoint — exact candidate `3963540a` (2026-08-30)
 
 Hardware-fit server-profile removal now uses a shared Hades confirmation with
