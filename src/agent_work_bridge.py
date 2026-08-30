@@ -533,11 +533,20 @@ def _history_result_references(history: list[Any] | None) -> list[dict[str, Any]
             if not isinstance(event, dict):
                 continue
             payload = event.get("result_projection")
-            if not isinstance(payload, dict):
-                try:
-                    payload = json.loads(str(event.get("output") or ""))
-                except (TypeError, ValueError):
-                    payload = None
+            # ResultProjection is intentionally compact for display, but
+            # structured continuity metadata lives in the full canonical
+            # output. Prefer that richer payload when it carries the ordered
+            # candidate set or selected-reference marker.
+            try:
+                full_payload = json.loads(str(event.get("output") or ""))
+            except (TypeError, ValueError):
+                full_payload = None
+            if isinstance(full_payload, dict) and (
+                "reference_entities" in full_payload or "last_reference" in full_payload
+            ):
+                payload = full_payload
+            elif not isinstance(payload, dict):
+                payload = full_payload
             if not isinstance(payload, dict):
                 continue
             refs: list[dict[str, Any]] = []
