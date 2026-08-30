@@ -33,6 +33,17 @@ attempted. Runtime remained healthy with 0 restarts on
 video approval and broader Tier 1 mutation/composition journeys remain open.
 Owner deployment and data remain untouched.
 
+## Sloppy Household mutation/readback — exact executable candidate `1a24a12f` (2026-08-30)
+
+The data-driven owner journey used ordinary slang and follow-ups: “yo add 3
+cans …”, “how much … we got”, “use one”, and “how much … is left now”. The
+four GUI turns produced two owner-facing mutations and two independent
+canonical readbacks, including the post-use quantity. The acceptance oracle
+reported `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`; reload/durability checks passed. This confirms the shared
+quantity-plus-item Household mutation path generalizes beyond canonical
+wording. Owner deployment and data remain untouched.
+
 ## Household add false-success fix and replay — exact candidate `701eff7e` (2026-08-30)
 
 The owner prompt “Add 3 cans of Acceptance Beans.” previously produced a
