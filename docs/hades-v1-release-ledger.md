@@ -19,6 +19,13 @@ Beans do I have?”, returned all three canonical items. Focused coverage passed
 source marker `701eff7eb6e01c4c7dad6356f6bf6ed7b84a4d6c`, healthy with 0
 restarts. Owner deployment and data remain untouched.
 
+## Full regression after household mutation routing — source `701eff7e` (2026-08-30)
+
+The supported full regression after routing quantity-plus-item imperatives to
+the canonical Household mutation completed with `7050 passed, 8 skipped, 149
+warnings` in 302.40 seconds. Exact browser evidence remains attributed to
+`odysseus:candidate-701eff7e`; the real owner runtime and data were untouched.
+
 ## Immediate first-chat bootstrap replay — exact candidate `78640e6a` (2026-08-30)
 
 Fresh authenticated browser acceptance submitted “what food we got” as soon
