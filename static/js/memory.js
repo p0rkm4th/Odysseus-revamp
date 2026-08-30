@@ -1185,7 +1185,10 @@ export async function editMemory(id) {
   const memory = memories.find(m => m.id === id);
   if (!memory) return;
 
-  const newText = prompt('Edit memory:', memory.text);
+  const newText = await uiModule.styledPrompt('Edit memory:', {
+    title: 'Edit memory', placeholder: 'Update the remembered detail',
+    confirmText: 'Save', maxLength: 4000, defaultValue: memory.text,
+  });
   if (!newText || newText === memory.text) return;
 
   await saveInlineEdit(id, newText);

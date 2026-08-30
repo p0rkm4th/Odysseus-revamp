@@ -2702,8 +2702,11 @@ export function _hwfitInit() {
     }
     // Model dir add/remove
     const addDirBtn = entry.querySelector('.cookbook-modeldir-add');
-    if (addDirBtn) addDirBtn.addEventListener('click', () => {
-      const raw = prompt('Model directory path:', '/data/models');
+    if (addDirBtn) addDirBtn.addEventListener('click', async () => {
+      const raw = await uiModule.styledPrompt('Model directory path:', {
+        title: 'Add model directory', placeholder: '/data/models',
+        confirmText: 'Add', maxLength: 1000,
+      });
       if (!raw) return;
       const dir = raw.replaceAll('\u2715', '').replaceAll('\u2716', '').trim();
       if (!dir) return;

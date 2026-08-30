@@ -146,6 +146,13 @@ def test_admin_offline_endpoint_cleanup_uses_shared_confirmation_without_native_
     assert "else if (!confirm(" not in source
 
 
+def test_owner_text_entry_paths_use_shared_prompts_without_native_fallbacks():
+    for name in ("memory.js", "cookbook-hwfit.js", "gallery.js", "presets.js"):
+        source = (ROOT / "static/js" / name).read_text()
+        assert "prompt(" not in source, name
+        assert "styledPrompt" in source, name
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]
