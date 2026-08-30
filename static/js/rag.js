@@ -98,7 +98,7 @@ async function _deleteFile(filepath, displayName) {
     await loadPersonalDocs();
   } catch (e) {
     console.error('Delete failed:', e);
-    alert('Failed to delete file: ' + e.message);
+    uiModule.showError('Failed to delete file: ' + e.message);
   }
 }
 

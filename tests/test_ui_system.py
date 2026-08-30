@@ -55,7 +55,7 @@ def test_inventory_uses_shared_window_and_form_primitives():
 
 def test_work_uses_shared_prompt_and_keeps_canonical_records_secondary():
     source = (ROOT / "static/js/work.js").read_text()
-    assert "import { styledPrompt } from './ui.js';" in source
+    assert "import { styledPrompt, showError } from './ui.js';" in source
     assert "window.prompt(" not in source
     assert "readableRecord" in source
     assert "work-technical-record" in source
