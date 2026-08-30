@@ -2708,6 +2708,9 @@ def validate_result(frame: IntentFrame, result: Any) -> tuple[bool, str]:
         elif frame.filters.get("recipe_expiring") is True:
             if not isinstance(result.get("candidates"), list):
                 return False, "INVALID_RESULT"
+        elif frame.filters.get("recipe_cooking_history") is True:
+            if not isinstance(result.get("events"), list):
+                return False, "INVALID_RESULT"
         elif frame.entity_reference:
             if not isinstance(result.get("recipe"), Mapping):
                 return False, "INVALID_RESULT"
