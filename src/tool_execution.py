@@ -51,6 +51,38 @@ class _NoToolSecurityContext:
 _MISSING_TOOL_SECURITY_CONTEXT = _MissingToolSecurityContext()
 NO_TOOL_SECURITY_CONTEXT = _NoToolSecurityContext()
 
+
+def _resolve_memory_delete_id(query: str, entries: list[dict[str, Any]]) -> str:
+    """Resolve a memory reference without trusting model-generated prose.
+
+    Small local models sometimes append recalled conversation to a delete
+    argument. Treat punctuation and recall markers as query boundaries, then
+    require one owned record to match a complete bounded clause. Multiple
+    distinct records still fail closed.
+    """
+    raw_query = str(query or "").strip().casefold()
+    if not raw_query:
+        return ""
+    clauses = re.split(r"(?:[.!?]+|\b(?:remember|recall)\b)", raw_query)
+    stop_words = {
+        "my", "the", "this", "that", "personal", "memory", "fact",
+        "is", "are", "was", "were", "now", "anymore", "not",
+    }
+    candidate_ids: set[str] = set()
+    for clause in clauses:
+        words = [word for word in re.findall(r"[a-z0-9]+", clause)
+                 if word not in stop_words]
+        if not words:
+            continue
+        matches = [entry for entry in entries if all(
+            word in str(entry.get("text") or "").casefold() for word in words
+        )]
+        if len(matches) == 1:
+            memory_id = str(matches[0].get("id") or "").strip()
+            if memory_id:
+                candidate_ids.add(memory_id)
+    return next(iter(candidate_ids)) if len(candidate_ids) == 1 else ""
+
 # Persistent working directory for agent subprocesses.
 # Resolves to <repo_root>/data, which is the bind-mounted volume in Docker
 # (/app/data) and the local data directory for manual installs.
@@ -1755,18 +1787,12 @@ async def _execute_manage_memory_binding(block, owner=None):
             raise ValueError("unsupported memory mutation action")
         memory_id = str(payload.get("memory_id") or "").strip()
         if action == "delete" and not memory_id:
-            query = str(payload.get("query") or "").strip().casefold()
-            words = [word for word in re.findall(r"[a-z0-9]+", query) if word not in {
-                "my", "the", "this", "that", "personal", "memory", "fact",
-            }]
+            query = str(payload.get("query") or "").strip()
             from src import ai_interaction
             entries = ai_interaction._memory_manager.load(owner=owner)
-            matches = [entry for entry in entries if words and all(
-                word in str(entry.get("text") or "").casefold() for word in words
-            )]
-            if len(matches) != 1:
+            memory_id = _resolve_memory_delete_id(query, entries)
+            if not memory_id:
                 raise ValueError("I couldn't identify exactly one saved memory to remove; nothing was changed.")
-            memory_id = str(matches[0].get("id") or "")
         lines = [action]
         if action == "add":
             lines.extend([str(payload.get("text") or "").strip(), str(payload.get("category") or "fact").strip()])
