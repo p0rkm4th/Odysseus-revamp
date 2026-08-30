@@ -2278,6 +2278,11 @@ def compile_intent(
         q,
     ):
         operation = "READ"
+    if operation == "CONTINUE" and re.search(
+        r"^(?:reload[.!?]\s*)?what(?:'s|\s+is)\s+in\s+(?:the\s+)?[A-Z][A-Za-z0-9-]*(?:\s+[A-Z][A-Za-z0-9-]*)+\s*\??$",
+        text,
+    ):
+        operation = "READ"
     # A property question about a resolved owner entity is a canonical detail
     # read, even when the conversational classifier labels its leading
     # "and" as a generic continuation.  Letting CONTINUE win here discards

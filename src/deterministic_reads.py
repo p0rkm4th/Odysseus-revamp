@@ -118,6 +118,9 @@ _RECIPE_SHOPPING_FOLLOWUP = re.compile(
     r"\bwhat\s+ingredients?\s+do\s+i\s+need\s+for\s+(?:this|that|it)\b",
     re.IGNORECASE,
 )
+_RECIPE_NAMED_DETAIL = re.compile(
+    r"^(?:reload[.!?]\s*)?what(?:'s|\s+is)\s+in\s+(?:the\s+)?[A-Z][A-Za-z0-9-]*(?:\s+[A-Z][A-Za-z0-9-]*)+\s*\??$",
+)
 _SERVING_NUMBER = re.compile(
     r"\b(?:to\s+)?(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b",
     re.IGNORECASE,
@@ -232,6 +235,8 @@ def is_recipe_pantry_candidates_query(text: str) -> bool:
 def deterministic_read_concept(text: str) -> str | None:
     """Return an existing DomainContract concept for an unambiguous read."""
     query = _normalized(text)
+    if _RECIPE_NAMED_DETAIL.search(str(text or "").strip()):
+        return "RECIPE"
     # Operational health questions also commonly begin with ``are``/``is``
     # ("Are my services alive?", "Is anything unhealthy?").  Let the
     # already-composed infrastructure predicate admit those forms without
