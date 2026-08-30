@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Legacy owner-entry dialog checkpoint — exact candidate `8136af69` (2026-08-30)
+
+The remaining legacy owner-facing text-entry paths in Memory, Cookbook
+hardware-fit, Gallery, and Presets now use shared Hades prompts. RAG upload,
+Signature save, Deep Research follow-up, and Cookbook preset-save errors also
+use shared error surfaces without native alerts. Focused coverage passed 23
+tests and the live-code search finds only explanatory comments for native
+dialogs. Exact candidate `odysseus:candidate-8136af69` has image ID
+`sha256:e7bc50b0035d2839f82b8c1937c92d662c694cf7bcb66cddea70effaa37be656`
+and source marker `8136af697a3bdf97297c06c67c70548d5793fde3`; isolated runtime
+was healthy with 0 restarts and authenticated responsive browser acceptance
+passed. Full regression remains represented by the preceding `7041 passed,
+8 skipped, 149 warnings` checkpoint because this is a frontend-only slice.
+Owner deployment and data remain untouched.
+
 ## Shared owner-error surface checkpoint — exact candidate `c4cc63cf` (2026-08-30)
 
 Several normal recovery paths still fell back to native browser alerts after
