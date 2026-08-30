@@ -152,6 +152,15 @@
       "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_count": 0}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "recipe_count": 0}, "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-VIDEO-POSITIVE-001",
+      "environment": "realistic_messy_synthetic",
+      "fixture_profile": "empty-recipes-video-positive",
+      "turns": [
+        {"prompt": "Save the recipe from this cooking video in my recipe book as \"Acceptance Homemade Pasta\": https://www.youtube.com/watch?v=5YcsrFC2h5U", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "commit_import", "tool_binding": "manage_recipes", "approval": "required", "requires_effect": true, "must_include_any": ["saved", "added", "recipe"], "forbidden": ["could not", "nothing was saved", "needs review", "Done"]}}
+      ],
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Homemade Pasta", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Homemade Pasta", "contains_source_url": "https://www.youtube.com/watch?v=5YcsrFC2h5U"}, "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-HOUSEHOLD-MUTATION-READBACK-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-household",
