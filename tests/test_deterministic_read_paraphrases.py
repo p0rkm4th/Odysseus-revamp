@@ -586,6 +586,24 @@ def test_owner_outage_status_questions_enter_bounded_network_read(query):
     assert resolve_intent(frame).action_id == "read_network_observations"
 
 
+def test_returning_to_ordinal_asset_reference_is_a_read_not_continue():
+    context = {
+        "ordered_entities": [
+            {"ref": "acceptance-atlas", "concept": "TECHNICAL_ASSET"},
+            {"ref": "acceptance-erebus", "concept": "TECHNICAL_ASSET"},
+        ],
+        "last": {"ref": "acceptance-erebus", "concept": "TECHNICAL_ASSET"},
+    }
+    frame = compile_intent(
+        "Go back to that second computer.", continuation=True,
+        reference_context=context,
+    )
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.operation_class == "READ"
+    assert frame.entity_reference == "acceptance-erebus"
+    assert resolve_intent(frame).action_id == "get"
+
+
 def test_content_topic_does_not_create_hades_pentest_action_without_target():
     from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence
     for query in ("Explain pentesting", "can you help me pentest?"):

@@ -2094,8 +2094,17 @@ def compile_intent(
     if (
         operation == "CONTINUE"
         and reference_resolution.get("status") == "RESOLVED"
-        and re.search(r"\b(?:ram|memory|cpu|processor|gpu|graphics\s+card|storage|motherboard|os)\b", q)
-        and re.search(r"\b(?:it|its|that|this|that\s+one)\b", q)
+        and (
+            (
+                re.search(r"\b(?:ram|memory|cpu|processor|gpu|graphics\s+card|storage|motherboard|os)\b", q)
+                and re.search(r"\b(?:it|its|that|this|that\s+one)\b", q)
+            )
+            or (
+                reference_resolution.get("concept") == "TECHNICAL_ASSET"
+                and re.search(r"\b(?:first|second|third)\b", q)
+                and re.search(r"\b(?:machine|computer|server|host|device|one)\b", q)
+            )
+        )
     ):
         operation = "READ"
     semantic_read_concept = (
