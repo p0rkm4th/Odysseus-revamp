@@ -10,13 +10,12 @@ sidebar icon uniqueness, desktop and narrow viewport containment, and no
 horizontal overflow. This was read-only and did not seed or mutate owner data.
 The owner container remained healthy on source `34ced247` with zero restarts.
 
-A separate fresh disposable Memory correction attempt reached a healthy
-application but `/api/models` exposed no usable `qwen3:8b` endpoint, so no
-conversation was graded. This is classified as
+A separate fresh disposable Memory correction attempt initially reached a
+healthy application but `/api/models` exposed no usable `qwen3:8b` endpoint,
+so no conversation was graded. This was classified as
 `PROVIDER_FAILURE / MODEL_ENDPOINT_MISCONFIGURED`; the disposable stack was
-removed. The next release task is to exercise the documented normal admin
-model-registration flow in the fresh-fresh lane before rerunning broader
-Memory correction/reference journeys.
+removed. The documented normal admin model-registration flow was then
+exercised successfully in a fresh-fresh lane, as recorded below.
 
 The setup gap was reproduced and generalized in the acceptance helper: an
 entrypoint-provisioned instance now authenticates the configured
