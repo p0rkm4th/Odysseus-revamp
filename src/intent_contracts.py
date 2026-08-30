@@ -1571,17 +1571,24 @@ def is_bounded_owner_capability_turn(frame: IntentFrame | None) -> bool:
     those things downstream. Keeping the predicate beside ``IntentFrame``
     prevents each UI/transport from growing its own routing heuristic.
     """
-    if frame is None or frame.domain_concept not in _BOUNDED_OWNER_CAPABILITY_CONCEPTS:
+    if frame is None:
+        return False
+    # Transport must enter the canonical path for structured references even
+    # when this first lexical pass lacks the durable context.  The ACI turn
+    # will resolve the reference against server-owned history; staying in
+    # plain chat here would strand harmless follow-ups such as "its storage?"
+    # as model-only prose.
+    if str((frame.reference_resolution or {}).get("status") or "") in {
+        "RESOLVED", "UNRESOLVED", "AMBIGUOUS",
+    }:
+        return True
+    if frame.domain_concept not in _BOUNDED_OWNER_CAPABILITY_CONCEPTS:
         # A terse follow-up such as ``Actually I meant the first one`` has no
         # domain noun for the lexical compiler to use.  It is still an
         # owner-capability turn when the structured-reference resolver was
         # attempted: transport must enter the canonical path so durable
         # context can resolve it (or fail closed with clarification).
-        return bool(
-            frame is not None
-            and str((frame.reference_resolution or {}).get("status") or "")
-            in {"RESOLVED", "UNRESOLVED", "AMBIGUOUS"}
-        )
+        return False
     return bool(
         frame.read_explicit
         or frame.operation_class in {"CREATE", "UPDATE", "DELETE", "EXECUTE", "RESEARCH"}

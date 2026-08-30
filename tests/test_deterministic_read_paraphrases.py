@@ -604,6 +604,14 @@ def test_returning_to_ordinal_asset_reference_is_a_read_not_continue():
     assert resolve_intent(frame).action_id == "get"
 
 
+def test_unresolved_asset_property_followup_still_enters_canonical_transport():
+    from src.intent_contracts import is_bounded_owner_capability_turn
+
+    frame = compile_intent("And its storage?")
+    assert frame.reference_resolution["status"] == "UNRESOLVED"
+    assert is_bounded_owner_capability_turn(frame) is True
+
+
 def test_content_topic_does_not_create_hades_pentest_action_without_target():
     from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence
     for query in ("Explain pentesting", "can you help me pentest?"):
