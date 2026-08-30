@@ -132,6 +132,13 @@ def test_natural_reminder_uses_existing_notes_mutation_contract():
     assert resolved.reason != "actionspec_unavailable"
 
 
+def test_reminder_title_can_contain_cancel_without_becoming_a_delete():
+    frame = compile_intent("Remind me tomorrow to cancel the test appointment.")
+    assert frame.operation_class == "CREATE"
+    assert frame.domain_concept == "NOTES_MUTATION"
+    assert resolve_intent(frame).action_id == "add"
+
+
 def test_natural_reminder_projects_title_and_due_date_without_model_arguments():
     from src.intent_contracts import note_mutation_payload
 
