@@ -2219,3 +2219,7 @@ Recipe URL-import rejection and copied-webpage paste are also green on the
 same exact candidate. The rejection saved nothing and the messy paste used a
 review/mutation path with canonical readback; both remained free of false
 success, raw final Result, duplicate delivery, and abrupt EOF.
+
+Work overview remains green on exact candidate `4da73504`: three owner turns,
+three canonical reads, no mutation, and zero false success, raw final Result,
+duplicate delivery, or abrupt EOF.

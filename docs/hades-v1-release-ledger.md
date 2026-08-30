@@ -2937,6 +2937,11 @@ passed recipe listing and an ordinary request for ingredients to buy, again
 with two canonical readbacks including reload. Both Qwen3:8B GUI runs recorded
 zero false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+The same exact candidate passed `OWNER-WORK-OVERVIEW-001`: 3 turns and 3
+canonical reads with no mutation, false success, raw final Result, duplicate
+delivery, or abrupt EOF. This confirms the bounded Work overview projection
+remains intact after the Household and Recipe runtime changes.
+
 ## Current Work task mutation checkpoint — executable candidate `a784b35e` (2026-08-29)
 
 A fresh disposable Compose project with normal admin setup and Qwen3:8B passed
