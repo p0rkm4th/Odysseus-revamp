@@ -932,6 +932,17 @@ def test_work_project_start_language_uses_bounded_create_action():
     assert resolved.binding_name == "manage_work"
 
 
+def test_ordinary_work_overview_language_reaches_canonical_read():
+    for query in ("whats left", "what should I do next?", "check my work"):
+        frame = compile_intent(query)
+        resolved = resolve_intent(frame)
+        assert frame.domain_concept == "WORK"
+        assert frame.operation_class == "READ"
+        assert frame.read_explicit is True
+        assert resolved.action_id == "overview"
+        assert resolved.binding_name == "read_work"
+
+
 def test_work_task_create_requires_explicit_project_and_projects_bounded_payload():
     query = "Create a task called Review the backup plan in project Hades V1"
     assert work_task_create_payload(query) == {
