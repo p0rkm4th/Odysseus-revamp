@@ -3588,3 +3588,34 @@ exact YouTube source URL in canonical state, and returned a verified-readback
 answer. Across the two video attempts there were 2 GUI mutations attempted,
 1 canonical mutation, and no false success, raw final Result, duplicate
 delivery, or abrupt EOF.
+
+## Chat recipe review handoff — exact candidate `320606a1` (2026-08-30)
+
+An owner-style qualitative recipe paste exposed the remaining Recipe review UX
+gap: Hades correctly reported that `salt (to taste)` and `oil (as needed)`
+needed review, but chat did not open the editable review workflow. This was
+classified as `UI_RENDER_FAILURE` / missing owner review handoff, not a parser
+failure: the canonical draft and `recipe_import_review` event already existed.
+
+The shared chat-to-Inventory handoff now imports the cache-busted Inventory
+module used by the deployed app shell and exposes `openRecipeImportDraft`
+through the module default surface. This prevents a stale service-worker module
+from silently dropping a valid review event. Focused ACI verification passed
+91 tests.
+
+Exact pushed candidate `320606a1ea462586495ed357490a66314c1906d3` was built as
+`odysseus:candidate-320606a1`, image
+`sha256:6347c5399fc07910a650ebea1f2e891b8f7803711bd9e0b26fbddca9667b9e93`,
+and deployed only to the disposable recipe URL lane. The lane was explicitly
+audited to use `/tmp/hades-recipe-url` and `/tmp/hades-recipe-url/logs`, with
+matching source marker, healthy status, and zero restarts.
+
+Through the GUI, the owner pasted the qualitative recipe, saw the real
+editable Review recipe dialog, corrected the uncertain quantities and units,
+and explicitly saved. Independent canonical readback increased the Recipe
+count from 2 to 3 and found the requested recipe with the corrected ingredient
+values; reload preserved the recipe. No false success, raw final Result,
+duplicate delivery, or abrupt EOF occurred. A transient network-subnet and
+published-port collision during disposable redeployment was classified as
+`ENVIRONMENT_FAILURE`; no recipe mutation was run during the unsafe mount
+attempt, which was stopped and replaced with the explicitly isolated lane.
