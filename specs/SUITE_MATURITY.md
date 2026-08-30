@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Positive Recipe video import checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+Public video recipe ingestion passed through owner chat with validated
+canonical commit and two independent readbacks. The isolated Qwen3:8B journey
+had zero false success, raw Result, duplicate delivery, or abrupt EOF.
+
 ## Full regression checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 The supported regression is green after the owner-journey corpus correction:
