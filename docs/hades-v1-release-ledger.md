@@ -2175,3 +2175,28 @@ of both `whats outsanding` and `whts outsanding` reached `CHECKING WORK` and
 returned `No outstanding work is recorded for this owner.` with no raw binding
 or page errors. `whats left` remains intentionally clarification-safe because
 it is ambiguous between Work and household stock.
+
+## Context-taint convergence checkpoint — exact candidate `682eb6c6` (2026-08-30)
+
+The household approval replay exposed a second shared source of unnecessary
+approval: the MCP server catalog was injected into known non-MCP routes. The
+route-scoped MCP repair (`563e5bca`) passed 14 prompt-injection/security tests
+and replayed the realistic sloppy household journey with two GUI mutations,
+two independent canonical readbacks, reload durability, zero false successes,
+zero raw final Results, zero duplicate delivery, and zero abrupt EOFs.
+
+The next Work mutation replay then exposed passive keyword-recalled Memory
+context tainting unrelated ACI actions. ACI turns now suppress opportunistic
+memory injection; explicit Memory questions still use the canonical
+`read_memory` Action and deterministic projection. The repair (`682eb6c6`)
+passed 59 focused chat/context/security tests. On the exact pushed candidate,
+Work project creation required no approval, persisted the requested project,
+read it back independently after reload, and completed with zero false
+successes, raw final Results, duplicate delivery, or abrupt EOFs.
+
+The isolated acceptance data directory is intentionally disposable but now
+contains prior journey state. The `empty-memory` benchmark correctly failed
+fixture semantics because it was not empty; this is recorded as fixture
+hygiene/environment failure, not a product pass. Asset fixture journeys also
+still require an explicit disposable asset database and owner setup. The real
+owner deployment remains untouched at source `34ced247`.
