@@ -4718,3 +4718,27 @@ read-only candidate verifier reports branch-matched image and source marker,
 healthy `/api/health`, zero runtime restarts, and reachable `qwen3:8b` with
 digest `500a1f067a9f…`. Local and remote branch heads are synchronized at
 `a9028f98`; owner deployment/data remained untouched.
+
+## Dependabot reconciliation against productization — 2026-08-30
+
+Live GitHub review found three open Dependabot PRs, all based on `main` rather
+than the current productization head `4458732b`: PR #1 Bombadil 0.6.1 → 0.7.2,
+PR #2 grouped Python updates, and PR #3 pinned Actions/CodeQL/Docker updates.
+No Dependabot branch was merged.
+
+PR #2 was split by semantic risk: `httpcore>=1.0.9,<2.0` was PORTED for the
+published h11 security fix; `markitdown==0.1.7` was PORTED as a low-risk
+optional bugfix; `pydantic-settings>=2.15.0` was ADAPTED after the installed
+2.15.0 compatibility run; MCP 2.x was REJECTED for V1 and the existing
+`mcp<2` bound was retained because the built-in servers use the v1 low-level
+API and the PR documents a breaking SDK rewrite.
+
+PR #3 was PORTED mechanically onto productization: checkout/setup-python/
+setup-node, CodeQL, Hadolint, Buildx, Docker login/build, metadata, and SARIF
+pins were refreshed to the PR's immutable SHAs. All workflow YAML parsed
+successfully and `pip check` reported no broken requirements. The focused
+dependency/config/network/MCP set passed `124` tests with `1` optional skip;
+the full regression on the preceding executable recipe candidate passed
+`7,098` tests with `9` skips and `149` warnings. PR #1 is DEFERRED because
+Bombadil 0.7 introduces a breaking action-template/runtime change and is not
+needed for the V1 product gate.
