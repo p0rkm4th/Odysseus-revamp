@@ -5708,6 +5708,10 @@ async def stream_aci_runtime(
                     "body",
                     # ui_control open_panel payload
                     "panel",
+                    # Prepared recipe drafts are handed to the existing
+                    # editable Inventory review dialog; commit remains an
+                    # explicit user action in that dialog.
+                    "draft",
                 ):
                     if k in result:
                         tool_output_data[k] = result[k]

@@ -2032,6 +2032,10 @@ async def _execute_manage_recipes_binding(block, owner=None):
             result = {
                 "status": "NEEDS_REVIEW", "success": True,
                 "action": "prepare_import", "draft": draft_payload,
+                # Reuse the existing Inventory recipe-review dialog for
+                # owner-pasted/imported drafts. This is a presentation hint;
+                # the draft is still untrusted and commit remains explicit.
+                "ui_event": "recipe_import_review",
                 "canonical_store": "inventory_service",
             }
             return "manage_recipes", {

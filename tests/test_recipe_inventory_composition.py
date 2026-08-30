@@ -777,6 +777,7 @@ async def test_chat_incomplete_paste_returns_editable_review_draft_without_commi
     assert result["success"] is True
     assert result["data"]["status"] == "NEEDS_REVIEW"
     assert result["data"]["draft"]["review_required"] is True
+    assert result["data"]["ui_event"] == "recipe_import_review"
     assert calls == [({
         "action": "prepare_import", "source_text": source,
         "source_url": None, "requested_name": None,

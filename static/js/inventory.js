@@ -226,6 +226,7 @@ function modalForm(title, body, submitLabel, kind, id = '') {
   modal.addEventListener('click', onClick);
   modal.addEventListener('submit', onSubmit);
   modal.querySelector('input')?.focus();
+  return modal.querySelector('form');
 }
 
 function field(label, name, attrs = '') { return `<label class="hades-intake-field"><span>${escapeHtml(label)}</span><input name="${escapeHtml(name)}" ${attrs}></label>`; }
@@ -311,6 +312,18 @@ function renderRecipeImportDraft(form, draft) {
   const submit = form.querySelector('.hades-dialog-actions [type=submit]');
   if (submit) { submit.disabled = false; submit.textContent = 'Save reviewed recipe'; }
   panel.querySelector('[name=review_name]')?.focus();
+}
+
+export function openRecipeImportDraft(draft) {
+  if (!draft || typeof draft !== 'object') return;
+  openPanel();
+  const form = modalForm(
+    'Review recipe',
+    '<p class="inventory-muted">Review the extracted recipe before saving.</p>',
+    'Save reviewed recipe',
+    'recipe-import',
+  );
+  if (form) renderRecipeImportDraft(form, draft);
 }
 
 async function onSubmit(event) {

@@ -172,6 +172,13 @@ export function handleUIControl(uiData) {
         // chip injection needed here anymore.
       }
 
+    } else if (uiEvent === 'recipe_import_review' || uiData.ui_event === 'recipe_import_review') {
+      if (!uiData.draft || typeof uiData.draft !== 'object') return;
+      import('./inventory.js').then(function(mod) {
+        var fn = mod.openRecipeImportDraft || (mod.default && mod.default.openRecipeImportDraft);
+        if (fn) fn(uiData.draft);
+      }).catch(function(){});
+
     } else if (uiEvent === 'open_panel' || uiData.ui_event === 'open_panel') {
       var panel = uiData.panel;
       if (panel === 'documents') {
