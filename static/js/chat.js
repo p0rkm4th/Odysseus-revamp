@@ -3129,6 +3129,9 @@ import { loadPanel } from './panels.js';
                   // before rendering; otherwise the finalizer dereferences a
                   // null roundHolder and the authoritative answer disappears.
                   _ensureVisibleRoundForDelta();
+                  // Creating the round resets its streaming accumulator; keep
+                  // the authoritative replacement for final rendering too.
+                  roundText = replacement;
                   _renderStream({ knownNormal: true, displayText: _streamDisplayText(replacement) });
                 } else {
                   const bgReplace = _backgroundStreams.get(streamSessionId);
