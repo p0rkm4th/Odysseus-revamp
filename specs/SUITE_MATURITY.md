@@ -1632,3 +1632,11 @@ passed independent recipe readback, review no-save behavior, and browser page
 error checks. Inline editable chat review remains open. Acceptance must use
 explicit isolated data paths; the previous overlay accidentally shared the
 real repository data directory and was stopped.
+
+## YouTube recipe no-evidence maturity — exact candidate `03bc782b` (2026-08-29)
+
+A public video request with no verified recipe structure now fails safely after
+approval: no invented recipe is persisted, the answer explains that review is
+needed, and the browser shows a readable `Saving recipe` status rather than a
+raw binding. Positive video extraction and an editable correction/commit flow
+remain unverified and are still required for the full Recipe V1 bar.

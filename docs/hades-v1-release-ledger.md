@@ -2106,3 +2106,13 @@ The prior acceptance Compose project was found to mount the real repository
 without deleting or resetting data. Subsequent acceptance used an explicit
 `/tmp/hades-isolated.../data` bind mount and a separate network; this harness
 provenance defect remains a release-infrastructure follow-up.
+
+## YouTube recipe no-evidence checkpoint — exact candidate `03bc782b` (2026-08-29)
+
+An owner-facing request to save a recipe from a public video with no verified
+recipe structure reached the existing exact approval boundary. After approval,
+the candidate returned a bounded review-needed answer naming the missing
+verified fields, created no canonical Recipe, exposed no raw binding or
+duplicate Action, and produced zero browser page errors. This is recorded as a
+false-premise/no-evidence safety journey, not as successful video import
+coverage. The inline editable review handoff remains open.
