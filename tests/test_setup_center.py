@@ -56,6 +56,13 @@ def test_integration_projection_is_secret_free_and_maps_setup_health(tmp_path, m
     assert projection["authority_unchanged"] is True
 
 
+def test_integration_capabilities_remain_human_readable_strings(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "state.json")
+    projection = setup_center.SetupCenterService().integrations_projection("alice")
+    contacts = next(item for item in projection["integrations"] if item["id"] == "contacts")
+    assert contacts["capabilities"] == ["contacts read/write"]
+
+
 def test_configured_setup_does_not_claim_provider_health_without_a_probe(tmp_path, monkeypatch):
     monkeypatch.setattr(setup_center, "SETUP_STATE_FILE", tmp_path / "state.json")
     projection = setup_center.SetupCenterService().projection("alice")
