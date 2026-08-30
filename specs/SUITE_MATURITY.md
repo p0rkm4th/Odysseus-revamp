@@ -1649,3 +1649,12 @@ quantity, unit, and instructions before explicit commit; canonical readback
 confirmed the corrected Recipe and no raw Action text was shown. This closes
 the previously missing chat-to-review handoff. Positive YouTube extraction,
 source attribution in the draft, and imported ingredient cleanup remain open.
+
+## Recipe import display cleanliness — exact candidate `f3d847fa` (2026-08-29)
+
+Imported recipe ingredient names now strip only unambiguous trailing source-site
+price and footnote markers. The exact browser journey persisted the requested
+URL recipe, independently verified 12 clean ingredient names, retained
+meaningful preparation parentheses, and survived reload. Final output was
+owner-readable with no raw binding or browser errors. Positive YouTube
+extraction remains unverified.
