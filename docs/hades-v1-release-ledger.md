@@ -2200,3 +2200,11 @@ fixture semantics because it was not empty; this is recorded as fixture
 hygiene/environment failure, not a product pass. Asset fixture journeys also
 still require an explicit disposable asset database and owner setup. The real
 owner deployment remains untouched at source `34ced247`.
+
+The same candidate also passed the Work task-create/readback journey (2
+turns, one GUI mutation, two independent readbacks, reload durability, and
+zero false successes/raw finals/duplicate delivery/abrupt EOF). Broad
+regression after the shared runtime changes completed with `7010 passed, 8
+skipped, 186 warnings` in 5m24s. Candidate image `odysseus:candidate-682eb6c6`
+remains the browser-tested executable; the docs checkpoint commit that records
+this result is `3dab0f79`.
