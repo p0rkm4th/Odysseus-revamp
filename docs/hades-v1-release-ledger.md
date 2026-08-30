@@ -3489,3 +3489,19 @@ answer failure: the scenario declares `empty-recipes` but does not enforce a
 zero-recipe precondition or provision a fresh isolated data set. No production
 change was made and no owner data was touched. Future empty-state runs must
 use a fresh disposable stack or an explicit read-only precondition check.
+
+The finding was then resolved operationally by creating a separate fresh
+Compose project `hades-recipe-clean` with a newly configured local Ollama
+endpoint and acceptance principal. Exact candidate `195c99ae` was healthy,
+with source marker `195c99aec5c37e53e2a15b71a4f9fa6e8a55313e`, image
+`sha256:0c4c40adbfa57131905e5d9eeabf8c266b14e7cbb327b95f236a5f05a14eb175`,
+and zero restarts. `OWNER-RECIPE-EMPTY-001` passed with one deterministic
+empty-state turn and no false success, raw final Result, duplicate delivery,
+or abrupt EOF.
+
+`OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001` then passed on that same clean lane:
+the normal GUI pasted ratings/author/CTA/nutrition noise, the canonical Recipe
+mutation was independently read back, the Recipe was read again, and the
+result survived reload. It covered 2 turns, 1 GUI mutation, and 2 canonical
+readbacks with zero false successes, raw final Results, duplicate delivery, or
+abrupt EOF.
