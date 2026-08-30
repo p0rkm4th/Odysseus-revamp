@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Qualitative Recipe correction/commit GUI replay — `8136af69` (2026-08-30)
+
+The exact candidate’s editable review form accepted corrected values for the
+two qualitative ingredients, saved the recipe through the GUI, independently
+read back the canonical recipe, and preserved it after reload. This closes a
+concrete correction/readback journey; broader qualitative and missing-data
+variants remain open.
+
 ## Exact-candidate qualitative Recipe GUI replay — `8136af69` (2026-08-30)
 
 Visible Inventory → Recipes → Import replay with ordinary qualitative amounts

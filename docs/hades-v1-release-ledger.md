@@ -2,6 +2,17 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Qualitative Recipe correction/commit GUI replay — `8136af69` (2026-08-30)
+
+The same disposable owner journey continued from the review draft. Through
+the visible review form, the owner filled the two flagged qualitative amounts
+(`salt` = `1`, `oil` = `0.5`) and clicked “Save reviewed recipe”. Independent
+canonical readback found `Acceptance GUI Qualitative` with grounded values
+(`rice` = `236.588236 ml`, `salt` = `1 count`, `oil` = `0.5 count`), and the
+recipe was visible again after browser reload. This was one GUI mutation, one
+canonical readback, and one reload durability check; disposable acceptance
+data only, with owner deployment and data untouched.
+
 ## Exact-candidate qualitative Recipe GUI replay — `8136af69` (2026-08-30)
 
 An outside-in browser replay used the visible Inventory → Recipes → Import
