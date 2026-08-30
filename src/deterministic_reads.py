@@ -120,6 +120,7 @@ _RECIPE_SHOPPING_FOLLOWUP = re.compile(
 )
 _RECIPE_NAMED_DETAIL = re.compile(
     r"^(?:reload[.!?]\s*)?what(?:'s|\s+is)\s+in\s+(?:the\s+)?[A-Z][A-Za-z0-9-]*(?:\s+[A-Z][A-Za-z0-9-]*)+\s*\??$",
+    re.IGNORECASE,
 )
 _SERVING_NUMBER = re.compile(
     r"\b(?:to\s+)?(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b",
