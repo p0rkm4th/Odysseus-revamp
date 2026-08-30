@@ -196,6 +196,20 @@ def test_integration_description_suppressed_with_local_context(monkeypatch):
     assert "SensitiveAPI" not in all_text
 
 
+def test_integration_description_suppressed_for_known_non_integration_route(monkeypatch):
+    """Known household routes must not inherit the integration catalog."""
+    _patch_integrations(monkeypatch, "## SensitiveAPI\nDo not expose.")
+
+    from src.agent_loop import _build_system_prompt
+
+    out, _ = _build_system_prompt(
+        messages=[{"role": "user", "content": "add three cans to my pantry"}],
+        model="test-model", active_document=None, mcp_mgr=None, owner=None,
+        intent_domains={"household"},
+    )
+    assert "SensitiveAPI" not in "\n".join(m.get("content") or "" for m in out)
+
+
 # ── 3. MCP tool descriptions ─────────────────────────────────────────────────
 
 def _make_mcp_mgr(desc_text: str):
