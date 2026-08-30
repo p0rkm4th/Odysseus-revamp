@@ -2,6 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Owner read-only visual smoke and fresh-model provisioning note — 2026-08-30
+
+The actual owner deployment passed `scripts/browser_realistic_acceptance.mjs`
+against `http://127.0.0.1:7000`: shared Inventory/Recipe window chrome,
+sidebar icon uniqueness, desktop and narrow viewport containment, and no
+horizontal overflow. This was read-only and did not seed or mutate owner data.
+The owner container remained healthy on source `34ced247` with zero restarts.
+
+A separate fresh disposable Memory correction attempt reached a healthy
+application but `/api/models` exposed no usable `qwen3:8b` endpoint, so no
+conversation was graded. This is classified as
+`PROVIDER_FAILURE / MODEL_ENDPOINT_MISCONFIGURED`; the disposable stack was
+removed. The next release task is to exercise the documented normal admin
+model-registration flow in the fresh-fresh lane before rerunning broader
+Memory correction/reference journeys.
+
 ## Docker Chroma persistence checkpoint — pending candidate (2026-08-29)
 
 Release testing found a product/recovery defect in all three Docker Compose
