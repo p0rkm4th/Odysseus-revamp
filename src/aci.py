@@ -4953,6 +4953,16 @@ def project_action_selection(
             draft = memory_mutation_payload(query, str(item.get("action_id") or ""))
             if draft:
                 payload.update(draft)
+        if (
+            str(frame.get("domain_concept") or "") == "NOTES_MUTATION"
+            and str(frame.get("operation_class") or "") == "CREATE"
+            and str(item.get("binding") or "") == "manage_notes"
+            and str(item.get("action_id") or "") == "add"
+        ):
+            from src.intent_contracts import note_mutation_payload
+            draft = note_mutation_payload(query, str(item.get("action_id") or ""))
+            if draft:
+                payload.update(draft)
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
         if item["binding"] == "read_recipes" and item["action_id"] == "prepare_import":
