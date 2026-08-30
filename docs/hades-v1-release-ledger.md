@@ -2233,3 +2233,11 @@ turns covering recipe listing, pantry feasibility, and scaling, with 2
 independent canonical readbacks including reload durability and zero false
 successes, raw final Results, duplicate delivery, or abrupt EOF. The fresh
 stack was healthy with zero restarts and source marker `729f9066`.
+
+The same fresh stack passed the qualitative Recipe review journey: ordinary
+`salt to taste` / `oil as needed` input produced the review/no-save flow with
+two independent no-persistence checks and no raw final Result, false success,
+duplicate delivery, or abrupt EOF. The four-turn realistic Memory correction
+journey also passed: remember, read, correct/delete, and read again completed
+with two canonical mutations and zero false success, raw final Result,
+duplicate delivery, or abrupt EOF.

@@ -2768,6 +2768,8 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     filters["recipe_shopping"] = True
                 elif operation == "READ_SCALE":
                     filters["recipe_scale"] = True
+                elif operation == "READ_EXPIRING":
+                    filters["recipe_expiring"] = True
                 if operation == "READ_DETAIL":
                     frame_entity_reference = "recipe"
                 else:
