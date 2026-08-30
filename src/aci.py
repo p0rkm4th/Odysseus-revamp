@@ -4265,6 +4265,24 @@ def canonical_memory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -
     return None
 
 
+def canonical_notes_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Own bounded notes/reminder list answers with a deterministic source."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_notes"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+    except (TypeError, ValueError):
+        request = {}
+    if not isinstance(request, Mapping) or str(request.get("action") or "").strip().lower() not in {"list", "search", "find", "view"}:
+        return None
+    return note_list_summary_from_tool_output(str(event.get("output") or "").strip()) or "No notes found."
+
+
 def canonical_notes_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render one successful notes/reminder mutation without model prose."""
     event = next(
@@ -4471,6 +4489,7 @@ def canonical_result_answer(
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_work_mutation_answer(tool_events), "Work mutation Result"),
         (canonical_memory_mutation_answer(tool_events), "Memory mutation Result"),
+        (canonical_notes_read_answer(tool_events), "canonical Notes Result"),
         (canonical_notes_mutation_answer(tool_events), "notes mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
