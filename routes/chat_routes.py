@@ -1388,37 +1388,56 @@ def setup_chat_routes(
             allowed_models=_allowed_models_for_request(request),
         )
 
+        # Context preparation can perform slow, bounded external work (for
+        # example transcript/comment retrieval for a pasted YouTube URL)
+        # before the detached SSE generator gets a chance to register the
+        # stream below.  Publish the request as active now so the browser's
+        # stale-stream watchdog does not abort a healthy request merely
+        # because the model has not started yet.
+        _active_streams[session] = {
+            "status": "preparing",
+            "partial": "",
+            "query": message,
+            "is_research": do_research,
+            "mode": chat_mode,
+            "turn_id": turn_id,
+        }
+
         # Build shared context (stream path uses enhanced_message for context preface)
-        ctx = await build_chat_context(
-            sess, request, chat_handler, chat_processor,
-            message=message,
-            session_id=session,
-            preset_id=preset_id,
-            att_ids=att_ids,
-            use_web=use_web,
-            use_rag=use_rag,
-            time_filter=time_filter,
-            incognito=incognito,
-            no_memory=no_memory,
-            search_context=search_context,
-            compare_mode=compare_mode,
-            webhook_manager=webhook_manager,
-            use_enhanced_message=True,
-            # Skills index only ships when the model can actually call
-            # manage_skills (agent mode). In plain chat or incognito the
-            # index would be useless / unwanted noise.
-            agent_mode=(chat_mode == "agent"),
-            allow_tool_preprocessing=allow_tool_preprocessing,
-            defer_context_shaping=foreground_policy.enabled,
-            continuation_context_message=(
-                pending_tool_approval.continuation_query
-                if exact_tool_approval
-                and pending_tool_approval
-                and pending_tool_approval.continuation_query
-                else None
-            ),
-            persist_user_message=not tool_approval_continuation,
-        )
+        try:
+            ctx = await build_chat_context(
+                sess, request, chat_handler, chat_processor,
+                message=message,
+                session_id=session,
+                preset_id=preset_id,
+                att_ids=att_ids,
+                use_web=use_web,
+                use_rag=use_rag,
+                time_filter=time_filter,
+                incognito=incognito,
+                no_memory=no_memory,
+                search_context=search_context,
+                compare_mode=compare_mode,
+                webhook_manager=webhook_manager,
+                use_enhanced_message=True,
+                # Skills index only ships when the model can actually call
+                # manage_skills (agent mode). In plain chat or incognito the
+                # index would be useless / unwanted noise.
+                agent_mode=(chat_mode == "agent"),
+                allow_tool_preprocessing=allow_tool_preprocessing,
+                defer_context_shaping=foreground_policy.enabled,
+                continuation_context_message=(
+                    pending_tool_approval.continuation_query
+                    if exact_tool_approval
+                    and pending_tool_approval
+                    and pending_tool_approval.continuation_query
+                    else None
+                ),
+                persist_user_message=not tool_approval_continuation,
+            )
+        except Exception:
+            _active_streams.pop(session, None)
+            raise
 
         # First-class actionable agent turns are projected into the canonical
         # Work ledger before model routing. This makes the same owner/session
