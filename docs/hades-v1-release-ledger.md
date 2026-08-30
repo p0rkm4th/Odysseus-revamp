@@ -21,6 +21,18 @@ approval wait, so this repair is not yet browser-green. The later test-only
 head is `ef58496d`; no rebuild is required for that test-only change. Owner
 deployment and data remain untouched.
 
+## Read-only Tier 1 walkabout — exact executable candidate `1a24a12f` (2026-08-30)
+
+The isolated authenticated owner walkabout exercised seven ordinary read
+journeys through the GUI: Network, Homelab, Memory, Assets, asset reference
+follow-ups, GPU details, and Work. All seven streams completed with exactly
+one terminal event. The harness reported `falseSuccess=0`,
+`rawFinalResults=0`, `duplicateDelivery=0`, and `abruptEOF=0`; no mutation was
+attempted. Runtime remained healthy with 0 restarts on
+`odysseus:candidate-1a24a12f` (source `1a24a12f`). This is read-path evidence;
+video approval and broader Tier 1 mutation/composition journeys remain open.
+Owner deployment and data remain untouched.
+
 ## Household add false-success fix and replay — exact candidate `701eff7e` (2026-08-30)
 
 The owner prompt “Add 3 cans of Acceptance Beans.” previously produced a
