@@ -1069,8 +1069,15 @@ def _build_system_prompt(
         except Exception as _sk_err:
             logger.debug(f"skill injection failed (non-fatal): {_sk_err}")
 
-    # Integration descriptions — user-editable fields, must not be in system role.
-    if not suppress_local_context:
+    # Integration descriptions are user-editable context. Only add them when
+    # the route may actually use an integration/setup boundary; injecting the
+    # catalog into unrelated routes needlessly taints private reads/writes.
+    _integration_route = (
+        relevant_tools is None
+        or bool(set(relevant_tools or ()) & {"api_call", "read_setup"})
+        or bool(set(intent_domains or ()) & {"integrations", "setup", "settings"})
+    )
+    if not suppress_local_context and _integration_route:
         try:
             from src.integrations import get_integrations_prompt
             _integ_prompt = get_integrations_prompt()
