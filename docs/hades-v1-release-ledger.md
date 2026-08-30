@@ -2,6 +2,14 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Full regression after compact Recipe parser fix — exact candidate `806fc3ba` (2026-08-30)
+
+After the compact qualitative Recipe repair, the supported full regression
+passed `7024 passed, 8 skipped, 149 warnings` in 308.35 seconds. A prior run
+was invalidated as `ENVIRONMENT_FAILURE` because the 32 GiB `/tmp` tmpfs was
+100% full; the generated disposable artifacts were moved to recoverable
+storage and the rerun completed without failures.
+
 ## Compact qualitative Recipe review checkpoint — exact candidate `806fc3ba` (2026-08-30)
 
 Owner testing found that a compact one-line ingredient section silently

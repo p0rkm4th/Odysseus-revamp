@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Full regression after compact Recipe parser fix — exact candidate `806fc3ba` (2026-08-30)
+
+The valid broad rerun passed 7,024 tests, with 8 skipped and 149 warnings, in
+308.35 seconds. A preceding run was invalidated by a full `/tmp` tmpfs rather
+than a code failure; the corrected rerun was clean.
+
 ## Compact qualitative Recipe review checkpoint — exact candidate `806fc3ba` (2026-08-30)
 
 Compact owner text now preserves each ingredient in the editable review draft:
