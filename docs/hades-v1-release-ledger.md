@@ -2,6 +2,24 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Specific Memory relevance fix and replay — exact candidate `4adb2e82` (2026-08-30)
+
+An owner-like Memory chain found that a narrow question could receive an
+unrelated adjacent record after the requested memory was removed. The shared
+canonical Memory projection now treats narrow forms such as “what is my X?”
+as specific queries and requires all meaningful terms to match; broad “what
+do you know about me?” summaries retain their bounded all-record behavior.
+Focused Memory/ACI coverage passed `508 passed, 5 skipped`. On the exact
+candidate, the four-turn GUI chain remembered, recalled, removed, and then
+re-read an acceptance color; independent canonical readback showed zero
+matching records and the final completed answer did not invent a color. The
+remaining polish gap is that the weak model asked for clarification instead
+of saying plainly that no current value was recorded. Exact candidate
+`odysseus:candidate-4adb2e82` has image ID
+`sha256:2e85c98932b80bd0f7d61f23d196bc3e73161d1a11b2f1b2b42436af2f50fb4c`
+and source marker `4adb2e824d5c875bcb1e5e5476150bb56af184bd`; isolated runtime
+was healthy with 0 restarts. Owner deployment and data remain untouched.
+
 ## Qualitative Recipe correction/commit GUI replay — `8136af69` (2026-08-30)
 
 The same disposable owner journey continued from the review draft. Through
