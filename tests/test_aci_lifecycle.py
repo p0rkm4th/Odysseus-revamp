@@ -875,6 +875,23 @@ def test_url_recipe_import_projects_commit_action_and_user_fields():
     assert projection.fast_path == selected["payload"]
 
 
+def test_temporal_note_update_keeps_resolved_reference_with_projected_due_date():
+    query = "Actually, make that next Friday instead."
+    intent = _intent(query)
+    intent["intent_frame"]["reference_resolution"] = {
+        "status": "RESOLVED", "refs": ["note-123"], "concept": "NOTES"
+    }
+    projection = project_action_selection(
+        intent=intent,
+        relevant_tools=["manage_notes"],
+        disabled_tools=set(), owner="owner", active_run=None, query=query,
+    )
+    selected = next(value for value in projection.choice_map.values())
+    assert selected["payload"] == {
+        "action": "update", "due_date": "next Friday", "id": "note-123"
+    }
+
+
 def test_household_move_projects_named_item_and_location_for_update_actions():
     query = "Move Acceptance Turnip2 to the pantry."
     projection = project_action_selection(
