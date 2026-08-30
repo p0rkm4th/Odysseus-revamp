@@ -12,6 +12,14 @@ covering two Memory mutations and two reads. The acceptance oracle reported
 `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
 `abruptEOF=0`. Owner deployment and data were untouched.
 
+## Asset RAM collection read replay (2026-08-30)
+
+The deterministic `OWNER-ASSET-RAM-001` journey passed three GUI reads covering
+natural collection/property questions, including comparative RAM information.
+All three streams completed with one terminal event and reported
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. No mutation was attempted.
+
 ## Recovery artifact verification continuation (2026-08-30)
 
 The retained disposable recovery artifact was independently verified with the
