@@ -2088,3 +2088,21 @@ per-turn attempted-effect signature guard now suppresses that repeat. The
 replay produced exactly one failed Action, zero false success, duplicate
 delivery, abrupt EOF, or browser page errors. The real owner deployment was
 untouched and remained on source `34ced247`.
+
+## Owner-readable tool-thread checkpoint — exact candidate `03bc782b` (2026-08-29)
+
+The copied-webpage recipe mutation reached the existing approval boundary,
+persisted the requested recipe after approval, and was independently verified
+through `/api/recipes`. The normal conversation showed a readable `SAVING
+RECIPE` thread label instead of the internal `MANAGE_RECIPES` binding; the
+exact Action payload remains available inside the collapsed technical content.
+The compact qualitative replay also showed the same owner-readable label,
+returned a clear review answer, and created no row. Both replays had zero page
+errors and zero duplicate Actions. The exact candidate OCI/source marker was
+`03bc782b`; the real owner deployment remained on older source `34ced247`.
+
+The prior acceptance Compose project was found to mount the real repository
+`data/` directory despite being named disposable. Its container was stopped
+without deleting or resetting data. Subsequent acceptance used an explicit
+`/tmp/hades-isolated.../data` bind mount and a separate network; this harness
+provenance defect remains a release-infrastructure follow-up.
