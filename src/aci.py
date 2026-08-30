@@ -4934,6 +4934,31 @@ def project_action_selection(
         ):
             fast_path = memory_payload
             mode = SelectionMode.DIRECT_ACTION
+    # Recipe import semantics are already explicit in the owner request and
+    # the server has projected the bounded URL/name or review-only payload
+    # above. Do not send this through weak-model arbitration: URL imports can
+    # be refused as "I can't manage external content", while incomplete
+    # pastes can expose raw commit JSON instead of the review workflow.
+    if (
+        str(frame.get("domain_concept") or "") == "RECIPE"
+        and str(frame.get("operation_class") or "") == "CREATE"
+        and frame_filters.get("recipe_import") is True
+        and desired_binding == "manage_recipes"
+        and desired_action == "commit_import"
+        and desired_binding not in disabled
+    ):
+        selected_import = next(
+            (
+                value for value in choices.values()
+                if value.get("binding") == desired_binding
+                and value.get("payload", {}).get("action") == desired_action
+            ),
+            None,
+        )
+        import_payload = dict(selected_import.get("payload") or {}) if selected_import else {}
+        if import_payload.get("source_url") or import_payload.get("review_required") is True:
+            fast_path = import_payload
+            mode = SelectionMode.DIRECT_ACTION
     if mode is SelectionMode.NEED_CONTEXT:
         if str(frame.get("domain_concept") or "") == "RECIPE":
             question = "Which recipe should I check for missing ingredients?"
