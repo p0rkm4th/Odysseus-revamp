@@ -580,6 +580,10 @@ def test_owner_outage_status_questions_enter_bounded_network_read(query):
     intent = _classify_agent_request([], query)
     intent = _normalize_operational_intent_evidence(intent, query)
     assert "network_ops" in intent["domains"]
+    frame = compile_intent(query)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "READ"
+    assert resolve_intent(frame).action_id == "read_network_observations"
 
 
 def test_content_topic_does_not_create_hades_pentest_action_without_target():
