@@ -159,9 +159,11 @@ def _recipe_name(text: str) -> str | None:
         # The same owner wording is often typed without quotation marks.
         # Stop at sentence punctuation/newline so surrounding instructions
         # are never absorbed into the display name.
-        r"\bas\s+(?P<name>[A-Z][^\.\n]{1,200})\s*\.",
+        r"\bas\s+(?P<name>(?!(?:needed|desired|necessary)\b)[A-Z][^\.\n]{1,200})\s*\.",
         r"\bfor\s+the\s+name\s*,?\s*use\s+[\"'](?P<name>[^\"']{1,200})[\"']",
         r"\b(?:called|named)\s+[\"']?(?P<name>[^\"'\n:.]{1,200})[\"']?\s*[:.]",
+        # Ordinary compact creation: "add recipe Weeknight Pasta."
+        r"\b(?:add|save|create)\s+(?:a\s+)?recipe\s+(?P<name>[^\n:.]{1,200})\s*\.(?=\s*(?:ingredients?|instructions?)\b)",
         # Existing compact form: "recipe: Name. Ingredients: ...".
         r"\brecipe\b(?:\s+(?:to\s+)?(?:my\s+)?recipes?)?\s*:\s*"
         r"(?P<name>.+?)(?=\.\s*ingredients\s*:|\s+ingredients\s*:|\n\s*ingredients\s*:)",
