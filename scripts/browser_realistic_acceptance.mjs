@@ -22,7 +22,7 @@ const errors = [];
 const fixture = `
   <div class="osint-fixture">
     <header class="hades-module-header fixture-header">
-      <div class="hades-module-heading"><span class="hades-module-icon">OSINT</span><div><h2>OSINT</h2><p>Bounded public-source investigation workspace</p></div></div>
+      <div class="hades-module-heading"><span class="hades-module-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M10.5 7v7M7 10.5h7"/></svg></span><div><h2>OSINT</h2><p>Bounded public-source investigation workspace</p></div></div>
       <div class="hades-module-actions"><button class="hades-btn-primary" data-fixture-cta>New Investigation</button></div>
     </header>
     <nav class="hades-module-tabs fixture-nav" aria-label="Investigation sections">${Array.from({length: 10}, (_, i) => `<button class="hades-module-tab${i === 0 ? ' active' : ''}">${['Overview','Cases','Sources','Evidence','Claims','Relationships','Timeline','Corrections','Reports','History'][i]}</button>`).join('')}</nav>
