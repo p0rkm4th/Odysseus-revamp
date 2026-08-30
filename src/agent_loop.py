@@ -6153,6 +6153,7 @@ async def stream_aci_runtime(
     if tool_events:
         for _ev in reversed(tool_events):
             _tool_name = resolved_tool_event_name(_ev)
+            _event_tool_name = str(_ev.get("tool") or "").strip().lower()
             _tool_action = ""
             try:
                 _cmd_args = json.loads(_ev.get("command") or "{}")
@@ -6170,7 +6171,11 @@ async def stream_aci_runtime(
                 if _calendar_summary:
                     full_response = _calendar_summary
                 break
-            if _tool_name == "read_communications" and _tool_action in {"overview", "list_events", "list"}:
+            if (
+                _tool_name == "read_communications"
+                or _event_tool_name == "read_communications"
+                or "read_communications" in _event_tool_name
+            ):
                 _calendar_summary = communications_calendar_summary_from_tool_output(_ev.get("output") or "")
                 if not _calendar_summary:
                     _calendar_summary = str(_ev.get("output") or "").strip()
