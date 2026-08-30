@@ -607,6 +607,21 @@ with source marker `78640e6a9073e13f2f09373c8ed38193fc937968`; disposable
 runtime was healthy with 0 restarts. Owner deployment and data remain
 untouched.
 
+## Recurring reminder lifecycle replay — exact candidate `4c873549` (2026-08-30)
+
+The recurring scheduler journey was replayed after the normal browser harness
+was found to retain Chat mode between turns. The harness now explicitly selects
+the visible Agent mode before owner journeys begin. On the exact disposable
+candidate `odysseus:candidate-4c873549`, recurring create/readback passed `2`
+turns, `1` GUI mutation, and `2` independent scheduled-task readbacks. The
+adjacent hourly, correction, and cancellation journeys each also passed in
+separate replays: `2`, `3`, and `3` turns respectively, with canonical
+mutation/readback verification. Across these replays false success, raw final
+Results, duplicate delivery, and abrupt EOF were zero. A four-scenario batch
+hit the browser completion timeout despite backend projections completing; it
+remains tracked as an acceptance-session reliability issue rather than being
+counted as a product pass. Owner deployment/data remained untouched.
+
 ## Ordinary Work overview language replay — exact candidate `b1671aee` (2026-08-30)
 
 On the exact Qwen3:8B candidate, the owner prompts “whats left”, “what should
