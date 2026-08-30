@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Memory specific-query full-regression checkpoint — exact candidate `23e51370` (2026-08-30)
+
+The supported full regression after the specific Memory routing/relevance fix
+passed 7,045 tests with 8 skipped and 149 warnings. Exact candidate browser
+runtime remained source-matched, healthy, and at zero restarts. Owner
+deployment state was not modified.
+
 ## Specific Memory routing and accumulated-state acceptance checkpoint — `23e51370` (2026-08-30)
 
 Specific personal questions now reach canonical Memory while technical domain
