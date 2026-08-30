@@ -1604,3 +1604,12 @@ review response rather than a raw approval payload. No canonical Recipe is
 created before amounts are corrected, and the existing validated commit path
 remains protected. Chat still does not expose an inline editable draft card;
 that handoff remains a UX gap for the broader Recipe V1 bar.
+
+## Recipe URL import maturity — exact candidate `c6ac382e` (2026-08-29)
+
+An explicit-name public URL import now bypasses weak-model action arbitration,
+reaches the canonical import Action, retains both name and source URL, and
+passes independent persistence/readback after visible approval. The initial
+no-Action refusal is closed; external recipe content remains approval-gated.
+Source-specific price/footnote text is still retained in some ingredient names,
+so imported display cleanliness remains a follow-up UX concern.
