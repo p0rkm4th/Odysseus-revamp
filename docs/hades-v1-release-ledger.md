@@ -63,6 +63,14 @@ read, a human-readable empty-state answer, and
 `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
 `abruptEOF=0`. No production code or owner data was changed.
 
+## Recipe shopping-requirements checkpoint — candidate `8c620bf438bd` (2026-08-30)
+
+The deterministic Kitchen→Recipe composition journey exercised two ordinary
+owner reads for pantry coverage and missing ingredients. Both streams and two
+independent canonical readbacks passed; the oracle reported
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. No mutation was attempted.
+
 ## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
 
 The video no-evidence journey remains open. Server-side evidence showed the
