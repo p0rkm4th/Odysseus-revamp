@@ -7,7 +7,12 @@ from core import database as cdb
 from core import inventory_models  # noqa: F401 - register inventory tables
 from src.inventory_service import InventoryNotFound, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
-from src.aci import canonical_recipe_mutation_answer, canonical_recipe_read_answer, project_action_selection
+from src.aci import (
+    canonical_recipe_mutation_answer,
+    canonical_recipe_read_answer,
+    canonical_tool_result_projection,
+    project_action_selection,
+)
 from src.intent_contracts import (
     RecipeDraft, recipe_import_draft, recipe_import_review, recipe_import_review_draft,
 )
@@ -133,6 +138,24 @@ def test_recipe_detail_read_result_identifies_canonical_owner_and_operation():
     assert result["operation"] == "get"
     assert result["canonical_store"] == "inventory_service"
     assert result["recipe"]["id"] == recipe["id"]
+
+
+def test_recipe_list_projection_preserves_bounded_refs_for_follow_up_resolution():
+    projection = canonical_tool_result_projection("read_recipes", {
+        "output": json.dumps({
+            "status": "SUCCESS",
+            "operation": "list",
+            "canonical_store": "inventory_service",
+            "recipes": [{"id": "recipe-1", "name": "Weeknight Chili", "servings": "2", "ingredients": []}],
+        }),
+    })
+
+    assert projection["recipes"] == [{
+        "id": "recipe-1",
+        "name": "Weeknight Chili",
+        "servings": "2",
+    }]
+    assert "ingredients" not in projection["recipes"][0]
 
 
 def test_recipe_owner_scope_does_not_leak_across_inventory_service_reads():

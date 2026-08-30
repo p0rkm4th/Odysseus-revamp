@@ -3754,6 +3754,23 @@ def canonical_tool_result_projection(
                 for row in payload["candidates"][:20]
                 if isinstance(row, Mapping)
             ]
+        if isinstance(payload.get("recipes"), list):
+            projection["recipes"] = [
+                {
+                    "id": row.get("id"),
+                    "name": row.get("name"),
+                    "servings": row.get("servings"),
+                }
+                for row in payload["recipes"][:50]
+                if isinstance(row, Mapping)
+            ]
+        if isinstance(payload.get("recipe"), Mapping):
+            recipe = payload["recipe"]
+            projection["recipe"] = {
+                "id": recipe.get("id"),
+                "name": recipe.get("name"),
+                "servings": recipe.get("servings"),
+            }
         return projection
     if str(tool_name or "").strip() == "manage_recipes":
         # Recipe commits can contain a large ingredient/instruction payload.
