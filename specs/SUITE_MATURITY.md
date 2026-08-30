@@ -1,5 +1,15 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Legacy owner-entry dialog checkpoint — exact candidate `8136af69` (2026-08-30)
+
+Memory, Cookbook hardware-fit, Gallery, and Presets text-entry paths now use
+shared Hades prompts. RAG, Signature, Deep Research, and Cookbook preset-save
+errors use shared error surfaces without native alerts. Focused coverage passed
+23 tests, live-code search found only explanatory native-dialog comments, and
+exact-candidate responsive browser acceptance passed. The prior broad
+regression passed 7,041 tests with 8 skipped and 149 warnings. Owner deployment
+state was not modified.
+
 ## Shared owner-error surface checkpoint — exact candidate `c4cc63cf` (2026-08-30)
 
 Chat follow-up, Work, RAG, Document, Cookbook, Settings, and Email error paths
