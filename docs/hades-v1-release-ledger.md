@@ -6,13 +6,20 @@ Status: active engineering release ledger; not a release declaration.
 
 A new empty disposable Compose state completed normal first-run admin setup,
 registered the host Qwen3:8B endpoint, and passed an authenticated empty-Work
-browser journey. The app container was then restarted and the same browser
-journey passed again. The exact image ID was
-`sha256:66465f4b0c58bd98db55e4aa0d18838b1b645b67d545cbe89614d9adf19243f9`,
-the OCI/source marker matched `04d05854790856719b71e69f6fc27f72da29b66a`,
-health was restored, and Docker restart count remained 0. This fresh-fresh
-install/restart evidence is isolated; the actual owner runtime remains
+browser read. After restarting only the disposable app container, the same
+browser journey passed again. Image ID:
+`sha256:66465f4b0c58bd98db55e4aa0d18838b1b645b67d545cbe89614d9adf19243f9`;
+OCI/source marker matched `04d05854790856719b71e69f6fc27f72da29b66a`;
+health returned with 0 Docker restarts. The actual owner runtime remains
 untouched.
+
+## Asset ordinal reference-chain checkpoint — exact candidate `04d05854` (2026-08-30)
+
+`OWNER-ASSET-REFERENCE-CHAIN-001` passed in the realistic messy fixture. The
+owner selected an ordinal asset, corrected the reference to another asset,
+and then asked for its RAM; all three turns produced grounded canonical reads
+with zero false successes, raw final Results, duplicate delivery, or abrupt
+EOF. The exact runtime and owner deployment remained unchanged.
 
 ## Household clean mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
 
