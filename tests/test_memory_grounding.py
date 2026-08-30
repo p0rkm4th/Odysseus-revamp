@@ -35,6 +35,8 @@ def _rows():
 def test_explicit_memory_queries_are_detected_and_misroute_to_memory_domain():
     assert is_explicit_memory_query("What do you remember about me?")
     assert is_explicit_memory_query("check your memories, are you sure?")
+    assert is_explicit_memory_query("What is my acceptance color now?")
+    assert not is_explicit_memory_query("What is my computer's RAM?")
     intent = _classify_agent_request([], "What do you know about my work?")
     assert intent["explicit_memory_query"] is True
     assert intent["domains"] == {"memory"}

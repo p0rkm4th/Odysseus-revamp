@@ -40,6 +40,12 @@ _SPECIFIC_MEMORY_RE = re.compile(
     r"\b(?:what(?:'s| is)\s+my|what\s+is\s+the|which\s+of\s+my)\b",
     re.IGNORECASE,
 )
+_SPECIFIC_MEMORY_NON_MEMORY_RE = re.compile(
+    r"\b(?:computer|machine|server|asset|hardware|ram|memory|gpu|storage|"
+    r"network|host|service|recipe|recipes|pantry|kitchen|food|task|project|"
+    r"work|calendar|email|message|document)s?\b",
+    re.IGNORECASE,
+)
 _MEMORY_QUERY_STOPWORDS = frozenset(
     "what what's is the my of do you know remember about now currently please".split()
 )
@@ -50,6 +56,10 @@ def is_explicit_memory_query(text: str) -> bool:
     query = str(text or "").strip()
     return bool(
         _EXPLICIT_MEMORY_RE.search(query)
+        or (
+            _SPECIFIC_MEMORY_RE.search(query)
+            and not _SPECIFIC_MEMORY_NON_MEMORY_RE.search(query)
+        )
         or deterministic_read_concept(query) == "MEMORY"
     )
 
