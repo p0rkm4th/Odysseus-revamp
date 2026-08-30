@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Ordinary Work overview language replay — exact candidate `b1671aee` (2026-08-30)
+
+On the exact Qwen3:8B candidate, the owner prompts “whats left”, “what should
+I do next?”, and “check my work” all reached canonical `read_work.overview`
+and returned the persisted pending task instead of generic advice or a
+clarification. The first two completed promptly; the isolated third replay
+also completed after approximately 45 seconds, so the earlier multi-turn
+120-second timeout was treated as provider/queue timing noise rather than a
+product failure. No raw Action/JSON output appeared. The exact image is
+`odysseus:candidate-b1671aee`, image ID
+`sha256:7b4a292f5bf93ee92728065e1b9e49bc5dea22a86083aa8e40ebb8bf883ea2db`,
+source marker `b1671aee52b094fefb28566ab969adc77c48a349`, healthy with 0
+restarts. Owner deployment and data remain untouched.
+
 ## Natural Work project/task mutation replay — exact candidate `4148710e` (2026-08-30)
 
 An outside-in GUI replay against disposable Qwen3:8B acceptance state found and
