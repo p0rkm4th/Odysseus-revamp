@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Current candidate visual acceptance checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+The responsive visual gate passed against the isolated candidate at desktop,
+narrow, and mobile viewports. It checked normal login, shared Hades window
+chrome, navigation icon uniqueness, duplicate Security/Research entries,
+containment, wrapping, tabs, and horizontal overflow; screenshots were
+captured and inspected. The repeated OSINT label is synthetic fixture content,
+not a product defect. The actual owner runtime remains untouched.
+
 ## No-active-Run continuation safety checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 `OWNER-CONTINUE-NO-ACTIVE-001` passed in the isolated realistic Qwen3:8B

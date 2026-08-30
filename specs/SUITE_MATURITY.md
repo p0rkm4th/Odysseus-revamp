@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Current candidate visual acceptance checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+Desktop, narrow, and mobile visual acceptance passed with shared Hades chrome,
+navigation uniqueness, responsive containment, wrapping, and overflow checks.
+Screenshots were inspected; the repeated OSINT heading belongs to the test
+fixture. Owner-runtime visual smoke remains separately scoped.
+
 ## No-active-Run continuation safety checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 With no active task or Run, a bare continuation returned a grounded
