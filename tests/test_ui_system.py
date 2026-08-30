@@ -110,6 +110,14 @@ def test_tasks_use_shared_confirmation_dialogs_without_native_fallbacks():
     assert "Keep settings" in source
 
 
+def test_notes_use_shared_confirmation_dialogs_without_native_fallbacks():
+    source = (ROOT / "static/js/notes.js").read_text()
+    assert source.count("uiModule.styledConfirm") >= 4
+    assert "window.confirm(" not in source
+    assert "Clear past reminders" in source
+    assert "Keep notes" in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]
