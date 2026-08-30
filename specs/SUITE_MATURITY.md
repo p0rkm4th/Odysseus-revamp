@@ -1,5 +1,16 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Asset ordinal correction/reference-chain checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+The isolated realistic owner journey now passes a three-turn Asset chain:
+second computer, correction to first computer, and RAM follow-up. Ordered
+candidate references and the currently selected reference are preserved
+separately across canonical Results, and immediate chat history takes
+precedence over a newly-created stale Run. Qwen3:8B browser evidence recorded
+3 canonical reads with zero false success, raw Result, duplicate delivery, or
+abrupt EOF. Broader Asset composition and actual-owner network smoke remain
+separate maturity work.
+
 ## Current owner-acceptance correction — exact candidate `7e01a053` (2026-08-30)
 
 The browser acceptance harness now refuses to provision unless `APP_DATA_DIR`
