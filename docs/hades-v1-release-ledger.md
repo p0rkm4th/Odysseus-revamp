@@ -4391,3 +4391,29 @@ copied-webpage paste journey. The URL case completed 1 turn with no canonical
 Recipe created and two independent readbacks; the messy paste completed 2
 turns with one owner-facing mutation/review path and two readbacks. Both had
 zero false success, raw final Result, duplicate delivery, or abrupt EOF.
+
+## Tier 1 lived-in daily-driver replay and reload pagination — exact candidate `e4027b2b` / harness `b0f7f095` (2026-08-30)
+
+The accumulated-state owner walkabout was expanded to 20 turns across Work,
+Today/attention, Calendar readiness, commitments, reminders, Household,
+Recipes, Assets, Memory, and Network. The replay included cross-domain
+switching, ordinal Asset references, correction, and returning to an earlier
+referent. The candidate completed all 20 turns with 20 streams, 20 terminal
+DONE events, zero false success, zero raw final Results, zero duplicate
+delivery, and zero abrupt EOF. The network-current turn correctly reported the
+isolated host-broker dependency as unavailable instead of inventing live state.
+
+An initial reload gate reported `20 -> 12`. Independent inspection found all
+40 transcript rows durable in the disposable application database; the result
+was the intentional 24-row desktop display page, not data loss. Acceptance
+harness commit `b0f7f09532ef39db0fb6ce6bb1229fead8bd6544` now exercises the
+existing older-history pager after reload before grading transcript durability.
+The corrected exact browser replay passed all 20 turns and fully rehydrated
+the conversation. No owner deployment or owner data was modified.
+
+Executable candidate `e4027b2bd100817b5937ec402744a1133606163c` was built as
+`odysseus:candidate-e4027b2b`, image
+`sha256:893e07ee48356062663de6c9787e0f5cce862865084821c4859ba81d3a7abdf9`,
+and deployed only to the disposable current lane with matching source marker,
+healthy running status, and zero restarts. The harness-only pagination change
+was pushed afterward and does not require rebuilding the executable image.
