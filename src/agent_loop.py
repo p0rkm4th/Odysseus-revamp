@@ -1089,8 +1089,15 @@ def _build_system_prompt(
         except Exception as _integ_err:
             logger.debug(f"Integration prompt injection skipped: {_integ_err}")
 
-    # MCP tool descriptions — sourced from external servers, must not be in system role.
-    if mcp_mgr:
+    # MCP tool descriptions are sourced from external servers. Only expose
+    # them when the route can actually call an MCP tool; injecting every
+    # server's catalog into a known built-in route needlessly taints private
+    # reads/writes and spends substantial context.
+    _mcp_route = (
+        (relevant_tools is None and not intent_domains)
+        or any(str(tool).startswith("mcp__") for tool in (relevant_tools or ()))
+    )
+    if mcp_mgr and _mcp_route:
         try:
             _mcp_desc = mcp_mgr.get_tool_descriptions_for_prompt(mcp_disabled_map or {})
             if _mcp_desc:

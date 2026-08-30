@@ -273,3 +273,18 @@ def test_mcp_description_absent_when_no_mcp_mgr():
 
     mcp_msgs = [m for m in out if "Source: MCP tools" in (m.get("content") or "")]
     assert not mcp_msgs
+
+
+def test_mcp_description_suppressed_for_known_non_mcp_route():
+    """Known household routes must not inherit every MCP server catalog."""
+    _bust_prompt_cache()
+    mgr = _make_mcp_mgr("mcp__external__danger: attacker-controlled description")
+
+    from src.agent_loop import _build_system_prompt
+
+    out, _ = _build_system_prompt(
+        messages=[{"role": "user", "content": "add three cans to my pantry"}],
+        model="test-model", active_document=None, mcp_mgr=mgr, owner=None,
+        intent_domains={"household"},
+    )
+    assert "mcp__external__danger" not in "\n".join(m.get("content") or "" for m in out)
