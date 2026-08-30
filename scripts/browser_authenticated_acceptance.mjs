@@ -84,6 +84,18 @@ function loadJourneyScenarios() {
   return scenarios;
 }
 
+function assertIsolatedAcceptanceDataDir() {
+  const configured = String(process.env.APP_DATA_DIR || '').trim();
+  if (!configured) {
+    throw new Error('refusing browser acceptance: APP_DATA_DIR must name a disposable data directory');
+  }
+  const dataDir = path.resolve(process.cwd(), configured);
+  const ownerDataDir = path.resolve(process.cwd(), 'data');
+  if (dataDir === ownerDataDir || dataDir.startsWith(`${ownerDataDir}${path.sep}`)) {
+    throw new Error(`refusing browser acceptance: APP_DATA_DIR points at owner data (${dataDir})`);
+  }
+}
+
 function provision() {
   if (externalAcceptance) {
     return JSON.parse(fs.readFileSync(externalCredentialFile, 'utf8'));
@@ -784,6 +796,7 @@ async function send(page, prompt, expectation = {}) {
 async function main() {
   // Validate scenario safety before any provisioning can enable the gated
   // acceptance facility or touch deployment state.
+  assertIsolatedAcceptanceDataDir();
   const scenarios = loadJourneyScenarios();
   const credentials = provision();
   acceptanceUsername = String(credentials.username || acceptanceUsername);
