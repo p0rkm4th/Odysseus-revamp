@@ -34,6 +34,15 @@ instructions. This adds a green mutation/readback result for webpage-shaped
 Recipe input on the isolated Qwen3:8B candidate; the owner runtime was not
 modified.
 
+## URL Recipe import approval and durability checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+A public URL with an explicit display-name override reached the visible sealed
+action approval gate. After owner approval, canonical readback confirmed the
+name, source URL, six servings, twelve ingredients, and instructions; a fresh
+browser reload confirmed durability. This is green isolated Qwen3:8B evidence
+for URL import, approval UX, and persistence. The actual owner runtime was
+not modified.
+
 ## Recipe review browser boundary — `2026-08-30`
 
 The next Recipe review replay did not reach a chat turn: isolated setup first
