@@ -16,6 +16,7 @@ import re
 from typing import Any, Iterable, Iterator
 from uuid import uuid4
 
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -35,6 +36,7 @@ from src.inventory_planning import (
     RecipeRequirement,
     RecipeStockPlan,
     StockLot,
+    item_name_search_terms,
     normalize_item_name,
     plan_recipe_stock,
 )
@@ -470,13 +472,13 @@ class InventoryService:
     def search_items(
         self, owner: str, query: str, *, domain: str | None = None, limit: int = 50,
     ) -> list[dict[str, Any]]:
-        term = normalize_item_name(query)
+        terms = item_name_search_terms(query)
         limit = max(1, min(int(limit), 200))
         with self._read() as db:
             statement = db.query(InventoryItem).filter(
                 InventoryItem.owner == owner,
                 InventoryItem.archived.is_(False),
-                InventoryItem.normalized_name.contains(term),
+                or_(*(InventoryItem.normalized_name.contains(term) for term in terms)),
             )
             if domain is not None:
                 statement = statement.filter(InventoryItem.domain == str(domain).casefold())

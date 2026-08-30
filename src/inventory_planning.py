@@ -17,6 +17,23 @@ def normalize_item_name(value: Any) -> str:
     return name
 
 
+def item_name_search_terms(value: Any) -> tuple[str, ...]:
+    """Return bounded owner-facing name variants for ordinary inflection."""
+    term = normalize_item_name(value)
+    variants = [term]
+    if term.endswith("ies") and len(term) > 3:
+        variants.append(term[:-3] + "y")
+    elif term.endswith("oes") and len(term) > 3:
+        variants.append(term[:-2])
+    elif term.endswith("o") and len(term) > 2:
+        variants.append(term + "es")
+    elif term.endswith("s") and not term.endswith(("ss", "us")) and len(term) > 2:
+        variants.append(term[:-1])
+    else:
+        variants.append(term + "s")
+    return tuple(dict.fromkeys(variants))
+
+
 @dataclass(frozen=True)
 class StockLot:
     lot_id: str
