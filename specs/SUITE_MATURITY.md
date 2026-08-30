@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Asset reconciliation shared-dialog follow-up — exact candidate `ca206716` (2026-08-30)
+
+CMDB candidate naming now uses the shared styled prompt for both required and
+optional names, retaining explicit rejection semantics. Focused UI/network
+coverage passed 13 tests and the authenticated visual gate passed at desktop,
+narrow, and mobile sizes on the exact source-marked candidate. This is a
+focused follow-up to the prior broad regression, not a new full-suite claim;
+owner deployment state was not modified.
+
 ## Security shared-dialog checkpoint — exact candidate `79d377cb` (2026-08-30)
 
 Security engagement creation now uses the shared Hades styled prompt and
