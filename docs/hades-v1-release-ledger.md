@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Fresh-fresh post-restart acceptance and credential-expiry classification (2026-08-30)
+
+The fresh-fresh disposable lane restarted on exact candidate
+`8c620bf438bd` with zero restarts. Its first post-restart browser attempt did
+not reach the product: the isolated credential had expired and login bootstrap
+returned 401 responses, classified as `AUTH_SESSION_FAILURE`. The credential
+was rotated only under `/tmp/hades-fresh-fresh/data`, and the lane was
+restarted again.
+
+The normal authenticated `OWNER-WORK-EMPTY-001` journey then passed on the
+fresh-fresh lane with one GUI read, one terminal stream, and
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. No owner deployment or data was involved.
+
 ## Broad regression after continued owner acceptance (2026-08-30)
 
 The supported Python regression completed with `7063 passed, 8 skipped, 149
