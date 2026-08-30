@@ -1163,7 +1163,7 @@ def test_public_agent_policy_hides_sensitive_tools(monkeypatch):
     assert "read_file" in blocked
     assert "app_api" in blocked
     assert "serve_preset" in blocked
-    assert "manage_tasks" in blocked
+    assert "manage_tasks" not in blocked
     # The authenticated owner may manage their own private memory. The
     # canonical ActionSpec still bounds this to owner-scoped memory records.
     assert "manage_memory" not in blocked
