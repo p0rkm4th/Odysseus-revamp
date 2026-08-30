@@ -69,6 +69,13 @@ def test_asset_reconciliation_uses_shared_prompt_dialog():
     assert "window.prompt(" not in source
 
 
+def test_inventory_mutations_use_shared_confirmation_dialogs():
+    source = (ROOT / "static/js/inventory.js").read_text()
+    assert source.count("uiModule?.styledConfirm") >= 3
+    assert "window.confirm(" not in source
+    assert "Apply stock changes" in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]
