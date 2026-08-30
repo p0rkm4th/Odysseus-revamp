@@ -2405,7 +2405,11 @@ async def stream_aci_runtime(
                 disabled_tools=disabled_tools,
                 owner=owner,
                 active_run=_active_run_context,
-                query=str(_intent.get("retrieval_query") or _last_user),
+                query=str(
+                    _intent.get("canonical_query")
+                    or _intent.get("retrieval_query")
+                    or _last_user
+                ),
                 profile=_aci_profile,
                 network_cidr=network_discovery_request_cidr(_last_user),
                 read_payload_builder=canonical_read_fast_path_payload,

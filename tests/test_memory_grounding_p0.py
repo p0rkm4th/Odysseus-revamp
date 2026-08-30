@@ -125,7 +125,8 @@ def test_memory_property_followup_uses_canonical_read_after_correction():
         "What is my test color now?",
     )
     assert owned is True
-    assert intent["retrieval_query"] == "What is my test color now?"
+    assert intent["retrieval_query"] == "What do you remember about me?"
+    assert intent["canonical_query"] == "What is my test color now?"
 
 
 def test_memory_delete_resolution_ignores_recalled_context_contamination():
