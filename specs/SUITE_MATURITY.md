@@ -1586,3 +1586,13 @@ false premise `which recipe did i cook last night?` produced a truthful empty
 cooking-history answer because no cooking events are recorded. This improves
 reference continuity and epistemic behavior, but Recipe V1 remains below the
 release bar until mutation/import/review journeys are broadly green.
+
+## Household and Work owner walkabout — exact candidate `a0681fc1` (2026-08-29)
+
+Household add/consume chat mutations reached the canonical inventory owner and
+were independently verified as 3 then 2 after explicit visible approval;
+reload preserved the result. The approval-free expectation in the current
+journey corpus does not match the tainted-run safety gate and remains an
+acceptance-policy mismatch. Work empty-state reads passed for three ordinary,
+sloppy variants and survived reload. Tier 1 is still not release-ready because
+Recipe import/review and household approval semantics remain under pressure.
