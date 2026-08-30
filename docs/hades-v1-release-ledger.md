@@ -3558,6 +3558,13 @@ evidence was produced, so this is classified as `ENVIRONMENT_FAILURE`, not a
 Memory regression. The dedicated network acceptance lane remains the valid
 source for network-read evidence.
 
+After the Memory projection repair, the dedicated network-capable disposable
+lane was redeployed to exact candidate `17c067a2` and passed the full standard
+7-turn read-only owner walkabout. Network, homelab, memory, assets, reference
+continuity, and Work each produced one terminal stream; the run recorded 7
+read journeys, 0 mutations, 0 false successes, 0 raw final Results, 0
+duplicate deliveries, and 0 abrupt EOFs.
+
 Video import coverage also passed on the disposable URL lane. A video with no
 verified recipe data required approval, returned a review-safe answer, and
 left the canonical Recipe count unchanged. A positive public cooking video
