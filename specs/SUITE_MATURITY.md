@@ -2,11 +2,16 @@
 
 ## Fresh-fresh install/restart checkpoint — exact candidate `04d05854` (2026-08-30)
 
-An empty disposable Compose state completed first-run setup, Qwen3:8B endpoint
-registration, and an authenticated empty-Work browser read. After restarting
-the app container, the same journey passed again with the exact source marker
-and zero Docker restarts. This current-candidate install/restart evidence is
-isolated from the owner deployment.
+An empty disposable Compose state passed first-run setup, Qwen3:8B endpoint
+registration, and an authenticated empty-Work browser read. The app was
+restarted and the same journey passed again with the exact source marker and
+zero Docker restarts. Owner deployment state was not modified.
+
+## Asset ordinal reference-chain checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The realistic messy Asset journey passed three grounded read turns covering
+ordinal selection, self-correction, and a property follow-up. False success,
+raw Result, duplicate delivery, and abrupt EOF were zero.
 
 ## Household clean mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
 
