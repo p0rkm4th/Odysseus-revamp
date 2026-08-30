@@ -125,6 +125,15 @@
       "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Budget Chili", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Budget Chili", "contains_source_url": "https://www.budgetbytes.com/slow-cooker-white-chicken-chili/"}, "terminal": {"done": 3, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-VIDEO-NO-EVIDENCE-001",
+      "environment": "realistic_messy_synthetic",
+      "fixture_profile": "empty-recipes-video-no-evidence",
+      "turns": [
+        {"prompt": "Save the recipe from this video in my recipe book as \"Acceptance Video No Recipe\": https://www.youtube.com/watch?v=dQw4w9WgXcQ. If it isn't a recipe, tell me clearly and don't invent one.", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "ERROR", "action": "commit_import", "tool_binding": "manage_recipes", "approval": "required", "requires_effect": false, "must_include_any": ["review", "no recipe", "nothing was saved", "missing"], "forbidden": ["successfully added", "saved successfully", "invented ingredient"]}}
+      ],
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_count": 0}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "recipe_count": 0}, "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-HOUSEHOLD-MUTATION-READBACK-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "empty-household",
