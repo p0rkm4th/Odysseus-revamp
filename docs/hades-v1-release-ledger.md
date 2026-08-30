@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Notes shared-confirmation checkpoint — exact candidate `a7e44b99` (2026-08-30)
+
+Notes retained native confirmation fallbacks across bulk note deletion,
+clearing past reminders, editor deletion, and direct note deletion. All four
+now use shared Hades confirmations with explicit keep/cancel labels and danger
+treatment. Focused Notes/reminder coverage passed 44 tests. Exact candidate
+`odysseus:candidate-a7e44b99` has image ID
+`sha256:0236b422d84143b1f94a3636ae206692cf0c9bb39120ed34d1b257d421a949fa`
+and source marker `a7e44b99f0dc69643fd76187dca3268f532b2b36`; isolated runtime
+was healthy with 0 restarts. Authenticated responsive browser acceptance and
+the broad regression passed `7037 passed, 8 skipped, 149 warnings` in 297.55
+seconds. Owner deployment and data remain untouched.
+
 ## Tasks shared-confirmation checkpoint — exact candidate `5dcbf204` (2026-08-30)
 
 Tasks retained native confirmation fallbacks across five owner actions:
