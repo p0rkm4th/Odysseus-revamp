@@ -28,6 +28,21 @@ alone was insufficient protection; no browser mutation was run in that stack,
 and it was stopped and removed before further testing. The owner container
 remained running with zero restarts.
 
+## Acceptance isolation and video safety checkpoint — exact candidate `7e01a053` (2026-08-30)
+
+The exact candidate `7e01a053bb638810aec361b3914e4adefd088c0b`, image
+`sha256:d2023c97033dadaf93515c4b0db7a68b3b647cf00395b7a2434b4fd878c5a48f`,
+was browser-tested in a fresh temporary data directory with separate Compose
+network, ports, and Chroma volume. The harness refused an intentional
+`APP_DATA_DIR=data` invocation before provisioning, then the isolated stack
+passed `OWNER-RECIPE-VIDEO-NO-EVIDENCE-001` through the normal login/chat
+surface using Qwen3:8B. The ordinary video request produced a clear no-evidence
+outcome, made no canonical Recipe, and survived two independent readback
+checks; one turn, one attempted mutation, zero false successes, raw final
+Results, duplicate delivery, or abrupt EOF. The stack was removed afterward.
+The candidate container had source marker `7e01a053` and zero restarts; the
+owner runtime remained on source `34ced247` with zero restarts.
+
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
 `OWNER-MEMORY-MUTATION-READBACK-001` passed on the exact disposable
