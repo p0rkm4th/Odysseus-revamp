@@ -2255,8 +2255,7 @@ export function _renderRunningTab() {
         const _msg = stillRunning
           ? `No finished tasks on ${_serverName(host)} — ${stillRunning} still running. Stop them first to clear.`
           : `No finished tasks on ${_serverName(host)}.`;
-        if (window.uiModule?.showToast) window.uiModule.showToast(_msg);
-        else alert(_msg);
+        uiModule.showToast(_msg);
         return;
       }
       if (!await window.styledConfirm(`Clear ${toRemove.length} finished task${toRemove.length === 1 ? '' : 's'} on ${_serverName(host)}?`, { confirmText: 'Clear' })) return;

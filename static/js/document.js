@@ -636,8 +636,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      if (uiModule) uiModule.showError('Export failed: ' + e.message);
-      else alert('Export failed: ' + e.message);
+      uiModule.showError('Export failed: ' + e.message);
     }
   }
 

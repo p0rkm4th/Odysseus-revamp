@@ -1,7 +1,7 @@
 let pane = null;
 let windowEl = null;
 import { openWindow, close as closeWindow, registerView } from './workspaceWindowManager.js';
-import { styledPrompt } from './ui.js';
+import { styledPrompt, showError } from './ui.js';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path, options={}) { const r=await fetch(path,{credentials:'same-origin',headers:options.body?{'Content-Type':'application/json'}:undefined,...options}); const d=await r.json().catch(()=>({})); if(!r.ok) throw Error(d.detail||`Request failed (${r.status})`); return d; }
 function readableRecord(kind, row, title) {
@@ -54,7 +54,7 @@ async function createGoal(){
   const outcome = await styledPrompt('What outcome would make this goal complete? (Optional)', {title:'Desired outcome', placeholder:'e.g. A tested release candidate is ready', confirmText:'Create', maxLength:500});
   if (outcome === null) return;
   try { await api('/api/work/goals',{method:'POST',body:JSON.stringify({title,desired_outcome:outcome})}); await load(); }
-  catch(e) { alert(e.message); }
+  catch(e) { showError(e.message); }
 }
 function close(){closeWindow('work-overview');pane=null;windowEl=null;document.getElementById('tool-work-btn')?.classList.remove('active');}
 export function togglePanel(){if(pane)close();else{windowEl=openWindow({id:'work-overview',view:'work',title:'Work',content:''});pane=windowEl.querySelector('.hades-window-body');document.getElementById('tool-work-btn')?.classList.add('active');load();}}
