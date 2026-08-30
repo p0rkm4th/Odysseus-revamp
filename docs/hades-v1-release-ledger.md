@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## False-premise Asset and empty-Recipe continuation (2026-08-30)
+
+The realistic duplicate-like/incomplete Asset journey passed a GUI no-match
+query without inventing a canonical entity. The deterministic empty Recipe
+journey then returned a bounded canonical empty-state answer. Each was a
+single read stream; both reported `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0`. No mutation or owner-state change
+occurred.
+
 ## OSINT visual fixture fidelity correction (2026-08-30)
 
 Screenshot review of the realistic OSINT walkabout found that its synthetic
