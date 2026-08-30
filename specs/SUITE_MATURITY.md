@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Ambiguous service restart safety checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+An unqualified “Restart it” correctly produced a clarification instead of
+guessing a service or claiming execution. The isolated Qwen3:8B journey had
+zero false success, raw Result, duplicate delivery, or abrupt EOF.
+
 ## Positive Recipe video import checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 Public video recipe ingestion passed through owner chat with validated
