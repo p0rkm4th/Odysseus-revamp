@@ -2094,7 +2094,12 @@ def provisional_intent_projection(
         and frame.operation_class == "DELETE"
     )
     retrieval_query = (
-        "What do you remember about me?"
+        # Contextual property reads are routed through the explicit Memory
+        # contract above, but must retain the owner's actual question for
+        # canonical filtering. Replacing it with a broad summary here lets a
+        # deleted fact reappear beside unrelated memories and makes a narrow
+        # correction look successful while the next read is stale.
+        latest
         if contextual_memory_read else (
             recent_user_context
             if continuation or retain_memory_context else latest

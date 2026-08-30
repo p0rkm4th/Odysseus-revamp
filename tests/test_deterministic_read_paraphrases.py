@@ -483,6 +483,26 @@ def test_contextual_cue_does_not_demote_substantive_recipe_create():
     assert resolve_intent(frame).action_id == "add"
 
 
+def test_memory_correction_followup_keeps_narrow_property_query():
+    messages = [
+        {"role": "user", "content": "Remember that my test color is ultraviolet orange."},
+        {"role": "assistant", "content": "Remembered that for you."},
+        {"role": "user", "content": "What is my test color?"},
+        {"role": "assistant", "content": "Here's what I remember: ultraviolet orange."},
+        {"role": "user", "content": "Actually, that is not true anymore."},
+        {"role": "assistant", "content": "Removed that memory."},
+        {"role": "user", "content": "What is my test color now?"},
+    ]
+    projection, owned = provisional_intent_projection(messages, messages[-1]["content"])
+    assert owned is True
+    assert projection["retrieval_query"] == messages[-1]["content"]
+    # The provisional projection supplies the explicit Memory frame because
+    # this natural property wording is intentionally not a standalone domain
+    # grammar match. The preserved query must still remain narrow for the
+    # canonical Brain filter.
+    assert is_explicit_memory_query(projection["retrieval_query"])
+
+
 def test_recipe_detail_followup_uses_session_reference_context_and_get_action():
     context = {
         "ordered_entities": [{"ref": "recipe-1", "concept": "RECIPE"}],
