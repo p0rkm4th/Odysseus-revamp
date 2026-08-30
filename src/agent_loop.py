@@ -6056,11 +6056,7 @@ async def stream_aci_runtime(
             logger.info("[agent] odysseus doc tool completed after one textual tool block")
             break
 
-        if (
-            (_ody_notes_finetune_mode or _ody_qwen_finetune_model)
-            and _ody_notes_tool_completed
-            and not _aci_answer_only
-        ):
+        if _ody_notes_tool_completed and not _aci_answer_only:
             logger.info("[agent] odysseus completed from deterministic tool output")
             break
 

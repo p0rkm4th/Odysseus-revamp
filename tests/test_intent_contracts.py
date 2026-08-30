@@ -131,6 +131,18 @@ def test_natural_reminder_uses_existing_notes_mutation_contract():
     assert resolved.reason != "actionspec_unavailable"
 
 
+def test_natural_reminder_projects_title_and_due_date_without_model_arguments():
+    from src.intent_contracts import note_mutation_payload
+
+    assert note_mutation_payload(
+        "Remind me tomorrow to review the backup plan.", "add"
+    ) == {
+        "action": "add",
+        "title": "Review the backup plan",
+        "due_date": "tomorrow",
+    }
+
+
 @pytest.mark.parametrize("query", [
     "What IT assets do I have?",
     "What machines are recorded?",

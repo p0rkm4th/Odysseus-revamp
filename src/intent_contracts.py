@@ -643,6 +643,29 @@ def memory_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
     return None
 
 
+def note_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
+    """Project a natural one-off reminder into the existing notes Action."""
+    if str(action or "").strip().casefold() != "add":
+        return None
+    text = re.sub(r"\s+", " ", str(query or "").strip())
+    match = re.search(
+        r"\bremind\s+me\s+(?P<when>.+?)\s+to\s+(?P<title>.+?)\s*[.!?]?$",
+        text, re.IGNORECASE,
+    )
+    if not match:
+        return None
+    when = match.group("when").strip(" .,:;")
+    title = match.group("title").strip(" .:;\"'")
+    if not title or not re.search(
+        r"\b(?:today|tomorrow|tonight|morning|afternoon|evening|hour|hours|minute|minutes|day|days|week|weeks|at|on)\b",
+        when, re.IGNORECASE,
+    ):
+        return None
+    title = title[:500]
+    title = title[:1].upper() + title[1:]
+    return {"action": "add", "title": title, "due_date": when[:200]}
+
+
 def work_project_create_payload(query: str) -> dict[str, Any] | None:
     """Project only an explicit Work project title into a bounded Action.
 
