@@ -18,6 +18,20 @@ removed. The next release task is to exercise the documented normal admin
 model-registration flow in the fresh-fresh lane before rerunning broader
 Memory correction/reference journeys.
 
+The setup gap was reproduced and generalized in the acceptance helper: an
+entrypoint-provisioned instance now authenticates the configured
+`ODYSSEUS_ADMIN_USER` (default `admin`), while API-first setup retains its
+dedicated bootstrap username. Through the normal admin login and
+`/api/model-endpoints` flow, a fresh disposable project registered the host
+Ollama endpoint and exposed `qwen3:8b`. The exact executable candidate
+`f726b16b` then passed `OWNER-MEMORY-CORRECTION-READBACK-001`: four turns,
+two canonical mutations, four terminal completions, and zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF. The browser
+harness fix was tested from the worktree as a script/test descendant; the
+product container remained source-matched to `f726b16b`. The stack and
+temporary credentials were removed, and the actual owner runtime was not
+touched.
+
 ## Docker Chroma persistence checkpoint — pending candidate (2026-08-29)
 
 Release testing found a product/recovery defect in all three Docker Compose

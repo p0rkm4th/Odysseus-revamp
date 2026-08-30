@@ -138,8 +138,15 @@ def bootstrap_acceptance_user(
             "acceptance instance is already configured; provide --bootstrap-admin-password"
         )
     # Setup does not issue a token; authenticate the bootstrap controller using
-    # the same public login flow a real operator uses.
-    login(session, base_url, BOOTSTRAP_ADMIN, admin_password)
+    # the same public login flow a real operator uses.  The container
+    # entrypoint may have already created its configured admin account before
+    # this helper runs, so use that account for preconfigured installs.  A
+    # fresh API-first install still uses the dedicated bootstrap identity.
+    bootstrap_username = (
+        BOOTSTRAP_ADMIN if not status.get("configured")
+        else (os.environ.get("ODYSSEUS_ADMIN_USER") or "admin").strip().lower()
+    )
+    login(session, base_url, bootstrap_username, admin_password)
     created = session.post(
         f"{base_url}/api/auth/users",
         json={"username": ACCEPTANCE_USER, "password": acceptance_password, "is_admin": False},
