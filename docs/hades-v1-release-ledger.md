@@ -2259,3 +2259,10 @@ the Recipe shopping-requirements journey across 2 turns with 2 canonical
 readbacks and reload durability. Both disposable stacks were healthy with
 zero restarts and Qwen3:8B configured through the normal model endpoint flow.
 The real owner deployment remains untouched at source `34ced247`.
+
+The same disposable stack passed `OWNER-WORK-OVERVIEW-001` across 3 owner
+turns with 2 canonical readbacks and reload durability. The ambiguous restart
+and no-active-context continuation journeys also passed 2 turns without false
+execution claims, duplicate delivery, or abrupt EOF. These are safety/read
+evidence only; active homelab/security execution remains separately approval-
+scoped.
