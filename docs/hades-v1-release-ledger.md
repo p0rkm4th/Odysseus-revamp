@@ -35,7 +35,7 @@ The exact candidate `7e01a053bb638810aec361b3914e4adefd088c0b`, image
 was browser-tested in a fresh temporary data directory with separate Compose
 network, ports, and Chroma volume. The harness refused an intentional
 `APP_DATA_DIR=data` invocation before provisioning, then the isolated stack
-passed `OWNER-RECIPE-VIDEO-NO-EVIDENCE-001` through the normal login/chat
+passed `OWNER-RECIPE-VIDEO-INSUFFICIENT-EVIDENCE-001` through the normal login/chat
 surface using Qwen3:8B. The ordinary video request produced a clear no-evidence
 outcome, made no canonical Recipe, and survived two independent readback
 checks; one turn, one attempted mutation, zero false successes, raw final
