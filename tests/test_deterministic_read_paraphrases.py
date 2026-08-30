@@ -493,6 +493,13 @@ def test_memory_correction_followup_keeps_narrow_property_query():
         {"role": "assistant", "content": "Removed that memory."},
         {"role": "user", "content": "What is my test color now?"},
     ]
+    initial_projection, initial_owned = provisional_intent_projection(
+        messages[:3], messages[2]["content"],
+    )
+    assert initial_owned is True
+    assert initial_projection["domains"] == {"memory"}
+    assert initial_projection["retrieval_query"] == messages[2]["content"]
+
     projection, owned = provisional_intent_projection(messages, messages[-1]["content"])
     assert owned is True
     assert projection["retrieval_query"] == messages[-1]["content"]

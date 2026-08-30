@@ -19,7 +19,7 @@ from src.capability_registry import CAPABILITY_REGISTRY, action_for_tool, capabi
 from src.capability_dependencies import dependency_manager
 from src.model_context import estimate_tokens
 from src.prompt_security import untrusted_context_message
-from src.memory_grounding import minimal_saved_memory_message
+from src.memory_grounding import is_explicit_memory_query, minimal_saved_memory_message
 from src.tool_capabilities import (
     ResultIntegrity,
     capabilities_for_action,
@@ -2051,6 +2051,12 @@ def provisional_intent_projection(
     )
     contextual_memory_read = bool(
         memory_property_followup
+        or (
+            read_frame.domain_concept == "UNKNOWN"
+            and read_frame.operation_class == "READ"
+            and read_frame.read_explicit
+            and is_explicit_memory_query(latest)
+        )
     )
     if contextual_memory_read:
         # Compile the active property as an explicit Brain read, while the
@@ -2113,7 +2119,11 @@ def provisional_intent_projection(
     return {
         "low_signal": not bool(latest.strip()),
         "continuation": continuation,
-        "domains": set(),
+        # Preserve the bounded domain selected by the provisional frame. In
+        # particular, natural narrow Memory questions can compile as UNKNOWN
+        # until this projection promotes them to the explicit Memory frame;
+        # returning an empty domain would hand the turn back to the model.
+        "domains": {"memory"} if frame.domain_concept == "MEMORY" else set(),
         "retrieval_query": retrieval_query,
         "general_explanatory": explanatory,
     }, True
