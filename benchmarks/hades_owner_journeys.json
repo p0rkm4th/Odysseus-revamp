@@ -339,7 +339,7 @@
         {"prompt": "What's its RAM?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}},
         {"prompt": "What work do I still have left?", "expected": {"domain": "WORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_work"}},
         {"prompt": "What do you remember about me?", "expected": {"domain": "MEMORY", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "summarize_owner_memory", "tool_binding": "read_memory"}},
-        {"prompt": "What's on my network right now?", "expected": {"domain": "NETWORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "read_network_observations", "tool_binding": "manage_homelab"}},
+        {"prompt": "What's on my network right now?", "expected": {"domain": "NETWORK", "operation": "READ", "answer_source": "ERROR", "action": "read_network_context", "tool_binding": "manage_homelab", "must_include_any": ["couldn't retrieve", "network state", "unavailable", "no current state"]}},
         {"prompt": "Is anything down?", "expected": {"domain": "NETWORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "read_network_observations", "tool_binding": "manage_homelab"}},
         {"prompt": "Go back to that second computer.", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}},
         {"prompt": "And its storage?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}}
