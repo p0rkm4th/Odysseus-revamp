@@ -30,6 +30,14 @@ reported `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
 `abruptEOF=0`. This confirms the current candidate handles a nontechnical
 Household phrasing path without seeding the behavior through an API.
 
+## Asset reference-chain checkpoint (2026-08-30)
+
+The realistic `OWNER-ASSET-REFERENCE-CHAIN-001` journey passed three GUI reads
+covering an asset reference and follow-up property questions. All three streams
+completed with one terminal event, with `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0`. No mutation was attempted and no
+owner data was touched.
+
 ## Current-candidate recovery rehearsal and fresh-fresh acceptance (2026-08-30)
 
 The current executable candidate `8c620bf438bd` was deployed into the
