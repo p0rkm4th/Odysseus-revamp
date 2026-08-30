@@ -174,7 +174,11 @@ export function handleUIControl(uiData) {
 
     } else if (uiEvent === 'recipe_import_review' || uiData.ui_event === 'recipe_import_review') {
       if (!uiData.draft || typeof uiData.draft !== 'object') return;
-      import('./inventory.js').then(function(mod) {
+      // Keep this lazy route on the same cache-busted module boundary as the
+      // app shell.  An unversioned import can resolve a stale service-worker
+      // copy after a deployment, which turns a valid review event into a
+      // silent no-op for the owner.
+      import('./inventory.js?v=20260830recipe-review1').then(function(mod) {
         var fn = mod.openRecipeImportDraft || (mod.default && mod.default.openRecipeImportDraft);
         if (fn) fn(uiData.draft);
       }).catch(function(){});
