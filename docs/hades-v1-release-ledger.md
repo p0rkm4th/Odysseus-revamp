@@ -2989,6 +2989,22 @@ canonical reads with no mutation, false success, raw final Result, duplicate
 delivery, or abrupt EOF. This confirms the bounded Work overview projection
 remains intact after the Household and Recipe runtime changes.
 
+## Fresh-fresh install and model setup checkpoint — exact candidate `4da73504` (2026-08-30)
+
+A new disposable Compose project booted from empty application data using an
+isolated network (`172.81.0.0/16`), ports, logs, and Chroma volume. The first
+requested subnet overlapped an existing disposable network and was rejected
+before service startup; active subnets were enumerated and the run was retried
+once with the free subnet. No owner container or data was involved.
+
+Normal browser setup then created the initial `freshadmin` account, logged in
+through the real login form, opened the visible model picker/settings flow,
+tested the Ollama endpoint, and added `qwen3:8b`. After an explicit app
+container restart, health returned healthy with zero restarts; a new normal
+login still showed `qwen3:8b` selected. This closes the first-login/model
+configuration and restart-durability slice for the exact candidate. Broader
+fresh-fresh feature journeys and recovery/restore remain separate gates.
+
 The same acceptance reset boundary now covers canonical Asset fixtures. A
 repeat run exposed stale Atlas/Erebus fixture rows from another scenario; the
 runner now removes only disposable-owner rows marked `acceptance-fixture` and

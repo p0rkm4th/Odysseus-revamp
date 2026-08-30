@@ -1935,6 +1935,14 @@ reset preserves the reusable project, removes stale acceptance tasks/events,
 and was verified by two consecutive task mutation/readback journeys with zero
 false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+The exact candidate also passed a fresh-fresh installation slice from empty
+application data: normal first login, visible Ollama endpoint test/add,
+`qwen3:8b` selection, app restart, healthy recovery, and model selection
+durability after a new login. The first disposable subnet conflicted with an
+existing network and was replaced after enumeration; no owner state was
+touched. Broader fresh-fresh feature and populated recovery evidence remain
+open.
+
 Canonical Asset fixtures now receive an equivalent disposable-owner reset.
 It removes stale rows marked `acceptance-fixture` and their dependent records
 before seeding Atlas/Erebus scenarios. The Asset reference-chain journey then
