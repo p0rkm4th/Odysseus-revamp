@@ -132,6 +132,19 @@ def test_natural_reminder_uses_existing_notes_mutation_contract():
     assert resolved.reason != "actionspec_unavailable"
 
 
+@pytest.mark.parametrize("query", [
+    "Remind me what you know about me.",
+    "Remind me what I'm working on.",
+    "Remind me what I've got going.",
+])
+def test_remind_me_interrogatives_remain_owner_reads(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.operation_class == "READ"
+    assert frame.domain_concept in {"MEMORY", "WORK"}
+    assert resolved.action_id in {"summarize_owner_memory", "overview"}
+
+
 def test_reminder_title_can_contain_cancel_without_becoming_a_delete():
     frame = compile_intent("Remind me tomorrow to cancel the test appointment.")
     assert frame.operation_class == "CREATE"

@@ -2059,7 +2059,20 @@ def _operation(text: str, *, continuation: bool = False) -> str:
         q,
     ):
         return "DELETE"
-    if re.search(r"\bremind\s+me\b", q): return "CREATE"
+    # ``remind me`` is also ordinary conversational wording for recalling
+    # information ("Remind me what you know about me"). Only treat it as a
+    # mutation when it has a reminder-shaped request rather than an
+    # interrogative clause. Keep the broad ``to`` form for owner language such
+    # as "remind me to call..." and the explicit recurring form for
+    # "every morning remind me...".
+    if re.search(
+        r"\bremind\s+me\s+(?!(?:what|who|where|when|how|why|if|whether)\b)"
+        r"[^?!.]{0,240}\bto\b|"
+        r"\b(?:every|each)\s+(?:morning|afternoon|evening|day|weekday|week)\b"
+        r"[^?!.]{0,160}\bremind\s+me\b",
+        q,
+    ):
+        return "CREATE"
     if re.search(r"\b(?:delete|remove|retire|forget|cancel)\b", q): return "DELETE"
     if re.search(r"\b(?:remember|memorize|save this about me)\b", q): return "CREATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm|move)\b", q): return "UPDATE"

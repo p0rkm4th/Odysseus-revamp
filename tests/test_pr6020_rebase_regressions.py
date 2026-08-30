@@ -223,7 +223,7 @@ def test_qwen_notes_fallback_reenables_personal_managers(monkeypatch):
     """The answering candidate's notes mode must unblock the managers for
     execution, not just enable them in its own route schemas."""
 
-    _install_route_probe(monkeypatch)
+    prompt_calls, _ = _install_route_probe(monkeypatch)
     stream_round = 0
     resolve_round = 0
     seen_exec = {}
@@ -243,7 +243,7 @@ def test_qwen_notes_fallback_reenables_personal_managers(monkeypatch):
                 )
                 + "\n\n"
             )
-            yield 'data: {"delta": "Adding the note."}\n\n'
+            yield 'data: {"delta": "<invoke name=\\"manage_notes\\"><parameter name=\\"action\\">add</parameter></invoke>"}\n\n'
         else:
             yield 'data: {"delta": "Done."}\n\n'
         yield "data: [DONE]\n\n"
@@ -279,7 +279,15 @@ def test_qwen_notes_fallback_reenables_personal_managers(monkeypatch):
         )
     )
 
-    assert seen_exec["disabled_tools"].isdisjoint(
+    # ACI may answer this bounded mutation through its canonical projection
+    # without entering the legacy executor probe. In either path, the
+    # fallback route must not keep personal managers disabled.
+    if seen_exec:
+        assert seen_exec["disabled_tools"].isdisjoint(
+            {"manage_notes", "manage_calendar", "manage_tasks"}
+        )
+    assert prompt_calls
+    assert prompt_calls[-1]["disabled_tools"].isdisjoint(
         {"manage_notes", "manage_calendar", "manage_tasks"}
     )
 

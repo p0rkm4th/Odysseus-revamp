@@ -3565,6 +3565,28 @@ async def stream_aci_runtime(
                                 if candidate_index < len(_candidate_route_descriptors)
                                 else {}
                             )
+                            # The fallback route's prompt is built with the
+                            # shared blocklist below. Relax the personal
+                            # managers before that build, not afterward, or a
+                            # Qwen notes/calendar/task fallback sees a route
+                            # that advertises no usable owner tools and can
+                            # only answer with unsupported prose.
+                            _fallback_notes_mode = (
+                                _is_odysseus_qwen_model(data.get("answered_by"))
+                                and (
+                                    "notes_calendar_tasks" in _intent_domains
+                                    or _looks_like_notes_turn(_last_user)
+                                    or (
+                                        _looks_like_notes_calendar_followup(_last_user)
+                                        and minimal_recent_notes_tool_context_message(messages) is not None
+                                    )
+                                )
+                                and not guide_only
+                            )
+                            if _fallback_notes_mode:
+                                disabled_tools.difference_update({
+                                    "manage_notes", "manage_calendar", "manage_tasks",
+                                })
                             endpoint_url, model, headers = _pinned_fallback_candidate
                             answering_state = _candidate_request_states.get(candidate_index)
                             if answering_state is None:
