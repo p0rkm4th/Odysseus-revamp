@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Fresh-fresh install/restart checkpoint — exact candidate `04d05854` (2026-08-30)
+
+An empty disposable Compose state completed first-run setup, Qwen3:8B endpoint
+registration, and an authenticated empty-Work browser read. After restarting
+the app container, the same journey passed again with the exact source marker
+and zero Docker restarts. This current-candidate install/restart evidence is
+isolated from the owner deployment.
+
 ## Household clean mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
 
 The clean Household journey passed four deterministic owner turns with two GUI
