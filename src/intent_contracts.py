@@ -2225,7 +2225,8 @@ def compile_intent(
         concept = "WORK"
     elif re.search(
         r"\b(?:what(?:'s|\s+is)?\s+(?:left|outstanding)|whats\s+(?:left|outstanding)|"
-        r"what\s+should\s+i\s+do\s+next|check\s+my\s+work|review\s+my\s+work)\b",
+        r"what\s+should\s+i\s+do\s+next|what(?:'s|\s+is)\s+next|"
+        r"check\s+my\s+work|review\s+my\s+work)\b",
         q,
     ):
         # Personal operating-agent language often omits the noun "tasks" or
@@ -2572,7 +2573,7 @@ def compile_intent(
     semantic_view = deterministic_read_view(text, concept)
     if concept == "WORK" and (
         semantic_view == "attention"
-        or re.search(r"\b(?:attention|waiting\s+on|pending\s+approvals?)\b", q)
+        or re.search(r"\b(?:attention|waiting\s+on|pending\s+approvals?|what(?:'s|\s+is)\s+next)\b", q)
     ):
         reference_filters["view"] = "attention"
     elif concept == "DEVELOPER":
