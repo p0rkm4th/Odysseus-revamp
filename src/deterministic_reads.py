@@ -202,7 +202,7 @@ def _normalized(text: str) -> str:
     # normalization layer, not a list of benchmark sentences.
     tokens = {
         "abotu": "about", "abt": "about", "bout": "about",
-        "yuo": "you", "teh": "the", "wht": "what",
+        "yuo": "you", "teh": "the", "wht": "what", "whts": "whats",
     }
     value = re.sub(r"\b[^\s]+\b", lambda match: tokens.get(match.group(0), match.group(0)), value)
     value = re.sub(r"\s+", " ", value).strip(" .?!")
