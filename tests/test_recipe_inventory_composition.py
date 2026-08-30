@@ -237,6 +237,18 @@ def test_expiring_recipe_result_has_a_human_renderer_distinct_from_raw_result():
     assert not answer.startswith("{")
 
 
+def test_expiring_recipe_result_contract_accepts_candidates_collection():
+    from src.intent_contracts import validate_bound_result
+
+    valid, reason = validate_bound_result(
+        "read_recipes", "expiring_candidates",
+        {"status": "SUCCESS", "candidates": [{"recipe_name": "Chicken Rice"}]},
+    )
+
+    assert valid is True
+    assert reason == "SUCCESS"
+
+
 def test_pantry_recipe_candidates_compose_current_stock_without_mutation():
     service, recipe = _recipe_fixture()
     result = service.manage_recipes({"action": "pantry_candidates"}, owner="alice")
