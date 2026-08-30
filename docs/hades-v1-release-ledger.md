@@ -51,6 +51,14 @@ one GUI read and one human final answer, with `falseSuccess=0`,
 `rawFinalResults=0`, `duplicateDelivery=0`, and `abruptEOF=0`. No Network
 mutation or owner deployment change was performed.
 
+## Recipe pantry-composition checkpoint (2026-08-30)
+
+The deterministic `OWNER-RECIPE-COMPOSITION-001` journey passed three GUI
+reads over pantry coverage and recipe candidates, with two canonical readback
+checks. All streams completed cleanly; the oracle reported
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. No mutation was attempted.
+
 ## Current-candidate recovery rehearsal and fresh-fresh acceptance (2026-08-30)
 
 The current executable candidate `8c620bf438bd` was deployed into the
