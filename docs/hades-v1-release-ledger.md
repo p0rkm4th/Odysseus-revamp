@@ -3659,3 +3659,14 @@ duplicate deliveries, and 0 abrupt EOFs. A separate reload probe produced an
 empty provider completion under a long context; provider health was available,
 and the standard retry passed, so that observation remains classified as a
 transient `PROVIDER_FAILURE`/context flake rather than a product pass.
+
+The same exact candidate also closed the positive YouTube evidence gap. After
+renewing the disposable acceptance principal, the owner submitted a public
+cooking-video URL through chat, approved the bounded import, and independently
+verified canonical Recipe count `3 -> 4`. The requested display name,
+`https://www.youtube.com/watch?v=5YcsrFC2h5U`, and two extracted ingredients
+persisted; the final answer reported verified readback with zero page errors.
+After browser reload, the visible Recipe workspace search found the saved
+recipe. Two earlier custom probes stopped before the prompt because of expired
+credentials/session hydration and were classified `AUTH_SESSION_FAILURE` /
+`ENVIRONMENT_FAILURE`, not feature results.
