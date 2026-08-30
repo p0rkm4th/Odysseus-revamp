@@ -1483,6 +1483,39 @@ async def _execute_manage_assets_binding(block, owner=None, run_id=None):
         if isinstance(payload, dict) and payload.get("action") in {
             "add_item", "add_stock", "consume_stock", "adjust_stock", "move_item", "update_asset",
         }:
+            if payload.get("action") == "add_item" and payload.get("domain") == "kitchen" \
+                    and payload.get("initial_quantity") is not None:
+                # "Add N of X" is commonly a stock replenishment even when
+                # the model selects the legacy add_item Action. Resolve an
+                # exact existing owner item before allowing create_item to
+                # mint a duplicate or verify the wrong entity.
+                from src.inventory_planning import normalize_item_name
+                from src.inventory_service import get_inventory_service
+                item_name = str(payload.get("name") or "").strip()
+                normalized_name = normalize_item_name(item_name)
+                matches = get_inventory_service().search_items(owner, item_name, domain="kitchen") if item_name else []
+                exact_matches = [
+                    candidate for candidate in matches
+                    if normalize_item_name(candidate.get("name")) == normalized_name
+                ]
+                if len(exact_matches) > 1:
+                    message = "That pantry item is duplicated in canonical inventory, so I did not guess which one to update."
+                    return "manage_assets", {"error": message, "output": message, "exit_code": 1, "success": False}
+                if len(exact_matches) == 1:
+                    existing = exact_matches[0]
+                    payload = dict(payload)
+                    payload.update({
+                        "action": "add_stock",
+                        "item_id": existing["id"],
+                        "quantity": payload.get("initial_quantity"),
+                        "unit": existing.get("default_unit") or payload.get("initial_unit") or "each",
+                        "idempotency_key": (
+                            f"stream:{str(run_id or uuid4()).strip()}:"
+                            f"{hashlib.sha256(_ody_v34_json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:40]}"
+                        )[:255],
+                    })
+                    for key in ("initial_quantity", "initial_unit", "name", "item_kind", "default_unit"):
+                        payload.pop(key, None)
             if payload.get("action") in {"consume_stock", "move_item"} and not payload.get("item_id"):
                 from src.inventory_service import get_inventory_service
                 item_name = str(payload.get("item_name") or "").strip()

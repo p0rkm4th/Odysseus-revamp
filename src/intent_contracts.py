@@ -700,10 +700,21 @@ def work_task_create_payload(query: str) -> dict[str, Any] | None:
 def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
     """Extract explicit item quantity for the canonical inventory CREATE."""
     text = str(query or "").strip()
+    # Location phrases belong to the operation, not the item's display name.
+    # Split the bounded trailing location clause before extracting the item so
+    # ordinary wording such as "add 3 cans of beans to my pantry" cannot create
+    # an item literally named "beans to my pantry".
+    location_match = re.search(
+        r"\s+(?:to|in)\s+(?:(?:my|the)\s+)?"
+        r"(?P<area>pantry|refrigerator|fridge|freezer|cabinet|kitchen)\s*\.?$",
+        text, re.IGNORECASE,
+    )
+    area = location_match.group("area") if location_match else None
+    item_text = text[:location_match.start()] if location_match else text
     match = re.search(
         r"\badd\s+(?P<quantity>\d+(?:\.\d+)?)\s+(?P<name>.+?)"
-        r"(?:\s+to\s+(?:the\s+)?(?P<area>pantry|refrigerator|fridge|freezer|cabinet|kitchen))?\s*\.?$",
-        text, re.IGNORECASE,
+        r"\s*\.?$",
+        item_text, re.IGNORECASE,
     )
     if not match:
         return None
@@ -720,7 +731,8 @@ def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
         "item_kind": "ingredient", "default_unit": "each",
         "initial_quantity": float(match.group("quantity")),
         "initial_unit": "each",
-        "category": (match.group("area") or "").casefold() or None,
+        "category": (area or "").casefold() or None,
+        "location_name": (area or "").casefold() or None,
     }
 
 
