@@ -1930,6 +1930,11 @@ runs and a subsequent pantry-composition run passed without manual database
 cleanup; the reset is restricted to explicitly external isolated acceptance
 data and preserves historical rows.
 
+Work task-create fixtures now receive the same disposable-owner reset. The
+reset preserves the reusable project, removes stale acceptance tasks/events,
+and was verified by two consecutive task mutation/readback journeys with zero
+false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 The same reset boundary was verified with two consecutive sloppy Household
 mutation/readback runs: each performed two GUI mutations and two canonical
 readbacks with zero false success, raw final Result, duplicate delivery, or

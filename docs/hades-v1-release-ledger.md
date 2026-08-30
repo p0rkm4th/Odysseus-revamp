@@ -2955,6 +2955,14 @@ success, raw final Result, duplicate delivery, or abrupt EOF. This closes the
 observed precondition-contamination loop while keeping fixture cleanup outside
 the behavior under test.
 
+The same reset boundary was extended to the Work task-create profile after a
+precondition audit found tasks left by prior Work overview fixtures. It now
+detaches task references from disposable runs/commitments, removes only tasks
+and events owned by the isolated acceptance principal, and retains the named
+project prerequisite. Two consecutive task-creation journeys then passed
+with one GUI mutation, two canonical readbacks, and zero false success, raw
+final Result, duplicate delivery, or abrupt EOF.
+
 The repaired runner also passed two consecutive
 `OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` runs against the same
 disposable data directory. Each completed 4 turns with 2 GUI mutations and 2
