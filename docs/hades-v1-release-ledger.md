@@ -3505,3 +3505,11 @@ mutation was independently read back, the Recipe was read again, and the
 result survived reload. It covered 2 turns, 1 GUI mutation, and 2 canonical
 readbacks with zero false successes, raw final Results, duplicate delivery, or
 abrupt EOF.
+
+The same isolated URL lane then passed both URL-import gates. The named public
+URL journey required approval, returned a conservative review/error answer,
+and independently confirmed zero saved Recipes. The complete public URL
+journey required approval, created the requested canonical Recipe, listed it,
+retrieved it by reference, and preserved it through reload. Together these
+covered 4 turns, 2 GUI mutation attempts, and 4 canonical readbacks with zero
+false successes, raw final Results, duplicate delivery, or abrupt EOF.
