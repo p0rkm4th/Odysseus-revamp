@@ -3477,3 +3477,15 @@ Candidate image is `sha256:0c4c40adbfa57131905e5d9eeabf8c266b14e7cbb327b95f236a5
 embedded source marker matches the full executable SHA, health is healthy, and
 restart count is 0. The branch HEAD is later test-only commit `7c8e6266`; the
 real owner deployment remains untouched at source `34ced247` and stopped.
+
+## Recipe-empty corpus replay — fixture isolation finding (2026-08-30)
+
+The data-driven `OWNER-RECIPE-EMPTY-001` runner was attempted against the
+long-lived disposable acceptance data directory. The GUI turn completed, but
+its empty-state expectation did not match because that principal already had
+Recipes from earlier mutation replays. This is classified as
+`ENVIRONMENT_FAILURE` / acceptance-fixture isolation debt, not a product
+answer failure: the scenario declares `empty-recipes` but does not enforce a
+zero-recipe precondition or provision a fresh isolated data set. No production
+change was made and no owner data was touched. Future empty-state runs must
+use a fresh disposable stack or an explicit read-only precondition check.
