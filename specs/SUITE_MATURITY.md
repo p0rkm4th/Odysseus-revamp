@@ -1,5 +1,15 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Memory correction reference-resolution fix — exact candidate `04d05854` (2026-08-30)
+
+Real Qwen3:8B GUI testing reproduced a failed natural Memory correction when
+the model appended recalled conversation to its delete query. The executor
+now resolves bounded clauses against one owned canonical record and remains
+fail-closed for ambiguity. Focused coverage passed 21 tests. The rebuilt
+candidate removed the saved test-color fact through chat, and independent
+readback remained empty after reload. This is source-matched exact-candidate
+evidence; the actual owner runtime was not modified.
+
 ## Full regression after compact Recipe parser fix — exact candidate `806fc3ba` (2026-08-30)
 
 The valid broad rerun passed 7,024 tests, with 8 skipped and 149 warnings, in

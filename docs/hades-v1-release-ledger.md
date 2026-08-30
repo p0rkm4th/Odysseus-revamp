@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Memory correction reference-resolution fix — exact candidate `04d05854` (2026-08-30)
+
+Owner testing found a real false-negative mutation: after saving
+`my test color is ultraviolet orange`, the natural follow-up
+`Actually, that is not true anymore. Forget my test color.` reached
+`manage_memory:delete` but Qwen3:8B contaminated its query with recalled
+conversation, so the executor matched zero records and correctly claimed that
+nothing changed. The generalized executor now resolves sentence/recall
+clauses to one owned canonical record, deduplicates candidates, and still
+fails closed on ambiguity. Focused Memory/security coverage passed 21 tests.
+On the rebuilt exact candidate, the real GUI mutation and correction were
+replayed; independent `/api/memory` readback was empty both immediately and
+after browser reload. Image ID:
+`sha256:66465f4b0c58bd98db55e4aa0d18838b1b645b67d545cbe89614d9adf19243f`;
+OCI/source marker matched `04d05854790856719b71e69f6fc27f72da29b66a`;
+runtime had 0 restarts. The actual owner runtime remains untouched.
+
 ## Full regression after compact Recipe parser fix — exact candidate `806fc3ba` (2026-08-30)
 
 After the compact qualitative Recipe repair, the supported full regression
