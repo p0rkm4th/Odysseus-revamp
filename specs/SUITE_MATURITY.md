@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Cookbook action-dialog checkpoint — exact candidate `6f059f00` (2026-08-30)
+
+Cookbook rebuild/update and package-reinstall actions now use shared Hades
+confirmations with visible targets and danger treatment, preserving bounded
+execution behavior. Focused coverage passed 227 tests, responsive browser
+acceptance passed, and the broad regression passed 7,038 tests with 8 skipped
+and 149 warnings. Owner deployment state was not modified.
+
 ## Notes shared-confirmation checkpoint — exact candidate `a7e44b99` (2026-08-30)
 
 Notes bulk deletion, past-reminder clearing, editor deletion, and direct note

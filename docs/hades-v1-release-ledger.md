@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Cookbook action-dialog checkpoint — exact candidate `6f059f00` (2026-08-30)
+
+Cookbook rebuild-engine/update-source and package-reinstall actions still used
+native confirmations despite importing the shared UI module. They now use
+shared Hades confirmations with explicit target/action copy and danger
+treatment; the bounded execution paths are unchanged. Focused Cookbook/UI
+coverage passed 227 tests. Exact candidate `odysseus:candidate-6f059f00` has
+image ID `sha256:5457c9b6eb38d3d0d8efeeeb6d740a831b072cc0c8e1fe82c803628cad34bf3d`
+and source marker `6f059f009d3d5ef2d741339277697f9b81f43f40`; isolated runtime
+was healthy with 0 restarts. Authenticated responsive browser acceptance and
+the full regression passed `7038 passed, 8 skipped, 149 warnings` in 298.16
+seconds. Owner deployment and data remain untouched.
+
 ## Notes shared-confirmation checkpoint — exact candidate `a7e44b99` (2026-08-30)
 
 Notes retained native confirmation fallbacks across bulk note deletion,
