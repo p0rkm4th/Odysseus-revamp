@@ -2041,6 +2041,11 @@ async def _execute_manage_recipes_binding(block, owner=None):
             return "manage_recipes", {
                 "output": _ody_v34_json.dumps(result, default=str, sort_keys=True),
                 "exit_code": 0, "success": True, "data": result,
+                # Keep the UI hint at the tool-result boundary as well as in
+                # canonical data so the SSE bridge can forward it without
+                # exposing or trusting the draft as persisted state.
+                "ui_event": "recipe_import_review",
+                "draft": draft_payload,
             }
         if action in {"add", "commit_import"} and payload.get("source_url"):
             # URL recipe creation is an effectful Action, but source
