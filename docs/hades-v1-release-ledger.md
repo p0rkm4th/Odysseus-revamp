@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recovery artifact verification continuation (2026-08-30)
+
+The retained disposable recovery artifact was independently verified with the
+current `scripts/odysseus-backup` CLI: `recovery.tar.gz` opened successfully
+with 31 members, beginning at `data/app.db` and ending at `data/settings.json`.
+The restored `data/memory.json` matches the archive, the deliberate
+drift-only file is absent, and the pre-restore safety stash remains present.
+Recovery-focused tests also passed (`19 passed, 1 warning`). No owner data,
+volume, or deployment was used.
+
 ## Fresh-fresh post-restart acceptance and credential-expiry classification (2026-08-30)
 
 The fresh-fresh disposable lane restarted on exact candidate
