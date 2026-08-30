@@ -1,5 +1,16 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Shared owner-error surface checkpoint — exact candidate `c4cc63cf` (2026-08-30)
+
+Chat follow-up, Work, RAG, Document, Cookbook, Settings, and Email error paths
+now use shared Hades error/toast surfaces without native browser alerts.
+Focused cross-suite coverage passed 76 tests and exact-candidate responsive
+browser acceptance passed after a bounded startup-readiness retry. The prior
+broad regression passed 7,041 tests with 8 skipped and 149 warnings; this
+frontend-only slice has fresh focused coverage. Native text-entry paths in
+older Presets, Memory, Cookbook hardware-fit, and Gallery surfaces remain
+open. Owner deployment state was not modified.
+
 ## Admin endpoint cleanup dialog checkpoint — exact candidate `319b530c` (2026-08-30)
 
 Admin offline-endpoint cleanup now uses the shared Hades confirmation without
