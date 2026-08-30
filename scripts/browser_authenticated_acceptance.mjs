@@ -706,6 +706,27 @@ async function send(page, prompt, expectation = {}) {
   const finalText = assertHumanCanonicalAnswer(turn, prompt);
   const turnStreams = await page.evaluate((start) =>
     (window.__hadesE2EStreams || []).slice(start), beforeStreams);
+  if (expectation.ui_event) {
+    const uiEvents = turnStreams.flatMap((candidate) => candidate.events || [])
+      .map((event) => event.uiEvent).filter(Boolean);
+    if (!uiEvents.includes(expectation.ui_event)) {
+      throw new Error(`expected UI event ${expectation.ui_event} was not observed for ${prompt}: ${uiEvents.join(', ') || 'none'}`);
+    }
+  }
+  if (expectation.review_dialog) {
+    const reviewDialog = page.locator('.inventory-dialog[data-kind="recipe-import"][data-recipe-review="true"]');
+    await reviewDialog.waitFor({state: 'visible', timeout: 10000});
+    for (const field of expectation.editable_review_fields || []) {
+      const selector = field === 'name' ? '[name="review_name"]'
+        : field === 'servings' ? '[name="review_servings"]'
+          : field === 'instructions' ? '[name="review_instructions"]'
+            : field === 'ingredient quantity' ? '[name="review_ingredient_quantity"]'
+              : field === 'ingredient unit' ? '[name="review_ingredient_unit"]' : null;
+      if (selector && await reviewDialog.locator(selector).count() === 0) {
+        throw new Error(`recipe review dialog omitted editable ${field} for ${prompt}`);
+      }
+    }
+  }
   const mustInclude = expectation.must_include_any || [];
   if (mustInclude.length && !mustInclude.some((value) => new RegExp(literalPattern(value), 'i').test(finalText))) {
     throw new Error(`semantic answer oracle failed for ${prompt}: expected one of ${mustInclude.join(', ')}`);
@@ -922,6 +943,8 @@ async function main() {
                 if (nested?.success !== undefined && event.success === undefined) event.success = Boolean(nested.success);
                 if (nested?.verified !== undefined && event.verified === undefined) event.verified = Boolean(nested.verified);
                 if (json.answer_source) event.answerSource = String(json.answer_source);
+                const uiEvent = json.ui_event || json.data?.ui_event;
+                if (uiEvent) event.uiEvent = String(uiEvent).slice(0, 120);
                 if (json.type === 'ask_user' && json.data && typeof json.data === 'object') {
                   event.askUserKind = String(json.data.kind || '');
                   event.askUserOptions = Array.isArray(json.data.options)
