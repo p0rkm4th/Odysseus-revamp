@@ -15,6 +15,16 @@ passed 94 tests; the data-driven Qwen3:8B replay passed with two no-save
 readbacks and zero false success, raw Result, duplicate delivery, or abrupt
 EOF. The parser fix is source-matched in `odysseus:candidate-806fc3ba`.
 
+## Qualitative Recipe review correction and commit checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+The owner completed the review workflow through the GUI by correcting the two
+qualitative ingredient quantities and saving the draft. Independent canonical
+readback confirmed the requested recipe, all three ingredients, and its
+instructions; a browser reload confirmed durability. This isolated Qwen3:8B
+journey had one GUI mutation and two canonical readbacks, with zero false
+success, raw Result, duplicate delivery, or abrupt EOF. The actual owner
+runtime was not modified.
+
 ## Recipe review browser boundary — `2026-08-30`
 
 The next Recipe review replay did not reach a chat turn: isolated setup first

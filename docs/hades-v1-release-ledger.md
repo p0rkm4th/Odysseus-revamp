@@ -25,6 +25,20 @@ image: `odysseus:candidate-806fc3ba`, image ID
 `sha256:1573b7ccac6d125739ab83a70a8708d5249cad21b6a0af58369c3ca86aa22190`;
 source marker matched `806fc3ba`. The actual owner runtime remains untouched.
 
+## Qualitative Recipe review correction and commit checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+The follow-through owner journey passed in the same isolated Qwen3:8B
+environment. Through the visible review dialog, the owner corrected the two
+qualitative quantities (`salt` = `1 count`, `oil` = `0.5 count`) and clicked
+`Save reviewed recipe`. Independent `GET /api/recipes` readback found the
+requested recipe with all three ingredients and the expected instructions;
+the same canonical record was present after browser reload. This was one GUI
+mutation, one independent post-save readback, and one reload readback, with
+zero false successes, false-premise claims, raw final Results, duplicate
+delivery, or abrupt EOF. The disposable runtime was source-marked
+`806fc3ba0a16f754df8f4d82a8802dd11a3dca73`; the actual owner runtime remains
+untouched.
+
 ## Recipe review replay boundary — browser harness `2026-08-30`
 
 Two disposable Compose attempts reached different pre-chat acceptance
