@@ -3519,3 +3519,11 @@ owner walkabout across 7 natural-language turns covering network, homelab,
 memory, assets, reference continuity, and Work. Each stream terminated once;
 the run had 7 read journeys, 0 mutations, 0 false successes, 0 raw final
 Results, 0 duplicate deliveries, and 0 abrupt EOFs.
+
+The same disposable owner lane passed two additional Work mutations through
+the visible chat composer. A unique project was created and independently
+found in canonical Work state after reload; a task was then created in that
+project, independently found with the expected `project_id`, and preserved
+after reload. Both answers explicitly reported verified canonical readback;
+there were no false-success, raw-result, duplicate-delivery, or abrupt-EOF
+observations.
