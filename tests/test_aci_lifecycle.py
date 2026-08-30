@@ -27,6 +27,7 @@ from src.aci import (
     compile_composite_action,
     ground_action_completion,
     canonical_recipe_mutation_answer,
+    canonical_notes_mutation_answer,
     canonical_work_mutation_answer,
     project_action_selection,
     project_post_result_transition,
@@ -890,6 +891,18 @@ def test_temporal_note_update_keeps_resolved_reference_with_projected_due_date()
     assert selected["payload"] == {
         "action": "update", "due_date": "next Friday", "id": "note-123"
     }
+
+
+def test_successful_note_update_has_a_deterministic_owner_answer():
+    answer = canonical_notes_mutation_answer([{
+        "tool": "manage_notes",
+        "command": json.dumps({"action": "update", "id": "note-123", "due_date": "next Friday"}),
+        "note_id": "note-123",
+        "note_title": "Submit the timesheet",
+        "due_date": "2026-09-04T00:00:00-05:00",
+        "exit_code": 0,
+    }])
+    assert answer == 'Reminder updated: "Submit the timesheet" for 2026-09-04T00:00:00-05:00. It is saved.'
 
 
 def test_household_move_projects_named_item_and_location_for_update_actions():

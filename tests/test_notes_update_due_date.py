@@ -86,6 +86,9 @@ def test_update_parses_natural_language_due_date(monkeypatch):
     )
 
     assert result.get("exit_code") == 0
+    assert result["note_id"] == note.id
+    assert result["note_title"] == "Dentist"
+    assert result["due_date"] == "PARSED::tomorrow at 9am"
     # Stored value went through the parser, not the raw literal.
     assert note.due_date == "PARSED::tomorrow at 9am"
     assert calls["parsed"] == ["tomorrow at 9am"]

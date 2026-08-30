@@ -289,7 +289,13 @@ async def do_manage_notes(content: str, owner: Optional[str] = None) -> Dict:
             if "archived" in args:
                 note.archived = args["archived"]
             db.commit()
-            return {"response": f"Note updated: \"{note.title or '(untitled)'}\"", "exit_code": 0}
+            return {
+                "response": f"Note updated: \"{note.title or '(untitled)'}\"",
+                "note_id": note.id,
+                "note_title": note.title or "",
+                "due_date": note.due_date,
+                "exit_code": 0,
+            }
 
         elif action == "delete":
             note_id = args.get("id", "")
