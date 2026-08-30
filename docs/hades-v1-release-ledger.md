@@ -4557,3 +4557,25 @@ untouched.
 The replay was repeated after the current branch’s subsequent documentation
 and corpus updates with the same exact executable candidate and retained the
 same result. No rebuild was needed for those docs/benchmark-only changes.
+
+## Reminder correction journey — exact candidate `4bcdbb38` (2026-08-30)
+
+The new `OWNER-REMINDER-CORRECTION-001` journey initially exposed three
+generalized defects: temporal correction wording was routed as Run
+continuation; the deterministic due-date projector dropped the unique
+resolved note ID when it supplied update fields; and successful Notes updates
+returned no metadata for deterministic final-answer projection. These were
+classified as `REFERENCE_FAILURE`, `BAD_ARGUMENT`, and
+`RESULT_PROJECTION_FAILURE` respectively. The repairs reuse the existing
+Notes owner, ACI payload projector, and canonical answer path.
+
+Focused verification passed `261` tests with `6` skipped. Exact candidate
+`odysseus:candidate-4bcdbb38` was built from pushed source
+`4bcdbb38c747199a16e056b104dc70c577555129`, image
+`sha256:24bfed959580bcae3513a44546f0cc6da9b1fcae2062d6ba4f22f858797bbe2d`,
+and deployed to the disposable lane with matching source marker and zero
+restarts. The unchanged browser replay passed `3` turns, `2` GUI mutations,
+and `2` independent readbacks: the reminder was created for tomorrow, changed
+through ordinary pronoun-based correction to parsed next Friday, and listed
+afterward. False success, raw final Results, duplicate delivery, and abrupt
+EOF were zero. Owner deployment/data remained untouched.
