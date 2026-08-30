@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Current-head recovery/setup focused gate — `2026-08-30`
+
+The current branch passed 40 focused tests covering application backup/restore
+CLI safety, owner-scoped backup import and deduplication, skill import
+handling, Chroma client/persistence and health contracts, setup admin-user
+creation, and provider alias setup. No owner data, owner volumes, or live
+deployment were used. This strengthens the recovery evidence but does not
+replace a full fresh-fresh install/restart/recovery rehearsal.
+
 ## Recipe expiring-inventory composition checkpoint — exact candidate `6a713675` (2026-08-30)
 
 `OWNER-RECIPE-EXPIRING-COMPOSITION-001` passed in a fresh isolated
