@@ -22,6 +22,20 @@ replay, not product claims. Focused acceptance/auth coverage passed `2
 passed, 7 deselected, 1 warning`; the full regression then passed `7063
 passed, 8 skipped, 149 warnings` in 6m19s.
 
+## Work mutation and overview replay continuation (2026-08-30)
+
+Using the existing data-driven authenticated browser harness against the same
+isolated candidate, `OWNER-WORK-TASK-MUTATION-READBACK-001` passed with two
+GUI turns, one mutation, two independent readbacks, and zero
+`falseSuccess`/`rawFinalResults`/`duplicateDelivery`/`abruptEOF` failures.
+`OWNER-WORK-PROJECT-MUTATION-READBACK-001` passed with the same evidence, and
+`OWNER-WORK-OVERVIEW-001` passed three natural read turns with two readbacks
+and the same zero-failure oracle counts. The first invocation was correctly
+refused because `APP_DATA_DIR` was not explicit; rerunning with
+`/tmp/hades-fresh-current` satisfied the disposable-data safety gate. The
+candidate remained source-matched and healthy; owner deployment/data were not
+used.
+
 ## Fresh-fresh post-restart Recipe durability checkpoint (2026-08-30)
 
 After rotating the disposable fresh-fresh credential and restarting the exact
