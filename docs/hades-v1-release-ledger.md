@@ -2,6 +2,25 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe video title-default checkpoint — exact candidate `6a713675` (2026-08-30)
+
+The owner-facing video import path had a product gap: a valid video source
+already supplied a trusted `Video title`, but an ordinary request to “save
+this” without a display-name override could not produce a commit-ready draft.
+The generalized recipe name extractor now uses that source title as the
+default, while preserving explicit owner names when supplied.
+
+The exact pushed candidate `6a713675b8fc374ba5a85f6795023381e8e6a278`, image
+`sha256:66adb3baab70a52aad88f0af7dd06724f2e3e11dc7d56a1d5d556b247198f943`,
+passed `OWNER-RECIPE-VIDEO-TITLE-DEFAULT-001` in a fresh isolated Compose
+project using normal login/model setup and Qwen3:8B. The request entered via
+GUI/chat, committed the public quantified recipe, preserved the source URL,
+and independently read back the canonical recipe twice including after reload.
+Evidence: one conversational turn, one mutation, two readbacks, zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF. The
+disposable stack and volumes were removed afterward; the stopped owner
+deployment was not touched.
+
 ## Owner read-only visual smoke and fresh-model provisioning note — 2026-08-30
 
 The actual owner deployment passed `scripts/browser_realistic_acceptance.mjs`
