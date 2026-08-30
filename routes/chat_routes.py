@@ -1382,7 +1382,16 @@ def setup_chat_routes(
         pre_context_tool_policy = build_effective_tool_policy(
             last_user_message=message,
         )
-        allow_tool_preprocessing = not pre_context_tool_policy.block_all_tool_calls
+        # An approval continuation resumes the already-reviewed proposal. Its
+        # sealed original request/context is supplied below; re-running URL,
+        # transcript, attachment, or other external preprocessing here would
+        # duplicate slow work and could make a successful approval appear to
+        # hang (and would let mutable composer text influence the reviewed
+        # action).
+        allow_tool_preprocessing = (
+            not pre_context_tool_policy.block_all_tool_calls
+            and not tool_approval_continuation
+        )
         foreground_policy = resolve_foreground_model_policy(
             owner=owner,
             allowed_models=_allowed_models_for_request(request),
