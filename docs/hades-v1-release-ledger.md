@@ -2,6 +2,17 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Household sloppy-language checkpoint — exact candidate `6a713675` (2026-08-30)
+
+`OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` passed in a fresh isolated
+Compose/Qwen3:8B project through the normal browser chat surface. The owner
+used informal language to add three cans, read the quantity, used one, and
+read the remaining quantity after reload. Evidence: four turns, two actual
+canonical mutations, two readbacks, and zero false successes, raw final
+Results, duplicate delivery, or abrupt EOF. This provides browser evidence
+for ordinary messy Household language, while broader fresh-install coverage
+remains open.
+
 ## Work task mutation checkpoint — exact candidate `6a713675` (2026-08-30)
 
 `OWNER-WORK-TASK-MUTATION-READBACK-001` passed in a fresh isolated Compose
