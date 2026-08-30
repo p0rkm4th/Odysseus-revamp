@@ -1930,6 +1930,11 @@ runs and a subsequent pantry-composition run passed without manual database
 cleanup; the reset is restricted to explicitly external isolated acceptance
 data and preserves historical rows.
 
+The same reset boundary was verified with two consecutive sloppy Household
+mutation/readback runs: each performed two GUI mutations and two canonical
+readbacks with zero false success, raw final Result, duplicate delivery, or
+abrupt EOF.
+
 Fresh exact-candidate evidence also covers populated Memory, the no-RTX-4090
 false-premise asset query, responsive UI acceptance, and Recipe pantry
 composition. Each completed without false success, raw final Result, duplicate
