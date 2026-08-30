@@ -1935,6 +1935,12 @@ reset preserves the reusable project, removes stale acceptance tasks/events,
 and was verified by two consecutive task mutation/readback journeys with zero
 false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+Canonical Asset fixtures now receive an equivalent disposable-owner reset.
+It removes stale rows marked `acceptance-fixture` and their dependent records
+before seeding Atlas/Erebus scenarios. The Asset reference-chain journey then
+passed twice with 3 canonical reads per run and zero false success, raw final
+Result, duplicate delivery, or abrupt EOF.
+
 The same reset boundary was verified with two consecutive sloppy Household
 mutation/readback runs: each performed two GUI mutations and two canonical
 readbacks with zero false success, raw final Result, duplicate delivery, or

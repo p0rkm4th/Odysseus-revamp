@@ -2989,6 +2989,14 @@ canonical reads with no mutation, false success, raw final Result, duplicate
 delivery, or abrupt EOF. This confirms the bounded Work overview projection
 remains intact after the Household and Recipe runtime changes.
 
+The same acceptance reset boundary now covers canonical Asset fixtures. A
+repeat run exposed stale Atlas/Erebus fixture rows from another scenario; the
+runner now removes only disposable-owner rows marked `acceptance-fixture` and
+their dependent identifiers, observations, relationships, and merge records
+before seeding. `OWNER-ASSET-REFERENCE-CHAIN-001` then passed twice on the
+exact candidate with 3 turns and 3 canonical reads per run. Both runs had zero
+false success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Current Work task mutation checkpoint — executable candidate `a784b35e` (2026-08-29)
 
 A fresh disposable Compose project with normal admin setup and Qwen3:8B passed

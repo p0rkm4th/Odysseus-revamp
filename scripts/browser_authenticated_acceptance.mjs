@@ -478,6 +478,56 @@ function seedCanonicalAssetFixture(scenarios) {
   return {setup: setups[0], assets: assets.length};
 }
 
+function resetDisposableAssetFixture(scenarios) {
+  if (!externalAcceptance || !scenarios?.length) return null;
+  const setups = [...new Set(scenarios.map((scenario) => scenario.fixture_setup).filter(Boolean))];
+  const assetSetups = setups.filter((setup) => ['canonical_asset_atlas_erebus', 'canonical_asset_no_4090'].includes(setup));
+  if (!assetSetups.length) return null;
+  if (setups.length !== 1 || assetSetups.length !== 1) {
+    throw new Error(`unsupported or mixed canonical asset fixture setup: ${setups.join(', ')}`);
+  }
+  const dataDirectory = path.resolve(process.cwd(), String(process.env.APP_DATA_DIR || '').trim());
+  const configuredDatabase = String(process.env.HADES_BROWSER_CANONICAL_ASSET_DB || '').trim();
+  const database = path.resolve(configuredDatabase || path.join(dataDirectory, 'assets', 'assets.db'));
+  if (!database.startsWith(`${dataDirectory}${path.sep}`)) {
+    throw new Error('canonical asset fixture database must be inside APP_DATA_DIR so reset remains disposable');
+  }
+  const resetScript = String.raw`
+import json, sqlite3, sys
+database, owner = sys.argv[1:]
+connection = sqlite3.connect(database)
+try:
+    asset_ids = [row[0] for row in connection.execute(
+        "select id from assets where owner=? and source='acceptance-fixture'", (owner,)
+    ).fetchall()]
+    if not asset_ids:
+        print(json.dumps({'assets': 0}, sort_keys=True))
+        raise SystemExit(0)
+    marks = ','.join('?' for _ in asset_ids)
+    counts = {'assets': connection.execute(
+        f"select count(*) from assets where owner=? and source='acceptance-fixture'", (owner,)
+    ).fetchone()[0]}
+    connection.execute(f"delete from identifiers where asset_id in ({marks})", asset_ids)
+    connection.execute(f"delete from observations where asset_id in ({marks})", asset_ids)
+    connection.execute(
+        f"delete from relationships where parent_asset_id in ({marks}) or child_asset_id in ({marks})",
+        [*asset_ids, *asset_ids],
+    )
+    connection.execute(
+        f"delete from merge_log where source_asset_id in ({marks}) or target_asset_id in ({marks})",
+        [*asset_ids, *asset_ids],
+    )
+    connection.execute(
+        "delete from assets where owner=? and source='acceptance-fixture'", (owner,)
+    )
+    connection.commit()
+    print(json.dumps(counts, sort_keys=True))
+finally:
+    connection.close()
+`;
+  return JSON.parse(run(python, ['-c', resetScript, database, acceptanceUsername], process.env).trim() || '{}');
+}
+
 function credentialsOwner() {
   return acceptanceUsername;
 }
@@ -1155,6 +1205,7 @@ async function main() {
     }
     if (scenarios) {
       diagnostics.fixtureReset = resetDisposableCanonicalFixture(scenarios);
+      diagnostics.assetReset = resetDisposableAssetFixture(scenarios);
       if (scenarios.some((scenario) => scenario.fixture_profile === 'empty-memory')) {
         diagnostics.memorySeed = await clearMemoryAcceptanceState(page);
       }
