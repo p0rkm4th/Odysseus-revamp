@@ -2222,7 +2222,7 @@ def compile_intent(
     # Household consumption is an owner mutation even when the item name is
     # not known to the compiler (for example, "Use one onion"). The executor
     # resolves that name against canonical owner-scoped inventory.
-    if concept == "UNKNOWN" and operation == "READ" and re.search(
+    if concept == "UNKNOWN" and operation in {"READ", "CONTINUE"} and re.search(
         r"\b(?:use|consume|used|consumed)\s+(?:\d+(?:\.\d+)?|one|a|an|two|three|four|five)\b",
         q,
     ) and (

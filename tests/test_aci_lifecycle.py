@@ -964,6 +964,15 @@ def test_quantity_only_household_consume_uses_unique_conversational_reference():
     assert resolved.action_id == "consume_stock"
     assert resolved.binding_name == "manage_assets"
 
+    continued = compile_intent(
+        "Use one.",
+        continuation=True,
+        reference_context={"entities": [{"id": "item-1", "concept": "HOUSEHOLD_ITEM"}]},
+    )
+    assert continued.domain_concept == "HOUSEHOLD_ITEM"
+    assert continued.operation_class == "EXECUTE"
+    assert resolve_intent(continued).action_id == "consume_stock"
+
 
 def test_work_task_create_requires_explicit_project_and_projects_bounded_payload():
     query = "Create a task called Review the backup plan in project Hades V1"
