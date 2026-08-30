@@ -2105,7 +2105,7 @@ def provisional_intent_projection(
         # canonical filtering. Replacing it with a broad summary here lets a
         # deleted fact reappear beside unrelated memories and makes a narrow
         # correction look successful while the next read is stale.
-        latest
+        "What do you remember about me?"
         if contextual_memory_read else (
             recent_user_context
             if continuation or retain_memory_context else latest
@@ -2125,6 +2125,7 @@ def provisional_intent_projection(
         # returning an empty domain would hand the turn back to the model.
         "domains": {"memory"} if frame.domain_concept == "MEMORY" else set(),
         "retrieval_query": retrieval_query,
+        "canonical_query": latest if contextual_memory_read else "",
         "general_explanatory": explanatory,
     }, True
 

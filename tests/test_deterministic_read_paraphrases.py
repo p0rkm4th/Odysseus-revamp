@@ -498,11 +498,13 @@ def test_memory_correction_followup_keeps_narrow_property_query():
     )
     assert initial_owned is True
     assert initial_projection["domains"] == {"memory"}
-    assert initial_projection["retrieval_query"] == messages[2]["content"]
+    assert initial_projection["retrieval_query"] == "What do you remember about me?"
+    assert initial_projection["canonical_query"] == messages[2]["content"]
 
     projection, owned = provisional_intent_projection(messages, messages[-1]["content"])
     assert owned is True
-    assert projection["retrieval_query"] == messages[-1]["content"]
+    assert projection["retrieval_query"] == "What do you remember about me?"
+    assert projection["canonical_query"] == messages[-1]["content"]
     # The provisional projection supplies the explicit Memory frame because
     # this natural property wording is intentionally not a standalone domain
     # grammar match. The preserved query must still remain narrow for the
