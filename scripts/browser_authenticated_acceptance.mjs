@@ -686,6 +686,26 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
         throw new Error(`${scenario.id} recipe readback source URL mismatch`);
       }
     }
+    if (spec.requires_qualitative_amounts || spec.requires_source_text || spec.forbid_fabricated_quantities) {
+      const ingredients = Array.isArray(found.ingredients) ? found.ingredients : [];
+      if (!ingredients.length) throw new Error(`${scenario.id} recipe readback omitted ingredients`);
+      const qualitativeKinds = new Set(['TO_TASTE', 'AS_NEEDED', 'OPTIONAL', 'UNSPECIFIED', 'NOMINAL']);
+      if (spec.requires_qualitative_amounts && !ingredients.some((ingredient) => qualitativeKinds.has(String(ingredient?.amount_kind || '').toUpperCase()))) {
+        throw new Error(`${scenario.id} recipe readback omitted qualitative amount semantics`);
+      }
+      if (spec.requires_source_text && ingredients.some((ingredient) => !String(ingredient?.source_text || '').trim())) {
+        throw new Error(`${scenario.id} recipe readback omitted ingredient source text`);
+      }
+      if (spec.forbid_fabricated_quantities) {
+        for (const ingredient of ingredients) {
+          if (qualitativeKinds.has(String(ingredient?.amount_kind || '').toUpperCase()) &&
+              (ingredient.quantity !== null && ingredient.quantity !== undefined || ingredient.unit !== null && ingredient.unit !== undefined)) {
+            throw new Error(`${scenario.id} fabricated a numeric quantity for ${ingredient.name}`);
+          }
+        }
+      }
+      return {phase, kind: spec.kind, found: true, ingredients: ingredients.length, qualitative: ingredients.filter((ingredient) => qualitativeKinds.has(String(ingredient?.amount_kind || '').toUpperCase())).length};
+    }
     return {phase, kind: spec.kind, found: true};
   }
   if (spec.kind === 'inventory') {
