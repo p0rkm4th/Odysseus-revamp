@@ -2,6 +2,27 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Natural reminder cancellation and reference continuity (2026-08-30)
+
+Owner replay initially exposed a shared `WRONG_OPERATION` / routing defect:
+"Actually, cancel that reminder" was classified as a generic continuation or
+read, and reminder titles containing the word "cancel" could be misclassified
+as deletion. The compiler now gives explicit reminder creation precedence over
+title words, treats explicit cancellation as bounded Notes DELETE, and carries
+the canonical note ID through the existing Result/session reference projection.
+
+Focused verification passed 261 tests with 6 skips. Exact pushed candidate
+`d1f8ebc9` was built as `odysseus:candidate-d1f8ebc96aba`, image ID
+`sha256:b7c63b63cb6700f4a71494da1e51e452224ec36e0feeed5a45cffdbf4678e483`.
+The isolated runtime `hades-fresh-current-odysseus-1` matched the source
+marker and OCI revision, was healthy with zero restarts, and exposed Qwen3:8B.
+The three-turn GUI journey `OWNER-REMINDER-CANCEL-REFERENCE-001` completed
+CREATE → conversational DELETE → READ with two mutations, two independent
+readbacks, and the target title absent after deletion. Counters were
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. The real owner deployment and data were untouched.
+
+
 ## Tier 1 daily-driver composition and visual replay (2026-08-30)
 
 On the isolated candidate `7efc755b`, the realistic messy Household journey
