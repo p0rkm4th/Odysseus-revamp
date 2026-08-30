@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Current-candidate recovery rehearsal and fresh-fresh auth finding (2026-08-30)
+
+The current executable candidate `8c620bf438bd` was deployed into the
+isolated fresh-fresh Compose lane and verified with matching image/OCI/source
+markers, healthy startup, zero restarts, and Qwen3:8B availability. A browser
+replay was then blocked at login: both the newly provisioned disposable
+acceptance principal and the lane's recorded `freshadmin` password returned
+401. This is classified as `AUTH_SESSION_FAILURE` in the disposable lane;
+feature acceptance was not claimed from it, and owner authentication/data were
+untouched.
+
+Separately, the documented application backup path was rehearsed in the
+isolated `/tmp/hades-recovery-gHuNV6` root. Snapshot and archive verification
+passed (31 members); deliberate JSON drift was removed by `restore --yes`,
+which retained a timestamped pre-restore safety stash. No owner data or live
+deployment was involved.
+
 ## Video recipe no-evidence approval — exact executable candidate `8c620bf438bd` (2026-08-30)
 
 The isolated owner journey now passes through the real GUI on exact candidate
