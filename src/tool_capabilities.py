@@ -536,6 +536,32 @@ def _action_from_content(tool_name: str, content: Any) -> str | None:
     return _ACTION_ALIASES.get(tool_name, {}).get(normalized, normalized)
 
 
+def _is_recipe_review_preparation(tool_name: str, content: Any) -> bool:
+    """Recognize the non-mutating Recipe review handoff.
+
+    Incomplete owner-pasted recipes use the existing ``manage_recipes``
+    binding as an adapter, but its ``review_required`` payload only calls
+    ``prepare_import`` and cannot persist state. Treating that explicit marker
+    as a write would expose raw Action JSON instead of the human review flow.
+    """
+    if str(tool_name or "").strip() != "manage_recipes":
+        return False
+    if _action_from_content(tool_name, content) != "commit_import":
+        return False
+    if isinstance(content, Mapping):
+        payload = dict(content)
+    else:
+        try:
+            payload = json.loads(str(content or "{}"))
+        except (TypeError, ValueError):
+            return False
+    return (
+        isinstance(payload, dict)
+        and payload.get("review_required") is True
+        and not isinstance(payload.get("draft"), Mapping)
+    )
+
+
 def capabilities_for_action(tool_name: Any, content: Any) -> ToolCapabilities:
     """Classify a sealed multiplexed action; ambiguous actions fail high."""
     base = capabilities_for_tool(tool_name)
@@ -777,6 +803,11 @@ class ToolRunSecurityContext:
             action = _action_from_content(tool_name, content)
             if action in _PRIVATE_ACTION_WRITES.get(tool_name, frozenset()):
                 return ToolGateDecision(True)
+        if _is_recipe_review_preparation(tool_name, content):
+            # This is a review projection, not a commit. The binding must call
+            # prepare_import and return an editable draft; persistence remains
+            # behind a later validated commit.
+            return ToolGateDecision(True)
         if not self.external_untrusted_context_seen:
             return ToolGateDecision(True)
         capabilities = capabilities_for_action(tool_name, content)
