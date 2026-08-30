@@ -376,6 +376,40 @@
         {"prompt": "And its storage?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}}
       ],
       "expected": {"policy": "allowed", "terminal": {"done": 20, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-RECIPE-QUALITATIVE-AMOUNTS-001",
+      "environment": "realistic_messy_synthetic",
+      "fixture_profile": "empty-recipes",
+      "fixture_setup": "empty_recipe_qualitative_acceptance",
+      "owner_language_corpus": [
+        "some salt and pepper", "salt and pepper to taste", "oil as needed",
+        "a pinch of cayenne", "a splash of milk", "a handful of parsley",
+        "butter for greasing", "flour for dusting", "about 2 cups flour",
+        "1-2 tbsp olive oil", "some salt", "a little salt",
+        "salt, to taste", "salt as desired", "season with salt",
+        "salt and pepper, as needed"
+      ],
+      "turns": [
+        {"prompt": "Save a recipe called Acceptance Truthful Amounts. Ingredients:\n- some salt and pepper\n- salt and pepper to taste\n- oil as needed\n- a pinch of cayenne\n- a splash of milk\n- a handful of parsley\n- butter for greasing\n- flour for dusting\n- about 2 cups flour\n- 1-2 tbsp olive oil\n- 1 egg\nInstructions: Mix everything and cook.", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "commit_import", "tool_binding": "manage_recipes", "requires_effect": true, "must_include_any": ["saved", "added", "recipe"], "forbidden": ["invented", "quantity unspecified", "raw"]}},
+        {"prompt": "Scale that recipe to four servings.", "expected": {"domain": "RECIPE", "operation": "READ", "action": "scale", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["4", "four", "scaled"], "forbidden": ["to taste became", "as needed became"]}},
+        {"prompt": "Can I make it with what I have?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "can_make", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["available", "missing", "can"]}},
+        {"prompt": "What do I need to buy for it?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "shopping_requirements", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["missing", "need", "buy"], "forbidden": ["0", "1 tsp salt"]}},
+        {"prompt": "Reload and show me that recipe again.", "expected": {"domain": "RECIPE", "operation": "READ", "action": "get", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["Acceptance Truthful Amounts", "salt", "olive oil"]}}
+      ],
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 0}, "after": {"recipe_name": "Acceptance Truthful Amounts", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Truthful Amounts", "requires_qualitative_amounts": true, "requires_source_text": true, "forbid_fabricated_quantities": true}, "terminal": {"done": 5, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-RECIPE-QUALITATIVE-MIXED-READBACK-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-recipes",
+      "fixture_setup": "empty_recipe_qualitative_acceptance",
+      "turns": [
+        {"prompt": "Add recipe Acceptance Mixed Amounts. Ingredients: 1 cup rice, salt to taste, oil as needed. Instructions: Cook the rice and season it.", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "commit_import", "tool_binding": "manage_recipes", "requires_effect": true}},
+        {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "list", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Acceptance Mixed Amounts"]}},
+        {"prompt": "Reload. What is in Acceptance Mixed Amounts?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "get", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["rice", "salt", "oil"]}}
+      ],
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "after": {"recipe_name": "Acceptance Mixed Amounts", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "requires_qualitative_amounts": true, "requires_source_text": true, "forbid_fabricated_quantities": true}, "terminal": {"done": 3, "abrupt_eof": false}}
     }
   ]
 }

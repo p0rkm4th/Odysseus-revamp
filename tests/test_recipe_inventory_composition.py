@@ -401,8 +401,8 @@ def test_recipe_import_parses_unicode_and_mixed_quantities_without_guessing():
         'Recipe: Fraction Dinner. Ingredients: ¾ cup flour, 1½ cups milk. '
         'Instructions: Mix and cook.'
     ).ingredients == (
-        {"name": "flour", "quantity": 0.75, "unit": "cup"},
-        {"name": "milk", "quantity": 1.5, "unit": "cups"},
+            {"name": "flour", "quantity": 0.75, "unit": "cup", "amount_kind": "EXACT", "source_text": "¾ cup flour"},
+            {"name": "milk", "quantity": 1.5, "unit": "cups", "amount_kind": "EXACT", "source_text": "1½ cups milk"},
     )
 
 

@@ -47,9 +47,13 @@ class StockLot:
 @dataclass(frozen=True)
 class RecipeRequirement:
     name: str
-    quantity: Decimal
-    unit: str
+    quantity: Decimal | None
+    unit: str | None
     optional: bool = False
+    amount_kind: str = "EXACT"
+    quantity_min: Decimal | None = None
+    quantity_max: Decimal | None = None
+    modifier: str | None = None
 
 
 @dataclass(frozen=True)
@@ -63,9 +67,13 @@ class PlannedDeduction:
 @dataclass(frozen=True)
 class StockShortage:
     name: str
-    missing: Decimal
-    unit: str
+    missing: Decimal | None
+    unit: str | None
     optional: bool
+    amount_kind: str = "EXACT"
+    modifier: str | None = None
+    quantity_min: Decimal | None = None
+    quantity_max: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -109,7 +117,20 @@ def plan_recipe_stock(
     shortages: list[StockShortage] = []
     for requirement in requirements:
         key = normalize_item_name(requirement.name)
-        remaining = (_decimal_quantity(requirement.quantity) * multiplier)
+        if (requirement.quantity is None and requirement.amount_kind != "RANGE") or requirement.amount_kind in {
+            "TO_TASTE", "AS_NEEDED", "OPTIONAL", "UNSPECIFIED", "NOMINAL",
+        }:
+            if available.get(key):
+                continue
+            shortages.append(StockShortage(
+                name=key, missing=None, unit=requirement.unit,
+                optional=bool(requirement.optional or requirement.amount_kind == "OPTIONAL"),
+                amount_kind=requirement.amount_kind, modifier=requirement.modifier,
+            ))
+            continue
+        remaining = (_decimal_quantity(requirement.quantity_max) * multiplier
+                     if requirement.amount_kind == "RANGE"
+                     else _decimal_quantity(requirement.quantity) * multiplier)
         for lot, quantity_left in available.get(key, []):
             if lot.unit != requirement.unit:
                 continue
@@ -138,5 +159,9 @@ def plan_recipe_stock(
                 missing=remaining,
                 unit=requirement.unit,
                 optional=bool(requirement.optional),
+                amount_kind=requirement.amount_kind,
+                modifier=requirement.modifier,
+                quantity_min=requirement.quantity_min * multiplier if requirement.quantity_min is not None else None,
+                quantity_max=requirement.quantity_max * multiplier if requirement.quantity_max is not None else None,
             ))
     return RecipeStockPlan(tuple(deductions), tuple(shortages))

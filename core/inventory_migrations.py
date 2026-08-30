@@ -33,6 +33,13 @@ INVENTORY_V2_VERSION = "20260823_002_inventory_network_discovery"
 INVENTORY_V2_DEFINITION = "inventory-v2\ninventory_drafts:network_discovery-source-type\n"
 INVENTORY_V2_CHECKSUM = migration_checksum(INVENTORY_V2_DEFINITION)
 
+INVENTORY_V3_VERSION = "20260830_003_recipe_qualitative_amounts"
+INVENTORY_V3_DEFINITION = """inventory-v3
+inventory_recipe_ingredients:truthful-qualitative-range-amounts
+quantity-nullable-unit-nullable-amount-kind-min-max-modifier-source-text
+"""
+INVENTORY_V3_CHECKSUM = migration_checksum(INVENTORY_V3_DEFINITION)
+
 
 def apply_inventory_v1(connection: Connection) -> None:
     for table in INVENTORY_TABLES:
@@ -51,6 +58,79 @@ register_schema_migration(
         apply=apply_inventory_v1,
     )
 )
+
+
+def apply_inventory_v3(connection: Connection) -> None:
+    """Add truthful culinary amount semantics without rewriting recipe rows."""
+    inspector = inspect(connection)
+    if not inspector.has_table("inventory_recipe_ingredients"):
+        return
+    existing = {column["name"] for column in inspector.get_columns("inventory_recipe_ingredients")}
+    old = Table("inventory_recipe_ingredients", MetaData(), autoload_with=connection)
+    # V1 made quantity/unit NOT NULL. SQLite cannot loosen that constraint
+    # with ALTER TABLE, so rebuild only that table before adding the semantic
+    # nullable fields. Rows and their stable IDs are copied unchanged.
+    if old.c.quantity.nullable is False or old.c.unit.nullable is False:
+        rebuilt_metadata = MetaData()
+        rebuilt = Table(
+            "inventory_recipe_ingredients_v3", rebuilt_metadata,
+            Column("id", old.c.id.type, primary_key=True, nullable=False),
+            Column("owner", old.c.owner.type, nullable=False),
+            Column("recipe_id", old.c.recipe_id.type, ForeignKey("inventory_recipes.id", ondelete="CASCADE"), nullable=False),
+            Column("item_id", old.c.item_id.type, ForeignKey("inventory_items.id", ondelete="SET NULL"), nullable=True),
+            Column("ingredient_name", old.c.ingredient_name.type, nullable=False),
+            Column("quantity", old.c.quantity.type, nullable=True),
+            Column("unit", old.c.unit.type, nullable=True),
+            Column("amount_kind", String, nullable=False, default="EXACT"),
+            Column("quantity_min", old.c.quantity.type, nullable=True),
+            Column("quantity_max", old.c.quantity.type, nullable=True),
+            Column("modifier", String, nullable=True),
+            Column("source_text", old.c.ingredient_name.type, nullable=True),
+            Column("optional", old.c.optional.type, nullable=False, default=False),
+            Column("substitution_group", old.c.substitution_group.type, nullable=True),
+            Column("preparation", old.c.preparation.type, nullable=True),
+            Column("sort_order", old.c.sort_order.type, nullable=False, default=0),
+            Column("created_at", old.c.created_at.type, nullable=False),
+            Column("updated_at", old.c.updated_at.type, nullable=False),
+            CheckConstraint("quantity IS NULL OR quantity > 0", name="ck_inventory_recipe_ingredient_quantity_positive"),
+            Index("ix_inventory_recipe_ingredients_owner_recipe", "owner", "recipe_id", "sort_order"),
+        )
+        rebuilt.create(connection)
+        connection.exec_driver_sql(
+            "INSERT INTO inventory_recipe_ingredients_v3 "
+            "(id, owner, recipe_id, item_id, ingredient_name, quantity, unit, amount_kind, "
+            "quantity_min, quantity_max, modifier, source_text, optional, substitution_group, "
+            "preparation, sort_order, created_at, updated_at) "
+            "SELECT id, owner, recipe_id, item_id, ingredient_name, quantity, unit, 'EXACT', "
+            "NULL, NULL, NULL, ingredient_name, optional, substitution_group, preparation, "
+            "sort_order, created_at, updated_at FROM inventory_recipe_ingredients"
+        )
+        connection.exec_driver_sql("DROP TABLE inventory_recipe_ingredients")
+        connection.exec_driver_sql(
+            "ALTER TABLE inventory_recipe_ingredients_v3 RENAME TO inventory_recipe_ingredients"
+        )
+        existing = {column["name"] for column in inspect(connection).get_columns("inventory_recipe_ingredients")}
+    additions = {
+        "quantity": "NUMERIC(18, 6)", "unit": "VARCHAR",
+        "amount_kind": "VARCHAR NOT NULL DEFAULT 'EXACT'",
+        "quantity_min": "NUMERIC(18, 6)", "quantity_max": "NUMERIC(18, 6)",
+        "modifier": "VARCHAR", "source_text": "TEXT",
+    }
+    for name, definition in additions.items():
+        if name not in existing:
+            connection.exec_driver_sql(
+                f"ALTER TABLE inventory_recipe_ingredients ADD COLUMN {name} {definition}"
+            )
+    connection.exec_driver_sql(
+        "UPDATE inventory_recipe_ingredients SET amount_kind = 'EXACT' "
+        "WHERE amount_kind IS NULL OR amount_kind = ''"
+    )
+
+
+register_schema_migration(SchemaMigration(
+    version=INVENTORY_V3_VERSION, checksum=INVENTORY_V3_CHECKSUM,
+    apply=apply_inventory_v3,
+))
 
 
 def apply_inventory_v2(connection: Connection) -> None:
