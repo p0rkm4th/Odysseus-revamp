@@ -228,7 +228,11 @@ def _video_recipe_sections(text: str) -> tuple[str, str] | None:
     return "\n".join(ingredient_lines), text[method.end():].strip()
 
 
-def recipe_create_draft(query: str) -> RecipeDraft | None:
+def recipe_create_draft(
+    query: str,
+    *,
+    requested_name: str | None = None,
+) -> RecipeDraft | None:
     """Extract and validate an explicit owner recipe draft.
 
     The extractor accepts both compact and pasted sectioned recipes. It is
@@ -238,7 +242,7 @@ def recipe_create_draft(query: str) -> RecipeDraft | None:
     text = str(query or "").strip()
     if not text:
         return None
-    name = _recipe_name(text)
+    name = str(requested_name or "").strip()[:200] or _recipe_name(text)
     ingredients_text = _recipe_section(text, "ingredients", "instructions")
     instructions = _recipe_section(text, "instructions")
     if not ingredients_text or not instructions:
@@ -277,7 +281,9 @@ def recipe_import_draft(
     to the effectful recipe owner.
     """
     text = str(source_text or "").strip()
-    draft = recipe_create_draft(text) if text else None
+    draft = recipe_create_draft(
+        text, requested_name=requested_name,
+    ) if text else None
     if draft is None:
         json_text = text
         structured_marker = re.search(r"<!--\s*RECIPE_JSONLD:(?P<body>.*?)\s*-->", text, re.I | re.S)
