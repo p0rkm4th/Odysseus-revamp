@@ -2,6 +2,17 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Fresh-fresh post-restart Recipe durability checkpoint (2026-08-30)
+
+After rotating the disposable fresh-fresh credential and restarting the exact
+candidate lane, `OWNER-RECIPE-EMPTY-001` passed through normal authenticated
+browser use. The empty canonical Recipe answer completed with one terminal
+stream and `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. `/api/health` was healthy, restart count was zero, and the image
+OCI revision plus `/app/.odysseus-source-commit` matched
+`8c620bf438bd53cab21e44d73a64b65e60495c6c`. Owner deployment/data were not
+used.
+
 ## False-premise Asset and empty-Recipe continuation (2026-08-30)
 
 The realistic duplicate-like/incomplete Asset journey passed a GUI no-match
