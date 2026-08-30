@@ -578,6 +578,15 @@ def capabilities_for_action(tool_name: Any, content: Any) -> ToolCapabilities:
             ToolEffect.READ_PRIVATE,
             result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
         )
+    # Scheduled-task reads remain exposed through the legacy multiplexed
+    # manager for compatibility.  An omitted action means the safe list
+    # default; classify it as a private read instead of the broad unknown
+    # capability while the canonical registry resolves the concrete action.
+    if tool_name == "manage_tasks" and legacy_action in _PRIVATE_ACTION_READS.get(tool_name, frozenset()):
+        return _capabilities(
+            ToolEffect.READ_PRIVATE,
+            result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
+        )
 
     # First-class capabilities carry action metadata independently of the LLM
     # transport.  Keep this lazy import to avoid the legacy facade's import

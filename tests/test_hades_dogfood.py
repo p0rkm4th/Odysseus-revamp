@@ -615,7 +615,11 @@ def test_generated_semantic_cases_are_reproducible_and_carry_an_oracle():
 
 
 def test_generated_cases_cover_thin_canonical_product_families():
-    cases = generate_semantic_cases(seed=31, count=180)
+    from benchmarks.hades_dogfood import _registry_action_entries, _SCENARIO_ARCHETYPES
+
+    cases = generate_semantic_cases(
+        seed=31, count=len(_registry_action_entries()) + len(_SCENARIO_ARCHETYPES),
+    )
     families = {case["family"] for case in cases}
     assert {"kitchen", "finance", "background", "dependency"} <= families
     assert all(
