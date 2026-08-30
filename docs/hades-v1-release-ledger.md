@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe review replay boundary — browser harness `2026-08-30`
+
+Two disposable Compose attempts reached different pre-chat acceptance
+failures: one had an overlapping configured network subnet, and the other
+had a Playwright target crash after the authenticated shell/session setup.
+The stable candidate replay also reproduced the target crash after a fresh
+disposable principal; no Recipe prompt or Action ran. These are classified as
+`ENVIRONMENT_FAILURE`/`AUTH_SESSION_FAILURE`, not Recipe results. The
+authenticated harness now accepts a completed SPA root transition even when
+Playwright emits no navigation event, with focused harness coverage green.
+Recipe review remains unverified in this checkpoint and is not promoted to
+release evidence.
+
 ## Exact recovery-tool candidate checkpoint — `c3401313` (2026-08-30)
 
 The pushed recovery-tool change is built as `odysseus:candidate-c3401313`
