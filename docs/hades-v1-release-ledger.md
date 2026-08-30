@@ -65,6 +65,17 @@ readbacks, including the follow-up recipe lookup. The two streams reported
 `abruptEOF=0`; the disposable state remained durable through the scenario
 reload check. Owner deployment and data remain untouched.
 
+## Recipe composition and expiry acceptance — exact executable candidate `1a24a12f` (2026-08-30)
+
+The isolated GUI composition journeys passed on canonical pantry fixtures.
+Recipe listing, pantry coverage, and serving scaling completed in three turns
+with two independent readbacks; the expiring-ingredient candidate journey
+completed in one turn with two independent readbacks. Both scenarios reported
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`, including reload/durability checks. These are read/composition
+journeys; recipe URL/video import remains the open external-content bar.
+Owner deployment and data remain untouched.
+
 ## Household add false-success fix and replay — exact candidate `701eff7e` (2026-08-30)
 
 The owner prompt “Add 3 cans of Acceptance Beans.” previously produced a
