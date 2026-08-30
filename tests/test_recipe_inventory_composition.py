@@ -406,6 +406,19 @@ def test_recipe_import_keeps_commas_inside_schema_org_ingredient_items():
     ]
 
 
+def test_recipe_import_strips_trailing_site_price_and_footnote_artifacts():
+    draft = recipe_import_draft(
+        '{"@type":"Recipe","name":"Clean Dinner",'
+        '"recipeIngredient":["1 onion, diced (about 1 cup)* ($0.76)",'
+        '"2 cloves garlic, minced ($0.12)"],'
+        '"recipeInstructions":"Cook the onion and garlic."}'
+    )
+    assert isinstance(draft, RecipeDraft)
+    assert [item["name"] for item in draft.ingredients] == [
+        "onion, diced (about 1 cup)", "garlic, minced",
+    ]
+
+
 def test_recipe_inventory_accepts_clove_as_a_deterministic_count_unit():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
