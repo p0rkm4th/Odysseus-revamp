@@ -72,6 +72,10 @@ def apply_inventory_v3(connection: Connection) -> None:
     # nullable fields. Rows and their stable IDs are copied unchanged.
     if old.c.quantity.nullable is False or old.c.unit.nullable is False:
         rebuilt_metadata = MetaData()
+        # Foreign-key targets must be present in this metadata collection for
+        # SQLAlchemy to emit the rebuilt SQLite table.
+        Table("inventory_recipes", rebuilt_metadata, autoload_with=connection)
+        Table("inventory_items", rebuilt_metadata, autoload_with=connection)
         rebuilt = Table(
             "inventory_recipe_ingredients_v3", rebuilt_metadata,
             Column("id", old.c.id.type, primary_key=True, nullable=False),
