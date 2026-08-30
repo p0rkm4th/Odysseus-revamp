@@ -1518,9 +1518,15 @@ async def _execute_manage_assets_binding(block, owner=None, run_id=None):
                         payload.pop(key, None)
             if payload.get("action") in {"consume_stock", "move_item"} and not payload.get("item_id"):
                 from src.inventory_service import get_inventory_service
+                from src.inventory_planning import item_name_search_terms
                 item_name = str(payload.get("item_name") or "").strip()
                 matches = get_inventory_service().search_items(owner, item_name, domain="kitchen") if item_name else []
-                if len(matches) != 1:
+                exact_matches = [
+                    candidate for candidate in matches
+                    if str(candidate.get("name") or "").strip().casefold() in item_name_search_terms(item_name)
+                ] if item_name else []
+                resolved_matches = exact_matches if exact_matches else matches
+                if len(resolved_matches) != 1:
                     target_label = "Move target" if payload.get("action") == "move_item" else "Consumption target"
                     message = f"{target_label} was not uniquely resolved in canonical inventory."
                     return "manage_assets", {
@@ -1528,12 +1534,12 @@ async def _execute_manage_assets_binding(block, owner=None, run_id=None):
                         "output": message,
                         "exit_code": 1, "success": False,
                     }
-                payload["item_id"] = matches[0]["id"]
+                payload["item_id"] = resolved_matches[0]["id"]
                 # InventoryService validates quantities against the item's
                 # canonical unit (for example ``count`` rather than the
                 # conversational ``each``). Preserve that owner state in
                 # the Action input instead of asking the model to guess it.
-                payload["unit"] = matches[0].get("default_unit") or payload.get("unit")
+                payload["unit"] = resolved_matches[0].get("default_unit") or payload.get("unit")
             if payload.get("action") in {"consume_stock", "move_item"} and not payload.get("idempotency_key"):
                 # Direct canonical turns may not have a durable WorkAction
                 # projection. Reuse the dispatcher-owned run identity plus a
