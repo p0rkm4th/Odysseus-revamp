@@ -5951,6 +5951,30 @@ async def stream_aci_runtime(
                 tool_event["diff"] = result["diff"]
             if _memory_projection is not None:
                 tool_event["result_projection"] = _memory_projection
+            elif block.tool_type == "read_communications":
+                _communications_data = result.get("data") if isinstance(result.get("data"), Mapping) else None
+                if _communications_data is None:
+                    try:
+                        _communications_data = json.loads(str(result.get("output") or ""))
+                    except (TypeError, ValueError):
+                        _communications_data = None
+                if isinstance(_communications_data, Mapping):
+                    _calendar_data = _communications_data.get("calendar")
+                    if isinstance(_calendar_data, Mapping):
+                        tool_event["result_projection"] = {
+                            "status": _communications_data.get("status"),
+                            "calendar": {
+                                "calendars": _calendar_data.get("calendars", 0),
+                                "events": [
+                                    {
+                                        "summary": item.get("summary"),
+                                        "dtstart": item.get("dtstart"),
+                                    }
+                                    for item in (_calendar_data.get("events") or [])[:20]
+                                    if isinstance(item, Mapping)
+                                ],
+                            },
+                        }
             else:
                 _canonical_projection = canonical_tool_result_projection(block.tool_type, result)
                 if _canonical_projection is not None:

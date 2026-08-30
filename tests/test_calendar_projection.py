@@ -24,7 +24,8 @@ def test_calendar_projection_is_authoritative_final_answer():
     answer, provenance = project_final_answer(
         "The current objective is blocked or needs clarification.",
         [{"tool": "read_communications", "command": '{"action":"overview"}',
-          "output": "You have no calendar events scheduled in the next 14 days.",
+          "output": "The current objective is blocked or needs clarification.",
+          "result_projection": {"calendar": {"calendars": 1, "events": []}},
           "exit_code": 0, "success": True}],
     )
     assert answer == "You have no calendar events scheduled in the next 14 days."
