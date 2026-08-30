@@ -47,9 +47,9 @@
       "fixture_profile": "assets-atlas-erebus-reference-chain",
       "fixture_setup": "canonical_asset_atlas_erebus",
       "turns": [
-        {"prompt": "Tell me about the second computer.", "expected": {"domain": "ASSET", "operation": "READ", "tool_binding": "manage_assets", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Erebus"]}},
-        {"prompt": "Actually I meant the first one.", "expected": {"domain": "ASSET", "operation": "READ", "tool_binding": "manage_assets", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas"]}},
-        {"prompt": "And what RAM does that one have?", "expected": {"domain": "ASSET", "operation": "READ", "tool_binding": "manage_assets", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas", "64"]}}
+        {"prompt": "Tell me about the second computer.", "expected": {"domain": "ASSET", "operation": "READ", "action": "get", "tool_binding": "manage_assets", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Erebus"]}},
+        {"prompt": "Actually I meant the first one.", "expected": {"domain": "ASSET", "operation": "READ", "action": "get", "tool_binding": "manage_assets", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas"]}},
+        {"prompt": "And what RAM does that one have?", "expected": {"domain": "ASSET", "operation": "READ", "action": "get", "tool_binding": "manage_assets", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Atlas", "64"]}}
       ],
       "expected": {"tool_binding": "manage_assets", "policy": "allowed", "approval": "not_required", "terminal": {"done": 3, "abrupt_eof": false}}
     },
