@@ -51,6 +51,18 @@ independent canonical readback. The exact candidate remains source-marked
 `806fc3ba0a16f754df8f4d82a8802dd11a3dca73`; the actual owner runtime remains
 untouched.
 
+## URL Recipe import approval and durability checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+The owner supplied a public recipe URL with an explicit display name through
+chat. Hades presented the exact sealed `manage_recipes` action and approval
+choices before execution. After the owner approved the task, independent
+canonical readback found the requested name, source URL, six servings, twelve
+ingredients, and instructions. A fresh authenticated browser reload retained
+the same record. This was one approved GUI mutation, one canonical readback,
+and one reload readback, with no false success or invented source claim. The
+disposable runtime remains source-marked `806fc3ba`; the actual owner runtime
+was not modified.
+
 ## Recipe review replay boundary — browser harness `2026-08-30`
 
 Two disposable Compose attempts reached different pre-chat acceptance
