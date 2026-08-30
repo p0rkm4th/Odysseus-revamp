@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Cookbook hardware-fit dialog checkpoint — exact candidate `3963540a` (2026-08-30)
+
+Hardware-fit server-profile removal now uses a shared Hades confirmation with
+an explicit keep action and danger treatment. Focused coverage passed 128
+tests, responsive browser acceptance passed, and the broad regression passed
+7,039 tests with 8 skipped and 149 warnings. Owner deployment state was not
+modified.
+
 ## Cookbook action-dialog checkpoint — exact candidate `6f059f00` (2026-08-30)
 
 Cookbook rebuild/update and package-reinstall actions now use shared Hades

@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Cookbook hardware-fit dialog checkpoint — exact candidate `3963540a` (2026-08-30)
+
+Cookbook hardware-fit server-profile removal retained a native confirmation
+fallback. It now uses the shared Hades confirmation with explicit “keep
+profile” wording and danger styling; profile synchronization is unchanged.
+Focused hardware-fit/Cookbook coverage passed 128 tests. Exact candidate
+`odysseus:candidate-3963540a` has image ID
+`sha256:736db84fdcfadf92bdf06c421c26574eb6417d174e878c41355edbb4aef61074`
+and source marker `3963540a0a40f38a0fac1e40020f08ca56d5799c`; isolated runtime
+was healthy with 0 restarts. Authenticated responsive browser acceptance and
+the broad regression passed `7039 passed, 8 skipped, 149 warnings` in 299.37
+seconds. Owner deployment and data remain untouched.
+
 ## Cookbook action-dialog checkpoint — exact candidate `6f059f00` (2026-08-30)
 
 Cookbook rebuild-engine/update-source and package-reinstall actions still used
