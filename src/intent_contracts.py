@@ -2192,6 +2192,10 @@ def compile_intent(
         r"\bcapabilit(?:y|ies)\b", q,
     ):
         concept = "WORK"
+    elif re.search(r"\b(?:scheduled|schedule|calendar|event|meeting|appointment)\b", q) and re.search(
+        r"\b(?:today|tomorrow|this\s+week|anything|what|do\s+i\s+have)\b", q,
+    ):
+        concept = "COMMUNICATIONS"
     elif re.search(r"\b(?:communications?|email accounts?|calendars?|calendar events?)\b", q):
         concept = "COMMUNICATIONS"
     elif re.search(r"\b(?:contacts?|address\s*book)\b", q):

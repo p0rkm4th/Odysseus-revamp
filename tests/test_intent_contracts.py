@@ -110,6 +110,16 @@ def test_communications_read_uses_canonical_owner_scoped_projection():
     assert resolved.action.approval.value == "none"
 
 
+def test_owner_scheduled_question_uses_calendar_projection():
+    frame = compile_intent("Do I have anything scheduled today?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "COMMUNICATIONS"
+    assert frame.operation_class == "READ"
+    assert resolved.available is True
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_communications"
+
+
 @pytest.mark.parametrize("query", [
     "What IT assets do I have?",
     "What machines are recorded?",
