@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Current-candidate Docker Chroma backup/restore checkpoint — exact candidate `04d05854` (2026-08-30)
+
+In the fresh isolated Compose project, one disposable Memory marker populated
+the corrected `hades-fresh-current_chromadb-data` volume. The app and Chroma
+were stopped, the volume was archived, a drift-only file was added, and the
+archive was restored into the same explicitly identified disposable volume.
+Independent checks confirmed the drift file was removed, `chroma.sqlite3`
+remained present, Chroma heartbeat succeeded, and the restored collection
+count was `1`. After restarting the services, authenticated Hades
+`/api/memory` still returned the recovery marker. The exact app runtime was
+source-marked `04d05854790856719b71e69f6fc27f72da29b66a` with 0 restarts; no
+owner volume or deployment was touched.
+
 ## Fresh-fresh install/restart checkpoint — exact candidate `04d05854` (2026-08-30)
 
 A new empty disposable Compose state completed normal first-run admin setup,
