@@ -41583,6 +41583,8 @@ body.settings-sidebar-resize-active {
 .hades-record-card > * { min-width:0; max-width:100%; }
 .hades-record-card p { margin:4px 0; color:var(--hades-text-muted); font-size:.86rem; overflow-wrap:anywhere; word-break:break-word; }
 .hades-record-card strong, .hades-record-card small { overflow-wrap:anywhere; word-break:break-word; }
+.setup-module-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:var(--hades-space-2); min-width:11rem; }
+.setup-permissions-details { margin-top:var(--hades-space-5); }
 .osint-case-main, .osint-case-meta { display:flex; flex-direction:column; align-items:flex-start; gap:var(--hades-space-1); min-width:0; }
 .osint-case-meta { margin-left:auto; align-items:flex-end; max-width:100%; text-align:right; }
 .osint-case-meta .hades-badge, .osint-case-meta .hades-provenance { display:inline-flex; }

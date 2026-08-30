@@ -170,3 +170,11 @@ def test_safe_health_checks_cover_non_mutating_core_and_domain_readiness():
     assert "scan_performed" in routes
     assert "mutations_performed" in routes
     assert "canonical_primitives" in routes
+
+
+def test_setup_center_prioritizes_readiness_and_folds_technical_permissions():
+    from pathlib import Path
+    frontend = (Path(__file__).resolve().parents[1] / "static/js/setupCenter.js").read_text()
+    assert 'Technical permissions and authority' in frontend
+    assert 'class="setup-module-actions"' in frontend
+    assert frontend.index('Integration readiness') < frontend.index('Technical permissions and authority')
