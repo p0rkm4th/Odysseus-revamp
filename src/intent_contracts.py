@@ -1129,6 +1129,21 @@ def normalize_operational_intent_evidence(intent, query: str):
 
     net_entities = phrase(r"\b(?:hosts?|devices?|servers?)\b")
 
+    # Owners often ask about an outage without naming the network, host, or
+    # service: "is anything down?" / "what's offline?".  Treat this as
+    # operational status evidence so the bounded homelab read can establish
+    # what is actually known; do not let model prose answer from implication.
+    outage_ask = phrase(
+        r"\b(?:is|are|was|were)\b.{0,20}\b(?:anything|something|anyone)\b"
+        r".{0,12}\b(?:down|offline|unreachable|broken|not\s+working)\b",
+        r"\b(?:anything|something|anyone)\b.{0,12}"
+        r"\b(?:down|offline|unreachable|broken|not\s+working)\b",
+        r"\bwhat(?:'s|\s+is)?\b.{0,32}"
+        r"\b(?:down|offline|unreachable|broken|not\s+working)\b",
+        r"\b(?:is|are)\b.{0,32}\b(?:hosts?|devices?|servers?|services?)\b"
+        r".{0,12}\b(?:down|offline|unreachable|broken|not\s+working)\b",
+    )
+
     local_scope = phrase(
         r"\b(?:local|internal|private|home|homelab)\s+(?:network|lan|subnet)\b",
         r"\b(?:our|my|your|current|this)\s+(?:network|lan|subnet)\b",
@@ -1153,11 +1168,12 @@ def normalize_operational_intent_evidence(intent, query: str):
     net_score += 3 if local_scope else 0
     net_score += 3 if recon else 0
     net_score += 2 if action or current_state_ask else 0
+    net_score += 6 if outage_ask else 0
     net_score += 2 if "pentest_ops" in domains and (net_tool or recon or net_core) else 0
     net_score += 1 if "container_ops" in domains and (net_core or local_scope) else 0
 
-    network_actionable = bool(action or current_state_ask)
-    network_specific = bool(net_core or net_tool or recon)
+    network_actionable = bool(action or current_state_ask or outage_ask)
+    network_specific = bool(net_core or net_tool or recon or outage_ask)
     public_target_only = phrase(
         r"\b(?:https?://|www\.|[a-z0-9-]+\.(?:com|net|org|io|dev|gov|edu))\b"
     ) and not local_scope
@@ -1168,7 +1184,7 @@ def normalize_operational_intent_evidence(intent, query: str):
         and network_specific
         and net_score >= 6
         and not public_target_only
-        and (local_scope or net_core or ("network_ops" in domains))
+        and (local_scope or net_core or outage_ask or ("network_ops" in domains))
     ):
         domains.add("network_ops")
         evidence["network_ops"] = net_score

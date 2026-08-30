@@ -568,6 +568,20 @@ def test_current_network_figure_it_out_is_context_read_not_discovery():
     assert resolved.action_id == "read_network_context"
 
 
+@pytest.mark.parametrize("query", [
+    "Is anything down?",
+    "what's offline on my homelab?",
+    "are any of my servers unreachable?",
+])
+def test_owner_outage_status_questions_enter_bounded_network_read(query):
+    """Vague outage wording still needs canonical status evidence."""
+    from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence
+
+    intent = _classify_agent_request([], query)
+    intent = _normalize_operational_intent_evidence(intent, query)
+    assert "network_ops" in intent["domains"]
+
+
 def test_content_topic_does_not_create_hades_pentest_action_without_target():
     from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence
     for query in ("Explain pentesting", "can you help me pentest?"):
