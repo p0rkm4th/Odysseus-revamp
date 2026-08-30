@@ -9,6 +9,13 @@ the Hades Memory API still returned the marker after service restart. This is
 current-candidate vector-state recovery evidence; owner volumes were not
 modified.
 
+## Current-head application backup/restore checkpoint — `2026-08-30`
+
+The standard backup tool successfully snapshotted and verified a disposable
+application-data root, restored deliberate JSON/text drift, removed a
+drift-only file, and retained the pre-restore safety stash. This complements
+the separate current-candidate Docker Chroma volume recovery rehearsal.
+
 ## Fresh-fresh install/restart checkpoint — exact candidate `04d05854` (2026-08-30)
 
 An empty disposable Compose state passed first-run setup, Qwen3:8B endpoint
