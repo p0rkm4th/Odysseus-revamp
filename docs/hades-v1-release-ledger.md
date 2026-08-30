@@ -2,6 +2,13 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Full regression after shared summary-metric UI fix — exact candidate `b8f49186` (2026-08-30)
+
+The supported full regression after the shared CSS primitive change passed
+`7027 passed, 8 skipped, 149 warnings` in 295.94 seconds. The exact visual
+candidate was source-marked `b8f49186c7161291a0807ac6e3df498750064331`; its
+isolated runtime had 0 restarts. The actual owner runtime remains untouched.
+
 ## Shared summary-metric UI fix — exact candidate `b8f49186` (2026-08-30)
 
 An isolated Security walkabout exposed a production UI defect: every

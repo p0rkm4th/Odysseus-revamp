@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Full regression after shared summary-metric UI fix — exact candidate `b8f49186` (2026-08-30)
+
+The supported broad regression after the shared summary-metric CSS change
+passed 7,027 tests, with 8 skipped and 149 warnings, in 295.94 seconds. The
+exact executable candidate was source-matched; owner deployment state was not
+modified.
+
 ## Shared summary-metric UI fix — exact candidate `b8f49186` (2026-08-30)
 
 The shared summary-metric primitive now lays out readable responsive cards;
