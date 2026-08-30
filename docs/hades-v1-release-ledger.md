@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Document Library shared-confirmation checkpoint — exact candidate `f153493b` (2026-08-30)
+
+Document Library single and bulk deletion retained native browser confirmation
+fallbacks despite importing the shared Hades dialog. Both destructive paths
+now use the shared confirmation surface with explicit “keep” actions and
+danger styling. Focused coverage passed 14 tests. Exact candidate
+`odysseus:candidate-f153493b` has image ID
+`sha256:9cd5bea68b91f1dbb9f506c21b2317087ad581908816579f4bb2c1088d0d08c3`
+and source marker `f153493b656d4a7da6edcb2aca20f93cbd9252c8`; isolated runtime
+was healthy with 0 restarts. Authenticated responsive browser acceptance and
+the broad regression passed; regression totals were `7034 passed, 8 skipped,
+149 warnings` in 297.41 seconds. Owner deployment and data remain untouched.
+
 ## Settings shared-confirmation checkpoint — exact candidate `ceb9bd9f` (2026-08-30)
 
 Settings already preferred Hades dialogs but retained native `confirm()` fallbacks
