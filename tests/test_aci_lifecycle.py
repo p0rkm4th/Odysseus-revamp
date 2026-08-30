@@ -919,6 +919,19 @@ def test_work_project_create_projects_explicit_title_and_verified_answer_only():
     }]) is None
 
 
+def test_work_project_start_language_uses_bounded_create_action():
+    query = "Start a project called Acceptance Sloppy Project"
+    assert work_project_create_payload(query) == {
+        "action": "create", "title": "Acceptance Sloppy Project", "domain": "general",
+    }
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "PROJECT"
+    assert frame.operation_class == "CREATE"
+    assert resolved.action_id == "create"
+    assert resolved.binding_name == "manage_work"
+
+
 def test_work_task_create_requires_explicit_project_and_projects_bounded_payload():
     query = "Create a task called Review the backup plan in project Hades V1"
     assert work_task_create_payload(query) == {
