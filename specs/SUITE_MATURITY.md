@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Document Library shared-confirmation checkpoint — exact candidate `f153493b` (2026-08-30)
+
+Document Library single and bulk destructive deletion now use shared Hades
+confirmation dialogs without native fallbacks, with explicit keep actions.
+Focused coverage passed 14 tests, responsive browser acceptance passed, and
+the broad regression passed 7,034 tests with 8 skipped and 149 warnings.
+Owner deployment state was not modified.
+
 ## Settings shared-confirmation checkpoint — exact candidate `ceb9bd9f` (2026-08-30)
 
 Settings hide-cog and contact-delete flows now use the shared Hades dialog
