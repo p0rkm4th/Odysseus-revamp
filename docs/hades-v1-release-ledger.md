@@ -132,6 +132,9 @@ This closes the previously open positive YouTube extraction gate for a
 complete quantified description. Qualitative/missing-amount video evidence,
 review correction UX, broader video variants, and meal-plan composition remain
 separate Recipe release work.
+The focused parser/import slice passed `93` tests, and the full supported
+regression at this candidate checkpoint passed `7018` tests with `8` skips and
+`149` warnings in `295.06s`.
 
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
