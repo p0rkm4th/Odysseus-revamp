@@ -487,6 +487,7 @@ class InventoryService:
     def add_stock(
         self, owner: str, item_id: str, *, quantity: Any, unit: str,
         idempotency_key: str, location_id: str | None = None,
+        location_name: str | None = None,
         expiry_date: date | None = None, opened_at: datetime | None = None,
         purchase_date: date | None = None, unit_cost: Any | None = None,
         currency: str | None = None, lot_code: str | None = None,
@@ -502,6 +503,24 @@ class InventoryService:
                 lot = self._lot(db, owner, prior.lot_id)
                 return {"lot": _lot_view(lot), "movement": _movement_view(prior), "replayed": True}
             item = self._item(db, owner, item_id)
+            if location_name and not location_id:
+                normalized_location = normalize_item_name(location_name)
+                location = db.query(InventoryLocation).filter_by(
+                    owner=owner, normalized_name=normalized_location,
+                ).one_or_none()
+                if location is None:
+                    location = InventoryLocation(
+                        id=str(uuid4()), owner=owner,
+                        name=_required_text(location_name, "location_name", maximum=200),
+                        normalized_name=normalized_location,
+                        normalized_path=normalized_location,
+                    )
+                    db.add(location)
+                    db.flush()
+                location_id = location.id
+                # A stock addition to a named household location establishes
+                # that location as the item's current owner-facing location.
+                item.location_id = location_id
             self._location(db, owner, location_id)
             amount = _canonical_amount(quantity, unit, item.default_unit)
             cost = None
@@ -1219,7 +1238,8 @@ class RecipeService(InventoryService):
                 owner, _required_text(args.get("item_id"), "item_id"),
                 quantity=args.get("quantity"), unit=args.get("unit"),
                 idempotency_key=args.get("idempotency_key"),
-                location_id=args.get("location_id"), **kwargs,
+                location_id=args.get("location_id"),
+                location_name=args.get("location_name"), **kwargs,
             )
         if action == "update_asset":
             item_id = _required_text(args.get("item_id"), "item_id")

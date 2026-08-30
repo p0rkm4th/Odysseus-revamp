@@ -308,6 +308,46 @@ async def test_kitchen_mutation_binding_delegates_to_existing_inventory_service(
     assert result["provenance"] == "USER_ASSERTED"
 
 
+@pytest.mark.asyncio
+async def test_kitchen_add_existing_item_becomes_verified_stock_add(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.inventory_service as inventory_service
+    import src.tool_execution as tool_execution
+
+    class FakeInventoryService:
+        def search_items(self, owner, query, *, domain):
+            assert (owner, query, domain) == ("alice", "Acceptance Beans", "kitchen")
+            return [{"id": "beans-1", "name": "Acceptance Beans", "default_unit": "count"}]
+
+        def get_item(self, owner, item_id):
+            return {"id": item_id, "name": "Acceptance Beans", "default_unit": "count"}
+
+        def list_lots(self, owner, item_id):
+            return [{"item_id": item_id, "quantity": 3, "unit": "count"}]
+
+    class FakeInventoryTool:
+        async def execute(self, content, ctx):
+            payload = json.loads(content)
+            assert payload["action"] == "add_stock"
+            assert payload["item_id"] == "beans-1"
+            assert payload["quantity"] == 3
+            assert payload["unit"] == "count"
+            assert payload["location_name"] == "pantry"
+            return {"lot": {"item_id": "beans-1"}, "exit_code": 0}
+
+    monkeypatch.setattr(inventory_service, "get_inventory_service", lambda: FakeInventoryService())
+    monkeypatch.setattr(inventory_tools, "ManageInventoryTool", FakeInventoryTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "add_item", "domain": "kitchen", "name": "Acceptance Beans",
+        "item_kind": "ingredient", "initial_quantity": 3, "initial_unit": "each",
+        "category": "pantry", "location_name": "pantry",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["verification"]["status"] == "VERIFIED"
+
+
 def test_canonical_asset_reads_are_read_only_and_need_no_approval():
     from src.capability_registry import action_for_tool, requires_exact_approval
     action = action_for_tool("manage_assets", {"action": "list"})

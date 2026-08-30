@@ -336,7 +336,15 @@ def test_household_quantity_add_projects_item_and_initial_stock():
         "action": "add_item", "name": "Acceptance Tomatoes", "domain": "kitchen",
         "item_kind": "ingredient", "default_unit": "each",
         "initial_quantity": 3.0, "initial_unit": "each", "category": "pantry",
+        "location_name": "pantry",
     }
+    for wording in (
+        "Add 3 cans of Acceptance Tomatoes to my pantry.",
+        "Add 3 cans of Acceptance Tomatoes in the pantry.",
+    ):
+        payload = inventory_add_item_payload(wording)
+        assert payload["name"] == "Acceptance Tomatoes"
+        assert payload["location_name"] == "pantry"
 
 
 @pytest.mark.parametrize("query", ["Use one Acceptance Tomato.", "consume 1 Acceptance Tomatoes"])
