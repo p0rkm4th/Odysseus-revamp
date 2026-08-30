@@ -3124,6 +3124,10 @@ import { loadPanel } from './panels.js';
                 _roundDisplayProjector.reset();
                 _replyDisplayProjector.reset();
                 if (!_isBg) {
+                  // response_replace can be the first visible answer for a
+                  // deterministic tool-only turn. Recreate the visible round
+                  // before rendering; otherwise the finalizer dereferences a
+                  // null roundHolder and the authoritative answer disappears.
                   _ensureVisibleRoundForDelta();
                   _renderStream({ knownNormal: true, displayText: _streamDisplayText(replacement) });
                 } else {
