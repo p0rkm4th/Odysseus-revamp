@@ -10,6 +10,13 @@ sidebar icon uniqueness, desktop and narrow viewport containment, and no
 horizontal overflow. This was read-only and did not seed or mutate owner data.
 The owner container remained healthy on source `34ced247` with zero restarts.
 
+Current reconciliation at this checkpoint finds the owner Compose project
+stopped as a group: `odysseus-odysseus-1` exited `0` and
+`odysseus-ntfy-1` exited `2` at approximately `04:19 UTC`, with no recorded
+restart. No sprint command stopped, recreated, or modified that owner
+project. Live-owner health and read-only smoke claims therefore remain
+historical until the owner deployment is intentionally restored.
+
 A separate fresh disposable Memory correction attempt initially reached a
 healthy application but `/api/models` exposed no usable `qwen3:8b` endpoint,
 so no conversation was graded. This was classified as
