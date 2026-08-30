@@ -779,7 +779,7 @@ async function waitForAnswer(page, beforeAssistant, streamIndex, prompt) {
   await page.waitForFunction((index) => {
     const stream = window.__hadesE2EStreams?.[index];
     return !!stream && (stream.doneCount === 1 || stream.abruptEOF);
-  }, streamIndex, { timeout: 30000 });
+  }, streamIndex, { timeout: 120000 });
   const stream = await page.evaluate((index) => window.__hadesE2EStreams?.[index] || null, streamIndex);
   if (!stream || stream.doneCount !== 1 || stream.abruptEOF) {
     throw new Error(`transport invariant failed for ${prompt}: ${JSON.stringify(stream)}`);
@@ -809,7 +809,11 @@ async function send(page, prompt, expectation = {}) {
   let streamIndex = beforeStreams;
   if (String(expectation.approval || '').toLowerCase() === 'required') {
     const approvalCard = page.locator('#chat-history .ask-user-card').last();
-    await approvalCard.waitFor({state: 'attached', timeout: 30000});
+    // URL/video extraction may complete before the proposal stream is
+    // rendered. Keep approval journeys within the same bounded budget as
+    // answer completion instead of treating normal provider latency as a
+    // missing owner review card.
+    await approvalCard.waitFor({state: 'attached', timeout: 120000});
     const approve = approvalCard.locator('.ask-user-option').filter({hasText: /allow for this task/i}).first();
     await approve.waitFor({state: 'visible', timeout: 10000});
     await approve.click();

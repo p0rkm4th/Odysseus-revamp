@@ -3005,6 +3005,17 @@ login still showed `qwen3:8b` selected. This closes the first-login/model
 configuration and restart-durability slice for the exact candidate. Broader
 fresh-fresh feature journeys and recovery/restore remain separate gates.
 
+The first current-candidate no-evidence video replay exposed acceptance timing
+debt: YouTube preprocessing took about 33 seconds, beyond the runner's former
+30-second approval-card wait. The runner now gives approval-card attachment
+and terminal stream completion the same bounded 120-second budget as answer
+completion. A subsequent replay reached the approval continuation, but the
+shared host Ollama service then stopped responding while an in-flight model
+request held the disposable app worker; the app was recovered by restarting
+only the disposable container. This remains `PROVIDER_FAILURE` /
+`ENVIRONMENT_FAILURE` evidence, not a product pass, and video acceptance is
+still open on a responsive model lane.
+
 The same acceptance reset boundary now covers canonical Asset fixtures. A
 repeat run exposed stale Atlas/Erebus fixture rows from another scenario; the
 runner now removes only disposable-owner rows marked `acceptance-fixture` and
