@@ -66,6 +66,12 @@ readbacks. False success, raw Result, duplicate delivery, and abrupt EOF were
 zero. The earlier reused-root precondition mismatch is recorded as fixture
 contamination, not product evidence.
 
+## Work overview paraphrase checkpoint — exact candidate `04d05854` (2026-08-30)
+
+Three deterministic owner read turns for outstanding work, current work, and
+personal outstanding work converged on the same canonical projection. False
+success, raw Result, duplicate delivery, and abrupt EOF were zero.
+
 ## URL Recipe import approval and durability checkpoint — exact candidate `806fc3ba` (2026-08-30)
 
 A public URL with an explicit display-name override reached the visible sealed
