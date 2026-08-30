@@ -2,6 +2,13 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Full regression checkpoint after owner-journey corpus correction — exact candidate `cb8a3777` (2026-08-30)
+
+The full supported pytest regression passed after pinning the Asset reference
+scenario’s per-turn Action expectations: `7022 passed, 8 skipped, 149
+warnings` in 297.64 seconds. The preceding failure was benchmark metadata,
+not product behavior; the focused owner-journey contract suite also passes.
+
 ## Household sloppy-language mutation/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 `OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` passed in the isolated
