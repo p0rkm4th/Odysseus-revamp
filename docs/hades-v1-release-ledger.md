@@ -4417,3 +4417,16 @@ Executable candidate `e4027b2bd100817b5937ec402744a1133606163c` was built as
 and deployed only to the disposable current lane with matching source marker,
 healthy running status, and zero restarts. The harness-only pagination change
 was pushed afterward and does not require rebuilding the executable image.
+
+The same candidate passed `OWNER-TODAY-EMPTY-001`: 2 deterministic owner reads
+covering Today/attention and disconnected Calendar, with no fabricated events,
+zero raw final Results, duplicate delivery, false success, or abrupt EOF.
+Reminder V1 also passed `OWNER-REMINDER-CREATE-READBACK-001` with one GUI
+mutation and two independent persistence/readback checks, and
+`OWNER-REMINDER-CANCEL-REFERENCE-001` with two GUI mutations and two
+independent readbacks. Both had zero false success, raw final Result,
+duplicate delivery, and abrupt EOF. One cancellation attempt timed out before
+the journey because the short-lived disposable acceptance credential had
+expired; rotating that credential and restarting the isolated candidate made
+the replay pass. This is recorded as `AUTH_SESSION_FAILURE` /
+`ENVIRONMENT_FAILURE`, not a reminder product failure.
