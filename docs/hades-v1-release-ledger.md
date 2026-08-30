@@ -4579,3 +4579,19 @@ and `2` independent readbacks: the reminder was created for tomorrow, changed
 through ordinary pronoun-based correction to parsed next Friday, and listed
 afterward. False success, raw final Results, duplicate delivery, and abrupt
 EOF were zero. Owner deployment/data remained untouched.
+
+## Recurring reminder journey — candidate `721aada8` (2026-08-30)
+
+`OWNER-REMINDER-RECURRING-READBACK-001` exposed a real product gap:
+“Every morning, remind me to review my calendar” was routed to Notes and
+created no scheduled object (`WRONG_DOMAIN`/`WRONG_ACTION`). The repair adds a
+bounded scheduler contract and deterministic payload on the existing
+`manage_tasks` owner; focused verification is `261 passed, 6 skipped`.
+
+Exact candidate `odysseus:candidate-721aada8` was built from pushed source
+`721aada832ea7e192baea88df198d652dfa0788b`, image `sha256:05f4e3483bd7`, and
+deployed with matching source marker. Browser replay remains RED: the live
+ACI runtime emitted no `manage_tasks` Action and canonical `scheduled_tasks`
+remained unchanged. This is an unresolved `ACI_RUNTIME/EXECUTION_GATE`
+failure, not a passing scheduler journey. Owner deployment/data remained
+untouched.
