@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Shared summary-metric UI fix — exact candidate `b8f49186` (2026-08-30)
+
+The shared summary-metric primitive now lays out readable responsive cards;
+the Security empty state no longer concatenates labels and values. Six
+focused UI/security tests passed, and the desktop/narrow/mobile visual gate
+passed on the exact candidate with the corrected Security screenshot
+inspected. Owner deployment state was not modified.
+
 ## Recipe pantry-composition checkpoint — exact candidate `04d05854` (2026-08-30)
 
 The Recipe pantry-composition journey passed three deterministic owner reads
