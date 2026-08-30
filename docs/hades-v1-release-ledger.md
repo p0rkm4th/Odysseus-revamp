@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Current-candidate visual acceptance checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The authenticated visual acceptance passed at desktop, narrow, and mobile
+viewports. It checked sidebar icon uniqueness and duplicate Security/Research
+entries, shared Inventory/Recipe window chrome, containment, wrapping, tabs,
+and horizontal overflow. Screenshots were captured and inspected; the only
+repeated OSINT label is synthetic fixture content (fixture icon plus heading),
+not a production navigation defect. The exact candidate runtime and owner
+deployment were unchanged.
+
 ## Current-candidate Docker Chroma backup/restore checkpoint — exact candidate `04d05854` (2026-08-30)
 
 In the fresh isolated Compose project, one disposable Memory marker populated
