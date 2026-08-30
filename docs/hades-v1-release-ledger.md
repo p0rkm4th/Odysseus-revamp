@@ -2955,6 +2955,12 @@ success, raw final Result, duplicate delivery, or abrupt EOF. This closes the
 observed precondition-contamination loop while keeping fixture cleanup outside
 the behavior under test.
 
+The repaired runner also passed two consecutive
+`OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` runs against the same
+disposable data directory. Each completed 4 turns with 2 GUI mutations and 2
+independent readbacks; false success, raw final Result, duplicate delivery,
+and abrupt EOF were all zero.
+
 Additional exact-candidate owner evidence: populated Memory passed 1 turn with
 two canonical readbacks; the no-RTX-4090 false-premise asset query passed one
 read turn without inventing an entity; realistic UI acceptance passed desktop,
