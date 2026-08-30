@@ -862,7 +862,10 @@ def test_household_move_projects_named_item_and_location_for_update_actions():
         "item_name": "Acceptance Turnip2",
         "location_name": "pantry",
     }
-    assert projection.fast_path == selected["payload"]
+    # UPDATE actions remain in the bounded action-selection flow; the
+    # important invariant is that the selected payload retains the parsed
+    # owner arguments instead of collapsing to only {action: ...}.
+    assert projection.fast_path is None
 
 
 def test_qualitative_recipe_import_projects_review_only_fast_path():
