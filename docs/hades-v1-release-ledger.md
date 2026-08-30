@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Positive Recipe video import checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+`OWNER-RECIPE-VIDEO-POSITIVE-001` passed in the isolated realistic
+Qwen3:8B browser environment. The owner supplied a public recipe video URL
+through chat; the validated Recipe mutation completed and two independent
+canonical readbacks confirmed persistence. Evidence: 1 GUI mutation, 2
+mutation readbacks, zero false successes, raw final Results, duplicate
+delivery, or abrupt EOF. The actual owner runtime remains untouched.
+
 ## Full regression checkpoint after owner-journey corpus correction — exact candidate `cb8a3777` (2026-08-30)
 
 The full supported pytest regression passed after pinning the Asset reference
