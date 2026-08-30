@@ -2191,3 +2191,11 @@ the exact source URL and extracted ingredients, canonical readback passed, and
 the visible Recipe workspace found it after reload. This closes the previous
 positive-video evidence gap; unsupported or insufficient video evidence still
 remains fail-closed and review-safe.
+
+Memory correction/readback is now verified on exact candidate `c685013e`.
+Natural personal-property questions route through canonical Memory reads while
+retaining their narrow query, and the owner correction journey (remember,
+read, invalidate, read again) completed with two verified mutations, two
+deterministic reads, no stale forbidden fact, no false success, no raw Result,
+no duplicate delivery, and no abrupt EOF. Empty-memory answer matching still
+needs a small acceptance-oracle wording fix.

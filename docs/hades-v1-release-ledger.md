@@ -3670,3 +3670,33 @@ After browser reload, the visible Recipe workspace search found the saved
 recipe. Two earlier custom probes stopped before the prompt because of expired
 credentials/session hydration and were classified `AUTH_SESSION_FAILURE` /
 `ENVIRONMENT_FAILURE`, not feature results.
+
+## Memory correction readback — exact candidate `c685013e` (2026-08-30)
+
+The data-driven owner journey exposed a real Memory defect: after the owner
+said “Actually, that is not true anymore,” the next narrow question could be
+routed as a broad Memory summary or fall back to the model, allowing stale or
+missing answers. This was classified `STALE_STATE` /
+`RESULT_PROJECTION_FAILURE` with a shared `WRONG_DOMAIN` route cause.
+
+The repair separates the explicit Memory frame query from the owner’s narrow
+property query, routes natural personal-property questions through the
+canonical `read_memory` Action, and preserves the bounded query in its fast
+path payload. Focused verification passed 366 tests.
+
+Exact pushed candidate `c685013eeae0d61b1ba6fdb37fd7023ab135544a` was built as
+`odysseus:candidate-c685013e`, image
+`sha256:70047a0693efbd5f67fbe5c1bd894cf314b9ea6047c4a1fef63d12a608c81a7c`,
+and deployed only to the disposable current lane with matching source marker,
+healthy running status, and zero restarts. The clean GUI journey completed all
+four turns: two canonical Memory reads and two verified mutations. It reported
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`; the corrected fact was absent from the final read.
+
+An earlier replay failed closed because repeated failed runs had contaminated
+the disposable lane with duplicate test-color rows. The resolver correctly
+refused to guess among duplicates; the harness empty-memory fixture cleared
+only that disposable principal before the clean replay. The empty-memory
+fixture itself returned the correct deterministic zero-result answer, but its
+semantic oracle phrase set did not recognize the displayed wording and remains
+a harness defect to fix separately.
