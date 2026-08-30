@@ -3565,6 +3565,21 @@ continuity, and Work each produced one terminal stream; the run recorded 7
 read journeys, 0 mutations, 0 false successes, 0 raw final Results, 0
 duplicate deliveries, and 0 abrupt EOFs.
 
+## Recovery and visual acceptance checkpoint — exact candidate `17c067a2` (2026-08-30)
+
+Backup/restore was rehearsed against a copied disposable data set using the
+supported `ODYSSEUS_BACKUP_ROOT` isolation control. The tool snapshotted 31
+files, verified the archive, restored it with a safety stash, and independent
+SQLite inspection confirmed the restored data contained 2 Recipes and auth
+state. Owner data and deployment were untouched. Focused backup/Chroma/health
+tests passed 17 tests.
+
+The visual acceptance harness had a repeated post-login `waitForURL` race even
+when the authenticated root shell was already loaded. It now uses the same
+bounded root-path fallback as the authenticated owner runner. The updated
+visual harness passed on the exact candidate at desktop, narrow, and mobile
+widths with no duplicate navigation entry, overflow, or page-error finding.
+
 Video import coverage also passed on the disposable URL lane. A video with no
 verified recipe data required approval, returned a review-safe answer, and
 left the canonical Recipe count unchanged. A positive public cooking video

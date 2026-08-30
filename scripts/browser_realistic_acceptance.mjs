@@ -63,7 +63,15 @@ async function openPage(viewport) {
     await page.locator('#username').fill(credentials.username);
     await page.locator('#password').fill(credentials.password);
     await page.locator('#submitBtn').click();
-    await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
+    // Login may complete through SPA history manipulation without emitting a
+    // navigation event. Accept an already-authenticated root shell while
+    // still surfacing a genuine redirect failure.
+    try {
+      await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
+    } catch (error) {
+      const currentPath = new URL(page.url()).pathname;
+      if (currentPath !== '/' && currentPath !== '') throw error;
+    }
     captureDiagnostics = true;
   } else {
     await context.addCookies([{ name: 'odysseus_session', value: token, url: baseURL }]);
