@@ -279,7 +279,7 @@
       "fixture_profile": "empty-daily-driver",
       "turns": [
         {"prompt": "What's on my plate today?", "expected": {"domain": "WORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "attention", "tool_binding": "read_work", "must_include_any": ["nothing", "no", "today", "plate", "task", "work"], "forbidden": ["scheduled event", "calendar event"]}},
-        {"prompt": "Do I have anything scheduled today?", "expected": {"domain": "CALENDAR", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list_events", "tool_binding": "manage_calendar", "must_include_any": ["no", "none", "nothing", "not connected", "calendar"], "forbidden": ["meeting at", "appointment at", "scheduled event"]}}
+        {"prompt": "Do I have anything scheduled today?", "expected": {"domain": "CALENDAR", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_communications", "must_include_any": ["no", "none", "nothing", "not connected", "calendar"], "forbidden": ["meeting at", "appointment at", "scheduled event"]}}
       ],
       "expected": {"policy": "allowed", "approval": "not_required", "terminal": {"done": 2, "abrupt_eof": false}}
     },

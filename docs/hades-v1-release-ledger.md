@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Today/calendar empty-state replay (2026-08-30)
+
+The expanded Tier 1 minimal pair was replayed through the authenticated GUI on
+the exact disposable candidate `dc03d6763bb87416d865231aa7506351168e95ba`.
+“What's on my plate today?” used the canonical Work attention projection;
+“Do I have anything scheduled today?” used the existing owner-scoped
+`read_communications` Calendar projection. The latter initially exposed a
+transport defect where a streamed generic model answer remained visible after
+the deterministic result was selected. The repair persists bounded Calendar
+evidence and always emits replacement for authoritative final answers. The
+final replay passed two GUI turns with two read journeys and zero
+`falseSuccess`, `rawFinalResults`, `duplicateDelivery`, or `abruptEOF` counts.
+The candidate image was `sha256:ee95bb7219e0e10858d91b8efa3ae439373494a50caa9806b9f96700a3666415`,
+with zero restarts; no owner runtime or owner data was used.
+
 ## Approved Recipe URL failure-path repair and replay (2026-08-30)
 
 An owner-like named URL import on the prior candidate exposed a control-plane
