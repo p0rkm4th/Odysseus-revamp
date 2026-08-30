@@ -1,5 +1,17 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Household clean mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The clean Household journey passed four deterministic owner turns with two GUI
+mutations, two canonical readbacks, and zero false success, raw Result,
+duplicate delivery, or abrupt EOF. Owner deployment state was not modified.
+
+## Asset false-premise filter checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The realistic messy Asset journey correctly handled a nonexistent hardware
+match as absent. It completed one grounded read turn with zero hallucinated
+entity, false success, raw Result, duplicate delivery, or abrupt EOF.
+
 ## Full regression after Memory correction fix — exact candidate `04d05854` (2026-08-30)
 
 The supported full regression after the shared Memory delete-resolution fix
