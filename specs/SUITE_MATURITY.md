@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Admin endpoint cleanup dialog checkpoint — exact candidate `319b530c` (2026-08-30)
+
+Admin offline-endpoint cleanup now uses the shared Hades confirmation without
+a native fallback, with explicit keep/remove wording. Focused UI/Admin
+coverage passed 22 tests, responsive browser acceptance passed, and the broad
+regression passed 7,041 tests with 8 skipped and 149 warnings. Static review
+finds no remaining application native prompt, alert, or confirm calls. Owner
+deployment state was not modified.
+
 ## Cookbook GPU-preflight dialog checkpoint — exact candidate `b95c04f8` (2026-08-30)
 
 GPU-preflight launch warnings now use a shared Hades confirmation with clear
