@@ -1409,7 +1409,9 @@ async def stream_aci_runtime(
             session_id,
             work_run_id,
             structured_reference=bool(re.search(
-                r"\b(?:the\s+)?(?:first|second|third)\b|\b(?:it|that|this|those|them)\b",
+                r"\b(?:the\s+)?(?:first|second|third)\b|"
+                r"\b(?:it|that|this|those|them)\b|"
+                r"\b(?:use|consume)\s+(?:one|a|an|two|three|four|five|\d+(?:\.\d+)?)\b",
                 str(_last_user or ""),
                 re.IGNORECASE,
             )),
