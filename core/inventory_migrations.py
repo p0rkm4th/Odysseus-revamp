@@ -97,8 +97,14 @@ def apply_inventory_v3(connection: Connection) -> None:
             # Early V1 databases predate timestamps on recipe ingredients.
             # Keep the rebuilt schema compatible with the current model and
             # synthesize timestamps only for those legacy rows.
-            Column("created_at", getattr(old.c, "created_at", Column("created_at", DateTime)).type, nullable=False),
-            Column("updated_at", getattr(old.c, "updated_at", Column("updated_at", DateTime)).type, nullable=False),
+            Column(
+                "created_at", getattr(old.c, "created_at", Column("created_at", DateTime)).type,
+                nullable=False, server_default=text("CURRENT_TIMESTAMP"),
+            ),
+            Column(
+                "updated_at", getattr(old.c, "updated_at", Column("updated_at", DateTime)).type,
+                nullable=False, server_default=text("CURRENT_TIMESTAMP"),
+            ),
             CheckConstraint("quantity IS NULL OR quantity > 0", name="ck_inventory_recipe_ingredient_quantity_positive"),
         )
         rebuilt.create(connection)
