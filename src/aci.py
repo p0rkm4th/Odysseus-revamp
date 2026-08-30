@@ -867,6 +867,45 @@ def calendar_list_summary_from_tool_output(raw: str, max_items: int = 20) -> str
     return "\n".join(lines)
 
 
+def communications_calendar_summary_from_tool_output(raw: str, max_items: int = 20) -> str:
+    """Project the owner-scoped calendar portion of communications reads.
+
+    ``read_communications`` can be DEGRADED because email or contacts are not
+    projected while its calendar data is still authoritative.  Do not let
+    that unrelated status turn a successful calendar read into a generic
+    blocked answer.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        return ""
+    text = raw.strip()
+    if text.startswith("AI: "):
+        text = text[4:].strip()
+    try:
+        payload = json.loads(text)
+    except (TypeError, ValueError):
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    calendar = payload.get("calendar")
+    if not isinstance(calendar, dict):
+        return ""
+    events = calendar.get("events")
+    if not isinstance(events, list):
+        return ""
+    if not events:
+        if int(calendar.get("calendars") or 0) > 0:
+            return "You have no calendar events scheduled in the next 14 days."
+        return "Your calendar is not connected, so I can't check today's schedule."
+    lines = [f"You have {len(events)} calendar event{'s' if len(events) != 1 else ''} coming up:"]
+    for event in events[:max_items]:
+        if not isinstance(event, dict):
+            continue
+        summary = str(event.get("summary") or "(untitled event)").strip()
+        when = str(event.get("dtstart") or "").strip()
+        lines.append(f"- {summary}" + (f" — {when}" if when else ""))
+    return "\n".join(lines)
+
+
 def _format_email_summary_item(item: dict[str, str]) -> str:
     subject = item.get("subject") or "(no subject)"
     parts = [subject]
