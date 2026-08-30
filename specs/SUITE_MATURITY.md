@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## World Model shared-error checkpoint — exact candidate `251828bb` (2026-08-30)
+
+World Model CMDB-sync failures now use the shared Hades error surface rather
+than a native alert, retaining retry behavior. Focused World Model/network
+coverage passed 25 tests and the authenticated responsive visual gate passed
+on the exact source-marked candidate. This remains a focused follow-up to the
+prior broad regression; owner deployment state was not modified.
+
 ## Inventory shared-confirmation checkpoint — exact candidate `4f420ba4` (2026-08-30)
 
 Inventory mutation confirmations for cooking, applying reviewed stock
