@@ -1964,6 +1964,17 @@ def compile_intent(
     # explicit attempt bit in the IntentFrame projection for evaluator metrics.
     reference_resolution["attempted"] = reference_resolution.get("status") != "NOT_REFERENCE"
     operation = _operation(text, continuation=continuation)
+    # A property question about a resolved owner entity is a canonical detail
+    # read, even when the conversational classifier labels its leading
+    # "and" as a generic continuation.  Letting CONTINUE win here discards
+    # the asset property and sends the user to a run-state clarification.
+    if (
+        operation == "CONTINUE"
+        and reference_resolution.get("status") == "RESOLVED"
+        and re.search(r"\b(?:ram|memory|cpu|processor|gpu|graphics\s+card|storage|motherboard|os)\b", q)
+        and re.search(r"\b(?:it|its|that|this|that\s+one)\b", q)
+    ):
+        operation = "READ"
     semantic_read_concept = (
         deterministic_read_concept(text) if operation == "READ" else None
     )

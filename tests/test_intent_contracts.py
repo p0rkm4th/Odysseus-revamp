@@ -212,6 +212,26 @@ def test_structured_reference_followup_enters_bounded_aci_path_without_domain_no
     assert is_bounded_owner_capability_turn(frame) is True
 
 
+def test_asset_property_followup_beats_generic_continuation():
+    context = {
+        "ordered_entities": [
+            {"ref": "atlas", "concept": "TECHNICAL_ASSET"},
+            {"ref": "erebus", "concept": "TECHNICAL_ASSET"},
+        ],
+        "last": {"ref": "atlas", "concept": "TECHNICAL_ASSET"},
+    }
+    frame = compile_intent(
+        "And what RAM does that one have?",
+        continuation=True,
+        reference_context=context,
+    )
+
+    assert frame.operation_class == "READ"
+    assert frame.domain_concept == "TECHNICAL_ASSET"
+    assert frame.entity_reference == "atlas"
+    assert frame.filters["asset_property"] == "ram"
+
+
 @pytest.mark.parametrize(("query", "action"), [
     ("Add this server to my IT asset inventory.", "add"),
     ("Update Thanatos in my asset inventory.", "update"),
