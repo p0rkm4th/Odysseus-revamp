@@ -1965,8 +1965,15 @@ async def _execute_manage_work_binding(block, owner=None):
             else:
                 project_title = str(payload.get("project_title") or "").strip()
                 if not project_title:
-                    raise ValueError("an existing project is required for task creation")
-                projects = db.query(WorkProject).filter_by(owner=owner, title=project_title).all()
+                    projects = db.query(WorkProject).filter(
+                        WorkProject.owner == owner,
+                        WorkProject.status.notin_(["completed", "cancelled"]),
+                    ).all()
+                    if len(projects) != 1:
+                        raise ValueError("an existing project must be named when more than one is available")
+                    project_title = projects[0].title
+                else:
+                    projects = db.query(WorkProject).filter_by(owner=owner, title=project_title).all()
                 if len(projects) != 1:
                     raise ValueError("project reference is missing or ambiguous")
                 created = service.create_task(owner, {
