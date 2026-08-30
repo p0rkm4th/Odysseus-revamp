@@ -64,6 +64,27 @@ def test_zero_result_is_not_false_retrieval_failure(tmp_path):
     assert "ZERO_RESULT" in render_explicit_memory_context(empty)
 
 
+def test_specific_memory_question_does_not_surface_adjacent_unrelated_record(tmp_path):
+    rows = [
+        {"id": "color", "owner": "alice", "text": "My test color is ultraviolet orange.", "category": "fact"},
+        {"id": "adjacent", "owner": "alice", "text": "Recovery marker ultraviolet orange.", "category": "fact"},
+    ]
+    result = build_explicit_memory_result(
+        _manager(tmp_path, rows), "alice", "What is my test color now?"
+    )
+    assert result["query_type"] == "specific"
+    assert [row["id"] for row in result["memories"]] == ["color"]
+
+
+def test_specific_memory_question_is_zero_result_after_exact_record_removed(tmp_path):
+    rows = [{"id": "adjacent", "owner": "alice", "text": "Recovery marker ultraviolet orange.", "category": "fact"}]
+    result = build_explicit_memory_result(
+        _manager(tmp_path, rows), "alice", "What is my test color now?"
+    )
+    assert result["status"] == "zero_result"
+    assert result["memories"] == []
+
+
 def test_unreadable_store_is_reported_as_retrieval_failure(tmp_path):
     path = tmp_path / "memory.json"
     path.write_text("{not-json", encoding="utf-8")

@@ -36,6 +36,13 @@ _EXPLICIT_MEMORY_RE = re.compile(
 )
 
 _WORK_RE = re.compile(r"\b(?:work|job|career|professional|employment|homelab)\b", re.IGNORECASE)
+_SPECIFIC_MEMORY_RE = re.compile(
+    r"\b(?:what(?:'s| is)\s+my|what\s+is\s+the|which\s+of\s+my)\b",
+    re.IGNORECASE,
+)
+_MEMORY_QUERY_STOPWORDS = frozenset(
+    "what what's is the my of do you know remember about now currently please".split()
+)
 
 
 def is_explicit_memory_query(text: str) -> bool:
@@ -51,9 +58,32 @@ def memory_query_kind(text: str) -> str:
     query = str(text or "").strip()
     if _WORK_RE.search(query):
         return "work"
+    if _SPECIFIC_MEMORY_RE.search(query):
+        return "specific"
     if re.search(r"\b(?:check|show|inspect|search)\b", query, re.IGNORECASE):
         return "inspect"
     return "summary"
+
+
+def _specific_memory_match(query: str, entry: Mapping[str, Any]) -> bool:
+    """Require every meaningful phrase term for a narrow owner question.
+
+    Broad ``about me`` requests intentionally return the owner's bounded
+    summary. A question such as ``what is my test color?`` is different: a
+    semantically adjacent record must not be presented as the answer after
+    the exact record was removed.
+    """
+    normalized = re.sub(r"[^a-z0-9\s]", " ", str(query or "").casefold())
+    terms = [
+        token.rstrip("s")
+        for token in normalized.split()
+        if token not in _MEMORY_QUERY_STOPWORDS and len(token) > 1
+    ]
+    haystack = re.sub(
+        r"[^a-z0-9\s]", " ",
+        " ".join(str(entry.get(key) or "") for key in ("text", "category")),
+    ).casefold()
+    return bool(terms) and all(re.search(rf"\b{re.escape(term)}", haystack) for term in terms)
 
 
 def minimal_saved_memory_message(messages: List[Dict]) -> Optional[Dict]:
@@ -173,6 +203,8 @@ def build_explicit_memory_result(memory_manager: Any, owner: Optional[str], quer
 
     if kind == "work":
         selected = [entry for entry in entries if _matches_work(entry)]
+    elif kind == "specific":
+        selected = [entry for entry in entries if _specific_memory_match(query, entry)]
     else:
         selected = entries
 
