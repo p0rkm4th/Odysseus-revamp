@@ -1073,7 +1073,7 @@ def _build_system_prompt(
     # the route may actually use an integration/setup boundary; injecting the
     # catalog into unrelated routes needlessly taints private reads/writes.
     _integration_route = (
-        relevant_tools is None
+        (relevant_tools is None and not intent_domains)
         or bool(set(relevant_tools or ()) & {"api_call", "read_setup"})
         or bool(set(intent_domains or ()) & {"integrations", "setup", "settings"})
     )
