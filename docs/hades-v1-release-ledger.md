@@ -3441,3 +3441,13 @@ canonically. Recipe count changed 2→3 by independent API readback; the named
 Recipe appeared in two natural-language reads and remained present after
 reload. No API behavior setup was used, and the replay produced no false
 success, raw final Result, duplicate delivery, or abrupt EOF.
+
+## Household location-move gap — owner walkabout (2026-08-30)
+
+The owner-style request `Move them to the pantry.` was reproduced through the
+GUI on the exact disposable candidate. It selected the read-only household
+overview Action and produced no useful final answer. This is classified as
+`WRONG_OPERATION` / `WRONG_ACTION` with `CAPABILITY_UNAVAILABLE`: the existing
+InventoryService explicitly rejects `move_stock`, so the request must not be
+silently mapped to stock addition or allowed to claim a location change.
+Location ownership and a bounded move Action remain an open Tier 1 target.
