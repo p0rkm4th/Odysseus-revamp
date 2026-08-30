@@ -2,6 +2,18 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## World Model shared-error checkpoint — exact candidate `251828bb` (2026-08-30)
+
+World Model’s owner-facing “Sync CMDB” failure path used a native alert. It
+now uses the shared Hades error surface while preserving retry state on the
+sync control. Focused World Model/network coverage passed 25 tests. Exact
+candidate `odysseus:candidate-251828bb` has image ID
+`sha256:2af478b9f244130a77a77dc47e9da45b26e6d72e65b0c928048732b7aa6c9763`
+and source marker `251828bb0c0fc2ba975bc439f2bdd47f866bae43`; the isolated
+runtime passed the authenticated responsive visual gate with 0 restarts.
+This is a focused follow-up to the preceding broad regression, not a new
+full-suite claim. Owner deployment and data remain untouched.
+
 ## Inventory shared-confirmation checkpoint — exact candidate `4f420ba4` (2026-08-30)
 
 The Household/Recipe walkabout found three owner-facing inventory mutation
