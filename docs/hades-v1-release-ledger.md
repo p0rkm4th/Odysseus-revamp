@@ -11,6 +11,10 @@ turns with one approved mutation, two canonical readbacks, and reload/follow-up
 coverage. Both journeys reported `falseSuccess=0`, `rawFinalResults=0`,
 `duplicateDelivery=0`, and `abruptEOF=0`; owner deployment/data were untouched.
 
+The `OWNER-RECIPE-EXPIRING-COMPOSITION-001` journey also passed with one
+canonical read and two independent readback checks, with the same zero oracle
+and transport defects.
+
 ## Recipe video, Memory, and Work overview continuation (2026-08-30)
 
 On the isolated Qwen3:8B candidate, the positive video Recipe mutation journey
