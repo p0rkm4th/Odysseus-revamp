@@ -63,6 +63,15 @@ and one reload readback, with no false success or invented source claim. The
 disposable runtime remains source-marked `806fc3ba`; the actual owner runtime
 was not modified.
 
+## Asset RAM collection-property checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+`OWNER-ASSET-RAM-001` passed in the corpus deterministic synthetic fixture
+mode across three owner turns. The collection-property journey returned
+grounded RAM facts with three read journeys and zero false successes, raw final
+Results, duplicate delivery, or abrupt EOF. This is deterministic feature
+evidence, not a new Qwen reliability run; the candidate and actual owner
+runtime remained unchanged.
+
 ## Household sloppy-language mutation/readback checkpoint — exact candidate `806fc3ba` (2026-08-30)
 
 `OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` passed through the authenticated

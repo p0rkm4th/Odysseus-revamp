@@ -50,6 +50,13 @@ language, with two GUI mutations and two independent inventory readbacks.
 False success, raw Result, duplicate delivery, and abrupt EOF counts were all
 zero. Household mutation/readback remains green on this candidate.
 
+## Asset RAM collection-property checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+The Asset RAM owner journey passed three deterministic read turns with
+grounded collection-property answers and zero false success, raw Result,
+duplicate delivery, or abrupt EOF. This checkpoint is deterministic fixture
+evidence; Qwen reliability remains separately scoped.
+
 ## Recipe review browser boundary — `2026-08-30`
 
 The next Recipe review replay did not reach a chat turn: isolated setup first
