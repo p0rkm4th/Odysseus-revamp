@@ -3795,6 +3795,25 @@ import { loadPanel } from './panels.js';
                     }
                   }
                 }
+                // Approval payloads are carried inside tool_output so the
+                // settled tool trace and interactive choice share one event.
+                // Render the live card here as well as on the standalone
+                // ask_user event; otherwise an owner sees a pending spinner
+                // until reload even though approval is ready.
+                if (json.ask_user && !json.ask_user.resolved) {
+                  _cancelThinkingTimer();
+                  _removeThinkingSpinner();
+                  const _embeddedAskUser = json.ask_user;
+                  chatRenderer.renderAskUserCard(_embeddedAskUser);
+                  if (_embeddedAskUser.kind === 'tool_approval' && _embeddedAskUser.approval_id) {
+                    requestAnimationFrame(() => {
+                      if (!document.querySelector('#chat-history .ask-user-card[data-ask-user-kind="tool_approval"]')) {
+                        chatRenderer.renderAskUserCard(_embeddedAskUser);
+                      }
+                    });
+                  }
+                }
+
                 // --- Reload sessions after manage_session tool (delete, rename, etc.) ---
                 // Debounce so bulk deletes don't fire loadSessions per call
                 if (json.tool === 'manage_session' && sessionModule) {
