@@ -5299,8 +5299,13 @@ import { loadPanel } from './panels.js';
       chatRenderer.recordSessionMetricsCost(metricsData, sessionId);
     }
     if (onThisSession) {
-      const pendingAskUser = _livePendingAskUser;
-      sessionModule.selectSession(sessionId).then(() => {
+      // resumeStream is also exercised as a detached function by the
+      // fallback/reconnect harness, where module-local live-card state is not
+      // present.  Treat that isolated context as having no pending card.
+      const pendingAskUser = typeof _livePendingAskUser !== 'undefined'
+        ? _livePendingAskUser
+        : null;
+      Promise.resolve(sessionModule.selectSession(sessionId)).then(() => {
         // Restore the live card if the history reload raced the assistant
         // metadata write.  Once the user chooses an approval, the event
         // handler clears this snapshot and the next turn removes the card.
