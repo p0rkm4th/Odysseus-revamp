@@ -1564,3 +1564,15 @@ With the required owner-scoped disposable CMDB observations supplied,
 `read_network_observations` Action, and zero false success, raw final Result,
 duplicate delivery, or abrupt EOF. The initial unavailable replay remains
 fixture-wiring evidence only.
+
+## Messy pantry recipe-candidate maturity — exact candidate `303fde19` (2026-08-29)
+
+Messy owner phrasing for pantry-backed recipe discovery now resolves to the
+canonical Recipe candidate projection. The exact prompt plus two natural
+paraphrases produced grounded human answers on the isolated Qwen3:8B
+candidate, and reload preserved the answers. The journey used no mutation;
+each turn had one `read_recipes` `pantry_candidates` Action, with zero false
+success, raw final Result, duplicate delivery, abrupt EOF, and browser page
+errors. This closes the previously observed route-success/final-answer loss
+for this journey, but does not make the broader Recipe V1 or Tier 1 release
+bar complete.
