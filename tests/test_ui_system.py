@@ -102,6 +102,14 @@ def test_document_owner_actions_use_shared_prompt_and_confirmation_dialogs():
     assert "Attach separately" in source
 
 
+def test_tasks_use_shared_confirmation_dialogs_without_native_fallbacks():
+    source = (ROOT / "static/js/tasks.js").read_text()
+    assert source.count("uiModule.styledConfirm") >= 5
+    assert "window.confirm(" not in source
+    assert "Keep tasks" in source
+    assert "Keep settings" in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]

@@ -698,9 +698,9 @@ function _taskUpdateBulkCount() {
 async function _taskBulkDelete() {
   const ids = [..._taskSelected];
   if (!ids.length || _taskBulkDeleting) return;
-  const ok = uiModule?.styledConfirm
-    ? await uiModule.styledConfirm(`Delete ${ids.length} task${ids.length > 1 ? 's' : ''}? This cannot be undone.`, { confirmText: 'Delete', danger: true })
-    : confirm(`Delete ${ids.length} task(s)?`);
+  const ok = await uiModule.styledConfirm(`Delete ${ids.length} task${ids.length > 1 ? 's' : ''}? This cannot be undone.`, {
+    title: 'Delete tasks', confirmText: 'Delete', cancelText: 'Keep tasks', danger: true,
+  });
   if (!ok) return;
   _taskBulkDeleting = true;
   const countEl = document.getElementById('tasks-selected-count');
@@ -1892,9 +1892,9 @@ async function _doRunNow(id, force = false) {
 }
 
 async function _doDelete(id) {
-  const ok = uiModule?.styledConfirm
-    ? await uiModule.styledConfirm('Delete this task and all its run history?', { confirmText: 'Delete', danger: true })
-    : confirm('Delete this task and all its run history?');
+  const ok = await uiModule.styledConfirm('Delete this task and all its run history?', {
+    title: 'Delete task', confirmText: 'Delete', cancelText: 'Keep task', danger: true,
+  });
   if (!ok) return;
   try {
     await _deleteTask(id);
@@ -1906,9 +1906,9 @@ async function _doDelete(id) {
 }
 
 async function _doRevert(id) {
-  const ok = uiModule?.styledConfirm
-    ? await uiModule.styledConfirm('Revert this built-in task to its default schedule and settings?', { confirmText: 'Revert' })
-    : confirm('Revert this built-in task to its default?');
+  const ok = await uiModule.styledConfirm('Revert this built-in task to its default schedule and settings?', {
+    title: 'Revert built-in task', confirmText: 'Revert task', cancelText: 'Keep settings',
+  });
   if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/api/tasks/${id}/revert`, { method: 'POST', credentials: 'same-origin' });
@@ -1920,9 +1920,9 @@ async function _doRevert(id) {
 }
 
 async function _doClearTaskCache(id, label = 'cache') {
-  const ok = uiModule?.styledConfirm
-    ? await uiModule.styledConfirm(`Clear cached ${label} for this task?`, { confirmText: 'Clear' })
-    : confirm(`Clear cached ${label} for this task?`);
+  const ok = await uiModule.styledConfirm(`Clear cached ${label} for this task?`, {
+    title: 'Clear task cache', confirmText: 'Clear cache', cancelText: 'Keep cache',
+  });
   if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/api/tasks/${encodeURIComponent(id)}/clear-cache`, {
@@ -1948,14 +1948,10 @@ async function _doToggleAll() {
   }
   const verb = hasActive ? 'Pause' : 'Resume';
   let confirmed = true;
-  if (uiModule?.styledConfirm) {
-    confirmed = await uiModule.styledConfirm(
-      `${verb} all ${targets.length} ${hasActive ? 'active' : 'paused'} task(s)?`,
-      { confirmText: verb + ' all' }
-    );
-  } else if (typeof confirm === 'function') {
-    confirmed = confirm(`${verb} ${targets.length} task(s)?`);
-  }
+  confirmed = await uiModule.styledConfirm(
+    `${verb} all ${targets.length} ${hasActive ? 'active' : 'paused'} task(s)?`,
+    { title: `${verb} tasks`, confirmText: verb + ' all', cancelText: 'Cancel' }
+  );
   if (!confirmed) return;
   let ok = 0, fails = [];
   for (const t of targets) {
