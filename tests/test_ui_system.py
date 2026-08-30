@@ -138,6 +138,14 @@ def test_cookbook_gpu_preflight_uses_shared_confirmation_without_native_fallback
     assert "window.confirm" not in source
 
 
+def test_admin_offline_endpoint_cleanup_uses_shared_confirmation_without_native_fallback():
+    source = (ROOT / "static/js/admin.js").read_text()
+    assert "title: 'Clear offline endpoints'" in source
+    assert "cancelText: 'Keep endpoints'" in source
+    assert "window.confirm(" not in source
+    assert "else if (!confirm(" not in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]
