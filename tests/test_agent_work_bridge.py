@@ -66,6 +66,25 @@ def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch)
         engine.dispose()
 
 
+def test_completed_household_item_result_projects_reference_for_quantity_followup(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-household-ref", "Add 4 cans of Chickpeas.",
+            intent={"domains": ["household"], "domain_concept": "HOUSEHOLD_ITEM", "operation_class": "CREATE"},
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_assets",
+            {"action": "add_item", "name": "Chickpeas", "initial_quantity": 4},
+        )
+        bridge.record_result("alice", action_id, {"data": {"status": "VERIFIED", "item": {"id": "item:chickpeas"}}})
+        context = bridge.recent_session_reference_context("alice", "chat-household-ref")
+        assert context["ordered_entities"] == [{"ref": "item:chickpeas", "concept": "HOUSEHOLD_ITEM"}]
+    finally:
+        engine.dispose()
+
+
 def test_consumption_action_receives_durable_idempotency_key(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)

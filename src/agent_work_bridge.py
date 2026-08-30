@@ -560,7 +560,7 @@ def _history_result_references(history: list[Any] | None) -> list[dict[str, Any]
             if not isinstance(payload, dict):
                 continue
             refs: list[dict[str, Any]] = []
-            for items, concept in ((payload.get("reference_entities"), "TECHNICAL_ASSET"), (payload.get("assets"), "TECHNICAL_ASSET"), (payload.get("recipes"), "RECIPE")):
+            for items, concept in ((payload.get("reference_entities"), "TECHNICAL_ASSET"), (payload.get("assets"), "TECHNICAL_ASSET"), (payload.get("recipes"), "RECIPE"), (payload.get("items"), "HOUSEHOLD_ITEM")):
                 if not isinstance(items, list):
                     continue
                 for item in items[:500]:
@@ -569,7 +569,7 @@ def _history_result_references(history: list[Any] | None) -> list[dict[str, Any]
                         if ref:
                             if not any(item["ref"] == ref for item in refs):
                                 refs.append({"ref": ref[:500], "concept": concept})
-            for key, concept in (("asset", "TECHNICAL_ASSET"), ("recipe", "RECIPE")):
+            for key, concept in (("asset", "TECHNICAL_ASSET"), ("recipe", "RECIPE"), ("item", "HOUSEHOLD_ITEM")):
                 item = payload.get(key)
                 if isinstance(item, dict):
                     ref = str(item.get("id") or item.get("asset_id") or "").strip()
@@ -862,6 +862,7 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 (safe_data.get("reference_entities"), "TECHNICAL_ASSET"),
                 (safe_data.get("assets"), "TECHNICAL_ASSET"),
                 (safe_data.get("recipes"), "RECIPE"),
+                (safe_data.get("items"), "HOUSEHOLD_ITEM"),
             )
             for items, concept in collections:
                 if not isinstance(items, list):
@@ -872,13 +873,13 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                     ref = str(item.get("id") or item.get("asset_id") or "").strip()
                     if ref and not any(existing["ref"] == ref for existing in refs):
                         refs.append({"ref": ref[:500], "concept": concept})
-            for key, concept in (("asset", "TECHNICAL_ASSET"), ("recipe", "RECIPE")):
+            for key, concept in (("asset", "TECHNICAL_ASSET"), ("recipe", "RECIPE"), ("item", "HOUSEHOLD_ITEM")):
                 item = safe_data.get(key)
                 if isinstance(item, dict):
                     ref = str(item.get("id") or item.get("asset_id") or "").strip()
                     if ref:
                         refs.append({"ref": ref[:500], "concept": concept})
-            for key, concept in (("recipe_id", "RECIPE"), ("asset_id", "TECHNICAL_ASSET")):
+            for key, concept in (("recipe_id", "RECIPE"), ("asset_id", "TECHNICAL_ASSET"), ("item_id", "HOUSEHOLD_ITEM")):
                 ref = str(safe_data.get(key) or "").strip()
                 if ref:
                     refs.append({"ref": ref[:500], "concept": concept})
