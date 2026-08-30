@@ -70,8 +70,8 @@ def test_recipe_import_schema_allows_unprepared_commit_payload():
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "manage_memory", "read_work", "manage_work", "read_household", "read_recipes", "manage_recipes", "read_setup", "read_career", "read_communications", "developer_read", "web_search", "web_fetch"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 17
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "manage_memory", "read_work", "manage_work", "manage_notes", "read_household", "read_recipes", "manage_recipes", "read_setup", "read_career", "read_communications", "developer_read", "web_search", "web_fetch"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 18
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()

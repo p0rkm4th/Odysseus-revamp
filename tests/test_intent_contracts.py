@@ -120,6 +120,17 @@ def test_owner_scheduled_question_uses_calendar_projection():
     assert resolved.binding_name == "read_communications"
 
 
+def test_natural_reminder_uses_existing_notes_mutation_contract():
+    frame = compile_intent("Remind me tomorrow to review the backup plan.")
+    resolved = resolve_intent(frame)
+    assert frame.operation_class == "CREATE"
+    assert frame.domain_concept == "NOTES_MUTATION"
+    assert resolved.action_id == "add"
+    assert resolved.binding_name == "manage_notes"
+    assert resolved.available is True
+    assert resolved.reason != "actionspec_unavailable"
+
+
 @pytest.mark.parametrize("query", [
     "What IT assets do I have?",
     "What machines are recorded?",

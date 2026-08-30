@@ -192,6 +192,26 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             for action in ("overview", "contacts")
         )),
     ),
+    "notes.read": CapabilitySpec(
+        capability_id="notes.read",
+        description="Owner-scoped reads over notes, todos, and reminders.",
+        actions=_actions(*(
+            ActionSpec(action_id=action, effects=("read_private",), executor_key="manage_notes")
+            for action in ("list", "search", "find", "view")
+        )),
+    ),
+    "notes.manage": CapabilitySpec(
+        capability_id="notes.manage",
+        description="Manage owner-scoped notes, todos, and one-off reminders.",
+        actions=_actions(*(
+            ActionSpec(
+                action_id=action,
+                effects=("read_private",) if action in {"list", "search", "find", "view"} else ("write_private",),
+                executor_key="manage_notes",
+            )
+            for action in ("list", "search", "find", "view", "add", "update", "delete", "toggle_item")
+        )),
+    ),
     "system.privileged_diagnostics": CapabilitySpec(
         capability_id="system.privileged_diagnostics",
         description="Narrow brokered diagnostic operations.",
@@ -367,6 +387,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_setup": "setup.read",
     "read_career": "career.read",
     "read_communications": "communications.read",
+    "manage_notes": "notes.manage",
     "developer_read": "developer.read",
     "web_search": "web.evidence",
     "web_fetch": "web.evidence",
