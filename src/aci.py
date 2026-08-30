@@ -3710,7 +3710,7 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_work", "manage_recipes", "manage_memory"} or not isinstance(result, Mapping):
+    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_work", "read_recipes", "manage_recipes", "manage_memory"} or not isinstance(result, Mapping):
         return None
     if str(tool_name or "").strip() == "manage_memory":
         return {
@@ -3729,6 +3729,25 @@ def canonical_tool_result_projection(
             return None
     if not isinstance(payload, Mapping):
         return None
+    if str(tool_name or "").strip() == "read_recipes":
+        projection = {
+            "status": payload.get("status"),
+            "action": payload.get("action") or payload.get("operation"),
+            "canonical_store": payload.get("canonical_store"),
+            "verification": payload.get("verification"),
+        }
+        if isinstance(payload.get("candidates"), list):
+            projection["candidates"] = [
+                {
+                    "recipe_id": row.get("recipe_id"),
+                    "recipe_name": row.get("recipe_name"),
+                    "can_make": row.get("can_make"),
+                    "shortages": row.get("shortages", [])[:8] if isinstance(row.get("shortages"), list) else [],
+                }
+                for row in payload["candidates"][:20]
+                if isinstance(row, Mapping)
+            ]
+        return projection
     if str(tool_name or "").strip() == "manage_recipes":
         # Recipe commits can contain a large ingredient/instruction payload.
         # Preserve only the bounded evidence needed by the deterministic
