@@ -601,14 +601,22 @@ class AuthManager:
         password: str,
         *,
         expires_at: float | None = None,
+        allow_research: bool = False,
     ) -> bool:
-        """Create/rotate the explicitly enabled, least-privileged test user."""
+        """Create/rotate the explicitly enabled test user.
+
+        Research remains disabled by default because most acceptance journeys
+        need only canonical local capabilities.  A disposable provider-backed
+        OSINT rehearsal may opt in explicitly without changing normal users or
+        the research policy boundary.
+        """
         if not self.acceptance_principal_enabled() or len(password) < PASSWORD_MIN_LENGTH:
             return False
         expiry = expires_at or (time.time() + ACCEPTANCE_ACCOUNT_TTL)
         privileges = dict(DEFAULT_PRIVILEGES)
         for key in ("can_use_browser", "can_use_bash", "can_use_documents", "can_use_research", "can_generate_images"):
             privileges[key] = False
+        privileges["can_use_research"] = bool(allow_research)
         with self._config_lock:
             existing = self.users.get(ACCEPTANCE_USERNAME)
             if existing and not existing.get("acceptance_only"):

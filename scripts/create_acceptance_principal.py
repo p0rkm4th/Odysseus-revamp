@@ -26,6 +26,10 @@ def main() -> int:
     parser.add_argument("--auth-path", default=str(DEFAULT_AUTH_PATH))
     parser.add_argument("--credential-file", default="/tmp/hades-acceptance-credentials.json")
     parser.add_argument("--ttl", type=int, default=600)
+    parser.add_argument(
+        "--allow-research", action="store_true",
+        help="enable research only for this explicitly disposable acceptance account",
+    )
     parser.add_argument("--revoke", action="store_true")
     args = parser.parse_args()
     manager = AuthManager(args.auth_path)
@@ -39,7 +43,9 @@ def main() -> int:
         raise SystemExit("--ttl must be between 1 and 900 seconds")
     password = secrets.token_urlsafe(32)
     account_expiry = time.time() + args.ttl
-    if not manager.create_acceptance_principal(password, expires_at=account_expiry):
+    if not manager.create_acceptance_principal(
+        password, expires_at=account_expiry, allow_research=args.allow_research,
+    ):
         raise SystemExit("could not create acceptance principal")
     destination = Path(args.credential_file)
     destination.parent.mkdir(parents=True, exist_ok=True)

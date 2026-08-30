@@ -101,6 +101,12 @@ def test_acceptance_principal_requires_explicit_flag_and_expires_sessions(monkey
     assert mgr.create_acceptance_principal("acceptance-password", expires_at=__import__("time").time() + 60)
     token = mgr.create_session("hades-acceptance", "acceptance-password")
     assert token and mgr.validate_token(token)
+    assert mgr.get_privileges("hades-acceptance")["can_use_research"] is False
+    assert mgr.create_acceptance_principal(
+        "acceptance-password-2", expires_at=__import__("time").time() + 60,
+        allow_research=True,
+    )
+    assert mgr.get_privileges("hades-acceptance")["can_use_research"] is True
     monkeypatch.delenv("HADES_ACCEPTANCE_PRINCIPAL_ENABLED", raising=False)
     assert mgr.validate_token(token) is False
     assert mgr.create_session("hades-acceptance", "acceptance-password") is None
