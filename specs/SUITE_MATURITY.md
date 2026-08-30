@@ -2198,4 +2198,14 @@ retaining their narrow query, and the owner correction journey (remember,
 read, invalidate, read again) completed with two verified mutations, two
 deterministic reads, no stale forbidden fact, no false success, no raw Result,
 no duplicate delivery, and no abrupt EOF. Empty-memory answer matching still
-needs a small acceptance-oracle wording fix.
+was corrected in docs-only commit `e716858c`.
+
+Household owner mutation/readback is now verified on exact candidate
+`4da73504`. A successful `read_household` Action is projected into a bounded
+human answer, and common singular/plural item references resolve to an exact
+canonical item before the legacy substring search is considered. The clean
+four-turn GUI journey performed two mutations and two independent readbacks;
+false success, raw final Results, duplicate delivery, and abrupt EOF were all
+zero. Failed predecessor replays exposed real projection and mutation
+resolution defects; disposable fixture residue is tracked separately as
+acceptance-harness cleanup debt.

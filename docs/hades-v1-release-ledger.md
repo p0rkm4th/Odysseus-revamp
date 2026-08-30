@@ -3697,6 +3697,30 @@ An earlier replay failed closed because repeated failed runs had contaminated
 the disposable lane with duplicate test-color rows. The resolver correctly
 refused to guess among duplicates; the harness empty-memory fixture cleared
 only that disposable principal before the clean replay. The empty-memory
-fixture itself returned the correct deterministic zero-result answer, but its
-semantic oracle phrase set did not recognize the displayed wording and remains
-a harness defect to fix separately.
+fixture itself returned the correct deterministic zero-result answer; the
+acceptance wording was subsequently corrected in docs-only commit `e716858c`.
+
+## Household read projection and natural mutation resolution — exact candidate `4da73504` (2026-08-30)
+
+The owner Household journey exposed a real `RESULT_PROJECTION_FAILURE` /
+`ANSWER_FINALIZATION_FAILURE`: a successful canonical `read_household` Action
+could complete without a human answer. The shared result projection now emits
+a bounded inventory summary and the final answer consumes that projection.
+
+The next replay exposed a real mutation argument-resolution defect. Ordinary
+owner language such as “Use one Acceptance Tomato” did not resolve the
+canonical “Acceptance Tomatoes” item when a similarly named “Acceptance Tomato
+Sauce” existed. Shared inventory search now supports bounded common
+singular/plural forms, while mutation resolution prefers exact normalized
+variants and still fails closed on ambiguity.
+
+Focused verification passed 404 tests, then 141 focused lifecycle/tool tests
+after the resolver refinement. Exact pushed candidate
+`4da73504d7c16ad26d16da52df21cf395ef53636` was built as
+`odysseus:candidate-4da73504`, image
+`sha256:b0fd174d045d1a456e8136e912df02610e05b36f0695fe20bd85e4a349c2fae5`,
+with matching OCI revision and source marker. The clean GUI replay completed
+4 turns, 2 GUI mutations, and 2 independent canonical readbacks with
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. Earlier candidates failed the same journey and remain recorded
+as reproducible evidence, not hidden by the later pass.
