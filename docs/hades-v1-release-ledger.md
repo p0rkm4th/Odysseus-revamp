@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Admin endpoint cleanup dialog checkpoint — exact candidate `319b530c` (2026-08-30)
+
+Admin endpoint cleanup still retained a native confirmation fallback when
+removing offline endpoints. It now always uses the shared Hades confirmation
+with an explicit “Clear offline endpoints” title, keep action, and danger
+styling. Focused UI/Admin coverage passed 22 tests. Exact candidate
+`odysseus:candidate-319b530c` has image ID
+`sha256:975aad26919ff0980681a47190bfc5b2e1fba946c20abed3aa127c7b9e4c993a`
+and source marker `319b530ce3b216498d8aae3c684f984a1e1889bc`; isolated runtime
+was healthy with 0 restarts. Authenticated responsive browser acceptance and
+the broad regression passed `7041 passed, 8 skipped, 149 warnings` in 300.47
+seconds. Static review now finds no remaining application native prompt,
+alert, or confirm calls; only shared-dialog documentation/comments remain.
+Owner deployment and data remain untouched.
+
 ## Cookbook GPU-preflight dialog checkpoint — exact candidate `b95c04f8` (2026-08-30)
 
 Cookbook GPU preflight still retained a native fallback when existing GPU load
