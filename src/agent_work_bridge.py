@@ -848,6 +848,18 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 work.fail_read_deliverable(owner, action.run_id, reason=action.error)
             return {"action_id": action.id, "status": "failed"}
         safe_data = result.get("data")
+        # manage_notes returns its durable identity alongside the tool data
+        # envelope. Keep that identity in the persisted domain reference too;
+        # UI-only tool events are not enough for a later conversational
+        # reference such as "cancel that reminder".
+        if action.tool_binding_name == "manage_notes":
+            note_projection = dict(safe_data) if isinstance(safe_data, dict) else {}
+            for key in ("note_id", "note_title", "due_date"):
+                value = result.get(key)
+                if value:
+                    note_projection[key] = value
+            if note_projection:
+                safe_data = note_projection
         try:
             encoded = json.dumps(safe_data, ensure_ascii=False, default=str)
             safe_data = json.loads(encoded[:100000]) if len(encoded) <= 100000 else {"truncated": True}
