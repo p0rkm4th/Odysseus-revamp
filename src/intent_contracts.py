@@ -2266,6 +2266,16 @@ def compile_intent(
     # explicit attempt bit in the IntentFrame projection for evaluator metrics.
     reference_resolution["attempted"] = reference_resolution.get("status") != "NOT_REFERENCE"
     operation = _operation(text, continuation=continuation)
+    # A recipe conversation often continues with ordinary shorthand such as
+    # "what do I need to buy for it?".  Keep that explicit shopping request
+    # in the Recipe read contract instead of allowing the generic continuation
+    # or Notes classifier to steal the turn.
+    if operation == "CONTINUE" and re.search(
+        r"\bwhat\s+(?:do\s+)?i\s+need\s+to\s+buy\s+for\s+(?:this|that|it)\b|"
+        r"\bwhat\s+ingredients?\s+do\s+i\s+need\s+for\s+(?:this|that|it)\b",
+        q,
+    ):
+        operation = "READ"
     # A property question about a resolved owner entity is a canonical detail
     # read, even when the conversational classifier labels its leading
     # "and" as a generic continuation.  Letting CONTINUE win here discards
@@ -2854,6 +2864,7 @@ def compile_intent(
     ):
         reference_filters["recipe_cooking_history"] = True
     if concept == "RECIPE" and operation == "READ" and re.search(
+        r"\bwhat\s+(?:do\s+)?i\s+need\s+to\s+buy\s+for\s+(?:this|that|it)\b|"
         r"\b(?:shopping\s+list|shopping\s+requirements?|what\s+(?:do\s+)?i\s+need\s+to\s+buy|what\s+(?:am|do)\s+i\s+missing|what\s+ingredients?\s+are\s+missing|"
         r"ingredients?\s+(?:do\s+)?i\s+need|missing\s+ingredients?)\b.*\b(?:for|from)\s+(?:this|that|the|it)\s+recipe\b|"
         r"\b(?:shopping\s+list|shopping\s+requirements?)\b", q,
