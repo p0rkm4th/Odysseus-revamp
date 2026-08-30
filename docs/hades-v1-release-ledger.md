@@ -125,6 +125,14 @@ owner turns, one GUI mutation, two independent canonical readbacks, and zero
 false successes, raw final Results, duplicate delivery, or abrupt EOF. No
 owner runtime or data was touched.
 
+## Work overview paraphrase checkpoint — exact candidate `04d05854` (2026-08-30)
+
+`OWNER-WORK-OVERVIEW-001` passed three deterministic read turns covering
+“outstanding,” “still working on,” and “what’s outstanding for me?” The three
+journeys converged on the canonical work projection with zero false successes,
+raw final Results, duplicate delivery, or abrupt EOF. The isolated runtime
+remained source-matched; the actual owner runtime remains untouched.
+
 ## Recipe review replay boundary — browser harness `2026-08-30`
 
 Two disposable Compose attempts reached different pre-chat acceptance
