@@ -2281,6 +2281,7 @@ def compile_intent(
     if operation == "CONTINUE" and re.search(
         r"^(?:reload[.!?]\s*)?what(?:'s|\s+is)\s+in\s+(?:the\s+)?[A-Z][A-Za-z0-9-]*(?:\s+[A-Z][A-Za-z0-9-]*)+\s*\??$",
         text,
+        re.IGNORECASE,
     ):
         operation = "READ"
     # A property question about a resolved owner entity is a canonical detail
