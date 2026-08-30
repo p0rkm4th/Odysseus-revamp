@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Specific Memory routing and accumulated-state acceptance checkpoint — `23e51370` (2026-08-30)
+
+The narrow personal-memory predicate now reaches the canonical Memory read for
+questions such as “what is my acceptance color?”, while excluding known
+technical/domain subjects. Focused routing/grounding coverage passed `424
+passed, 5 skipped`. Exact candidate `odysseus:candidate-23e51370` has image
+ID `sha256:ff5733abf261fdb9521c7f29825d1566617d40f5c9c81d7594af15528640b515`
+and source marker `23e513707577df762d01b56d815087adec3e97d1`; the disposable
+runtime was healthy with 0 restarts. The completed owner read after deletion
+reported no invented value and canonical API readback found zero matching
+records. The realistic browser harness initially rejected two legitimate
+recipes because it assumed exactly one list state; that `UI_TEST_INFRASTRUCTURE`
+defect is fixed to accept one or more rendered records, and the replay passes.
+Owner deployment and data remain untouched.
+
 ## Specific Memory relevance fix and replay — exact candidate `4adb2e82` (2026-08-30)
 
 An owner-like Memory chain found that a narrow question could receive an

@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Specific Memory routing and accumulated-state acceptance checkpoint — `23e51370` (2026-08-30)
+
+Specific personal questions now reach canonical Memory while technical domain
+questions remain excluded. Focused coverage passed 424 tests with 5 skipped;
+the exact candidate produced a non-hallucinatory zero-result read after
+deletion. The browser acceptance harness was generalized to tolerate multiple
+legitimate recipe records and passed on the accumulated disposable state.
+Owner deployment state was not modified.
+
 ## Specific Memory relevance fix and replay — exact candidate `4adb2e82` (2026-08-30)
 
 Narrow Memory questions now filter canonical records by all meaningful query
