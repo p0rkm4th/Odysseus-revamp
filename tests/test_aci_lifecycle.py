@@ -29,6 +29,7 @@ from src.aci import (
     canonical_recipe_mutation_answer,
     canonical_notes_mutation_answer,
     canonical_scheduled_task_mutation_answer,
+    canonical_scheduled_task_read_answer,
     canonical_work_mutation_answer,
     project_action_selection,
     project_post_result_transition,
@@ -916,6 +917,16 @@ def test_successful_scheduled_task_has_a_deterministic_owner_answer():
         "exit_code": 0, "success": True,
     }])
     assert answer == 'Scheduled reminder: "Review my calendar" (daily, 09:00). It is saved.'
+
+
+def test_scheduled_task_list_has_a_deterministic_owner_answer():
+    answer = canonical_scheduled_task_read_answer([{
+        "tool": "manage_tasks",
+        "command": json.dumps({"action": "list"}),
+        "output": 'Found 1 tasks: 1. Review my calendar (task-1) — active, daily',
+        "exit_code": 0,
+    }])
+    assert answer.startswith("Found 1 tasks:")
 
 
 def test_household_move_projects_named_item_and_location_for_update_actions():

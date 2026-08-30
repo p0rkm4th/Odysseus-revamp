@@ -4286,6 +4286,25 @@ def canonical_notes_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str
     return note_list_summary_from_tool_output(str(event.get("output") or "").strip()) or "No notes found."
 
 
+def canonical_scheduled_task_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render the existing scheduler list as a deterministic owner answer."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_tasks"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+    except (TypeError, ValueError):
+        request = {}
+    if not isinstance(request, Mapping) or str(request.get("action") or "").strip().lower() != "list":
+        return None
+    output = str(event.get("output") or "").strip()
+    return output or "No scheduled reminders found."
+
+
 def canonical_notes_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render one successful notes/reminder mutation without model prose."""
     event = next(
@@ -4514,6 +4533,7 @@ def canonical_result_answer(
         (canonical_work_mutation_answer(tool_events), "Work mutation Result"),
         (canonical_memory_mutation_answer(tool_events), "Memory mutation Result"),
         (canonical_notes_read_answer(tool_events), "canonical Notes Result"),
+        (canonical_scheduled_task_read_answer(tool_events), "canonical scheduled task Result"),
         (canonical_notes_mutation_answer(tool_events), "notes mutation Result"),
         (canonical_scheduled_task_mutation_answer(tool_events), "scheduled task Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
