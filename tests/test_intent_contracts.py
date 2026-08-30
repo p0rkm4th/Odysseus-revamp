@@ -164,6 +164,17 @@ def test_natural_reminder_projects_title_and_due_date_without_model_arguments():
     }
 
 
+def test_natural_reminder_correction_projects_due_date_without_model_arguments():
+    from src.intent_contracts import note_mutation_payload
+
+    assert note_mutation_payload(
+        "Actually, make that next Friday instead.", "update"
+    ) == {
+        "action": "update",
+        "due_date": "next Friday",
+    }
+
+
 @pytest.mark.parametrize("query", [
     "Actually, cancel that reminder.",
     "Cancel that reminder.",

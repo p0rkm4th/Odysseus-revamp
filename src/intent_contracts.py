@@ -644,8 +644,27 @@ def memory_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
 
 
 def note_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
-    """Project a natural one-off reminder into the existing notes Action."""
-    if str(action or "").strip().casefold() != "add":
+    """Project bounded natural reminder fields into the existing Notes Action."""
+    normalized_action = str(action or "").strip().casefold()
+    if normalized_action == "update":
+        correction = re.search(
+            r"\b(?:actually|no|wait)\b.{0,48}\bmake\s+that\s+"
+            r"(?P<when>.+?)\s+instead\b",
+            str(query or "").strip(),
+            re.IGNORECASE,
+        )
+        if correction:
+            when = correction.group("when").strip(" .,:;\"'")
+            if when and re.search(
+                r"\b(?:today|tomorrow|tonight|morning|afternoon|evening|"
+                r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|"
+                r"hour|hours|minute|minutes|week|next\s+week)\b",
+                when,
+                re.IGNORECASE,
+            ):
+                return {"action": "update", "due_date": when[:200]}
+        return None
+    if normalized_action != "add":
         return None
     text = re.sub(r"\s+", " ", str(query or "").strip())
     match = re.search(
