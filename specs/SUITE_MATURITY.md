@@ -1640,3 +1640,12 @@ approval: no invented recipe is persisted, the answer explains that review is
 needed, and the browser shows a readable `Saving recipe` status rather than a
 raw binding. Positive video extraction and an editable correction/commit flow
 remain unverified and are still required for the full Recipe V1 bar.
+
+## Recipe review handoff maturity — exact candidate `fd289209` (2026-08-29)
+
+Chat-prepared qualitative recipe drafts now open the existing editable
+Inventory review dialog exactly once. The owner can correct the name,
+quantity, unit, and instructions before explicit commit; canonical readback
+confirmed the corrected Recipe and no raw Action text was shown. This closes
+the previously missing chat-to-review handoff. Positive YouTube extraction,
+source attribution in the draft, and imported ingredient cleanup remain open.

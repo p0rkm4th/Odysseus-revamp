@@ -2116,3 +2116,22 @@ verified fields, created no canonical Recipe, exposed no raw binding or
 duplicate Action, and produced zero browser page errors. This is recorded as a
 false-premise/no-evidence safety journey, not as successful video import
 coverage. The inline editable review handoff remains open.
+
+## Recipe review handoff checkpoint — exact candidate `fd289209` (2026-08-29)
+
+The previous chat review result correctly explained the draft but failed to
+open the existing Inventory review form because its UI event was nested inside
+the Result data. The generalized result-boundary repair forwards the review
+event and draft to the shared UI. A duplicate-event guard then ensured one
+dialog per draft. On the exact candidate, a qualitative chat request opened
+exactly one editable recipe dialog, left canonical state unchanged, allowed
+the owner to correct the draft, and saved it through the existing reviewed
+commit path. Independent `/api/recipes` readback confirmed the corrected row;
+the dialog closed, the save toast appeared, raw bindings were absent, and page
+errors were zero.
+
+The same candidate includes `yt-dlp==2026.8.19` as a core dependency. A direct
+candidate probe retrieved public YouTube metadata successfully. A video with
+recipe titles but no verified structure still failed safely into review with
+no invented or persisted recipe; positive extraction remains subject to the
+existing validation bar.
