@@ -1323,7 +1323,14 @@ function _autoSaveWorkingConfig(task) {
 // ── Cross-device sync ──
 
 let _syncTimer = null;
+function _canSyncServerState() {
+  // Cookbook state contains server/preset data and is admin-only on the
+  // backend. Avoid probing that endpoint from ordinary owner sessions (or
+  // before auth status has resolved); the server remains authoritative.
+  return window._isAdmin === true;
+}
 function _syncToServer() {
+  if (!_canSyncServerState()) return;
   // Debounce to coalesce bursts of writes, but keep latency low so the server
   // is effectively authoritative across devices
   clearTimeout(_syncTimer);
@@ -1387,6 +1394,7 @@ function _normalizeState(state) {
 }
 
 export async function _syncFromServer() {
+  if (!_canSyncServerState()) return false;
   try {
     const res = await fetch('/api/cookbook/state', { credentials: 'same-origin' });
     if (!res.ok) return false;
@@ -4107,7 +4115,7 @@ async function _probeEndpointUntilOnline(epId, host, port) {
 }
 
 async function _pollBackgroundStatus() {
-  if (!_canBackgroundPoll() || _bgPollInFlight) return;
+  if (!_canBackgroundPoll() || !_canSyncServerState() || _bgPollInFlight) return;
   _bgPollInFlight = true;
   try {
     // Pull any tasks the server knows about that aren't in localStorage
