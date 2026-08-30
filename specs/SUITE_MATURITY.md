@@ -2214,3 +2214,8 @@ Recipe clean mutation/readback is also green on exact candidate `4da73504`:
 one owner-facing creation, two canonical readbacks, and zero false success,
 raw final Result, duplicate delivery, or abrupt EOF. Earlier precondition
 failure was disposable acceptance residue, not a feature result.
+
+Recipe URL-import rejection and copied-webpage paste are also green on the
+same exact candidate. The rejection saved nothing and the messy paste used a
+review/mutation path with canonical readback; both remained free of false
+success, raw final Result, duplicate delivery, and abrupt EOF.

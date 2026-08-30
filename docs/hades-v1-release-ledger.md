@@ -3731,3 +3731,9 @@ fixture lane. The browser journey completed 3 turns with 1 GUI mutation and 2
 independent canonical readbacks; `falseSuccess=0`, `rawFinalResults=0`,
 `duplicateDelivery=0`, and `abruptEOF=0`. The precondition residue is tracked
 as acceptance-lane isolation debt rather than a Recipe product failure.
+
+The exact candidate also passed the Recipe URL negative journey and the
+copied-webpage paste journey. The URL case completed 1 turn with no canonical
+Recipe created and two independent readbacks; the messy paste completed 2
+turns with one owner-facing mutation/review path and two readbacks. Both had
+zero false success, raw final Result, duplicate delivery, or abrupt EOF.
