@@ -2201,6 +2201,23 @@ hygiene/environment failure, not a product pass. Asset fixture journeys also
 still require an explicit disposable asset database and owner setup. The real
 owner deployment remains untouched at source `34ced247`.
 
+## Acceptance fixture hygiene checkpoint — exact candidate `729f9066` (2026-08-30)
+
+The owner journey harness now establishes the declared `empty-memory`
+precondition through the normal owner-scoped API on the disposable acceptance
+principal and verifies that no records remain before testing. Asset fixture
+seeding now uses the supplied acceptance username instead of a hard-coded
+principal, while still requiring an explicit disposable asset database.
+`node --check` and `git diff --check` passed. Replays passed for empty Memory,
+Atlas/Erebus RAM, and the no-RTX-4090 false premise; each had zero false
+successes, raw final Results, duplicate delivery, and abrupt EOFs.
+
+The repair was pushed as `729f9066` and built as
+`odysseus:candidate-729f9066`; the exact candidate was recreated, reported
+healthy with zero restarts and source marker `729f9066`, and passed the empty
+Memory browser journey. The real owner deployment remains untouched at
+source `34ced247`.
+
 The same candidate also passed the Work task-create/readback journey (2
 turns, one GUI mutation, two independent readbacks, reload durability, and
 zero false successes/raw finals/duplicate delivery/abrupt EOF). Broad
@@ -2208,3 +2225,11 @@ regression after the shared runtime changes completed with `7010 passed, 8
 skipped, 186 warnings` in 5m24s. Candidate image `odysseus:candidate-682eb6c6`
 remains the browser-tested executable; the docs checkpoint commit that records
 this result is `3dab0f79`.
+
+The fixture repair was then validated on a separate fresh application-data
+project. Normal browser-visible model setup registered the Ollama endpoint and
+Qwen3:8B before the journey. `OWNER-RECIPE-COMPOSITION-001` passed 3 owner
+turns covering recipe listing, pantry feasibility, and scaling, with 2
+independent canonical readbacks including reload durability and zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF. The fresh
+stack was healthy with zero restarts and source marker `729f9066`.
