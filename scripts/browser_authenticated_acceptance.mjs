@@ -219,6 +219,27 @@ async function seedRecipeCompositionAcceptanceState(page, {expiring = false, sho
   }, {expiring, shortage});
 }
 
+async function seedQualitativeRecipeAcceptanceState(page) {
+  // Establish only the existing canonical recipe required by the review
+  // journey. The recipe under test still enters through owner chat and must
+  // remain uncommitted while qualitative amounts are reviewed.
+  return page.evaluate(async () => {
+    const response = await fetch('/api/recipes', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({
+        name: 'Acceptance Existing Recipe', servings: 2,
+        ingredients: [{name: 'rice', quantity: 1, unit: 'cup'}],
+        instructions: 'Cook the rice.',
+      }),
+    });
+    if (!response.ok) throw new Error(`qualitative recipe setup failed (${response.status})`);
+    const recipe = (await response.json()).recipe;
+    if (!recipe?.id) throw new Error('qualitative recipe setup returned no id');
+    return {recipeId: recipe.id, recipeName: recipe.name};
+  });
+}
+
 async function seedWorkAcceptanceState(page) {
   // These owner-scoped calls establish prerequisite state only. The tested
   // read still enters through natural-language chat on the disposable owner.
@@ -993,6 +1014,9 @@ async function main() {
       }
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_expiring')) {
         diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page, {expiring: true});
+      }
+      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_qualitative_existing_recipe')) {
+        diagnostics.recipeSeed = await seedQualitativeRecipeAcceptanceState(page);
       }
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_overview')) {
         diagnostics.workSeed = await seedWorkAcceptanceState(page);

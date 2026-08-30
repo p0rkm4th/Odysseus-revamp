@@ -108,6 +108,7 @@
       "id": "OWNER-RECIPE-QUALITATIVE-REVIEW-001",
       "environment": "deterministic_synthetic",
       "fixture_profile": "qualitative-review-existing-recipe",
+      "fixture_setup": "canonical_qualitative_existing_recipe",
       "turns": [
         {"prompt": "Save this in my recipe book as \"Acceptance Taste Test\".\n\nIngredients\n- 1 cup rice\n- salt to taste\n- oil as needed\n\nInstructions\nCook the rice and season it.\n", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "commit_import", "tool_binding": "manage_recipes", "requires_effect": false, "must_include_any": ["review", "nothing has been saved", "amount"], "forbidden": ["successfully added", "saved successfully", "Done"]}}
       ],
