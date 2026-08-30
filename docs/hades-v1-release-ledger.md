@@ -3424,3 +3424,6 @@ changed quantity 4 to 3, and reload preserved 3. Candidate source marker was
 `sha256:7367c18603ca354eca10387af76105e35f682277cfb59e82fd5ad79cfedb4444`;
 the app was healthy with zero restarts. The real owner deployment remains
 untouched at source `34ced247`.
+
+Focused and broad verification after the follow-up repair is complete: the
+full source regression passed `7052 tests, 8 skipped, 149 warnings` in 5m06s.
