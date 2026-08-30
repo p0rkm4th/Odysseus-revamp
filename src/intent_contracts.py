@@ -2004,7 +2004,7 @@ def compile_intent(
     # metadata rather than a tool-name/route heuristic.
     read_explicit = bool(semantic_read_concept) or bool(re.match(
         r"\s*(?:what(?:'s| is| are)?|which|who|where|when|how many|how much|show|list|"
-        r"tell me|do you have|are there|is there|find my|what do you)\b",
+        r"tell me|do you have|are there|is there|find my|what do you|check my|review my)\b",
         q,
     ))
     # Interrogative requests about the research store are canonical reads;
@@ -2132,6 +2132,16 @@ def compile_intent(
         concept = "WORK"
     elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
         concept = "WORK"
+    elif re.search(
+        r"\b(?:what(?:'s|\s+is)?\s+(?:left|outstanding)|whats\s+(?:left|outstanding)|"
+        r"what\s+should\s+i\s+do\s+next|check\s+my\s+work|review\s+my\s+work)\b",
+        q,
+    ):
+        # Personal operating-agent language often omits the noun "tasks" or
+        # "projects". These bounded forms ask for the owner's Work overview;
+        # they must not fall through to generic advice or model-only prose.
+        concept = "WORK"
+        read_explicit = True
     elif re.search(r"\b(?:work|working|project|task|goal|commitment)\b", q) and not re.search(
         r"\bcapabilit(?:y|ies)\b", q,
     ):
@@ -2259,6 +2269,7 @@ def compile_intent(
             q,
         )
         and not re.search(r"\b(?:my|mine|right\s+now|current(?:ly)?|on\s+my\s+plate)\b", q)
+        and not re.search(r"\bwhat\s+should\s+i\s+do\s+next\b", q)
         and not re.search(r"\bwe\b.{0,20}\bworking\b", q)
         and not re.search(r"\b(?:hades|waiting\s+on|needs?\s+attention|pending\s+approvals?)\b", q)
     ):
