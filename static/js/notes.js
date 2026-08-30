@@ -1361,10 +1361,10 @@ export function openPanel() {
   document.getElementById('notes-bulk-delete').addEventListener('click', async () => {
     const ids = [..._selectedIds];
     if (!ids.length) return;
-    if (uiModule && uiModule.styledConfirm) {
-      const ok = await uiModule.styledConfirm(`Delete ${ids.length} note${ids.length === 1 ? '' : 's'}?`, { confirmText: 'Delete', danger: true });
-      if (!ok) return;
-    }
+    const ok = await uiModule.styledConfirm(`Delete ${ids.length} note${ids.length === 1 ? '' : 's'}?`, {
+      title: 'Delete notes', confirmText: 'Delete', cancelText: 'Keep notes', danger: true,
+    });
+    if (!ok) return;
     await Promise.all(ids.map(id => _deleteNoteApi(id).catch(() => {})));
     _exitSelectMode();
     await _fetchNotes();
@@ -1515,9 +1515,9 @@ async function _clearPastReminders() {
     uiModule.showToast?.('No past reminders to clear');
     return;
   }
-  const ok = uiModule?.styledConfirm
-    ? await uiModule.styledConfirm(`Delete ${targets.length} past reminder${targets.length === 1 ? '' : 's'}?`, { confirmText: 'Delete', danger: true })
-    : confirm(`Delete ${targets.length} past reminder${targets.length === 1 ? '' : 's'}?`);
+  const ok = await uiModule.styledConfirm(`Delete ${targets.length} past reminder${targets.length === 1 ? '' : 's'}?`, {
+    title: 'Clear past reminders', confirmText: 'Delete reminders', cancelText: 'Keep reminders', danger: true,
+  });
   if (!ok) return;
   await Promise.all(targets.map(n => _deleteNoteApi(n.id).catch(() => {})));
   await _fetchNotes();
@@ -3755,12 +3755,10 @@ function _buildForm(note = null) {
   form.querySelector('.note-form-delete-btn')?.addEventListener('click', async () => {
     if (!isEdit) return;
     const id = note.id;
-    if (uiModule.styledConfirm) {
-      const ok = await uiModule.styledConfirm('Delete this note?', { confirmText: 'Delete', danger: true });
-      if (!ok) return;
-    } else if (!confirm('Delete this note?')) {
-      return;
-    }
+    const ok = await uiModule.styledConfirm('Delete this note?', {
+      title: 'Delete note', confirmText: 'Delete', cancelText: 'Keep note', danger: true,
+    });
+    if (!ok) return;
     const idx = _notes.findIndex(n => n.id === id);
     if (idx >= 0) _notes.splice(idx, 1);
     _editingId = null;
@@ -4713,9 +4711,9 @@ function _editNote(id) {
 }
 
 async function _deleteNote(id) {
-  const ok = uiModule?.styledConfirm
-    ? await uiModule.styledConfirm('Delete this note?', { confirmText: 'Delete', danger: true })
-    : confirm('Delete this note?');
+  const ok = await uiModule.styledConfirm('Delete this note?', {
+    title: 'Delete note', confirmText: 'Delete', cancelText: 'Keep note', danger: true,
+  });
   if (!ok) return;
   try { await _deleteNoteApi(id); await _fetchNotes(); _renderNotes(); uiModule.showToast('Deleted'); }
   catch (err) { uiModule.showError(err.message); }
