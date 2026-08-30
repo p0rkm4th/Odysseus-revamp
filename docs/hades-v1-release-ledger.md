@@ -3528,6 +3528,29 @@ after reload. Both answers explicitly reported verified canonical readback;
 there were no false-success, raw-result, duplicate-delivery, or abrupt-EOF
 observations.
 
+## Memory owner-answer projection — exact candidate `17c067a2` (2026-08-30)
+
+An owner-style Memory correction journey exposed a genuine
+`RESULT_PROJECTION_FAILURE` / `UI_RENDER_FAILURE`: canonical remembered facts
+were correct, but normal read answers exposed `CANONICAL MEMORY RESULT`, query
+type, retrieval detail, current branch/source commit, and provider telemetry.
+
+The shared final-answer boundary now renders only bounded owner language and
+remembered facts. The technical projection remains available for protected
+model grounding and diagnostics. Empty, retrieval-failure, and owner-scope
+states also have human-readable answers. Focused verification passed 364
+tests; the full regression after this shared runtime change passed 7056 tests,
+8 skipped, and 149 warnings in 5m10s.
+
+Exact candidate `17c067a29ec0c2150960d9c51cdbba1752865622` was deployed to the
+disposable URL lane as image
+`sha256:59ab2de7104571de14bab9b608aa69e43fcbb1fdbc7a5cc14cb538fabed4a87d`,
+with matching source marker, healthy status, and zero restarts. Through the
+GUI, the journey remembered a unique color, retrieved it without technical
+telemetry, corrected it conversationally, and confirmed it absent afterward.
+Canonical Memory state and reload durability were checked independently; no
+false success, raw final Result, duplicate delivery, or abrupt EOF occurred.
+
 Video import coverage also passed on the disposable URL lane. A video with no
 verified recipe data required approval, returned a review-safe answer, and
 left the canonical Recipe count unchanged. A positive public cooking video
