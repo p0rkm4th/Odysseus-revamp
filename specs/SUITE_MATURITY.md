@@ -1,5 +1,13 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Dialog fallback cleanup follow-up — exact candidate `accf9531` (2026-08-30)
+
+Document Library research-report deletion and Settings agent-token revocation
+no longer retain native confirmation fallbacks. Focused coverage passed 13
+tests and the authenticated responsive browser gate passed on the exact
+candidate. This is a focused follow-up to the prior broad regression; owner
+deployment state was not modified.
+
 ## Document Editor shared-dialog checkpoint — exact candidate `26c68c5f` (2026-08-30)
 
 Document Editor AI-fill, multi-file attachment, and deletion actions now use

@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Dialog fallback cleanup follow-up — exact candidate `accf9531` (2026-08-30)
+
+The native confirmation fallbacks left in Document Library research-report
+deletion and Settings agent-token revocation are removed. Existing shared
+global dialog calls were preserved; only native fallback branches changed.
+Focused coverage passed 13 tests. Exact candidate
+`odysseus:candidate-accf9531` has image ID
+`sha256:dde152d6b20b6d5c1192b8ed17ed63cf3a59be1497f5414039177aa0e1137b73`
+and source marker `accf9531fda6a97f1f1c8f1b327130d37b3eefc2`; isolated runtime
+was healthy with 0 restarts and the authenticated responsive browser gate
+passed. This focused follow-up does not claim a new broad regression; the
+preceding Document Editor checkpoint recorded the full suite. Owner
+deployment and data remain untouched.
+
 ## Document Editor shared-dialog checkpoint — exact candidate `26c68c5f` (2026-08-30)
 
 Document Editor’s AI-fill instruction prompt, multi-file zip choice, and active
