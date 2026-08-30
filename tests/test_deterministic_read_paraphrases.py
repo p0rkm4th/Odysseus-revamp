@@ -18,7 +18,7 @@ from src.aci import (
 )
 from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
-from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, inventory_consume_stock_payload, recipe_create_draft, recipe_create_payload, recipe_requested_name, resolve_intent
+from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, inventory_consume_stock_payload, inventory_move_item_payload, recipe_create_draft, recipe_create_payload, recipe_requested_name, resolve_intent
 from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 
@@ -348,6 +348,19 @@ def test_household_consumption_promotes_to_canonical_update_action(query):
     assert resolved.action_id == "consume_stock"
     assert resolved.binding_name == "manage_assets"
     assert inventory_consume_stock_payload(query)["quantity"] == 1.0
+
+
+def test_household_move_promotes_to_bounded_location_action():
+    query = "Move Acceptance Tomatoes to the pantry."
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "UPDATE"
+    assert resolved.action_id == "move_item"
+    assert inventory_move_item_payload(query) == {
+        "action": "move_item", "location_name": "pantry",
+        "item_name": "Acceptance Tomatoes",
+    }
 
 
 def test_expiring_recipe_composition_uses_distinct_canonical_action():

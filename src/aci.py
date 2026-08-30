@@ -4027,7 +4027,7 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     except (TypeError, ValueError):
         return None
     if not isinstance(request, Mapping) or request.get("action") not in {
-        "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+        "add_item", "add_stock", "consume_stock", "adjust_stock", "move_item", "update_asset",
     } or not isinstance(payload, Mapping):
         return None
     if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
@@ -4044,6 +4044,7 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
         "consume_stock": "Consumed stock for",
         "adjust_stock": "Adjusted stock for",
         "update_asset": "Updated",
+        "move_item": "Moved",
     }[action]
     if verified:
         return f"{verb} {label}; the canonical inventory readback is verified."
@@ -4750,16 +4751,19 @@ def project_action_selection(
             str(frame.get("domain_concept") or "") in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"}
             and str(frame.get("operation_class") or "") in {"CREATE", "EXECUTE"}
             and str(item.get("binding") or "") == "manage_assets"
-            and str(item.get("action_id") or "") in {"add_item", "consume_stock"}
+            and str(item.get("action_id") or "") in {"add_item", "consume_stock", "move_item"}
         ):
-            from src.intent_contracts import inventory_add_item_payload, inventory_consume_stock_payload
+            from src.intent_contracts import inventory_add_item_payload, inventory_consume_stock_payload, inventory_move_item_payload
             reference_resolution = frame.get("reference_resolution") if isinstance(frame, Mapping) else {}
             reference_refs = reference_resolution.get("refs") if isinstance(reference_resolution, Mapping) else None
             item_reference = reference_refs[0] if isinstance(reference_refs, list) and len(reference_refs) == 1 else None
+            action_name = str(item.get("action_id") or "")
             draft = (
                 inventory_add_item_payload(query)
-                if str(item.get("action_id") or "") == "add_item"
+                if action_name == "add_item"
                 else inventory_consume_stock_payload(query, item_reference=item_reference)
+                if action_name == "consume_stock"
+                else inventory_move_item_payload(query, item_reference=item_reference)
             )
             if draft:
                 payload.update(draft)

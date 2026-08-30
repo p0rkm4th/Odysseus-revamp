@@ -143,3 +143,28 @@ def test_household_overview_projects_owner_scoped_location_names_and_totals():
     assert all(row["id"] != "pantry-bob" for row in result["locations"])
     assert service.get_item("alice", rice["id"])["location_name"] == "Pantry"
     assert service.list_lots("alice", rice["id"])[0]["location_name"] == "Pantry"
+
+
+def test_household_move_updates_item_and_lot_locations_idempotently():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    rice = service.create_item(
+        "alice", name="Acceptance Rice", domain="kitchen", item_kind="ingredient",
+        default_unit="kg",
+    )
+    service.add_stock("alice", rice["id"], quantity="2", unit="kg", idempotency_key="rice-add")
+
+    moved = service.move_item(
+        "alice", rice["id"], location_name="Pantry", idempotency_key="rice-move",
+    )
+    assert moved["replayed"] is False
+    assert moved["location"]["name"] == "Pantry"
+    assert service.get_item("alice", rice["id"])["location_name"] == "Pantry"
+    assert service.list_lots("alice", rice["id"])[0]["location_name"] == "Pantry"
+    assert service.household_overview("alice")["items"][0]["stock_quantity"] == "2000.000000"
+
+    replay = service.move_item(
+        "alice", rice["id"], location_name="Pantry", idempotency_key="rice-move",
+    )
+    assert replay["replayed"] is True
+    assert service.household_overview("alice")["items"][0]["stock_quantity"] == "2000.000000"

@@ -634,6 +634,76 @@ class InventoryService:
             db.flush()
             return {"lot": _lot_view(lot), "movement": _movement_view(movement), "replayed": False}
 
+    def move_item(
+        self, owner: str, item_id: str, *, location_name: str,
+        idempotency_key: str, actor: str | None = None,
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Move an owner item and its stocked lots to one named location."""
+        owner = _required_text(owner, "owner", maximum=255)
+        item_id = _required_text(item_id, "item_id", maximum=255)
+        name = _required_text(location_name, "location_name", maximum=200)
+        key = _required_text(idempotency_key, "idempotency_key", maximum=255)
+        normalized = normalize_item_name(name)
+        with self._transaction() as db:
+            prior = db.query(InventoryMovement).filter_by(
+                owner=owner, source_kind="stock_move", source_id=key,
+            ).order_by(InventoryMovement.id).first()
+            item = self._item(db, owner, item_id)
+            location = db.query(InventoryLocation).filter_by(
+                owner=owner, parent_id=None, normalized_name=normalized,
+            ).one_or_none()
+            if location is None:
+                location = InventoryLocation(
+                    id=str(uuid4()), owner=owner, name=name,
+                    normalized_name=normalized, normalized_path=normalized,
+                )
+                db.add(location)
+                db.flush()
+            if prior is not None:
+                return {
+                    "item": _item_view(item) | {"location_name": location.name},
+                    "location": {"id": location.id, "name": location.name},
+                    "moved_lots": 0, "replayed": True,
+                }
+            old_location_id = item.location_id
+            item.location_id = location.id
+            lots = db.query(InventoryLot).filter_by(
+                owner=owner, item_id=item.id,
+            ).with_for_update().all()
+            moved_lots = 0
+            for index, lot in enumerate(lots):
+                if lot.location_id == location.id:
+                    continue
+                old_id = lot.location_id
+                lot.location_id = location.id
+                if lot.quantity <= 0:
+                    continue
+                moved_lots += 1
+                out_key = _movement_key(key, index * 2)
+                in_key = _movement_key(key, index * 2 + 1)
+                db.add_all([
+                    InventoryMovement(
+                        id=str(uuid4()), owner=owner, item_id=item.id, lot_id=lot.id,
+                        quantity_delta=-lot.quantity, unit=lot.unit,
+                        reason="move_out", source_kind="stock_move", source_id=key,
+                        idempotency_key=out_key, actor=actor, session_id=session_id,
+                    ),
+                    InventoryMovement(
+                        id=str(uuid4()), owner=owner, item_id=item.id, lot_id=lot.id,
+                        quantity_delta=lot.quantity, unit=lot.unit,
+                        reason="move_in", source_kind="stock_move", source_id=key,
+                        idempotency_key=in_key, actor=actor, session_id=session_id,
+                    ),
+                ])
+            db.flush()
+            return {
+                "item": _item_view(item) | {"location_name": location.name},
+                "location": {"id": location.id, "name": location.name},
+                "moved_lots": moved_lots, "previous_location_id": old_location_id,
+                "replayed": False,
+            }
+
     def list_lots(self, owner: str, item_id: str) -> list[dict[str, Any]]:
         with self._read() as db:
             self._item(db, owner, item_id)
@@ -1172,6 +1242,12 @@ class RecipeService(InventoryService):
                 owner, _required_text(args.get("lot_id"), "lot_id"),
                 quantity_delta=args.get("quantity_delta"), unit=args.get("unit"),
                 idempotency_key=args.get("idempotency_key"), note=args.get("notes"),
+            )
+        if action == "move_item":
+            return self.move_item(
+                owner, _required_text(args.get("item_id"), "item_id"),
+                location_name=args.get("location_name"),
+                idempotency_key=args.get("idempotency_key"),
             )
         if action in {"update_item", "move_stock", "archive_item"}:
             raise InventoryError(f"{action} is not available in this service version")

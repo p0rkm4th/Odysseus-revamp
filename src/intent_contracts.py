@@ -756,6 +756,31 @@ def inventory_consume_stock_payload(query: str, *, item_reference: str | None = 
     return payload
 
 
+def inventory_move_item_payload(query: str, *, item_reference: str | None = None) -> dict[str, Any] | None:
+    """Extract a bounded item-to-location move for the canonical Action."""
+    text = str(query or "").strip()
+    match = re.search(
+        r"\bmove\s+(?:(?P<name>.+?)\s+)?to\s+(?:the\s+)?"
+        r"(?P<location>pantry|freezer|refrigerator|fridge|cabinet|kitchen)\s*[.!?]*$",
+        text, re.IGNORECASE,
+    )
+    if not match:
+        return None
+    name = re.sub(r"\s+", " ", match.group("name") or "").strip(" .\"'")
+    if name.casefold() in {"it", "that", "this", "them", "those", "these"}:
+        name = ""
+    if not name and not item_reference:
+        return None
+    payload: dict[str, Any] = {
+        "action": "move_item", "location_name": match.group("location").casefold(),
+    }
+    if name:
+        payload["item_name"] = name[:200]
+    if item_reference:
+        payload["item_id"] = str(item_reference).strip()
+    return payload
+
+
 # Operational domain metadata used by prompt/capability projections.  These
 # flags describe cognition requirements only; policy and execution remain
 # owned by the canonical Action path.
@@ -1673,7 +1698,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     # explicit canonical Actions instead of model-selected prose.
     "INVENTORY_MUTATION": DomainContract(
         "INVENTORY_MUTATION", "inventory.manage",
-        {"CREATE": "add_item", "UPDATE": "add_stock", "EXECUTE": "consume_stock"},
+        {"CREATE": "add_item", "UPDATE": "add_stock", "MOVE": "move_item", "EXECUTE": "consume_stock"},
         "manage_assets",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "inventory_mutation",
@@ -1966,7 +1991,7 @@ def _operation(text: str, *, continuation: bool = False) -> str:
         return "CONTINUE"
     if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
     if re.search(r"\b(?:remember|memorize|save this about me)\b", q): return "CREATE"
-    if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
+    if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm|move)\b", q): return "UPDATE"
     if re.search(r"\b(?:save|store|keep)\b", q) and re.search(r"\b(?:recipe|recipes|cookbook|dish)\b", q):
         return "CREATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
@@ -2557,6 +2582,18 @@ def compile_intent(
         requested_name = recipe_requested_name(text)
         if requested_name:
             reference_filters["recipe_requested_name"] = requested_name
+    if concept == "UNKNOWN" and operation in {"UPDATE", "CONTINUE", "READ"} and re.search(
+        r"\bmove\b.+\bto\s+(?:the\s+)?(?:pantry|freezer|refrigerator|fridge|cabinet|kitchen)\b",
+        q, re.IGNORECASE,
+    ) and not re.search(r"\b(?:code|file|project|task|workspace)\b", q):
+        concept = "HOUSEHOLD_ITEM"
+        operation = "UPDATE"
+        read_explicit = False
+    if concept == "HOUSEHOLD_ITEM" and operation == "UPDATE" and re.search(
+        r"\bmove\b.+\bto\s+(?:the\s+)?(?:pantry|freezer|refrigerator|fridge|cabinet|kitchen)\b",
+        q, re.IGNORECASE,
+    ):
+        reference_filters["inventory_move"] = True
     if (
         concept == "RECIPE"
         and operation == "CREATE"
@@ -2739,6 +2776,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "DELETE"
     if frame.domain_concept == "HOMELAB_HOST" and frame.filters.get("remote") and frame.operation_class == "READ":
         action_key = "REMOTE_READ"
+    if frame.domain_concept == "HOUSEHOLD_ITEM" and frame.filters.get("inventory_move"):
+        action_key = "MOVE"
     if frame.domain_concept in {"TECHNICAL_ASSET", "RECIPE"} and frame.operation_class == "READ" and frame.entity_reference and not (frame.domain_concept == "RECIPE" and frame.filters.get("recipe_shopping") is True):
         action_key = "READ_DETAIL"
     if frame.domain_concept == "WORK" and frame.filters.get("view") == "attention":
