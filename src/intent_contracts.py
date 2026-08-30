@@ -724,7 +724,7 @@ def inventory_add_item_payload(query: str) -> dict[str, Any] | None:
     }
 
 
-def inventory_consume_stock_payload(query: str) -> dict[str, Any] | None:
+def inventory_consume_stock_payload(query: str, *, item_reference: str | None = None) -> dict[str, Any] | None:
     """Extract an explicit household consumption request for the owner Action.
 
     This is bounded argument extraction after the semantic household mutation
@@ -734,8 +734,8 @@ def inventory_consume_stock_payload(query: str) -> dict[str, Any] | None:
     text = str(query or "").strip()
     match = re.search(
         r"\b(?:use|consume|used|consumed)\s+"
-        r"(?:(?P<quantity>\d+(?:\.\d+)?)|(?P<word>one|a|an|two|three|four|five))\s+"
-        r"(?P<name>.+?)\s*\.?$", text, re.IGNORECASE,
+        r"(?:(?P<quantity>\d+(?:\.\d+)?)|(?P<word>one|a|an|two|three|four|five))"
+        r"(?:\s+(?P<name>.+?))?\s*[.!?]*$", text, re.IGNORECASE,
     )
     if not match:
         return None
@@ -743,12 +743,17 @@ def inventory_consume_stock_payload(query: str) -> dict[str, Any] | None:
     quantity = float(match.group("quantity")) if match.group("quantity") else word_quantities[match.group("word").casefold()]
     name = re.sub(
         r"\s+from\s+(?:the\s+)?(?:pantry|kitchen|freezer|refrigerator|fridge)\s*$", "",
-        match.group("name"), flags=re.IGNORECASE,
+        match.group("name") or "", flags=re.IGNORECASE,
     )
     name = re.sub(r"\s+", " ", name).strip(" .\"'")
-    if not name or quantity <= 0:
+    if (not name and not item_reference) or quantity <= 0:
         return None
-    return {"action": "consume_stock", "item_name": name[:200], "quantity": quantity, "unit": "each"}
+    payload = {"action": "consume_stock", "quantity": quantity, "unit": "each"}
+    if name:
+        payload["item_name"] = name[:200]
+    if item_reference:
+        payload["item_id"] = str(item_reference).strip()
+    return payload
 
 
 # Operational domain metadata used by prompt/capability projections.  These
@@ -1882,13 +1887,17 @@ def resolve_structured_reference(
         query,
     )) and bool(re.search(r"\b(?:machines|computers|pcs|servers|hosts|assets|devices)\b", query))
     other = bool(re.search(r"\b(?:the\s+)?other\s+one\b", query))
+    consumption_reference = bool(re.search(
+        r"\b(?:use|consume)\s+(?:one|a|an|two|three|four|five|\d+(?:\.\d+)?)\s*[.!?]*$",
+        query,
+    ))
     # ``it assets`` is the common lower-case/voice-transcription spelling of
     # ``IT assets``. It is an owner-scope noun phrase, not a pronoun referring
     # to the last Asset, so an active referent must not narrow the collection
     # read to one record.
     it_assets = bool(re.search(r"\bit\s+assets?\b", query))
     pronoun = bool(re.search(r"\b(?:it|its|that|this|that\s+one|their)\b", query)) and not it_assets
-    singular = pronoun or bool(ordinal_match) or other or (implicit_detail and not plural_collection_noun)
+    singular = pronoun or bool(ordinal_match) or other or consumption_reference or (implicit_detail and not plural_collection_noun)
     if not plural and not singular:
         return {"status": "NOT_REFERENCE", "refs": [], "reason": "no structured reference phrase"}
     if not candidates:
@@ -2214,8 +2223,11 @@ def compile_intent(
     # not known to the compiler (for example, "Use one onion"). The executor
     # resolves that name against canonical owner-scoped inventory.
     if concept == "UNKNOWN" and operation == "READ" and re.search(
-        r"\b(?:use|consume|used|consumed)\s+(?:\d+(?:\.\d+)?|one|a|an|two|three|four|five)\s+\S",
+        r"\b(?:use|consume|used|consumed)\s+(?:\d+(?:\.\d+)?|one|a|an|two|three|four|five)\b",
         q,
+    ) and (
+        re.search(r"\b(?:use|consume|used|consumed)\s+(?:\d+(?:\.\d+)?|one|a|an|two|three|four|five)\s+\S", q)
+        or reference_resolution.get("status") == "RESOLVED"
     ) and not re.search(r"\b(?:code|python|shell|command|tool|feature|api)\b", q):
         concept = "HOUSEHOLD_ITEM"
         operation = "EXECUTE"

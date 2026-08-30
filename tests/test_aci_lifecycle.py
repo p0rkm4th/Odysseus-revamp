@@ -952,6 +952,19 @@ def test_quantity_item_imperative_reaches_canonical_household_mutation():
     assert resolved.binding_name == "manage_assets"
 
 
+def test_quantity_only_household_consume_uses_unique_conversational_reference():
+    frame = compile_intent(
+        "Use one.",
+        reference_context={"entities": [{"id": "item-1", "concept": "HOUSEHOLD_ITEM"}]},
+    )
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "EXECUTE"
+    assert frame.reference_resolution["status"] == "RESOLVED"
+    assert resolved.action_id == "consume_stock"
+    assert resolved.binding_name == "manage_assets"
+
+
 def test_work_task_create_requires_explicit_project_and_projects_bounded_payload():
     query = "Create a task called Review the backup plan in project Hades V1"
     assert work_task_create_payload(query) == {
