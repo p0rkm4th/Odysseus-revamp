@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Cookbook non-admin sync checkpoint — exact candidate `df353edf` (2026-08-30)
+
+The authenticated owner browser gate exposed a noisy `403 Forbidden` from
+Cookbook background state synchronization for a legitimate non-admin owner.
+The endpoint is intentionally admin-only, but the frontend was probing it for
+every session. All Cookbook state synchronization paths now share an
+admin-privilege guard: non-admin sessions do not issue the request, while
+authorized admins retain GET/POST/background synchronization. Focused
+Cookbook/UI coverage passed 222 tests. Exact candidate
+`odysseus:candidate-df353edf` has image ID
+`sha256:cd84dada586cb8bdd31344cf069b671da2f6c89c51c3b2b2c7e5b23684142e5b`
+and source marker `df353edf4eb5df29b1e3f27bc590ca7fef5d81cd`; its isolated
+runtime was healthy with 0 restarts. The non-admin authenticated responsive
+browser gate now passes without the prior 403 diagnostic. The full
+regression passed `7033 passed, 8 skipped, 149 warnings` in 297.98 seconds.
+Owner deployment and data remain untouched.
+
 ## OSINT shared-confirmation checkpoint — exact candidate `dad9e7c5` (2026-08-30)
 
 OSINT claim retraction now uses the shared Hades confirmation dialog, keeping

@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Cookbook non-admin sync checkpoint — exact candidate `df353edf` (2026-08-30)
+
+Cookbook’s admin-only state endpoint is no longer probed by legitimate
+non-admin owner sessions. GET, POST, and background synchronization share an
+admin privilege guard; backend authorization remains unchanged. Focused
+coverage passed 222 tests, the non-admin responsive browser gate passed, and
+the broad regression passed 7,033 tests with 8 skipped and 149 warnings.
+Owner deployment state was not modified.
+
 ## OSINT shared-confirmation checkpoint — exact candidate `dad9e7c5` (2026-08-30)
 
 OSINT claim retraction uses the shared styled confirmation dialog with
