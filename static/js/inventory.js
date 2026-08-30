@@ -530,14 +530,18 @@ async function showRecipe(id) {
 }
 
 async function cookRecipe(id, button) {
-  if (!window.confirm('Cook this recipe and deduct its ingredients from stock?')) return;
+  if (!await uiModule?.styledConfirm?.('Cook this recipe and deduct its ingredients from stock?', {
+    title: 'Cook recipe', confirmText: 'Cook recipe', cancelText: 'Keep recipe',
+  })) return;
   button.disabled = true;
   try { await api(`/api/recipes/${encodeURIComponent(id)}/cook`, {method:'POST', body:JSON.stringify({idempotency_key:makeIdempotencyKey('cook')})}); uiModule.showToast?.('Recipe cooked and stock updated'); await loadRecipes(); }
   catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
 }
 
 async function confirmDraft(id, revision, button) {
-  if (!window.confirm('Apply exactly the reviewed operations shown? This will change stock.')) return;
+  if (!await uiModule?.styledConfirm?.('Apply exactly the reviewed operations shown? This will change stock.', {
+    title: 'Apply stock changes', confirmText: 'Apply changes', cancelText: 'Review again', danger: true,
+  })) return;
   button.disabled = true;
   try {
     const result = await api(`/api/inventory/intake/drafts/${encodeURIComponent(id)}/confirm`, {method:'POST', body:JSON.stringify({confirm:true,expected_revision:revision})});
@@ -547,7 +551,9 @@ async function confirmDraft(id, revision, button) {
     editingDraft = null;
   }
   catch (error) {
-    if (/already in progress/i.test(error.message) && window.confirm('The previous apply may have been interrupted. Resume the same idempotent draft?')) {
+    if (/already in progress/i.test(error.message) && await uiModule?.styledConfirm?.('The previous apply may have been interrupted. Resume the same safe, repeatable draft?', {
+      title: 'Resume stock update', confirmText: 'Resume', cancelText: 'Stop',
+    })) {
       try { await api(`/api/inventory/intake/drafts/${encodeURIComponent(id)}/confirm`, {method:'POST', body:JSON.stringify({confirm:true,resume:true})}); uiModule.showToast?.('Draft resumed and applied'); await loadStock(); } catch (resumeError) { uiModule.showError?.(resumeError.message); }
     } else uiModule.showError?.(error.message);
     button.disabled = false;
