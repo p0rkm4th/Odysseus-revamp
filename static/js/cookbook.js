@@ -1786,7 +1786,9 @@ async function _fetchDependencies() {
       const detail = updateSource
         ? 'This fast-forwards the Cookbook-managed ~/llama.cpp checkout when possible, then clears the cached llama-server build. The next launch recompiles or installs the latest matching prebuilt.'
         : 'This clears the cached llama-server build. The next launch recompiles or installs a matching prebuilt.';
-      if (!confirm(`${action} on ${where}?\n\n${detail}`)) return;
+      if (!await uiModule.styledConfirm(`${action} on ${where}?\n\n${detail}`, {
+        title: action, confirmText: updateSource ? 'Update and rebuild' : 'Rebuild engine', cancelText: 'Cancel', danger: true,
+      })) return;
       const oldText = statusEl?.textContent;
       if (statusEl) {
         statusEl.disabled = true;
@@ -2231,7 +2233,9 @@ function _wireTabEvents(body) {
       if (sel) _applyServerSelection(sel.value);
       const host = _envState.remoteHost || '';
       const where = host || 'this server';
-      if (!confirm(`Reinstall ${pkg} on ${where}?\n\nRuns "pip install --force-reinstall --no-deps ${pkg}" as a tmux task. Watch progress in the Running tab.`)) return;
+      if (!await uiModule.styledConfirm(`Reinstall ${pkg} on ${where}?\n\nRuns "pip install --force-reinstall --no-deps ${pkg}" as a tmux task. Watch progress in the Running tab.`, {
+        title: 'Reinstall package', confirmText: 'Reinstall', cancelText: 'Cancel', danger: true,
+      })) return;
       const _venvPy = (_envState.env === 'venv' && _envState.envPath)
         ? `${_envState.envPath.replace(/\/+$/, '')}/bin/python3`
         : 'python3';
