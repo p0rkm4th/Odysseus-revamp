@@ -1943,6 +1943,13 @@ existing network and was replaced after enumeration; no owner state was
 touched. Broader fresh-fresh feature and populated recovery evidence remain
 open.
 
+The browser runner's approval-card and terminal-stream waits were raised from
+30 to 120 seconds after YouTube preprocessing exceeded the old budget. A video
+replay subsequently reached approval but encountered a stalled shared Ollama
+request that blocked the disposable app worker; the disposable app was
+restarted and recovered. This is recorded as provider/environment failure;
+video acceptance remains open until it passes on a responsive model lane.
+
 Canonical Asset fixtures now receive an equivalent disposable-owner reset.
 It removes stale rows marked `acceptance-fixture` and their dependent records
 before seeding Atlas/Erebus scenarios. The Asset reference-chain journey then
