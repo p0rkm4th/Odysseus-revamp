@@ -5941,9 +5941,16 @@ async def stream_aci_runtime(
                 ),
             }
             if block.tool_type == "manage_notes":
+                try:
+                    _note_request = json.loads(block.content or "{}")
+                except (TypeError, ValueError):
+                    _note_request = {}
                 for key in ("note_id", "note_title", "due_date"):
-                    if result.get(key):
-                        tool_event[key] = result[key]
+                    value = result.get(key)
+                    if not value and isinstance(_note_request, dict):
+                        value = _note_request.get({"note_id": "id", "note_title": "title", "due_date": "due_date"}[key])
+                    if value:
+                        tool_event[key] = value
             if block.tool_type == "read_communications":
                 _calendar_summary = communications_calendar_summary_from_tool_output(
                     result.get("output") if isinstance(result.get("output"), str) else ""
