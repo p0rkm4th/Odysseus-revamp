@@ -2,6 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Qualitative recipe fixture replay checkpoint — harness commit `76210b81` (2026-08-30)
+
+The qualitative-amount review journey was initially blocked before the owner
+turn because its declared existing-recipe fixture had no corresponding setup
+hook. This was classified as `ENVIRONMENT_FAILURE`, not accepted as feature
+evidence. The browser acceptance harness now owns that prerequisite through a
+named `canonical_qualitative_existing_recipe` fixture setup, using the same
+permitted API-only prerequisite pattern as the other composition journeys.
+
+A fresh disposable replay then passed `OWNER-RECIPE-QUALITATIVE-REVIEW-001`
+against exact candidate `6a713675`: one owner turn, one review-only mutation
+attempt, two canonical readbacks, and zero false successes, raw final Results,
+duplicate delivery, or abrupt EOF. The qualitative `salt to taste` and `oil as
+needed` fields remained reviewable rather than being assigned invented
+quantities. Disposable state was removed and owner state was untouched.
+
 ## Recipe video title-default checkpoint — exact candidate `6a713675` (2026-08-30)
 
 The owner-facing video import path had a product gap: a valid video source
