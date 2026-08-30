@@ -5001,6 +5001,25 @@ async def stream_aci_runtime(
                     "[agent] suppressing duplicate attempted effectful binding in one turn: tool=%s",
                     block.tool_type,
                 )
+                if exact_approval is not None:
+                    # The approved sealed action was already executed above.
+                    # A weak model may echo that same mutation after seeing its
+                    # Result, especially when the Result is a validation
+                    # failure. Suppressing the call alone leaves the model in
+                    # a no-progress loop until the global loop-breaker fires.
+                    # Force one tool-free answer immediately so the owner gets
+                    # the actual Result explanation and the mutation remains
+                    # exactly-once.
+                    _force_answer = True
+                    messages.append({
+                        "role": "system",
+                        "content": (
+                            "The exact approved action has already been executed once. "
+                            "Do not call that same effectful action again. Give the owner "
+                            "a concise final answer grounded in its Result, including "
+                            "what was not saved if it failed."
+                        ),
+                    })
                 continue
             if block.tool_type in _BATCH_EFFECTFUL_TOOLS:
                 _attempted_effectful_batch_calls.add(_effectful_signature)
