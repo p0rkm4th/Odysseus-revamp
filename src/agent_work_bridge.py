@@ -408,7 +408,10 @@ def recent_session_reference_context(owner: str, session_id: str, *, limit: int 
         runs = (
             db.query(WorkRun)
             .filter(WorkRun.owner == str(owner), WorkRun.session_id == str(session_id))
-            .order_by(WorkRun.updated_at.desc()).limit(20).all()
+            # SQLite timestamps can tie for adjacent conversational turns;
+            # the durable monotonic Run id makes the newest correction win
+            # deterministically for the next pronoun/property follow-up.
+            .order_by(WorkRun.updated_at.desc(), WorkRun.id.desc()).limit(20).all()
         )
         for run in runs:
             results = (
