@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Inventory shared-confirmation checkpoint — exact candidate `4f420ba4` (2026-08-30)
+
+Inventory mutation confirmations for cooking, applying reviewed stock
+changes, and resuming an idempotent draft now use shared Hades dialogs with
+clear cancel/danger treatment. Focused coverage passed 63 tests, the
+authenticated responsive visual gate passed, and the broad regression passed
+7,030 tests with 8 skipped and 149 warnings. Owner deployment state was not
+modified.
+
 ## Asset reconciliation shared-dialog follow-up — exact candidate `ca206716` (2026-08-30)
 
 CMDB candidate naming now uses the shared styled prompt for both required and
