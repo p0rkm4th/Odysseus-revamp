@@ -2,6 +2,17 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Memory correction/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+`OWNER-MEMORY-CORRECTION-READBACK-001` passed in the isolated realistic
+Qwen3:8B browser environment. The owner remembered a test color, read it,
+corrected it as no longer true, and read the resulting state after the
+correction. Evidence: 4 turns, 2 Memory mutations, 2 deterministic reads,
+zero false successes, raw final Results, duplicate delivery, or abrupt EOF.
+The exact candidate image was
+`sha256:a71ecae56d433f4abe8dca6c52da4d754d3753a7e5d8c36358186d313bf5a1cf`;
+the actual owner runtime remains untouched.
+
 ## Asset ordinal correction/reference-chain checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 `OWNER-ASSET-REFERENCE-CHAIN-001` passed in the isolated realistic synthetic
