@@ -2273,6 +2273,17 @@ composer remained visible and visually coherent. The first 1024 replay hit a
 post-login `waitForURL` timeout, but the DOM-content-loaded retry passed, so it
 is classified as harness timing rather than a product failure.
 
+## Fresh restart and vector-recovery boundary — exact candidate `7cbd7666` (2026-08-30)
+
+The disposable Recipe/Work acceptance app was explicitly restarted after
+normal browser-visible Qwen3:8B endpoint setup. The container returned healthy
+with source marker `7cbd7666`, zero restarts, and the post-restart Work
+overview journey passed 3 turns with 2 canonical readbacks and reload
+durability. A Chroma archive was also created from the exact Compose volume,
+but that volume contained no vector records for these journeys; therefore
+archive/restore command safety is not promoted to nontrivial vector-state
+recovery evidence. A populated Chroma restore rehearsal remains open.
+
 The same disposable stack passed `OWNER-WORK-OVERVIEW-001` across 3 owner
 turns with 2 canonical readbacks and reload durability. The ambiguous restart
 and no-active-context continuation journeys also passed 2 turns without false
