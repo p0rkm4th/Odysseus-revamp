@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Tasks shared-confirmation checkpoint — exact candidate `5dcbf204` (2026-08-30)
+
+Tasks retained native confirmation fallbacks across five owner actions:
+bulk delete, delete with run history, revert built-in task, clear task cache,
+and pause/resume all. All now use shared Hades confirmations with explicit
+action titles, safe cancel labels, and danger treatment where destructive.
+Focused Work/UI coverage passed 98 tests. Exact candidate
+`odysseus:candidate-5dcbf204` has image ID
+`sha256:c4d16b4249f94680b406d588ecdd0421ed7c3f5b4c8a6fd62e17e478bfeb85b7`
+and source marker `5dcbf204e1849a02a3bd28e4491c60540ac89e0f`; isolated runtime
+was healthy with 0 restarts. Authenticated responsive browser acceptance and
+the full regression passed `7036 passed, 8 skipped, 149 warnings` in 299.15
+seconds. Owner deployment and data remain untouched.
+
 ## Dialog fallback cleanup follow-up — exact candidate `accf9531` (2026-08-30)
 
 The native confirmation fallbacks left in Document Library research-report
