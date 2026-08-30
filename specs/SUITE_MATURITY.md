@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Household sloppy-language mutation/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+Informal owner language successfully drove household add/consume mutations
+through canonical inventory. Two independent readbacks and reload continuity
+passed with zero false success, raw Result, duplicate delivery, or abrupt EOF.
+
 ## Work task mutation/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 The isolated owner journey passed GUI task creation through the canonical Work

@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Household sloppy-language mutation/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+`OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` passed in the isolated
+realistic synthetic Qwen3:8B browser environment. The owner used informal
+language to add and consume household stock, and independent canonical
+readbacks confirmed the resulting quantities. Evidence: 4 turns, 2 GUI
+mutations, 2 mutation readbacks, zero false successes, raw final Results,
+duplicate delivery, or abrupt EOF. The actual owner runtime remains
+untouched.
+
 ## Work task mutation/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 `OWNER-WORK-TASK-MUTATION-READBACK-001` passed in the isolated deterministic
