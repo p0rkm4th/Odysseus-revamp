@@ -32,6 +32,17 @@ seconds. The browser-tested executable remains exact candidate
 `odysseus:candidate-4148710e` with 0 restarts; source/doc branch head is now
 `f011782e`. This is regression evidence only, not a release declaration.
 
+## Exact-candidate owner walkabout after Work repair — `4148710e` (2026-08-30)
+
+The authenticated disposable browser walkabout exercised seven read journeys
+across Network, Homelab, Memory, Assets, and Work, including reload and shared
+navigation/window checks. All seven streams completed with one terminal event;
+the network answer had one human-facing answer and one bounded tool card. The
+run reported `falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. No mutation was attempted in this read-only walkabout; the
+separate Work project/task replay independently verified both GUI-originated
+mutations. Owner deployment and data remain untouched.
+
 ## Sloppy Work read replay — exact candidate `23e51370` (2026-08-30)
 
 The read-only owner prompt `whats outsanding` reached the bounded Work read
