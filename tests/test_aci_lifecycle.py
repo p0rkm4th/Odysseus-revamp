@@ -609,7 +609,8 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     }])
     assert memory is not None
     assert memory.source.value == "DETERMINISTIC_RESULT"
-    assert "No applicable owner-scoped memories" in memory.content
+    assert memory.content == "I don't have any applicable memories recorded for you."
+    assert "CANONICAL MEMORY RESULT" not in memory.content
 
     work = canonical_result_answer([{
         "tool": "read_work", "exit_code": 0,
@@ -618,6 +619,24 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     assert work is not None
     assert work.source.value == "DETERMINISTIC_RESULT"
     assert "No outstanding work" in work.content
+
+
+def test_canonical_memory_read_hides_grounding_telemetry_from_owner_answer():
+    from src.aci import canonical_result_answer
+
+    memory = canonical_result_answer([{
+        "tool": "read_memory", "exit_code": 0,
+        "result_projection": {
+            "status": "ok", "query_type": "summary", "retrieved_count": 1,
+            "records": [{"text": "my test color is ultraviolet orange", "epistemic_type": "REMEMBERED"}],
+            "current_self_state": {"provider": "ollama", "model": "qwen3:8b", "active": True},
+        },
+    }])
+    assert memory is not None
+    assert memory.content == "Here's what I remember:\n- Remembered: my test color is ultraviolet orange"
+    assert "CANONICAL MEMORY RESULT" not in memory.content
+    assert "qwen3:8b" not in memory.content
+    assert "retrieved_count" not in memory.content
 
     # Work, like Network, may contain enough durable history to exceed the
     # display envelope.  The answer owner must consume its bounded projection,
