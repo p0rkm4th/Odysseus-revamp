@@ -4525,3 +4525,31 @@ asset referent. It recorded zero false successes, raw final Results, duplicate
 delivery, abrupt EOF, or effectful mutations. This is read-only conversation
 evidence against the disposable lived-in fixture; owner deployment/data was
 untouched.
+
+## Setup Center owner-surface migration — exact candidate `4b6d0c7b` (2026-08-30)
+
+The visible Setup Center audit found technical capability inventory preceding
+the information a normal owner needs first. The window now presents
+Integration readiness before module inventory, folds “Technical permissions
+and authority” into a collapsed disclosure, uses owner-readable copy, and
+separates module status from Validate/Skip actions with a shared flex action
+cluster. Focused Setup Center verification passed `15` tests.
+
+Exact candidate `odysseus:candidate-4b6d0c7b` was built from pushed source
+`4b6d0c7b`, image `sha256:f7324ed91b53b9e94e0a8b11647e8c40ea24f0bafd45b17c5df86740271e78d6`,
+and deployed only to the disposable current lane with matching source marker
+and zero restarts. Browser visual checks at 1440x900 and 900x700 confirmed
+readiness-first ordering, collapsed technical details, fourteen module cards,
+and zero horizontal/action-cluster overflow. Owner deployment/data remained
+untouched.
+
+## Natural hourly reminder journey — candidate `4b6d0c7b` (2026-08-30)
+
+The owner journey corpus now includes `OWNER-REMINDER-HOURLY-READBACK-001`,
+covering ordinary “Could you remind me in an hour to check the laundry?”
+language rather than only tomorrow/cancel wording. On the exact disposable
+candidate `odysseus:candidate-4b6d0c7b`, the request completed through chat
+with `2` turns, `1` GUI mutation, and `2` independent `/api/notes` readbacks
+including due-date evidence. False success, raw final Results, duplicate
+delivery, and abrupt EOF were all zero. Owner deployment/data remained
+untouched.
