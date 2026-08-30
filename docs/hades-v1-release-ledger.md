@@ -4623,6 +4623,23 @@ zero false successes, raw final Results, duplicate delivery, or abrupt EOF.
 These are read-only disposable acceptance replays; owner deployment/data
 remained untouched.
 
+## Vector readiness retry and Memory correction — candidate `021960ff` (2026-08-30)
+
+An isolated restart showed the app could initialize MemoryVectorStore before
+Chroma DNS/service readiness and remain permanently degraded. The existing
+initializer now retries the vector store four times with a one-second bounded
+backoff, retaining the explicit degraded state if the dependency stays down.
+Focused verification passed `98` related tests and the new transient-readiness
+regression; the exact candidate was built from pushed source
+`021960ff535791bd107feb6f67a1b6721395e732`.
+
+After recreating the disposable lane with explicit data paths, acceptance gate,
+and network aliases, Chroma and MemoryVectorStore initialized healthy. The
+four-turn Memory correction journey then passed with two GUI mutations and
+canonical verification: remember, recall, remove by natural-language
+correction, and confirm absence. The earlier duplicate-record ambiguity was
+cleaned only from disposable fixture data; no owner data was touched.
+
 ## Household and Work mutation replay — exact candidate `4c873549` (2026-08-30)
 
 The sloppy Household journey passed `4` owner turns with `2` GUI mutations
