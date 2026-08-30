@@ -501,6 +501,20 @@ def test_sectioned_qualitative_recipe_returns_editable_review_draft_without_pers
     assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"] == []
 
 
+def test_compact_qualitative_recipe_review_preserves_each_ingredient():
+    source = (
+        'Acceptance Compact Taste Test\n\n'
+        'Ingredients: 1 cup rice; salt to taste; oil as needed\n'
+        'Instructions: Cook the rice and season it.\n'
+    )
+    draft = recipe_import_review_draft(source, requested_name="Acceptance Compact Taste Test")
+    assert draft is not None
+    assert [item["name"] for item in draft["ingredients"]] == ["rice", "salt", "oil"]
+    assert draft["ingredients"][0]["quantity"] == 1.0
+    assert draft["ingredients"][1]["review_note"] == "to taste"
+    assert draft["ingredients"][2]["review_note"] == "as needed"
+
+
 def test_review_draft_ignores_serving_metadata_inside_copied_ingredients_section():
     source = (
         'Acceptance Web Paste Dinner\n★★★★★ 4.8 from 214 reviews\n\n'

@@ -995,8 +995,10 @@ async function main() {
       // Seed only the UI's normal last-session preference; authentication is
       // still established exclusively by the login route above.
       await page.evaluate((sessionId) => localStorage.setItem('lastSessionId', sessionId), session.id);
-      await page.evaluate((sessionId) => history.replaceState(null, '', `#${sessionId}`), session.id);
-      await page.reload({ waitUntil: 'domcontentloaded' });
+      // Navigate directly to the session hash.  A history.replaceState()
+      // followed by reload races the SPA's startup/session hydration and can
+      // crash the Playwright target before the composer is available.
+      await page.goto(`${baseURL}/#${session.id}`, { waitUntil: 'domcontentloaded' });
     }
     await page.locator('textarea#message:visible').first().waitFor({ state: 'visible', timeout: 30000 });
     // A session reload can expose the composer before history hydration has
@@ -1004,15 +1006,28 @@ async function main() {
     // the freshly appended user bubble, producing a false browser failure
     // (and hiding a real client-ordering race).  Wait for the existing
     // session loader to settle before beginning the journey.
-    await page.waitForFunction((sessionId) =>
-      document.readyState === 'complete' &&
-      !document.querySelector('#app-loader:not(.hidden)') &&
-      !document.querySelector('#chat-history .session-loading-state') &&
-      (!sessionId || (
-        window.sessionModule?.getCurrentSessionId?.() === sessionId &&
-        window.location.hash === `#${sessionId}`
-      )),
-    expectedSessionId, { timeout: 30000 });
+    try {
+      await page.waitForFunction((sessionId) =>
+        document.readyState === 'complete' &&
+        !document.querySelector('#app-loader:not(.hidden)') &&
+        !document.querySelector('#chat-history .session-loading-state') &&
+        (!sessionId || (
+          window.sessionModule?.getCurrentSessionId?.() === sessionId &&
+          window.location.hash === `#${sessionId}`
+        )),
+      expectedSessionId, { timeout: 30000 });
+    } catch (error) {
+      diagnostics.sessionHydration = await page.evaluate(() => ({
+        readyState: document.readyState,
+        url: window.location.href,
+        hasSessionModule: Boolean(window.sessionModule),
+        currentSessionId: window.sessionModule?.getCurrentSessionId?.() || null,
+        hash: window.location.hash,
+        appLoaderVisible: Boolean(document.querySelector('#app-loader:not(.hidden)')),
+        sessionLoadingVisible: Boolean(document.querySelector('#chat-history .session-loading-state')),
+      })).catch(() => ({ pageUnavailable: true }));
+      throw error;
+    }
 
     if (householdAcceptance) {
       diagnostics.householdSeed = await seedHouseholdAcceptanceState(page);

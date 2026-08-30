@@ -460,7 +460,16 @@ def recipe_import_review_draft(
         servings = int(servings)
 
     ingredients: list[dict[str, Any]] = []
-    for raw_line in (line.strip() for line in ingredients_text.splitlines() if line.strip()):
+    raw_lines = [line.strip() for line in ingredients_text.splitlines() if line.strip()]
+    # Owners often type a short recipe in one line or paste a compact form
+    # from a notes app. Split that form before reviewing each ingredient so a
+    # qualitative item cannot swallow the rest of the ingredient section.
+    if len(raw_lines) <= 1:
+        raw_lines = re.split(
+            r",|\s*;\s*|\s+and\s+(?=\d+(?:\.\d+)?\s)",
+            ingredients_text,
+        )
+    for raw_line in (line.strip() for line in raw_lines if line.strip()):
         item = re.sub(r"^(?:[-*•]|\d+[.)])\s*", "", raw_line).strip().strip(".")
         # Copied recipe pages commonly place serving metadata inside the
         # Ingredients section. It is page chrome, not an ingredient; retain
