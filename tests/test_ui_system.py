@@ -90,6 +90,7 @@ def test_settings_uses_shared_confirmation_dialogs_without_native_fallbacks():
     assert "window.confirm(" not in source
     assert "Hide Settings cog" in source
     assert "Delete contact" in source
+    assert "Revoke agent token" in source
 
 
 def test_document_owner_actions_use_shared_prompt_and_confirmation_dialogs():

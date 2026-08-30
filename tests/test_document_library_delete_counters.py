@@ -37,6 +37,7 @@ def test_single_delete_updates_language_counters_and_chips():
     assert "uiModule.styledConfirm" in text
     assert "confirm('Delete this document?')" not in text
     assert "confirm(`Delete ${count}" not in text
+    assert "window.confirm('Delete this research report?')" not in text
 
     delete_body = _between(
         text,

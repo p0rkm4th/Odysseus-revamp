@@ -2805,9 +2805,9 @@ let _libraryArchivedView = false;   // Documents tab showing archived docs?
       const delBtn = preview.querySelector('.doclib-chat-delete-btn');
       if (delBtn) delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const ok = uiModule && uiModule.styledConfirm
-          ? await uiModule.styledConfirm('Delete this research report?', { confirmText: 'Delete', danger: true })
-          : window.confirm('Delete this research report?');
+        const ok = await uiModule.styledConfirm('Delete this research report?', {
+          title: 'Delete research report', confirmText: 'Delete', cancelText: 'Keep report', danger: true,
+        });
         if (!ok) return;
         try {
           const res = await fetch(`${API_BASE}/api/research/${item.id}`, { method: 'DELETE', credentials: 'same-origin' });
