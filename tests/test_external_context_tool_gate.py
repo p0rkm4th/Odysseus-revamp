@@ -337,6 +337,21 @@ def test_external_context_keeps_explicit_low_impact_tools_available(tool_name):
     assert context.decision_for(tool_name).allowed is True
 
 
+def test_external_context_allows_recipe_review_preparation_without_approval():
+    context = ToolRunSecurityContext(external_untrusted_context_seen=True)
+    payload = {
+        "action": "commit_import",
+        "review_required": True,
+        "source_text": "Ingredients: salt to taste\nInstructions: season it",
+    }
+
+    assert context.decision_for("manage_recipes", payload).allowed is True
+    assert context.decision_for("manage_recipes", {
+        **payload,
+        "draft": {"name": "Already prepared"},
+    }).allowed is False
+
+
 def test_external_context_blocks_model_controlled_web_fetch_egress():
     context = ToolRunSecurityContext(external_untrusted_context_seen=True)
 
