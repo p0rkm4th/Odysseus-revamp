@@ -841,6 +841,32 @@ def test_url_recipe_import_projects_commit_action_and_user_fields():
     assert [value["payload"].get("action") for value in projection.choice_map.values()] == ["commit_import"]
     assert selected["payload"]["source_url"].startswith("https://sundaysuppermovement.com/")
     assert selected["payload"]["requested_name"] == "Chicken Cordon Bleu with Cheese Sauce"
+    assert projection.mode is SelectionMode.DIRECT_ACTION
+    assert projection.fast_path == selected["payload"]
+
+
+def test_qualitative_recipe_import_projects_review_only_fast_path():
+    query = '''Please save this in my recipe book as "Web Review Dinner".
+
+Ingredients
+- 1 cup rice
+- salt to taste
+- oil as needed
+
+Instructions
+Cook the rice and season it.'''
+    projection = project_action_selection(
+        intent=_intent(query),
+        relevant_tools=["manage_recipes"],
+        disabled_tools=set(),
+        owner="owner",
+        active_run=None,
+        query=query,
+    )
+    assert projection.mode is SelectionMode.DIRECT_ACTION
+    assert projection.fast_path["action"] == "commit_import"
+    assert projection.fast_path["review_required"] is True
+    assert projection.fast_path["source_text"] == query
 
 
 def test_url_recipe_import_keeps_arguments_when_read_and_manage_capabilities_are_visible():
