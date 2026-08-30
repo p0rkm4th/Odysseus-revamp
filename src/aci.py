@@ -4306,7 +4306,8 @@ def canonical_notes_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         suffix = f" for {due}" if due else ""
         return f'Reminder created: "{title}"{suffix}. It is saved.'
     if action == "update" and title:
-        return f'Reminder updated: "{title}". It is saved.'
+        suffix = f" for {due}" if due else ""
+        return f'Reminder updated: "{title}"{suffix}. It is saved.'
     if action == "delete":
         return "Reminder deleted."
     return None
