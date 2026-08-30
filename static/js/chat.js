@@ -1392,8 +1392,18 @@ import { loadPanel } from './panels.js';
         try {
           if (!dc || !dc.endpoint_url || !dc.model) {
             _sendPerf.mark('default_chat_fetch_begin');
-            const dcRes = await fetch('/api/default-chat');
-            dc = await dcRes.json();
+            // Login can finish just before the default-chat route and model
+            // picker state are ready. Retry this bounded read so an owner who
+            // types immediately after opening Hades does not lose the first
+            // message to a transient "no session" state.
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+              const dcRes = await fetch('/api/default-chat', { credentials: 'same-origin' });
+              if (dcRes.ok) {
+                dc = await dcRes.json();
+                if (dc && dc.endpoint_url && dc.model) break;
+              }
+              if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 250));
+            }
             _sendPerf.mark('default_chat_fetch_done');
             if (dc && dc.endpoint_url && dc.model) {
               try {
