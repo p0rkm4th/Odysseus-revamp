@@ -2,6 +2,17 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Asset false-premise checkpoint — exact candidate `6a713675` (2026-08-30)
+
+`OWNER-ASSET-FILTER-NO-MATCH-001` passed in a fresh isolated Compose project
+after supplying its required disposable canonical CMDB fixture. The owner
+asked which server had an RTX 4090 while the fixture contained no such asset.
+The browser journey produced a grounded no-match answer with no hallucinated
+entity and no raw Asset Result leak. Evidence: one read turn, one canonical
+read journey, zero mutations, false successes, duplicate delivery, or abrupt
+EOF. The initial missing-CMDB invocation was classified as
+`ENVIRONMENT_FAILURE` and was not counted as feature evidence.
+
 ## Household sloppy-language checkpoint — exact candidate `6a713675` (2026-08-30)
 
 `OWNER-HOUSEHOLD-SLOPPY-MUTATION-READBACK-001` passed in a fresh isolated
