@@ -2057,7 +2057,10 @@ def provisional_intent_projection(
     transport should enter the ACI-owned route before legacy compatibility
     classification runs.
     """
-    from src.intent_contracts import DOMAIN_CONTRACTS, compile_intent, is_explicit_continuation
+    from src.intent_contracts import (
+        DOMAIN_CONTRACTS, canonical_domain_projection, compile_intent,
+        is_explicit_continuation,
+    )
 
     latest = str(text or "")
     explicit_continuation = is_explicit_continuation(latest)
@@ -2162,7 +2165,7 @@ def provisional_intent_projection(
         # particular, natural narrow Memory questions can compile as UNKNOWN
         # until this projection promotes them to the explicit Memory frame;
         # returning an empty domain would hand the turn back to the model.
-        "domains": {"memory"} if frame.domain_concept == "MEMORY" else set(),
+        "domains": set(canonical_domain_projection(frame)),
         "retrieval_query": retrieval_query,
         "canonical_query": latest if contextual_memory_read else "",
         "general_explanatory": explanatory,
