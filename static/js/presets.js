@@ -455,7 +455,11 @@ function initSaveAsTemplate() {
 
     let name = nameInput ? nameInput.value.trim() : '';
     if (!name) {
-      name = prompt('Enter a name for this persona:');
+      const { styledPrompt } = await import('./ui.js');
+      name = await styledPrompt('Enter a name for this persona:', {
+        title: 'Save persona', placeholder: 'Persona name', confirmText: 'Save',
+        maxLength: 200,
+      });
       if (!name || !name.trim()) return;
       name = name.trim();
       if (nameInput) nameInput.value = name;

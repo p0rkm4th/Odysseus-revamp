@@ -752,7 +752,10 @@ function _wireAlbumsEvents(scope) {
       e.stopPropagation();
       pop.hidden = true;
       const album = _albums.find(a => a.id === id);
-      const newName = prompt('Rename album:', album?.name || '');
+      const newName = await uiModule.styledPrompt('Rename album:', {
+        title: 'Rename album', placeholder: 'Album name', confirmText: 'Save',
+        maxLength: 200, defaultValue: album?.name || '',
+      });
       if (!newName || !newName.trim() || newName.trim() === album?.name) return;
       const r = await fetch(`${API_BASE}/api/gallery/albums/${id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -791,9 +794,10 @@ function _wireAlbumsEvents(scope) {
   });
 
   document.getElementById('gallery-albums-new')?.addEventListener('click', async () => {
-    const name = (uiModule.styledPrompt
-      ? await uiModule.styledPrompt('Name your new album.', { title: 'New album', placeholder: 'e.g. Vacation 2026', confirmText: 'Create' })
-      : prompt('Album name:'));
+    const name = await uiModule.styledPrompt('Name your new album.', {
+      title: 'New album', placeholder: 'e.g. Vacation 2026', confirmText: 'Create',
+      maxLength: 200,
+    });
     if (!name?.trim()) return;
     await fetch(`${API_BASE}/api/gallery/albums`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -824,7 +828,10 @@ function _wireAlbumsEvents(scope) {
       const rel = images[0].webkitRelativePath || '';
       let folderName = rel.split('/')[0] || '';
       if (!folderName) {
-        folderName = prompt('Album name for these photos:') || '';
+        folderName = await uiModule.styledPrompt('Album name for these photos:', {
+          title: 'Name uploaded album', placeholder: 'Album name', confirmText: 'Create',
+          maxLength: 200,
+        }) || '';
         if (!folderName.trim()) return;
       }
       // Reuse an existing album with the same name; otherwise create one.
