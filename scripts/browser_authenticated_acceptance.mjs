@@ -365,7 +365,14 @@ function resetDisposableCanonicalFixture(scenarios) {
   );
   const householdFixture = [...profiles].some((profile) => profile.startsWith('empty-household'));
   const kitchenFixture = householdFixture || [...profiles].some((profile) => profile.startsWith('recipe-'));
-  const workFixture = profiles.has('work-task-create');
+  // Every Work fixture needs task isolation. Without this, a preceding
+  // project/task acceptance run leaks pending tasks into the supposedly empty
+  // Work profile and makes the canonical empty-state oracle fail for the
+  // correct reason (stale fixture state).
+  const workFixture = [...profiles].some((profile) =>
+    profile === 'empty-work' || profile === 'work-task-create' ||
+    profile === 'work-overview'
+  );
   if (!recipeFixture && !kitchenFixture && !workFixture) return null;
   const dataDirectory = path.resolve(process.cwd(), String(process.env.APP_DATA_DIR || '').trim());
   const database = path.join(dataDirectory, 'app.db');

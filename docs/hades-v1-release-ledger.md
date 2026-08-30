@@ -52,6 +52,17 @@ acceptance oracle reported `falseSuccess=0`, `rawFinalResults=0`,
 for Memory correction behavior; its harness scenario does not emit separate
 canonical readback records.
 
+## Work empty-state isolation checkpoint — candidate `8c620bf438bd` (2026-08-30)
+
+The first empty Work replay was correctly classified as `ENVIRONMENT_FAILURE`
+in the acceptance fixture: the `empty-work` profile failed to remove tasks
+created by an earlier Work scenario, so the canonical read returned two real
+pending tasks while the empty-state oracle expected none. The shared fixture
+reset now covers all Work profiles. A clean replay then passed with one GUI
+read, a human-readable empty-state answer, and
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. No production code or owner data was changed.
+
 ## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
 
 The video no-evidence journey remains open. Server-side evidence showed the
