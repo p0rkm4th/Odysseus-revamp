@@ -155,6 +155,11 @@ def test_safe_health_checks_cover_non_mutating_core_and_domain_readiness():
     for module_id in ("core.models", "core.memory", "investigation.osint", "technology.network", "technology.homelab", "business.crm", "interaction.voice", "advanced.automations"):
         assert module_id in routes
         assert module_id in frontend
+    # The readiness route must validate the canonical MemoryManager that the
+    # application initializes, rather than a stale/nonexistent projection
+    # helper that turns the owner-facing health check into HTTP 500.
+    assert "from src.memory import MemoryManager" in routes
+    assert "callable(MemoryManager)" in routes
     assert "scan_performed" in routes
     assert "mutations_performed" in routes
     assert "canonical_primitives" in routes
