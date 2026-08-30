@@ -2019,3 +2019,17 @@ answers. No mutation was attempted; false success, raw final Result, duplicate
 delivery, abrupt EOF, and browser page errors were zero. The disposable
 candidate source marker matched `303fde19`; the real owner deployment
 remained on older source `34ced247`.
+
+## Recipe reference continuity checkpoint — exact candidate `a0681fc1` (2026-08-29)
+
+The isolated Qwen3:8B browser candidate passed the ordinary same-session
+conversation `what recipes do i have?` followed by `what am i missing for that
+recipe?`. The first turn listed the canonical recipe, and the second resolved
+the pronoun to that recipe and returned a grounded shopping answer. The
+bounded read projection now preserves recipe IDs, names, and servings for
+durable follow-up resolution without exposing ingredient payloads. A separate
+false-premise turn, `which recipe did i cook last night?`, failed closed with an
+honest no-recorded-history answer; reload preserved it. No mutation was
+attempted, false success, raw final Result, duplicate delivery, abrupt EOF, or
+browser page error was observed. Candidate source marker matched `a0681fc1`;
+the real owner deployment remained on older source `34ced247`.

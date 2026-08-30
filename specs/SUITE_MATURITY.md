@@ -1576,3 +1576,13 @@ success, raw final Result, duplicate delivery, abrupt EOF, and browser page
 errors. This closes the previously observed route-success/final-answer loss
 for this journey, but does not make the broader Recipe V1 or Tier 1 release
 bar complete.
+
+## Recipe reference continuity maturity — exact candidate `a0681fc1` (2026-08-29)
+
+The exact isolated Qwen3:8B candidate now preserves bounded canonical Recipe
+references from a list read, allowing `what am I missing for that recipe?` to
+resolve against the recipe just shown. Reload retained the conversation. The
+false premise `which recipe did i cook last night?` produced a truthful empty
+cooking-history answer because no cooking events are recorded. This improves
+reference continuity and epistemic behavior, but Recipe V1 remains below the
+release bar until mutation/import/review journeys are broadly green.
