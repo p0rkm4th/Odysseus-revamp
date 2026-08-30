@@ -128,6 +128,7 @@ from src.aci import (
     user_turn_count,
     note_list_summary_from_tool_output,
     calendar_list_summary_from_tool_output,
+    communications_calendar_summary_from_tool_output,
     email_list_summary_from_tool_output,
     email_read_summary_from_tool_output,
     ody_qwen_terminal_tool_summary,
@@ -6156,6 +6157,11 @@ async def stream_aci_runtime(
                 break
             if _tool_name == "manage_calendar" and _tool_action in {"list", "list_events"}:
                 _calendar_summary = calendar_list_summary_from_tool_output(_ev.get("output") or "")
+                if _calendar_summary:
+                    full_response = _calendar_summary
+                break
+            if _tool_name == "read_communications" and _tool_action in {"overview", "list_events", "list"}:
+                _calendar_summary = communications_calendar_summary_from_tool_output(_ev.get("output") or "")
                 if _calendar_summary:
                     full_response = _calendar_summary
                 break
