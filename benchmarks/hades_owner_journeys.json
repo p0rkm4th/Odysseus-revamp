@@ -134,11 +134,20 @@
       "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_count": 0}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "recipe_count": 0}, "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-RECIPE-VIDEO-REVIEW-DRAFT-001",
+      "environment": "realistic_messy_synthetic",
+      "fixture_profile": "empty-recipes-video-review-draft",
+      "turns": [
+        {"prompt": "Save the recipe from this cooking video in my recipe book as \"Acceptance Greek Yogurt Pancakes\": https://www.youtube.com/watch?v=BuTQZNP_6yI", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "ERROR", "action": "commit_import", "tool_binding": "manage_recipes", "approval": "required", "requires_effect": false, "must_include_any": ["review", "amount", "nothing has been saved", "no recipe was saved"], "must_include_all": [], "forbidden": ["successfully added", "saved successfully", "Done"]}}
+      ],
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_count": 0}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "recipe_count": 0}, "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-RECIPE-VIDEO-INSUFFICIENT-EVIDENCE-001",
       "environment": "realistic_messy_synthetic",
       "fixture_profile": "empty-recipes-video-insufficient-evidence",
       "turns": [
-        {"prompt": "Save the recipe from this cooking video in my recipe book as \"Acceptance Video Pancakes\": https://www.youtube.com/watch?v=UOKJCwyUJGU. If there isn't enough verified recipe detail, tell me clearly and don't invent ingredients.", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "ERROR", "action": "commit_import", "tool_binding": "manage_recipes", "approval": "required", "requires_effect": false, "must_include_any": ["review", "missing", "no recipe was saved"], "must_include_all": [], "forbidden": ["successfully added", "saved successfully", "invented ingredient", "Done"]}}
+        {"prompt": "Save the recipe from this cooking video in my recipe book as \"Acceptance Noisy Video Recipe\": https://www.youtube.com/watch?v=UOKJCwyUJGU. If there isn't enough verified recipe detail, tell me clearly and don't invent ingredients.", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "ERROR", "action": "commit_import", "tool_binding": "manage_recipes", "approval": "required", "requires_effect": false, "must_include_any": ["review", "missing", "no recipe was saved"], "must_include_all": [], "forbidden": ["successfully added", "saved successfully", "invented ingredient", "Done"]}}
       ],
       "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "required", "before": {"recipe_count": 0}, "after": {"recipe_count": 0}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "recipe_count": 0}, "terminal": {"done": 1, "abrupt_eof": false}}
     },
