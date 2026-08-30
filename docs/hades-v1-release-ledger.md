@@ -2946,6 +2946,12 @@ all recorded zero false success, raw final Result, duplicate delivery, and
 abrupt EOF. Reused-lane precondition stops remain acceptance fixture-isolation
 debt, not product behavior.
 
+The current disposable runtime was then restarted from
+`odysseus:candidate-4da73504`; health recovered successfully, the source marker
+remained exact, and the post-restart Work overview passed 3 turns and 3
+canonical reads with zero false success, raw final Result, duplicate delivery,
+or abrupt EOF. No owner deployment or owner data was touched.
+
 The same exact candidate passed `OWNER-WORK-OVERVIEW-001`: 3 turns and 3
 canonical reads with no mutation, false success, raw final Result, duplicate
 delivery, or abrupt EOF. This confirms the bounded Work overview projection

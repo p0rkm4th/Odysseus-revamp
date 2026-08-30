@@ -520,6 +520,10 @@ The exact-candidate empty-memory first-use journey returned a grounded empty
 state through the browser with zero false success, raw final Result, duplicate
 delivery, or abrupt EOF.
 
+After a disposable runtime restart, Work overview again passed three owner
+turns and canonical reads on exact candidate `4da73504`, with zero false
+success, raw final Result, duplicate delivery, or abrupt EOF.
+
 ## Complete URL Recipe import checkpoint — candidate `5fe5bf94` (2026-08-29)
 
 Exact-candidate URL import passed required approval, canonical commit, name and
