@@ -816,12 +816,12 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
         if isinstance(safe_data, dict):
             refs = []
             collections = (
-                (safe_data.get("assets"), "TECHNICAL_ASSET"),
-                (safe_data.get("recipes"), "RECIPE"),
                 # Detail reads retain the ordered collection separately so
                 # follow-up ordinals can be corrected without changing the
                 # human-facing detail projection.
                 (safe_data.get("reference_entities"), "TECHNICAL_ASSET"),
+                (safe_data.get("assets"), "TECHNICAL_ASSET"),
+                (safe_data.get("recipes"), "RECIPE"),
             )
             for items, concept in collections:
                 if not isinstance(items, list):
@@ -830,7 +830,7 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                     if not isinstance(item, dict):
                         continue
                     ref = str(item.get("id") or item.get("asset_id") or "").strip()
-                    if ref:
+                    if ref and not any(existing["ref"] == ref for existing in refs):
                         refs.append({"ref": ref[:500], "concept": concept})
             for key, concept in (("asset", "TECHNICAL_ASSET"), ("recipe", "RECIPE")):
                 item = safe_data.get(key)
