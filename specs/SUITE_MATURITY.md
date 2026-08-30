@@ -1,5 +1,15 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Specific Memory relevance fix and replay — exact candidate `4adb2e82` (2026-08-30)
+
+Narrow Memory questions now filter canonical records by all meaningful query
+terms, preventing an unrelated record from being projected as the answer after
+the requested fact is removed. Focused Memory/ACI coverage passed 508 tests
+with 5 skipped. Exact-candidate GUI replay verified remember/recall/remove and
+zero matching canonical state afterward without hallucinating a value; answer
+wording still needs a clearer explicit no-record response in the weak-model
+path. Owner deployment state was not modified.
+
 ## Qualitative Recipe correction/commit GUI replay — `8136af69` (2026-08-30)
 
 The exact candidate’s editable review form accepted corrected values for the
