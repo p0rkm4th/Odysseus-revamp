@@ -2221,6 +2221,15 @@ def compile_intent(
         operation = "EXECUTE"
         read_explicit = False
 
+    # A quantity-plus-item imperative such as "Add 3 cans of beans" is a
+    # Household mutation even when the owner never says kitchen, pantry, or
+    # inventory. Reuse the bounded argument projector to establish semantic
+    # ownership before ACI selection; otherwise model prose can claim an add
+    # succeeded without any canonical Action or state change.
+    if concept == "UNKNOWN" and operation == "CREATE" and inventory_add_item_payload(text):
+        concept = "HOUSEHOLD_ITEM"
+        read_explicit = False
+
     # Public web access is an ordinary evidence capability. Keep bounded
     # lookup/fetch distinct from OSINT case management and deep research. A
     # local operational question such as "current network" does not match
