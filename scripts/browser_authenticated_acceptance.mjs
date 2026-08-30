@@ -557,6 +557,22 @@ function visibleMessages(page) {
   })));
 }
 
+async function loadAllConversationHistory(page) {
+  const history = page.locator('#chat-history');
+  let previousCount = -1;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const currentCount = await assistantCount(page);
+    if (currentCount === previousCount) break;
+    previousCount = currentCount;
+    await history.evaluate((element) => {
+      element.scrollTop = 0;
+      element.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+    await page.waitForTimeout(250);
+  }
+  return assistantCount(page);
+}
+
 function finalAnswerSnapshot(page) {
   return page.locator('#chat-history').evaluate((history) => {
     const messages = [...history.querySelectorAll('.msg-ai')]
@@ -1352,7 +1368,7 @@ async function main() {
       const beforeReload = await assistantCount(page);
       await page.reload({ waitUntil: 'domcontentloaded' });
       await page.locator('#chat-history .msg').first().waitFor({ timeout: 30000 });
-      const afterReload = await assistantCount(page);
+      const afterReload = await loadAllConversationHistory(page);
       if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
       for (const scenario of scenarios) {
         const readback = await verifyScenarioReadback(page, scenario, 'after-reload');
@@ -1362,7 +1378,7 @@ async function main() {
       const beforeReload = await assistantCount(page);
       await page.reload({ waitUntil: 'domcontentloaded' });
       await page.locator('#chat-history .msg').first().waitFor({ timeout: 30000 });
-      const afterReload = await assistantCount(page);
+      const afterReload = await loadAllConversationHistory(page);
       if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
       await send(page, householdAcceptance ? 'what else is in the kitchen?' : 'what about its RAM?');
     }
