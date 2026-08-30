@@ -1613,3 +1613,12 @@ passes independent persistence/readback after visible approval. The initial
 no-Action refusal is closed; external recipe content remains approval-gated.
 Source-specific price/footnote text is still retained in some ingredient names,
 so imported display cleanliness remains a follow-up UX concern.
+
+## Unreachable Recipe URL maturity — exact candidate `cb96ea09` (2026-08-29)
+
+Unreachable public recipe sources now fail closed after explicit approval with a
+bounded human-readable error and no canonical Recipe. The repeated failed
+Action previously visible in the conversation is suppressed by the generalized
+per-turn attempted-effect guard. This closes duplicate failure delivery for
+this journey; editable chat review handoff and imported ingredient cleanup
+remain open UX work.

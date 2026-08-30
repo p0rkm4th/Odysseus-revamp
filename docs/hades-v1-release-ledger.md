@@ -2076,3 +2076,15 @@ owner-approved replay, the exact candidate persisted `Acceptance Budget Chili
 20260830c`, independently read it back, and confirmed the requested source URL
 was retained. The browser answer was human-readable; false success, raw final
 Result, duplicate delivery, abrupt EOF, and page errors were zero.
+
+## Unreachable Recipe URL failure checkpoint — exact candidate `cb96ea09` (2026-08-29)
+
+An approved import of an unreachable public URL failed closed with the
+human-readable answer `The recipe source could not be fetched for review.`
+Canonical Recipe readback confirmed no row was created and no raw Action JSON
+was shown. Trace inspection found the resumed model had previously repeated
+the same failed `commit_import` Action, producing duplicate failure cards; a
+per-turn attempted-effect signature guard now suppresses that repeat. The
+replay produced exactly one failed Action, zero false success, duplicate
+delivery, abrupt EOF, or browser page errors. The real owner deployment was
+untouched and remained on source `34ced247`.
