@@ -3296,10 +3296,14 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     )
     if event is None or event.get("exit_code") not in (None, 0):
         return None
-    try:
-        payload = json.loads(str(event.get("output") or ""))
-    except (TypeError, ValueError):
-        return None
+    projection = event.get("result_projection")
+    if isinstance(projection, Mapping):
+        payload = projection
+    else:
+        try:
+            payload = json.loads(str(event.get("output") or ""))
+        except (TypeError, ValueError):
+            return None
     if not isinstance(payload, Mapping):
         return None
     if str(payload.get("status") or "").strip().upper() in {
@@ -3740,7 +3744,7 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_work", "read_recipes", "manage_recipes", "manage_memory"} or not isinstance(result, Mapping):
+    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_household", "read_work", "read_recipes", "manage_recipes", "manage_memory"} or not isinstance(result, Mapping):
         return None
     if str(tool_name or "").strip() == "manage_memory":
         return {
@@ -3749,6 +3753,38 @@ def canonical_tool_result_projection(
             "canonical_store": result.get("canonical_store"),
             "verification": result.get("verification"),
         }
+    if str(tool_name or "").strip() == "read_household":
+        raw = result.get("data") if isinstance(result.get("data"), Mapping) else result.get("output")
+        if isinstance(raw, Mapping):
+            payload = raw
+        else:
+            try:
+                payload = json.loads(str(raw or ""))
+            except (TypeError, ValueError):
+                return None
+        if not isinstance(payload, Mapping):
+            return None
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        projection = {
+            "status": payload.get("status"),
+            "item_count": payload.get("item_count", len(items)),
+            "items": [
+                {
+                    "id": row.get("id"),
+                    "name": row.get("name"),
+                    "domain": row.get("domain"),
+                    "stock_quantity": row.get("stock_quantity", row.get("quantity")),
+                    "default_unit": row.get("default_unit", row.get("unit")),
+                }
+                for row in items[:100]
+                if isinstance(row, Mapping)
+            ],
+            "expiring_lots": payload.get("expiring_lots", [])[:100]
+                if isinstance(payload.get("expiring_lots"), list) else [],
+            "low_stock": payload.get("low_stock", [])[:100]
+                if isinstance(payload.get("low_stock"), list) else [],
+        }
+        return projection
     raw = result.get("output")
     if isinstance(raw, Mapping):
         payload = raw

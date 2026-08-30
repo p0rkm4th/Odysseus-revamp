@@ -277,6 +277,17 @@ def test_canonical_household_read_answer_renders_inventory_risk_projections():
     assert "Rice (1 kg; reorder at 2)" in answer
 
 
+def test_canonical_household_read_answer_consumes_bounded_result_projection():
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "result_projection": {
+            "status": "SUCCESS_WITH_DATA",
+            "items": [{"name": "Acceptance Thyme", "domain": "kitchen", "stock_quantity": "3", "default_unit": "count"}],
+        },
+    }])
+    assert answer == "I found 1 kitchen/household item:\n- Acceptance Thyme (domain=kitchen, quantity=3 count)"
+
+
 def test_canonical_result_answer_selects_one_authoritative_source():
     answer = canonical_result_answer([{
         "tool": "manage_assets", "exit_code": 0,
