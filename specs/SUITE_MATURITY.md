@@ -1,5 +1,12 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Memory deterministic final-answer replay — exact candidate `23e51370` (2026-08-30)
+
+Completed-bubble inspection confirmed narrow Memory zero-result reads render
+the deterministic canonical answer as the sole assistant result. The earlier
+vague response was a transient capture artifact; no production defect remained
+at finalization.
+
 ## Memory specific-query full-regression checkpoint — exact candidate `23e51370` (2026-08-30)
 
 The supported full regression after the specific Memory routing/relevance fix
