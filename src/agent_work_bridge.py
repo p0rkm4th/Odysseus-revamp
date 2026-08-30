@@ -883,6 +883,14 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 ref = str(safe_data.get(key) or "").strip()
                 if ref:
                     refs.append({"ref": ref[:500], "concept": concept})
+            # Notes/reminders participate in the same opaque-reference
+            # continuity path as the other owner domains. Preserve the
+            # canonical note identity so a follow-up such as "cancel that
+            # reminder" can project a bounded delete Action without guessing
+            # from title text.
+            note_ref = str(safe_data.get("note_id") or "").strip()
+            if note_ref:
+                refs.append({"ref": note_ref[:500], "concept": "NOTES"})
             if refs:
                 safe_data = {**safe_data, "canonical_refs": refs}
         completed = work.complete_action(owner, action.id, {
