@@ -202,6 +202,16 @@ def test_owner_read_or_mutation_enters_bounded_aci_capability_path(query):
     assert is_bounded_owner_capability_turn(compile_intent(query)) is True
 
 
+def test_structured_reference_followup_enters_bounded_aci_path_without_domain_noun():
+    from src.intent_contracts import is_bounded_owner_capability_turn
+
+    frame = compile_intent("Actually I meant the first one.")
+
+    assert frame.domain_concept == "UNKNOWN"
+    assert frame.reference_resolution["status"] == "UNRESOLVED"
+    assert is_bounded_owner_capability_turn(frame) is True
+
+
 @pytest.mark.parametrize(("query", "action"), [
     ("Add this server to my IT asset inventory.", "add"),
     ("Update Thanatos in my asset inventory.", "update"),

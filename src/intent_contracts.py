@@ -1469,7 +1469,16 @@ def is_bounded_owner_capability_turn(frame: IntentFrame | None) -> bool:
     prevents each UI/transport from growing its own routing heuristic.
     """
     if frame is None or frame.domain_concept not in _BOUNDED_OWNER_CAPABILITY_CONCEPTS:
-        return False
+        # A terse follow-up such as ``Actually I meant the first one`` has no
+        # domain noun for the lexical compiler to use.  It is still an
+        # owner-capability turn when the structured-reference resolver was
+        # attempted: transport must enter the canonical path so durable
+        # context can resolve it (or fail closed with clarification).
+        return bool(
+            frame is not None
+            and str((frame.reference_resolution or {}).get("status") or "")
+            in {"RESOLVED", "UNRESOLVED", "AMBIGUOUS"}
+        )
     return bool(
         frame.read_explicit
         or frame.operation_class in {"CREATE", "UPDATE", "DELETE", "EXECUTE", "RESEARCH"}
