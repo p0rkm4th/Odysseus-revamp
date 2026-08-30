@@ -2001,3 +2001,21 @@ run produced one deterministic human answer and one `read_network_observations`
 Action with zero mutations, false success, raw final Result, duplicate
 delivery, or abrupt EOF. The earlier `UNAVAILABLE` result was retained as
 fixture-wiring evidence and is not counted as a product failure.
+
+## Messy pantry recipe-candidate checkpoint — exact candidate `303fde19` (2026-08-29)
+
+The ordinary owner prompt `can i make anything w what we got` initially
+reached Recipe routing but ended without a human answer. Trace evidence showed
+the canonical `pantry_candidates` Result was generated server-side while the
+client dropped the first `response_replace` during final rendering. The repair
+registered the ActionSpec, added bounded Recipe read projection, and recreated
+the visible answer round while preserving its replacement accumulator.
+
+On the exact pushed candidate, the original prompt and the paraphrases `can i
+cook something w what we have` and `what can we make from whatever we have`
+each executed one canonical `read_recipes` `pantry_candidates` read and visibly
+answered from the isolated recipe/pantry fixture. Reload preserved both
+answers. No mutation was attempted; false success, raw final Result, duplicate
+delivery, abrupt EOF, and browser page errors were zero. The disposable
+candidate source marker matched `303fde19`; the real owner deployment
+remained on older source `34ced247`.
