@@ -3527,3 +3527,12 @@ project, independently found with the expected `project_id`, and preserved
 after reload. Both answers explicitly reported verified canonical readback;
 there were no false-success, raw-result, duplicate-delivery, or abrupt-EOF
 observations.
+
+Video import coverage also passed on the disposable URL lane. A video with no
+verified recipe data required approval, returned a review-safe answer, and
+left the canonical Recipe count unchanged. A positive public cooking video
+required approval, created a uniquely named Recipe through chat, preserved the
+exact YouTube source URL in canonical state, and returned a verified-readback
+answer. Across the two video attempts there were 2 GUI mutations attempted,
+1 canonical mutation, and no false success, raw final Result, duplicate
+delivery, or abrupt EOF.
