@@ -2,6 +2,18 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Asset ordinal correction/reference-chain checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+`OWNER-ASSET-REFERENCE-CHAIN-001` passed in the isolated realistic synthetic
+Qwen3:8B browser environment. Through the GUI, the owner asked for the second
+computer, corrected that to the first, then asked for its RAM. All three
+turns resolved against canonical Asset state and produced deterministic human
+answers. Evidence: 3 turns, 3 canonical reads, zero false successes, raw
+final Results, duplicate delivery, or abrupt EOF. Candidate image:
+`sha256:a71ecae56d433f4abe8dca6c52da4d754d3753a7e5d8c36358186d313bf5a1cf`;
+runtime source marker `cb8a3777`, restart count 0. The actual owner runtime
+remains untouched.
+
 ## Disposable application backup/restore replay — current head `2026-08-30`
 
 The existing `scripts/odysseus-backup` CLI was exercised in a standalone
