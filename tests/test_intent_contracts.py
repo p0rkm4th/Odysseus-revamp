@@ -179,6 +179,15 @@ def test_natural_reminder_cancellation_is_a_bounded_notes_mutation(query):
     assert resolved.binding_name == "manage_notes"
 
 
+def test_temporal_reminder_correction_is_a_notes_update_not_run_continuation():
+    frame = compile_intent("Actually, make that next Friday instead.", continuation=True)
+    resolved = resolve_intent(frame)
+    assert frame.operation_class == "UPDATE"
+    assert frame.domain_concept == "NOTES_MUTATION"
+    assert resolved.action_id == "update"
+    assert resolved.binding_name == "manage_notes"
+
+
 @pytest.mark.parametrize("query", [
     "What IT assets do I have?",
     "What machines are recorded?",

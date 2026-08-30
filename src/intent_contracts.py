@@ -1062,6 +1062,13 @@ def looks_like_notes_calendar_followup(text: str) -> bool:
             query,
         )
         or re.search(r"\b(?:delete|remove|cancel)\s+(?:it|that|this)\b", query)
+        or re.search(
+            r"\b(?:actually|no|wait)\b.{0,48}\bmake\s+that\b"
+            r".{0,80}\b(?:today|tomorrow|tonight|morning|afternoon|evening|"
+            r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|"
+            r"hour|hours|minute|minutes|week|next\s+week)\b",
+            query,
+        )
     )
 
 def normalize_operational_intent_evidence(intent, query: str):
@@ -2073,6 +2080,19 @@ def _operation(text: str, *, continuation: bool = False) -> str:
         q,
     ):
         return "CREATE"
+    # A temporal correction to the immediately preceding reminder is an
+    # existing Notes update, not a generic Run continuation. Keep this
+    # deliberately bounded to explicit correction language plus a date/time
+    # term so ordinary reference corrections remain reads and bare
+    # continuation remains Run-owned.
+    if re.search(
+        r"\b(?:actually|no|wait)\b.{0,48}\bmake\s+that\b"
+        r".{0,80}\b(?:today|tomorrow|tonight|morning|afternoon|evening|"
+        r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|"
+        r"hour|hours|minute|minutes|week|next\s+week)\b",
+        q,
+    ):
+        return "UPDATE"
     if re.search(r"\b(?:delete|remove|retire|forget|cancel)\b", q): return "DELETE"
     if re.search(r"\b(?:remember|memorize|save this about me)\b", q): return "CREATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm|move)\b", q): return "UPDATE"
@@ -2205,7 +2225,9 @@ def compile_intent(
         concept = "GOAL"
     elif operation == "CREATE" and re.search(r"\b(?:create|add|make)\s+(?:a\s+)?task\b", q):
         concept = "TASK"
-    elif operation in {"CREATE", "UPDATE", "DELETE"} and looks_like_notes_request(q):
+    elif operation in {"CREATE", "UPDATE", "DELETE"} and (
+        looks_like_notes_request(q) or looks_like_notes_calendar_followup(q)
+    ):
         concept = "NOTES_MUTATION"
     elif looks_like_notes_request(q):
         concept = "NOTES"

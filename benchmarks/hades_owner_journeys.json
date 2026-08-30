@@ -329,6 +329,17 @@
       "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "approval": "not_required", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "contains_title": "Check the laundry", "requires_due_date": true}, "terminal": {"done": 2, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-REMINDER-CORRECTION-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-daily-driver",
+      "turns": [
+        {"prompt": "Remind me tomorrow to submit the timesheet.", "expected": {"domain": "NOTES", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add", "tool_binding": "manage_notes", "requires_effect": true, "must_include_any": ["reminder", "timesheet", "tomorrow"]}},
+        {"prompt": "Actually, make that next Friday instead.", "expected": {"domain": "NOTES", "operation": "UPDATE", "answer_source": "DETERMINISTIC_RESULT", "action": "update", "tool_binding": "manage_notes", "requires_effect": true, "must_include_any": ["Friday", "timesheet", "updated", "changed"]}},
+        {"prompt": "Show my reminders.", "expected": {"domain": "NOTES", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_notes", "must_include_any": ["timesheet", "Friday"]}}
+      ],
+      "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "approval": "not_required", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "contains_title": "Submit the timesheet", "requires_due_date": true}, "terminal": {"done": 3, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-TIER1-LIVED-IN-WALKABOUT-001",
       "environment": "realistic_messy_synthetic",
       "fixture_profile": "lived-in-daily-driver",
