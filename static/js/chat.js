@@ -61,6 +61,11 @@ import { loadPanel } from './panels.js';
   let _contextHeaderData = null;
   let _contextHeaderBound = false;
   let _pendingToolApproval = null;
+  // Keep the latest live approval available while rich-stream finalization
+  // reloads history.  The server persists the approval before [DONE], but the
+  // reload can race that write/stream-state transition and briefly omit the
+  // durable card from the returned history.
+  let _livePendingAskUser = null;
 
   function _submitToolApprovalWhenIdle(approvalId) {
     if (
@@ -88,6 +93,7 @@ import { loadPanel } from './panels.js';
       decision,
       document_id: String(detail.document_id || ''),
     };
+    _livePendingAskUser = null;
     _submitToolApprovalWhenIdle(_pendingToolApproval.approval_id);
   });
 
@@ -2915,6 +2921,7 @@ import { loadPanel } from './panels.js';
                 continue;
               }
               if (json.type === 'tool_approval_resolved') {
+                _livePendingAskUser = null;
                 _cancelThinkingTimer();
                 _removeThinkingSpinner();
                 if (spinner && spinner.element) spinner.destroy();
@@ -3801,6 +3808,7 @@ import { loadPanel } from './panels.js';
                 // ask_user event; otherwise an owner sees a pending spinner
                 // until reload even though approval is ready.
                 if (json.ask_user && !json.ask_user.resolved) {
+                  _livePendingAskUser = json.ask_user;
                   _cancelThinkingTimer();
                   _removeThinkingSpinner();
                   const _embeddedAskUser = json.ask_user;
@@ -3913,6 +3921,7 @@ import { loadPanel } from './panels.js';
                 _cancelThinkingTimer();
                 _removeThinkingSpinner();
                 const _askUserPayload = json.data || {};
+                if (!_askUserPayload.resolved) _livePendingAskUser = _askUserPayload;
                 chatRenderer.renderAskUserCard(json.data || {});
                 // Tool/result finalization can rebuild the adjacent thread in
                 // the same task that delivered ask_user. Retry once after the
@@ -5289,7 +5298,21 @@ import { loadPanel } from './panels.js';
     if (metricsData) {
       chatRenderer.recordSessionMetricsCost(metricsData, sessionId);
     }
-    if (onThisSession) sessionModule.selectSession(sessionId);
+    if (onThisSession) {
+      const pendingAskUser = _livePendingAskUser;
+      sessionModule.selectSession(sessionId).then(() => {
+        // Restore the live card if the history reload raced the assistant
+        // metadata write.  Once the user chooses an approval, the event
+        // handler clears this snapshot and the next turn removes the card.
+        if (
+          pendingAskUser
+          && _livePendingAskUser === pendingAskUser
+          && !document.querySelector('#chat-history .ask-user-card')
+        ) {
+          chatRenderer.renderAskUserCard(pendingAskUser, { focus: false, scroll: false });
+        }
+      }).catch(() => {});
+    }
     else sessionModule.loadSessions();
     return true;
   }
