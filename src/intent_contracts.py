@@ -652,7 +652,7 @@ def work_project_create_payload(query: str) -> dict[str, Any] | None:
     """
     text = re.sub(r"\s+", " ", str(query or "").strip())
     match = re.search(
-        r"\bcreate\s+(?:a\s+)?project\s+(?:called|named|for|about)\s+(.+)$",
+        r"\b(?:create|start|begin)\s+(?:a\s+)?project\s+(?:called|named|for|about)\s+(.+)$",
         text, re.IGNORECASE,
     )
     if not match:
@@ -2179,6 +2179,16 @@ def compile_intent(
         concept = "RECIPE"
         operation = "READ"
         read_explicit = True
+    # Owners commonly say "start a project" or "begin a project". These are
+    # creation requests, not Work execution requests; keeping the conversion
+    # here lets the bounded project Action receive the explicit title.
+    if (
+        concept == "PROJECT"
+        and operation == "EXECUTE"
+        and re.search(r"\b(?:start|begin)\s+(?:a\s+)?project\b", q)
+    ):
+        operation = "CREATE"
+        read_explicit = False
     # Household consumption is an owner mutation even when the item name is
     # not known to the compiler (for example, "Use one onion"). The executor
     # resolves that name against canonical owner-scoped inventory.
