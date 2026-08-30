@@ -51,6 +51,10 @@ with one GUI read stream and zero `falseSuccess`, `rawFinalResults`,
 `duplicateDelivery`, and `abruptEOF`. Health was green with zero restarts;
 owner deployment/data were not used.
 
+The same corrected fresh-fresh lane then passed `OWNER-RECIPE-EMPTY-001` after
+restart: one GUI read stream, no mutation, and zero
+`falseSuccess`/`rawFinalResults`/`duplicateDelivery`/`abruptEOF` failures.
+
 ## Fresh-fresh post-restart Recipe durability checkpoint (2026-08-30)
 
 After rotating the disposable fresh-fresh credential and restarting the exact
