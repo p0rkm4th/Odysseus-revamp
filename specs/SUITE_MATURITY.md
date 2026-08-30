@@ -2184,3 +2184,10 @@ approval card, and the standard Qwen3:8B read walkabout passed afterward. Full
 regression passed 7057 tests, 8 skipped, and 149 warnings. A transient empty
 Qwen completion during one long-context reload probe was retried successfully
 and remains an environment/provider flake, not a verified product pass.
+
+The positive YouTube Recipe journey is also now verified on the exact
+candidate: approval-gated chat import created the requested named Recipe with
+the exact source URL and extracted ingredients, canonical readback passed, and
+the visible Recipe workspace found it after reload. This closes the previous
+positive-video evidence gap; unsupported or insufficient video evidence still
+remains fail-closed and review-safe.
