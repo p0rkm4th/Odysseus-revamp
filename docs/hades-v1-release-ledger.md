@@ -2064,3 +2064,15 @@ review answer naming all three ambiguous ingredients, exposed no raw Action
 JSON or approval card, and an independent `/api/recipes` read confirmed that
 nothing was saved. Page errors were zero. The candidate source marker matched
 `1e950047`; the real owner deployment remained on older source `34ced247`.
+
+## Recipe URL import checkpoint — exact candidate `c6ac382e` (2026-08-29)
+
+The first live URL replay fetched the public Budget Bytes page successfully but
+Qwen declined the already-resolved import action, producing no Action and no
+canonical change (`WRONG_ACTION`/model-arbitration failure). The generalized
+Recipe import fast path now selects the sealed `commit_import` Action directly;
+external source content still enters the existing approval boundary. After the
+owner-approved replay, the exact candidate persisted `Acceptance Budget Chili
+20260830c`, independently read it back, and confirmed the requested source URL
+was retained. The browser answer was human-readable; false success, raw final
+Result, duplicate delivery, abrupt EOF, and page errors were zero.
