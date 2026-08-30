@@ -31,7 +31,7 @@ product container remained source-matched to `f726b16b`. The stack and
 temporary credentials were removed, and the actual owner runtime was not
 touched.
 
-## Docker Chroma persistence checkpoint — pending candidate (2026-08-29)
+## Docker Chroma persistence checkpoint — exact candidate lineage (2026-08-30)
 
 Release testing found a product/recovery defect in all three Docker Compose
 variants: the Chroma image persists to `/data`, but the named volume had been
@@ -46,9 +46,10 @@ staged before recreation, copied into the corrected named volume, and the
 collections API returned the existing collection. A tar backup of that volume
 was unpacked into a separate restore volume; a fresh Chroma container mounted
 on the restore volume returned the same collections API response. The actual
-owner deployment was not touched. The corrected Compose candidate still needs
-commit, exact-image build/provenance, and a release checkpoint; owner-data
-migration remains a separately controlled operation.
+owner deployment was not touched. The correction is included in the exact
+candidate lineage through `68beec69`; image marker and OCI revision for that
+candidate were verified. Owner-data migration remains a separately controlled
+operation, and a fresh candidate backup/restore replay remains release work.
 
 The acceptance harness now refuses to run unless `APP_DATA_DIR` is set to a
 disposable directory distinct from the repository's `data/` directory. A
