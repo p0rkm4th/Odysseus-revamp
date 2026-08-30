@@ -38,6 +38,16 @@ The script depends only on the Python standard library, so any `python3` on your
 
 Every command prints a JSON result. Add `--pretty` for indented output.
 
+For a disposable recovery rehearsal, set `ODYSSEUS_BACKUP_ROOT` to an
+explicit temporary repository root. This changes both `data/` and the default
+`backups/` location, including the restore safety stash; it does not change the
+default repository-root behavior.
+
+```bash
+ODYSSEUS_BACKUP_ROOT=/tmp/hades-recovery-rehearsal \
+  ./scripts/odysseus-backup snapshot --out /tmp/hades-recovery.tar.gz
+```
+
 ## Commands
 
 ### `snapshot`
