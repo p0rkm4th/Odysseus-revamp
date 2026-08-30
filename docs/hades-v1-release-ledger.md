@@ -2,6 +2,19 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Settings shared-confirmation checkpoint — exact candidate `ceb9bd9f` (2026-08-30)
+
+Settings already preferred Hades dialogs but retained native `confirm()` fallbacks
+for hiding the Settings cog and deleting contacts. Those fallbacks are removed;
+the shared dialog now supplies explicit titles and owner-readable cancel labels.
+Focused Settings/dialog coverage passed 35 tests. Exact candidate
+`odysseus:candidate-ceb9bd9f` has image ID
+`sha256:c4cf0788fc2e1148359dd106b42481929778cd05292f5c46d796c616f55e553e`
+and source marker `ceb9bd9ffc6dcb48da6dabfc79161c806b6f1ae0`; the isolated
+runtime was healthy with 0 restarts. The authenticated responsive visual gate
+passed. The full regression passed `7034 passed, 8 skipped, 149 warnings` in
+297.09 seconds. Owner deployment and data remain untouched.
+
 ## Cookbook non-admin sync checkpoint — exact candidate `df353edf` (2026-08-30)
 
 The authenticated owner browser gate exposed a noisy `403 Forbidden` from
