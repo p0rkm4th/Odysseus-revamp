@@ -608,6 +608,7 @@ def test_work_subconcept_reads_resolve_to_first_class_canonical_actions(query, c
     "What needs attention?",
     "What is Hades waiting on?",
     "Show pending approvals",
+    "What's next?",
 ])
 def test_attention_reads_use_the_canonical_owner_scoped_projection(query):
     resolved = resolve_intent(compile_intent(query))

@@ -317,6 +317,34 @@
         {"prompt": "Show my reminders.", "expected": {"domain": "NOTES", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_notes", "must_include_any": ["no notes", "reminder", "notes"]}}
       ],
       "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "absent_title": "Cancel the test appointment"}, "terminal": {"done": 3, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-TIER1-LIVED-IN-WALKABOUT-001",
+      "environment": "realistic_messy_synthetic",
+      "fixture_profile": "lived-in-daily-driver",
+      "turns": [
+        {"prompt": "What's on my plate today?", "expected": {"domain": "WORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "attention", "tool_binding": "read_work"}},
+        {"prompt": "What's next?", "expected": {"domain": "WORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "attention", "tool_binding": "read_work"}},
+        {"prompt": "Do I have anything scheduled today?", "expected": {"domain": "CALENDAR", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_communications"}},
+        {"prompt": "What commitments have I made?", "expected": {"domain": "COMMITMENT", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list_commitments", "tool_binding": "read_work"}},
+        {"prompt": "What reminders do I have?", "expected": {"domain": "NOTES", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_notes"}},
+        {"prompt": "What's in my kitchen?", "expected": {"domain": "HOUSEHOLD", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_household"}},
+        {"prompt": "What's expiring?", "expected": {"domain": "HOUSEHOLD", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_household"}},
+        {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "read_recipes"}},
+        {"prompt": "What can I make for dinner with what I have?", "expected": {"domain": "RECIPE", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "pantry_candidates", "tool_binding": "read_recipes"}},
+        {"prompt": "What computers do I have?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_assets"}},
+        {"prompt": "Tell me about the first one.", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}},
+        {"prompt": "What GPU does it have?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}},
+        {"prompt": "Actually I meant the second one.", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}},
+        {"prompt": "What's its RAM?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}},
+        {"prompt": "What work do I still have left?", "expected": {"domain": "WORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "overview", "tool_binding": "read_work"}},
+        {"prompt": "What do you remember about me?", "expected": {"domain": "MEMORY", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "summarize_owner_memory", "tool_binding": "read_memory"}},
+        {"prompt": "What's on my network right now?", "expected": {"domain": "NETWORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "read_network_observations", "tool_binding": "manage_homelab"}},
+        {"prompt": "Is anything down?", "expected": {"domain": "NETWORK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "read_network_observations", "tool_binding": "manage_homelab"}},
+        {"prompt": "Go back to that second computer.", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}},
+        {"prompt": "And its storage?", "expected": {"domain": "ASSET", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "get", "tool_binding": "manage_assets"}}
+      ],
+      "expected": {"policy": "allowed", "terminal": {"done": 20, "abrupt_eof": false}}
     }
   ]
 }
