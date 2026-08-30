@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Memory specific-query full-regression checkpoint — exact candidate `23e51370` (2026-08-30)
+
+The supported full regression after the specific Memory routing/relevance fix
+completed with `7045 passed, 8 skipped, 149 warnings` in 301.54 seconds. Exact
+runtime provenance remains `odysseus:candidate-23e51370`, source marker
+`23e513707577df762d01b56d815087adec3e97d1`, healthy with 0 restarts; the
+latest source/doc-only branch head is `a0b5de4f`. Owner deployment and data
+remain untouched.
+
 ## Specific Memory routing and accumulated-state acceptance checkpoint — `23e51370` (2026-08-30)
 
 The narrow personal-memory predicate now reaches the canonical Memory read for
