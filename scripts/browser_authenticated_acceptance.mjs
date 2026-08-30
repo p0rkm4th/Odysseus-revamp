@@ -29,6 +29,7 @@ const externalAcceptance = Boolean(externalCredentialFile);
 const isolatedAcceptance = process.env.HADES_BROWSER_ISOLATED_ACCEPTANCE === 'true';
 const householdAcceptance = process.env.HADES_BROWSER_HOUSEHOLD_ACCEPTANCE === 'true';
 const journeyFile = process.env.HADES_BROWSER_JOURNEY_FILE || '';
+let acceptanceUsername = 'hades-acceptance';
 const healthTimeoutMs = Math.min(
   300000,
   Math.max(30000, Number(process.env.HADES_BROWSER_HEALTH_TIMEOUT_MS || 180000) || 180000),
@@ -296,6 +297,31 @@ async function seedMemoryAcceptanceState(page) {
   });
 }
 
+async function clearMemoryAcceptanceState(page) {
+  // Empty-memory scenarios must establish their declared precondition on the
+  // disposable acceptance principal. This uses the normal owner-scoped API;
+  // it is never permitted against the actual owner lane by loadJourneyScenarios.
+  return page.evaluate(async () => {
+    const response = await fetch('/api/memory', {credentials: 'same-origin'});
+    if (!response.ok) throw new Error(`memory acceptance cleanup failed (${response.status})`);
+    const payload = await response.json();
+    const memories = Array.isArray(payload?.memory) ? payload.memory : [];
+    for (const memory of memories) {
+      if (!memory?.id) continue;
+      const deleted = await fetch(`/api/memory/${encodeURIComponent(memory.id)}`, {
+        method: 'DELETE', credentials: 'same-origin',
+      });
+      if (!deleted.ok) throw new Error(`memory acceptance cleanup delete failed (${deleted.status})`);
+    }
+    const verify = await fetch('/api/memory', {credentials: 'same-origin'});
+    if (!verify.ok) throw new Error(`memory acceptance cleanup verification failed (${verify.status})`);
+    const verified = await verify.json();
+    const remaining = Array.isArray(verified?.memory) ? verified.memory : [];
+    if (remaining.length) throw new Error(`memory acceptance cleanup left ${remaining.length} records`);
+    return {deleted: memories.length};
+  });
+}
+
 function seedCanonicalAssetFixture(scenarios) {
   const setups = [...new Set(scenarios.map((scenario) => scenario.fixture_setup).filter(Boolean))];
   const assetSetups = setups.filter((setup) => ['canonical_asset_atlas_erebus', 'canonical_asset_no_4090'].includes(setup));
@@ -337,7 +363,7 @@ function seedCanonicalAssetFixture(scenarios) {
 }
 
 function credentialsOwner() {
-  return 'hades-acceptance';
+  return acceptanceUsername;
 }
 
 function assistantCount(page) {
@@ -760,6 +786,7 @@ async function main() {
   // acceptance facility or touch deployment state.
   const scenarios = loadJourneyScenarios();
   const credentials = provision();
+  acceptanceUsername = String(credentials.username || acceptanceUsername);
   await waitForHealth(healthTimeoutMs);
   // Keep the unattended browser lane usable in constrained/containerized
   // runners. Chromium may otherwise exhaust its renderer shared-memory
@@ -941,6 +968,9 @@ async function main() {
       diagnostics.householdSeed = await seedHouseholdAcceptanceState(page);
     }
     if (scenarios) {
+      if (scenarios.some((scenario) => scenario.fixture_profile === 'empty-memory')) {
+        diagnostics.memorySeed = await clearMemoryAcceptanceState(page);
+      }
       diagnostics.assetSeed = seedCanonicalAssetFixture(scenarios);
       if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_pantry')) {
         diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page);
