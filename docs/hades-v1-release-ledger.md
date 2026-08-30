@@ -4473,3 +4473,29 @@ mutation and 2 independent readbacks, while
 `OWNER-RECIPE-QUALITATIVE-REVIEW-001` completed its review path with one GUI
 mutation and 2 readbacks. Both had zero false success, raw final Results,
 duplicate delivery, and abrupt EOF.
+
+## Setup Center Tier 1 readiness repair — exact candidate `2822674c` (2026-08-30)
+
+The owner-facing Setup Center health audit found `POST
+/api/setup-center/modules/core.memory/health` returning HTTP 500 with an empty
+response. This was classified as a readiness projection failure: the route
+imported a nonexistent `summarize_owner_memory` helper instead of checking the
+canonical `MemoryManager` that the application initializes. The route now
+validates that canonical owner and explicitly performs no memory retrieval or
+mutation. A regression was added to the Setup Center suite.
+
+Focused verification passed `13` tests. Exact pushed candidate
+`2822674cf96ea6963e7c2f8732dea8adbeee53b9` was built as
+`odysseus:candidate-2822674c`, image
+`sha256:4d37fa5dde0768e2a78567ca0f54d8dc368004c77b7ce61b5f39834b08c278d4`,
+and deployed only to the disposable current lane. The OCI/source marker
+matched the pushed SHA and the container had zero restarts.
+
+Black-box Setup Center replay on that exact image returned structured HTTP 200
+health evidence for `core.memory`, `core.models`, `technology.network`,
+`technology.homelab`, `communications.calendar`, and
+`advanced.automations`. The checks explicitly reported no retrieval, scan,
+host operation, inference, network probe, job scheduling, or mutation. The
+integration projection kept Telegram and Home Assistant `NOT_CONFIGURED`,
+Calendar connected-but-provider-unprobed, and Email configured-but-unprobed.
+No owner deployment or owner data was modified.
