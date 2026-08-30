@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Work task mutation/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
+
+The isolated owner journey passed GUI task creation through the canonical Work
+path, with two independent readbacks and reload-safe state. The journey had
+zero false success, raw Result, duplicate delivery, or abrupt EOF.
+
 ## Memory correction/readback checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 The isolated realistic owner journey passed remember/read/correct/read-after-
