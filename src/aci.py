@@ -4316,6 +4316,26 @@ def canonical_notes_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     return None
 
 
+def canonical_scheduled_task_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render a successful scheduled reminder from the scheduler Result."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_tasks"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0) or event.get("success") is False:
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+    except (TypeError, ValueError):
+        request = {}
+    if not isinstance(request, Mapping) or str(request.get("action") or "").strip().lower() != "create":
+        return None
+    title = str(event.get("task_name") or request.get("name") or request.get("prompt") or "the reminder").strip()
+    schedule = str(request.get("schedule") or "daily").strip()
+    return f'Scheduled reminder: "{title}" ({schedule}, {request.get("scheduled_time", "09:00")}). It is saved.'
+
+
 def canonical_work_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render only a verified Work mutation; model prose is not evidence."""
     event = next(
@@ -4495,6 +4515,7 @@ def canonical_result_answer(
         (canonical_memory_mutation_answer(tool_events), "Memory mutation Result"),
         (canonical_notes_read_answer(tool_events), "canonical Notes Result"),
         (canonical_notes_mutation_answer(tool_events), "notes mutation Result"),
+        (canonical_scheduled_task_mutation_answer(tool_events), "scheduled task Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
         (canonical_communications_read_answer(tool_events), "canonical Calendar Result"),
