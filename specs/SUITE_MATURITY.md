@@ -2161,3 +2161,13 @@ outsanding` and `whts outsanding` through the shared routing normalizer. Exact
 browser replay returned the canonical empty-state answer with readable Work
 status, no raw binding, and no browser errors. Ambiguous `whats left` remains
 unresolved rather than being guessed.
+
+## Recipe review workflow regression gate — exact candidate `320606a1` (2026-08-30)
+
+The qualitative Recipe owner journey is now graded as a workflow, not merely
+as review prose. The owner journey corpus requires the `recipe_import_review`
+UI event, a visible editable review dialog, and fields for the recipe name,
+servings, ingredient quantities/units, and instructions. The exact candidate
+opened that dialog from a messy chat paste; after explicit owner correction,
+canonical Recipe readback and reload durability passed. The harness and corpus
+changes are test/docs-only and do not require a new executable image.
