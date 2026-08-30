@@ -296,6 +296,16 @@
       "fixture_profile": "owner-safety-clarification",
       "turns": [{"prompt": "Continue.", "expected": {"domain": "RUN", "operation": "CONTINUE", "answer_source": "CLARIFICATION", "must_include_any": ["nothing", "no active", "don't have", "cannot", "can't", "which"], "forbidden": ["restarted successfully", "completed", "done"]}}],
       "expected": {"policy": "allowed", "terminal": {"done": 1, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-REMINDER-CREATE-READBACK-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-daily-driver",
+      "turns": [
+        {"prompt": "Remind me tomorrow to review the backup plan.", "expected": {"domain": "NOTES", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "add", "tool_binding": "manage_notes", "requires_effect": true, "must_include_any": ["reminder", "backup plan", "tomorrow"], "forbidden": ["Done", "successfully completed"]}},
+        {"prompt": "Show my reminders.", "expected": {"domain": "NOTES", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_notes", "must_include_any": ["backup plan", "reminder"], "forbidden": ["no reminders", "don't have"]}}
+      ],
+      "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "approval": "not_required", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "contains_title": "Review the backup plan", "requires_due_date": true}, "terminal": {"done": 2, "abrupt_eof": false}}
     }
   ]
 }

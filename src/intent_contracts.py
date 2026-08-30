@@ -1013,6 +1013,8 @@ def explicitly_references_missing_workspace(text: str, workspace: str | None) ->
 def looks_like_notes_request(text: str) -> bool:
     """Return whether a turn has notes, reminders, or checklist intent evidence."""
     query = str(text or "").lower()
+    if re.search(r"\bremind\s+me\b", query):
+        return True
     if re.search(r"\b(notes?|todos?|to-?do|checklists?|reminders?)\b", query):
         return True
     if re.search(
@@ -1518,7 +1520,7 @@ class IntentFrame:
 _BOUNDED_OWNER_CAPABILITY_CONCEPTS = frozenset({
     "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM", "RECIPE",
     "MEMORY", "WORK", "GOAL", "PROJECT", "TASK", "RUN", "COMMITMENT",
-    "MISSION", "WATCH",
+    "MISSION", "WATCH", "NOTES", "NOTES_MUTATION",
 })
 
 
@@ -1725,6 +1727,16 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "communications_overview",
     ),
+    "NOTES": DomainContract(
+        "NOTES", "notes.read", {"READ": "list"}, "manage_notes",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "notes_and_reminders_read",
+    ),
+    "NOTES_MUTATION": DomainContract(
+        "NOTES_MUTATION", "notes.manage", {"CREATE": "add", "UPDATE": "update", "DELETE": "delete"}, "manage_notes",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "YES"},
+        "notes_and_reminders_mutation",
+    ),
     "CONTACT": DomainContract(
         "CONTACT", "communications.read", {"READ": "contacts"}, "read_communications",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
@@ -1789,6 +1801,8 @@ CANONICAL_DOMAIN_PROJECTIONS: Mapping[str, str] = {
     "RECIPE": "recipes",
     "INTEGRATION": "setup",
     "COMMUNICATIONS": "communications",
+    "NOTES": "notes_calendar_tasks",
+    "NOTES_MUTATION": "notes_calendar_tasks",
     "CONTACT": "contacts",
     "CAREER_PROFILE": "career",
     "JOB_SEARCH": "career",
@@ -2002,6 +2016,7 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
     if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
+    if re.search(r"\bremind\s+me\b", q): return "CREATE"
     if re.search(r"\b(?:remember|memorize|save this about me)\b", q): return "CREATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm|move)\b", q): return "UPDATE"
     if re.search(r"\b(?:save|store|keep)\b", q) and re.search(r"\b(?:recipe|recipes|cookbook|dish)\b", q):
@@ -2109,6 +2124,10 @@ def compile_intent(
         concept = "GOAL"
     elif operation == "CREATE" and re.search(r"\b(?:create|add|make)\s+(?:a\s+)?task\b", q):
         concept = "TASK"
+    elif operation == "CREATE" and looks_like_notes_request(q):
+        concept = "NOTES_MUTATION"
+    elif looks_like_notes_request(q):
+        concept = "NOTES"
     elif re.search(r"\b(?:project(?:s)?)\b", q):
         concept = "PROJECT"
     elif re.search(r"\b(?:task(?:s)?)\b", q):
@@ -2674,6 +2693,7 @@ def compile_intent(
         "SECURITY_EVIDENCE": "infrastructure", "OSINT_CASE": "research", "RESEARCH": "research",
         "WEB_EVIDENCE": "web", "WEB_URL": "web",
         "HOUSEHOLD_ITEM": "home", "INTEGRATION": "system",
+        "NOTES": "today", "NOTES_MUTATION": "today",
         "COMMUNICATIONS": "communications", "DEVELOPER": "developer",
         "CONTACT": "communications",
     }.get(concept)
@@ -2768,6 +2788,10 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         contract_key = "PROJECT_CREATE"
     if frame.domain_concept == "TASK" and frame.operation_class == "CREATE":
         contract_key = "TASK_CREATE"
+    if frame.domain_concept == "NOTES" and frame.operation_class in {"CREATE", "UPDATE", "DELETE"}:
+        contract_key = "NOTES_MUTATION"
+    elif frame.domain_concept == "NOTES_MUTATION":
+        contract_key = "NOTES_MUTATION"
     if frame.domain_concept == "MEMORY" and frame.operation_class in {"CREATE", "UPDATE", "DELETE"}:
         contract_key = "MEMORY_MUTATION"
     contract = DOMAIN_CONTRACTS.get(contract_key)

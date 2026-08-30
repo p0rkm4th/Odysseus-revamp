@@ -138,6 +138,22 @@ MANAGE_WORK_SCHEMA = {
     }
 }
 
+MANAGE_NOTES_SCHEMA = {
+    "type": "function", "function": {
+        "name": "manage_notes",
+        "description": "Manage owner-scoped notes, todos, checklists, and one-off reminders. A reminder requires a due date.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["list", "search", "find", "view", "add", "update", "delete", "toggle_item"]},
+            "title": {"type": "string", "maxLength": 500}, "content": {"type": "string", "maxLength": 20000},
+            "text": {"type": "string", "maxLength": 20000}, "body": {"type": "string", "maxLength": 20000},
+            "due_date": {"type": "string", "description": "ISO timestamp or natural-language date/time such as tomorrow"},
+            "id": {"type": "string"}, "query": {"type": "string", "maxLength": 500},
+            "note_type": {"type": "string"}, "checklist_items": {"type": "array"},
+            "label": {"type": "string"}, "archived": {"type": "boolean"},
+        }, "required": ["action"]},
+    }
+}
+
 READ_HOUSEHOLD_SCHEMA = {
     "type": "function", "function": {
         "name": "read_household",
@@ -388,6 +404,14 @@ admin/single-user provider boundary permits it; other owners receive an honest
 separate provider operations.
 `<invoke name="read_communications"><parameter name="action">overview</parameter></invoke>`.'''
 
+_MANAGE_NOTES_CONTRACT = '''### `manage_notes`
+Canonical owner-scoped notes, todos, checklists, and one-off reminder state.
+Use `list`, `search`, `find`, or `view` for reads; use `add`, `update`,
+`delete`, or `toggle_item` for bounded mutations. A one-off reminder must
+include a due date. Success requires canonical persistence and readback;
+model prose alone is never evidence.
+`<invoke name="manage_notes"><parameter name="action">list|search|find|view|add|update|delete|toggle_item</parameter></invoke>`.'''
+
 _DEVELOPER_READ_CONTRACT = '''### `developer_read`
 Canonical read-only Developer ACI. The selected workspace is the only file
 scope. Use `search_code` for a bounded symbol/text search, `view_file_region`
@@ -428,6 +452,7 @@ must name an existing project; titles and project references must come from the
 user's request. Model prose is not persistence evidence. Success requires a
 canonical write and readback verification.
 `<invoke name=\"manage_work\"><parameter name=\"action\">create|create_task</parameter></invoke>`.""", frozenset({"work"}), "manage_work"),
+    "manage_notes": ToolBinding("manage_notes", TOOL_CAPABILITY_IDS["manage_notes"], MANAGE_NOTES_SCHEMA, _MANAGE_NOTES_CONTRACT, frozenset({"notes", "today", "reminders"}), "manage_notes"),
     "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
     "read_recipes": ToolBinding("read_recipes", TOOL_CAPABILITY_IDS["read_recipes"], READ_RECIPES_SCHEMA, _RECIPE_READ_CONTRACT, frozenset({"household", "recipes", "cooking"}), "read_recipes"),
     "manage_recipes": ToolBinding("manage_recipes", TOOL_CAPABILITY_IDS["manage_recipes"], MANAGE_RECIPES_SCHEMA, """### `manage_recipes`
