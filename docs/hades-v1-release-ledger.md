@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## OSINT/Security contract continuation (2026-08-30)
+
+The available development-only browser window dogfood harness was not run
+against owner state because it reads repository session cookies. Supplemental
+owner-scope, OSINT workspace, research-route, prompt-security, and Security
+Assessment contract coverage passed `306 passed, 8 warnings`. No active scan,
+external communication, or owner-state mutation was performed. Browser UX
+evidence for the shared chrome remains covered by the isolated realistic
+walkabout; provider-backed OSINT remains a separate open acceptance gate.
+
 ## Critical no-evidence Recipe replay and provenance check (2026-08-30)
 
 The realistic `OWNER-RECIPE-VIDEO-NO-EVIDENCE-001` journey passed again on the
