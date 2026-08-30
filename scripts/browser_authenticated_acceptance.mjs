@@ -365,12 +365,13 @@ function resetDisposableCanonicalFixture(scenarios) {
   );
   const householdFixture = [...profiles].some((profile) => profile.startsWith('empty-household'));
   const kitchenFixture = householdFixture || [...profiles].some((profile) => profile.startsWith('recipe-'));
-  if (!recipeFixture && !kitchenFixture) return null;
+  const workFixture = profiles.has('work-task-create');
+  if (!recipeFixture && !kitchenFixture && !workFixture) return null;
   const dataDirectory = path.resolve(process.cwd(), String(process.env.APP_DATA_DIR || '').trim());
   const database = path.join(dataDirectory, 'app.db');
   const resetScript = String.raw`
 import json, sqlite3, sys
-database, owner, recipes, household = sys.argv[1:]
+database, owner, recipes, household, work = sys.argv[1:]
 connection = sqlite3.connect(database)
 try:
     counts = {}
@@ -394,13 +395,40 @@ try:
         connection.execute(
             "update inventory_items set archived=1 where owner=? and domain='kitchen'", (owner,)
         )
+    if work == '1':
+        task_ids = [row[0] for row in connection.execute(
+            "select id from work_tasks where owner=?", (owner,)
+        ).fetchall()]
+        counts['work_tasks'] = len(task_ids)
+        if task_ids:
+            marks = ','.join('?' for _ in task_ids)
+            connection.execute(
+                f"update work_runs set task_id=null where owner=? and task_id in ({marks})",
+                [owner, *task_ids],
+            )
+            connection.execute(
+                f"update work_commitments set task_id=null where owner=? and task_id in ({marks})",
+                [owner, *task_ids],
+            )
+            connection.execute(
+                f"delete from work_events where owner=? and task_id in ({marks})",
+                [owner, *task_ids],
+            )
+            connection.execute(
+                f"delete from work_task_dependencies where owner=? and (task_id in ({marks}) or depends_on_task_id in ({marks}))",
+                [owner, *task_ids, *task_ids],
+            )
+            connection.execute(
+                f"delete from work_tasks where owner=? and id in ({marks})",
+                [owner, *task_ids],
+            )
     connection.commit()
     print(json.dumps(counts, sort_keys=True))
 finally:
     connection.close()
 `;
   return JSON.parse(run(python, ['-c', resetScript, database, acceptanceUsername,
-    recipeFixture ? '1' : '0', kitchenFixture ? '1' : '0'], process.env).trim() || '{}');
+    recipeFixture ? '1' : '0', kitchenFixture ? '1' : '0', workFixture ? '1' : '0'], process.env).trim() || '{}');
 }
 
 function seedCanonicalAssetFixture(scenarios) {
