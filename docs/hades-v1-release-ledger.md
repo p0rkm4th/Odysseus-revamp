@@ -4652,3 +4652,20 @@ credential had expired; rotating that credential and restarting only the
 disposable runtime restored normal login. This was classified as
 `AUTH_SESSION_FAILURE`, not a product failure. Owner deployment/data remained
 untouched.
+
+## Candidate metadata and post-restart replay — `021960ff` (2026-08-30)
+
+The candidate was rebuilt with explicit OCI/source metadata after an initial
+metadata-only build omitted the branch label. The browser-tested image is
+`odysseus:candidate-021960ff`, source revision
+`021960ff535791bd107feb6f67a1b6721395e732`, branch
+`hades-v1-productization`, and image ID `sha256:94d3a236532f…`. The isolated
+runtime mounts only `/tmp/hades-fresh-current`, reports zero restarts, and
+initialized Chroma-backed MemoryVectorStore healthy after recreation.
+
+The four-turn Memory correction replay passed on this rebuilt image with two
+GUI mutations and deterministic canonical finalization. A prior disposable
+recreation briefly used default Compose paths because required environment
+variables were omitted; login failed before any journey or mutation. The
+container was removed and recreated with explicit isolated paths and gate;
+repository owner data was not modified.
