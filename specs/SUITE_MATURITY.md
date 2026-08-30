@@ -58,6 +58,14 @@ mutation, two canonical readbacks, and zero false success, raw Result,
 duplicate delivery, or abrupt EOF. This is deterministic fixture evidence;
 Qwen reliability remains separately scoped.
 
+## Work task mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
+
+After isolating the fixture in a fresh Compose root, the Work task journey
+passed two deterministic turns with one GUI mutation and two canonical
+readbacks. False success, raw Result, duplicate delivery, and abrupt EOF were
+zero. The earlier reused-root precondition mismatch is recorded as fixture
+contamination, not product evidence.
+
 ## URL Recipe import approval and durability checkpoint — exact candidate `806fc3ba` (2026-08-30)
 
 A public URL with an explicit display-name override reached the visible sealed

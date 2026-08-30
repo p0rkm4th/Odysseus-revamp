@@ -115,6 +115,16 @@ zero false successes, raw final Results, duplicate delivery, or abrupt EOF.
 The candidate runtime remained source-marked `806fc3ba`; the actual owner
 runtime remains untouched.
 
+## Work task mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
+
+The first replay was rejected before chat because a reused disposable root
+retained the prior project fixture (`ENVIRONMENT_FAILURE`/fixture
+contamination). A fresh isolated Compose root then passed
+`OWNER-WORK-TASK-MUTATION-READBACK-001` in deterministic synthetic mode: two
+owner turns, one GUI mutation, two independent canonical readbacks, and zero
+false successes, raw final Results, duplicate delivery, or abrupt EOF. No
+owner runtime or data was touched.
+
 ## Recipe review replay boundary — browser harness `2026-08-30`
 
 Two disposable Compose attempts reached different pre-chat acceptance
