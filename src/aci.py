@@ -3474,7 +3474,15 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
                 quantity = item.get("quantity")
                 unit = str(item.get("unit") or "").strip()
                 name = str(item.get("name") or "ingredient").strip()
-                lines.append(f"- {quantity} {unit} {name}".strip())
+                kind = str(item.get("amount_kind") or "EXACT").upper()
+                if kind in {"TO_TASTE", "AS_NEEDED", "OPTIONAL", "UNSPECIFIED", "NOMINAL"}:
+                    amount = str(item.get("modifier") or kind.lower().replace("_", " "))
+                elif kind == "RANGE" and item.get("quantity_min") is not None and item.get("quantity_max") is not None:
+                    amount = f"{item['quantity_min']}-{item['quantity_max']} {unit}".strip()
+                else:
+                    amount = f"{quantity} {unit}".strip()
+                    if kind == "APPROXIMATE": amount = f"about {amount}"
+                lines.append(f"- {name} — {amount}".strip())
         return "\n".join(lines)
     if action == "scale":
         ingredients = payload.get("scaled_ingredients")
