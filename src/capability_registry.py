@@ -113,7 +113,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                     "summary", "list", "search", "get", "add", "update",
                     "record_observation", "link_component", "unlink_component",
                     "retire", "merge", "add_item", "add_stock", "consume_stock",
-                    "adjust_stock", "update_asset",
+                    "adjust_stock", "move_item", "update_asset",
                 )
             )
         ),

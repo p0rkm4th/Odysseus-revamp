@@ -27,14 +27,14 @@ MANAGE_ASSETS_SCHEMA = {
         "name": "manage_assets",
         "description": "Manage the persistent hardware/asset inventory, component relationships, and observation history. Prefer strong identity evidence such as system UUID, serial, or MAC. Never merge assets solely by IP address.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset"]},
+            "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "add_stock", "consume_stock", "adjust_stock", "move_item", "update_asset"]},
             "asset": {"type": "string"}, "name": {"type": "string"}, "type": {"type": "string"}, "status": {"type": "string"},
             "manufacturer": {"type": "string"}, "model": {"type": "string"}, "serial": {"type": "string"}, "system_uuid": {"type": "string"},
             "hostname": {"type": "string"}, "mac": {"type": "string"}, "location": {"type": "string"}, "notes": {"type": "string"}, "source": {"type": "string"},
             "confidence": {"type": "number"}, "attributes": {"type": "object"}, "query": {"type": "string"}, "limit": {"type": "integer"},
             "kind": {"type": "string"}, "data": {"type": "object"}, "text": {"type": "string"}, "parent": {"type": "string"}, "child": {"type": "string"},
             "relation": {"type": "string"}, "source_asset": {"type": "string"}, "target_asset": {"type": "string"}, "reason": {"type": "string"},
-            "initial_quantity": {"type": "number", "minimum": 0.01}, "initial_unit": {"type": "string"},
+            "initial_quantity": {"type": "number", "minimum": 0.01}, "initial_unit": {"type": "string"}, "location_name": {"type": "string"},
         }, "required": ["action"]},
     }
 }
@@ -276,7 +276,7 @@ path.
 
 Actions: `summary`, `list`, `search`, `get`, `add`, `update`, `record_observation`,
 `link_component`, `unlink_component`, `retire`, `merge`, `add_item`, `add_stock`,
-`consume_stock`, `adjust_stock`, and `update_asset`. Use the documented
+`consume_stock`, `adjust_stock`, `move_item`, and `update_asset`. Use the documented
 JSON/function schema for action-specific parameters.
 
 Identity rule: UUID/serial/MAC are strong identity evidence. IP address alone

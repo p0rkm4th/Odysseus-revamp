@@ -1481,9 +1481,9 @@ async def _execute_manage_assets_binding(block, owner=None, run_id=None):
         # to the existing transactional service rather than creating a second
         # binding or installer-like subsystem.
         if isinstance(payload, dict) and payload.get("action") in {
-            "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+            "add_item", "add_stock", "consume_stock", "adjust_stock", "move_item", "update_asset",
         }:
-            if payload.get("action") == "consume_stock" and not payload.get("item_id"):
+            if payload.get("action") in {"consume_stock", "move_item"} and not payload.get("item_id"):
                 from src.inventory_service import get_inventory_service
                 item_name = str(payload.get("item_name") or "").strip()
                 matches = get_inventory_service().search_items(owner, item_name, domain="kitchen") if item_name else []
@@ -1499,7 +1499,7 @@ async def _execute_manage_assets_binding(block, owner=None, run_id=None):
                 # conversational ``each``). Preserve that owner state in
                 # the Action input instead of asking the model to guess it.
                 payload["unit"] = matches[0].get("default_unit") or payload.get("unit")
-            if payload.get("action") == "consume_stock" and not payload.get("idempotency_key"):
+            if payload.get("action") in {"consume_stock", "move_item"} and not payload.get("idempotency_key"):
                 # Direct canonical turns may not have a durable WorkAction
                 # projection. Reuse the dispatcher-owned run identity plus a
                 # canonical request digest; this remains invisible to the

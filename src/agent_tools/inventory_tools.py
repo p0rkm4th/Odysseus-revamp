@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 INVENTORY_ACTIONS = frozenset({
     "list", "search", "get", "add_item", "add_stock", "consume_stock",
-    "adjust_stock", "get_components", "update_asset", "create_intake_draft",
+    "adjust_stock", "move_item", "get_components", "update_asset", "create_intake_draft",
 })
 RECIPE_ACTIONS = frozenset({
     "list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale",
