@@ -2937,6 +2937,15 @@ passed recipe listing and an ordinary request for ingredients to buy, again
 with two canonical readbacks including reload. Both Qwen3:8B GUI runs recorded
 zero false success, raw final Result, duplicate delivery, or abrupt EOF.
 
+Additional exact-candidate owner evidence: populated Memory passed 1 turn with
+two canonical readbacks; the no-RTX-4090 false-premise asset query passed one
+read turn without inventing an entity; realistic UI acceptance passed desktop,
+narrow, and mobile layout/sidebar/chrome checks; and Recipe pantry composition
+passed 3 canonical read turns with two independent readbacks. These journeys
+all recorded zero false success, raw final Result, duplicate delivery, and
+abrupt EOF. Reused-lane precondition stops remain acceptance fixture-isolation
+debt, not product behavior.
+
 The same exact candidate passed `OWNER-WORK-OVERVIEW-001`: 3 turns and 3
 canonical reads with no mutation, false success, raw final Result, duplicate
 delivery, or abrupt EOF. This confirms the bounded Work overview projection

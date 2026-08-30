@@ -1920,6 +1920,11 @@ Work overview now has exact-candidate Qwen browser evidence across three read
 turns, with two canonical readbacks and zero false success, raw final Result,
 duplicate delivery, or abrupt EOF.
 
+Fresh exact-candidate evidence also covers populated Memory, the no-RTX-4090
+false-premise asset query, responsive UI acceptance, and Recipe pantry
+composition. Each completed without false success, raw final Result, duplicate
+delivery, or abrupt EOF; composition used canonical recipe/pantry readbacks.
+
 ## Current Work task mutation checkpoint — `a784b35e` (2026-08-29)
 
 The exact Work task mutation/readback journey passed on a fresh isolated
