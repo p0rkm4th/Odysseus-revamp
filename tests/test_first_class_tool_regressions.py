@@ -460,3 +460,17 @@ def test_general_continuation_phrases(text):
 )
 def test_substantive_requests_do_not_inherit_stale_context(text):
     assert not is_explicit_continuation(text)
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        ("Acceptance Tomato", ("acceptance tomato", "acceptance tomatoes")),
+        ("Acceptance Tomatoes", ("acceptance tomatoes", "acceptance tomato")),
+        ("fresh berries", ("fresh berries", "fresh berry")),
+    ],
+)
+def test_inventory_name_search_terms_cover_common_singular_plural_forms(query, expected):
+    from src.inventory_planning import item_name_search_terms
+
+    assert item_name_search_terms(query) == expected
