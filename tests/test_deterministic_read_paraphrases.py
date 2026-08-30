@@ -374,6 +374,26 @@ def test_recipe_pantry_coverage_has_distinct_canonical_result_contract(query):
 
 
 @pytest.mark.parametrize("query", [
+    "what am i missing for that recipe?",
+    "what ingredients do i need for this recipe?",
+])
+def test_recipe_missing_ingredients_language_selects_shopping_read(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.filters["recipe_shopping"] is True
+    assert resolved.action_id == "shopping_requirements"
+
+
+def test_recipe_cooking_history_false_premise_is_an_empty_canonical_read():
+    frame = compile_intent("which recipe did i cook last night?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["recipe_cooking_history"] is True
+    assert resolved.action_id == "cooking_history"
+    assert resolved.available is True
+
+
+@pytest.mark.parametrize("query", [
     "can i make anything with what we got",
     "can i cook something w what we have",
     "what can we make from whatever we have",
