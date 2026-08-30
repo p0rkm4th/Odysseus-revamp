@@ -80,6 +80,16 @@ canonical readbacks; the scenario passed with
 `abruptEOF=0`. This confirms qualitative amounts remain reviewable without
 inventing quantities.
 
+## URL, empty-Recipe, and Asset RAM checkpoints — candidate `8c620bf438bd` (2026-08-30)
+
+The named public URL import preserved its explicit display name through the
+GUI mutation and canonical readback. The empty Recipe read returned a useful
+human empty-state answer without raw Result leakage. The canonical Asset RAM
+journey completed three ordinary collection-property reads with grounded
+values. Across these journeys the oracle reported
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`; URL import produced two independent readbacks.
+
 ## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
 
 The video no-evidence journey remains open. Server-side evidence showed the
