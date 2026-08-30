@@ -2033,3 +2033,21 @@ honest no-recorded-history answer; reload preserved it. No mutation was
 attempted, false success, raw final Result, duplicate delivery, abrupt EOF, or
 browser page error was observed. Candidate source marker matched `a0681fc1`;
 the real owner deployment remained on older source `34ced247`.
+
+## Household mutation and Work read walkabout — exact candidate `a0681fc1` (2026-08-29)
+
+On the isolated candidate, ordinary chat mutation `yo add 3 cans of
+Acceptance Walkabout Tomatoes 20260829c to the pantry` reached the canonical
+`manage_assets/add_item` path. The tainted-run security boundary displayed the
+visible exact-action approval card; after `Allow for this task`, independent
+`/api/inventory/overview` readback confirmed quantity 3. `use one ...` followed
+the same approval path and independent readback confirmed quantity 2. Chat
+readback and reload both retained quantity 2, with no page errors. The corpus
+currently expects these bounded household writes to be approval-free; this is
+tracked as a policy/acceptance expectation mismatch, not bypassed.
+
+The same candidate also passed Work read variants `what am i working on?`,
+`whats outstanding`, and `whats left`, each returning a truthful empty-state
+answer. Reload preserved the conversation. No mutation, false success, raw
+final Result, duplicate delivery, abrupt EOF, or browser page error was
+observed. The real owner deployment remained on older source `34ced247`.
