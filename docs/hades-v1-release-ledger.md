@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Broad regression after continued owner acceptance (2026-08-30)
+
+The supported Python regression completed with `7063 passed, 8 skipped, 149
+warnings` in 5m05s. This follows the Household mutation/readback and visual
+walkabout checkpoint and the Recipe ingestion/composition replays. No
+executable source changed since candidate `8c620bf438bd`; the isolated
+candidate remained healthy with zero restarts, and the owner runtime remained
+stopped and untouched.
+
 ## Household canonical mutation and visual walkabout continuation (2026-08-30)
 
 The deterministic `OWNER-HOUSEHOLD-MUTATION-READBACK-001` journey passed four
