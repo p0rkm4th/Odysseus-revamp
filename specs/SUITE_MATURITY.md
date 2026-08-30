@@ -2171,3 +2171,16 @@ servings, ingredient quantities/units, and instructions. The exact candidate
 opened that dialog from a messy chat paste; after explicit owner correction,
 canonical Recipe readback and reload durability passed. The harness and corpus
 changes are test/docs-only and do not require a new executable image.
+
+## Household replenishment identity — exact candidate `f6300d26` (2026-08-30)
+
+An owner mutation initially claimed verified success while leaving the named
+item unchanged and creating a duplicate whose name included the destination
+phrase. The shared household boundary now separates trailing location language,
+resolves exact existing items to canonical stock addition, preserves units,
+and records the requested pantry location. Ambiguous duplicates fail closed.
+The exact GUI replay changed only the intended item from 0 to 3 with no
+approval card, and the standard Qwen3:8B read walkabout passed afterward. Full
+regression passed 7057 tests, 8 skipped, and 149 warnings. A transient empty
+Qwen completion during one long-context reload probe was retried successfully
+and remains an environment/provider flake, not a verified product pass.
