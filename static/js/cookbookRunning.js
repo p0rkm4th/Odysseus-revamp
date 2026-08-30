@@ -1907,9 +1907,9 @@ async function _confirmGpuPreflight(reqBody, shortName, repo, cmd) {
     const list = issues.slice(0, 6).join('; ');
     const more = issues.length > 6 ? `; +${issues.length - 6} more` : '';
     const msg = `GPU preflight found existing load on ${where}: ${list}${more}. Launch ${shortName || 'model'} anyway?`;
-    const confirm = window.styledConfirm || uiModule?.styledConfirm;
-    if (confirm) return await confirm(msg, { confirmText: 'Launch anyway', cancelText: 'Cancel' });
-    return window.confirm ? window.confirm(msg) : true;
+    return await uiModule.styledConfirm(msg, {
+      title: 'GPU load detected', confirmText: 'Launch anyway', cancelText: 'Cancel',
+    });
   } catch (e) {
     console.warn('[cookbook] GPU preflight failed; allowing launch', e);
     return true;
