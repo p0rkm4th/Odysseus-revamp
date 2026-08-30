@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Compact qualitative Recipe review checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+Owner testing found that a compact one-line ingredient section silently
+collapsed `salt to taste` and `oil as needed` into one review row. The shared
+owner-text review parser now splits compact sections before applying
+quantitative or qualitative handling. Focused Recipe coverage passed `94`
+tests, and the exact candidate replay passed through the GUI with Qwen3:8B:
+the review draft showed all three ingredients, marked the two qualitative
+amounts for correction, and saved nothing. The data-driven acceptance result
+was 1 turn, 1 review mutation attempt, 2 no-save readbacks, and zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF. Candidate
+image: `odysseus:candidate-806fc3ba`, image ID
+`sha256:1573b7ccac6d125739ab83a70a8708d5249cad21b6a0af58369c3ca86aa22190`;
+source marker matched `806fc3ba`. The actual owner runtime remains untouched.
+
 ## Recipe review replay boundary — browser harness `2026-08-30`
 
 Two disposable Compose attempts reached different pre-chat acceptance

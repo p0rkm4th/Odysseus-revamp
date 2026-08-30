@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Compact qualitative Recipe review checkpoint — exact candidate `806fc3ba` (2026-08-30)
+
+Compact owner text now preserves each ingredient in the editable review draft:
+the GUI showed rice, salt, and oil, with `to taste` and `as needed` retained as
+review notes and no canonical save before correction. Focused Recipe coverage
+passed 94 tests; the data-driven Qwen3:8B replay passed with two no-save
+readbacks and zero false success, raw Result, duplicate delivery, or abrupt
+EOF. The parser fix is source-matched in `odysseus:candidate-806fc3ba`.
+
 ## Recipe review browser boundary — `2026-08-30`
 
 The next Recipe review replay did not reach a chat turn: isolated setup first
