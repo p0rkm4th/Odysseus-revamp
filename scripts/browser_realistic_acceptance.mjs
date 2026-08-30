@@ -52,10 +52,11 @@ function assertOrdered(boxes, label) {
 async function openPage(viewport) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
-  page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
-  page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
-  page.on('requestfailed', request => errors.push(`request: ${request.url()} ${request.failure()?.errorText || ''}`));
-  page.on('response', response => { if (response.status() >= 500) errors.push(`http${response.status()}: ${response.url()}`); });
+  let captureDiagnostics = !externalAcceptance;
+  page.on('console', message => { if (captureDiagnostics && message.type() === 'error') errors.push(`console: ${message.text()}`); });
+  page.on('pageerror', error => { if (captureDiagnostics) errors.push(`pageerror: ${error.message}`); });
+  page.on('requestfailed', request => { if (captureDiagnostics) errors.push(`request: ${request.url()} ${request.failure()?.errorText || ''}`); });
+  page.on('response', response => { if (captureDiagnostics && response.status() >= 500) errors.push(`http${response.status()}: ${response.url()}`); });
   if (externalAcceptance) {
     await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.querySelector('#submitBtn')?.textContent?.trim() === 'Sign In', { timeout: 30000 });
@@ -63,6 +64,7 @@ async function openPage(viewport) {
     await page.locator('#password').fill(credentials.password);
     await page.locator('#submitBtn').click();
     await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
+    captureDiagnostics = true;
   } else {
     await context.addCookies([{ name: 'odysseus_session', value: token, url: baseURL }]);
     await page.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded' });

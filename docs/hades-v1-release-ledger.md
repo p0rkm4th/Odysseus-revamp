@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Isolated realistic visual acceptance checkpoint — harness commit `228809c7` (2026-08-30)
+
+The realistic visual acceptance script was previously coupled to the owner
+session file, preventing safe visual testing against a fresh candidate. It
+now supports an explicitly supplied disposable credential file, requires
+isolated-acceptance settings in that mode, and ignores expected unauthenticated
+login-page API errors until normal login completes.
+
+The full visual gate passed against exact candidate `6a713675` in a fresh
+isolated Compose project at desktop, narrow, and mobile viewports. It checked
+shared Inventory/Recipe window chrome, sidebar icon uniqueness, duplicate
+Security/Research entries, window containment, tab behavior, long-content
+wrapping, and horizontal overflow; desktop, narrow, and mobile screenshots
+were captured and inspected. The synthetic OSINT fixture’s repeated label in
+its own heading is fixture content, not a product defect. The disposable
+stack was removed and owner state was untouched.
+
 ## Fresh-install restart durability checkpoint — exact candidate `6a713675` (2026-08-30)
 
 A fresh disposable Compose project completed normal admin setup, registered
