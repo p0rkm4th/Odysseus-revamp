@@ -4512,3 +4512,16 @@ returned `capabilities: ["contacts read/write"]`. The first immediate browser
 attempt hit a startup race before the app listened (`ERR_SOCKET_NOT_CONNECTED`);
 retry after readiness passed. This was classified `ENVIRONMENT_FAILURE`, not
 a Contacts product failure. Owner deployment/data remained untouched.
+
+## Lived-in Tier 1 cross-suite replay after readiness fixes — candidate `4fa8152d` (2026-08-30)
+
+The exact candidate containing the Setup Center Memory and Contacts readiness
+repairs passed `OWNER-TIER1-LIVED-IN-WALKABOUT-001` through the real browser
+chat surface: `20` turns, `20` streams, and `20` terminal `[DONE]` events.
+The replay exercised Today/attention, Calendar, commitments, reminders,
+Household, Recipes, Assets, Memory, unavailable/current Network handling,
+ordinal and property references, domain switching, and returning to an old
+asset referent. It recorded zero false successes, raw final Results, duplicate
+delivery, abrupt EOF, or effectful mutations. This is read-only conversation
+evidence against the disposable lived-in fixture; owner deployment/data was
+untouched.
