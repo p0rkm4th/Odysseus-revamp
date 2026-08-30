@@ -61,7 +61,7 @@ def resolve(c, key, owner=None):
         if owner:
             sql += " AND a.owner=?"
             params.append(owner)
-        sql += " ORDER BY a.updated_at DESC, a.id DESC LIMIT 1 OFFSET ?"
+        sql += " ORDER BY lower(a.name) ASC, a.id ASC LIMIT 1 OFFSET ?"
         params.append(ordinal)
         return c.execute(sql, params).fetchone()
     owner_clause = " AND a.owner=?" if owner else ""
@@ -150,7 +150,7 @@ def cmd_list(a):
         # an owner-scoped SQL read; it does not infer inventory from prose.
         sql+=" AND (lower(name) LIKE lower(?) OR lower(coalesce(hostname,'')) LIKE lower(?) OR lower(coalesce(model,'')) LIKE lower(?) OR lower(coalesce(attributes_json,'')) LIKE lower(?))"
         q="%"+a.query+"%"; p += [q,q,q,q]
-    sql+=" ORDER BY updated_at DESC LIMIT ?"; p.append(a.limit)
+    sql+=" ORDER BY lower(name) ASC, id ASC LIMIT ?"; p.append(a.limit)
     print(json.dumps([view(c,r, owner) for r in c.execute(sql,p)],indent=2,sort_keys=True))
 
 def cmd_observe(a):

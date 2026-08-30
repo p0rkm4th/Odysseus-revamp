@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 import src.asset_inventory as assets
 
 
@@ -18,7 +16,7 @@ def test_resolve_supports_owner_scoped_ordinal_asset_references(monkeypatch, tmp
     connection.executemany(f"INSERT INTO assets ({columns}) VALUES ({','.join('?' for _ in rows[0])})", rows)
     connection.commit()
 
-    assert assets.resolve(connection, "first", "alice")["name"] == "Erebus"
-    assert assets.resolve(connection, "second", "alice")["name"] == "Atlas"
+    assert assets.resolve(connection, "first", "alice")["name"] == "Atlas"
+    assert assets.resolve(connection, "second", "alice")["name"] == "Erebus"
     assert assets.resolve(connection, "third", "alice") is None
     assert assets.resolve(connection, "first", "bob")["name"] == "Other"
