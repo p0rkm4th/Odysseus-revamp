@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Incomplete Recipe paste GUI replay — exact candidate `23e51370` (2026-08-30)
+
+Incomplete pasted recipe text reached editable review, explicitly flagged
+missing/qualitative amounts, stated that nothing was saved, and left canonical
+Recipe count unchanged. Broader URL/video missing-data cases remain open.
+
 ## Memory deterministic final-answer replay — exact candidate `23e51370` (2026-08-30)
 
 Completed-bubble inspection confirmed narrow Memory zero-result reads render

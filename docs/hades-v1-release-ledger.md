@@ -2,6 +2,15 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Incomplete Recipe paste GUI replay — exact candidate `23e51370` (2026-08-30)
+
+An owner-like paste with `salt and pepper` and `oil as needed` reached the
+visible editable Recipe review form. Missing/qualitative amounts were marked
+“Needs review: quantity unspecified” and “Needs review: as needed”; the UI
+stated that nothing had been saved. Independent canonical counts remained
+`2 → 2`. This closes one incomplete-paste no-save variant; broader URL/video
+missing-data variants remain open.
+
 ## Memory deterministic final-answer replay — exact candidate `23e51370` (2026-08-30)
 
 Rendered-bubble inspection of a completed narrow Memory read confirmed that
