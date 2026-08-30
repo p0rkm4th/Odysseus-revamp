@@ -7,6 +7,7 @@ from src.context_compactor import context_trace, tool_projection_trace
 from src.intent_contracts import compile_intent, memory_mutation_payload, resolve_intent
 from src.aci import project_action_selection
 from src.aci import provisional_intent_projection, canonical_memory_mutation_answer
+from src.tool_execution import _resolve_memory_delete_id
 
 
 def test_breakdown_wording_is_an_explicit_canonical_memory_query():
@@ -125,6 +126,22 @@ def test_memory_property_followup_uses_canonical_read_after_correction():
     )
     assert owned is True
     assert intent["retrieval_query"] == "What do you remember about me?"
+
+
+def test_memory_delete_resolution_ignores_recalled_context_contamination():
+    entries = [{"id": "m1", "text": "my test color is ultraviolet orange"}]
+    assert _resolve_memory_delete_id(
+        "test color. Remember that my test color is ultraviolet orange",
+        entries,
+    ) == "m1"
+
+
+def test_memory_delete_resolution_fails_closed_for_ambiguous_clauses():
+    entries = [
+        {"id": "m1", "text": "my test color is ultraviolet orange"},
+        {"id": "m2", "text": "my test color is infrared blue"},
+    ]
+    assert _resolve_memory_delete_id("test color", entries) == ""
 
 
 def test_verified_memory_mutation_has_one_human_answer():
