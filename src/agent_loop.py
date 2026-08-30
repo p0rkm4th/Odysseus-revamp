@@ -5665,6 +5665,14 @@ async def stream_aci_runtime(
                 # full CanonicalResult evidence remains behind the Action/Memory
                 # boundary and is never dumped into chat history.
                 output_text = _truncate(_memory_projection_text)
+            elif block.tool_type == "read_communications":
+                # Communications reads may contain usable calendar truth even
+                # when another sub-source (email/contacts) is degraded. Keep
+                # the owner-facing tool bubble and final answer grounded in
+                # that bounded projection rather than a generic model fallback.
+                output_text = _truncate(
+                    communications_calendar_summary_from_tool_output(json.dumps(result))
+                )
             elif is_doc_tool and "action" in result:
                 action = result["action"]
                 title = result.get("title", "")
@@ -6162,6 +6170,8 @@ async def stream_aci_runtime(
                 break
             if _tool_name == "read_communications" and _tool_action in {"overview", "list_events", "list"}:
                 _calendar_summary = communications_calendar_summary_from_tool_output(_ev.get("output") or "")
+                if not _calendar_summary:
+                    _calendar_summary = str(_ev.get("output") or "").strip()
                 if _calendar_summary:
                     full_response = _calendar_summary
                 break
