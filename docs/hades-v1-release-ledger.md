@@ -43,6 +43,15 @@ Results, duplicate delivery, or abrupt EOF. The stack was removed afterward.
 The candidate container had source marker `7e01a053` and zero restarts; the
 owner runtime remained on source `34ced247` with zero restarts.
 
+The same isolated lane then exercised a public cooking video URL that search
+identified as a recipe video. The provider did not expose enough verified
+recipe structure for canonical import, and Hades returned a readable review
+error without saving anything. This is recorded as
+`OWNER-RECIPE-VIDEO-INSUFFICIENT-EVIDENCE-001` (`PROVIDER_FAILURE /
+INSUFFICIENT_EVIDENCE`), not as positive extraction evidence. Positive
+transcript/description extraction and validated commit remain an open Recipe
+release gate.
+
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 
 `OWNER-MEMORY-MUTATION-READBACK-001` passed on the exact disposable
