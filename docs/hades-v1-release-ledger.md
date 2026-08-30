@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Accumulated-state Tier 1 dogfood replay (2026-08-30)
+
+On the source-matched disposable runtime `d1f8ebc9`, the existing realistic
+Asset reference-chain fixture passed 3 owner turns covering ordinal/pronoun
+continuity and property follow-up. The Work overview fixture passed 3 natural
+owner turns with 2 independent readbacks. The expiring-inventory → Recipe
+composition fixture passed its owner read and 2 independent readbacks. Across
+these three GUI replays there were 7 turns, 7 streams, no mutations, 2
+readback-backed fixture mutations, and zero `falseSuccess`, raw final Results,
+duplicate delivery, or abrupt EOF. These are positive slices, not evidence
+that the required 20–50 turn lived-in session is complete; long cross-domain
+conversation, mutation-adversarial coverage, and partial-dependency recovery
+remain open. Owner deployment/data was untouched.
+
+
 ## Natural reminder cancellation and reference continuity (2026-08-30)
 
 Owner replay initially exposed a shared `WRONG_OPERATION` / routing defect:
