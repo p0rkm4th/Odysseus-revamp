@@ -29,6 +29,8 @@ def test_calendar_read_requests_promote_to_agent():
     assert message_needs_tools("Do I have upcoming Taekwondo classes this week?")
     assert message_needs_tools("What's on my calendar tomorrow?")
     assert message_needs_tools("When is my next meeting?")
+    assert message_needs_tools("Do I have anything scheduled today?")
+    assert message_needs_tools("What's scheduled today?")
 
 
 def test_note_todo_and_reminder_actions_promote_to_agent():
