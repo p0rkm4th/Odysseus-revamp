@@ -3,6 +3,7 @@
 let pane = null;
 let windowEl = null;
 import { openWindow, close as closeWindow, registerView } from './workspaceWindowManager.js';
+import uiModule from './ui.js';
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -39,10 +40,14 @@ async function load() {
 }
 
 async function create() {
-  const name = window.prompt('Engagement name');
+  const name = await uiModule.styledPrompt('Give this assessment a name.', {
+    title: 'New security engagement',
+    placeholder: 'e.g. Home lab review',
+    confirmText: 'Create',
+  });
   if (!name?.trim()) return;
   try { await api('/api/security/engagements', {method: 'POST', body: JSON.stringify({name: name.trim(), assessment_type: 'security_review'})}); await load(); }
-  catch (error) { window.alert(error.message); }
+  catch (error) { uiModule.showError(error.message); }
 }
 
 async function openDetail(id) {
@@ -61,7 +66,7 @@ async function openDetail(id) {
     pane.querySelector('#security-back').onclick = load;
     pane.querySelector('#security-authorize').onclick = async () => {
       try { await api(`/api/security/engagements/${encodeURIComponent(id)}/authorize`, {method:'POST', body: JSON.stringify({reference:'operator-confirmed dogfood scope', notes:'Bounded local test only', expires_at: new Date(Date.now()+3600000).toISOString()})}); await openDetail(id); }
-      catch (error) { window.alert(error.message); }
+      catch (error) { uiModule.showError(error.message); }
     };
     pane.querySelector('#security-report').onclick = async () => {
       const output = pane.querySelector('#security-report-output');
@@ -71,7 +76,7 @@ async function openDetail(id) {
         output.innerHTML = `<p class="hades-provenance">Canonical report revision ${esc(report.source_revision || item.revision)}</p><pre>${esc(JSON.stringify(report.projection || report, null, 2))}</pre>`;
       } catch (error) { output.innerHTML = `<p class="security-error">${esc(error.message)}</p>`; }
     };
-  } catch (error) { window.alert(error.message); }
+  } catch (error) { uiModule.showError(error.message); }
 }
 
 export function togglePanel() {
