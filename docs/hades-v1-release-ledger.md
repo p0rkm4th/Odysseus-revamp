@@ -33,6 +33,15 @@ overflow checks, sidebar icon uniqueness, and screenshot/tracing assertions.
 This is release evidence for the isolated candidate only; the actual owner
 container remains stopped and is not represented by this result.
 
+## Messy asset false-premise checkpoint — candidate `8c620bf438bd` (2026-08-30)
+
+The realistic duplicate-like/incomplete Asset fixture was queried through the
+GUI with its no-match filter journey. The single read stream completed with
+`falseSuccess=0`, `rawFinalResults=0`, `duplicateDelivery=0`, and
+`abruptEOF=0`. No mutation was attempted. This adds current-candidate
+false-premise evidence outside Recipe while preserving the owner-data safety
+boundary.
+
 ## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
 
 The video no-evidence journey remains open. Server-side evidence showed the
