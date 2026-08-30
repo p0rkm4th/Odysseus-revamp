@@ -4622,3 +4622,16 @@ Memory, and cross-domain asset-reference switching. Both replays recorded
 zero false successes, raw final Results, duplicate delivery, or abrupt EOF.
 These are read-only disposable acceptance replays; owner deployment/data
 remained untouched.
+
+## Household and Work mutation replay — exact candidate `4c873549` (2026-08-30)
+
+The sloppy Household journey passed `4` owner turns with `2` GUI mutations
+and `2` canonical readbacks. Work project and task mutation journeys passed
+separately because their isolated fixture profiles differ: each completed
+with `2` turns, `1` mutation, and `2` independent readbacks. False success,
+raw final Results, duplicate delivery, and abrupt EOF were zero. Two initial
+Work attempts failed before any turn because the disposable acceptance
+credential had expired; rotating that credential and restarting only the
+disposable runtime restored normal login. This was classified as
+`AUTH_SESSION_FAILURE`, not a product failure. Owner deployment/data remained
+untouched.
