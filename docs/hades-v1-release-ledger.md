@@ -2,6 +2,18 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Work task mutation checkpoint — exact candidate `6a713675` (2026-08-30)
+
+`OWNER-WORK-TASK-MUTATION-READBACK-001` passed in a fresh isolated Compose
+project using the normal login/model setup and Qwen3:8B. The acceptance
+fixture created only the prerequisite project through the API; the owner then
+created the task through chat, read it back conversationally, and the harness
+verified canonical persistence before and after reload. Evidence: two turns,
+one mutation, two readbacks, and zero false successes, raw final Results,
+duplicate delivery, or abrupt EOF. Basic Work project/task mutation is now
+browser-proven; cross-suite remediation relationships remain intentionally
+unimplemented until canonical ownership is defined.
+
 ## Work project mutation checkpoint — exact candidate `6a713675` (2026-08-30)
 
 `OWNER-WORK-PROJECT-MUTATION-READBACK-001` passed in a fresh isolated
