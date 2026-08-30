@@ -1622,3 +1622,13 @@ Action previously visible in the conversation is suppressed by the generalized
 per-turn attempted-effect guard. This closes duplicate failure delivery for
 this journey; editable chat review handoff and imported ingredient cleanup
 remain open UX work.
+
+## Owner-readable tool-thread maturity — exact candidate `03bc782b` (2026-08-29)
+
+Canonical recipe mutation and qualitative review replays now use readable
+owner-facing thread labels (`Saving recipe`) while retaining technical Action
+details behind the existing collapsed thread content. The exact candidate
+passed independent recipe readback, review no-save behavior, and browser page
+error checks. Inline editable chat review remains open. Acceptance must use
+explicit isolated data paths; the previous overlay accidentally shared the
+real repository data directory and was stopped.
