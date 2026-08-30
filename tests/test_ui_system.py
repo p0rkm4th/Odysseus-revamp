@@ -132,6 +132,12 @@ def test_cookbook_hardware_fit_uses_shared_server_removal_confirmation():
     assert "Remove server profile" in source
 
 
+def test_cookbook_gpu_preflight_uses_shared_confirmation_without_native_fallback():
+    source = (ROOT / "static/js/cookbookRunning.js").read_text()
+    assert "title: 'GPU load detected'" in source
+    assert "window.confirm" not in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]
