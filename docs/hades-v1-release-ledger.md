@@ -2,6 +2,17 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## OSINT browser-evidence boundary (2026-08-30)
+
+Inspection of the existing browser infrastructure confirms that
+`browser_realistic_acceptance.mjs` exercises OSINT layout and shared Hades
+chrome with a synthetic fixture only; it does not start a provider-backed
+investigation. The development-only window dogfood harness uses repository
+session cookies and is therefore not safe for owner-state acceptance. The
+available OSINT/Security contract suite remains green at `306 passed, 8
+warnings`; provider-backed OSINT investigation acceptance remains explicitly
+open rather than being inferred from synthetic visual coverage.
+
 ## OSINT/Security contract continuation (2026-08-30)
 
 The available development-only browser window dogfood harness was not run
