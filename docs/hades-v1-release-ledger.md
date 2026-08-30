@@ -2,6 +2,17 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Disposable application backup/restore replay — current head `2026-08-30`
+
+The existing `scripts/odysseus-backup` CLI was exercised in a standalone
+temporary repository containing synthetic owner state. Snapshot and archive
+verification succeeded; after deliberate JSON/text drift and an extra file,
+`restore --yes` restored the original state, removed the drift-only file, and
+retained the pre-restore directory as a rollback stash. No repository `data/`,
+owner data, Docker volumes, or owner deployment were used. This is direct
+application-data recovery evidence; Docker Chroma recovery remains a separate
+volume procedure.
+
 ## Isolated realistic visual acceptance checkpoint — harness commit `228809c7` (2026-08-30)
 
 The realistic visual acceptance script was previously coupled to the owner
