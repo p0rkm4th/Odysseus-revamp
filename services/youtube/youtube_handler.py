@@ -101,8 +101,14 @@ def extract_youtube_id(url: str) -> Optional[str]:
     return None
 
 
+def _fetch_transcript_sync(video_id: str):
+    """Fetch and materialize a transcript off the event loop."""
+    api = YouTubeTranscriptApi()
+    return list(api.fetch(video_id))
+
+
 async def extract_transcript_async(
-    url: str, video_id: str, max_retries: int = 3
+    url: str, video_id: str, max_retries: int = 3, timeout: int = 20
 ) -> Dict[str, Any]:
     """
     Async YouTube transcript extraction with retries.
@@ -111,6 +117,7 @@ async def extract_transcript_async(
         url: Full YouTube URL
         video_id: Extracted video ID
         max_retries: Number of attempts
+        timeout: Maximum seconds per network attempt
 
     Returns:
         Dict with success/error/transcript keys
@@ -120,9 +127,15 @@ async def extract_transcript_async(
 
     for attempt in range(max_retries):
         try:
-            api = YouTubeTranscriptApi()
-            transcript = api.fetch(video_id)
-            transcript_list = list(transcript)
+            # youtube-transcript-api is synchronous. Running it directly here
+            # can block the single application worker forever when YouTube is
+            # unreachable, preventing the owner from receiving a fail-closed
+            # review answer. A thread keeps the event loop responsive and the
+            # wait_for boundary makes the recipe import finite.
+            transcript_list = await asyncio.wait_for(
+                asyncio.to_thread(_fetch_transcript_sync, video_id),
+                timeout=max(0.1, min(float(timeout), 60.0)),
+            )
 
             formatted = []
             for snippet in transcript_list:
@@ -150,6 +163,10 @@ async def extract_transcript_async(
                 "is_generated": False,
                 "segments": formatted,
             }
+        except asyncio.TimeoutError:
+            logger.warning("Transcript attempt %s timed out for %s", attempt + 1, video_id)
+            if attempt < max_retries - 1:
+                await asyncio.sleep(1 * (attempt + 1))
         except Exception as e:
             logger.warning(f"Transcript attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:

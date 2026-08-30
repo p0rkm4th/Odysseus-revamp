@@ -15,6 +15,7 @@ state and the broadened URL parsing.
 """
 import sys
 import types
+import asyncio
 
 import pytest
 
@@ -102,3 +103,24 @@ def test_shorts_url_is_recognized_and_extractable():
     url = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
     assert is_youtube_url(url)
     assert extract_youtube_id(url) == "dQw4w9WgXcQ"
+
+
+@pytest.mark.asyncio
+async def test_transcript_fetch_timeout_does_not_block_event_loop(monkeypatch):
+    """A blocked synchronous transcript client must fail closed in bounded time."""
+    import src.youtube_handler as yt
+
+    class _HangingApi:
+        def fetch(self, _video_id):
+            import time
+            time.sleep(2)
+            return []
+
+    monkeypatch.setattr(yt, "YOUTUBE_AVAILABLE", True)
+    monkeypatch.setattr(yt, "YouTubeTranscriptApi", _HangingApi)
+    started = asyncio.get_running_loop().time()
+    result = await yt.extract_transcript_async("https://youtu.be/example", "example", max_retries=1, timeout=0.05)
+    elapsed = asyncio.get_running_loop().time() - started
+    assert result["success"] is False
+    assert "Failed after" in result["error"]
+    assert elapsed < 1
