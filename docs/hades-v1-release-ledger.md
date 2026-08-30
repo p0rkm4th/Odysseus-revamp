@@ -2,6 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Household clean mutation/readback checkpoint — exact candidate `04d05854` (2026-08-30)
+
+`OWNER-HOUSEHOLD-MUTATION-READBACK-001` passed in the deterministic isolated
+fixture: four owner turns, two GUI mutations, two independent inventory
+readbacks, and zero false successes, raw final Results, duplicate delivery, or
+abrupt EOF. The exact candidate runtime remained healthy and the actual owner
+runtime was untouched.
+
+## Asset false-premise filter checkpoint — exact candidate `04d05854` (2026-08-30)
+
+`OWNER-ASSET-FILTER-NO-MATCH-001` passed in the realistic messy fixture. The
+nonexistent hardware query produced one grounded read journey and no
+hallucinated entity, false success, raw final Result, duplicate delivery, or
+abrupt EOF. This was read-only isolated evidence; the actual owner runtime
+remains untouched.
+
 ## Full regression after Memory correction fix — exact candidate `04d05854` (2026-08-30)
 
 The supported full regression after the shared Memory executor change passed
