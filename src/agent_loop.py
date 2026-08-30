@@ -2842,7 +2842,7 @@ async def stream_aci_runtime(
     # Persist across the approval replay and subsequent model rounds in this
     # chat turn. A resumed provider response may repeat the already-approved
     # effectful binding in a later round.
-    _successful_effectful_batch_calls: set[tuple[str, str]] = set()
+    _attempted_effectful_batch_calls: set[tuple[str, str]] = set()
     if exact_approval is not None:
         approved = exact_approval.pending
         approved_block = ToolBlock(approved.tool_name, approved.content)
@@ -2906,14 +2906,8 @@ async def stream_aci_runtime(
         if tool_result_is_successful(approved_result):
             for doc_event in _document_stream_events(approved_block):
                 yield f"data: {json.dumps(doc_event)}\n\n"
-        if (
-            approved.tool_name in _BATCH_EFFECTFUL_TOOLS
-            and isinstance(approved_result, dict)
-            and approved_result.get("success") is True
-            and not approved_result.get("error")
-            and not approved_result.get("approval_required")
-        ):
-            _successful_effectful_batch_calls.add(
+        if approved.tool_name in _BATCH_EFFECTFUL_TOOLS:
+            _attempted_effectful_batch_calls.add(
                 _effectful_call_signature(approved.tool_name, approved.content)
             )
         if approved_result.get("action") == "suggest":
@@ -4988,13 +4982,15 @@ async def stream_aci_runtime(
             _effectful_signature = _effectful_call_signature(block.tool_type, block.content)
             if (
                 block.tool_type in _BATCH_EFFECTFUL_TOOLS
-                and _effectful_signature in _successful_effectful_batch_calls
+                and _effectful_signature in _attempted_effectful_batch_calls
             ):
                 logger.warning(
-                    "[agent] suppressing duplicate successful effectful binding in one batch: tool=%s",
+                    "[agent] suppressing duplicate attempted effectful binding in one turn: tool=%s",
                     block.tool_type,
                 )
                 continue
+            if block.tool_type in _BATCH_EFFECTFUL_TOOLS:
+                _attempted_effectful_batch_calls.add(_effectful_signature)
 
             total_tool_calls += 1
             # Build a short display string for the frontend tool bubble.
@@ -5952,15 +5948,6 @@ async def stream_aci_runtime(
                 # An approval card is a turn boundary.  Never execute a later
                 # model-supplied call from the same batch after this request.
                 break
-
-            if (
-                block.tool_type in _BATCH_EFFECTFUL_TOOLS
-                and isinstance(result, dict)
-                and result.get("success") is True
-                and not result.get("error")
-                and not result.get("approval_required")
-            ):
-                _successful_effectful_batch_calls.add(_effectful_signature)
 
             # If budget was hit, stop the loop
         if budget_hit:
