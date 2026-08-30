@@ -5936,8 +5936,12 @@ async def stream_aci_runtime(
                     "MEMORY" if block.tool_type == "read_memory" else None
                 ),
             }
-            if block.tool_type == "read_communications" and output_text:
-                tool_event["calendar_summary"] = output_text
+            if block.tool_type == "read_communications":
+                _calendar_summary = communications_calendar_summary_from_tool_output(
+                    result.get("output") if isinstance(result.get("output"), str) else ""
+                )
+                if _calendar_summary:
+                    tool_event["calendar_summary"] = _calendar_summary
             if result.get("verified") is True:
                 tool_event["verified"] = True
             if result.get("image_url"):
