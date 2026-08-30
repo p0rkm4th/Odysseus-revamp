@@ -2,6 +2,14 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Sloppy Work read replay — exact candidate `23e51370` (2026-08-30)
+
+The read-only owner prompt `whats outsanding` reached the bounded Work read
+and returned “No outstanding work is recorded for this owner.” No raw Action,
+JSON, or internal capability terms appeared in the final answer. This adds a
+sloppy-language Work read variant; mutation/reference and fresh-install Work
+breadth remain open.
+
 ## Incomplete Recipe paste GUI replay — exact candidate `23e51370` (2026-08-30)
 
 An owner-like paste with `salt and pepper` and `oil as needed` reached the

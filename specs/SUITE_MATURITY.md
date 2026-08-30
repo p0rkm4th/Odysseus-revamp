@@ -1,5 +1,11 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Sloppy Work read replay — exact candidate `23e51370` (2026-08-30)
+
+The typo/slang prompt `whats outsanding` returned a bounded human Work answer
+with no raw technical result or internal capability terms. Broader Work
+mutation/reference and fresh-install coverage remain open.
+
 ## Incomplete Recipe paste GUI replay — exact candidate `23e51370` (2026-08-30)
 
 Incomplete pasted recipe text reached editable review, explicitly flagged
