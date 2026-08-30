@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, MetaData, PrimaryKeyConstraint, String, Table, UniqueConstraint, inspect, select, text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, MetaData, PrimaryKeyConstraint, String, Table, UniqueConstraint, inspect, select, text
 from sqlalchemy.engine import Connection
 
 from core.inventory_models import INVENTORY_TABLES
@@ -94,30 +94,17 @@ def apply_inventory_v3(connection: Connection) -> None:
             Column("substitution_group", old.c.substitution_group.type, nullable=True),
             Column("preparation", old.c.preparation.type, nullable=True),
             Column("sort_order", old.c.sort_order.type, nullable=False, default=0),
-            # Early V1 databases predate timestamps on recipe ingredients.
-            # Keep the rebuilt schema compatible with the current model and
-            # synthesize timestamps only for those legacy rows.
-            Column(
-                "created_at", getattr(old.c, "created_at", Column("created_at", DateTime)).type,
-                nullable=False, server_default=text("CURRENT_TIMESTAMP"),
-            ),
-            Column(
-                "updated_at", getattr(old.c, "updated_at", Column("updated_at", DateTime)).type,
-                nullable=False, server_default=text("CURRENT_TIMESTAMP"),
-            ),
             CheckConstraint("quantity IS NULL OR quantity > 0", name="ck_inventory_recipe_ingredient_quantity_positive"),
         )
         rebuilt.create(connection)
-        created_at = "created_at" if "created_at" in existing else "CURRENT_TIMESTAMP"
-        updated_at = "updated_at" if "updated_at" in existing else "CURRENT_TIMESTAMP"
         connection.exec_driver_sql(
             "INSERT INTO inventory_recipe_ingredients_v3 "
             "(id, owner, recipe_id, item_id, ingredient_name, quantity, unit, amount_kind, "
             "quantity_min, quantity_max, modifier, source_text, optional, substitution_group, "
-            "preparation, sort_order, created_at, updated_at) "
+            "preparation, sort_order) "
             "SELECT id, owner, recipe_id, item_id, ingredient_name, quantity, unit, 'EXACT', "
             "NULL, NULL, NULL, ingredient_name, optional, substitution_group, preparation, "
-            f"sort_order, {created_at}, {updated_at} FROM inventory_recipe_ingredients"
+            "sort_order FROM inventory_recipe_ingredients"
         )
         connection.exec_driver_sql("DROP TABLE inventory_recipe_ingredients")
         connection.exec_driver_sql(
@@ -148,6 +135,73 @@ def apply_inventory_v3(connection: Connection) -> None:
 register_schema_migration(SchemaMigration(
     version=INVENTORY_V3_VERSION, checksum=INVENTORY_V3_CHECKSUM,
     apply=apply_inventory_v3,
+))
+
+
+INVENTORY_V4_VERSION = "20260830_004_recipe_qualitative_schema_cleanup"
+INVENTORY_V4_DEFINITION = "inventory-v4\nremove-accidental-recipe-ingredient-timestamps\npreserve-v3-semantics\n"
+INVENTORY_V4_CHECKSUM = migration_checksum(INVENTORY_V4_DEFINITION)
+
+
+def apply_inventory_v4(connection: Connection) -> None:
+    """Remove timestamp columns accidentally introduced by the first v3 build.
+
+    The mapped ingredient owner intentionally has no timestamp fields.  This
+    forward migration is needed for databases that briefly ran that candidate
+    before the v3 migration was corrected.
+    """
+    inspector = inspect(connection)
+    if not inspector.has_table("inventory_recipe_ingredients"):
+        return
+    columns = {column["name"] for column in inspector.get_columns("inventory_recipe_ingredients")}
+    if not {"created_at", "updated_at"}.intersection(columns):
+        return
+    metadata = MetaData()
+    old = Table("inventory_recipe_ingredients", metadata, autoload_with=connection)
+    rebuilt_metadata = MetaData()
+    Table("inventory_recipes", rebuilt_metadata, autoload_with=connection)
+    Table("inventory_items", rebuilt_metadata, autoload_with=connection)
+    rebuilt = Table(
+        "inventory_recipe_ingredients_v4", rebuilt_metadata,
+        Column("id", old.c.id.type, primary_key=True, nullable=False),
+        Column("owner", old.c.owner.type, nullable=False),
+        Column("recipe_id", old.c.recipe_id.type, ForeignKey("inventory_recipes.id", ondelete="CASCADE"), nullable=False),
+        Column("item_id", old.c.item_id.type, ForeignKey("inventory_items.id", ondelete="SET NULL"), nullable=True),
+        Column("ingredient_name", old.c.ingredient_name.type, nullable=False),
+        Column("quantity", old.c.quantity.type, nullable=True),
+        Column("unit", old.c.unit.type, nullable=True),
+        Column("amount_kind", String, nullable=False, default="EXACT"),
+        Column("quantity_min", old.c.quantity.type, nullable=True),
+        Column("quantity_max", old.c.quantity.type, nullable=True),
+        Column("modifier", String, nullable=True),
+        Column("source_text", old.c.source_text.type, nullable=True),
+        Column("optional", old.c.optional.type, nullable=False, default=False),
+        Column("substitution_group", old.c.substitution_group.type, nullable=True),
+        Column("preparation", old.c.preparation.type, nullable=True),
+        Column("sort_order", old.c.sort_order.type, nullable=False, default=0),
+        CheckConstraint("quantity IS NULL OR quantity > 0", name="ck_inventory_recipe_ingredient_quantity_positive"),
+    )
+    rebuilt.create(connection)
+    connection.exec_driver_sql(
+        "INSERT INTO inventory_recipe_ingredients_v4 "
+        "(id, owner, recipe_id, item_id, ingredient_name, quantity, unit, amount_kind, "
+        "quantity_min, quantity_max, modifier, source_text, optional, substitution_group, "
+        "preparation, sort_order) SELECT id, owner, recipe_id, item_id, ingredient_name, "
+        "quantity, unit, amount_kind, quantity_min, quantity_max, modifier, source_text, "
+        "optional, substitution_group, preparation, sort_order "
+        "FROM inventory_recipe_ingredients"
+    )
+    connection.exec_driver_sql("DROP TABLE inventory_recipe_ingredients")
+    connection.exec_driver_sql("ALTER TABLE inventory_recipe_ingredients_v4 RENAME TO inventory_recipe_ingredients")
+    connection.exec_driver_sql(
+        "CREATE INDEX ix_inventory_recipe_ingredients_owner_recipe "
+        "ON inventory_recipe_ingredients (owner, recipe_id, sort_order)"
+    )
+
+
+register_schema_migration(SchemaMigration(
+    version=INVENTORY_V4_VERSION, checksum=INVENTORY_V4_CHECKSUM,
+    apply=apply_inventory_v4,
 ))
 
 
