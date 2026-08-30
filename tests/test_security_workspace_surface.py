@@ -17,3 +17,11 @@ def test_security_report_remains_a_canonical_projection():
     assert "generated from canonical scope, runs, evidence, and findings" in source
     assert "JSON.stringify(report.projection || report" in source
     assert "Authorized, bounded assessment records" in source
+
+
+def test_shared_summary_metrics_have_layout_and_spacing():
+    source = (Path(__file__).resolve().parents[1] / "static/style.css").read_text()
+    assert ".hades-summary-metrics" in source
+    assert "grid-template-columns:repeat(3,minmax(0,1fr))" in source
+    assert ".hades-summary-metric" in source
+    assert "gap:var(--hades-space-3)" in source
