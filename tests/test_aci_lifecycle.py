@@ -972,7 +972,7 @@ Cook the rice and season it.'''
     )
     assert projection.mode is SelectionMode.DIRECT_ACTION
     assert projection.fast_path["action"] == "commit_import"
-    assert projection.fast_path["review_required"] is True
+    assert projection.fast_path.get("review_required") is not True
     assert projection.fast_path["source_text"] == query
 
 

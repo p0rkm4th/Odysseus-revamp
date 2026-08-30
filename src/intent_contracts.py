@@ -74,16 +74,41 @@ class RecipeDraft:
             if not isinstance(item, Mapping):
                 raise ValueError("recipe ingredients must be objects")
             item_name = str(item.get("name") or "").strip()
+            if not item_name:
+                raise ValueError("each recipe ingredient needs a name")
+            amount_kind = str(item.get("amount_kind") or "EXACT").strip().upper()
+            if amount_kind == "RANGE":
+                try:
+                    low, high = float(item.get("quantity_min")), float(item.get("quantity_max"))
+                except (TypeError, ValueError) as exc:
+                    raise ValueError("range recipe ingredients need numeric bounds") from exc
+                if low <= 0 or high < low:
+                    raise ValueError("recipe ingredient range must be positive and ordered")
+                normalized.append({"name": item_name[:200], "quantity": None,
+                                   "quantity_min": low, "quantity_max": high,
+                                   "unit": str(item.get("unit") or "").strip().lower()[:40],
+                                   "amount_kind": amount_kind, "modifier": item.get("modifier"),
+                                   "source_text": item.get("source_text") or item_name,
+                                   "optional": bool(item.get("optional", False))})
+                continue
+            if amount_kind in {"TO_TASTE", "AS_NEEDED", "OPTIONAL", "UNSPECIFIED", "NOMINAL"}:
+                normalized.append({"name": item_name[:200], "quantity": None, "unit": None,
+                                   "amount_kind": amount_kind, "modifier": item.get("modifier"),
+                                   "source_text": item.get("source_text") or item_name,
+                                   "optional": bool(item.get("optional", False))})
+                continue
             unit = str(item.get("unit") or "").strip().lower()
-            if not item_name or not unit:
-                raise ValueError("each recipe ingredient needs a name and unit")
+            if not unit:
+                raise ValueError("exact recipe ingredients need a unit")
             try:
                 quantity = float(item.get("quantity"))
             except (TypeError, ValueError) as exc:
-                raise ValueError("each recipe ingredient needs a numeric quantity") from exc
+                raise ValueError("exact recipe ingredient needs a numeric quantity") from exc
             if quantity <= 0:
                 raise ValueError("recipe ingredient quantities must be positive")
             normalized.append({"name": item_name[:200], "quantity": quantity, "unit": unit[:40],
+                               "amount_kind": amount_kind, "modifier": item.get("modifier"),
+                               "source_text": item.get("source_text") or item_name,
                                "optional": bool(item.get("optional", False))})
         try:
             servings = float(payload.get("servings", 1))
@@ -161,10 +186,31 @@ def _recipe_ingredients(section: str, *, split_compact: bool = True) -> list[dic
     raw_lines = [line.strip() for line in section.splitlines() if line.strip()]
     raw_lines = [line for line in raw_lines if not re.match(r"^serves?\s+\d", line, re.IGNORECASE)]
     if len(raw_lines) <= 1 and split_compact:
-        raw_lines = re.split(r",|\s*;\s*|\s+and\s+(?=\d+(?:\.\d+)?\s)", section)
+        raw_lines = re.split(r",\s*|\s*;\s*|\s+and\s+(?=\d+(?:\.\d+)?\s)", section, flags=re.I)
+        merged: list[str] = []
+        for part in raw_lines:
+            part = part.strip().strip(".")
+            starts_ingredient = re.match(
+                r"(?:\d|\.\d|about\b|approximately\b|roughly\b|some\b|a\s+(?:little|bit|pinch|splash|handful)\b|season\s+with\b)",
+                part, re.I,
+            ) or re.search(r"\b(?:to taste|as needed|as desired|for garnish|for greasing|for dusting|for topping)\s*$", part, re.I)
+            if re.fullmatch(r"(?:to taste|as needed|as desired)", part, re.I) and merged:
+                merged[-1] = f"{merged[-1]} {part.strip()}"
+            elif starts_ingredient or not merged:
+                merged.append(part)
+            else:
+                # Commas inside a preparation note (e.g. "onion, diced")
+                # are not ingredient separators.
+                merged[-1] = f"{merged[-1]}, {part}"
+        raw_lines = merged
     ingredients: list[dict[str, Any]] = []
     for raw in raw_lines:
-        item = re.sub(r"^(?:[-*•]|\d+[.)])\s*", "", raw).strip().strip(".")
+        source_text = re.sub(r"^(?:[-*•]|\d+[.)])\s*", "", raw).strip().strip(".")
+        item = source_text
+        # Clean display-only webpage artifacts for identity parsing, but keep
+        # the owner's original ingredient wording as provenance.
+        item = re.sub(r"\s+\(\s*\$\s*[\d,.]+\s*\)\s*$", "", item).strip()
+        item = re.sub(r"[*†‡]+\s*$", "", item).strip()
         # Common recipe sites use Unicode vulgar fractions and a mixed form
         # such as ``1½ cups``. Normalize those presentation forms before the
         # conservative quantity parser; this does not invent an amount.
@@ -174,32 +220,69 @@ def _recipe_ingredients(section: str, *, split_compact: bool = True) -> list[dic
         number_words = {"zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"}
         for word, value in number_words.items():
             item = re.sub(rf"^\s*{word}\b", value, item, count=1, flags=re.IGNORECASE)
-        item = re.sub(r"\bof\s+", "", item, count=1, flags=re.IGNORECASE)
+        if re.match(r"^\s*(?:\d|\.\d|zero|one|two|three|four|five|six|seven|eight|nine|ten)", item, re.I):
+            item = re.sub(r"\bof\s+", "", item, count=1, flags=re.IGNORECASE)
         match = re.match(
+            rf"(?P<approx>about|approximately|roughly)?\s*"
             rf"(?P<quantity>\d+(?:\.\d+)?|\.\d+|\d+\s*/\s*\d+)\s*"
+            rf"(?P<range>\s*-\s*(?:\d+(?:\.\d+)?|\.\d+|\d+\s*/\s*\d+))?\s*"
+            rf"(?P<modifier>heaping|scant)?\s*"
             rf"(?:(?P<unit>{unit_words})\.?\s+)?(?P<name>.+)$",
             item, re.IGNORECASE,
         )
-        if not match:
-            return None
-        quantity_text = match.group("quantity").replace(" ", "")
-        if "/" in quantity_text:
-            numerator, denominator = quantity_text.split("/", 1)
-            quantity: float = float(numerator) / float(denominator)
+        if match:
+            def _number(value: str) -> float:
+                value = value.replace(" ", "")
+                if "/" in value:
+                    numerator, denominator = value.split("/", 1)
+                    return float(numerator) / float(denominator)
+                return float(value)
+            quantity = _number(match.group("quantity"))
+            ingredient_name = match.group("name").strip()
+            amount_kind = "RANGE" if match.group("range") else ("APPROXIMATE" if match.group("approx") else "EXACT")
+            row: dict[str, Any] = {
+                "name": ingredient_name, "quantity": None if amount_kind == "RANGE" else quantity,
+                "unit": (match.group("unit") or "each").strip().lower(),
+                "amount_kind": amount_kind, "source_text": source_text,
+            }
+            if match.group("range"):
+                row["quantity_min"] = quantity
+                row["quantity_max"] = _number(match.group("range")[1:].strip())
+            if match.group("modifier"):
+                row["modifier"] = match.group("modifier").lower()
+            ingredients.append(row)
+            continue
+        lower = item.casefold()
+        amount_kind = None
+        modifier = None
+        suffix = re.search(r"\b(to taste|as needed|as desired|for garnish|for greasing|for dusting|for topping)\s*$", item, re.I)
+        if suffix:
+            phrase = suffix.group(1).casefold()
+            amount_kind = "TO_TASTE" if phrase == "to taste" else "AS_NEEDED"
+            ingredient_name = item[:suffix.start()].strip(" ,")
+            modifier = phrase if phrase.startswith("for ") else None
         else:
-            quantity = float(quantity_text)
-        ingredient_name = match.group("name").strip()
-        # Recipe sites sometimes append display-only prices and footnote
-        # markers to schema.org ingredient strings. Strip only those
-        # unambiguous trailing artifacts; meaningful preparation text such as
-        # ``(about 3/4 lb.)`` remains intact.
-        ingredient_name = re.sub(r"\s+\(\s*\$\s*[\d,.]+\s*\)\s*$", "", ingredient_name)
-        ingredient_name = re.sub(r"[*†‡]+\s*$", "", ingredient_name).strip()
-        ingredients.append({
-            "name": ingredient_name,
-            "quantity": quantity,
-            "unit": (match.group("unit") or "each").strip().lower(),
-        })
+            nominal = re.match(r"^(?:a|an)\s+(pinch|splash|handful)\s+of\s+(.+)$", item, re.I)
+            if nominal:
+                ingredient_name, modifier, amount_kind = nominal.group(2).strip(), nominal.group(1).lower(), "NOMINAL"
+            else:
+                some = re.match(r"^(some|a little|a bit of)\s+(.+)$", item, re.I)
+                if some:
+                    ingredient_name, amount_kind = some.group(2).strip(), "UNSPECIFIED"
+                else:
+                    seasoning = re.match(r"^season with\s+(.+)$", item, re.I)
+                    if seasoning:
+                        ingredient_name, amount_kind = seasoning.group(1).strip(), "TO_TASTE"
+                    else:
+                        return None
+        names = [part.strip() for part in re.split(r"\s+and\s+", ingredient_name, flags=re.I)] if re.search(r"\s+and\s+", ingredient_name, re.I) else [ingredient_name]
+        for name in names:
+            if not name:
+                return None
+            ingredients.append({"name": name, "quantity": None, "unit": None,
+                                "amount_kind": amount_kind, "modifier": modifier,
+                                "source_text": source_text})
+        continue
     return ingredients[:200] or None
 
 
@@ -478,6 +561,12 @@ def recipe_import_review_draft(
             continue
         parsed = _recipe_ingredients(item, split_compact=False)
         if parsed and len(parsed) == 1:
+            if parsed[0].get("amount_kind") not in {None, "EXACT"}:
+                ingredients.append({
+                    "name": parsed[0]["name"], "quantity": "", "unit": "each",
+                    "review_note": parsed[0].get("source_text", "quantity unspecified").removeprefix(parsed[0]["name"]).strip(" ,") or "quantity unspecified",
+                })
+                continue
             ingredients.append(parsed[0])
             continue
         qualitative = re.match(
@@ -2821,6 +2910,15 @@ def compile_intent(
         requested_name = recipe_requested_name(text)
         if requested_name:
             reference_filters["recipe_requested_name"] = requested_name
+    if (
+        concept == "RECIPE" and operation == "CREATE"
+        and re.search(r"(?im)^\s*ingredients?\s*:?.*$", text)
+        and re.search(r"\b(?:to taste|as needed|as desired|some|a pinch|a splash|a handful)\b", text, re.I)
+    ):
+        # Preserve the historical import/readiness classification for
+        # sectioned pasted recipes, while the validated semantic draft now
+        # commits directly when no external fetch/review is needed.
+        reference_filters["recipe_import"] = True
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask

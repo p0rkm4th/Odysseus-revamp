@@ -5290,19 +5290,26 @@ def project_action_selection(
         and str(frame.get("operation_class") or "") == "CREATE"
         and frame_filters.get("recipe_import") is True
         and desired_binding == "manage_recipes"
-        and desired_action == "commit_import"
+        and desired_action in {"commit_import", "add"}
         and desired_binding not in disabled
     ):
         selected_import = next(
             (
                 value for value in choices.values()
                 if value.get("binding") == desired_binding
-                and value.get("payload", {}).get("action") == desired_action
+                and value.get("payload", {}).get("action") in {desired_action, "commit_import", "add"}
             ),
             None,
         )
         import_payload = dict(selected_import.get("payload") or {}) if selected_import else {}
-        if import_payload.get("source_url") or import_payload.get("review_required") is True:
+        if isinstance(import_payload.get("ingredients"), list):
+            import_payload["action"] = "commit_import"
+            import_payload.setdefault("source_text", query)
+        if (
+            import_payload.get("source_url")
+            or import_payload.get("review_required") is True
+            or isinstance(import_payload.get("ingredients"), list)
+        ):
             fast_path = import_payload
             mode = SelectionMode.DIRECT_ACTION
     if mode is SelectionMode.NEED_CONTEXT:

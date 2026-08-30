@@ -892,6 +892,9 @@ class RecipeService(InventoryService):
                 "id": ingredient.id, "item_id": ingredient.item_id,
                 "name": ingredient.ingredient_name, "quantity": ingredient.quantity,
                 "unit": ingredient.unit, "optional": bool(ingredient.optional),
+                "amount_kind": ingredient.amount_kind or "EXACT",
+                "quantity_min": ingredient.quantity_min, "quantity_max": ingredient.quantity_max,
+                "modifier": ingredient.modifier, "source_text": ingredient.source_text,
                 "substitution_group": ingredient.substitution_group,
                 "preparation": ingredient.preparation,
             } for ingredient in ingredients],
@@ -925,12 +928,35 @@ class RecipeService(InventoryService):
                 item_id = spec.get("item_id")
                 item = self._item(db, owner, item_id) if item_id else None
                 ingredient_name = item.name if item else _required_text(spec.get("name"), "ingredient name", maximum=200)
-                expected_unit = item.default_unit if item else normalize_amount(1, spec.get("unit")).unit
-                quantity = _canonical_amount(spec.get("quantity"), spec.get("unit"), expected_unit)
+                amount_kind = str(spec.get("amount_kind") or "EXACT").strip().upper()
+                allowed_kinds = {"EXACT", "APPROXIMATE", "RANGE", "TO_TASTE", "AS_NEEDED", "OPTIONAL", "UNSPECIFIED", "NOMINAL"}
+                if amount_kind not in allowed_kinds:
+                    raise InventoryError("unsupported recipe amount kind")
+                raw_quantity = spec.get("quantity")
+                raw_unit = spec.get("unit")
+                expected_unit = None
+                quantity = quantity_min = quantity_max = None
+                if amount_kind in {"EXACT", "APPROXIMATE"}:
+                    if raw_quantity is None or not raw_unit:
+                        raise InventoryError("exact recipe ingredients need a quantity and unit")
+                    expected_unit = item.default_unit if item else normalize_amount(1, raw_unit).unit
+                    quantity = _canonical_amount(raw_quantity, raw_unit, expected_unit)
+                elif amount_kind == "RANGE":
+                    if not raw_unit or spec.get("quantity_min") is None or spec.get("quantity_max") is None:
+                        raise InventoryError("range recipe ingredients need minimum, maximum, and unit")
+                    expected_unit = item.default_unit if item else normalize_amount(1, raw_unit).unit
+                    quantity_min = _canonical_amount(spec["quantity_min"], raw_unit, expected_unit)
+                    quantity_max = _canonical_amount(spec["quantity_max"], raw_unit, expected_unit)
+                    if quantity_min > quantity_max:
+                        raise InventoryError("recipe ingredient range must be ordered")
                 db.add(InventoryRecipeIngredient(
                     id=str(uuid4()), owner=owner, recipe_id=recipe.id,
                     item_id=item.id if item else None, ingredient_name=ingredient_name,
-                    quantity=quantity, unit=expected_unit, optional=bool(spec.get("optional", False)),
+                    quantity=quantity, unit=expected_unit, amount_kind=amount_kind,
+                    quantity_min=quantity_min, quantity_max=quantity_max,
+                    modifier=_optional_text(spec.get("modifier"), "modifier", maximum=200),
+                    source_text=_optional_text(spec.get("source_text") or spec.get("name"), "source_text", maximum=500),
+                    optional=bool(spec.get("optional", False)),
                     substitution_group=_optional_text(spec.get("substitution_group"), "substitution_group"),
                     preparation=_optional_text(spec.get("preparation"), "preparation"),
                     sort_order=index,
@@ -970,8 +996,9 @@ class RecipeService(InventoryService):
                 )
             items = item_query.all()
             requirements.append(RecipeRequirement(
-                ingredient.ingredient_name, ingredient.quantity,
-                ingredient.unit, bool(ingredient.optional),
+                ingredient.ingredient_name, ingredient.quantity, ingredient.unit,
+                bool(ingredient.optional), ingredient.amount_kind or "EXACT",
+                ingredient.quantity_min, ingredient.quantity_max, ingredient.modifier,
             ))
             for item in items:
                 # A repeated ingredient must share one stock balance rather
@@ -1016,6 +1043,8 @@ class RecipeService(InventoryService):
             "missing_ingredients": [{
                 "name": row.name, "quantity": row.missing,
                 "unit": row.unit, "optional": row.optional,
+                "amount_kind": row.amount_kind, "modifier": row.modifier,
+                "quantity_min": row.quantity_min, "quantity_max": row.quantity_max,
             } for row in plan.shortages],
         }
 
@@ -1089,6 +1118,8 @@ class RecipeService(InventoryService):
                     "shortages": [{
                         "name": row.name, "missing": row.missing,
                         "unit": row.unit, "optional": row.optional,
+                        "amount_kind": row.amount_kind, "modifier": row.modifier,
+                        "quantity_min": row.quantity_min, "quantity_max": row.quantity_max,
                     } for row in plan.shortages],
                 })
             return {
@@ -1124,6 +1155,8 @@ class RecipeService(InventoryService):
                     "shortages": [{
                         "name": row.name, "missing": row.missing,
                         "unit": row.unit, "optional": row.optional,
+                        "amount_kind": row.amount_kind, "modifier": row.modifier,
+                        "quantity_min": row.quantity_min, "quantity_max": row.quantity_max,
                     } for row in plan.shortages],
                 })
             return {
@@ -1385,6 +1418,8 @@ class RecipeService(InventoryService):
                 "shortages": [{
                     "name": row.name, "missing": row.missing,
                     "unit": row.unit, "optional": row.optional,
+                    "amount_kind": row.amount_kind, "modifier": row.modifier,
+                    "quantity_min": row.quantity_min, "quantity_max": row.quantity_max,
                 } for row in plan.shortages],
             }
         if action == "shopping_requirements":
@@ -1406,9 +1441,14 @@ class RecipeService(InventoryService):
                 "servings": requested,
                 "scaled_ingredients": [{
                     "name": ingredient["name"],
-                    "quantity": parse_decimal(ingredient["quantity"]) * multiplier,
+                    "quantity": (parse_decimal(ingredient["quantity"]) * multiplier) if ingredient.get("quantity") is not None else None,
+                    "quantity_min": (parse_decimal(ingredient["quantity_min"]) * multiplier) if ingredient.get("quantity_min") is not None else None,
+                    "quantity_max": (parse_decimal(ingredient["quantity_max"]) * multiplier) if ingredient.get("quantity_max") is not None else None,
                     "unit": ingredient["unit"],
                     "optional": ingredient["optional"],
+                    "amount_kind": ingredient.get("amount_kind", "EXACT"),
+                    "modifier": ingredient.get("modifier"),
+                    "source_text": ingredient.get("source_text"),
                 } for ingredient in recipe.get("ingredients", [])],
             }
         if action == "expiring_candidates":
