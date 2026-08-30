@@ -1,9 +1,41 @@
 from decimal import Decimal
 
 from core import database as cdb
-from src.intent_contracts import _recipe_ingredients
+from src.intent_contracts import _recipe_ingredients, compile_intent
 from src.inventory_service import get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
+
+
+def test_named_recipe_detail_followup_resolves_to_canonical_get():
+    frame = compile_intent("Reload. What is in Acceptance Mixed Amounts?", continuation=True)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.operation_class == "READ"
+    assert frame.entity_reference == "Acceptance Mixed Amounts"
+
+
+def test_recipe_detail_resolves_unique_owner_scoped_name_but_not_duplicates():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    recipe = service.create_recipe(
+        "alice", name="Named Dinner", servings=2,
+        ingredients=[{"name": "rice", "quantity": 1, "unit": "cup"}],
+        instructions="Cook.",
+    )
+    assert service.get_recipe("alice", "Named Dinner")["id"] == recipe["id"]
+    service.create_recipe(
+        "alice", name="Duplicate Dinner", servings=1,
+        ingredients=[{"name": "salt", "amount_kind": "TO_TASTE"}], instructions="Season.",
+    )
+    service.create_recipe(
+        "alice", name="Duplicate Dinner", servings=1,
+        ingredients=[{"name": "pepper", "amount_kind": "TO_TASTE"}], instructions="Season.",
+    )
+    try:
+        service.get_recipe("alice", "Duplicate Dinner")
+    except Exception as exc:
+        assert "not found" in str(exc)
+    else:
+        raise AssertionError("ambiguous recipe name must not resolve")
 
 
 def test_owner_recipe_language_preserves_truthful_amount_kinds_and_compounds():

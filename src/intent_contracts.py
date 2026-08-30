@@ -21,6 +21,7 @@ from src.deterministic_reads import (
     deterministic_read_concept,
     deterministic_read_view,
     deterministic_recipe_servings,
+    recipe_named_detail_name,
     is_recipe_pantry_coverage_query,
     is_recipe_pantry_candidates_query,
 )
@@ -2863,6 +2864,13 @@ def compile_intent(
         query_match = re.search(r"\b(?:find|search|look\s+for)\s+(?:a\s+)?(?:recipes?\s+(?:for\s+)?)?(.+)$", q)
         if query_match and query_match.group(1).strip():
             reference_filters["recipe_query"] = query_match.group(1).strip(" ?.!\n")
+    if concept == "RECIPE" and operation == "READ":
+        named_recipe = recipe_named_detail_name(text)
+        if named_recipe:
+            # Keep detail reads on the existing canonical get Action. The
+            # RecipeService resolves this owner-scoped human name to its
+            # canonical ID and rejects ambiguous matches.
+            target = named_recipe
     if concept == "RECIPE" and operation == "READ" and is_recipe_pantry_coverage_query(q):
         reference_filters["recipe_pantry_candidates" if is_recipe_pantry_candidates_query(q) else "recipe_coverage"] = True
     if concept == "RECIPE" and operation == "READ" and re.search(

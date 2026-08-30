@@ -875,6 +875,18 @@ class RecipeService(InventoryService):
     def _recipe(db: Session, owner: str, recipe_id: str) -> InventoryRecipe:
         recipe = db.query(InventoryRecipe).filter_by(id=recipe_id, owner=owner).one_or_none()
         if recipe is None:
+            # Owner-facing references commonly use the title returned by a
+            # preceding list/read turn. Resolve only a unique active recipe
+            # within the canonical owner scope; never guess between copies.
+            normalized = normalize_item_name(recipe_id)
+            matches = db.query(InventoryRecipe).filter(
+                InventoryRecipe.owner == owner,
+                InventoryRecipe.normalized_name == normalized,
+                InventoryRecipe.archived.is_(False),
+            ).order_by(InventoryRecipe.id).all()
+            if len(matches) == 1:
+                recipe = matches[0]
+        if recipe is None:
             raise InventoryNotFound("recipe not found")
         return recipe
 

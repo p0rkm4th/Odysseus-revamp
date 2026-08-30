@@ -119,8 +119,7 @@ _RECIPE_SHOPPING_FOLLOWUP = re.compile(
     re.IGNORECASE,
 )
 _RECIPE_NAMED_DETAIL = re.compile(
-    r"^(?:reload[.!?]\s*)?what(?:'s|\s+is)\s+in\s+(?:the\s+)?[A-Z][A-Za-z0-9-]*(?:\s+[A-Z][A-Za-z0-9-]*)+\s*\??$",
-    re.IGNORECASE,
+    r"^(?:(?i:reload)[.!?]\s*)?(?i:what(?:'s|\s+is)\s+in\s+(?:the\s+)?)(?P<name>[A-Z][A-Za-z0-9-]*(?:\s+[A-Z][A-Za-z0-9-]*)+)\s*\??$",
 )
 _SERVING_NUMBER = re.compile(
     r"\b(?:to\s+)?(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+servings?\b",
@@ -421,6 +420,12 @@ def deterministic_read_concept(text: str) -> str | None:
     if _OWNER_SELF.search(query):
         return "MEMORY"
     return None
+
+
+def recipe_named_detail_name(text: str) -> str | None:
+    """Return a title-cased recipe name from an explicit detail question."""
+    match = _RECIPE_NAMED_DETAIL.search(str(text or "").strip())
+    return match.group("name").strip() if match else None
 
 
 def deterministic_read_view(text: str, concept: str | None) -> str | None:
