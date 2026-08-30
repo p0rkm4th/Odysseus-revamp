@@ -3433,3 +3433,11 @@ read slice (4 natural-language read/reference turns; zero mutations, false
 successes, raw final Results, duplicate delivery, or abrupt EOFs) and
 `browser_realistic_acceptance.mjs` at its desktop/narrow/mobile visual smoke
 widths. The latter reported no layout or duplicate-navigation failure.
+
+An additional owner-style Recipe mutation replay passed on the same candidate:
+a GUI paste containing ratings, author/CTA junk, Unicode fractions, bullets,
+nutrition text, webpage noise, and an explicit display name was recorded
+canonically. Recipe count changed 2→3 by independent API readback; the named
+Recipe appeared in two natural-language reads and remained present after
+reload. No API behavior setup was used, and the replay produced no false
+success, raw final Result, duplicate delivery, or abrupt EOF.
