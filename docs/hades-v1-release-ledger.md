@@ -24,6 +24,14 @@ with 0 restarts. Project and task mutations were GUI-originated; API calls
 were readback only. Owner deployment and data remain untouched. Broader
 Work paraphrase/ambiguity and full regression evidence remain open.
 
+## Full regression after Work mutation projection — source `4148710e` (2026-08-30)
+
+The supported full regression after the natural Work project/task argument
+projection completed with `7047 passed, 8 skipped, 149 warnings` in 300.84
+seconds. The browser-tested executable remains exact candidate
+`odysseus:candidate-4148710e` with 0 restarts; source/doc branch head is now
+`f011782e`. This is regression evidence only, not a release declaration.
+
 ## Sloppy Work read replay — exact candidate `23e51370` (2026-08-30)
 
 The read-only owner prompt `whats outsanding` reached the bounded Work read
