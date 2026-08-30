@@ -557,6 +557,11 @@ def _history_result_references(history: list[Any] | None) -> list[dict[str, Any]
                 payload = full_payload
             elif not isinstance(payload, dict):
                 payload = full_payload
+            if not isinstance(payload, dict) and event.get("note_id"):
+                payload = {
+                    "note_id": event.get("note_id"),
+                    "note_title": event.get("note_title"),
+                }
             if not isinstance(payload, dict):
                 continue
             refs: list[dict[str, Any]] = []
@@ -575,7 +580,7 @@ def _history_result_references(history: list[Any] | None) -> list[dict[str, Any]
                     ref = str(item.get("id") or item.get("asset_id") or "").strip()
                     if ref:
                         refs.append({"ref": ref[:500], "concept": concept})
-            for key, concept in (("asset_id", "TECHNICAL_ASSET"), ("recipe_id", "RECIPE")):
+            for key, concept in (("asset_id", "TECHNICAL_ASSET"), ("recipe_id", "RECIPE"), ("note_id", "NOTES")):
                 ref = str(payload.get(key) or "").strip()
                 if ref:
                     refs.append({"ref": ref[:500], "concept": concept})
