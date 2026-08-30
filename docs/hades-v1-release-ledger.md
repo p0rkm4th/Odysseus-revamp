@@ -43,14 +43,20 @@ Results, duplicate delivery, or abrupt EOF. The stack was removed afterward.
 The candidate container had source marker `7e01a053` and zero restarts; the
 owner runtime remained on source `34ced247` with zero restarts.
 
-The same isolated lane then exercised a public cooking video URL that search
-identified as a recipe video. The provider did not expose enough verified
-recipe structure for canonical import, and Hades returned a readable review
-error without saving anything. This is recorded as
-`OWNER-RECIPE-VIDEO-INSUFFICIENT-EVIDENCE-001` (`PROVIDER_FAILURE /
-INSUFFICIENT_EVIDENCE`), not as positive extraction evidence. Positive
-transcript/description extraction and validated commit remain an open Recipe
-release gate.
+The same isolated lane also exercised a public cooking video URL whose
+description contained a recipe-shaped ingredient list and numbered method.
+The adapter retrieved metadata successfully, but the weak-model draft still
+returned a bounded review error for missing verified structure. This remains
+`PROVIDER_FAILURE / INSUFFICIENT_EVIDENCE`, not positive extraction evidence;
+the safe no-save result is covered by
+`OWNER-RECIPE-VIDEO-INSUFFICIENT-EVIDENCE-001`. Positive transcript/description
+extraction with validated commit remains an open Recipe release gate.
+
+The generalized parser now recognizes headingless video descriptions with a
+`METHOD`/`DIRECTIONS` boundary and number-word quantities as an editable
+review draft. Unresolved qualitative lines remain explicitly marked for human
+correction; strict canonical commit still refuses them. Focused parser
+coverage passed `4` tests before browser replay of this follow-up.
 
 ## Owner Memory mutation/correction checkpoint — candidate `0ae8d463` (2026-08-29)
 

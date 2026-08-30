@@ -167,6 +167,9 @@ def _recipe_ingredients(section: str, *, split_compact: bool = True) -> list[dic
         fraction_values = {"¼": ".25", "½": ".5", "¾": ".75", "⅓": ".333333", "⅔": ".666667", "⅛": ".125", "⅜": ".375", "⅝": ".625", "⅞": ".875"}
         for glyph, value in fraction_values.items():
             item = item.replace(glyph, value if item[:1].isdigit() else value)
+        number_words = {"zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"}
+        for word, value in number_words.items():
+            item = re.sub(rf"^\s*{word}\b", value, item, count=1, flags=re.IGNORECASE)
         item = re.sub(r"\bof\s+", "", item, count=1, flags=re.IGNORECASE)
         match = re.match(
             rf"(?P<quantity>\d+(?:\.\d+)?|\.\d+|\d+\s*/\s*\d+)\s*"
@@ -196,6 +199,35 @@ def _recipe_ingredients(section: str, *, split_compact: bool = True) -> list[dic
     return ingredients[:200] or None
 
 
+def _video_recipe_sections(text: str) -> tuple[str, str] | None:
+    """Extract conservative ingredient/method sections from video metadata.
+
+    YouTube descriptions commonly omit a literal ``Ingredients:`` heading and
+    use ``METHOD`` or ``DIRECTIONS`` instead.  Treat the block immediately
+    before that heading as evidence only; callers still apply the strict draft
+    validator before persistence.
+    """
+    if not re.search(r"(?mi)^\s*video\s+description\s*:\s*", text):
+        return None
+    method = re.search(r"(?mi)^\s*(?:method|directions|instructions)\s*:?\s*$", text)
+    if not method:
+        return None
+    before = text[:method.start()]
+    lines = before.splitlines()
+    quantity_words = r"(?:zero|one|two|three|four|five|six|seven|eight|nine|ten)"
+    candidate = re.compile(
+        rf"^\s*(?:[-*•]\s*)?(?:\d+(?:\.\d+)?|{quantity_words})\b",
+        re.IGNORECASE,
+    )
+    start = next((index for index, line in enumerate(lines) if candidate.match(line)), None)
+    if start is None:
+        return None
+    ingredient_lines = [line.strip() for line in lines[start:] if line.strip()]
+    if not ingredient_lines:
+        return None
+    return "\n".join(ingredient_lines), text[method.end():].strip()
+
+
 def recipe_create_draft(query: str) -> RecipeDraft | None:
     """Extract and validate an explicit owner recipe draft.
 
@@ -209,6 +241,10 @@ def recipe_create_draft(query: str) -> RecipeDraft | None:
     name = _recipe_name(text)
     ingredients_text = _recipe_section(text, "ingredients", "instructions")
     instructions = _recipe_section(text, "instructions")
+    if not ingredients_text or not instructions:
+        video_sections = _video_recipe_sections(text)
+        if video_sections:
+            ingredients_text, instructions = video_sections
     if not name or not ingredients_text or not instructions:
         return None
     ingredients = _recipe_ingredients(ingredients_text)
@@ -387,6 +423,10 @@ def recipe_import_review_draft(
     ingredients_text = _recipe_section(text, "ingredients", "instructions")
     instructions = _recipe_section(text, "instructions")
     if not ingredients_text or not instructions:
+        video_sections = _video_recipe_sections(text)
+        if video_sections:
+            ingredients_text, instructions = video_sections
+    if not ingredients_text or not instructions:
         return None
 
     name = str(requested_name or "").strip()[:200] or _recipe_name(text)
@@ -426,7 +466,13 @@ def recipe_import_review_draft(
             item, re.IGNORECASE,
         )
         if not qualitative:
-            return None
+            ingredients.append({
+                "name": item,
+                "quantity": "",
+                "unit": "each",
+                "review_note": "quantity unspecified",
+            })
+            continue
         ingredients.append({
             "name": qualitative.group("name").strip(),
             "quantity": "",

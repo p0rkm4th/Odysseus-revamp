@@ -886,6 +886,37 @@ async def test_youtube_recipe_source_accepts_description_when_transcript_unavail
     assert "Ingredients are listed below" in text
 
 
+def test_video_description_without_literal_ingredients_heading_gets_review_draft():
+    source = """Video title: Banana Pancakes
+Video description:
+Nutrition: 500 kcal
+
+One banana (100g)
+Two medium eggs
+200g reduced fat Greek yogurt (0%)
+40g self raising flour
+Olive oil spray
+One passionfruit
+
+METHOD
+1. Mash the banana.
+2. Mix in the eggs and yogurt.
+3. Cook the pancakes until golden.
+"""
+
+    draft = recipe_import_review_draft(
+        source,
+        source_url="https://www.youtube.com/watch?v=BuTQZNP_6yI",
+        requested_name="Acceptance Greek Yogurt Pancakes",
+    )
+
+    assert draft is not None
+    assert draft["name"] == "Acceptance Greek Yogurt Pancakes"
+    assert len(draft["ingredients"]) == 6
+    assert any(item.get("review_note") == "quantity unspecified" for item in draft["ingredients"])
+    assert draft["review_required"] is True
+
+
 def test_household_add_item_can_atomically_seed_requested_initial_stock():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
