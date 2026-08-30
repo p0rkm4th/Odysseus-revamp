@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## OSINT shared-confirmation checkpoint — exact candidate `dad9e7c5` (2026-08-30)
+
+OSINT claim retraction uses the shared styled confirmation dialog with
+evidence-retention warning and danger treatment. Focused coverage passed 12
+tests. The candidate build was source-matched; the responsive gate was
+blocked by the non-admin disposable account receiving the expected 403 from
+the admin-only Cookbook state endpoint, not by an OSINT failure. Owner state
+was not modified.
+
 ## World Model shared-error checkpoint — exact candidate `251828bb` (2026-08-30)
 
 World Model CMDB-sync failures now use the shared Hades error surface rather
