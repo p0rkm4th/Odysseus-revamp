@@ -952,7 +952,16 @@ async function main() {
     await page.locator('#username').fill(credentials.username);
     await page.locator('#password').fill(credentials.password);
     await page.locator('#submitBtn').click();
-    await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
+    // The login flow may complete through SPA history manipulation without
+    // emitting a Playwright navigation event.  Treat an already-loaded shell
+    // at the authenticated root as equivalent, while still surfacing a real
+    // redirect failure.
+    try {
+      await page.waitForURL((url) => url.pathname === '/' || url.pathname === '', { timeout: 30000 });
+    } catch (error) {
+      const currentPath = new URL(page.url()).pathname;
+      if (currentPath !== '/' && currentPath !== '') throw error;
+    }
     const shouldCreateSession = Boolean(process.env.HADES_BROWSER_SESSION_ENDPOINT_ID) || Boolean(scenarios);
     if (shouldCreateSession) {
       const session = await page.evaluate(async ({ endpointId, model }) => {

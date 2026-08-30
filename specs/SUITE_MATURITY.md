@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Recipe review browser boundary — `2026-08-30`
+
+The next Recipe review replay did not reach a chat turn: isolated setup first
+hit a subnet collision, then the authenticated Playwright target crashed after
+login/session setup even with a fresh disposable principal. This is
+`ENVIRONMENT_FAILURE`/`AUTH_SESSION_FAILURE`; no Recipe Action or persistence
+claim was made. The authenticated harness now has a bounded SPA URL fallback,
+but the Recipe review journey remains unverified rather than green.
+
 ## Recovery-tool candidate checkpoint — `c3401313` (2026-08-30)
 
 The backup CLI now accepts `ODYSSEUS_BACKUP_ROOT` for explicitly isolated
