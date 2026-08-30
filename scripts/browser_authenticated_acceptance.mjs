@@ -1341,6 +1341,11 @@ async function main() {
         { prompt: 'what GPUs does it have?' },
         { prompt: 'what work is outstanding?' },
       ];
+    await page.evaluate(() => {
+      if (typeof window.__odysseusSetChatMode === 'function') {
+        window.__odysseusSetChatMode('agent');
+      }
+    });
     for (const turn of prompts) {
       const prompt = typeof turn === 'string' ? turn : turn.prompt;
       const result = await send(page, prompt, typeof turn === 'string' ? {} : turn.expected || {});
