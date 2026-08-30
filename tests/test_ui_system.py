@@ -92,6 +92,15 @@ def test_settings_uses_shared_confirmation_dialogs_without_native_fallbacks():
     assert "Delete contact" in source
 
 
+def test_document_owner_actions_use_shared_prompt_and_confirmation_dialogs():
+    source = (ROOT / "static/js/document.js").read_text()
+    assert "uiModule.styledPrompt" in source
+    assert source.count("uiModule.styledConfirm") >= 2
+    assert "window.prompt(" not in source
+    assert "window.confirm(" not in source
+    assert "Attach separately" in source
+
+
 def test_sidebar_tool_entries_have_one_intentional_icon():
     html = (ROOT / "static/index.html").read_text()
     sidebar = html.split('<nav class="sidebar"', 1)[1].split('</nav>', 1)[0]

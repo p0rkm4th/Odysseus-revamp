@@ -1784,8 +1784,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const doc = docs.get(docId);
     if (!doc) return;
 
-    const instruction = window.prompt(
-      'What should the AI fill in?\n(e.g. "My name is Jane Doe, address 123 Main St, dob 1990-01-15")'
+    const instruction = await uiModule.styledPrompt(
+      'Describe what the AI should fill in. It will propose annotations for your review.',
+      {
+        title: 'Fill PDF fields with AI',
+        placeholder: 'e.g. name, address, and date of birth',
+        confirmText: 'Generate suggestions',
+      },
     );
     if (!instruction || !instruction.trim()) return;
 
@@ -3329,10 +3334,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const items = rows.map(row => ({ kind: row.dataset.kind, id: row.dataset.id })).filter(x => x.kind && x.id);
       let zip = false;
       if (items.length > 5) {
-        const ask = window.styledConfirm || uiModule?.styledConfirm;
-        zip = ask
-          ? await ask(`Attach ${items.length} files as one zip?`, { confirmText: 'Zip', cancelText: 'Separate' })
-          : window.confirm(`Attach ${items.length} files as one zip?`);
+        zip = await uiModule.styledConfirm(`Attach ${items.length} files as one zip?`, {
+          title: 'Attach selected files', confirmText: 'Zip files', cancelText: 'Attach separately',
+        });
       }
       if (zip) {
         await _stageOdysseusZip(items);
@@ -9807,9 +9811,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (!activeDocId) return;
     const doc = docs.get(activeDocId);
     const name = doc ? doc.title : 'this document';
-    const ok = uiModule && uiModule.styledConfirm
-      ? await uiModule.styledConfirm(`Delete "${name}"?`, { confirmText: 'Delete', danger: true })
-      : confirm(`Delete "${name}"?`);
+    const ok = await uiModule.styledConfirm(`Delete "${name}"?`, {
+      title: 'Delete document', confirmText: 'Delete', cancelText: 'Keep document', danger: true,
+    });
     if (!ok) return;
     try {
       const res = await fetch(`${API_BASE}/api/document/${activeDocId}`, { method: 'DELETE' });
