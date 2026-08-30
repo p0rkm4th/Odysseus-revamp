@@ -1905,6 +1905,7 @@ CANONICAL_DOMAIN_PROJECTIONS: Mapping[str, str] = {
     "COMMUNICATIONS": "communications",
     "NOTES": "notes_calendar_tasks",
     "NOTES_MUTATION": "notes_calendar_tasks",
+    "SCHEDULED_TASK": "notes_calendar_tasks",
     "CONTACT": "contacts",
     "CAREER_PROFILE": "career",
     "JOB_SEARCH": "career",
