@@ -1667,3 +1667,11 @@ registry marks these Actions `ApprovalMode.NONE`; the observed card is caused
 by the editable Agent-mode skill index being deliberately marked untrusted and
 arming the run taint gate. Keep this as a release UX/policy follow-up: do not
 disable the taint gate or allow skill text to authorize private writes.
+
+## Sloppy Work reads — exact candidate `7a0f3882` (2026-08-30)
+
+Work empty-state reads now tolerate bounded owner typos such as `whats
+outsanding` and `whts outsanding` through the shared routing normalizer. Exact
+browser replay returned the canonical empty-state answer with readable Work
+status, no raw binding, and no browser errors. Ambiguous `whats left` remains
+unresolved rather than being guessed.

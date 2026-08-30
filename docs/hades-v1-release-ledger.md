@@ -2163,3 +2163,15 @@ requires approval before private writes. The canonical `manage_assets`
 this is classified as a security-policy/UX friction mismatch, not a routing or
 false-success failure. The safety gate remains intact pending a scoped repair
 that cannot let editable skill text authorize mutations.
+
+## Sloppy Work read checkpoint — exact candidate `7a0f3882` (2026-08-30)
+
+The owner walkabout found that `whats outsanding` fell through to a generic
+model answer instead of the canonical Work empty state. The generalized
+deterministic-read normalizer now corrects bounded edit-distance slips only
+within routing vocabulary and preserves valid singular/plural forms. Focused
+intent tests passed (`394 passed, 5 skipped`); exact-candidate browser replay
+of both `whats outsanding` and `whts outsanding` reached `CHECKING WORK` and
+returned `No outstanding work is recorded for this owner.` with no raw binding
+or page errors. `whats left` remains intentionally clarification-safe because
+it is ambiguous between Work and household stock.
