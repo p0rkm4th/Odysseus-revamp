@@ -2,6 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Exact recovery-tool candidate checkpoint — `c3401313` (2026-08-30)
+
+The pushed recovery-tool change is built as `odysseus:candidate-c3401313`
+with image ID
+`sha256:b39fb925dafbed857b153a0d33cd9e60f7911c03adf84362966cfe8eeb4bdf7e`.
+The OCI revision, `/app/.odysseus-source-commit`, and branch source all match
+the pushed commit `c3401313ff1e7d2742bda11f60e5f09ff4fa4b45`. The candidate
+contains the explicit `ODYSSEUS_BACKUP_ROOT` isolation control and has not
+replaced the browser-tested runtime or the actual owner deployment.
+
+Focused backup security/recovery tests passed: `8 passed`. An independent
+subprocess replay against a disposable root verified snapshot integrity,
+restore of pre-drift state, removal of drift-only files, and retention of the
+pre-restore safety stash. The previous corrupt archives remain temporary
+forensics; no repository data or owner data was restored against.
+
 ## Current candidate visual acceptance checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 The responsive visual gate passed against the isolated candidate at desktop,

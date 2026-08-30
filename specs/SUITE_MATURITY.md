@@ -1,5 +1,14 @@
 # Hades Suite Maturity — Productization Baseline
 
+## Recovery-tool candidate checkpoint — `c3401313` (2026-08-30)
+
+The backup CLI now accepts `ODYSSEUS_BACKUP_ROOT` for explicitly isolated
+snapshot/restore rehearsals; default repository behavior is unchanged. Eight
+backup security/recovery tests pass, and a subprocess replay independently
+verified snapshot integrity, drift removal, restored state, and a retained
+pre-restore safety stash. This is recovery evidence, not an owner deployment
+mutation or a replacement for a full fresh-install recovery rehearsal.
+
 ## Current candidate visual acceptance checkpoint — exact candidate `cb8a3777` (2026-08-30)
 
 Desktop, narrow, and mobile visual acceptance passed with shared Hades chrome,
