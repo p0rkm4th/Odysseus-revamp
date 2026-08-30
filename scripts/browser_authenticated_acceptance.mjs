@@ -733,6 +733,16 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
     }
     return {phase, kind: spec.kind, found: true, due_date: found.due_date || null};
   }
+  if (spec.kind === 'scheduled_tasks' && spec.contains_prompt) {
+    const tasks = Array.isArray(result.payload?.tasks) ? result.payload.tasks : [];
+    const wanted = String(spec.contains_prompt).trim().toLowerCase();
+    const found = tasks.find((task) => String(task?.prompt || '').trim().toLowerCase().includes(wanted));
+    if (!found) throw new Error(`${scenario.id} scheduled-task readback missing canonical task`);
+    if (spec.schedule && String(found.schedule || '').toLowerCase() !== String(spec.schedule).toLowerCase()) {
+      throw new Error(`${scenario.id} scheduled-task readback had unexpected schedule`);
+    }
+    return {phase, kind: spec.kind, found: true, task_id: found.id, schedule: found.schedule, last_run: found.last_run || null};
+  }
   if (spec.kind === 'notes' && spec.absent_title) {
     const notes = Array.isArray(result.payload?.notes) ? result.payload.notes : [];
     const wanted = String(spec.absent_title).trim().toLowerCase();

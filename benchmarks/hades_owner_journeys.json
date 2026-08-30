@@ -340,6 +340,16 @@
       "expected": {"action": "manage_notes", "tool_binding": "manage_notes", "policy": "allowed", "approval": "not_required", "after": {"readback": true}, "readback": {"kind": "notes", "endpoint": "/api/notes", "contains_title": "Submit the timesheet", "requires_due_date": true}, "terminal": {"done": 3, "abrupt_eof": false}}
     },
     {
+      "id": "OWNER-REMINDER-RECURRING-READBACK-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "empty-daily-driver",
+      "turns": [
+        {"prompt": "Every morning, remind me to review my calendar.", "expected": {"domain": "TASK", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "create", "tool_binding": "manage_tasks", "requires_effect": true, "must_include_any": ["every morning", "daily", "scheduled", "calendar", "remind"]}},
+        {"prompt": "Show my scheduled reminders.", "expected": {"domain": "TASK", "operation": "READ", "answer_source": "DETERMINISTIC_RESULT", "action": "list", "tool_binding": "manage_tasks", "must_include_any": ["calendar", "daily", "morning", "scheduled"]}}
+      ],
+      "expected": {"action": "manage_tasks", "tool_binding": "manage_tasks", "policy": "allowed", "approval": "not_required", "after": {"readback": true}, "readback": {"kind": "scheduled_tasks", "endpoint": "/api/tasks?include_last_run=true", "contains_prompt": "review my calendar", "schedule": "daily"}, "terminal": {"done": 2, "abrupt_eof": false}}
+    },
+    {
       "id": "OWNER-TIER1-LIVED-IN-WALKABOUT-001",
       "environment": "realistic_messy_synthetic",
       "fixture_profile": "lived-in-daily-driver",

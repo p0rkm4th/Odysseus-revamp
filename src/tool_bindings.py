@@ -154,6 +154,21 @@ MANAGE_NOTES_SCHEMA = {
     }
 }
 
+MANAGE_TASKS_SCHEMA = {
+    "type": "function", "function": {
+        "name": "manage_tasks",
+        "description": "Manage persistent scheduled reminders and automations.",
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["list", "create", "edit", "delete", "pause", "resume", "run"]},
+            "task_id": {"type": "string"}, "name": {"type": "string"},
+            "prompt": {"type": "string"}, "task_type": {"type": "string", "enum": ["llm", "research", "action"]},
+            "trigger_type": {"type": "string", "enum": ["schedule", "event"]},
+            "schedule": {"type": "string", "enum": ["once", "daily", "weekly", "monthly"]},
+            "scheduled_time": {"type": "string"}, "scheduled_day": {"type": "integer"},
+        }, "required": ["action"]},
+    }
+}
+
 READ_HOUSEHOLD_SCHEMA = {
     "type": "function", "function": {
         "name": "read_household",
@@ -453,6 +468,10 @@ user's request. Model prose is not persistence evidence. Success requires a
 canonical write and readback verification.
 `<invoke name=\"manage_work\"><parameter name=\"action\">create|create_task</parameter></invoke>`.""", frozenset({"work"}), "manage_work"),
     "manage_notes": ToolBinding("manage_notes", TOOL_CAPABILITY_IDS["manage_notes"], MANAGE_NOTES_SCHEMA, _MANAGE_NOTES_CONTRACT, frozenset({"notes", "today", "reminders"}), "manage_notes"),
+    "manage_tasks": ToolBinding("manage_tasks", TOOL_CAPABILITY_IDS["manage_tasks"], MANAGE_TASKS_SCHEMA, """### `manage_tasks`
+Canonical owner-scoped scheduled reminders and automations. Recurring requests
+create durable scheduler state; success requires persistence and readback.
+`<invoke name=\"manage_tasks\"><parameter name=\"action\">list|create|edit|delete|pause|resume|run</parameter></invoke>`.""", frozenset({"today", "reminders", "automations"}), "manage_tasks"),
     "read_household": ToolBinding("read_household", TOOL_CAPABILITY_IDS["read_household"], READ_HOUSEHOLD_SCHEMA, _HOUSEHOLD_READ_CONTRACT, frozenset({"household", "home"}), "read_household"),
     "read_recipes": ToolBinding("read_recipes", TOOL_CAPABILITY_IDS["read_recipes"], READ_RECIPES_SCHEMA, _RECIPE_READ_CONTRACT, frozenset({"household", "recipes", "cooking"}), "read_recipes"),
     "manage_recipes": ToolBinding("manage_recipes", TOOL_CAPABILITY_IDS["manage_recipes"], MANAGE_RECIPES_SCHEMA, """### `manage_recipes`

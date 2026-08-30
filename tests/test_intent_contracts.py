@@ -20,12 +20,26 @@ from src.intent_contracts import (
     network_substantive_fallback_command,
     is_explicit_continuation,
     is_bounded_owner_capability_turn,
+    scheduled_task_create_payload,
 )
 from src.aci import compile_turn_contract, is_contextual_reference_followup
 
 
 def test_contract_registry_is_complete_for_registered_contracts():
     assert validate_contracts() == []
+
+
+def test_recurring_reminder_uses_scheduler_owner():
+    frame = compile_intent("Every morning, remind me to review my calendar.")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "SCHEDULED_TASK"
+    assert resolved.binding_name == "manage_tasks"
+    assert resolved.action_id == "create"
+    assert scheduled_task_create_payload("Every morning, remind me to review my calendar.") == {
+        "action": "create", "name": "Review my calendar", "prompt": "Review my calendar",
+        "task_type": "llm", "trigger_type": "schedule", "schedule": "daily",
+        "scheduled_time": "09:00",
+    }
 
 
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
