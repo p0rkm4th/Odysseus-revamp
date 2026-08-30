@@ -4430,3 +4430,26 @@ the journey because the short-lived disposable acceptance credential had
 expired; rotating that credential and restarting the isolated candidate made
 the replay pass. This is recorded as `AUTH_SESSION_FAILURE` /
 `ENVIRONMENT_FAILURE`, not a reminder product failure.
+
+## Qwen fallback owner-tool repair and reminder/read regression — exact candidate `1e244259` (2026-08-30)
+
+The broad regression exposed a real routing defect in the local-model fallback
+path: personal managers were removed from the shared disabled set only after
+the fallback prompt had been built. The repair relaxes that set before route
+construction for a Qwen notes/calendar/tasks fallback, preserving bounded
+owner mutations across provider fallback. The same slice also distinguishes
+interrogative wording such as “Remind me what you know about me” from a
+scheduled reminder request. Vague outage language remains a canonical Network
+observation/context read, consistent with the current owner journey contract;
+stale service-routing assertions were corrected rather than weakening the
+product route.
+
+Focused verification passed 416 tests. Exact pushed candidate
+`1e244259356b98c27286e842c6f2c6849f244709` was built as
+`odysseus:candidate-1e244259`, image
+`sha256:cbe705d050cc27c9de854058d24d95156e15d66bab5da6031a9d844e894a3a4f`,
+and deployed only to the disposable current lane. The reminder replay passed
+2 turns with 1 GUI mutation and 2 independent readbacks; the lived-in replay
+passed 20 turns and 20 streams. Both had zero false success, raw final
+Results, duplicate delivery, and abrupt EOF. Owner deployment/data remained
+untouched.
