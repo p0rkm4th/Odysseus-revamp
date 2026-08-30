@@ -54,6 +54,16 @@ def db():
 
 def resolve(c, key, owner=None):
     owner = str(owner or "").strip()
+    ordinal = {"first": 0, "second": 1, "third": 2}.get(str(key or "").strip().lower())
+    if ordinal is not None:
+        sql = "SELECT a.* FROM assets a WHERE 1=1"
+        params = []
+        if owner:
+            sql += " AND a.owner=?"
+            params.append(owner)
+        sql += " ORDER BY a.updated_at DESC, a.id DESC LIMIT 1 OFFSET ?"
+        params.append(ordinal)
+        return c.execute(sql, params).fetchone()
     owner_clause = " AND a.owner=?" if owner else ""
     owner_params = (owner,) if owner else ()
     r = c.execute("SELECT a.* FROM assets a WHERE a.id=?" + (" AND a.owner=?" if owner else ""), (key, *owner_params)).fetchone()
