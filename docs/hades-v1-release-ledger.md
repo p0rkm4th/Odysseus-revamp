@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Cookbook GPU-preflight dialog checkpoint — exact candidate `b95c04f8` (2026-08-30)
+
+Cookbook GPU preflight still retained a native fallback when existing GPU load
+was detected before a launch. It now always uses the shared Hades confirmation
+with explicit “GPU load detected” title and launch/cancel choices; the
+preflight remains advisory and does not widen execution authority. Focused
+Cookbook/UI coverage passed 234 tests. Exact candidate
+`odysseus:candidate-b95c04f8` has image ID
+`sha256:61b52068ca4e87a4a0373c7ccc0dd5a47ddee2629c4fb4210ece87849344defe`
+and source marker `b95c04f8a9ce25b5b3db905c63bf6c8a07d299e0`; isolated runtime
+was healthy with 0 restarts. Authenticated responsive browser acceptance and
+the broad regression passed `7040 passed, 8 skipped, 149 warnings` in 300.11
+seconds. Owner deployment and data remain untouched.
+
 ## Cookbook hardware-fit dialog checkpoint — exact candidate `3963540a` (2026-08-30)
 
 Cookbook hardware-fit server-profile removal retained a native confirmation
