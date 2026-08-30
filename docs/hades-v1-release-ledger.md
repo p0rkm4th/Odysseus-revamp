@@ -4708,3 +4708,13 @@ in the affected capability, policy, projection, or semantic-generator areas.
 The exact browser candidate remained `odysseus:candidate-616be82c`, healthy
 with zero restarts and source/branch-matched metadata. Owner deployment/data
 remained untouched.
+
+## Current candidate recovery/provenance checkpoint — `616be82c` (2026-08-30)
+
+The current disposable candidate was fault-injected with Chroma unavailable;
+its empty Memory read remained deterministic and canonical, then recovered to
+healthy vector readiness after Chroma restoration and app restart. The
+read-only candidate verifier reports branch-matched image and source marker,
+healthy `/api/health`, zero runtime restarts, and reachable `qwen3:8b` with
+digest `500a1f067a9f…`. Local and remote branch heads are synchronized at
+`a9028f98`; owner deployment/data remained untouched.
