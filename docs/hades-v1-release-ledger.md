@@ -42,6 +42,16 @@ GUI with its no-match filter journey. The single read stream completed with
 false-premise evidence outside Recipe while preserving the owner-data safety
 boundary.
 
+## Memory correction/readback checkpoint — candidate `8c620bf438bd` (2026-08-30)
+
+The realistic populated-Memory journey completed four GUI turns covering
+ordinary recall and correction language. Two Memory mutations were entered
+through chat; all four streams completed with exactly one terminal event. The
+acceptance oracle reported `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0`. This is current-candidate evidence
+for Memory correction behavior; its harness scenario does not emit separate
+canonical readback records.
+
 ## Pending approval card reload repair — exact executable candidate `1a24a12f` (2026-08-30)
 
 The video no-evidence journey remains open. Server-side evidence showed the
