@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from src.capability_registry import CAPABILITY_REGISTRY, action_for_tool, capability_for_tool
 from src.capability_dependencies import dependency_manager
+from src.module_manager import ModuleManager, default_module_manager
 from src.model_context import estimate_tokens
 from src.prompt_security import untrusted_context_message
 from src.memory_grounding import is_explicit_memory_query, minimal_saved_memory_message
@@ -44,10 +45,6 @@ from src.result_renderers.scheduled import (
     canonical_scheduled_task_read_answer,
 )
 from src.result_renderers.calendar import canonical_communications_read_answer
-from src.result_renderers.recipe import (
-    canonical_recipe_mutation_answer,
-    canonical_recipe_read_answer,
-)
 from src.result_renderers.generic import canonical_structured_empty_read_answer
 from src.result_renderers.assets import canonical_asset_read_answer
 from src.result_renderers.household import (
@@ -61,6 +58,18 @@ from src.result_renderers.notes import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def canonical_recipe_mutation_answer(events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Activate the Recipe renderer only for a Recipe Result."""
+    from src.result_renderers.recipe import canonical_recipe_mutation_answer as render
+    return render(events)
+
+
+def canonical_recipe_read_answer(events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Activate the Recipe renderer only for a Recipe Result."""
+    from src.result_renderers.recipe import canonical_recipe_read_answer as render
+    return render(events)
 
 
 def stream_aci_turn(*args: Any, **kwargs: Any):
@@ -3922,6 +3931,7 @@ def project_action_selection(
     profile: Any = None,
     network_cidr: str | None = None,
     read_payload_builder: Callable[..., Mapping[str, Any]] | None = None,
+    module_manager: ModuleManager | None = None,
 ) -> ActionProjection:
     """Build one bounded ActionCard packet from canonical semantic inputs."""
     frame = intent.get("intent_frame") if isinstance(intent.get("intent_frame"), Mapping) else {}
@@ -3932,6 +3942,8 @@ def project_action_selection(
     if "filters" not in frame and isinstance(contract.get("filters"), Mapping):
         frame["filters"] = dict(contract["filters"])
     disabled = set(disabled_tools or ())
+    modules = module_manager or default_module_manager()
+    enabled_capabilities = modules.enabled_capability_ids()
     desired_binding = str(contract.get("binding") or "")
     desired_action = str(contract.get("action_id") or "")
     # A resolved single-domain Objective has one canonical binding. Do not
@@ -3954,6 +3966,8 @@ def project_action_selection(
     for binding in sorted(candidate_bindings):
         capability = capability_for_tool(binding)
         if capability is None:
+            continue
+        if capability.capability_id not in enabled_capabilities:
             continue
         for action_id, spec in capability.actions.items():
             if not spec.known:
@@ -4041,6 +4055,13 @@ def project_action_selection(
     for index, item in enumerate(selected):
         choice = chr(ord("A") + index)
         payload: dict[str, Any] = {"action": item["action_id"]}
+        capability_id = str(contract.get("capability_id") or "").strip()
+        if capability_id:
+            # Activation is deliberately after capability filtering and
+            # shortlist construction.  An unrelated turn therefore imports
+            # no Recipe implementation, while a selected Recipe capability
+            # gets one request-scoped activation before field resolution.
+            modules.activate_for_capability(capability_id)
         from src.field_resolvers import resolve_action_fields
         payload.update(resolve_action_fields(
             capability_id=contract.get("capability_id"),

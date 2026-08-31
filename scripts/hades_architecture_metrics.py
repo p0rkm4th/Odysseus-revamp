@@ -20,6 +20,8 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 COUNTED_MODULES = (
     "src/agent_loop.py",
     "src/aci.py",
@@ -88,6 +90,25 @@ def imports_from(paths: list[Path], pattern: str) -> list[str]:
     return matches
 
 
+def top_level_imports_from(paths: list[Path], pattern: str) -> list[str]:
+    """Find eager feature imports, excluding intentionally lazy function imports."""
+    expression = re.compile(pattern)
+    matches: list[str] = []
+    for path in paths:
+        text = source(path)
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError:
+            continue
+        for node in tree.body:
+            if not isinstance(node, (ast.Import, ast.ImportFrom)):
+                continue
+            line = text.splitlines()[node.lineno - 1]
+            if expression.search(line):
+                matches.append(f"{path.relative_to(ROOT)}:{node.lineno}:{line.strip()}")
+    return matches
+
+
 def frontend_metrics() -> dict[str, Any]:
     css = list((ROOT / "static").glob("**/*.css"))
     js = list((ROOT / "static").glob("**/*.js"))
@@ -101,6 +122,58 @@ def frontend_metrics() -> dict[str, Any]:
             for path in sorted(css + js, key=lambda item: item.stat().st_size, reverse=True)[:20]
         ],
     }
+
+
+def modularity_metrics() -> dict[str, Any]:
+    """Measure the cheap manifest/runtime boundary without loading features."""
+    try:
+        from src.module_manager import ModuleManager
+
+        manager = ModuleManager()
+        manifests = manager.manifests
+        enabled = manager.enabled_module_ids()
+        unrelated = ModuleManager(enabled_modules=set(enabled))
+        recipe = ModuleManager(enabled_modules=set(enabled))
+        recipe.activate_for_capability("recipe.read")
+        kernel_paths = [
+            ROOT / item
+            for item in ("src/aci.py", "src/agent_loop.py", "src/intent_contracts.py")
+        ]
+        feature_imports = top_level_imports_from(
+            kernel_paths,
+            r"(?:from|import)\s+src\.(?:domain_resolvers|result_renderers)\.(?:recipe|inventory|memory|work|reminders)",
+        )
+        dependency_cycles: list[tuple[str, ...]] = []
+
+        def visit(node: str, path: tuple[str, ...]) -> None:
+            if node in path:
+                dependency_cycles.append(path[path.index(node):] + (node,))
+                return
+            for dependency in manifests[node].dependencies:
+                if dependency in manifests:
+                    visit(dependency, path + (node,))
+
+        for module_id in manifests:
+            visit(module_id, ())
+        return {
+            "installed_modules": len(manifests),
+            "enabled_modules": len(enabled),
+            "enabled_module_ids": sorted(enabled),
+            "eagerly_imported_feature_modules": feature_imports,
+            "feature_specific_kernel_import_count": len(feature_imports),
+            "representative_activation": {
+                "unrelated_request": sorted(unrelated.active_module_ids()),
+                "recipe_request": sorted(recipe.active_module_ids()),
+            },
+            "background_worker_start_sites_at_boot": count_regex(
+                [ROOT / "src/agent_loop.py"],
+                r"\b(?:create_task|Thread|Process|start_background|start_scheduler)\s*\(",
+            ),
+            "dependency_edges": sum(len(spec.dependencies) for spec in manifests.values()),
+            "dependency_cycles": dependency_cycles,
+        }
+    except Exception as exc:
+        return {"error": f"module metrics unavailable: {type(exc).__name__}: {exc}"}
 
 
 def require_clean_worktree() -> None:
@@ -132,8 +205,13 @@ def main() -> None:
         action="store_true",
         help="Fail before measuring unless the repository worktree is clean.",
     )
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Diagnostic-only override; release evidence requires a clean tree by default.",
+    )
     args = parser.parse_args()
-    if args.require_clean:
+    if not args.allow_dirty:
         require_clean_worktree()
     counted_paths = [ROOT / item for item in COUNTED_MODULES]
     semantic_paths = [path for path in counted_paths if path.exists()]
@@ -176,6 +254,7 @@ def main() -> None:
         ),
         "src_to_routes_imports": imports_from(production_paths, r"(?:from|import)\s+routes(?:\.|\s)"),
         "frontend": frontend_metrics(),
+        "modularity": modularity_metrics(),
         "source_sha": None,
         "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves.",
     }

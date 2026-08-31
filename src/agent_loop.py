@@ -47,6 +47,7 @@ from src.endpoint_resolver import (
 )
 from src.prompt_security import untrusted_context_message
 from src.capability_registry import requires_exact_approval
+from src.module_manager import default_module_manager
 from src.memory_grounding import (
     is_explicit_memory_query,
     build_runtime_self_state,
@@ -1226,6 +1227,11 @@ async def stream_aci_runtime(
     mcp_mgr = get_mcp_manager()
     prep_timings: Dict[str, float] = {}
     disabled_tools = set(disabled_tools or [])
+    module_manager = default_module_manager()
+    # Module enablement is a kernel-level visibility filter.  It does not
+    # authorize execution; policy, approval, executor, and verification still
+    # own that lifecycle below.
+    disabled_tools.update(module_manager.disabled_tool_names())
     route_descriptors = list(route_descriptors or [])
     while len(route_descriptors) < 1 + len(fallbacks or []):
         route_descriptors.append({})
@@ -2404,6 +2410,7 @@ async def stream_aci_runtime(
                 profile=_aci_profile,
                 network_cidr=network_discovery_request_cidr(_last_user),
                 read_payload_builder=canonical_read_fast_path_payload,
+                module_manager=module_manager,
             )
 
             _aci_packet = projection.packet
