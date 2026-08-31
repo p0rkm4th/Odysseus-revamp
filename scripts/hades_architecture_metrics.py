@@ -13,6 +13,8 @@ import argparse
 import ast
 import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -91,6 +93,22 @@ def frontend_metrics() -> dict[str, Any]:
     }
 
 
+def require_clean_worktree() -> None:
+    """Refuse release metrics that cannot be tied to committed source."""
+    try:
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=ROOT, text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(f"unable to verify worktree cleanliness: {exc}") from exc
+    if status.strip():
+        raise SystemExit(
+            "architecture metrics require a clean worktree; "
+            "commit or discard changes before generating release evidence"
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path)
@@ -99,7 +117,14 @@ def main() -> None:
         type=Path,
         help="Update current_state.json architecture_current from the generated metrics.",
     )
+    parser.add_argument(
+        "--require-clean",
+        action="store_true",
+        help="Fail before measuring unless the repository worktree is clean.",
+    )
     args = parser.parse_args()
+    if args.require_clean:
+        require_clean_worktree()
     counted_paths = [ROOT / item for item in COUNTED_MODULES]
     semantic_paths = [path for path in counted_paths if path.exists()]
     production_paths = [path for path in (ROOT / "src").glob("**/*.py") if path.name != "__init__.py"]
