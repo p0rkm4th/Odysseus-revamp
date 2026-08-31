@@ -153,7 +153,6 @@ from src.aci import (
     compatibility_intent_projection,
     compile_turn_contract,
 )
-from src.result_renderers.notes import note_list_summary_from_tool_output
 from src.intent_contracts import (
     EXPLICIT_CONTINUATION_RE as _EXPLICIT_CONTINUATION_RE,
     HARD_TOOL_DOMAINS,
@@ -180,6 +179,11 @@ from src.intent_contracts import (
     looks_like_explicit_skill_request,
     suppress_automatic_skills,
 )
+
+
+def note_list_summary_from_tool_output(*args, **kwargs):
+    from src.result_renderers.notes import note_list_summary_from_tool_output as renderer
+    return renderer(*args, **kwargs)
 
 # Temporary import compatibility for callers/tests that still reference the
 # retired loop-local names. These are aliases, not independent implementations
