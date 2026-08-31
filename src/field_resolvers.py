@@ -62,7 +62,7 @@ def _capability_fields(
     if capability_id == "work.project.manage" and action_id == "create_task":
         from src.intent_contracts import work_task_create_payload
         return work_task_create_payload(query)
-    if capability_id == "memory.manage" and action_id in {"create", "update", "delete"}:
+    if capability_id == "memory.manage" and action_id in {"add", "edit", "delete"}:
         from src.intent_contracts import memory_mutation_payload
         return memory_mutation_payload(query, action_id)
     if capability_id == "notes.manage" and action_id in {"add", "update", "delete"}:
