@@ -54,7 +54,8 @@ from src.aci import (
     user_turn_count,
     stream_aci_turn,
 )
-from src.intent_contracts import canonical_domain_projection, compile_intent, resolve_intent, work_project_create_payload, work_task_create_payload
+from src.intent_contracts import canonical_domain_projection, compile_intent, resolve_intent
+from src.domain_resolvers.work import work_project_create_payload, work_task_create_payload
 from src.capability_registry import action_for_tool, capability_for_tool
 from src.tool_capabilities import ToolEffect, capabilities_for_action
 from src.tool_policy import web_access_mode

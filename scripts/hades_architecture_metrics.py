@@ -31,6 +31,7 @@ COUNTED_MODULES = (
     "src/domain_resolvers/recipe.py",
     "src/domain_resolvers/inventory.py",
     "src/domain_resolvers/memory.py",
+    "src/domain_resolvers/work.py",
     "src/legacy_agent_loop.py",
 )
 

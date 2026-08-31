@@ -33,6 +33,7 @@ from src.domain_resolvers.inventory import (
     inventory_move_item_payload,
 )
 from src.domain_resolvers.memory import memory_mutation_payload
+from src.domain_resolvers.work import work_project_create_payload, work_task_create_payload
 
 logger = logging.getLogger(__name__)
 
@@ -754,60 +755,6 @@ def recipe_import_review_draft_from_payload(
 def recipe_create_payload(query: str) -> dict[str, Any] | None:
     draft = recipe_create_draft(query)
     return draft.as_payload() if draft else None
-
-
-def work_project_create_payload(query: str) -> dict[str, Any] | None:
-    """Project only an explicit Work project title into a bounded Action.
-
-    This is argument projection, not general Work classification.  Ambiguous
-    requests deliberately return no payload so the canonical executor fails
-    closed instead of inventing a project title.
-    """
-    text = re.sub(r"\s+", " ", str(query or "").strip())
-    match = re.search(
-        r"\b(?:create|start|begin)\s+(?:a\s+)?project\s+(?:called|named|for|about)\s+(.+)$",
-        text, re.IGNORECASE,
-    )
-    if not match:
-        return None
-    title = match.group(1).strip(" .:;\"'")
-    if not 1 <= len(title) <= 300:
-        return None
-    return {"action": "create", "title": title, "domain": "general"}
-
-
-def work_task_create_payload(query: str) -> dict[str, Any] | None:
-    """Project an explicit task title and project reference into one Action.
-
-    Task creation is deliberately bounded to an explicitly named existing
-    project. The executor resolves that title against the authenticated
-    owner's canonical Work state; model prose and an ambiguous project name
-    cannot create a task or select a project.
-    """
-    text = re.sub(r"\s+", " ", str(query or "").strip())
-    match = re.search(
-        r"\b(?:create|add|make)\s+(?:a\s+)?task\s+(?:called|named)\s+(.+?)\s+"
-        r"(?:in|for)\s+(?:the\s+)?project\s+(.+)$",
-        text, re.IGNORECASE,
-    )
-    if match:
-        title = match.group(1).strip(" .:;\"'")
-        project_title = match.group(2).strip(" .:;\"'")
-        if not (1 <= len(title) <= 300 and 1 <= len(project_title) <= 300):
-            return None
-        return {"action": "create_task", "title": title, "project_title": project_title}
-    # In a normal conversation the immediately preceding project can be the
-    # active context: "Add a task to review the backup plan." Leave project
-    # resolution to the authenticated executor, which accepts this only when
-    # exactly one non-terminal owner project exists.
-    match = re.search(
-        r"\b(?:create|add|make)\s+(?:a\s+)?task\s+(?:to|for|about)\s+(.+)$",
-        text, re.IGNORECASE,
-    )
-    if not match:
-        return None
-    title = match.group(1).strip(" .:;\"'")
-    return {"action": "create_task", "title": title} if 1 <= len(title) <= 300 else None
 
 
 # Operational domain metadata used by prompt/capability projections.  These
