@@ -5178,3 +5178,18 @@ approval-bearing GUI journeys were replayed on the exact `b91ff938` image:
 two canonical readbacks; false success, raw final Results, duplicate delivery,
 and abrupt EOF were all zero. The persistent owner-dogfood lane was not
 restarted or mutated.
+
+## Owner-journey fixture isolation repair — uncommitted checkpoint (2026-08-31)
+
+The data-driven browser harness had a `TEST_ORACLE / FIXTURE_ISOLATION` defect:
+selected scenarios shared one chat session and one canonical fixture reset, so
+an earlier mutation could invalidate a later scenario's empty-state readback.
+The harness now gives each selected scenario a fresh acceptance session,
+resets/seeds only that scenario's disposable fixture, verifies its readback
+before and after reload, and retains multi-turn continuity within the scenario.
+The session selector includes the existing bounded SPA-hydration recovery.
+
+Validation on the exact running candidate completed with three combined recipe
+scenarios, five turns, two GUI mutations, four canonical readbacks, and zero
+false success, raw final Results, duplicate delivery, or abrupt EOF. The
+persistent owner-dogfood lane was not touched.

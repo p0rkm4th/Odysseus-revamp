@@ -845,6 +845,92 @@ async function verifyRecipeWorkspace(page, recipeName) {
   return {checked: true, recipeName: expectedName};
 }
 
+async function createAcceptanceSession(page) {
+  const session = await page.evaluate(async ({endpointId, model}) => {
+    if (!endpointId) {
+      const modelsResponse = await fetch('/api/models', {credentials: 'same-origin'});
+      if (!modelsResponse.ok) throw new Error(`browser acceptance model discovery failed (${modelsResponse.status})`);
+      const catalog = await modelsResponse.json();
+      const items = Array.isArray(catalog?.items) ? catalog.items : [];
+      const modelName = String(model || '').trim();
+      const modelMatches = (item) => (Array.isArray(item?.models) ? item.models : [])
+        .some((entry) => String(entry?.id || entry?.name || entry || '').trim() === modelName);
+      const selected = items.find((item) => item?.endpoint_id && modelMatches(item))
+        || items.find((item) => item?.endpoint_id && item?.online !== false && Array.isArray(item.models) && item.models.length);
+      endpointId = String(selected?.endpoint_id || '').trim();
+      if (!endpointId) throw new Error(`browser acceptance found no usable endpoint for ${modelName || 'requested model'}`);
+    }
+    const body = new FormData();
+    body.append('name', `browser acceptance ${new Date().toISOString()}`);
+    body.append('endpoint_id', endpointId);
+    body.append('model', model);
+    body.append('skip_validation', 'true');
+    const response = await fetch('/api/session', {method: 'POST', body, credentials: 'same-origin'});
+    if (!response.ok) throw new Error(`browser acceptance session create failed (${response.status})`);
+    return response.json();
+  }, {
+    endpointId: process.env.HADES_BROWSER_SESSION_ENDPOINT_ID || '',
+    model: process.env.HADES_BROWSER_SESSION_MODEL || 'qwen3:8b',
+  });
+  if (!session?.id) throw new Error('browser acceptance session response had no id');
+  return session.id;
+}
+
+async function selectAcceptanceSession(page, sessionId) {
+  await page.evaluate((id) => localStorage.setItem('lastSessionId', id), sessionId);
+  await page.goto(`${baseURL}/#${sessionId}`, {waitUntil: 'domcontentloaded'});
+  await page.locator('textarea#message:visible').first().waitFor({state: 'visible', timeout: 30000});
+  try {
+    await page.waitForFunction((id) =>
+      document.readyState === 'complete' &&
+      !document.querySelector('#app-loader:not(.hidden)') &&
+      !document.querySelector('#chat-history .session-loading-state') &&
+      window.sessionModule?.getCurrentSessionId?.() === id &&
+      window.location.hash === `#${id}`,
+    sessionId, {timeout: 30000});
+  } catch (error) {
+    await page.evaluate(async (id) => {
+      await window.sessionModule.loadSessions();
+      await window.sessionModule.selectSession(id, {
+        keepSidebar: true, showLoading: false, immediateLoading: true,
+      });
+    }, sessionId);
+    try {
+      await page.waitForFunction((id) =>
+        window.sessionModule?.getCurrentSessionId?.() === id &&
+        window.location.hash === `#${id}`,
+      sessionId, {timeout: 15000});
+    } catch (_) {
+      throw error;
+    }
+  }
+}
+
+async function prepareScenarioFixture(page, scenario) {
+  const scenarios = [scenario];
+  return {
+    fixtureReset: resetDisposableCanonicalFixture(scenarios),
+    assetReset: resetDisposableAssetFixture(scenarios),
+    memorySeed: scenario.fixture_profile === 'empty-memory'
+      ? await clearMemoryAcceptanceState(page) : null,
+    assetSeed: seedCanonicalAssetFixture(scenarios),
+    recipeSeed: scenario.fixture_setup === 'canonical_recipe_pantry'
+      ? await seedRecipeCompositionAcceptanceState(page)
+      : scenario.fixture_setup === 'canonical_recipe_shopping'
+        ? await seedRecipeCompositionAcceptanceState(page, {shortage: true})
+        : scenario.fixture_setup === 'canonical_recipe_expiring'
+          ? await seedRecipeCompositionAcceptanceState(page, {expiring: true})
+          : scenario.fixture_setup === 'canonical_qualitative_existing_recipe'
+            ? await seedQualitativeRecipeAcceptanceState(page) : null,
+    workSeed: scenario.fixture_setup === 'canonical_work_overview'
+      ? await seedWorkAcceptanceState(page) : null,
+    workTaskSeed: scenario.fixture_setup === 'canonical_work_task_create'
+      ? await seedWorkTaskCreationAcceptanceState(page) : null,
+    preferenceSeed: scenario.fixture_setup === 'canonical_memory_preference'
+      ? await seedMemoryAcceptanceState(page) : null,
+  };
+}
+
 async function waitForAnswer(page, beforeAssistant, streamIndex, prompt) {
   await page.waitForFunction(() => !document.querySelector('#chat-history .msg-ai.streaming'));
   await page.waitForFunction(({ before }) => {
@@ -1297,55 +1383,13 @@ async function main() {
     if (householdAcceptance) {
       diagnostics.householdSeed = await seedHouseholdAcceptanceState(page);
     }
-    if (scenarios) {
-      diagnostics.fixtureReset = resetDisposableCanonicalFixture(scenarios);
-      diagnostics.assetReset = resetDisposableAssetFixture(scenarios);
-      if (scenarios.some((scenario) => scenario.fixture_profile === 'empty-memory')) {
-        diagnostics.memorySeed = await clearMemoryAcceptanceState(page);
-      }
-      diagnostics.assetSeed = seedCanonicalAssetFixture(scenarios);
-      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_pantry')) {
-        diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page);
-      }
-      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_shopping')) {
-        diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page, {shortage: true});
-      }
-      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_recipe_expiring')) {
-        diagnostics.recipeSeed = await seedRecipeCompositionAcceptanceState(page, {expiring: true});
-      }
-      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_qualitative_existing_recipe')) {
-        diagnostics.recipeSeed = await seedQualitativeRecipeAcceptanceState(page);
-      }
-      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_overview')) {
-        diagnostics.workSeed = await seedWorkAcceptanceState(page);
-      }
-      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_work_task_create')) {
-        diagnostics.workTaskSeed = await seedWorkTaskCreationAcceptanceState(page);
-      }
-      if (scenarios.some((scenario) => scenario.fixture_setup === 'canonical_memory_preference')) {
-        diagnostics.memorySeed = await seedMemoryAcceptanceState(page);
-      }
-    }
-
     // Start tracing only after the login response, so the password cannot be
     // present in trace network metadata.
     await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
     tracing = true;
 
-    if (scenarios) {
-      diagnostics.preconditions = [];
-      for (const scenario of scenarios) {
-        const precondition = await verifyScenarioPrecondition(page, scenario);
-        if (precondition) diagnostics.preconditions.push({scenarioId: scenario.id, ...precondition});
-      }
-    }
-
     const prompts = scenarios
-      ? scenarios.flatMap((scenario) => scenario.turns.map((turn) => ({
-        ...turn,
-        scenarioId: scenario.id,
-        expected: { ...scenario.expected, ...(turn.expected || {}) },
-      })))
+      ? []
       : process.env.HADES_BROWSER_RECIPE_ACCEPTANCE === 'true'
       ? [
         { prompt: 'what recipes do i have' },
@@ -1373,50 +1417,40 @@ async function main() {
         window.__odysseusSetChatMode('agent');
       }
     });
-    for (const turn of prompts) {
+    const runTurn = async (turn) => {
       const prompt = typeof turn === 'string' ? turn : turn.prompt;
       const result = await send(page, prompt, typeof turn === 'string' ? {} : turn.expected || {});
-      diagnostics.prompts.push({
-        prompt,
-        scenarioId: turn.scenarioId,
-        operation: typeof turn === 'string' ? null : turn.expected?.operation || null,
-        ...result,
-      });
-      if (prompt.toLowerCase() === 'tell me about my network.' || prompt.toLowerCase() === 'tell me about my network') {
-        console.log(JSON.stringify({
-          networkTrace: result.stream.events.map((event) => event.type),
-          networkAnswerCount: result.turn.answers.length,
-          networkToolCount: result.turn.tools.length,
-          networkRawOutputBlocks: result.turn.tools.reduce((sum, tool) => sum + tool.outputBlocks, 0),
-          networkOpenToolNodes: result.turn.tools.reduce((sum, tool) => sum + tool.openNodes, 0),
-        }));
-      }
-    }
-
+      diagnostics.prompts.push({prompt, scenarioId: turn.scenarioId, operation: typeof turn === 'string' ? null : turn.expected?.operation || null, ...result});
+      return result;
+    };
     if (scenarios) {
+      diagnostics.preconditions = [];
       diagnostics.readbacks = [];
-      for (const scenario of scenarios) {
+      for (const [index, scenario] of scenarios.entries()) {
+        if (index > 0) {
+          expectedSessionId = await createAcceptanceSession(page);
+          await selectAcceptanceSession(page, expectedSessionId);
+        }
+        Object.assign(diagnostics, await prepareScenarioFixture(page, scenario));
+        const precondition = await verifyScenarioPrecondition(page, scenario);
+        if (precondition) diagnostics.preconditions.push({scenarioId: scenario.id, ...precondition});
+        for (const turn of scenario.turns) {
+          await runTurn({ ...turn, scenarioId: scenario.id, expected: { ...scenario.expected, ...(turn.expected || {}) } });
+        }
         const readback = await verifyScenarioReadback(page, scenario);
         if (readback) diagnostics.readbacks.push(readback);
-      }
-      const recipeScenario = scenarios.find((scenario) =>
-        String(scenario.expected?.readback?.kind || '') === 'recipes' &&
-        scenario.expected?.readback?.contains_name);
-      if (recipeScenario) {
-        diagnostics.recipeWorkspace = await verifyRecipeWorkspace(
-          page, recipeScenario.expected.readback.contains_name,
-        );
-      }
-      const beforeReload = await assistantCount(page);
-      await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.locator('#chat-history .msg').first().waitFor({ timeout: 30000 });
-      const afterReload = await loadAllConversationHistory(page);
-      if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
-      for (const scenario of scenarios) {
-        const readback = await verifyScenarioReadback(page, scenario, 'after-reload');
-        if (readback) diagnostics.readbacks.push(readback);
+        const recipeName = scenario.expected?.readback?.contains_name;
+        if (recipeName) diagnostics.recipeWorkspace = await verifyRecipeWorkspace(page, recipeName);
+        const beforeReload = await assistantCount(page);
+        await page.reload({waitUntil: 'domcontentloaded'});
+        await page.locator('#chat-history .msg').first().waitFor({timeout: 30000});
+        const afterReload = await loadAllConversationHistory(page);
+        if (afterReload < beforeReload) throw new Error(`conversation did not persist across reload: ${beforeReload} -> ${afterReload}`);
+        const reloadedReadback = await verifyScenarioReadback(page, scenario, 'after-reload');
+        if (reloadedReadback) diagnostics.readbacks.push(reloadedReadback);
       }
     } else {
+      for (const turn of prompts) await runTurn(turn);
       const beforeReload = await assistantCount(page);
       await page.reload({ waitUntil: 'domcontentloaded' });
       await page.locator('#chat-history .msg').first().waitFor({ timeout: 30000 });
