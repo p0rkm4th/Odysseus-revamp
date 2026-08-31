@@ -4646,14 +4646,14 @@ def canonical_communications_read_answer(tool_events: Sequence[Mapping[str, Any]
 RESULT_RENDERER_REGISTRY: tuple[tuple[str, Callable[[Sequence[Mapping[str, Any]]], str | None]], ...] = (
     ("recipe mutation Result", canonical_recipe_mutation_answer),
     ("inventory mutation Result", canonical_inventory_mutation_answer),
-    ("work_mutation", canonical_work_mutation_answer),
+    ("Work mutation Result", canonical_work_mutation_answer),
     ("Memory mutation Result", canonical_memory_mutation_answer),
     ("canonical Notes Result", canonical_notes_read_answer),
     ("canonical scheduled task Result", canonical_scheduled_task_read_answer),
     ("notes mutation Result", canonical_notes_mutation_answer),
     ("scheduled task Result", canonical_scheduled_task_mutation_answer),
     ("canonical Memory Result", canonical_memory_read_answer),
-    ("work_read", canonical_work_read_answer),
+    ("canonical Work Result", canonical_work_read_answer),
     ("canonical Calendar Result", canonical_communications_read_answer),
     ("canonical bounded Network plan", canonical_network_plan_answer),
     ("canonical Network Result", canonical_network_read_answer),
@@ -4669,23 +4669,6 @@ RESULT_RENDERER_REGISTRY: tuple[tuple[str, Callable[[Sequence[Mapping[str, Any]]
 def canonical_result_answer(
     tool_events: Sequence[Mapping[str, Any]],
 ) -> CanonicalAnswer | None:
-    declared = next(
-        (str(event.get("result_renderer") or "").strip()
-         for event in reversed(tuple(tool_events or ()))
-         if isinstance(event, Mapping) and str(event.get("result_renderer") or "").strip()),
-        None,
-    )
-    if declared:
-        for provenance, renderer in RESULT_RENDERER_REGISTRY:
-            if provenance != declared:
-                continue
-            content = renderer(tool_events)
-            if content:
-                return CanonicalAnswer(
-                    content=content,
-                    source=AnswerSource.DETERMINISTIC_RESULT,
-                    provenance=provenance,
-                )
     for provenance, renderer in RESULT_RENDERER_REGISTRY:
         content = renderer(tool_events)
         if content:
