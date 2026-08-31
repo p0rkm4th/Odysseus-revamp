@@ -230,7 +230,7 @@
       ]
     },
     "src/aci.py": {
-      "loc": 5758,
+      "loc": 5750,
       "functions": [
         {
           "name": "canonical_tool_result_projection",
@@ -240,7 +240,7 @@
         {
           "name": "project_action_selection",
           "line": 4988,
-          "loc": 261
+          "loc": 253
         },
         {
           "name": "canonical_recipe_read_answer",
@@ -294,7 +294,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 5295,
+          "line": 5287,
           "loc": 93
         },
         {
@@ -334,7 +334,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 5548,
+          "line": 5540,
           "loc": 63
         },
         {
@@ -349,7 +349,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 5487,
+          "line": 5479,
           "loc": 59
         },
         {
@@ -359,7 +359,7 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 5695,
+          "line": 5687,
           "loc": 56
         },
         {
@@ -379,7 +379,7 @@
         },
         {
           "name": "parse_decision_json",
-          "line": 5405,
+          "line": 5397,
           "loc": 50
         },
         {
@@ -399,7 +399,7 @@
         },
         {
           "name": "project_result_observation",
-          "line": 5613,
+          "line": 5605,
           "loc": 48
         },
         {
@@ -434,7 +434,7 @@
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 5251,
+          "line": 5243,
           "loc": 42
         },
         {
@@ -549,7 +549,7 @@
         },
         {
           "name": "selected_action_for_decision",
-          "line": 5457,
+          "line": 5449,
           "loc": 28
         },
         {
@@ -639,7 +639,7 @@
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 5663,
+          "line": 5655,
           "loc": 20
         },
         {
@@ -764,7 +764,7 @@
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 5390,
+          "line": 5382,
           "loc": 13
         },
         {
@@ -824,7 +824,7 @@
         },
         {
           "name": "model_burden",
-          "line": 5753,
+          "line": 5745,
           "loc": 6
         },
         {
@@ -892,7 +892,7 @@
         {
           "name": "project_action_selection",
           "line": 4988,
-          "loc": 261
+          "loc": 253
         },
         {
           "name": "canonical_recipe_read_answer",
@@ -946,7 +946,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 5295,
+          "line": 5287,
           "loc": 93
         },
         {
@@ -1957,11 +1957,11 @@
       ]
     },
     "src/field_resolvers.py": {
-      "loc": 219,
+      "loc": 222,
       "functions": [
         {
           "name": "_recipe_fields",
-          "line": 81,
+          "line": 84,
           "loc": 23
         },
         {
@@ -1971,79 +1971,79 @@
         },
         {
           "name": "resolve_action_fields",
-          "line": 180,
+          "line": 183,
           "loc": 20
         },
         {
           "name": "deterministic_action_for_contract",
-          "line": 202,
+          "line": 205,
           "loc": 18
         },
         {
           "name": "_recipe_read_fields",
-          "line": 43,
+          "line": 46,
           "loc": 15
         },
         {
           "name": "_developer_read_fields",
-          "line": 60,
+          "line": 63,
           "loc": 13
         },
         {
           "name": "_inventory_fields",
-          "line": 117,
+          "line": 120,
           "loc": 12
-        },
-        {
-          "name": "_notes_fields",
-          "line": 151,
-          "loc": 9
         },
         {
           "name": "_asset_read_fields",
           "line": 33,
-          "loc": 8
+          "loc": 11
+        },
+        {
+          "name": "_notes_fields",
+          "line": 154,
+          "loc": 9
         },
         {
           "name": "_scheduled_task_fields",
-          "line": 75,
+          "line": 78,
           "loc": 4
         },
         {
           "name": "_reference_id",
-          "line": 111,
+          "line": 114,
           "loc": 4
         },
         {
           "name": "_network_fields",
-          "line": 106,
+          "line": 109,
           "loc": 3
         },
         {
           "name": "_work_project_fields",
-          "line": 131,
+          "line": 134,
           "loc": 3
         },
         {
           "name": "_work_task_fields",
-          "line": 136,
+          "line": 139,
           "loc": 3
         },
         {
           "name": "_memory_fields",
-          "line": 141,
+          "line": 144,
           "loc": 3
         },
         {
           "name": "_query_fields",
-          "line": 146,
+          "line": 149,
           "loc": 3
         }
       ],
       "largest_functions": [
         {
           "name": "_recipe_fields",
-          "line": 81,
+          "line": 84,
           "loc": 23
         },
         {
@@ -2053,72 +2053,72 @@
         },
         {
           "name": "resolve_action_fields",
-          "line": 180,
+          "line": 183,
           "loc": 20
         },
         {
           "name": "deterministic_action_for_contract",
-          "line": 202,
+          "line": 205,
           "loc": 18
         },
         {
           "name": "_recipe_read_fields",
-          "line": 43,
+          "line": 46,
           "loc": 15
         },
         {
           "name": "_developer_read_fields",
-          "line": 60,
+          "line": 63,
           "loc": 13
         },
         {
           "name": "_inventory_fields",
-          "line": 117,
+          "line": 120,
           "loc": 12
-        },
-        {
-          "name": "_notes_fields",
-          "line": 151,
-          "loc": 9
         },
         {
           "name": "_asset_read_fields",
           "line": 33,
-          "loc": 8
+          "loc": 11
+        },
+        {
+          "name": "_notes_fields",
+          "line": 154,
+          "loc": 9
         },
         {
           "name": "_scheduled_task_fields",
-          "line": 75,
+          "line": 78,
           "loc": 4
         },
         {
           "name": "_reference_id",
-          "line": 111,
+          "line": 114,
           "loc": 4
         },
         {
           "name": "_network_fields",
-          "line": 106,
+          "line": 109,
           "loc": 3
         },
         {
           "name": "_work_project_fields",
-          "line": 131,
+          "line": 134,
           "loc": 3
         },
         {
           "name": "_work_task_fields",
-          "line": 136,
+          "line": 139,
           "loc": 3
         },
         {
           "name": "_memory_fields",
-          "line": 141,
+          "line": 144,
           "loc": 3
         },
         {
           "name": "_query_fields",
-          "line": 146,
+          "line": 149,
           "loc": 3
         }
       ]
@@ -2276,7 +2276,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18839,
+  "semantic_control_plane_loc": 18834,
   "central_domain_conditionals": 118,
   "central_canonical_answer_functions": 23,
   "canonical_answer_dispatch_mentions": 27,
@@ -2418,6 +2418,6 @@
       }
     ]
   },
-  "source_sha": "15b91c00044f59753435979e206539f659652bf8",
+  "source_sha": "763f118df96a3cba005d1e7b36d3abc109bfc5f6",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
