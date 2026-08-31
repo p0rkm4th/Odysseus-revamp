@@ -107,6 +107,14 @@ function provision() {
   return JSON.parse(fs.readFileSync(credentialFile, 'utf8'));
 }
 
+function validateCredentialFreshness(credentials) {
+  if (!externalAcceptance) return;
+  const expiry = Number(credentials?.expires_at);
+  if (Number.isFinite(expiry) && expiry <= Date.now() / 1000) {
+    throw new Error('external browser acceptance credential is expired; rotate the disposable principal before retrying');
+  }
+}
+
 function disableAndRevoke() {
   if (externalAcceptance) return;
   try {
@@ -1191,6 +1199,7 @@ async function main() {
   assertIsolatedAcceptanceDataDir();
   const scenarios = loadJourneyScenarios();
   const credentials = provision();
+  validateCredentialFreshness(credentials);
   acceptanceUsername = String(credentials.username || acceptanceUsername);
   await waitForHealth(healthTimeoutMs);
   // Keep the unattended browser lane usable in constrained/containerized
