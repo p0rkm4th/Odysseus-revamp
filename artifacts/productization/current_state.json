@@ -1,20 +1,20 @@
 {
   "captured_at": "2026-08-31T03:29:45-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "54185150",
-  "source_head": "54185150",
-  "remote_head": "54185150",
-  "evidence_commit_sha": "54185150",
+  "branch_head": "604849f1",
+  "source_head": "604849f1",
+  "remote_head": "604849f1",
+  "evidence_commit_sha": "604849f1",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "54185150",
-    "image": "odysseus:candidate-54185150",
-    "image_id": "sha256:ee01d2897b4afad38ce568ff9c6fdda4688627781577070123234fac70e617d2",
-    "image_digest": "sha256:ee01d2897b4afad38ce568ff9c6fdda4688627781577070123234fac70e617d2",
-    "oci_revision": "54185150",
-    "source_marker": "54185150",
-    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; focused semantic regression PASS; held-out Qwen 18/18 answers and 17/18 trajectory; browser_realistic_acceptance PASS after startup readiness; no false success, duplicate delivery, raw final Result, or abrupt EOF"
+    "source_sha": "604849f1",
+    "image": "odysseus:candidate-604849f1",
+    "image_id": "sha256:f353a38a7974a622cbd152ebbe8bd5c9d8ce70f2b909d6c66ff5fd4090e61002",
+    "image_digest": "sha256:f353a38a7974a622cbd152ebbe8bd5c9d8ce70f2b909d6c66ff5fd4090e61002",
+    "oci_revision": "604849f1",
+    "source_marker": "604849f1",
+    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; full regression 7119 passed, 9 skipped, 149 warnings; browser_realistic_acceptance PASS; no false success, duplicate delivery, raw final Result, or abrupt EOF"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -343,9 +343,9 @@
     "focused_migration_tests": "166 passed, 1 warning",
     "full_regression": "7120 passed, 9 skipped, 149 warnings in 304.78s on content-identical application tree 6ce66c38; current source 7a208165 verified by focused 329 passed, 6 skipped plus renderer slice 166 passed",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "54185150",
-    "evidence_commit_sha": "54185150",
-    "latest_candidate_browser_replay": "PASS: exact 54185150 candidate browser_realistic_acceptance on disposable port 7006; initial startup reset classified ENVIRONMENT_FAILURE; no owner data was touched",
+    "application_source_sha": "604849f1",
+    "evidence_commit_sha": "604849f1",
+    "latest_candidate_browser_replay": "PASS: exact 604849f1 candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
     "latest_candidate_holdout": "18/18 answers, 17/18 trajectory; one assets_reference_3 acceptance-fixture failure due no seeded canonical collection; no transport error/leak/duplicate/EOF"
   },
   "known_evidence_gaps": [
