@@ -2,6 +2,27 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Tier 1 exact-candidate replay batch (2026-08-31)
+
+The source-matched disposable candidate `fc18ebed` passed the previously
+fragile Asset reference chain (3 turns), Recipe pantry composition (3),
+expiring-inventory Recipe composition (1), Today/Calendar empty state (2),
+Reminder create/cancel/reference lifecycle (3), Work project mutation (2),
+Work task mutation (2), Memory correction (4), and truthful qualitative Recipe
+amounts (5). The batch covered 25 owner turns, 8 mutations, 10 independent
+readbacks, and reload/readback paths where specified. The exact candidate ran
+healthy with zero restarts and recorded `falseSuccess=0`, `rawFinalResults=0`,
+`duplicateDelivery=0`, and `abruptEOF=0` in every completed scenario.
+
+One acceptance-infrastructure gap remains: the Memory correction scenario's
+final-state assertions passed, but the harness reported zero independent
+mutation readbacks for that case. This is tracked as TEST_ORACLE coverage work,
+not treated as proof of stronger persistence than the scenario actually
+measured. The attempted multi-scenario mixed-fixture invocation was correctly
+rejected by the harness and classified as an acceptance constraint; individual
+valid-fixture replays were used instead. Owner-dogfood and production data
+remained untouched.
+
 ## Network scoped-discovery owner defect and convergence replay (2026-08-31)
 
 Owner dogfood exposed two related Network/Homelab failures: the obvious CIDR
