@@ -2,6 +2,27 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Completion-trace projection fix — exact candidate `5e5bc0f7` (2026-08-31)
+
+Classified as `COMPLETION` / `RESULT_TRACE`. A generalized lifecycle defect
+allowed a terminal post-result state such as `BLOCKED` to remain paired with
+`completion_state=IN_PROGRESS`, obscuring the actual owner outcome in traces.
+`project_aci_trace` now projects terminal post-result states into the
+completion state when no explicit turn disposition exists. The focused ACI and
+dogfood regression set passed: 160 passed, 1 warning. The fix is committed and
+pushed as `5e5bc0f773a937befba23629adf6dc0bcc297b0d`.
+
+The exact candidate `odysseus:candidate-5e5bc0f-exact` was rebuilt with the
+full source SHA in both its OCI revision and `/app/.odysseus-source-commit`.
+The stable acceptance lane is healthy with zero observed restarts; Qwen3:8B
+is reachable. Browser replay passed for `OWNER-NETWORK-BOUNDED-CIDR-001`
+(4 turns, 4 bounded plan/mutation-labelled turns) and
+`OWNER-WORK-EMPTY-001` (1 turn, 1 stream). Both had zero false success, raw
+final Results, duplicate delivery, or abrupt EOF. No owner-dogfood or
+production state was modified. The V1 release remains active and unfrozen;
+generated Qwen functional performance and remaining release gates are still
+open.
+
 ## Isolated application backup/restore replay — exact candidate `fc18ebed` (2026-08-31)
 
 The fresh-install lane was snapshotted to
