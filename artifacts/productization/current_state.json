@@ -737,6 +737,26 @@
     "raw_artifact": "/tmp/hades-browser-realistic-current-e482cbfe.log",
     "recorded_at": "2026-08-31T21:02:54Z"
   },
+  "latest_current_source_recipe_url_complete": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "d9908686321e78348357c748857632714f2af410",
+    "harness_source_sha": "d9908686321e78348357c748857632714f2af410",
+    "scenarios": ["OWNER-RECIPE-URL-IMPORT-COMPLETE-001"],
+    "environment": "deterministic_synthetic",
+    "fixture_profile": "complete-url-recipes",
+    "status": "PASS",
+    "turns": 3,
+    "streams": 3,
+    "read_journeys": 2,
+    "mutations": 1,
+    "mutation_readbacks": 2,
+    "readbacks": 2,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "recorded_at": "2026-08-31T21:04:28Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
