@@ -3226,30 +3226,8 @@ def canonical_tool_result_projection(
         from src.result_renderers.recipe import project_recipe_result
         return project_recipe_result(str(tool_name).strip(), result)
     if str(tool_name or "").strip() == "manage_assets":
-        assets = payload.get("assets")
-        if not isinstance(assets, list):
-            return None
-        projected = []
-        for asset in assets[:100]:
-            if not isinstance(asset, Mapping):
-                continue
-            attrs = asset.get("attributes") if isinstance(asset.get("attributes"), Mapping) else {}
-            row = {"id": asset.get("id"), "name": asset.get("name")}
-            for key in ("role", "hostname", "model", "manufacturer", "ram", "gpu", "storage", "cpu", "type"):
-                value = asset.get(key)
-                if value in (None, "", [], {}):
-                    value = attrs.get(key)
-                if value not in (None, "", [], {}):
-                    row[key] = value
-            projected.append(row)
-        return {
-            "status": payload.get("status"),
-            "assets": projected,
-            "asset_count": len(assets),
-            "query": payload.get("query"),
-            "result_projection": payload.get("result_projection"),
-            "asset_property": payload.get("asset_property"),
-        }
+        from src.result_renderers.assets import project_asset_result
+        return project_asset_result(payload)
     if str(tool_name or "").strip() == "read_work":
         collections = {
             key: value for key, value in payload.items()

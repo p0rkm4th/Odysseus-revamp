@@ -5,6 +5,26 @@ import json
 from typing import Any, Mapping, Sequence
 
 
+def _project_asset(asset: Mapping[str, Any], fields: tuple[str, ...]) -> dict[str, Any]:
+    attrs = asset.get("attributes") if isinstance(asset.get("attributes"), Mapping) else {}
+    return {"id": asset.get("id"), "name": asset.get("name"), **{
+        key: value for key in fields
+        if (value := asset.get(key) if asset.get(key) not in (None, "", [], {}) else attrs.get(key))
+        not in (None, "", [], {})}}
+
+
+def project_asset_result(payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """Bound a canonical Asset Result for history and owner rendering."""
+    assets = payload.get("assets")
+    if not isinstance(assets, list):
+        return None
+    fields = ("role", "hostname", "model", "manufacturer", "ram", "gpu", "storage", "cpu", "type")
+    projected = [_project_asset(asset, fields) for asset in assets[:100] if isinstance(asset, Mapping)]
+    return {"status": payload.get("status"), "assets": projected, "asset_count": len(assets),
+            "query": payload.get("query"), "result_projection": payload.get("result_projection"),
+            "asset_property": payload.get("asset_property")}
+
+
 def _label(asset: Mapping[str, Any]) -> str:
     name = str(asset.get("name") or asset.get("id") or "Unnamed asset").strip()
     attributes = asset.get("attributes")
