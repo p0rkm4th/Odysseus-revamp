@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Qualitative Recipe amounts replay — exact candidate `fc18ebed` (2026-08-31)
+
+`OWNER-RECIPE-QUALITATIVE-AMOUNTS-001` passed in the isolated stable
+acceptance lane after rotating only its disposable credential and restarting
+that lane. The five-turn GUI/chat journey performed one mutation, four reads,
+and two independent canonical readbacks. Qualitative and mixed ingredient
+semantics survived the conversation and readback; false success, raw final
+Results, duplicate delivery, and abrupt EOF were all zero. No owner-dogfood or
+production state was changed.
+
 ## Dependency gate refresh — productization head `5c71fe9b` (2026-08-31)
 
 GitHub currently still shows Dependabot PRs #1, #2, and #3, all based on
