@@ -5203,10 +5203,7 @@ def project_action_selection(
             fast_path = payload
             mode = SelectionMode.DIRECT_ACTION
     if mode is SelectionMode.NEED_CONTEXT:
-        if str(frame.get("domain_concept") or "") == "RECIPE":
-            question = "Which recipe should I check for missing ingredients?"
-        else:
-            question = "Which service or systemd unit should I restart?"
+        question = str(contract.get("missing_target_question") or "Which target should I use?")
         return ActionProjection(None, {}, None, mode, reason, clarification_instruction, question, ("action_target_clarification",))
     safety_messages = {
         "strong_identity_required": "I can't merge or identify assets by IP address alone; I need a strong identity such as a system UUID, serial, or MAC.",

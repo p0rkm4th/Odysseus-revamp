@@ -1565,6 +1565,7 @@ class DomainContract:
     binding: str | None
     exposures: Mapping[str, str]
     result_contract: str
+    missing_target_question: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1588,6 +1589,7 @@ class ResolvedContract:
             "reason": self.reason,
             "result_contract": self.contract.result_contract if self.contract else None,
             "exposure": dict(self.contract.exposures) if self.contract else {},
+            "missing_target_question": self.contract.missing_target_question if self.contract else None,
         }
 
 
@@ -1650,7 +1652,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     "SERVICE": DomainContract(
         "SERVICE", "homelab.manage", {"READ": "service_status", "EXECUTE": "plan_service_restart"}, "manage_homelab",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
-        "service_status_observation",
+        "service_status_observation", "Which service or systemd unit should I restart?",
     ),
     "OSINT_CASE": DomainContract(
         "OSINT_CASE", "research.public_sources", {"READ": "list_cases", "RESEARCH": "plan"}, "manage_osint",
@@ -1707,7 +1709,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"READ": "list", "READ_SEARCH": "search", "READ_DETAIL": "get", "READ_COVERAGE": "can_make", "READ_PANTRY_CANDIDATES": "pantry_candidates", "READ_SHOPPING": "shopping_requirements", "READ_SCALE": "scale", "READ_EXPIRING": "expiring_candidates", "READ_COOKING_HISTORY": "cooking_history", "READ_IMPORT_PREPARE": "prepare_import"},
         "read_recipes",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
-        "recipe_read",
+        "recipe_read", "Which recipe should I check for missing ingredients?",
     ),
     "RECIPE_MUTATION": DomainContract(
         "RECIPE_MUTATION", "recipe.manage", {"CREATE": "add", "CREATE_IMPORT_COMMIT": "commit_import"}, "manage_recipes",
