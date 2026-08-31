@@ -175,6 +175,19 @@
     "owner_runtime_unchanged": true,
     "recorded_at": "2026-08-31T14:48:00-05:00"
   },
+  "latest_current_source_candidate_validation": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "26a651e854cd1dab54bc11229d6ea95305a81d93",
+    "image": "odysseus:candidate-e482cbfe6b55",
+    "image_digest": "sha256:6a1ca38a8762534b6893dc9e48ba0a3d52ff0c8405e3eb83f0a82d683da2e18e",
+    "compileall": "PASS",
+    "full_pytest": "PASS; 7139 passed, 9 skipped, 149 warnings in 305.37s",
+    "hades_aci_security_contract": "PASS; 355 passed, 2 warnings in 21.72s",
+    "browser": "PASS; exact isolated current-source candidate; OWNER-NETWORK-BOUNDED-CIDR-001 and OWNER-NETWORK-INVALID-CIDR-001; 6 streams; zero false success/raw Results/duplicates/abrupt EOF",
+    "runtime": "healthy; 0 restarts; qwen3:8b reachable",
+    "owner_runtime_promoted": false,
+    "recorded_at": "2026-08-31T14:58:00-05:00"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
