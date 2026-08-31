@@ -5100,40 +5100,41 @@ def project_action_selection(
                 "approval": spec.approval.value, "effects": list(spec.effects),
                 "dependencies": list(spec.dependencies),
                 "purpose": capability.description,
+                "selection_requirements": dict(spec.selection_requirements or {}),
             })
     filtered = hard_filter_actions(
         raw_actions,
         operation_class=str(frame.get("operation_class") or "") or None,
     )
-    # URL-backed Recipe CREATE has one canonical meaning: import and validate
-    # untrusted source material before commit. Do not expose the sibling
-    # primitive ``add`` Action; it cannot carry the import contract and would
-    # silently lose explicit user fields when selected by the model.
     frame_filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
-    if (
-        str(frame.get("domain_concept") or "") == "RECIPE"
-        and str(frame.get("operation_class") or "") == "CREATE"
-        and frame_filters.get("recipe_import") is True
-    ):
-        filtered = [
-            item for item in filtered
-            if item.get("binding") == "manage_recipes"
-            and item.get("action_id") == "commit_import"
-        ]
-    # Initial scoped discovery is always a plan.  The executable discovery
-    # Action is only eligible after a canonical plan/approval continuation;
-    # exposing execute alongside plan lets a weak model skip the exact CIDR
-    # binding and jump straight to an unsafe or under-specified request.
-    if (
-        str(frame.get("domain_concept") or "") == "NETWORK"
-        and str(frame.get("operation_class") or "") == "EXECUTE"
-        and desired_action == "plan_network_discovery"
-    ):
-        filtered = [
-            item for item in filtered
-            if item.get("binding") == desired_binding
-            and item.get("action_id") == "plan_network_discovery"
-        ]
+    # Capability metadata can declare an exclusive action for a resolved
+    # semantic context.  Apply all such constraints in one generic pass so
+    # ACI does not become a catalogue of domain-specific eligibility rules.
+    exclusive = {
+        str(item.get("action_id") or "")
+        for item in filtered
+        if isinstance(item.get("selection_requirements"), Mapping)
+        and isinstance(item["selection_requirements"].get("exclusive_when_filters"), Mapping)
+        and all(frame_filters.get(str(key)) == value for key, value in item["selection_requirements"]["exclusive_when_filters"].items())
+    }
+    exclusive.update(
+        str(item.get("action_id") or "")
+        for item in filtered
+        if isinstance(item.get("selection_requirements"), Mapping)
+        and isinstance(item["selection_requirements"].get("exclusive_when"), Mapping)
+        and str(item["selection_requirements"]["exclusive_when"].get("desired_action") or "") == desired_action
+        and all(frame.get(str(key)) == value for key, value in (item["selection_requirements"]["exclusive_when"].get("frame") or {}).items())
+    )
+    if exclusive:
+        filtered = [item for item in filtered if str(item.get("action_id") or "") in exclusive]
+    filtered = [
+        item for item in filtered
+        if not (
+            isinstance(item.get("selection_requirements"), Mapping)
+            and isinstance(item["selection_requirements"].get("exclude_when_filters"), Mapping)
+            and all(frame_filters.get(str(key)) == value for key, value in item["selection_requirements"]["exclude_when_filters"].items())
+        )
+    ]
     if not frame.get("target") and contract.get("reason") == "target_required":
         filtered = []
     if desired_binding and desired_action and not any(
