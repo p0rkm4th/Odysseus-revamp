@@ -196,6 +196,8 @@ _looks_like_notes_turn = looks_like_notes_request
 _looks_like_notes_calendar_followup = looks_like_notes_calendar_followup
 _is_casual_low_signal = is_casual_low_signal
 _detect_admin_intent = detect_admin_intent
+
+
 def _domain_rules_for_tools(tool_names: set) -> list[str]:
     from src.legacy_domain_contract import DOMAIN_TOOL_MAP
     return domain_rules_for_tools(
@@ -205,12 +207,6 @@ def _domain_rules_for_tools(tool_names: set) -> list[str]:
     )
 
 
-def _suppress_automatic_skills(text: str, intent: Dict[str, object]) -> bool:
-    return suppress_automatic_skills(
-        text,
-        intent,
-        explicit_memory_query=is_explicit_memory_query,
-    )
 _is_odysseus_qwen_model = is_odysseus_qwen_model
 _VERIFIER_EFFECTFUL_TOOLS = VERIFIER_EFFECTFUL_TOOLS
 # A provider can repeat an already-approved mutation when the approval
