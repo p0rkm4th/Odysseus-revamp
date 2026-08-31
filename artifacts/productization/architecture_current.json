@@ -32,223 +32,223 @@
   ],
   "modules": {
     "src/agent_loop.py": {
-      "loc": 6436,
+      "loc": 6441,
       "functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1007,
-          "loc": 5426
+          "line": 1011,
+          "loc": 5427
         },
         {
           "name": "_build_system_prompt",
-          "line": 380,
+          "line": 384,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2439,
+          "line": 2443,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3080,
+          "line": 3084,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1475,
+          "line": 1479,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2145,
+          "line": 2149,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3195,
+          "line": 3199,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 950,
+          "line": 954,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2191,
+          "line": 2195,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3253,
+          "line": 3257,
           "loc": 30
         },
         {
           "name": "_assemble_prompt",
-          "line": 334,
+          "line": 338,
           "loc": 22
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1456,
+          "line": 1460,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2707,
+          "line": 2711,
           "loc": 16
         },
         {
           "name": "__getattr__",
-          "line": 272,
+          "line": 276,
           "loc": 13
         },
         {
           "name": "_apply_candidate_compaction",
-          "line": 3167,
+          "line": 3171,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2725,
+          "line": 2729,
           "loc": 8
         },
         {
           "name": "_domain_rules_for_tools",
-          "line": 199,
+          "line": 209,
           "loc": 7
         },
         {
           "name": "_suppress_automatic_skills",
-          "line": 208,
+          "line": 201,
           "loc": 6
         },
         {
           "name": "_domain_tools_for_projection",
-          "line": 305,
+          "line": 309,
           "loc": 5
         },
         {
           "name": "_record_aci_framework",
-          "line": 1161,
+          "line": 1165,
           "loc": 3
         },
         {
           "name": "_record_aci_model",
-          "line": 1165,
+          "line": 1169,
           "loc": 3
         }
       ],
       "largest_functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1007,
-          "loc": 5426
+          "line": 1011,
+          "loc": 5427
         },
         {
           "name": "_build_system_prompt",
-          "line": 380,
+          "line": 384,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2439,
+          "line": 2443,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3080,
+          "line": 3084,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1475,
+          "line": 1479,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2145,
+          "line": 2149,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3195,
+          "line": 3199,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 950,
+          "line": 954,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2191,
+          "line": 2195,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3253,
+          "line": 3257,
           "loc": 30
         },
         {
           "name": "_assemble_prompt",
-          "line": 334,
+          "line": 338,
           "loc": 22
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1456,
+          "line": 1460,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2707,
+          "line": 2711,
           "loc": 16
         },
         {
           "name": "__getattr__",
-          "line": 272,
+          "line": 276,
           "loc": 13
         },
         {
           "name": "_apply_candidate_compaction",
-          "line": 3167,
+          "line": 3171,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2725,
+          "line": 2729,
           "loc": 8
         },
         {
           "name": "_domain_rules_for_tools",
-          "line": 199,
+          "line": 209,
           "loc": 7
         },
         {
           "name": "_suppress_automatic_skills",
-          "line": 208,
+          "line": 201,
           "loc": 6
         },
         {
           "name": "_domain_tools_for_projection",
-          "line": 305,
+          "line": 309,
           "loc": 5
         },
         {
           "name": "_record_aci_framework",
-          "line": 1161,
+          "line": 1165,
           "loc": 3
         }
       ]
     },
     "src/aci.py": {
-      "loc": 4672,
+      "loc": 4681,
       "functions": [
         {
           "name": "project_action_selection",
-          "line": 3878,
+          "line": 3887,
           "loc": 279
         },
         {
@@ -263,7 +263,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3686,
+          "line": 3695,
           "loc": 104
         },
         {
@@ -288,7 +288,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4203,
+          "line": 4212,
           "loc": 93
         },
         {
@@ -313,7 +313,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4456,
+          "line": 4465,
           "loc": 69
         },
         {
@@ -338,7 +338,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4395,
+          "line": 4404,
           "loc": 59
         },
         {
@@ -348,7 +348,7 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 4609,
+          "line": 4618,
           "loc": 56
         },
         {
@@ -367,8 +367,13 @@
           "loc": 51
         },
         {
+          "name": "project_final_answer",
+          "line": 3583,
+          "loc": 50
+        },
+        {
           "name": "parse_decision_json",
-          "line": 4313,
+          "line": 4322,
           "loc": 50
         },
         {
@@ -388,13 +393,8 @@
         },
         {
           "name": "project_result_observation",
-          "line": 4527,
+          "line": 4536,
           "loc": 48
-        },
-        {
-          "name": "project_final_answer",
-          "line": 3577,
-          "loc": 47
         },
         {
           "name": "compile_turn_contract",
@@ -413,7 +413,7 @@
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 4159,
+          "line": 4168,
           "loc": 42
         },
         {
@@ -433,7 +433,7 @@
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 3822,
+          "line": 3831,
           "loc": 37
         },
         {
@@ -453,7 +453,7 @@
         },
         {
           "name": "project_capability_palette",
-          "line": 3626,
+          "line": 3635,
           "loc": 32
         },
         {
@@ -488,7 +488,7 @@
         },
         {
           "name": "selected_action_for_decision",
-          "line": 4365,
+          "line": 4374,
           "loc": 28
         },
         {
@@ -528,7 +528,7 @@
         },
         {
           "name": "classify_action_escalation",
-          "line": 3660,
+          "line": 3669,
           "loc": 24
         },
         {
@@ -562,8 +562,13 @@
           "loc": 21
         },
         {
+          "name": "canonical_result_answer",
+          "line": 3560,
+          "loc": 21
+        },
+        {
           "name": "legacy_completion_verifier_allowed",
-          "line": 4577,
+          "line": 4586,
           "loc": 20
         },
         {
@@ -617,13 +622,8 @@
           "loc": 15
         },
         {
-          "name": "canonical_result_answer",
-          "line": 3560,
-          "loc": 15
-        },
-        {
           "name": "validate_capability_creation_request",
-          "line": 3861,
+          "line": 3870,
           "loc": 15
         },
         {
@@ -668,7 +668,7 @@
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 4298,
+          "line": 4307,
           "loc": 13
         },
         {
@@ -733,7 +733,7 @@
         },
         {
           "name": "model_burden",
-          "line": 4667,
+          "line": 4676,
           "loc": 6
         },
         {
@@ -790,7 +790,7 @@
       "largest_functions": [
         {
           "name": "project_action_selection",
-          "line": 3878,
+          "line": 3887,
           "loc": 279
         },
         {
@@ -805,7 +805,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3686,
+          "line": 3695,
           "loc": 104
         },
         {
@@ -830,7 +830,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4203,
+          "line": 4212,
           "loc": 93
         },
         {
@@ -855,7 +855,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4456,
+          "line": 4465,
           "loc": 69
         },
         {
@@ -880,7 +880,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4395,
+          "line": 4404,
           "loc": 59
         },
         {
@@ -2806,14 +2806,14 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 19140,
+  "semantic_control_plane_loc": 19154,
   "central_domain_conditionals": 112,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
   "compatibility_aliases": 4,
   "capability_action_map_declarations": 9,
   "production_legacy_semantic_imports": [
-    "src/agent_loop.py:281:from src.legacy_agent_loop import stream_agent_loop"
+    "src/agent_loop.py:285:from src.legacy_agent_loop import stream_agent_loop"
   ],
   "product_tests_private_legacy_classifier_imports": [],
   "product_tests_legacy_tool_map_imports": [],
@@ -2848,8 +2848,8 @@
     "src/task_scheduler.py:2302:from routes.prefs_routes import _load_for_user",
     "src/tool_execution.py:2277:from routes.contacts_routes import _fetch_contacts",
     "src/aci.py:239:from routes.prefs_routes import _load_for_user",
-    "src/agent_loop.py:792:from routes.prefs_routes import _load_for_user as _load_prefs",
-    "src/agent_loop.py:1983:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:796:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:1987:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/tools/calendar.py:23:from routes.calendar_routes import (",
     "src/tools/contacts.py:33:from routes import contacts_routes as cc",
     "src/tools/contacts.py:92:from routes import contacts_routes as cc",
@@ -2974,6 +2974,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "27733e42b304d31385e721efe88c7448d999fd01",
+  "source_sha": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
