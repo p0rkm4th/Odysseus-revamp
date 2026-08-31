@@ -3174,27 +3174,8 @@ def canonical_tool_result_projection(
                 return None
         if not isinstance(payload, Mapping):
             return None
-        items = payload.get("items") if isinstance(payload.get("items"), list) else []
-        projection = {
-            "status": payload.get("status"),
-            "item_count": payload.get("item_count", len(items)),
-            "items": [
-                {
-                    "id": row.get("id"),
-                    "name": row.get("name"),
-                    "domain": row.get("domain"),
-                    "stock_quantity": row.get("stock_quantity", row.get("quantity")),
-                    "default_unit": row.get("default_unit", row.get("unit")),
-                }
-                for row in items[:100]
-                if isinstance(row, Mapping)
-            ],
-            "expiring_lots": payload.get("expiring_lots", [])[:100]
-                if isinstance(payload.get("expiring_lots"), list) else [],
-            "low_stock": payload.get("low_stock", [])[:100]
-                if isinstance(payload.get("low_stock"), list) else [],
-        }
-        return projection
+        from src.result_renderers.household import project_household_result
+        return project_household_result(payload)
     # Planning receipts are already structured Results.  In particular, the
     # bounded network plan has no subprocess ``output`` field; dropping this
     # top-level receipt would leave the owner-facing finalizer without the
