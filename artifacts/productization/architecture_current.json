@@ -13,6 +13,7 @@
     "src/field_resolvers.py",
     "src/domain_resolvers/reminders.py",
     "src/domain_resolvers/recipe.py",
+    "src/domain_resolvers/network.py",
     "src/domain_resolvers/inventory.py",
     "src/domain_resolvers/memory.py",
     "src/domain_resolvers/work.py",
@@ -890,449 +891,449 @@
       ]
     },
     "src/intent_contracts.py": {
-      "loc": 3427,
+      "loc": 3333,
       "functions": [
         {
           "name": "compile_intent",
-          "line": 2084,
+          "line": 1990,
           "loc": 778
         },
         {
           "name": "normalize_operational_intent_evidence",
-          "line": 1009,
+          "line": 1008,
           "loc": 210
         },
         {
           "name": "classify_compatibility_request",
-          "line": 3258,
+          "line": 3164,
           "loc": 170
         },
         {
           "name": "resolve_structured_reference",
-          "line": 1883,
+          "line": 1789,
           "loc": 130
         },
         {
           "name": "recipe_import_review_draft",
-          "line": 566,
+          "line": 565,
           "loc": 111
         },
         {
           "name": "_recipe_ingredients",
-          "line": 246,
+          "line": 245,
           "loc": 109
         },
         {
           "name": "validate_bound_result",
-          "line": 3154,
+          "line": 3060,
           "loc": 102
         },
         {
           "name": "recipe_import_draft",
-          "line": 426,
+          "line": 425,
           "loc": 95
         },
         {
           "name": "resolve_intent",
-          "line": 2921,
+          "line": 2827,
           "loc": 91
         },
         {
           "name": "recipe_import_review_draft_from_payload",
-          "line": 679,
+          "line": 678,
           "loc": 68
         },
         {
           "name": "_operation",
-          "line": 2015,
+          "line": 1921,
           "loc": 67
         },
         {
           "name": "from_payload",
-          "line": 120,
+          "line": 119,
           "loc": 66
         },
         {
           "name": "resolve_continuation",
-          "line": 2864,
+          "line": 2770,
           "loc": 55
         },
         {
           "name": "validate_result",
-          "line": 3103,
+          "line": 3009,
           "loc": 49
         },
         {
-          "name": "explicitly_allows_diagnostic_install",
-          "line": 1412,
-          "loc": 46
-        },
-        {
           "name": "validate_contracts",
-          "line": 3014,
+          "line": 2920,
           "loc": 46
         },
         {
           "name": "recipe_import_review",
-          "line": 523,
+          "line": 522,
           "loc": 41
         },
         {
           "name": "canonical_read_action",
-          "line": 1833,
+          "line": 1739,
           "loc": 39
         },
         {
           "name": "recipe_create_draft",
-          "line": 386,
+          "line": 385,
           "loc": 38
         },
         {
           "name": "suppress_automatic_skills",
-          "line": 828,
+          "line": 827,
           "loc": 33
         },
         {
           "name": "is_bounded_owner_capability_turn",
-          "line": 1522,
+          "line": 1428,
           "loc": 30
         },
         {
           "name": "_recipe_name",
-          "line": 217,
+          "line": 216,
           "loc": 27
         },
         {
           "name": "_video_recipe_sections",
-          "line": 357,
+          "line": 356,
           "loc": 27
         },
         {
           "name": "normalize_asset_inventory_intent",
-          "line": 1222,
+          "line": 1221,
           "loc": 25
         },
         {
-          "name": "explicit_private_discovery_cidr",
-          "line": 1339,
-          "loc": 24
-        },
-        {
           "name": "normalize_homelab_intent",
-          "line": 1266,
+          "line": 1265,
           "loc": 23
         },
         {
           "name": "_recipe_section",
-          "line": 194,
+          "line": 193,
           "loc": 21
         },
         {
           "name": "generated_parity_matrix",
-          "line": 3062,
+          "line": 2968,
           "loc": 21
         },
         {
           "name": "looks_like_notes_calendar_followup",
-          "line": 990,
+          "line": 989,
           "loc": 18
         },
         {
           "name": "looks_like_notes_request",
-          "line": 971,
+          "line": 970,
           "loc": 17
         },
         {
           "name": "looks_like_explicit_skill_request",
-          "line": 810,
+          "line": 809,
           "loc": 16
         },
         {
           "name": "is_casual_low_signal",
-          "line": 877,
+          "line": 876,
           "loc": 16
         },
         {
           "name": "result_status",
-          "line": 3085,
+          "line": 2991,
           "loc": 16
         },
         {
           "name": "detect_admin_intent",
-          "line": 793,
+          "line": 792,
           "loc": 15
         },
         {
           "name": "looks_like_local_computer_request",
-          "line": 913,
+          "line": 912,
           "loc": 15
         },
         {
           "name": "asset_read_request",
-          "line": 1249,
+          "line": 1248,
           "loc": 15
         },
         {
           "name": "_is_continuation_phrase",
-          "line": 1473,
+          "line": 1379,
           "loc": 15
         },
         {
           "name": "as_payload",
-          "line": 104,
+          "line": 103,
           "loc": 14
         },
         {
           "name": "as_dict",
-          "line": 1575,
+          "line": 1481,
           "loc": 13
         },
         {
           "name": "is_explicit_continuation",
-          "line": 1325,
+          "line": 1324,
           "loc": 12
         },
         {
-          "name": "network_substantive_fallback_command",
-          "line": 1460,
-          "loc": 11
-        },
-        {
           "name": "fuzzy",
-          "line": 1024,
+          "line": 1023,
           "loc": 10
         },
         {
-          "name": "is_explicit_network_discovery_request",
-          "line": 1392,
-          "loc": 9
-        },
-        {
           "name": "looks_like_workspace_coding_request",
-          "line": 951,
+          "line": 950,
           "loc": 8
         },
         {
           "name": "explicitly_references_missing_workspace",
-          "line": 961,
-          "loc": 8
-        },
-        {
-          "name": "is_network_prerequisite_request",
-          "line": 1382,
+          "line": 960,
           "loc": 8
         },
         {
           "name": "as_dict",
-          "line": 1600,
+          "line": 1506,
           "loc": 8
-        },
-        {
-          "name": "network_discovery_request_cidr",
-          "line": 1365,
-          "loc": 7
-        },
-        {
-          "name": "is_network_service_enumeration_request",
-          "line": 1403,
-          "loc": 7
         },
         {
           "name": "_depth",
-          "line": 1874,
+          "line": 1780,
           "loc": 7
         },
         {
-          "name": "has_network_cidr_candidate",
-          "line": 1374,
-          "loc": 6
-        },
-        {
           "name": "_number",
-          "line": 302,
+          "line": 301,
           "loc": 6
         },
         {
           "name": "as_dict",
-          "line": 1508,
+          "line": 1414,
           "loc": 5
         },
         {
           "name": "recipe_requested_name",
-          "line": 75,
+          "line": 74,
           "loc": 4
         },
         {
           "name": "recipe_source_url",
-          "line": 81,
+          "line": 80,
           "loc": 4
         },
         {
           "name": "apply_recipe_owner_transformations",
-          "line": 188,
+          "line": 187,
+          "loc": 4
+        },
+        {
+          "name": "explicit_private_discovery_cidr",
+          "line": 1338,
           "loc": 4
         },
         {
           "name": "canonical_domain_projection",
-          "line": 1827,
+          "line": 1733,
           "loc": 4
         },
         {
           "name": "note_mutation_payload",
-          "line": 35,
+          "line": 34,
           "loc": 3
         },
         {
           "name": "scheduled_task_create_payload",
-          "line": 40,
+          "line": 39,
           "loc": 3
         },
         {
           "name": "inventory_add_item_payload",
-          "line": 45,
+          "line": 44,
           "loc": 3
         },
         {
           "name": "inventory_consume_stock_payload",
-          "line": 50,
+          "line": 49,
           "loc": 3
         },
         {
           "name": "inventory_move_item_payload",
-          "line": 55,
+          "line": 54,
           "loc": 3
         },
         {
           "name": "memory_mutation_payload",
-          "line": 60,
+          "line": 59,
           "loc": 3
         },
         {
           "name": "work_project_create_payload",
-          "line": 65,
+          "line": 64,
           "loc": 3
         },
         {
           "name": "work_task_create_payload",
-          "line": 70,
+          "line": 69,
           "loc": 3
         },
         {
           "name": "recipe_create_payload",
-          "line": 749,
+          "line": 748,
+          "loc": 3
+        },
+        {
+          "name": "network_discovery_request_cidr",
+          "line": 1344,
+          "loc": 3
+        },
+        {
+          "name": "has_network_cidr_candidate",
+          "line": 1349,
+          "loc": 3
+        },
+        {
+          "name": "is_network_prerequisite_request",
+          "line": 1354,
+          "loc": 3
+        },
+        {
+          "name": "is_explicit_network_discovery_request",
+          "line": 1359,
+          "loc": 3
+        },
+        {
+          "name": "is_network_service_enumeration_request",
+          "line": 1364,
+          "loc": 3
+        },
+        {
+          "name": "explicitly_allows_diagnostic_install",
+          "line": 1369,
+          "loc": 3
+        },
+        {
+          "name": "network_substantive_fallback_command",
+          "line": 1374,
           "loc": 3
         },
         {
           "name": "phrase",
-          "line": 1021,
+          "line": 1020,
           "loc": 2
         },
         {
           "name": "has",
-          "line": 3320,
+          "line": 3226,
           "loc": 2
         }
       ],
       "largest_functions": [
         {
           "name": "compile_intent",
-          "line": 2084,
+          "line": 1990,
           "loc": 778
         },
         {
           "name": "normalize_operational_intent_evidence",
-          "line": 1009,
+          "line": 1008,
           "loc": 210
         },
         {
           "name": "classify_compatibility_request",
-          "line": 3258,
+          "line": 3164,
           "loc": 170
         },
         {
           "name": "resolve_structured_reference",
-          "line": 1883,
+          "line": 1789,
           "loc": 130
         },
         {
           "name": "recipe_import_review_draft",
-          "line": 566,
+          "line": 565,
           "loc": 111
         },
         {
           "name": "_recipe_ingredients",
-          "line": 246,
+          "line": 245,
           "loc": 109
         },
         {
           "name": "validate_bound_result",
-          "line": 3154,
+          "line": 3060,
           "loc": 102
         },
         {
           "name": "recipe_import_draft",
-          "line": 426,
+          "line": 425,
           "loc": 95
         },
         {
           "name": "resolve_intent",
-          "line": 2921,
+          "line": 2827,
           "loc": 91
         },
         {
           "name": "recipe_import_review_draft_from_payload",
-          "line": 679,
+          "line": 678,
           "loc": 68
         },
         {
           "name": "_operation",
-          "line": 2015,
+          "line": 1921,
           "loc": 67
         },
         {
           "name": "from_payload",
-          "line": 120,
+          "line": 119,
           "loc": 66
         },
         {
           "name": "resolve_continuation",
-          "line": 2864,
+          "line": 2770,
           "loc": 55
         },
         {
           "name": "validate_result",
-          "line": 3103,
+          "line": 3009,
           "loc": 49
         },
         {
-          "name": "explicitly_allows_diagnostic_install",
-          "line": 1412,
-          "loc": 46
-        },
-        {
           "name": "validate_contracts",
-          "line": 3014,
+          "line": 2920,
           "loc": 46
         },
         {
           "name": "recipe_import_review",
-          "line": 523,
+          "line": 522,
           "loc": 41
         },
         {
           "name": "canonical_read_action",
-          "line": 1833,
+          "line": 1739,
           "loc": 39
         },
         {
           "name": "recipe_create_draft",
-          "line": 386,
+          "line": 385,
           "loc": 38
         },
         {
           "name": "suppress_automatic_skills",
-          "line": 828,
+          "line": 827,
           "loc": 33
+        },
+        {
+          "name": "is_bounded_owner_capability_turn",
+          "line": 1428,
+          "loc": 30
         }
       ]
     },
@@ -2264,6 +2265,93 @@
         }
       ]
     },
+    "src/domain_resolvers/network.py": {
+      "loc": 100,
+      "functions": [
+        {
+          "name": "explicitly_allows_diagnostic_install",
+          "line": 72,
+          "loc": 21
+        },
+        {
+          "name": "explicit_private_discovery_cidr",
+          "line": 14,
+          "loc": 13
+        },
+        {
+          "name": "is_explicit_network_discovery_request",
+          "line": 52,
+          "loc": 9
+        },
+        {
+          "name": "is_network_prerequisite_request",
+          "line": 42,
+          "loc": 8
+        },
+        {
+          "name": "is_network_service_enumeration_request",
+          "line": 63,
+          "loc": 7
+        },
+        {
+          "name": "has_network_cidr_candidate",
+          "line": 34,
+          "loc": 6
+        },
+        {
+          "name": "network_substantive_fallback_command",
+          "line": 95,
+          "loc": 6
+        },
+        {
+          "name": "network_discovery_request_cidr",
+          "line": 29,
+          "loc": 3
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "explicitly_allows_diagnostic_install",
+          "line": 72,
+          "loc": 21
+        },
+        {
+          "name": "explicit_private_discovery_cidr",
+          "line": 14,
+          "loc": 13
+        },
+        {
+          "name": "is_explicit_network_discovery_request",
+          "line": 52,
+          "loc": 9
+        },
+        {
+          "name": "is_network_prerequisite_request",
+          "line": 42,
+          "loc": 8
+        },
+        {
+          "name": "is_network_service_enumeration_request",
+          "line": 63,
+          "loc": 7
+        },
+        {
+          "name": "has_network_cidr_candidate",
+          "line": 34,
+          "loc": 6
+        },
+        {
+          "name": "network_substantive_fallback_command",
+          "line": 95,
+          "loc": 6
+        },
+        {
+          "name": "network_discovery_request_cidr",
+          "line": 29,
+          "loc": 3
+        }
+      ]
+    },
     "src/domain_resolvers/inventory.py": {
       "loc": 82,
       "functions": [
@@ -2718,7 +2806,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 19134,
+  "semantic_control_plane_loc": 19140,
   "central_domain_conditionals": 112,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -2886,6 +2974,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "8ddaebd241759a1143bc822e9c3a12b708edf146",
+  "source_sha": "27733e42b304d31385e721efe88c7448d999fd01",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
