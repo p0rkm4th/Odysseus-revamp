@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.agent_loop import _suppress_automatic_skills
+from src.intent_contracts import suppress_automatic_skills
 from src.memory_grounding import minimal_saved_memory_message
 from src.memory_grounding import is_explicit_memory_query
 from src.context_compactor import context_trace, tool_projection_trace
@@ -21,7 +21,10 @@ def test_breakdown_wording_is_an_explicit_canonical_memory_query():
 
 
 def test_explicit_memory_queries_suppress_procedural_skills():
-    assert _suppress_automatic_skills("check your memories, are you sure?", {}) is True
+    assert suppress_automatic_skills(
+        "check your memories, are you sure?", {},
+        explicit_memory_query=is_explicit_memory_query,
+    ) is True
 
 
 def test_qwen_compact_projection_preserves_explicit_zero_and_failure_status():
