@@ -1,0 +1,28 @@
+{
+  "schema": "hades-live-holdout-summary.v1",
+  "application_source_sha": "2d2d5644635ef5325a230984ba1ac557d8a5f14a",
+  "evidence_commit_sha": "46842365281e3f8c3a813690070766b47e989136",
+  "candidate_image": "odysseus:candidate-2d2d5644",
+  "candidate_image_digest": "sha256:c8765366966f277c6c9bde1fe9bb54932ce78bae5243362a45552051ca7a599b",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "seed": 20260831,
+  "cases": 62,
+  "functional_passes": 59,
+  "architectural_passes": 57,
+  "security_passes": 62,
+  "qualified_reference_cases": 5,
+  "qualified_reference_passes": 5,
+  "duplicate_delivery": 0,
+  "false_success": 0,
+  "raw_final_results": 0,
+  "abrupt_eof": 0,
+  "p50_latency_seconds": 0.118,
+  "p95_latency_seconds": 1.677,
+  "failure_clusters": {
+    "EXECUTION_FAILURE": 5,
+    "CONTINUATION_FAILURE": 2,
+    "DOMAIN_ROUTING_FAILURE": 1
+  },
+  "status": "exact candidate holdout; functional subset clears 95 percent, architectural subset remains below release target; failures retained for generalized follow-up"
+}

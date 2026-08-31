@@ -1,10 +1,10 @@
 {
   "captured_at": "2026-08-31T03:29:45-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "2d2d5644",
-  "source_head": "2d2d5644",
-  "remote_head": "2d2d5644",
-  "evidence_commit_sha": "2d2d5644",
+  "branch_head": "46842365",
+  "source_head": "46842365",
+  "remote_head": "46842365",
+  "evidence_commit_sha": "46842365",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -346,7 +346,7 @@
     "application_source_sha": "2d2d5644",
     "evidence_commit_sha": "2d2d5644",
     "latest_candidate_browser_replay": "PASS: exact 2d2d5644 candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
-    "latest_candidate_holdout": "18/18 answers, 17/18 trajectory; one assets_reference_3 acceptance-fixture failure due no seeded canonical collection; no transport error/leak/duplicate/EOF"
+    "latest_candidate_holdout": "62 cases on exact 2d2d5644 candidate: 59 functional, 57 architectural, 62 security; 5/5 qualified references; failure clusters execution=5, continuation=2, domain-routing=1; false success/raw final/duplicate delivery/abrupt EOF=0; compact summary artifact hades-v1-2d2d5644-live-holdout-summary.json"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
