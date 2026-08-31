@@ -3137,22 +3137,7 @@ def adaptive_shortlist(actions: Sequence[Mapping[str, Any]], confidence: str = "
     return list(actions[:max(0, count)])
 
 
-def canonical_asset_read_payload(frame: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Build the owner-safe asset read payload from the resolved frame."""
-    frame = frame if isinstance(frame, Mapping) else {}
-    reference = str(frame.get("entity_reference") or "").strip()
-    if reference:
-        return {"action": "get", "asset": reference}
-    filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
-    payload: dict[str, Any] = {"action": "list", "limit": 500}
-    if filters.get("asset_query"):
-        payload["query"] = str(filters["asset_query"])[:120]
-    if filters.get("asset_property") and filters.get("asset_projection") != "count":
-        payload["asset_property"] = str(filters["asset_property"])[:40]
-        payload["result_projection"] = "property"
-    elif filters.get("asset_projection") == "filter":
-        payload["result_projection"] = "filter"
-    return payload
+from src.field_resolvers import canonical_asset_read_payload
 
 
 def canonical_read_fast_path_payload(
@@ -3163,63 +3148,10 @@ def canonical_read_fast_path_payload(
     query: str = "",
 ) -> dict[str, Any]:
     """Build a complete payload for a framework-selected safe read."""
-    if binding == "manage_assets" and action == "get":
-        return canonical_asset_read_payload(frame)
     payload = {"action": action}
     from src.field_resolvers import resolve_action_fields
     payload.update(resolve_action_fields(capability_id=None, action_id=action, binding=binding,
                                          query=str(query or ""), frame=frame if isinstance(frame, Mapping) else {}))
-    if binding == "read_recipes":
-        frame = frame if isinstance(frame, Mapping) else {}
-        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
-        reference = str(frame.get("entity_reference") or "").strip()
-        if reference and action in {"get", "can_make", "shopping_requirements", "scale"}:
-            payload["recipe_id"] = reference[:500]
-        recipe_query = str(filters.get("recipe_query") or "").strip()
-        if recipe_query and action == "search":
-            payload["query"] = recipe_query[:200]
-        servings = str(filters.get("servings") or "").strip()
-        if servings and action == "scale":
-            payload["servings"] = servings[:20]
-        if filters.get("recipe_expiring") is True and action == "expiring_candidates":
-            payload["expiry_days"] = 30
-        return payload
-    if binding == "manage_assets" and action in {"list", "search"}:
-        frame = frame if isinstance(frame, Mapping) else {}
-        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
-        requested_query = str(query or "")
-        query = str(filters.get("asset_query") or "").strip()
-        if query:
-            payload["query"] = query[:120]
-            # Aggregation is a canonical projection over the filtered Result.
-            # Keep the request shape explicit so the final answer renderer can
-            # count structured rows without asking the model to do arithmetic
-            # or infer inventory from prose.
-            if filters.get("asset_projection") == "count" or re.search(
-                r"\bhow\s+many\b", requested_query, re.IGNORECASE
-            ):
-                payload["result_projection"] = "count"
-        if filters.get("asset_property") and filters.get("asset_projection") != "count":
-            payload["asset_property"] = str(filters["asset_property"])[:40]
-            payload["result_projection"] = "property"
-        elif filters.get("asset_projection") == "filter":
-            payload["result_projection"] = "filter"
-    if binding == "developer_read":
-        frame = frame if isinstance(frame, Mapping) else {}
-        query = str(query or "").strip()
-        view = str((frame.get("filters") or {}).get("view") or "")
-        if action == "search_code":
-            match = re.search(r"\b(?:for|called|named)\s+(.+)$", query, re.IGNORECASE)
-            payload["query"] = (match.group(1).strip() if match else query)[:400]
-        elif action == "view_file_region":
-            path_match = re.search(
-                r"(?:^|\s)([A-Za-z0-9_./-]+\.(?:py|js|ts|tsx|jsx|json|md|css|html|yaml|yml|toml|sh))(?:\s|$)",
-                query,
-                re.IGNORECASE,
-            )
-            payload["path"] = path_match.group(1) if path_match else ""
-        elif view == "map":
-            payload["query"] = "**/*"
     return payload
 
 

@@ -100,6 +100,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 effects=("read_workspace",),
                 executor_key="developer_read",
                 target_scope="workspace",
+                field_resolver="developer_read",
                 requires_direct_container_access=False,
             )
             for action in ("search_code", "view_file_region", "show_repo_map")
@@ -118,7 +119,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                     action_id=action,
                     effects=("read_private",) if action in {"summary", "list", "search", "get"} else ("write_private",),
                     executor_key="manage_assets",
-                    field_resolver=("inventory" if action in {"add_item", "consume_stock", "move_item"} else None),
+                    field_resolver=("inventory" if action in {"add_item", "consume_stock", "move_item"} else "asset_read" if action in {"summary", "list", "search", "get"} else None),
                 )
                 for action in (
                     "summary", "list", "search", "get", "add", "update",
@@ -172,7 +173,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="recipe.read",
         description="Owner-scoped recipe and pantry-coverage reads over Inventory Service.",
         actions=_actions(*(
-                ActionSpec(action_id=action, effects=("read_private",), executor_key="read_recipes", field_resolver=("recipe" if action == "prepare_import" else None))
+                ActionSpec(action_id=action, effects=("read_private",), executor_key="read_recipes", field_resolver=("recipe" if action == "prepare_import" else "recipe_read"))
             for action in ("list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale", "expiring_candidates", "cooking_history", "prepare_import")
         )),
     ),

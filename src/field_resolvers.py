@@ -1,10 +1,75 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import re
 from typing import Any, Callable
 
 
 FieldResolver = Callable[[str, Mapping[str, Any], str], Mapping[str, Any] | None]
+
+
+def canonical_asset_read_payload(frame: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Project bounded Asset read fields from the resolved semantic frame."""
+    frame = frame if isinstance(frame, Mapping) else {}
+    reference = str(frame.get("entity_reference") or "").strip()
+    if reference:
+        return {"action": "get", "asset": reference}
+    filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+    payload: dict[str, Any] = {"action": "list"}
+    if not filters.get("asset_property") and filters.get("asset_projection") not in {"count", "property", "filter"}:
+        payload["limit"] = 500
+    if filters.get("asset_query"):
+        payload["query"] = str(filters["asset_query"])[:120]
+    if filters.get("asset_property") and filters.get("asset_projection") != "count":
+        payload["asset_property"] = str(filters["asset_property"])[:40]
+        payload["result_projection"] = "property"
+    elif filters.get("asset_projection") == "count":
+        payload["result_projection"] = "count"
+    elif filters.get("asset_projection") == "filter":
+        payload["result_projection"] = "filter"
+    return payload
+
+
+def _asset_read_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
+    payload = canonical_asset_read_payload(frame)
+    payload["action"] = action_id
+    if action_id in {"list", "search"} and payload.get("query") and re.search(
+        r"\bhow\s+many\b", str(query or ""), re.IGNORECASE
+    ):
+        payload["result_projection"] = "count"
+    return payload
+
+
+def _recipe_read_fields(_query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
+    filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+    reference = str(frame.get("entity_reference") or "").strip()
+    payload: dict[str, Any] = {"action": action_id}
+    if reference and action_id in {"get", "can_make", "shopping_requirements", "scale"}:
+        payload["recipe_id"] = reference[:500]
+    recipe_query = str(filters.get("recipe_query") or "").strip()
+    if recipe_query and action_id == "search":
+        payload["query"] = recipe_query[:200]
+    servings = str(filters.get("servings") or "").strip()
+    if servings and action_id == "scale":
+        payload["servings"] = servings[:20]
+    if filters.get("recipe_expiring") is True and action_id == "expiring_candidates":
+        payload["expiry_days"] = 30
+    return payload
+
+
+def _developer_read_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
+    text = str(query or "").strip()
+    filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+    payload: dict[str, Any] = {"action": action_id}
+    if action_id == "search_code":
+        match = re.search(r"\b(?:for|called|named)\s+(.+)$", text, re.IGNORECASE)
+        payload["query"] = (match.group(1).strip() if match else text)[:400]
+    elif action_id == "view_file_region":
+        match = re.search(r"(?:^|\s)([A-Za-z0-9_./-]+\.(?:py|js|ts|tsx|jsx|json|md|css|html|yaml|yml|toml|sh))(?:\s|$)", text, re.IGNORECASE)
+        payload["path"] = match.group(1) if match else ""
+    elif str(filters.get("view") or "") == "map":
+        payload["query"] = "**/*"
+    return payload
 
 
 def _scheduled_task_fields(query: str, _frame: Mapping[str, Any], _action_id: str) -> Mapping[str, Any] | None:
@@ -97,6 +162,9 @@ def _notes_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mappi
 # The resolver name is declared by ActionSpec.  This table is intentionally
 # about field semantics only; it cannot select capabilities or execute work.
 FIELD_RESOLVERS: dict[str, FieldResolver] = {
+    "asset_read": _asset_read_fields,
+    "recipe_read": _recipe_read_fields,
+    "developer_read": _developer_read_fields,
     "scheduled_task": _scheduled_task_fields,
     "recipe": _recipe_fields,
     "inventory": _inventory_fields,
