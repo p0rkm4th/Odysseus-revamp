@@ -41,6 +41,7 @@ COUNTED_MODULES = (
     "src/result_renderers/calendar.py",
     "src/result_renderers/recipe.py",
     "src/result_renderers/generic.py",
+    "src/result_renderers/notes.py",
     "src/legacy_agent_loop.py",
 )
 
