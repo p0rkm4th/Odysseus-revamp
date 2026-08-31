@@ -1,0 +1,35 @@
+{
+  "schema": "hades-v1-checkpoint.v1",
+  "application_source_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
+  "candidate_image": "odysseus:candidate-c575b959",
+  "image_id": "sha256:a9bbc304716064e571b760534165f3f3961dd9423bb124faf125522b029dc7c7",
+  "oci_revision": "c575b959",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "full_regression": "7119 passed, 9 skipped, 149 warnings in 305.84s",
+  "browser_realistic_acceptance": "PASS",
+  "live_holdout_subset": {
+    "cases": 18,
+    "trajectory_passes": 18,
+    "errors": 0,
+    "internal_leaks": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "note": "subset trajectory evidence; not the full supported-domain score"
+  },
+  "architecture": {
+    "semantic_control_plane_loc": 18819,
+    "central_domain_conditionals": 118,
+    "central_canonical_answer_functions": 8,
+    "canonical_answer_dispatch_mentions": 12,
+    "agent_loop_loc": 6583,
+    "aci_loc": 5156,
+    "intent_contracts_loc": 3433
+  },
+  "owner_runtime": {
+    "source_sha": "2f05d500",
+    "image": "odysseus:candidate-2f05d500",
+    "status": "unchanged; healthy; zero restarts"
+  },
+  "status": "active engineering checkpoint; V1 not frozen"
+}

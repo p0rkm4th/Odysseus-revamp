@@ -1,20 +1,20 @@
 {
-  "captured_at": "2026-08-31T04:25:00-05:00",
+  "captured_at": "2026-08-31T04:48:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "f0b3d848",
-  "source_head": "f0b3d848",
-  "remote_head": "f0b3d848",
-  "evidence_commit_sha": "f0b3d848",
+  "branch_head": "c575b959",
+  "source_head": "c575b959",
+  "remote_head": "c575b959",
+  "evidence_commit_sha": "c575b959",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "f0b3d8488958827d1d58aba92eaf252251073eda",
-    "image": "odysseus:candidate-f0b3d848",
-    "image_id": "sha256:36685b01bdc571953fb8ad54afd4eb7df6070e74a62bf77f7d64280c78d3c339",
-    "image_digest": "sha256:36685b01bdc571953fb8ad54afd4eb7df6070e74a62bf77f7d64280c78d3c339",
-    "oci_revision": "f0b3d848",
-    "source_marker": "f0b3d848",
-    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; focused Recipe/ACI regression 254 passed, 1 warning; browser_realistic_acceptance PASS; full regression remains inherited from content-equivalent prior source; no false success, duplicate delivery, raw final Result, or abrupt EOF"
+    "source_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
+    "image": "odysseus:candidate-c575b959",
+    "image_id": "sha256:a9bbc304716064e571b760534165f3f3961dd9423bb124faf125522b029dc7c7",
+    "image_digest": "sha256:a9bbc304716064e571b760534165f3f3961dd9423bb124faf125522b029dc7c7",
+    "oci_revision": "c575b959",
+    "source_marker": "c575b959",
+    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; focused Asset/ACI regression 116 passed, 3 warnings; full regression 7119 passed, 9 skipped, 149 warnings; browser_realistic_acceptance PASS; no owner data touched"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -28,12 +28,12 @@
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
-    "candidate_source_sha": "663653171674670cbd2f1a8bdad806a448f71a8b",
-    "candidate_image": "odysseus:candidate-663653171674",
-    "candidate_image_id": "sha256:820cc58d1a4df7d2212505000470038fd8477a6904a7324c7e385bab1d421c35",
+    "candidate_source_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
+    "candidate_image": "odysseus:candidate-c575b959",
+    "candidate_image_id": "sha256:a9bbc304716064e571b760534165f3f3961dd9423bb124faf125522b029dc7c7",
     "completion_trace_fix": "5e5bc0f7; focused ACI/dogfood tests 160 passed, 1 warning",
     "browser_replays_exact_candidate": {
-      "candidate_source_sha": "663653171674670cbd2f1a8bdad806a448f71a8b",
+      "candidate_source_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
       "status": "PASS; browser_realistic_acceptance.mjs; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
       "OWNER-NETWORK-BOUNDED-CIDR-001": {
         "status": "PASS",
@@ -338,15 +338,15 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T04:25:00-05:00",
-    "artifact": "artifacts/productization/architecture_current.json",
-    "focused_migration_tests": "166 passed, 1 warning",
-    "full_regression": "7119 passed, 9 skipped, 149 warnings in 303.73s on exact application source f0b3d848; artifact hades-v1-f0b3d848-full-regression.json",
-    "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "f0b3d8488958827d1d58aba92eaf252251073eda",
-    "evidence_commit_sha": "f0b3d8488958827d1d58aba92eaf252251073eda",
-    "latest_candidate_browser_replay": "PASS: exact f0b3d848 candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
-    "latest_candidate_holdout": "62 cases on exact 2d2d5644 candidate: 59 functional, 57 architectural, 62 security; 5/5 qualified references; failure clusters execution=5, continuation=2, domain-routing=1; false success/raw final/duplicate delivery/abrupt EOF=0; compact summary artifact hades-v1-2d2d5644-live-holdout-summary.json"
+    "measured_at": "2026-08-31T04:48:00-05:00",
+    "artifact": "artifacts/productization/c575b959-checkpoint.json",
+    "focused_migration_tests": "116 passed, 3 warnings",
+    "full_regression": "7119 passed, 9 skipped, 149 warnings in 305.84s on exact application source c575b959",
+    "metrics_artifact": "artifacts/productization/c575b959-checkpoint.json",
+    "application_source_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
+    "evidence_commit_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
+    "latest_candidate_browser_replay": "PASS: exact c575b959 candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
+    "latest_candidate_holdout": "18-case live held-out trajectory subset on exact c575b959: 18/18 trajectories passed, 0 errors, 0 internal leaks, 0 duplicate delivery, 0 abrupt EOF; this is not the full supported-domain score; artifact /tmp/hades-39944460-heldout.json"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
