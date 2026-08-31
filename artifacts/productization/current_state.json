@@ -1,10 +1,10 @@
 {
   "captured_at": "2026-08-31T05:12:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "50ae6e6b",
+  "branch_head": "2c2b089b",
   "source_head": "50ae6e6b",
-  "remote_head": "50ae6e6b",
-  "evidence_commit_sha": "f5770225",
+  "remote_head": "2c2b089b",
+  "evidence_commit_sha": "2c2b089b",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
