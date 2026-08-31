@@ -1,10 +1,10 @@
 {
-  "captured_at": "2026-08-31T05:48:00-05:00",
+  "captured_at": "2026-08-31T06:02:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "4ff0f9ad",
+  "branch_head": "51cd3267",
   "source_head": "78bf0d1c",
-  "remote_head": "4ff0f9ad",
-  "evidence_commit_sha": "4ff0f9ad",
+  "remote_head": "51cd3267",
+  "evidence_commit_sha": "51cd3267",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -14,7 +14,7 @@
     "image_digest": "sha256:db6a877cd112ebdffe83be98c0a87ba75b0d9f4ee28f629fab7b92d4813c478a",
     "oci_revision": "78bf0d1c",
     "source_marker": "78bf0d1c7282486ce4f8252e805b3c467e041f6e",
-    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; focused regression 160 passed, 1 warning; browser_realistic_acceptance PASS; live owner corpus 43/43; full regression not rerun; no owner data touched"
+    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; focused regression 160 passed, 1 warning; browser_realistic_acceptance PASS; live owner corpus 43/43; full regression 7119 passed, 9 skipped, 149 warnings in 304.37s on docs-only descendant 51cd3267; no owner data touched"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -355,13 +355,13 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T05:25:00-05:00",
+    "measured_at": "2026-08-31T06:02:00-05:00",
     "artifact": "artifacts/productization/78bf0d1c-architecture-metrics.json",
     "focused_migration_tests": "160 passed, 1 warning on exact application source 78bf0d1c",
-    "full_regression": "7119 passed, 9 skipped, 149 warnings in 306.92s on exact application source 49467b32",
+    "full_regression": "7119 passed, 9 skipped, 149 warnings in 304.37s on docs-only descendant 51cd3267; executable source remains 78bf0d1c",
     "metrics_artifact": "artifacts/productization/78bf0d1c-architecture-metrics.json",
     "application_source_sha": "78bf0d1c7282486ce4f8252e805b3c467e041f6e",
-    "evidence_commit_sha": "9269a87f",
+    "evidence_commit_sha": "51cd3267",
     "latest_candidate_browser_replay": "PASS: exact 78bf0d1c candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
     "latest_candidate_holdout": "43/43 trajectories on exact 78bf0d1c (core 25/25, held-out 18/18), 0 errors, 0 internal leaks, 0 duplicate delivery, 0 abrupt EOF; artifact 78bf0d1c-live-holdout-summary.json"
   },
