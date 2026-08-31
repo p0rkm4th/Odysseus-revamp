@@ -5249,12 +5249,6 @@ def project_action_selection(
             (
                 frame.get("operation_class") == "READ" and frame.get("read_explicit") is True
             )
-            or (
-                frame.get("domain_concept") == "NETWORK"
-                and frame.get("operation_class") == "EXECUTE"
-                and desired_action == "plan_network_discovery"
-                and network_cidr
-            )
         )
         and desired_binding and desired_action and desired_binding in candidate_bindings
         and desired_binding not in disabled
