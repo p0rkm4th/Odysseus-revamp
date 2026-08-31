@@ -248,17 +248,17 @@
       ]
     },
     "src/aci.py": {
-      "loc": 4579,
+      "loc": 4560,
       "functions": [
         {
           "name": "project_action_selection",
-          "line": 3785,
+          "line": 3766,
           "loc": 279
         },
         {
           "name": "canonical_tool_result_projection",
           "line": 3151,
-          "loc": 162
+          "loc": 143
         },
         {
           "name": "provisional_intent_projection",
@@ -267,7 +267,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3593,
+          "line": 3574,
           "loc": 104
         },
         {
@@ -292,7 +292,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4110,
+          "line": 4091,
           "loc": 93
         },
         {
@@ -317,7 +317,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4363,
+          "line": 4344,
           "loc": 69
         },
         {
@@ -342,7 +342,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4302,
+          "line": 4283,
           "loc": 59
         },
         {
@@ -352,17 +352,17 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 4516,
+          "line": 4497,
           "loc": 56
         },
         {
           "name": "canonical_read_failure_answer",
-          "line": 3315,
+          "line": 3296,
           "loc": 53
         },
         {
           "name": "canonical_action_failure_answer",
-          "line": 3370,
+          "line": 3351,
           "loc": 52
         },
         {
@@ -372,12 +372,12 @@
         },
         {
           "name": "project_final_answer",
-          "line": 3481,
+          "line": 3462,
           "loc": 50
         },
         {
           "name": "parse_decision_json",
-          "line": 4220,
+          "line": 4201,
           "loc": 50
         },
         {
@@ -397,7 +397,7 @@
         },
         {
           "name": "project_result_observation",
-          "line": 4434,
+          "line": 4415,
           "loc": 48
         },
         {
@@ -417,7 +417,7 @@
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 4066,
+          "line": 4047,
           "loc": 42
         },
         {
@@ -437,7 +437,7 @@
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 3729,
+          "line": 3710,
           "loc": 37
         },
         {
@@ -452,12 +452,12 @@
         },
         {
           "name": "canonical_unverified_action_answer",
-          "line": 3424,
+          "line": 3405,
           "loc": 32
         },
         {
           "name": "project_capability_palette",
-          "line": 3533,
+          "line": 3514,
           "loc": 32
         },
         {
@@ -492,7 +492,7 @@
         },
         {
           "name": "selected_action_for_decision",
-          "line": 4272,
+          "line": 4253,
           "loc": 28
         },
         {
@@ -532,7 +532,7 @@
         },
         {
           "name": "classify_action_escalation",
-          "line": 3567,
+          "line": 3548,
           "loc": 24
         },
         {
@@ -567,12 +567,12 @@
         },
         {
           "name": "canonical_result_answer",
-          "line": 3458,
+          "line": 3439,
           "loc": 21
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 4484,
+          "line": 4465,
           "loc": 20
         },
         {
@@ -627,7 +627,7 @@
         },
         {
           "name": "validate_capability_creation_request",
-          "line": 3768,
+          "line": 3749,
           "loc": 15
         },
         {
@@ -672,7 +672,7 @@
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 4205,
+          "line": 4186,
           "loc": 13
         },
         {
@@ -737,7 +737,7 @@
         },
         {
           "name": "model_burden",
-          "line": 4574,
+          "line": 4555,
           "loc": 6
         },
         {
@@ -794,13 +794,13 @@
       "largest_functions": [
         {
           "name": "project_action_selection",
-          "line": 3785,
+          "line": 3766,
           "loc": 279
         },
         {
           "name": "canonical_tool_result_projection",
           "line": 3151,
-          "loc": 162
+          "loc": 143
         },
         {
           "name": "provisional_intent_projection",
@@ -809,7 +809,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3593,
+          "line": 3574,
           "loc": 104
         },
         {
@@ -834,7 +834,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4110,
+          "line": 4091,
           "loc": 93
         },
         {
@@ -859,7 +859,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4363,
+          "line": 4344,
           "loc": 69
         },
         {
@@ -884,7 +884,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4302,
+          "line": 4283,
           "loc": 59
         },
         {
@@ -2811,29 +2811,39 @@
       ]
     },
     "src/result_renderers/household.py": {
-      "loc": 129,
+      "loc": 143,
       "functions": [
         {
           "name": "canonical_household_read_answer",
-          "line": 43,
+          "line": 57,
           "loc": 87
         },
         {
           "name": "canonical_inventory_mutation_answer",
-          "line": 8,
+          "line": 22,
           "loc": 33
+        },
+        {
+          "name": "project_household_result",
+          "line": 8,
+          "loc": 12
         }
       ],
       "largest_functions": [
         {
           "name": "canonical_household_read_answer",
-          "line": 43,
+          "line": 57,
           "loc": 87
         },
         {
           "name": "canonical_inventory_mutation_answer",
-          "line": 8,
+          "line": 22,
           "loc": 33
+        },
+        {
+          "name": "project_household_result",
+          "line": 8,
+          "loc": 12
         }
       ]
     },
@@ -2843,7 +2853,7 @@
       "largest_functions": []
     }
   },
-  "semantic_control_plane_loc": 19109,
+  "semantic_control_plane_loc": 19104,
   "central_domain_conditionals": 112,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -3022,6 +3032,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "88de9035414a55f26c340ce09cbf432c3c734d05",
+  "source_sha": "99d40dc17c147a4d76bc3ffe99c774c65c77c876",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
