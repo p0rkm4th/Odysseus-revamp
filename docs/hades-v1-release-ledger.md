@@ -4789,3 +4789,10 @@ abrupt EOF were all zero. The previously observed accumulated-context timeout
 did not recur after canonical read dispatch was kept out of Qwen arbitration.
 The disposable candidate was healthy with zero restarts; the persistent owner
 dogfood lane remained untouched on its separately pinned candidate.
+
+The same exact `a8d8d349` candidate also passed
+`OWNER-REMINDER-RECURRING-READBACK-001` through the authenticated GUI: `2`
+turns, one chat-originated recurring-reminder mutation, and two independent
+readbacks after reload. False success, raw final Results, duplicate delivery,
+and abrupt EOF were zero. This was run in the disposable empty daily-driver
+profile; the persistent owner dogfood lane remained untouched.
