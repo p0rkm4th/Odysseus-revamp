@@ -5246,6 +5246,18 @@ mutation (2 turns, 1 mutation, 2 readbacks), and Work overview (3 turns, 2
 canonical readback checks). False success, raw final Results, duplicate
 delivery, and abrupt EOF were zero. No owner-dogfood state was touched.
 
+## Actual owner read-only Network provenance check — owner runtime `2f05d500` (2026-08-31)
+
+The read-only `OWNER-NETWORK-001` journey was replayed against the persistent
+owner-dogfood deployment. It reproduced the known
+`ENVIRONMENT_FAILURE / RUNTIME_PROVENANCE_MISMATCH`: the older owner image
+`candidate-2f05d500` returned `UNAVAILABLE` from
+`manage_homelab.read_network_observations` (`CMDB unavailable`), and the stream
+projected `AnswerSource.ERROR`. The visible answer remained bounded and did
+not infer current state; this is not evidence against the exact newer
+candidate, which has a different broker/runtime setup. No owner data or
+deployment state was changed.
+
 ## Realistic UI acceptance replay — candidate `b91ff938` (2026-08-31)
 
 `browser_realistic_acceptance.mjs` passed against the exact candidate. The
