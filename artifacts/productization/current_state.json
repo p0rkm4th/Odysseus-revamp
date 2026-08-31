@@ -24,12 +24,12 @@
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
-    "candidate_source_sha": "6012d6648b2b67b6f0018f271603a5c60996d81d",
-    "candidate_image": "odysseus:candidate-6012d6648b2",
-    "candidate_image_id": "sha256:f5c5f708b540a7136d3aabd3f257e74a95fe5cf79b6bba15fcfa38528fa91ace",
+    "candidate_source_sha": "934ee72d15e8accf809beeb34dd7a293e9cb085a",
+    "candidate_image": "odysseus:candidate-934ee72d15e8",
+    "candidate_image_id": "sha256:115e0b81b00b95784ef3bb6a65029162ffa56207a1de5880a19ae8fd4ced3e92",
     "completion_trace_fix": "5e5bc0f7; focused ACI/dogfood tests 160 passed, 1 warning",
     "browser_replays_exact_candidate": {
-      "candidate_source_sha": "6012d6648b2b67b6f0018f271603a5c60996d81d",
+      "candidate_source_sha": "934ee72d15e8accf809beeb34dd7a293e9cb085a",
       "status": "PASS; browser_realistic_acceptance.mjs; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
       "OWNER-NETWORK-BOUNDED-CIDR-001": {
         "status": "PASS",
@@ -186,7 +186,7 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-30T23:07:07-05:00",
+    "measured_at": "2026-08-30T23:19:49-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
     "full_regression": "7116 passed, 9 skipped, 149 warnings",
