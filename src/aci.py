@@ -5184,16 +5184,8 @@ def project_action_selection(
         if spec and spec.known and spec.approval.value == "none" and not set(spec.effects) & {
             "write_private", "admin_change", "external_side_effect", "external_network",
         }:
-            if read_payload_builder:
-                fast_path = dict(read_payload_builder(
-                    desired_binding, desired_action, frame, query=query,
-                ))
-            else:
-                fast_path = {"action": desired_action}
-                if desired_binding == "manage_assets" and desired_action == "get":
-                    fast_path = {"action": "get", "asset": str(frame.get("entity_reference") or "")}
-                if desired_action == "summarize_owner_memory":
-                    fast_path["query"] = query
+            builder = read_payload_builder or canonical_read_fast_path_payload
+            fast_path = dict(builder(desired_binding, desired_action, frame, query=query))
             mode = SelectionMode.DIRECT_ACTION
     # A resolver-declared payload is already validated enough for deterministic
     # selection. Keep this generic: the resolver owns field semantics, while
