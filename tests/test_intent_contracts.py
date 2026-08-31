@@ -74,6 +74,8 @@ def test_turn_contract_keeps_explicit_continuation_out_of_retrieval_context():
 
 @pytest.mark.parametrize("text, expected", [
     ("scan 192.168.10.17/24", "192.168.10.0/24"),
+    (r"scan 192.168.10.0\24", "192.168.10.0/24"),
+    ("scan 192.168.10.0 / 24", "192.168.10.0/24"),
     ("discover 10.20.30.0/25", "10.20.30.0/25"),
     ("scan 172.16.4.0/24", "172.16.4.0/24"),
     ("scan 8.8.8.0/24", None),
@@ -83,6 +85,14 @@ def test_turn_contract_keeps_explicit_continuation_out_of_retrieval_context():
 def test_network_scope_projection_requires_explicit_bounded_private_cidr(text, expected):
     assert explicit_private_discovery_cidr(text) == expected
     assert network_discovery_request_cidr(text) == expected
+
+
+@pytest.mark.parametrize("text", [
+    r"scan 192.168.10.0\33",
+    "scan 192.168.10.0 / 33",
+])
+def test_network_scope_projection_rejects_invalid_typo_normalization(text):
+    assert explicit_private_discovery_cidr(text) is None
 
 
 def test_network_action_predicates_are_semantic_and_non_authorizing():
