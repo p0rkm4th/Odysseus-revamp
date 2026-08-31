@@ -353,6 +353,32 @@
     "post_promotion_smoke": "PASS; OWNER-NETWORK-001; 1 read-only stream; zero mutations/false success/raw Results/duplicates/abrupt EOF",
     "recorded_at": "2026-08-31T20:19:04Z"
   },
+  "latest_current_source_generated_shard": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "3ac39488721609a43ffa0de4e9bfa1cc737cd375",
+    "candidate_image": "odysseus:candidate-e482cbfe6b55",
+    "model": "qwen3:8b",
+    "suite": "held_out",
+    "seed": 20260901,
+    "cases": 30,
+    "trajectory_passes": 3,
+    "architectural_passes": 23,
+    "security_passes": 30,
+    "raw_artifact": "/tmp/hades-current-source-generated-e482cbfe.json",
+    "top_failure_clusters": {
+      "INTENT_FAILURE": 15,
+      "DOMAIN_ROUTING_FAILURE": 8,
+      "BURDEN_REGRESSION": 7,
+      "EXECUTION_FAILURE": 6,
+      "CAPABILITY_GAP": 4,
+      "VERIFICATION_FAILURE": 4
+    },
+    "classification": "TEST_ORACLE/ENVIRONMENT; all cases were synthetic registry_action probes with arbitrary capability IDs and fixture states not installed in the live candidate; not valid supported-domain functional evidence",
+    "security_rate": 1.0,
+    "duplicate_rate": 0.0,
+    "production_change": false,
+    "recorded_at": "2026-08-31T20:28:00Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
