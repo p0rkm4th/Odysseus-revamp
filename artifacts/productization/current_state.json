@@ -633,6 +633,25 @@
     "scope_cases": "invalid /33, backslash /33, and malformed backslash suffix \\xx; no invented or broadened scope",
     "recorded_at": "2026-08-31T20:56:00Z"
   },
+  "latest_current_source_live_fuzz_seed17": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "90958d00a8aea8da785374628ad3ec8dda2fdfb8",
+    "harness_source_sha": "90958d00a8aea8da785374628ad3ec8dda2fdfb8",
+    "suite": "held_out",
+    "seed": 17,
+    "requested_sample": 12,
+    "scenario_count": 13,
+    "trajectory_pass": 13,
+    "model": "qwen3:8b",
+    "model_calls": 3,
+    "tool_index_lookups": 0,
+    "internal_leaks": 0,
+    "duplicate_finalization": 0,
+    "abrupt_eof": 0,
+    "status": "PASS",
+    "raw_artifact": "/tmp/hades-live-fuzz-heldout-seed17-e482cbfe.json",
+    "recorded_at": "2026-08-31T20:57:11Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
