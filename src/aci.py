@@ -5180,12 +5180,6 @@ def project_action_selection(
             query=query,
             frame=frame,
         ))
-        if item["action_id"] == "summarize_owner_memory":
-            payload["query"] = query
-        if item["binding"] == "web_search":
-            payload["query"] = query
-        if item["binding"] == "web_fetch":
-            payload["url"] = query
         dependency_plan = dependency_manager.ensure_action(
             str(item.get("binding") or ""),
             str(item.get("action_id") or ""),
