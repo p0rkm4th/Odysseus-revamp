@@ -62,6 +62,14 @@
     "coverage": "batches 0-9, 10-19, 20-29, and 30-end; fresh disposable principal per batch",
     "recorded_at": "2026-08-31T13:09:00-05:00"
   },
+  "latest_exact_source_validation": {
+    "source_sha": "975f495f821effbb7a65d102ae69c7e229c2ba69",
+    "compileall": "PASS",
+    "full_pytest": "PASS; 7139 passed, 9 skipped, 149 warnings in 306.49s",
+    "hades_aci_security_contract": "PASS; 445 passed, 2 warnings in 21.38s",
+    "candidate_image": "not rebuilt; executable candidate remains exact 896473de",
+    "recorded_at": "2026-08-31T13:15:00-05:00"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
