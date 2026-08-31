@@ -39,6 +39,7 @@ COUNTED_MODULES = (
     "src/result_renderers/homelab.py",
     "src/result_renderers/scheduled.py",
     "src/result_renderers/calendar.py",
+    "src/result_renderers/recipe.py",
     "src/legacy_agent_loop.py",
 )
 

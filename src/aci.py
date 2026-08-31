@@ -43,6 +43,7 @@ from src.result_renderers.scheduled import (
     canonical_scheduled_task_read_answer,
 )
 from src.result_renderers.calendar import canonical_communications_read_answer
+from src.result_renderers.recipe import canonical_recipe_mutation_answer
 
 logger = logging.getLogger(__name__)
 
@@ -4170,42 +4171,6 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     if verified:
         return f"{verb} {label}; the canonical inventory readback is verified."
     return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."
-
-
-def canonical_recipe_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Render only a verified recipe commit; model prose is never evidence."""
-    event = next(
-        (item for item in reversed(tuple(tool_events or ()))
-         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_recipes"),
-        None,
-    )
-    if event is None or event.get("exit_code") not in (None, 0):
-        return None
-    projection = event.get("result_projection")
-    if isinstance(projection, Mapping):
-        payload = projection
-    else:
-        try:
-            payload = json.loads(str(event.get("output") or ""))
-        except (TypeError, ValueError):
-            return None
-    if (
-        isinstance(payload, Mapping)
-        and str(payload.get("status") or "").strip().upper() == "NEEDS_REVIEW"
-        and isinstance(payload.get("draft"), Mapping)
-    ):
-        draft = payload["draft"]
-        name = str(draft.get("name") or "the recipe").strip()
-        ingredients = draft.get("ingredients") if isinstance(draft.get("ingredients"), list) else []
-        review = draft.get("review") if isinstance(draft.get("review"), Mapping) else {}
-        missing = review.get("missing_fields") if isinstance(review.get("missing_fields"), list) else []
-        suffix = f" Needs review: {', '.join(str(item) for item in missing[:5])}." if missing else ""
-        return f"Prepared {name!r} for review with {len(ingredients)} ingredient(s). Nothing has been saved yet." + suffix
-    recipe = payload.get("recipe") if isinstance(payload, Mapping) else None
-    if not isinstance(recipe, Mapping) or not recipe.get("id"):
-        return None
-    name = str(recipe.get("name") or "the recipe").strip()
-    return f"Recorded recipe {name!r}; the canonical recipe readback is verified."
 
 
 def canonical_notes_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
