@@ -1,8 +1,8 @@
 {
   "captured_at": "2026-08-31T02:10:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "844b7431391ba7dfa58245f88badb60b16014b7d",
-  "remote_head": "844b7431391ba7dfa58245f88badb60b16014b7d",
+  "source_head": "eee4df9bd6bf8cdd0661f2736c572e0ff42d0899",
+  "remote_head": "eee4df9bd6bf8cdd0661f2736c572e0ff42d0899",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -26,6 +26,7 @@
     "qwen_model": "qwen3:8b",
     "qwen_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
     "fresh_install_restart": "pass",
+    "backup_restore": "pass; drift removed and post-restore browser read verified",
     "full_regression": "7114 passed, 9 skipped, 149 warnings",
     "focused_semantic_recovery": "382 passed, 1 warning",
     "lived_in_walkabout": {
