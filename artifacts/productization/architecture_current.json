@@ -30,71 +30,71 @@
   ],
   "modules": {
     "src/agent_loop.py": {
-      "loc": 6590,
+      "loc": 6436,
       "functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1161,
+          "line": 1007,
           "loc": 5426
         },
         {
           "name": "_build_system_prompt",
-          "line": 534,
+          "line": 380,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2593,
+          "line": 2439,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3234,
+          "line": 3080,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1629,
+          "line": 1475,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2299,
+          "line": 2145,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3349,
+          "line": 3195,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 1104,
+          "line": 950,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2345,
+          "line": 2191,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3407,
+          "line": 3253,
           "loc": 30
         },
         {
           "name": "_assemble_prompt",
-          "line": 488,
+          "line": 334,
           "loc": 22
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1610,
+          "line": 1456,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2861,
+          "line": 2707,
           "loc": 16
         },
         {
@@ -104,12 +104,12 @@
         },
         {
           "name": "_apply_candidate_compaction",
-          "line": 3321,
+          "line": 3167,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2879,
+          "line": 2725,
           "loc": 8
         },
         {
@@ -124,84 +124,84 @@
         },
         {
           "name": "_domain_tools_for_projection",
-          "line": 459,
+          "line": 305,
           "loc": 5
         },
         {
           "name": "_record_aci_framework",
-          "line": 1315,
+          "line": 1161,
           "loc": 3
         },
         {
           "name": "_record_aci_model",
-          "line": 1319,
+          "line": 1165,
           "loc": 3
         }
       ],
       "largest_functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1161,
+          "line": 1007,
           "loc": 5426
         },
         {
           "name": "_build_system_prompt",
-          "line": 534,
+          "line": 380,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2593,
+          "line": 2439,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3234,
+          "line": 3080,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1629,
+          "line": 1475,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2299,
+          "line": 2145,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3349,
+          "line": 3195,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 1104,
+          "line": 950,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2345,
+          "line": 2191,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3407,
+          "line": 3253,
           "loc": 30
         },
         {
           "name": "_assemble_prompt",
-          "line": 488,
+          "line": 334,
           "loc": 22
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1610,
+          "line": 1456,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2861,
+          "line": 2707,
           "loc": 16
         },
         {
@@ -211,12 +211,12 @@
         },
         {
           "name": "_apply_candidate_compaction",
-          "line": 3321,
+          "line": 3167,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2879,
+          "line": 2725,
           "loc": 8
         },
         {
@@ -231,12 +231,12 @@
         },
         {
           "name": "_domain_tools_for_projection",
-          "line": 459,
+          "line": 305,
           "loc": 5
         },
         {
           "name": "_record_aci_framework",
-          "line": 1315,
+          "line": 1161,
           "loc": 3
         }
       ]
@@ -2692,7 +2692,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 19079,
+  "semantic_control_plane_loc": 18925,
   "central_domain_conditionals": 118,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -2734,8 +2734,8 @@
     "src/task_scheduler.py:2302:from routes.prefs_routes import _load_for_user",
     "src/tool_execution.py:2277:from routes.contacts_routes import _fetch_contacts",
     "src/aci.py:239:from routes.prefs_routes import _load_for_user",
-    "src/agent_loop.py:946:from routes.prefs_routes import _load_for_user as _load_prefs",
-    "src/agent_loop.py:2137:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:792:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:1983:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/tools/calendar.py:23:from routes.calendar_routes import (",
     "src/tools/contacts.py:33:from routes import contacts_routes as cc",
     "src/tools/contacts.py:92:from routes import contacts_routes as cc",
@@ -2860,6 +2860,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "2a777e7ab58bcae426759c42075eb80c4bcc6a2e",
+  "source_sha": "ffd7f47d46cbb1197624392166ad14e66f9fec0c",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
