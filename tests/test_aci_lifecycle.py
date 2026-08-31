@@ -2009,3 +2009,19 @@ def test_result_observation_projection_preserves_trace_state_without_authority()
     assert observed["approval_state"] == "REQUIRED"
     assert observed["policy_state"] == "BLOCKED"
     assert observed["executors"] == ["host.inspect"]
+
+
+def test_aci_trace_projects_terminal_result_state_as_completion_state():
+    from src.aci import PostResultState, project_aci_trace
+
+    trace = project_aci_trace(
+        intent={"intent_frame": {"domain_concept": "NETWORK", "operation_class": "READ"}},
+        run_id=None,
+        action_id="read_network_context",
+        mode="aci",
+        post_result_states=[PostResultState.BLOCKED],
+        tool_events=[{"error": "host context unavailable", "exit_code": 1}],
+    )
+
+    assert trace["post_result_state"] is PostResultState.BLOCKED
+    assert trace["completion_state"] == "BLOCKED"

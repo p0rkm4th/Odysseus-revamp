@@ -1653,6 +1653,18 @@ def project_aci_trace(
     reference = frame.get("reference_resolution")
     reference = reference if isinstance(reference, Mapping) else {}
     has_entity = bool(frame.get("entity_reference") or reference)
+    completion_state = "COMPLETE" if completion_satisfied else str(turn_disposition or "IN_PROGRESS")
+    if not completion_satisfied and not turn_disposition and post_result_states:
+        terminal_state = list(post_result_states)[-1]
+        terminal_state = str(getattr(terminal_state, "value", terminal_state) or "").upper()
+        # Result transition state is authoritative. Do not report a turn as
+        # still in progress after a terminal failure, approval gate, missing
+        # context, or deterministic continuation handoff.
+        if terminal_state in {
+            "BLOCKED", "NEEDS_APPROVAL", "NEEDS_CONTEXT",
+            "CONTINUE_DETERMINISTICALLY",
+        }:
+            completion_state = terminal_state
     return {
         "domain": domain,
         "primary_domain": domain,
@@ -1676,7 +1688,7 @@ def project_aci_trace(
         "result": "PRESENT" if tool_events else "NONE",
         "verification": list(verification),
         "post_result_state": list(post_result_states)[-1] if post_result_states else None,
-        "completion_state": "COMPLETE" if completion_satisfied else str(turn_disposition or "IN_PROGRESS"),
+        "completion_state": completion_state,
         "fallback_reason": str(fallback_reason or "")[:120] or None,
         "repair_count": int(repair_count),
         "answer_present": bool(answer_present),
