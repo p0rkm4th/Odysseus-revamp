@@ -2114,8 +2114,6 @@
     "tests/test_deterministic_read_paraphrases.py:590:from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence",
     "tests/test_deterministic_read_paraphrases.py:628:from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence",
     "tests/test_local_continuity_and_dependencies.py:82:from src.agent_loop import _assemble_prompt, _classify_agent_request, _normalize_homelab_intent",
-    "tests/test_memory_grounding.py:6:from src.agent_loop import _classify_agent_request",
-    "tests/test_memory_grounding_p0.py:3:from src.agent_loop import _classify_agent_request, _suppress_automatic_skills",
     "tests/test_p0_chat_continuity.py:4:from src.agent_loop import _classify_agent_request",
     "tests/test_tool_binding_projections.py:2:from src.agent_loop import TOOL_SECTIONS, _DOMAIN_TOOL_MAP",
     "tests/test_workspace_confine.py:387:from src.agent_loop import _classify_agent_request"
@@ -2251,6 +2249,6 @@
       }
     ]
   },
-  "source_sha": "f483877cf46829c5bac813e8ab0c92efe2d65304",
+  "source_sha": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }

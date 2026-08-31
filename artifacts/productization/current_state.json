@@ -1,16 +1,16 @@
 {
-  "captured_at": "2026-08-31T03:40:00-05:00",
+  "captured_at": "2026-08-31T03:12:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "f483877cf46829c5bac813e8ab0c92efe2d65304",
-  "remote_head": "f483877cf46829c5bac813e8ab0c92efe2d65304",
+  "source_head": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
+  "remote_head": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "5e5bc0f773a937befba23629adf6dc0bcc297b0d",
-    "image": "odysseus:candidate-5e5bc0f-exact",
-    "image_id": "sha256:38609d4293e74c332870c59890f0ca431e31e0c5d79e000bfffb0ff6538d217e",
-    "oci_revision": "5e5bc0f773a937befba23629adf6dc0bcc297b0d",
-    "source_marker": "5e5bc0f773a937befba23629adf6dc0bcc297b0d"
+    "source_sha": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
+    "image": "odysseus:candidate-ed3e888-exact",
+    "image_id": "sha256:2206fbc63e2a2735b2ea6e19284f8b53c3d5d62e6eff683bffcea4923fa732fd",
+    "oci_revision": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
+    "source_marker": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -24,19 +24,20 @@
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
-    "candidate_source_sha": "5e5bc0f773a937befba23629adf6dc0bcc297b0d",
-    "candidate_image": "odysseus:candidate-5e5bc0f-exact",
-    "candidate_image_id": "sha256:38609d4293e74c332870c59890f0ca431e31e0c5d79e000bfffb0ff6538d217e",
+    "candidate_source_sha": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
+    "candidate_image": "odysseus:candidate-ed3e888-exact",
+    "candidate_image_id": "sha256:2206fbc63e2a2735b2ea6e19284f8b53c3d5d62e6eff683bffcea4923fa732fd",
     "completion_trace_fix": "5e5bc0f7; focused ACI/dogfood tests 160 passed, 1 warning",
     "browser_replays_exact_candidate": {
       "OWNER-NETWORK-BOUNDED-CIDR-001": {"status": "PASS", "turns": 4, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
-      "OWNER-WORK-EMPTY-001": {"status": "PASS", "turns": 1, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0}
+      "OWNER-WORK-EMPTY-001": {"status": "PASS", "turns": 1, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
+      "OWNER-RECIPE-MUTATION-READBACK-001": {"status": "PASS", "turns": 3, "mutations": 1, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0}
     },
     "qwen_model": "qwen3:8b",
     "qwen_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
     "fresh_install_restart": "pass",
     "backup_restore": "pass; drift removed and post-restore browser read verified",
-    "full_regression": "7115 passed, 9 skipped, 149 warnings (post-completion-trace fix)",
+    "full_regression": "7116 passed, 9 skipped, 149 warnings (post-field-resolver/renderer migration)",
     "focused_semantic_recovery": "382 passed, 1 warning",
     "lived_in_walkabout": {
       "turns": 20,
@@ -63,16 +64,16 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T03:20:00-05:00",
+    "measured_at": "2026-08-31T03:12:00-05:00",
     "artifact": "artifacts/productization/architecture_after_field_resolvers.json",
     "semantic_control_plane_loc": 18891,
     "agent_loop_py_loc": 6608,
-    "aci_py_loc": 5915,
+    "aci_py_loc": 5912,
     "intent_contracts_py_loc": 3689,
-    "field_resolvers_py_loc": 118,
+    "field_resolvers_py_loc": 123,
     "central_domain_conditionals": 120,
     "central_canonical_answer_functions": 22,
-    "canonical_answer_dispatch_mentions": 44,
+    "canonical_answer_dispatch_mentions": 25,
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
     "full_regression": "7116 passed, 9 skipped, 149 warnings"
   },
