@@ -1,0 +1,22 @@
+{
+  "schema": "hades-live-holdout-summary.v1",
+  "application_source_sha": "e4e1c8f9d6b61225ccb107f0feddb3c759fc4f1d",
+  "candidate_image": "odysseus:candidate-e4e1c8f9",
+  "candidate_image_digest": "odysseus@sha256:56fd574f63063e6f796a74a96a2a0ece72492f53ddfc81f8e0141ef16384da38",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "suite": "held_out",
+  "seed": 9488,
+  "case_count": 9,
+  "trajectory_pass": 9,
+  "answer_success": 9,
+  "errors": 0,
+  "internal_leaks": 0,
+  "total_tool_calls": 5,
+  "tool_index_lookups": 0,
+  "duplicate_delivery": 0,
+  "duplicate_finalization": 0,
+  "abrupt_eof": 0,
+  "raw_trace": "/tmp/e4e1c8f9-live-holdout.json",
+  "notes": "Exact isolated candidate. Structural stream integrity passed; this compact subset includes bounded unsupported/model-fallback cases and is not a supported-domain functional score."
+}
