@@ -64,12 +64,12 @@ def _inventory_fields(query: str, frame: Mapping[str, Any], action_id: str) -> M
 
 
 def _work_project_fields(query: str, _frame: Mapping[str, Any], _action_id: str) -> Mapping[str, Any] | None:
-    from src.intent_contracts import work_project_create_payload
+    from src.domain_resolvers.work import work_project_create_payload
     return work_project_create_payload(query)
 
 
 def _work_task_fields(query: str, _frame: Mapping[str, Any], _action_id: str) -> Mapping[str, Any] | None:
-    from src.intent_contracts import work_task_create_payload
+    from src.domain_resolvers.work import work_task_create_payload
     return work_task_create_payload(query)
 
 
