@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-08-31T02:45:00-05:00",
+  "captured_at": "2026-08-31T03:05:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "50e78097138db87ad75b4698ec5582f3be9c3cdf",
-  "remote_head": "50e78097138db87ad75b4698ec5582f3be9c3cdf",
+  "source_head": "a56bb9a9cc8254c653eac7643d4e92a70f397cb5",
+  "remote_head": "a56bb9a9cc8254c653eac7643d4e92a70f397cb5",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -36,7 +36,7 @@
     "qwen_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
     "fresh_install_restart": "pass",
     "backup_restore": "pass; drift removed and post-restore browser read verified",
-    "full_regression": "7114 passed, 9 skipped, 149 warnings",
+    "full_regression": "7115 passed, 9 skipped, 149 warnings (post-completion-trace fix)",
     "focused_semantic_recovery": "382 passed, 1 warning",
     "lived_in_walkabout": {
       "turns": 20,
@@ -61,6 +61,7 @@
     }
   },
   "release_status": "active; not frozen",
+  "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
     "partial dependency failure/recovery browser coverage",
