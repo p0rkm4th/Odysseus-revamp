@@ -48,6 +48,9 @@ COUNTED_MODULES = (
     "src/result_renderers/notes.py",
     "src/result_renderers/assets.py",
     "src/result_renderers/household.py",
+    # Compatibility prompt vocabulary was moved out of agent_loop.py, but it
+    # remains counted so relocation cannot masquerade as deletion.
+    "src/legacy_prompt_contract.py",
     "src/legacy_agent_loop.py",
 )
 
