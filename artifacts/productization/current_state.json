@@ -518,6 +518,29 @@
     "abrupt_eof": 0,
     "recorded_at": "2026-08-31T20:43:10Z"
   },
+  "latest_current_source_recipe_qualitative_slice": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "8473fa27c8288f62532739bf9e1df7b389179b5c",
+    "harness_source_sha": "8473fa27c8288f62532739bf9e1df7b389179b5c",
+    "scenarios": [
+      "OWNER-RECIPE-QUALITATIVE-AMOUNTS-001",
+      "OWNER-RECIPE-QUALITATIVE-MIXED-READBACK-001"
+    ],
+    "environment": "realistic_messy_synthetic",
+    "fixture_profile": "empty-recipes",
+    "status": "PASS",
+    "turns": 8,
+    "streams": 8,
+    "read_journeys": 6,
+    "mutations": 2,
+    "mutation_readbacks": 4,
+    "readbacks": 4,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "recorded_at": "2026-08-31T20:44:53Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
