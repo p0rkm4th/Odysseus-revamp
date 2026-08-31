@@ -5193,3 +5193,14 @@ Validation on the exact running candidate completed with three combined recipe
 scenarios, five turns, two GUI mutations, four canonical readbacks, and zero
 false success, raw final Results, duplicate delivery, or abrupt EOF. The
 persistent owner-dogfood lane was not touched.
+
+## Isolated Recipe qualitative replay — candidate `b91ff938` (2026-08-31)
+
+After the fixture-isolation repair, the qualitative Recipe journeys were
+replayed independently on the exact application candidate. The messy
+qualitative scenario passed with 5 turns, 1 GUI mutation, and 2 canonical
+readbacks. The mixed exact/qualitative scenario passed with 3 turns, 1 GUI
+mutation, and 2 canonical readbacks. Both preserved qualitative semantics
+through reload; false success, raw final Results, duplicate delivery, and
+abrupt EOF were all zero. The scenarios intentionally ran separately because
+their declared environments differ. The owner-dogfood lane was not touched.
