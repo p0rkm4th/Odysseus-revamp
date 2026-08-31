@@ -360,7 +360,7 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T09:58:51-05:00",
+    "measured_at": "2026-08-31T10:00:28-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "193 passed, 1 warning for module lifecycle/ACI/cutover/memory contracts on exact application source 31fb9a3f",
     "full_regression": "7130 passed, 9 skipped, 149 warnings in 303.95s on exact application source 31fb9a3f",
