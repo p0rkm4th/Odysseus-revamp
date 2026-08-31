@@ -1,0 +1,15 @@
+{
+  "schema": "hades-v1-checkpoint.v1",
+  "application_source_sha": "49467b32b2ae7f2df7a9a2cb88ef715b5449b5fe",
+  "candidate_image": "odysseus:candidate-49467b32",
+  "image_id": "sha256:4069020ff009fbf3ed7e78631887496616a9b3f952b71aa385b83d85ca19fc8c",
+  "oci_revision": "49467b32",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "focused_tests": "116 passed, 3 warnings",
+  "full_regression": "7119 passed, 9 skipped, 149 warnings in 306.92s",
+  "browser_realistic_acceptance": "PASS",
+  "architecture": {"semantic_control_plane_loc": 18814, "central_domain_conditionals": 118, "central_canonical_answer_functions": 7, "canonical_answer_dispatch_mentions": 11, "agent_loop_loc": 6583, "aci_loc": 5057, "intent_contracts_loc": 3433},
+  "owner_runtime": {"source_sha": "2f05d500", "image": "odysseus:candidate-2f05d500", "status": "unchanged; healthy; zero restarts"},
+  "status": "active engineering checkpoint; V1 not frozen"
+}
