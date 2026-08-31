@@ -363,7 +363,7 @@
     "application_source_sha": "78bf0d1c7282486ce4f8252e805b3c467e041f6e",
     "evidence_commit_sha": "49cb07dff204019786e1025d5f627288dbddc8cc",
     "latest_candidate_browser_replay": "PASS: exact 78bf0d1c candidate browser_realistic_acceptance on disposable port 7006; daily-driver, network scope, and qualitative Recipe replays PASS",
-    "latest_candidate_holdout": "49cb07df exact candidate mixed 142-case holdout: 46 functional, 123 architectural, 142 security; diagnostic denominator includes unsupported/dependency/evaluator cases; artifact artifacts/productization/49cb07df-heldout.json"
+    "latest_candidate_holdout": "49cb07df exact candidate mixed 142-case holdout: 46 functional, 123 architectural, 142 security; diagnostic denominator includes unsupported/dependency/evaluator cases; compact summary artifacts/productization/49cb07df-heldout-summary.json; raw report retained at /tmp/49cb07df-heldout.json"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
