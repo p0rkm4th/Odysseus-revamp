@@ -2460,6 +2460,41 @@ async def stream_aci_runtime(
                 )
                 if _fast_binding == "manage_memory":
                     run_security.deterministic_owner_memory_mutation = True
+            # A resolved canonical read must not fall back to model arbitration
+            # merely because the shortlist was cold or a contextual route
+            # supplied an incomplete candidate set. Reuse the same bounded
+            # payload builder used by project_action_selection; this is still
+            # only a read-only Action and remains subject to normal execution
+            # and verification.
+            if (
+                _aci_mode == "aci"
+                and not _aci_answer_only
+                and _aci_fast_path_block is None
+                and is_canonical_read_contract(
+                    _intent.get("intent_frame"), _intent.get("resolved_contract")
+                )
+            ):
+                _direct_binding = str(
+                    (_intent.get("resolved_contract") or {}).get("binding") or ""
+                ).strip()
+                _direct_action = str(
+                    (_intent.get("resolved_contract") or {}).get("action_id") or ""
+                ).strip()
+                if (
+                    _direct_binding
+                    and _direct_action
+                    and _direct_binding not in disabled_tools
+                    and _direct_binding in set(_relevant_tools or {_direct_binding})
+                ):
+                    _direct_payload = canonical_read_fast_path_payload(
+                        _direct_binding, _direct_action,
+                        _intent.get("intent_frame") or {},
+                        query=str(_intent.get("canonical_query") or _last_user),
+                    )
+                    _aci_fast_path_block = ToolBlock(
+                        _direct_binding, json.dumps(_direct_payload, sort_keys=True)
+                    )
+                    _record_aci_framework("canonical_read_fallback_fast_path")
             for _event in projection.framework_events:
                 if _event:
                     _record_aci_framework(_event)
