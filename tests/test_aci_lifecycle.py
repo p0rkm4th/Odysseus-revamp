@@ -1162,16 +1162,20 @@ def test_action_projection_carries_canonical_dependency_plan():
         query="discover hosts on 192.168.10.0/24",
         network_cidr="192.168.10.0/24",
     )
+    # An initial owner request is deliberately staged as a plan.  The
+    # executable scan Action is only exposed after that plan has been
+    # approved and revalidated on a continuation.
     selected = next(
         value for value in projection.choice_map.values()
-        if value["payload"].get("action") == "execute_network_discovery"
+        if value["payload"].get("action") == "plan_network_discovery"
     )
     assert selected["dependency_plan"]["canonical_source"] == "ActionSpec.dependencies"
-    assert [item["dependency_id"] for item in selected["dependency_plan"]["dependencies"]] == ["binary.nmap"]
+    assert selected["dependency_plan"]["dependencies"] == []
     card = next(card for card in projection.packet.action_cards if card.choice == next(
         choice for choice, value in projection.choice_map.items() if value is selected
     ))
-    assert f"dependency_status:{selected['dependency_plan']['status']}" in card.preconditions
+    if selected["dependency_plan"]["dependencies"]:
+        assert f"dependency_status:{selected['dependency_plan']['status']}" in card.preconditions
 
 
 def test_dependency_status_blocks_action_revalidation_until_remediation():

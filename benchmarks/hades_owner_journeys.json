@@ -410,6 +410,28 @@
         {"prompt": "Reload. What is in Acceptance Mixed Amounts?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "get", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["rice", "salt", "oil"]}}
       ],
       "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "after": {"recipe_name": "Acceptance Mixed Amounts", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Mixed Amounts", "requires_qualitative_amounts": true, "requires_source_text": true, "forbid_fabricated_quantities": true}, "terminal": {"done": 3, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-NETWORK-BOUNDED-CIDR-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "network-discovery-synthetic",
+      "turns": [
+        {"prompt": "deep dive my 192.168.10.0/24 network", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "DETERMINISTIC_RESULT", "action": "plan_network_discovery", "tool_binding": "manage_homelab", "must_include_any": ["192.168.10.0/24", "scope", "approval"]}},
+        {"prompt": "do a deep dive discovery of my 192.168.10.0\\24 network, be exhaustive", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "DETERMINISTIC_RESULT", "action": "plan_network_discovery", "tool_binding": "manage_homelab", "must_include_any": ["192.168.10.0/24", "scope", "approval"]}},
+        {"prompt": "scan my 192.168.10.0 / 24 lab", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "DETERMINISTIC_RESULT", "action": "plan_network_discovery", "tool_binding": "manage_homelab", "must_include_any": ["192.168.10.0/24", "scope", "approval"]}},
+        {"prompt": "do a thorough inventory of my 192.168.10.0/24 lab", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "DETERMINISTIC_RESULT", "action": "plan_network_discovery", "tool_binding": "manage_homelab", "must_include_any": ["192.168.10.0/24", "scope", "approval"]}}
+      ],
+      "expected": {"action": "manage_homelab", "tool_binding": "manage_homelab", "policy": "allowed", "terminal": {"done": 4, "abrupt_eof": false}}
+    },
+    {
+      "id": "OWNER-NETWORK-INVALID-CIDR-001",
+      "environment": "deterministic_synthetic",
+      "fixture_profile": "network-discovery-synthetic",
+      "turns": [
+        {"prompt": "deep dive my 192.168.10.0/33 network", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "CLARIFICATION", "must_include_any": ["valid", "scope", "CIDR", "clarif"]}},
+        {"prompt": "scan 192.168.10.0\\33", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "CLARIFICATION", "must_include_any": ["valid", "scope", "CIDR", "clarif"]}}
+      ],
+      "expected": {"policy": "allowed", "terminal": {"done": 2, "abrupt_eof": false}}
     }
   ]
 }

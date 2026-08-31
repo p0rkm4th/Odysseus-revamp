@@ -1633,6 +1633,14 @@ def network_discovery_request_cidr(text: str) -> str | None:
     return explicit_private_discovery_cidr(text)
 
 
+def has_network_cidr_candidate(text: str) -> bool:
+    """Detect a CIDR-shaped owner target, including safely normalizable typos."""
+    return bool(re.search(
+        r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}\s*[/\\]\s*\d{1,2}(?!\w)",
+        str(text or ""),
+    ))
+
+
 def is_network_prerequisite_request(text: str) -> bool:
     """Recognize a request to prepare tools for bounded network work."""
     return bool(re.search(
@@ -2869,11 +2877,7 @@ def compile_intent(
     if (
         concept == "NETWORK"
         and operation in {"EXECUTE", "RESEARCH"}
-        and not re.search(
-            r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
-            r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
-            q,
-        )
+        and not network_discovery_request_cidr(q)
     ):
         safety_constraints.append("network_scope_requires_authorization")
     if (
@@ -2882,22 +2886,14 @@ def compile_intent(
         and re.search(r"\b(?:scan\w*|discover\w*|probe\w*|enumerat\w*|investigate|research)\b", q)
         and (
             re.search(r"\b(?:network|lan|subnet|wifi|wi-fi|connection|connected)\b", q)
-            or re.search(
-                r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
-                r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
-                q,
-            )
+            or has_network_cidr_candidate(q)
         )
     ):
         concept = "NETWORK"
     if (
         concept == "NETWORK"
         and operation in {"EXECUTE", "RESEARCH"}
-        and not re.search(
-            r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
-            r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
-            q,
-        )
+        and not network_discovery_request_cidr(q)
         and "network_scope_requires_authorization" not in safety_constraints
     ):
         safety_constraints.append("network_scope_requires_authorization")
