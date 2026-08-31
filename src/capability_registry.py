@@ -63,6 +63,13 @@ class ActionSpec:
     # Reviewed prerequisite IDs resolved by the canonical DependencyManager;
     # metadata alone never authorizes installation.
     dependencies: tuple[str, ...] = ()
+    # Semantic adapters are selected from the canonical action contract.  They
+    # are data, not permission: resolvers only produce candidate fields and
+    # renderers only project verified Results.
+    field_resolver: str | None = None
+    result_renderer: str | None = None
+    input_schema: Mapping[str, Any] | None = None
+    deterministic_selection: bool = False
 
 
 @dataclass(frozen=True)
@@ -108,6 +115,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                     action_id=action,
                     effects=("read_private",) if action in {"summary", "list", "search", "get"} else ("write_private",),
                     executor_key="manage_assets",
+                    field_resolver=("inventory" if action in {"add_item", "consume_stock", "move_item"} else None),
                 )
                 for action in (
                     "summary", "list", "search", "get", "add", "update",
@@ -135,6 +143,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 effects=("write_private",),
                 result_integrity="external_untrusted",
                 executor_key="manage_memory",
+                field_resolver="memory",
+                deterministic_selection=True,
             )
             for action in ("add", "edit", "delete")
         )),
@@ -159,7 +169,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="recipe.read",
         description="Owner-scoped recipe and pantry-coverage reads over Inventory Service.",
         actions=_actions(*(
-            ActionSpec(action_id=action, effects=("read_private",), executor_key="read_recipes")
+                ActionSpec(action_id=action, effects=("read_private",), executor_key="read_recipes", field_resolver=("recipe" if action == "prepare_import" else None))
             for action in ("list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale", "expiring_candidates", "cooking_history", "prepare_import")
         )),
     ),
@@ -167,8 +177,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="recipe.manage",
         description="Persist owner-scoped recipes through Inventory Service with readback verification.",
         actions=_actions(
-            ActionSpec(action_id="add", effects=("write_private",), executor_key="manage_recipes"),
-            ActionSpec(action_id="commit_import", effects=("write_private",), executor_key="manage_recipes"),
+            ActionSpec(action_id="add", effects=("write_private",), executor_key="manage_recipes", field_resolver="recipe", deterministic_selection=True),
+            ActionSpec(action_id="commit_import", effects=("write_private",), executor_key="manage_recipes", field_resolver="recipe", deterministic_selection=True),
         ),
     ),
     "setup.read": CapabilitySpec(
@@ -208,6 +218,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 action_id=action,
                 effects=("read_private",) if action in {"list", "search", "find", "view"} else ("write_private",),
                 executor_key="manage_notes",
+                field_resolver=("notes" if action in {"add", "update", "delete"} else None),
+                deterministic_selection=(action in {"add", "update", "delete"}),
             )
             for action in ("list", "search", "find", "view", "add", "update", "delete", "toggle_item")
         )),
@@ -220,6 +232,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 action_id=action,
                 effects=("read_private",) if action == "list" else ("write_private",),
                 executor_key="manage_tasks",
+                field_resolver=("scheduled_task" if action == "create" else None),
+                deterministic_selection=(action == "create"),
             )
             for action in ("list", "create", "edit", "delete", "pause", "resume", "run")
         )),
@@ -254,6 +268,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 execution_location=("host_broker" if action in {"execute_network_discovery", "execute_network_service_enumeration", "execute_diagnostic_install"} else "remote_ssh" if action in {"ssh_connect_test", "remote_host_inspect"} else "application"),
                 target_scope=("private_network" if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else "owner_asset" if action in {"ssh_connect_test", "remote_host_inspect"} else None),
                 requires_direct_container_access=(action not in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration", "execute_diagnostic_install"}),
+                field_resolver=("network" if action in {"plan_network_discovery", "plan_network_service_enumeration"} else None),
                 target_resources=("network:private_scope",) if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else (),
                 locks=(("network:private_scope",) if action in {"execute_network_discovery", "execute_network_service_enumeration"} else (("host:package_manager",) if action == "execute_diagnostic_install" else ())),
                 rollback_capability="none",
@@ -371,8 +386,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
     "work.goal.manage": CapabilitySpec("work.goal.manage", _actions(*(ActionSpec(action_id=a, effects=("write_private",), executor_key="manage_work") for a in ("create", "update"))), "Manage desired outcomes."),
     "work.project.read": CapabilitySpec("work.project.read", _actions(ActionSpec("list", effects=("read_private",), executor_key="manage_work")), "Read work projects."),
     "work.project.manage": CapabilitySpec("work.project.manage", _actions(
-        ActionSpec("create", effects=("write_private",), executor_key="manage_work"),
-        ActionSpec("create_task", effects=("write_private",), executor_key="manage_work"),
+        ActionSpec("create", effects=("write_private",), executor_key="manage_work", field_resolver="work_project"),
+        ActionSpec("create_task", effects=("write_private",), executor_key="manage_work", field_resolver="work_task"),
     ), "Manage work projects and explicitly scoped tasks."),
     "work.task.read": CapabilitySpec("work.task.read", _actions(ActionSpec("list", effects=("read_private",), executor_key="manage_work")), "Read work tasks."),
     "work.task.manage": CapabilitySpec("work.task.manage", _actions(*(ActionSpec(action_id=a, effects=("write_private",), executor_key="manage_work") for a in ("create", "dependency"))), "Manage bounded task state."),
