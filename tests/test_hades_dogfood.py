@@ -32,10 +32,40 @@ from scripts.hades_dogfood import (
     _case_deadline,
     _case_deadline_expired,
     _live_protocol_observation,
+    _synthetic_live_cases,
+    _validate_live_cases,
     _source_dirty,
     _source_reference,
     configured_model_endpoint,
 )
+
+
+def test_live_dogfood_rejects_synthetic_registry_cases_before_http():
+    synthetic = {
+        "id": "generated-registry-1",
+        "family": "registry_action",
+        "scenario": {"synthetic_capability_available": True},
+    }
+    assert _synthetic_live_cases([synthetic]) == [synthetic]
+    with pytest.raises(SystemExit, match="cannot execute synthetic registry_action"):
+        _validate_live_cases([synthetic])
+
+
+def test_live_dogfood_allows_capability_backed_cases():
+    _validate_live_cases([
+        {"id": "journey-1", "family": "assets", "scenario": {}},
+        {"id": "unsupported-1", "family": "registry_action", "scenario": {
+            "synthetic_capability_available": False,
+        }},
+    ])
+
+
+def test_live_dogfood_rejects_synthetic_case_even_when_selected_as_generated_only():
+    cases = generate_semantic_cases(seed=20260901, count=2, split="held_out")
+    assert any(case["family"] == "registry_action" and
+               case["scenario"].get("synthetic_capability_available") for case in cases)
+    with pytest.raises(SystemExit, match="in-process fixtures"):
+        _validate_live_cases([case for case in cases if case["source"].startswith("generated")])
 from benchmarks.jarvis.synthetic_tools import fixtures_for_case
 
 
