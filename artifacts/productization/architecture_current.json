@@ -31,12 +31,12 @@
   ],
   "modules": {
     "src/agent_loop.py": {
-      "loc": 6441,
+      "loc": 6408,
       "functions": [
         {
           "name": "stream_aci_runtime",
           "line": 1000,
-          "loc": 5427
+          "loc": 5394
         },
         {
           "name": "_build_system_prompt",
@@ -125,7 +125,7 @@
         },
         {
           "name": "stream_agent_loop",
-          "line": 6434,
+          "line": 6401,
           "loc": 4
         },
         {
@@ -148,7 +148,7 @@
         {
           "name": "stream_aci_runtime",
           "line": 1000,
-          "loc": 5427
+          "loc": 5394
         },
         {
           "name": "_build_system_prompt",
@@ -237,7 +237,7 @@
         },
         {
           "name": "stream_agent_loop",
-          "line": 6434,
+          "line": 6401,
           "loc": 4
         },
         {
@@ -2853,7 +2853,7 @@
       "largest_functions": []
     }
   },
-  "semantic_control_plane_loc": 19104,
+  "semantic_control_plane_loc": 19071,
   "central_domain_conditionals": 112,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -3032,6 +3032,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "99d40dc17c147a4d76bc3ffe99c774c65c77c876",
+  "source_sha": "07730d819be7f4ab080dc1be32123cde537a9e7f",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
