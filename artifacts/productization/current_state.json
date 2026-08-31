@@ -565,6 +565,28 @@
     "scope_cases": "valid /24, backslash /24 normalization, spaced slash /24, and invalid /33 clarification",
     "recorded_at": "2026-08-31T20:47:00Z"
   },
+  "latest_current_source_network_context_slice": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "461043ae423c6f311accef9c76120d0bde9ab32f",
+    "harness_source_sha": "461043ae423c6f311accef9c76120d0bde9ab32f",
+    "scenarios": [
+      "OWNER-NETWORK-001"
+    ],
+    "environment": "actual_owner_read_only",
+    "fixture_profile": "current-network-observation",
+    "status": "PASS",
+    "turns": 1,
+    "streams": 1,
+    "read_journeys": 1,
+    "mutations": 0,
+    "mutation_readbacks": 0,
+    "readbacks": 0,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "recorded_at": "2026-08-31T20:48:10Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
