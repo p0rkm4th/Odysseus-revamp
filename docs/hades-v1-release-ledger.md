@@ -5213,3 +5213,11 @@ The complete Today/reminder matrix passed on the exact candidate: 6 scenarios,
 14 turns/streams, 7 GUI mutations, and 10 independent canonical readbacks.
 False success, raw final Results, duplicate delivery, and abrupt EOF were all
 zero. The owner-dogfood lane was not touched.
+
+## Bounded Network scope pair — candidate `b91ff938` (2026-08-31)
+
+The valid and invalid CIDR Network journeys passed on the exact isolated
+candidate: 2 scenarios and 6 turns/streams. Both bounded-scope execution and
+invalid-scope handling remained truthful; false success, raw final Results,
+duplicate delivery, and abrupt EOF were all zero. No active network operation
+was run against the owner deployment.
