@@ -4,7 +4,8 @@ from src.agent_loop import _suppress_automatic_skills
 from src.memory_grounding import minimal_saved_memory_message
 from src.memory_grounding import is_explicit_memory_query
 from src.context_compactor import context_trace, tool_projection_trace
-from src.intent_contracts import compile_intent, memory_mutation_payload, resolve_intent
+from src.intent_contracts import compile_intent, resolve_intent
+from src.domain_resolvers.memory import memory_mutation_payload
 from src.aci import project_action_selection
 from src.aci import provisional_intent_projection, canonical_memory_mutation_answer
 from src.tool_execution import _resolve_memory_delete_id

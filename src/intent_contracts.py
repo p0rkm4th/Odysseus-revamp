@@ -32,6 +32,7 @@ from src.domain_resolvers.inventory import (
     inventory_consume_stock_payload,
     inventory_move_item_payload,
 )
+from src.domain_resolvers.memory import memory_mutation_payload
 
 logger = logging.getLogger(__name__)
 
@@ -753,44 +754,6 @@ def recipe_import_review_draft_from_payload(
 def recipe_create_payload(query: str) -> dict[str, Any] | None:
     draft = recipe_create_draft(query)
     return draft.as_payload() if draft else None
-
-
-def memory_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
-    """Project ordinary owner memory mutations into bounded Action fields.
-
-    The text/query remains user-supplied evidence. Resolution of a delete
-    query to an owned record belongs to the memory executor, not the model.
-    """
-    text = re.sub(r"\s+", " ", str(query or "").strip())
-    operation = str(action or "").strip().casefold()
-    if operation == "add":
-        match = re.search(r"\bremember(?:\s+that)?\s+(.+?)\s*[.!?]?$", text, re.IGNORECASE)
-        if not match:
-            return None
-        value = match.group(1).strip()
-        return {"action": "add", "text": value[:5000], "category": "fact"} if value else None
-    if operation == "delete":
-        match = re.search(r"\b(?:forget|delete|remove)\s+(?:my|the|this|that)?\s*(.+?)\s*[.!?]?$", text, re.IGNORECASE)
-        if match:
-            value = match.group(1).strip()
-        else:
-            # A normal correction often refers to the immediately preceding
-            # fact without repeating "forget" ("that's not true anymore").
-            # Recover only the bounded owner-property phrase already present
-            # in the conversation; the executor still resolves it against
-            # exactly one owned canonical record and fails closed otherwise.
-            property_match = re.search(
-                r"\bwhat(?:'s|\s+is)\s+(?:my|our)\s+([a-z][a-z0-9 _-]{1,80}?)(?:\s+now)?\s*[?!.]",
-                text, re.IGNORECASE,
-            ) or re.search(
-                r"\bremember(?:\s+that)?\s+(?:my|our)\s+([a-z][a-z0-9 _-]{1,80}?)\s+is\b",
-                text, re.IGNORECASE,
-            )
-            if not property_match:
-                return None
-            value = property_match.group(1).strip()
-        return {"action": "delete", "query": value[:200]} if value else None
-    return None
 
 
 def work_project_create_payload(query: str) -> dict[str, Any] | None:
