@@ -190,8 +190,8 @@
   },
   "latest_current_source_read_tier1_slice": {
     "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "evidence_source_sha": "3002a9167895a34e91a265b9c3660af0a829996f",
-    "harness_source_sha": "c4fd7c0037f8d6b18d23c5682c4773e5c19023c9",
+    "evidence_source_sha": "33160d140fe44af6e897be8fbbcca0e30360e05b",
+    "harness_source_sha": "33160d140fe44af6e897be8fbbcca0e30360e05b",
     "scenarios": [
       "OWNER-ASSET-RAM-001",
       "OWNER-RECIPE-EMPTY-001",
