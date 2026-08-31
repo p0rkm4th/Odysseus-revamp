@@ -1,19 +1,19 @@
 {
-  "captured_at": "2026-08-31T00:13:00-05:00",
+  "captured_at": "2026-08-31T00:31:00-05:00",
   "branch": "hades-v1-productization",
   "branch_head": "db9c593e6884b611c181e428bfccab0b55c36712",
-  "source_head": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
-  "remote_head": "db9c593e6884b611c181e428bfccab0b55c36712",
+  "source_head": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
+  "remote_head": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
   "evidence_commit_sha": "64ed518f50857cdc255e295144a5d92bb662d70f",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
-    "image": "odysseus:candidate-945b5fb1",
-    "image_id": "sha256:7597228c82262fbae5a26154b4e8f1846bae979757ba7fb100dde7c4cf002660",
-    "oci_revision": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
-    "source_marker": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
-    "status": "ISOLATED CANDIDATE BUILT; health/source verified; browser replay blocked by candidate auth configuration; not promoted"
+    "source_sha": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
+    "image": "odysseus:candidate-2585d7c6",
+    "image_id": "sha256:a08b44951614927ee6d39b43ffabe288a3f84bcbfdbffc622266a94ac9c093bc",
+    "oci_revision": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
+    "source_marker": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
+    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; browser and Qwen holdout replayed; not promoted"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -103,7 +103,7 @@
     "qwen_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
     "fresh_install_restart": "pass",
     "backup_restore": "pass; drift removed and post-restore browser read verified",
-    "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 945b5fb1",
+    "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 2585d7c6",
     "focused_semantic_recovery": "382 passed, 1 warning",
     "lived_in_walkabout": {
       "turns": 20,
@@ -272,17 +272,37 @@
       "p95_latency_seconds": 3.222,
       "browser_visual_acceptance": "PASS on http://127.0.0.1:7006",
       "status": "exact application candidate; one known network-context completion failure; no false success"
+    },
+    "live_qwen_held_out_20260831_candidate_2585d7c6": {
+      "artifact": "artifacts/productization/hades-v1-2585d7c6-authoritative-live-holdout.json",
+      "cases": 42,
+      "functional_passes": 41,
+      "architectural_passes": 42,
+      "security_passes": 42,
+      "functional_rate": 0.9762,
+      "architectural_rate": 1.0,
+      "security_rate": 1.0,
+      "reference_resolution_rate": 0.0,
+      "duplicate_rate": 0.0,
+      "top_failure_clusters": {
+        "COMPLETION_FAILURE": 1
+      },
+      "model_calls_per_task": 0.6429,
+      "median_latency_seconds": 0.6249,
+      "p95_latency_seconds": 5.1262,
+      "browser_visual_acceptance": "PASS on http://127.0.0.1:7006",
+      "status": "exact application candidate; inventory resolver extraction preserved holdout behavior; one known network-context completion failure; no false success"
     }
   },
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T00:16:41-05:00",
+    "measured_at": "2026-08-31T00:35:11-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
     "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 945b5fb1",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
+    "application_source_sha": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
     "evidence_commit_sha": "64ed518f50857cdc255e295144a5d92bb662d70f",
     "latest_candidate_browser_replay": "PASS: exact 945b5fb1 candidate browser_realistic_acceptance; initial acceptance-principal mismatch was isolated ENVIRONMENT_FAILURE and no owner data was touched"
   },
