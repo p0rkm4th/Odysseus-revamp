@@ -339,6 +339,20 @@
     "abrupt_eof": 0,
     "recorded_at": "2026-08-31T20:22:00Z"
   },
+  "latest_owner_dogfood_promotion": {
+    "candidate_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "owner_dogfood_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "image": "odysseus:candidate-e482cbfe6b55",
+    "image_id": "sha256:6a1ca38a8762534b6893dc9e48ba0a3d52ff0c8405e3eb83f0a82d683da2e18e",
+    "oci_revision": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "owner_project": "hades-owner-dogfood",
+    "owner_url": "http://127.0.0.1:7020",
+    "backup": "/home/scootz/hades-owner-dogfood-recovery/pre-promotion-e482cbfe.tar.gz",
+    "backup_verified": true,
+    "status": "PROMOTED",
+    "post_promotion_smoke": "PASS; OWNER-NETWORK-001; 1 read-only stream; zero mutations/false success/raw Results/duplicates/abrupt EOF",
+    "recorded_at": "2026-08-31T20:19:04Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
