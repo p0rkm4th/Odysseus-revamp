@@ -127,6 +127,22 @@
     "scope_cases": "valid /24, backslash /24 normalization, spaced slash /24, and invalid /33 clarification",
     "recorded_at": "2026-08-31T14:28:00-05:00"
   },
+  "latest_read_only_tier1_slice": {
+    "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "harness_source_sha": "85e3503035e94ae23e0a81214cfab84396905bc8",
+    "scenarios": ["OWNER-ASSET-FILTER-NO-MATCH-001", "OWNER-RECIPE-EMPTY-001", "OWNER-MEMORY-EMPTY-001"],
+    "environment": "isolated_synthetic",
+    "status": "PASS",
+    "turns": 3,
+    "streams": 3,
+    "read_journeys": 3,
+    "mutations": 0,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "recorded_at": "2026-08-31T14:35:00-05:00"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
