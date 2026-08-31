@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Reminder lifecycle replay — exact candidate `fc18ebed` (2026-08-31)
+
+Four daily-driver reminder scenarios passed through the isolated authenticated
+GUI: creation/readback, relative hourly scheduling, correction, and recurring
+morning scheduling. Across 9 owner turns there were 5 GUI-originated
+mutations, 8 independent canonical readbacks, and 4 read journeys. The
+scheduled objects and corrections remained durable in the disposable lane;
+false success, raw final Results, duplicate delivery, and abrupt EOF were all
+zero. No owner-dogfood or production state was modified.
+
 ## Lived-in Tier 1 walkabout replay — exact candidate `fc18ebed` (2026-08-31)
 
 `OWNER-TIER1-LIVED-IN-WALKABOUT-001` passed through the authenticated GUI on
