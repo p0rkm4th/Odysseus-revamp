@@ -3754,6 +3754,54 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     return None
 
 
+def canonical_network_plan_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render a bounded network-discovery plan without implying execution.
+
+    Planning is the deterministic owner-facing result for an unapproved
+    active-discovery request.  It must not fall through to model prose (which
+    can make the owner believe a scan happened), nor be mistaken for a read.
+    The exact CIDR comes from the canonical Action command/result, not the
+    assistant's wording.
+    """
+    event = next(
+        (
+            item for item in reversed(tuple(tool_events or ()))
+            if isinstance(item, Mapping)
+            and str(item.get("tool") or "").strip() == "manage_homelab"
+        ),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    projection = event.get("result_projection")
+    if not isinstance(projection, Mapping):
+        try:
+            projection = json.loads(str(event.get("output") or ""))
+        except (TypeError, ValueError):
+            projection = None
+    command: Mapping[str, Any] = {}
+    try:
+        parsed = json.loads(str(event.get("command") or ""))
+        if isinstance(parsed, Mapping):
+            command = parsed
+    except (TypeError, ValueError):
+        pass
+    action = str((projection or {}).get("action") or command.get("action") or "").strip()
+    if action != "plan_network_discovery":
+        return None
+    cidr = str((projection or {}).get("target") or command.get("cidr") or "").strip()
+    if not cidr:
+        return None
+    status = str((projection or {}).get("status") or "").strip().upper()
+    if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
+        return None
+    return (
+        f"I interpreted that as {cidr}. I prepared a bounded network discovery "
+        f"plan for exactly {cidr}. No scan has started; active discovery still "
+        "requires exact approval for this scope."
+    )
+
+
 def canonical_homelab_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render bounded host inspection evidence from the canonical Result."""
     event = next(
@@ -4593,6 +4641,7 @@ def canonical_result_answer(
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
         (canonical_communications_read_answer(tool_events), "canonical Calendar Result"),
+        (canonical_network_plan_answer(tool_events), "canonical bounded Network plan"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
         (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
         (canonical_service_read_answer(tool_events), "canonical Service Result"),
