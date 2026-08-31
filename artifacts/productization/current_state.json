@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-31T10:00:28-05:00",
+  "captured_at": "2026-08-31T10:18:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "ffe1c4246b1091602ecfcadc4d7047f4c2082e8c",
-  "application_source_sha": "ffe1c4246b1091602ecfcadc4d7047f4c2082e8c",
-  "source_head": "ffe1c4246b1091602ecfcadc4d7047f4c2082e8c",
-  "remote_head": "ffe1c4246b1091602ecfcadc4d7047f4c2082e8c",
-  "evidence_commit_sha": "ffe1c4246b1091602ecfcadc4d7047f4c2082e8c",
+  "branch_head": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+  "application_source_sha": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+  "source_head": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+  "remote_head": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+  "evidence_commit_sha": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "ahead_behind_main": {
@@ -13,13 +13,13 @@
     "behind": 0
   },
   "executable_candidate": {
-    "source_sha": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
-    "image": "odysseus:candidate-b141781e",
-    "image_id": "sha256:d68a1329d075a312dd8d64a48603204aa8289d1462d007c44eb2d94d14a3de70",
-    "image_digest": "odysseus@sha256:d68a1329d075a312dd8d64a48603204aa8289d1462d007c44eb2d94d14a3de70",
-    "oci_revision": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
-    "source_marker": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
-    "status": "STALE AFTER ea746e6b MODULE CONTRACT SLICE; do not use as current-source evidence; no owner data touched"
+    "source_sha": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+    "image": "odysseus:candidate-b3c20af5c1b5",
+    "image_id": "sha256:72d07939cecf9269e509e1db9cd02aaff45ba412e3d9e70d998349abe591cfdd",
+    "image_digest": "odysseus@sha256:72d07939cecf9269e509e1db9cd02aaff45ba412e3d9e70d998349abe591cfdd",
+    "oci_revision": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+    "source_marker": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+    "status": "CURRENT isolated candidate; browser_realistic_acceptance PASS; full regression last run on exact application ancestor ffe1c424; owner data untouched"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -36,6 +36,16 @@
     "candidate_source_sha": "e4e1c8f9d6b61225ccb107f0feddb3c759fc4f1d",
     "candidate_image": "odysseus:candidate-e4e1c8f9",
     "candidate_image_id": "sha256:56fd574f63063e6f796a74a96a2a0ece72492f53ddfc81f8e0141ef16384da38",
+    "latest_exact_candidate_b3c20af5": {
+      "source_sha": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+      "image": "odysseus:candidate-b3c20af5c1b5",
+      "image_id": "sha256:72d07939cecf9269e509e1db9cd02aaff45ba412e3d9e70d998349abe591cfdd",
+      "browser_realistic_acceptance": "PASS; authenticated desktop/narrow responsive/theme/navigation checks",
+      "health": "api/health healthy; running; 0 restarts; Docker healthcheck absent",
+      "qwen_namespace": "not yet rerun on b3 candidate",
+      "full_regression": "not rerun on b3 docs/metrics descendant; latest exact application regression is ffe1c424",
+      "owner_runtime": "unchanged on candidate-2f05d500 at :7020"
+    },
     "latest_exact_candidate_50ae6e6b": {
       "source_sha": "50ae6e6bec6b0953c2001f192baf0bd6e094c085",
       "image": "odysseus:candidate-50ae6e6b",
@@ -360,14 +370,14 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T10:00:28-05:00",
+    "measured_at": "2026-08-31T10:18:00-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "134 passed, 1 warning for module lifecycle/ACI/cutover/memory contracts on exact application source ffe1c424",
     "full_regression": "7130 passed, 9 skipped, 149 warnings in 304.24s on exact application source ffe1c424",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "ffe1c4246b1091602ecfcadc4d7047f4c2082e8c",
-    "evidence_commit_sha": "ffe1c4246b1091602ecfcadc4d7047f4c2082e8c",
-    "latest_candidate_browser_replay": "STALE: last exact browser replay was b141781e before ffe1c424; rebuild required",
+    "application_source_sha": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+    "evidence_commit_sha": "b3c20af5c1b5c524db68deeb7284944fe56d5df2",
+    "latest_candidate_browser_replay": "PASS: exact b3c20af5 candidate; browser_realistic_acceptance authenticated responsive/theme/navigation checks",
     "latest_candidate_holdout": "STALE: last exact live Qwen run was b141781e before ffe1c424; rerun required for candidate evidence",
     "module_lifecycle": "Recipe AVAILABLE/ENABLED/ACTIVE contracts proven; disabled schema exclusion, lazy activation, and explicit dependency non-self-enable tests pass",
     "network_resolver_extraction": "Network grammar moved from intent_contracts into counted src/domain_resolvers/network.py; focused contracts pass"
