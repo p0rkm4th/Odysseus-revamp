@@ -1,20 +1,20 @@
 {
-  "captured_at": "2026-08-31T03:42:00-05:00",
+  "captured_at": "2026-08-31T03:29:45-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "bdf332c9",
-  "source_head": "dce3c6e9",
-  "remote_head": "bdf332c9",
-  "evidence_commit_sha": "bdf332c9",
+  "branch_head": "b8812774",
+  "source_head": "b8812774",
+  "remote_head": "b8812774",
+  "evidence_commit_sha": "b8812774",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "dce3c6e9",
-    "image": "odysseus:candidate-dce3c6e9",
-    "image_id": "sha256:d91134979fa5238364b21b0e5cc6631ba8ea2954aeb19a3f4230959483eebc60",
-    "image_digest": "sha256:d91134979fa5238364b21b0e5cc6631ba8ea2954aeb19a3f4230959483eebc60",
-    "oci_revision": "dce3c6e9",
-    "source_marker": "dce3c6e9",
-    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; direct parser import regression PASS; network_3 completion PASS; browser replay PASS; no false success, duplicate delivery, raw final Result, or abrupt EOF"
+    "source_sha": "b8812774",
+    "image": "odysseus:candidate-b8812774",
+    "image_id": "sha256:8c6a10f6a594027aa8fe845e4c88c4b4f5c873c780fcc0f747b465f75e499f08",
+    "image_digest": "sha256:8c6a10f6a594027aa8fe845e4c88c4b4f5c873c780fcc0f747b465f75e499f08",
+    "oci_revision": "b8812774",
+    "source_marker": "b8812774",
+    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; focused semantic regression PASS; held-out Qwen 18/18 answers and 17/18 trajectory; browser replay PASS; no false success, duplicate delivery, raw final Result, or abrupt EOF"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -338,15 +338,15 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T03:42:00-05:00",
+    "measured_at": "2026-08-31T03:29:31-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "166 passed, 1 warning",
     "full_regression": "7120 passed, 9 skipped, 149 warnings in 304.78s on content-identical application tree 6ce66c38; current source 7a208165 verified by focused 329 passed, 6 skipped plus renderer slice 166 passed",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "dce3c6e9",
-    "evidence_commit_sha": "bdf332c9",
-    "latest_candidate_browser_replay": "PASS: exact dce3c6e9 candidate browser_realistic_acceptance; no owner data was touched",
-    "latest_candidate_holdout": "network_3 completion regression PASS: completion=true, one bounded read, no error/leak/duplicate/EOF"
+    "application_source_sha": "b8812774",
+    "evidence_commit_sha": "b8812774",
+    "latest_candidate_browser_replay": "PASS: exact b8812774 candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
+    "latest_candidate_holdout": "18/18 answers, 17/18 trajectory; one assets_reference_3 acceptance-fixture failure due no seeded canonical collection; no transport error/leak/duplicate/EOF"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
