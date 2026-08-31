@@ -8,7 +8,10 @@
   "evidence_commit_sha": "44b447af970206a959756df2c45f993c040308ee",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
-  "ahead_behind_main": {"ahead": 1013, "behind": 0},
+  "ahead_behind_main": {
+    "ahead": 1013,
+    "behind": 0
+  },
   "executable_candidate": {
     "source_sha": "b91ff9388be13e6e183641b19f158e1a4e0ea796",
     "image": "odysseus:candidate-b91ff9388be1",
@@ -357,7 +360,7 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T08:02:00-05:00",
+    "measured_at": "2026-08-31T08:39:35-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "195 passed, 1 warning on exact application source ac511bb5",
     "full_regression": "7125 passed, 9 skipped, 149 warnings in 303.54s on exact application source 5c8e1ea8; ac511bb5 has only lazy resolver adapters/tests since that run",
