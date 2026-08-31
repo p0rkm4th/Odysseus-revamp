@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-31T13:12:10-05:00",
+  "captured_at": "2026-08-31T13:09:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "0abaddbbeb24729ecd42f9e675a0064f5aae54d7",
+  "branch_head": "b511a0b14b8e6c2da889e56c8acfb5c43ec8dac5",
   "application_source_sha": "896473de81075178297eb510fa13b37810e514b6",
-  "source_head": "0abaddbbeb24729ecd42f9e675a0064f5aae54d7",
-  "remote_head": "0abaddbbeb24729ecd42f9e675a0064f5aae54d7",
-  "evidence_commit_sha": "0abaddbbeb24729ecd42f9e675a0064f5aae54d7",
+  "source_head": "b511a0b14b8e6c2da889e56c8acfb5c43ec8dac5",
+  "remote_head": "b511a0b14b8e6c2da889e56c8acfb5c43ec8dac5",
+  "evidence_commit_sha": "b511a0b14b8e6c2da889e56c8acfb5c43ec8dac5",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "ahead_behind_main": {
@@ -53,6 +53,14 @@
     "commits_behind_candidate": 0,
     "last_promotion": "2026-08-31T17:46:00-05:00",
     "status": "CURRENT with latest promoted candidate"
+  },
+  "latest_owner_validation": {
+    "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "owner_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "owner_read_only": "PASS; OWNER-NETWORK-001; 1 stream; 0 mutations; 0 false success/duplicates/raw Results/abrupt EOF",
+    "isolated_synthetic": "PASS; 39 scenarios; 101 streams/turns; 54 mutations; 54 readbacks; 0 false success/duplicates/raw Results/abrupt EOF",
+    "coverage": "batches 0-9, 10-19, 20-29, and 30-end; fresh disposable principal per batch",
+    "recorded_at": "2026-08-31T13:09:00-05:00"
   },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
