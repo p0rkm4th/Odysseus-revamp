@@ -399,6 +399,34 @@
     "status": "PASS; supported capability-backed live holdout remains unaffected by evaluator guard",
     "recorded_at": "2026-08-31T20:27:00Z"
   },
+  "latest_current_source_tier1_remainder": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "9e39606258a8b3cf2e577fba3f7494e205b02aa3",
+    "harness_source_sha": "9e39606258a8b3cf2e577fba3f7494e205b02aa3",
+    "scenarios": [
+      "OWNER-RECIPE-EXPIRING-COMPOSITION-001",
+      "OWNER-RECIPE-SHOPPING-REQUIREMENTS-001",
+      "OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001",
+      "OWNER-RECIPE-QUALITATIVE-REVIEW-001",
+      "OWNER-HOUSEHOLD-MUTATION-READBACK-001",
+      "OWNER-MEMORY-POPULATED-001",
+      "OWNER-REMINDER-HOURLY-READBACK-001",
+      "OWNER-REMINDER-RECURRING-READBACK-001"
+    ],
+    "environment": "isolated_synthetic",
+    "status": "PASS",
+    "turns": 15,
+    "streams": 15,
+    "read_journeys": 9,
+    "mutations": 6,
+    "mutation_readbacks": 16,
+    "readbacks": 16,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "recorded_at": "2026-08-31T20:35:00Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
