@@ -18,7 +18,8 @@ def test_owner_journey_corpus_has_required_black_box_scenarios():
         assert case["fixture_profile"]
         for turn in case["turns"]:
             expected = turn["expected"]
-            assert expected["domain"] and expected["operation"] and expected["answer_source"]
+            assert expected["domain"] and expected["operation"]
+            assert expected.get("answer_source") or expected.get("answer_source_any")
         assert case["expected"]["terminal"]["done"] == len(case["turns"])
 
 

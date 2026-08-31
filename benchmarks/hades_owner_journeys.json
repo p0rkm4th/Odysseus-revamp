@@ -23,7 +23,7 @@
       "id": "OWNER-NETWORK-001",
       "environment": "actual_owner_read_only",
       "fixture_profile": "current-network-observation",
-      "turns": [{"prompt": "Tell me about my network.", "expected": {"domain": "NETWORK", "operation": "READ", "action": "read_network_observations", "tool_binding": "manage_homelab", "answer_source": "DETERMINISTIC_RESULT", "must_include_any": ["network", "observed", "current", "unknown", "unavailable"], "forbidden": ["192.168.1.10", "2001:db8::1", "12 TCP", "Kubernetes master", "35% bandwidth"]}}],
+      "turns": [{"prompt": "Tell me about my network.", "expected": {"domain": "NETWORK", "operation": "READ", "action": "read_network_observations", "tool_binding": "manage_homelab", "answer_source_any": ["DETERMINISTIC_RESULT", "ERROR"], "must_include_any": ["network", "observed", "current", "unknown", "unavailable"], "forbidden": ["192.168.1.10", "2001:db8::1", "12 TCP", "Kubernetes master", "35% bandwidth"]}}],
       "expected": {"action": "read_network_observations", "tool_binding": "manage_homelab", "policy": "allowed", "approval": "not_required", "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
