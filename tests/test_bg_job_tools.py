@@ -156,7 +156,7 @@ def test_action_aliases(store):
     "kill the bg task",
 ])
 def test_bg_job_commands_are_not_low_signal(msg):
-    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+    from src.aci import compatibility_intent_projection as _classify_agent_request
     from src.legacy_domain_contract import DOMAIN_TOOL_MAP
     r = _classify_agent_request([{"role": "user", "content": msg}], msg)
     assert r["low_signal"] is False
@@ -170,6 +170,6 @@ def test_bg_job_commands_are_not_low_signal(msg):
     "find me a job listing",        # unrelated use of "job"
 ])
 def test_non_bg_messages_do_not_trip_files_domain(msg):
-    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+    from src.aci import compatibility_intent_projection as _classify_agent_request
     r = _classify_agent_request([{"role": "user", "content": msg}], msg)
     assert "files" not in r["domains"]

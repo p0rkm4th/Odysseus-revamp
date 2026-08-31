@@ -574,6 +574,24 @@ def resolve_turn_intent(
     return intent, contract_owned
 
 
+def compatibility_intent_projection(
+    messages: Sequence[Mapping[str, Any]], last_user: str,
+) -> dict[str, object]:
+    """Adapt legacy-only retrieval hints to the canonical runtime boundary."""
+    from src.intent_contracts import SPECIALIZED_OPERATIONAL_DOMAINS, classify_compatibility_request, is_explicit_continuation
+    from src.memory_grounding import is_explicit_memory_query
+    return classify_compatibility_request(
+        list(messages), last_user,
+        recent_context_for_retrieval=recent_context_for_retrieval,
+        explicit_memory_query=is_explicit_memory_query,
+        contextual_retry_continuation=is_contextual_retry_continuation,
+        contextual_reference_followup=is_contextual_reference_followup,
+        explicit_continuation=is_explicit_continuation,
+        assistant_requested_followup=assistant_requested_followup,
+        specialized_operational_domains=SPECIALIZED_OPERATIONAL_DOMAINS,
+    )
+
+
 def compile_turn_contract(
     intent: Mapping[str, Any],
     last_user: str,

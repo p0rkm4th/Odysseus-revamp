@@ -80,7 +80,7 @@ def test_prerequisite_handoff_preserves_same_work_identity():
 
 def test_network_install_intent_selects_homelab_capability_and_environment():
     from src.agent_loop import _assemble_prompt, _normalize_homelab_intent
-    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+    from src.aci import compatibility_intent_projection as _classify_agent_request
     intent = _classify_agent_request([], "install the tools necessary for a deep dive network scan")
     intent = _normalize_homelab_intent(intent, "install the tools necessary for a deep dive network scan")
     assert {"homelab", "network_ops"}.issubset(intent["domains"])

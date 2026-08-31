@@ -6,7 +6,7 @@ from benchmarks.hades_aci_metamorphic import (
     NEGATIVE_NEAR_MISSES,
     READ_PARAPHRASE_SETS,
 )
-from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+from src.aci import compatibility_intent_projection as _classify_agent_request
 from src.aci import (
     canonical_asset_read_payload,
     canonical_read_fast_path_payload,
@@ -587,7 +587,7 @@ def test_current_network_figure_it_out_is_context_read_not_discovery():
 ])
 def test_owner_outage_status_questions_enter_bounded_network_read(query):
     """Vague outage wording still needs canonical status evidence."""
-    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+    from src.aci import compatibility_intent_projection as _classify_agent_request
     from src.agent_loop import _normalize_operational_intent_evidence
 
     intent = _classify_agent_request([], query)
@@ -626,7 +626,7 @@ def test_unresolved_asset_property_followup_still_enters_canonical_transport():
 
 
 def test_content_topic_does_not_create_hades_pentest_action_without_target():
-    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+    from src.aci import compatibility_intent_projection as _classify_agent_request
     from src.agent_loop import _normalize_operational_intent_evidence
     for query in ("Explain pentesting", "can you help me pentest?"):
         intent = _classify_agent_request([], query)

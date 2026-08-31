@@ -14,7 +14,7 @@ The classifier is deterministic string matching (no embeddings / no DB), so it
 can be exercised directly.
 """
 
-from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+from src.aci import compatibility_intent_projection as _classify_agent_request
 from src.agent_loop import (
     _DOMAIN_RULES,
     _domain_rules_for_tools,

@@ -3446,13 +3446,13 @@ def classify_compatibility_request(
     messages: list[dict],
     last_user: str,
     *,
-    recent_context_for_retrieval=None,
-    explicit_memory_query=None,
-    contextual_retry_continuation=None,
-    contextual_reference_followup=None,
-    explicit_continuation=None,
-    assistant_requested_followup=None,
-    specialized_operational_domains=None,
+    recent_context_for_retrieval,
+    explicit_memory_query,
+    contextual_retry_continuation,
+    contextual_reference_followup,
+    explicit_continuation,
+    assistant_requested_followup,
+    specialized_operational_domains,
 ) -> dict[str, object]:
     """Classify legacy-only retrieval hints without owning ACI semantics.
 
@@ -3460,24 +3460,6 @@ def classify_compatibility_request(
     bounded projection exists only for older document, email, UI, and shell
     compatibility surfaces that have not crossed that contract yet.
     """
-    if recent_context_for_retrieval is None:
-        from src.aci import (
-            assistant_requested_followup as _assistant_requested_followup,
-            is_contextual_reference_followup as _contextual_reference_followup,
-            is_contextual_retry_continuation as _contextual_retry_continuation,
-            recent_context_for_retrieval as _recent_context_for_retrieval,
-        )
-        recent_context_for_retrieval = _recent_context_for_retrieval
-        contextual_retry_continuation = _contextual_retry_continuation
-        contextual_reference_followup = _contextual_reference_followup
-        assistant_requested_followup = _assistant_requested_followup
-    if explicit_memory_query is None:
-        from src.memory_grounding import is_explicit_memory_query
-        explicit_memory_query = is_explicit_memory_query
-    if explicit_continuation is None:
-        explicit_continuation = is_explicit_continuation
-    if specialized_operational_domains is None:
-        specialized_operational_domains = SPECIALIZED_OPERATIONAL_DOMAINS
     text = str(last_user or "").strip()
     retry_continuation = contextual_retry_continuation(messages, text)
     contextual_reference = contextual_reference_followup(messages, text)

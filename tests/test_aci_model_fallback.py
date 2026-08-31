@@ -5,7 +5,7 @@ import json
 
 
 def test_conceptual_storage_explanation_does_not_route_to_storage_operations():
-    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+    from src.aci import compatibility_intent_projection as _classify_agent_request
 
     for query in (
         "Explain why RAID isn't a backup.",

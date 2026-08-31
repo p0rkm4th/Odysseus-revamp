@@ -17,7 +17,7 @@ are absent, and run in CI where they are installed.
 import pytest
 
 agent_loop = pytest.importorskip("src.agent_loop")
-from src.intent_contracts import classify_compatibility_request
+from src.aci import compatibility_intent_projection as classify_compatibility_request
 from src.legacy_domain_contract import DOMAIN_TOOL_MAP
 
 REPRO = "Use the api_call tool to call Home Assistant GET /api/states"
