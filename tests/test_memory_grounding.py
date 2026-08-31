@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from src.agent_loop import _classify_agent_request
+from src.intent_contracts import compile_intent, resolve_intent
 from src.memory_grounding import minimal_saved_memory_message
 from src.memory import MemoryManager
 from src.memory_grounding import (
@@ -37,9 +37,10 @@ def test_explicit_memory_queries_are_detected_and_misroute_to_memory_domain():
     assert is_explicit_memory_query("check your memories, are you sure?")
     assert is_explicit_memory_query("What is my acceptance color now?")
     assert not is_explicit_memory_query("What is my computer's RAM?")
-    intent = _classify_agent_request([], "What do you know about my work?")
-    assert intent["explicit_memory_query"] is True
-    assert intent["domains"] == {"memory"}
+    frame = compile_intent("What do you know about my work?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "MEMORY"
+    assert resolved.binding_name == "read_memory"
 
 
 def test_all_about_me_is_canonical_owner_scoped_result(tmp_path):
