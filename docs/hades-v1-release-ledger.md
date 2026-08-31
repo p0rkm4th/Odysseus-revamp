@@ -5336,3 +5336,14 @@ trajectories with 10 tool calls, zero errors/internal leaks, duplicate final
 delivery, and abrupt EOF. A browser qualitative-Recipe replay passed again
 with 1 GUI mutation and 2 canonical readbacks. Persistent owner dogfood and
 production deployments were not changed.
+
+## Today and reminder daily-driver replay — candidate `b91ff938` (2026-08-31)
+
+The complete isolated Today/reminder browser cluster passed after a bounded
+session-hydration delay: 7 scenarios, 15 turns/streams, 7 GUI-originated
+mutations, and 10 independent canonical readbacks across empty Today,
+no-active-continuation, reminder create/read, cancellation by reference,
+hourly timing, correction, and recurring schedule journeys. All terminal
+streams completed with zero false success, raw final Results, duplicate
+delivery, and abrupt EOF. The owner-dogfood lane and production deployment
+were not touched.
