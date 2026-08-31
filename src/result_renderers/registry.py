@@ -8,6 +8,7 @@ imported. It is a projection registry, not an authority or persistence layer.
 from __future__ import annotations
 
 import importlib
+import json
 from typing import Any, Mapping, Sequence
 
 
@@ -32,6 +33,53 @@ RENDERER_SPECS: tuple[tuple[str, str, str], ...] = (
     ("canonical Recipe Result", "src.result_renderers.recipe", "canonical_recipe_read_answer"),
     ("canonical structured empty Result", "src.result_renderers.generic", "canonical_structured_empty_read_answer"),
 )
+
+# Result projection is deliberately kept beside the feature renderers.  The
+# kernel only needs to ask for a bounded projection; it must not know which
+# feature owns the payload shape.
+PROJECTION_SPECS: dict[str, tuple[str, str, str]] = {
+    "manage_memory": ("src.result_renderers.memory", "project_memory_result", "result"),
+    "read_household": ("src.result_renderers.household", "project_household_result", "nested"),
+    "read_recipes": ("src.result_renderers.recipe", "project_recipe_result", "recipe"),
+    "manage_recipes": ("src.result_renderers.recipe", "project_recipe_result", "recipe"),
+    "manage_assets": ("src.result_renderers.assets", "project_asset_result", "payload"),
+    "read_work": ("src.result_renderers.work", "project_work_result", "payload"),
+    "manage_homelab": ("src.result_renderers.homelab", "project_homelab_result", "payload"),
+}
+
+
+def project_result(tool_name: str, result: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """Return the bounded feature-owned projection for a canonical Result."""
+    spec = PROJECTION_SPECS.get(str(tool_name or "").strip())
+    if spec is None or not isinstance(result, Mapping):
+        return None
+    module_name, function_name, mode = spec
+    projector = getattr(importlib.import_module(module_name), function_name)
+    if mode == "result":
+        return projector(result)
+
+    if mode == "nested":
+        raw = result.get("data") if isinstance(result.get("data"), Mapping) else result.get("output")
+    else:
+        raw = result.get("output")
+
+    # A structured plan Result has no subprocess output and must retain its
+    # exact bounded scope for the owner-facing renderer.
+    if mode == "payload" and isinstance(result, Mapping):
+        action = str(result.get("action") or "").strip()
+        if action == "plan_network_discovery" and str(result.get("kind") or "").strip().lower() == "plan":
+            return projector(result)
+    payload = raw if isinstance(raw, Mapping) else None
+    if payload is None:
+        try:
+            payload = json.loads(str(raw or ""))
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(payload, Mapping):
+        return None
+    if mode == "recipe":
+        return projector(str(tool_name).strip(), result)
+    return projector(payload)
 
 
 def render_result(
