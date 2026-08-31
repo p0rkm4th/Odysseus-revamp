@@ -4756,3 +4756,10 @@ they had not happened. RecipeDraft now applies bounded owner transformations
 before validation, supports durable notes, preserves source provenance, and
 the canonical detail projection renders the final recipe rather than a raw
 Result. Focused tests pass; exact newest-image browser replay remains pending.
+
+The exact `81e5ccff` replay subsequently reached `read_recipes/get` and the
+detail answer was human-readable, but independent `/api/recipes` readback did
+not find the created acceptance-principal recipe. Classified
+`ACCEPTANCE/ENVIRONMENT_STATE` pending reconciliation of the browser
+principal's canonical readback path; this is not counted as a green owner
+journey.
