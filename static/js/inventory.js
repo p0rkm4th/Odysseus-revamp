@@ -249,7 +249,7 @@ function recipeIngredientEditor() {
 }
 
 function recipeFormBody() {
-  return `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div>${recipeIngredientEditor()}${field('Source URL','source_url','type="url" maxlength="4000"')}<label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label>`;
+  return `<div class="hades-intake-grid">${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}</div>${recipeIngredientEditor()}${field('Source URL','source_url','type="url" maxlength="4000"')}<label class="hades-intake-field"><span>Instructions <small>optional</small></span><textarea name="instructions"></textarea></label><label class="hades-intake-field"><span>Notes <small>optional</small></span><textarea name="notes" placeholder="Tips or serving notes"></textarea></label>`;
 }
 
 function renderRecipeImportReview(form, prepared) {
@@ -308,7 +308,8 @@ function renderRecipeImportDraft(form, draft) {
       <p class="inventory-muted">Correct names, quantities, or units. Each quantity must be a positive number before saving.</p>
       <div data-review-ingredients>${ingredients.map((item, index) => recipeReviewIngredientRow(index, item)).join('')}</div>
     </fieldset>
-    <label class="hades-intake-field"><span>Instructions</span><textarea name="review_instructions" required maxlength="20000">${escapeHtml(draft.instructions || '')}</textarea></label>`;
+    <label class="hades-intake-field"><span>Instructions</span><textarea name="review_instructions" required maxlength="20000">${escapeHtml(draft.instructions || '')}</textarea></label>
+    <label class="hades-intake-field"><span>Notes <small>optional</small></span><textarea name="review_notes" maxlength="10000">${escapeHtml(draft.notes || '')}</textarea></label>`;
   const submit = form.querySelector('.hades-dialog-actions [type=submit]');
   if (submit) { submit.disabled = false; submit.textContent = 'Save reviewed recipe'; }
   panel.querySelector('[name=review_name]')?.focus();
@@ -380,7 +381,7 @@ async function onSubmit(event) {
         }
         return ingredient;
       });
-      await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, source_url:data.source_url || null})});
+      await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, notes:data.notes || null, source_url:data.source_url || null})});
     }
     if (kind === 'recipe-import') {
       if (form.dataset.recipeReview === 'true') {
@@ -407,6 +408,7 @@ async function onSubmit(event) {
           name: String(new FormData(form).get('review_name') || '').trim(),
           servings, ingredients,
           instructions: String(new FormData(form).get('review_instructions') || '').trim(),
+          notes: String(new FormData(form).get('review_notes') || '').trim() || null,
         };
         if (!reviewedDraft.name || !reviewedDraft.instructions) throw new Error('Recipe name and instructions are required.');
         await api('/api/recipes/import/commit', {method:'POST', body:JSON.stringify({draft:reviewedDraft})});
@@ -523,7 +525,8 @@ async function showRecipe(id) {
       ? `<h4>Shopping needs</h4><ul>${shortages}</ul>`
       : '<h4>Shopping needs</h4><p>You have the recorded ingredients needed for this recipe.</p>';
     const source = recipe.source_url ? `<p><a href="${escapeHtml(recipe.source_url)}" target="_blank" rel="noopener noreferrer">View source</a></p>` : '';
-    modalForm(recipe.name, `<h4>Ingredients</h4><ul>${ingredients || '<li>No ingredients recorded.</li>'}</ul><h4>Instructions</h4><p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p>${coverage}${source}`, 'Close', 'view');
+    const notes = recipe.notes ? `<h4>Notes</h4><p>${escapeHtml(recipe.notes)}</p>` : '';
+    modalForm(recipe.name, `<h4>Ingredients</h4><ul>${ingredients || '<li>No ingredients recorded.</li>'}</ul>${notes}<h4>Instructions</h4><p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p>${coverage}${source}`, 'Close', 'view');
     const form = document.querySelector('.inventory-dialog[data-kind="view"]');
     form.querySelector('[type=submit]').type = 'button'; form.querySelector('[type=submit]').dataset.action = 'dismiss-dialog';
   } catch (error) { uiModule.showError?.(error.message); }

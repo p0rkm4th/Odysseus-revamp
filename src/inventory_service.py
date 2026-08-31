@@ -898,6 +898,7 @@ class RecipeService(InventoryService):
         return {
             "id": recipe.id, "owner": recipe.owner, "name": recipe.name,
             "instructions": recipe.instructions, "servings": recipe.servings,
+            "notes": recipe.notes,
             "source_url": recipe.source_url, "tags": list(recipe.tags_json or []),
             "image_refs": list(recipe.image_refs_json or []), "archived": bool(recipe.archived),
             "ingredients": [{
@@ -915,6 +916,7 @@ class RecipeService(InventoryService):
     def create_recipe(
         self, owner: str, *, name: str, servings: Any,
         ingredients: Iterable[dict[str, Any]], instructions: str = "",
+        notes: str | None = None,
         source_url: str | None = None, tags: Iterable[str] | None = None,
         image_refs: Iterable[str] | None = None,
     ) -> dict[str, Any]:
@@ -931,6 +933,7 @@ class RecipeService(InventoryService):
                 id=str(uuid4()), owner=_required_text(owner, "owner", maximum=255),
                 name=display_name, normalized_name=normalize_item_name(display_name),
                 instructions=str(instructions or ""), servings=serving_count,
+                notes=_optional_text(notes, "notes", maximum=10000),
                 source_url=_optional_text(source_url, "source_url", maximum=4000),
                 tags_json=[str(tag) for tag in (tags or [])],
                 image_refs_json=[str(ref) for ref in (image_refs or [])],
@@ -1342,6 +1345,7 @@ class RecipeService(InventoryService):
         if action == "prepare_import":
             from src.intent_contracts import (
                 recipe_import_draft, recipe_import_review, recipe_import_review_draft,
+                apply_recipe_owner_transformations,
             )
             draft = recipe_import_draft(
                 args.get("source_text"),
@@ -1377,6 +1381,7 @@ class RecipeService(InventoryService):
                     "message": "The source did not contain enough verified recipe structure to prepare a draft.",
                     "review": review,
                 }
+            draft = apply_recipe_owner_transformations(draft, args.get("owner_transformations"))
             return {"status": "READY_FOR_REVIEW", "draft": draft.as_payload()}
         if action == "list":
             return {
@@ -1478,8 +1483,9 @@ class RecipeService(InventoryService):
                 image_refs=args.get("image_refs"),
             )}
         if action == "commit_import":
-            from src.intent_contracts import RecipeDraft
+            from src.intent_contracts import RecipeDraft, apply_recipe_owner_transformations
             draft = RecipeDraft.from_payload(args.get("draft") or args)
+            draft = apply_recipe_owner_transformations(draft, args.get("owner_transformations"))
             # Import commits can be replayed when an approval stream is
             # resumed.  Treat the source URL plus owner-visible recipe name
             # as the import identity so a successful retry cannot create a
@@ -1503,6 +1509,7 @@ class RecipeService(InventoryService):
             recipe = self.create_recipe(
                 owner, name=draft.name, servings=draft.servings,
                 ingredients=draft.ingredients, instructions=draft.instructions,
+                notes=draft.notes,
                 source_url=draft.source_url, tags=args.get("tags"), image_refs=args.get("image_refs"),
             )
             readback = self.get_recipe(owner, recipe["id"])

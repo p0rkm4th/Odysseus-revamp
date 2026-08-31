@@ -42,6 +42,7 @@ class RecipeDraft:
     servings: int | float
     ingredients: tuple[dict[str, Any], ...]
     instructions: str
+    notes: str | None = None
     source_url: str | None = None
     provenance: str = "owner_text"
 
@@ -54,6 +55,8 @@ class RecipeDraft:
             "instructions": self.instructions,
             "provenance": self.provenance,
         }
+        if self.notes:
+            payload["notes"] = self.notes
         if self.source_url:
             payload["source_url"] = self.source_url
         return payload
@@ -122,8 +125,67 @@ class RecipeDraft:
         source_url = str(payload.get("source_url") or "").strip() or None
         if source_url and not re.match(r"^https?://", source_url, re.IGNORECASE):
             raise ValueError("recipe source_url must use http or https")
+        notes = str(payload.get("notes") or "").strip()[:10000] or None
         return cls(name[:200], servings, tuple(normalized), instructions[:20000],
-                   source_url, str(payload.get("provenance") or "owner_import")[:80])
+                   notes, source_url, str(payload.get("provenance") or "owner_import")[:80])
+
+
+def apply_recipe_owner_transformations(draft: RecipeDraft, transformations: Any) -> RecipeDraft:
+    """Apply explicit bounded owner edits before draft validation/commit."""
+    if not isinstance(transformations, list):
+        return draft
+    ingredients = [dict(item) for item in draft.ingredients]
+    notes = draft.notes
+    name = draft.name
+    servings: int | float = draft.servings
+
+    def targets(value: Any) -> set[str]:
+        text = re.sub(r"\s+", " ", str(value or "").strip().casefold())
+        return {part.strip(" .\"'") for part in re.split(r"\s+and\s+|\s*,\s*|\s*&\s*", text) if part.strip()}
+
+    def matches(item: Mapping[str, Any], wanted: set[str]) -> bool:
+        current = re.sub(r"\s+", " ", str(item.get("name") or "").strip().casefold())
+        return current in wanted or any(current.startswith(f"{v} ") or v.startswith(f"{current} ") for v in wanted)
+
+    for transformation in transformations:
+        if not isinstance(transformation, Mapping):
+            continue
+        operation = str(transformation.get("operation") or transformation.get("type") or "").strip().casefold().replace("-", "_")
+        wanted = targets(transformation.get("ingredient") or transformation.get("ingredients"))
+        if operation in {"exclude", "remove", "omit"} and wanted:
+            ingredients = [item for item in ingredients if not matches(item, wanted)]
+        elif operation in {"optional", "mark_optional"} and wanted:
+            for item in ingredients:
+                if matches(item, wanted):
+                    item["optional"] = True
+                    item["amount_kind"] = "OPTIONAL"
+                    item["quantity"] = None
+                    item["unit"] = None
+        elif operation in {"replace", "substitute"} and wanted:
+            replacement = str(transformation.get("replacement") or transformation.get("with") or "").strip()[:200]
+            if replacement:
+                for item in ingredients:
+                    if matches(item, wanted):
+                        item["name"] = replacement
+                        item["source_text"] = item.get("source_text") or replacement
+        elif operation in {"add_note", "note", "move_to_note"}:
+            note = str(transformation.get("note") or transformation.get("text") or "").strip()
+            if note and note.casefold() not in (notes or "").casefold():
+                notes = f"{notes}\n{note}".strip() if notes else note
+        elif operation in {"rename", "change_name"}:
+            value = str(transformation.get("name") or transformation.get("value") or "").strip()
+            if value:
+                name = value[:200]
+        elif operation in {"change_servings", "servings"}:
+            try:
+                value = float(transformation.get("servings") or transformation.get("value"))
+            except (TypeError, ValueError):
+                value = 0
+            if value > 0:
+                servings = int(value) if value.is_integer() else value
+    if not ingredients:
+        raise ValueError("owner transformations removed every recipe ingredient")
+    return replace(draft, name=name, servings=servings, ingredients=tuple(ingredients), notes=notes)
 
 
 def _recipe_section(text: str, header: str, next_header: str | None = None) -> str | None:

@@ -238,6 +238,7 @@ class InventoryRecipe(TimestampMixin, Base):
     name = Column(String, nullable=False)
     normalized_name = Column(String, nullable=False)
     instructions = Column(Text, nullable=False, default="")
+    notes = Column(Text, nullable=True)
     servings = Column(QUANTITY_TYPE, nullable=False, default=1)
     source_url = Column(Text, nullable=True)
     tags_json = Column(JSON, nullable=False, default=list)

@@ -101,6 +101,13 @@ function hydrateSemanticNavIcons() {
     if (legacyIcon) legacyIcon.replaceWith(nextIcon);
     else item.insertAdjacentHTML('afterbegin', iconSvg(name));
   }
+  // Older tool rows keep their inline SVG artwork as a no-JS fallback. Give
+  // every first-row icon the same shared styling contract so legacy and
+  // registry-projected destinations cannot split into different color
+  // families when a theme changes.
+  document.querySelectorAll('#tools-section .list-item > svg').forEach(icon => {
+    icon.classList.add('hades-nav-icon');
+  });
   groupToolDestinations();
 }
 

@@ -1531,6 +1531,9 @@ body.bg-pattern-sparkles {
     }
     /* Semantic module icons inherit the row/header state. Individual SVGs
        never own a theme color. */
+    #tools-section .list-item {
+      color: var(--text-primary, var(--fg));
+    }
     .hades-nav-icon,
     .hades-module-svg {
       color: inherit;
@@ -41623,7 +41626,7 @@ body.settings-sidebar-resize-active {
 .hades-loading-dot { display:inline-block; width:8px; height:8px; margin-right:8px; border-radius:50%; background:var(--accent-primary, #6aa7ff); animation:hades-pulse 1s ease-in-out infinite; }
 .hades-error-state { color:var(--hades-danger); }
 .hades-success-state { color:var(--hades-success); }
-.hades-nav-icon { display:inline-grid; place-items:center; width:14px; color:var(--accent-primary, #6aa7ff); font-weight:700; }
+.hades-nav-icon { display:inline-grid; place-items:center; width:14px; color:inherit; font-weight:700; }
 @keyframes hades-pulse { 50% { opacity:.3; transform:scale(.75); } }
 @media (max-width: 900px) { .hades-overview-grid, .hades-summary-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width: 700px) { .hades-module-header, .hades-callout { align-items:stretch; flex-direction:column; } .hades-module-actions { justify-content:flex-start; } .hades-overview-grid, .hades-summary-metrics, .hades-intake-grid { grid-template-columns:1fr; } .hades-record-card { align-items:flex-start; flex-direction:column; } }

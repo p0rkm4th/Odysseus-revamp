@@ -187,7 +187,7 @@ def setup_inventory_routes(
     async def create_recipe(request: Request, payload: dict[str, Any] = Body(...)):
         if "image_refs" in payload:
             raise HTTPException(400, "attach images through the owner-checked intake API")
-        allowed = {"name", "servings", "ingredients", "instructions", "source_url", "tags", "image_refs"}
+        allowed = {"name", "servings", "ingredients", "instructions", "notes", "source_url", "tags", "image_refs"}
         return {"recipe": await call(
             inventory.create_recipe, _owner(request),
             **{key: value for key, value in payload.items() if key in allowed},
@@ -231,7 +231,8 @@ def setup_inventory_routes(
         return await call(
             inventory.manage_recipes,
             {"action": "prepare_import", "source_text": source_text,
-             "source_url": source_url, "requested_name": requested_name},
+             "source_url": source_url, "requested_name": requested_name,
+             "owner_transformations": payload.get("owner_transformations")},
             owner=owner,
         )
 
@@ -244,7 +245,8 @@ def setup_inventory_routes(
             raise HTTPException(400, "a validated draft is required")
         return await call(
             inventory.manage_recipes,
-            {"action": "commit_import", "draft": draft}, owner=owner,
+            {"action": "commit_import", "draft": draft,
+             "owner_transformations": payload.get("owner_transformations")}, owner=owner,
         )
 
     @router.get("/recipes/{recipe_id}/can-make")
