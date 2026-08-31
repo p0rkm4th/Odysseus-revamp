@@ -340,6 +340,25 @@ def test_canonical_network_plan_has_bounded_owner_facing_answer():
     )
 
 
+def test_network_plan_receipt_projection_preserves_exact_scope():
+    projection = canonical_tool_result_projection("manage_homelab", {
+        "kind": "plan",
+        "action": "plan_network_discovery",
+        "target": "192.168.10.0/24",
+        "operation_digest": "digest",
+        "preflight": "Probe only 192.168.10.0/24",
+        "exit_code": 0,
+    })
+    assert projection == {
+        "action": "plan_network_discovery",
+        "status": "SUCCESS",
+        "kind": "plan",
+        "target": "192.168.10.0/24",
+        "operation_digest": "digest",
+        "preflight": "Probe only 192.168.10.0/24",
+        "scanner_available": None,
+        "broker_scanner_available": None,
+    }
 def test_canonical_network_plan_does_not_answer_for_failed_plan():
     answer = canonical_result_answer([{
         "tool": "manage_homelab", "exit_code": 1,
