@@ -5055,6 +5055,11 @@ def project_action_selection(
 ) -> ActionProjection:
     """Build one bounded ActionCard packet from canonical semantic inputs."""
     frame = intent.get("intent_frame") if isinstance(intent.get("intent_frame"), Mapping) else {}
+    frame = dict(frame)
+    if network_cidr:
+        frame["network_cidr"] = str(network_cidr)
+    if "filters" not in frame and isinstance(contract.get("filters"), Mapping):
+        frame["filters"] = dict(contract["filters"])
     contract = intent.get("resolved_contract") if isinstance(intent.get("resolved_contract"), Mapping) else {}
     disabled = set(disabled_tools or ())
     desired_binding = str(contract.get("binding") or "")
@@ -5129,12 +5134,7 @@ def project_action_selection(
             if item.get("binding") == desired_binding
             and item.get("action_id") == "plan_network_discovery"
         ]
-    if (
-        frame.get("domain_concept") == "SERVICE"
-        and frame.get("operation_class") == "EXECUTE"
-        and not frame.get("target")
-        and contract.get("reason") == "target_required"
-    ):
+    if not frame.get("target") and contract.get("reason") == "target_required":
         filtered = []
     if desired_binding and desired_action and not any(
         item.get("binding") == desired_binding and item.get("action_id") == desired_action
@@ -5163,20 +5163,10 @@ def project_action_selection(
         ))
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
-        if item["binding"] == "read_recipes" and item["action_id"] == "prepare_import":
-            url_match = re.search(r"https?://[^\s)>]+", query, re.IGNORECASE)
-            if url_match:
-                payload["source_url"] = url_match.group(0).rstrip(".,")
-            from src.intent_contracts import recipe_requested_name
-            requested_name = recipe_requested_name(query)
-            if requested_name:
-                payload["requested_name"] = requested_name
         if item["binding"] == "web_search":
             payload["query"] = query
         if item["binding"] == "web_fetch":
             payload["url"] = query
-        if item["action_id"] == "plan_network_discovery" and network_cidr:
-            payload["cidr"] = str(network_cidr)
         dependency_plan = dependency_manager.ensure_action(
             str(item.get("binding") or ""),
             str(item.get("action_id") or ""),
@@ -5271,136 +5261,21 @@ def project_action_selection(
                     fast_path = {"action": "get", "asset": str(frame.get("entity_reference") or "")}
                 if desired_action == "summarize_owner_memory":
                     fast_path["query"] = query
-            if desired_action == "plan_network_discovery" and network_cidr:
-                fast_path["cidr"] = str(network_cidr)
             mode = SelectionMode.DIRECT_ACTION
-    # Memory mutations are fully projected from the owner's ordinary request
-    # above.  Do not ask a weak model to rediscover a bounded add/delete
-    # choice from prose: that can turn a valid mutation into an apparent
-    # success with no Action at all.  The normal Action, policy, executor,
-    # verification, and Result paths still apply to this deterministic
-    # selection.
-    if (
-        frame.get("domain_concept") == "MEMORY"
-        and frame.get("operation_class") in {"CREATE", "UPDATE", "DELETE"}
-        and desired_binding == "manage_memory"
-        and desired_action in {"add", "edit", "delete"}
-        and desired_binding not in disabled
-    ):
-        selected_memory = next(
-            (
-                value for value in choices.values()
-                if value.get("binding") == desired_binding
-                and value.get("payload", {}).get("action") == desired_action
-            ),
-            None,
-        )
-        memory_payload = dict(selected_memory.get("payload") or {}) if selected_memory else {}
-        payload_complete = (
-            desired_action == "add" and bool(str(memory_payload.get("text") or "").strip())
-            or desired_action == "delete" and bool(
-                str(memory_payload.get("memory_id") or "").strip()
-                or str(memory_payload.get("query") or "").strip()
-            )
-            or desired_action == "edit" and bool(
-                str(memory_payload.get("memory_id") or "").strip()
-                and str(memory_payload.get("text") or "").strip()
-            )
-        )
+    # A resolver-declared payload is already validated enough for deterministic
+    # selection. Keep this generic: the resolver owns field semantics, while
+    # ActionSpec still owns approval/effect checks and execution remains below.
+    if desired_binding and desired_action and desired_binding not in disabled:
+        selected = next((value for value in choices.values()
+                         if value.get("binding") == desired_binding
+                         and value.get("payload")), None)
+        payload = dict(selected.get("payload") or {}) if selected else {}
         spec = action_for_tool(desired_binding, {"action": desired_action})
-        if (
-            selected_memory is not None
-            and payload_complete
-            and spec
-            and spec.known
-            and spec.approval.value == "none"
-            and set(spec.effects).issubset({"write_private"})
-        ):
-            fast_path = memory_payload
-            mode = SelectionMode.DIRECT_ACTION
-    # Natural reminders already carry a bounded title and due phrase from the
-    # owner request. Project the complete existing notes Action directly so a
-    # weak model cannot drop fields or repeat the mutation while answering.
-    if (
-        str(frame.get("domain_concept") or "") == "NOTES_MUTATION"
-        and frame.get("operation_class") in {"CREATE", "UPDATE", "DELETE"}
-        and desired_binding == "manage_notes"
-        and desired_action in {"add", "update", "delete"}
-        and desired_binding not in disabled
-    ):
-        selected_notes = next(
-            (value for value in choices.values()
-             if value.get("binding") == desired_binding
-             and value.get("payload", {}).get("action") == desired_action),
-            None,
-        )
-        notes_payload = dict(selected_notes.get("payload") or {}) if selected_notes else {}
-        complete = (
-            desired_action == "add"
-            and str(notes_payload.get("title") or "").strip()
-            and str(notes_payload.get("due_date") or "").strip()
-        ) or (
-            desired_action in {"update", "delete"}
-            and str(notes_payload.get("id") or "").strip()
-        )
-        spec = action_for_tool(desired_binding, {"action": desired_action})
-        if selected_notes is not None and complete and spec and spec.known and spec.approval.value == "none":
-            fast_path = notes_payload
-            mode = SelectionMode.DIRECT_ACTION
-    if (
-        str(frame.get("domain_concept") or "") == "SCHEDULED_TASK"
-        and frame.get("operation_class") == "CREATE"
-        and desired_binding == "manage_tasks"
-        and desired_action == "create"
-        and desired_binding not in disabled
-    ):
-        selected_task = next(
-            (value for value in choices.values()
-             if value.get("binding") == desired_binding
-             and value.get("payload", {}).get("action") == desired_action),
-            None,
-        )
-        task_payload = dict(selected_task.get("payload") or {}) if selected_task else {}
-        spec = action_for_tool(desired_binding, {"action": desired_action})
-        if (
-            selected_task is not None
-            and str(task_payload.get("prompt") or "").strip()
-            and str(task_payload.get("schedule") or "").strip()
-            and spec and spec.known and spec.approval.value == "none"
-        ):
-            fast_path = task_payload
-            mode = SelectionMode.DIRECT_ACTION
-    # Recipe import semantics are already explicit in the owner request and
-    # the server has projected the bounded URL/name or review-only payload
-    # above. Do not send this through weak-model arbitration: URL imports can
-    # be refused as "I can't manage external content", while incomplete
-    # pastes can expose raw commit JSON instead of the review workflow.
-    if (
-        str(frame.get("domain_concept") or "") == "RECIPE"
-        and str(frame.get("operation_class") or "") == "CREATE"
-        and frame_filters.get("recipe_import") is True
-        and desired_binding == "manage_recipes"
-        and desired_action in {"commit_import", "add"}
-        and desired_binding not in disabled
-    ):
-        selected_import = next(
-            (
-                value for value in choices.values()
-                if value.get("binding") == desired_binding
-                and value.get("payload", {}).get("action") in {desired_action, "commit_import", "add"}
-            ),
-            None,
-        )
-        import_payload = dict(selected_import.get("payload") or {}) if selected_import else {}
-        if isinstance(import_payload.get("ingredients"), list):
-            import_payload["action"] = "commit_import"
-            import_payload.setdefault("source_text", query)
-        if (
-            import_payload.get("source_url")
-            or import_payload.get("review_required") is True
-            or isinstance(import_payload.get("ingredients"), list)
-        ):
-            fast_path = import_payload
+        if (selected and payload and spec and spec.known and spec.field_resolver
+                and spec.deterministic_selection
+                and spec.approval.value == "none"
+                and not set(spec.effects) & {"admin_change", "external_side_effect", "external_network"}):
+            fast_path = payload
             mode = SelectionMode.DIRECT_ACTION
     if mode is SelectionMode.NEED_CONTEXT:
         if str(frame.get("domain_concept") or "") == "RECIPE":

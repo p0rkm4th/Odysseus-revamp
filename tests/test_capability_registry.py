@@ -20,6 +20,17 @@ def test_custom_capabilities_have_stable_ids_and_unique_actions():
     assert len(privileged.actions) == len(set(privileged.actions))
 
 
+def test_mutation_field_resolution_is_declared_by_action_metadata():
+    recipe = capability_for_tool("manage_recipes")
+    inventory = capability_for_tool("manage_assets")
+    memory = capability_for_tool("manage_memory")
+    assert recipe.actions["add"].field_resolver == "recipe"
+    assert recipe.actions["commit_import"].field_resolver == "recipe"
+    assert inventory.actions["add_item"].field_resolver == "inventory"
+    assert inventory.actions["consume_stock"].field_resolver == "inventory"
+    assert memory.actions["add"].field_resolver == "memory"
+
+
 def test_privileged_action_metadata_is_action_aware():
     status = action_for_tool("privileged_action", json.dumps({"action": "status"}))
     install = action_for_tool("privileged_action", {"action": "install_packages"})
