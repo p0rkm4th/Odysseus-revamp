@@ -1,7 +1,7 @@
 """P0 regressions: provider context is reconstructed from durable recent chat."""
 
 from src.context_compactor import context_trace, trim_for_context
-from src.agent_loop import _classify_agent_request
+from src.intent_contracts import classify_compatibility_request as _classify_agent_request
 from src.aci import (
     deterministic_reference_acknowledgement as _deterministic_reference_acknowledgement,
     reference_resolution_hint as _recent_reference_resolution_hint,

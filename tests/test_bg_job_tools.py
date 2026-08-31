@@ -156,12 +156,13 @@ def test_action_aliases(store):
     "kill the bg task",
 ])
 def test_bg_job_commands_are_not_low_signal(msg):
-    from src.agent_loop import _classify_agent_request, _DOMAIN_TOOL_MAP
+    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+    from src.legacy_domain_contract import DOMAIN_TOOL_MAP
     r = _classify_agent_request([{"role": "user", "content": msg}], msg)
     assert r["low_signal"] is False
     assert "files" in r["domains"]
     # files domain seeds manage_bg_jobs, so it gets offered to the model.
-    assert "manage_bg_jobs" in _DOMAIN_TOOL_MAP["files"]
+    assert "manage_bg_jobs" in DOMAIN_TOOL_MAP["files"]
 
 
 @pytest.mark.parametrize("msg", [
@@ -169,6 +170,6 @@ def test_bg_job_commands_are_not_low_signal(msg):
     "find me a job listing",        # unrelated use of "job"
 ])
 def test_non_bg_messages_do_not_trip_files_domain(msg):
-    from src.agent_loop import _classify_agent_request
+    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
     r = _classify_agent_request([{"role": "user", "content": msg}], msg)
     assert "files" not in r["domains"]

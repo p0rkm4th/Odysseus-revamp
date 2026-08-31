@@ -2552,16 +2552,6 @@ def test_direct_low_signal_partial_error_emits_terminal_history(
     monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default)
     monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None)
     monkeypatch.setattr(agent_loop, "estimate_tokens", lambda *args, **kwargs: 10)
-    monkeypatch.setattr(
-        agent_loop,
-        "_classify_agent_request",
-        lambda messages, latest: {
-            "low_signal": True,
-            "continuation": False,
-            "domains": [],
-            "retrieval_query": latest,
-        },
-    )
     monkeypatch.setattr(agent_loop, "_is_casual_low_signal", lambda latest: True)
 
     async def fake_stream(candidates, messages, **kwargs):
@@ -2613,16 +2603,6 @@ def test_direct_low_signal_fallback_estimates_winning_route_prompt(
 
     monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default)
     monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None)
-    monkeypatch.setattr(
-        agent_loop,
-        "_classify_agent_request",
-        lambda messages, latest: {
-            "low_signal": True,
-            "continuation": False,
-            "domains": [],
-            "retrieval_query": latest,
-        },
-    )
     monkeypatch.setattr(agent_loop, "_is_casual_low_signal", lambda latest: True)
     monkeypatch.setattr(
         agent_loop,
@@ -2731,16 +2711,6 @@ def test_direct_low_signal_configuration_error_surfaces_without_fake_success(mon
         ),
     )
     monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None)
-    monkeypatch.setattr(
-        agent_loop,
-        "_classify_agent_request",
-        lambda messages, latest: {
-            "low_signal": True,
-            "continuation": False,
-            "domains": [],
-            "retrieval_query": latest,
-        },
-    )
     monkeypatch.setattr(agent_loop, "_is_casual_low_signal", lambda latest: True)
 
     chunks = _collect(agent_loop.stream_agent_loop(
@@ -2769,16 +2739,6 @@ def test_direct_low_signal_configuration_error_surfaces_without_fake_success(mon
 def test_direct_low_signal_empty_completion_surfaces_without_fake_success(monkeypatch):
     monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default)
     monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None)
-    monkeypatch.setattr(
-        agent_loop,
-        "_classify_agent_request",
-        lambda messages, latest: {
-            "low_signal": True,
-            "continuation": False,
-            "domains": [],
-            "retrieval_query": latest,
-        },
-    )
     monkeypatch.setattr(agent_loop, "_is_casual_low_signal", lambda latest: True)
 
     async def empty_stream(*args, **kwargs):

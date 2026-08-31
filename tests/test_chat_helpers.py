@@ -43,11 +43,11 @@ def test_communications_chat_turn_attaches_to_shared_work_run(monkeypatch):
     assert captured["intent"]["operation_class"] == "READ"
 
 
-def test_work_run_projection_does_not_invoke_legacy_agent_classifier(monkeypatch):
+def test_work_run_projection_does_not_invoke_compatibility_classifier(monkeypatch):
     monkeypatch.setattr(
-        "src.agent_loop._classify_agent_request",
+        "src.intent_contracts.classify_compatibility_request",
         lambda *args, **kwargs: (_ for _ in ()).throw(
-            AssertionError("legacy classifier must not route Work-run creation")
+            AssertionError("compatibility classifier must not route Work-run creation")
         ),
     )
     monkeypatch.setattr(
