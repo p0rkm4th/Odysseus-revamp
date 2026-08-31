@@ -5391,9 +5391,12 @@ production deployments were not touched.
 
 ## Exact-source CI and Recipe module lifecycle pilot — source `15b2b8a9` (2026-08-31)
 
-The authoritative exact-source gates passed after the modular-kernel pilot:
-`compileall` passed, the ACI/lifecycle/security slice passed `228` tests, and
-the full regression passed `7124` tests with `9` skips and `149` warnings.
+The authoritative gates passed after the modular-kernel pilot: `compileall`
+passed, the ACI/lifecycle/security slice passed `228` tests, and the full
+application regression passed on the functionally identical pilot source
+`9f662b2b` with `7124` tests, `9` skips, and `149` warnings. The later
+`15b2b8a9` descendant changed only architecture-metric accounting; its clean
+metrics generation passed separately.
 
 The pilot adds a cheap internal ModuleSpec/ModuleManager lifecycle with
 `AVAILABLE`, `ENABLED`, and `ACTIVE` states. Recipe capability projection is
