@@ -4986,6 +4986,20 @@ def project_action_selection(
             if item.get("binding") == "manage_recipes"
             and item.get("action_id") == "commit_import"
         ]
+    # Initial scoped discovery is always a plan.  The executable discovery
+    # Action is only eligible after a canonical plan/approval continuation;
+    # exposing execute alongside plan lets a weak model skip the exact CIDR
+    # binding and jump straight to an unsafe or under-specified request.
+    if (
+        str(frame.get("domain_concept") or "") == "NETWORK"
+        and str(frame.get("operation_class") or "") == "EXECUTE"
+        and desired_action == "plan_network_discovery"
+    ):
+        filtered = [
+            item for item in filtered
+            if item.get("binding") == desired_binding
+            and item.get("action_id") == "plan_network_discovery"
+        ]
     if (
         frame.get("domain_concept") == "SERVICE"
         and frame.get("operation_class") == "EXECUTE"
