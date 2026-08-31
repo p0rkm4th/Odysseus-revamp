@@ -314,6 +314,31 @@
     "status": "PASS; bounded live holdout, not the full generated supported-domain release score",
     "recorded_at": "2026-08-31T15:35:00-05:00"
   },
+  "latest_current_source_work_automation_tier1_slice": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "a726be1dbb6776deb699893de015f1699d87ad5b",
+    "harness_source_sha": "a726be1dbb6776deb699893de015f1699d87ad5b",
+    "scenarios": [
+      "OWNER-WORK-PROJECT-MUTATION-READBACK-001",
+      "OWNER-WORK-TASK-MUTATION-READBACK-001",
+      "OWNER-WORK-OVERVIEW-001",
+      "OWNER-REMINDER-CREATE-READBACK-001",
+      "OWNER-REMINDER-CANCEL-REFERENCE-001"
+    ],
+    "environment": "isolated_synthetic",
+    "status": "PASS",
+    "turns": 12,
+    "streams": 12,
+    "read_journeys": 7,
+    "mutations": 5,
+    "mutation_readbacks": 10,
+    "readbacks": 10,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "recorded_at": "2026-08-31T20:22:00Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
