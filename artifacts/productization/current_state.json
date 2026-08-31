@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-08-30T23:59:00-05:00",
+  "captured_at": "2026-08-31T00:01:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "f7e0fe54a10ed0c4e79dea96a40a7d3111f4df7c",
-  "remote_head": "f7e0fe54a10ed0c4e79dea96a40a7d3111f4df7c",
+  "source_head": "1017813932927c0954fec73ae7ae26cb1437d8af",
+  "remote_head": "1017813932927c0954fec73ae7ae26cb1437d8af",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -255,7 +255,7 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-30T23:55:28-05:00",
+    "measured_at": "2026-08-30T23:55:45-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
     "full_regression": "7116 passed, 9 skipped, 149 warnings",
