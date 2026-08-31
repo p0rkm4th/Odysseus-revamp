@@ -1578,6 +1578,11 @@ class ResolvedContract:
     available: bool
     reason: str | None = None
 
+    @property
+    def requires_context(self) -> bool:
+        """Whether this contract needs bounded owner context before action selection."""
+        return self.reason in {"target_required", "recipe_reference_required"}
+
     def as_dict(self) -> dict[str, Any]:
         return {
             "intent_frame": self.frame.as_dict(),
@@ -1587,6 +1592,7 @@ class ResolvedContract:
             "binding": self.binding_name,
             "available": self.available,
             "reason": self.reason,
+            "requires_context": self.requires_context,
             "result_contract": self.contract.result_contract if self.contract else None,
             "exposure": dict(self.contract.exposures) if self.contract else {},
             "missing_target_question": self.contract.missing_target_question if self.contract else None,

@@ -5079,7 +5079,7 @@ def project_action_selection(
             and all(frame_filters.get(str(key)) == value for key, value in item["selection_requirements"]["exclude_when_filters"].items())
         )
     ]
-    if not frame.get("target") and contract.get("reason") == "target_required":
+    if contract.get("requires_context"):
         filtered = []
     if desired_binding and desired_action and not any(
         item.get("binding") == desired_binding and item.get("action_id") == desired_action
@@ -5161,7 +5161,7 @@ def project_action_selection(
         domain=str(frame.get("domain_concept") or "UNKNOWN"),
         operation=str(frame.get("operation_class") or "UNKNOWN"),
         action_count=len(selected),
-        context_required=contract.get("reason") in {"target_required", "recipe_reference_required"},
+        context_required=bool(contract.get("requires_context")),
     )
     reason = None
     if mode is SelectionMode.NEED_CONTEXT:
@@ -5178,7 +5178,7 @@ def project_action_selection(
         )
         and desired_binding and desired_action and desired_binding in candidate_bindings
         and desired_binding not in disabled
-        and contract.get("reason") not in {"target_required", "recipe_reference_required"}
+        and not contract.get("requires_context")
     ):
         spec = action_for_tool(desired_binding, {"action": desired_action})
         if spec and spec.known and spec.approval.value == "none" and not set(spec.effects) & {
