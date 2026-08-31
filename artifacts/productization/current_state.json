@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-08-31T03:12:00-05:00",
+  "captured_at": "2026-08-30T22:16:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
-  "remote_head": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
+  "source_head": "f2df83b56029853d662d7560d82f457e48b5138a",
+  "remote_head": "f2df83b56029853d662d7560d82f457e48b5138a",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -31,7 +31,10 @@
     "browser_replays_exact_candidate": {
       "OWNER-NETWORK-BOUNDED-CIDR-001": {"status": "PASS", "turns": 4, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
       "OWNER-WORK-EMPTY-001": {"status": "PASS", "turns": 1, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
-      "OWNER-RECIPE-MUTATION-READBACK-001": {"status": "PASS", "turns": 3, "mutations": 1, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0}
+      "OWNER-RECIPE-MUTATION-READBACK-001": {"status": "PASS", "turns": 3, "mutations": 1, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
+      "OWNER-TODAY-EMPTY-001": {"status": "PASS", "turns": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
+      "OWNER-MEMORY-CORRECTION-READBACK-001": {"status": "PASS", "turns": 4, "mutations": 2, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
+      "OWNER-REMINDER-CORRECTION-001": {"status": "PASS", "turns": 3, "mutations": 2, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0}
     },
     "qwen_model": "qwen3:8b",
     "qwen_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",

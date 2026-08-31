@@ -5051,3 +5051,22 @@ turns, one chat-originated recurring-reminder mutation, and two independent
 readbacks after reload. False success, raw final Results, duplicate delivery,
 and abrupt EOF were zero. This was run in the disposable empty daily-driver
 profile; the persistent owner dogfood lane remained untouched.
+
+## Exact candidate Tier 1 breadth replay — `ed3e8885` / evidence `f2df83b5` (2026-08-30)
+
+After rotating the disposable acceptance principal and restoring its explicit
+acceptance environment flag, the exact candidate
+`odysseus:candidate-ed3e888-exact` was replayed through the authenticated GUI.
+`OWNER-RECIPE-MUTATION-READBACK-001` passed with 3 turns, one GUI mutation, and
+two canonical readbacks. `OWNER-TODAY-EMPTY-001` passed with 2 read-only turns.
+`OWNER-MEMORY-CORRECTION-READBACK-001` passed with 4 turns, two GUI mutations,
+and two canonical readbacks. `OWNER-REMINDER-CORRECTION-001` passed with 3
+turns, two GUI mutations, and two canonical readbacks. All four journeys had
+zero false success, raw final Results, duplicate delivery, and abrupt EOF.
+
+The initial browser timeout was classified `AUTH_SESSION/ENVIRONMENT_FAILURE`:
+the acceptance principal had been created in the mounted disposable auth store
+while the manually restarted container had acceptance-principal enablement
+disabled. No production code or owner data was changed. The acceptance stack
+was recreated on an isolated Docker network and returned healthy with zero
+restarts. The persistent owner-dogfood lane remained untouched.
