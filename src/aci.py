@@ -4895,9 +4895,6 @@ def project_action_selection(
                 and not set(spec.effects) & {"admin_change", "external_side_effect", "external_network"}):
             fast_path = payload
             mode = SelectionMode.DIRECT_ACTION
-    if mode is SelectionMode.NEED_CONTEXT:
-        question = str(contract.get("missing_target_question") or "Which target should I use?")
-        return ActionProjection(None, {}, None, mode, reason, clarification_instruction, question, ("action_target_clarification",))
     safety_messages = {
         "strong_identity_required": "I can't merge or identify assets by IP address alone; I need a strong identity such as a system UUID, serial, or MAC.",
         "public_scope_requires_authorization": "I can't scan a public or external range without an explicitly authorized target scope.",
@@ -4907,6 +4904,9 @@ def project_action_selection(
     for constraint, message in safety_messages.items():
         if constraint in set(frame.get("constraints") or ()):
             return ActionProjection(None, {}, None, SelectionMode.NEED_CONTEXT, constraint, clarification_instruction, message, ("safety_boundary",))
+    if mode is SelectionMode.NEED_CONTEXT:
+        question = str(contract.get("missing_target_question") or "Which target should I use?")
+        return ActionProjection(None, {}, None, mode, reason, clarification_instruction, question, ("action_target_clarification",))
     if mode is SelectionMode.NO_APPLICABLE_ACTION:
         instruction = "HADES GENERAL ASSISTANT MODE. No specialized Hades operation applies; answer without execution authority."
         # Keep a packet for known domains so a future bounded retrieval
