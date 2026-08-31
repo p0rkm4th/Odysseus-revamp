@@ -70,6 +70,22 @@
     "candidate_image": "not rebuilt; executable candidate remains exact 896473de",
     "recorded_at": "2026-08-31T13:15:00-05:00"
   },
+  "latest_semantic_holdout": {
+    "source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "image": "odysseus:candidate-896473de",
+    "model": "qwen3:8b",
+    "suite": "held_out",
+    "seed": 20260831,
+    "cases": 13,
+    "generated_variants": 19,
+    "trajectory_passes": 13,
+    "model_calls": 3,
+    "tool_index_lookups": 0,
+    "internal_leaks": 0,
+    "expected_fallback_cases": 3,
+    "raw_artifact": "/tmp/hades-6b535818-heldout-20260831.json",
+    "recorded_at": "2026-08-31T13:20:00-05:00"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
