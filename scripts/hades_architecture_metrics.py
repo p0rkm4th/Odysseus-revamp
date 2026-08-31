@@ -43,6 +43,7 @@ COUNTED_MODULES = (
     "src/result_renderers/generic.py",
     "src/result_renderers/notes.py",
     "src/result_renderers/assets.py",
+    "src/result_renderers/household.py",
     "src/legacy_agent_loop.py",
 )
 
