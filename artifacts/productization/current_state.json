@@ -364,11 +364,6 @@
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "ac511bb554d4b453953edafb9c2b42d32758fe30",
     "evidence_commit_sha": "ac511bb554d4b453953edafb9c2b42d32758fe30",
-    "semantic_control_plane_loc": 19079,
-    "central_domain_conditionals": 118,
-    "central_canonical_answer_functions": 4,
-    "canonical_answer_dispatch_mentions": 8,
-    "eager_feature_module_imports": 0,
     "latest_candidate_browser_replay": "PASS: exact 15b2b8a9 candidate browser_realistic_acceptance on disposable port 7006; newer source ac511bb5 is not yet built/deployed",
     "latest_candidate_holdout": "49cb07df exact candidate mixed 142-case holdout: 46 functional, 123 architectural, 142 security; diagnostic denominator includes unsupported/dependency/evaluator cases; compact summary artifacts/productization/49cb07df-heldout-summary.json; raw report retained at /tmp/49cb07df-heldout.json"
   },
