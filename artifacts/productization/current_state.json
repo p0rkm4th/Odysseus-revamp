@@ -652,6 +652,25 @@
     "raw_artifact": "/tmp/hades-live-fuzz-heldout-seed17-e482cbfe.json",
     "recorded_at": "2026-08-31T20:57:11Z"
   },
+  "latest_current_source_live_fuzz_rotating_seed29": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "54753d35db0120d9d96e2dfe73dc1e5ad430af91",
+    "harness_source_sha": "54753d35db0120d9d96e2dfe73dc1e5ad430af91",
+    "suite": "rotating",
+    "seed": 29,
+    "requested_sample": 15,
+    "scenario_count": 15,
+    "trajectory_pass": 15,
+    "model": "qwen3:8b",
+    "model_calls": 3,
+    "tool_index_lookups": 0,
+    "internal_leaks": 0,
+    "duplicate_finalization": 0,
+    "abrupt_eof": 0,
+    "status": "PASS",
+    "raw_artifact": "/tmp/hades-live-fuzz-rotating-seed29-e482cbfe.json",
+    "recorded_at": "2026-08-31T20:58:36Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
