@@ -4778,3 +4778,14 @@ was corrected. The existing realistic Playwright acceptance now iterates all
 built-in themes and verifies ordinary navigation SVG colors equal their row
 theme color. It passed at desktop, narrow, and mobile setup paths with no
 inheritance failures; screenshots were captured at the established paths.
+
+The exact pushed `a8d8d3497d8460815ded980f1fa5a6e347661cb1` candidate was then
+recreated with matching source marker and replayed through the authenticated
+GUI. `OWNER-RECIPE-QUALITATIVE-MIXED-READBACK-001` passed `3` owner turns with
+one chat-originated recipe mutation and two independent canonical readbacks,
+including reload. The mixed recipe retained exact, `TO_TASTE`, and `AS_NEEDED`
+amount semantics; false success, raw final Results, duplicate delivery, and
+abrupt EOF were all zero. The previously observed accumulated-context timeout
+did not recur after canonical read dispatch was kept out of Qwen arbitration.
+The disposable candidate was healthy with zero restarts; the persistent owner
+dogfood lane remained untouched on its separately pinned candidate.
