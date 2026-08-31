@@ -735,8 +735,15 @@ async function verifyScenarioReadback(page, scenario, phase = 'before-reload') {
     }
     return {phase, kind: spec.kind, found: true};
   }
-  if (spec.kind === 'memory' && spec.contains_text) {
+  if (spec.kind === 'memory' && (spec.contains_text || spec.absent_text)) {
     const memories = Array.isArray(result.payload?.memory) ? result.payload.memory : [];
+    if (spec.absent_text) {
+      const wanted = String(spec.absent_text).trim().toLowerCase();
+      if (memories.some((memory) => String(memory?.text || '').trim().toLowerCase().includes(wanted))) {
+        throw new Error(`${scenario.id} memory readback unexpectedly found canonical memory`);
+      }
+      return {phase, kind: spec.kind, absent: true};
+    }
     const wanted = String(spec.contains_text).trim().toLowerCase();
     if (!memories.some((memory) => String(memory?.text || '').trim().toLowerCase().includes(wanted))) {
       throw new Error(`${scenario.id} memory readback missing canonical memory`);

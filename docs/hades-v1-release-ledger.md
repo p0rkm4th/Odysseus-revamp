@@ -2,6 +2,18 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Memory correction readback oracle closure (2026-08-31)
+
+The Memory correction owner journey originally asserted only a generic
+`readback: true`, so the browser harness did not independently verify the
+canonical post-delete state. The corpus now names `/api/memory` and asserts
+that the corrected fact is absent; the harness supports both positive and
+negative Memory readback expectations. The exact-candidate replay passed all
+4 turns with 2 mutations and 2 independent readbacks. False success, raw
+final Results, duplicate delivery, and abrupt EOF were all zero. The initial
+scoping bug in the new harness branch was fixed and covered by syntax and
+corpus-contract checks. No owner data was modified.
+
 ## Tier 1 exact-candidate replay batch (2026-08-31)
 
 The source-matched disposable candidate `fc18ebed` passed the previously
