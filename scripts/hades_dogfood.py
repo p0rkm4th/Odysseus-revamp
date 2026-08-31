@@ -107,6 +107,34 @@ def _case_deadline_expired(deadline: float) -> bool:
     return time.perf_counter() >= deadline
 
 
+def _synthetic_live_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Find generated cases whose oracle requires in-process fixtures.
+
+    The live lane exercises an already deployed HTTP candidate; it cannot
+    install the arbitrary capability IDs and synthetic tool world carried by
+    registry-action benchmark cases.  Letting those cases through produces a
+    misleading product score (and can look like an intent regression), so the
+    boundary is checked before any live request is made.
+    """
+    return [
+        case for case in cases
+        if str(case.get("family") or "") == "registry_action"
+        and bool((case.get("scenario") or {}).get("synthetic_capability_available"))
+    ]
+
+
+def _validate_live_cases(cases: list[dict[str, Any]]) -> None:
+    synthetic = _synthetic_live_cases(cases)
+    if not synthetic:
+        return
+    sample = ", ".join(str(case.get("id") or "unknown") for case in synthetic[:3])
+    raise SystemExit(
+        "live mode cannot execute synthetic registry_action cases; "
+        f"{len(synthetic)} case(s) require in-process fixtures (sample: {sample}). "
+        "Run these with --mode synthetic or use a capability-backed live corpus."
+    )
+
+
 def _source_reference() -> str:
     configured = os.environ.get("HADES_SOURCE_REFERENCE")
     if configured:
@@ -503,6 +531,8 @@ def main(argv: list[str] | None = None) -> int:
         cases = [case for case in cases if str(case.get("source") or "").startswith("generated")]
         if not cases:
             raise SystemExit("--generated-only selected no generated cases; add a generated count")
+    if args.mode == "live":
+        _validate_live_cases(cases)
     run_metadata = _run_metadata(args)
     for case in cases:
         case["run_id"] = run_metadata["run_id"]
