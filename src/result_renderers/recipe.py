@@ -4,6 +4,51 @@ from __future__ import annotations
 import json
 from typing import Any, Mapping, Sequence
 
+def project_recipe_result(tool_name: str, result: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    raw = result.get("output")
+    payload = raw if isinstance(raw, Mapping) else None
+    if payload is None:
+        try:
+            payload = json.loads(str(raw or ""))
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(payload, Mapping):
+        return None
+    if tool_name == "manage_recipes":
+        recipe = payload.get("recipe")
+        if not isinstance(recipe, Mapping) or not recipe.get("id"):
+            return None
+        return {
+            "status": payload.get("status"), "success": payload.get("success"),
+            "action": payload.get("action"), "canonical_store": payload.get("canonical_store"),
+            "recipe": {key: recipe.get(key) for key in ("id", "name", "source_url")},
+            "verification": payload.get("verification"),
+        }
+    projection: dict[str, Any] = {
+        "status": payload.get("status"),
+        "action": payload.get("action") or payload.get("operation"),
+        "canonical_store": payload.get("canonical_store"),
+        "verification": payload.get("verification"),
+    }
+    candidates = payload.get("candidates")
+    if isinstance(candidates, list):
+        projection["candidates"] = [
+            {"recipe_id": row.get("recipe_id"), "recipe_name": row.get("recipe_name"),
+             "can_make": row.get("can_make"),
+             "shortages": row.get("shortages", [])[:8] if isinstance(row.get("shortages"), list) else []}
+            for row in candidates[:20] if isinstance(row, Mapping)
+        ]
+    recipes = payload.get("recipes")
+    if isinstance(recipes, list):
+        projection["recipes"] = [
+            {key: row.get(key) for key in ("id", "name", "servings")}
+            for row in recipes[:50] if isinstance(row, Mapping)
+        ]
+    recipe = payload.get("recipe")
+    if isinstance(recipe, Mapping):
+        projection["recipe"] = {key: recipe.get(key) for key in ("id", "name", "servings")}
+    return projection
+
 def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render recipe/stock-coverage reads from Inventory Service evidence."""
     event = next(
