@@ -5,6 +5,20 @@ import json
 from typing import Any, Mapping, Sequence
 
 
+def project_household_result(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Bound canonical household inventory evidence for history output."""
+    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    return {
+        "status": payload.get("status"), "item_count": payload.get("item_count", len(items)),
+        "items": [{"id": row.get("id"), "name": row.get("name"), "domain": row.get("domain"),
+                   "stock_quantity": row.get("stock_quantity", row.get("quantity")),
+                   "default_unit": row.get("default_unit", row.get("unit"))}
+                  for row in items[:100] if isinstance(row, Mapping)],
+        "expiring_lots": payload.get("expiring_lots", [])[:100] if isinstance(payload.get("expiring_lots"), list) else [],
+        "low_stock": payload.get("low_stock", [])[:100] if isinstance(payload.get("low_stock"), list) else [],
+    }
+
+
 def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render a verified inventory mutation from its structured Result."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
