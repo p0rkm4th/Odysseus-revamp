@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-31T21:24:00Z",
+  "captured_at": "2026-08-31T22:00:24Z",
   "branch": "hades-v1-productization",
-  "branch_head": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
-  "development_head": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
-  "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-  "remote_head": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
-  "evidence_commit_sha": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
+  "branch_head": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+  "development_head": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+  "application_source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+  "remote_head": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+  "evidence_commit_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "ahead_behind_main": {
@@ -13,62 +13,62 @@
     "behind": 0
   },
   "executable_candidate": {
-    "source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "image": "odysseus:candidate-e482cbfe6b55",
-    "image_id": "sha256:6a1ca38a8762534b6893dc9e48ba0a3d52ff0c8405e3eb83f0a82d683da2e18e",
-    "image_digest": "odysseus@sha256:6a1ca38a8762534b6893dc9e48ba0a3d52ff0c8405e3eb83f0a82d683da2e18e",
-    "oci_revision": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "source_marker": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+    "application_source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+    "image": "odysseus:candidate-f61f66516671",
+    "image_id": "sha256:a80005df1bbe9d5f814a4f530964f309a203600762ec04681d63cb8f8ac64856",
+    "image_digest": "odysseus@sha256:a80005df1bbe9d5f814a4f530964f309a203600762ec04681d63cb8f8ac64856",
+    "oci_revision": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+    "source_marker": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
     "browser_realistic_acceptance": "PASS; exact isolated candidate; authenticated browser acceptance after isolated credential rotation",
-    "full_regression": "7131 passed, 9 skipped, 149 warnings in 309.85s on exact application source 896473de",
+    "full_regression": "7145 passed, 9 skipped, 149 warnings in 307.00s on exact application source f61f6651",
     "qwen_holdout": "PASS; 18/18 trajectory assertions, 18 answers, zero leaks/tool-index lookups/duplicates/abrupt EOF/transport errors; one bounded fallback diagnostic; artifact /tmp/896473de-heldout.json",
     "health": "api/health healthy; running; 0 restarts; Docker healthcheck absent",
-    "status": "CURRENT isolated candidate; owner data untouched"
+    "status": "CURRENT promoted candidate; owner data preserved and rollback retained"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
     "port": 7020,
-    "source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "image": "odysseus:candidate-e482cbfe6b55",
-    "image_id": "sha256:6a1ca38a8762534b6893dc9e48ba0a3d52ff0c8405e3eb83f0a82d683da2e18e",
+    "source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+    "image": "odysseus:candidate-f61f66516671",
+    "image_id": "sha256:a80005df1bbe9d5f814a4f530964f309a203600762ec04681d63cb8f8ac64856",
     "health": "healthy",
     "restarts": 0,
     "automated_mutation": false,
     "promotion_attempt": {
-      "candidate_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+      "candidate_source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
       "status": "PROMOTED",
       "reason": "Promoted with the existing owner network subnet after verified backup and safe recovery rehearsal",
-      "backup": "/home/scootz/hades-owner-dogfood-recovery/pre-promotion-e482cbfe.tar.gz",
+      "backup": "/home/scootz/hades-owner-dogfood-recovery/pre-promotion-f61f6651.tar.gz",
       "backup_verified": true,
-      "post_promotion_smoke": "GUI read-only network journey reached canonical UNAVAILABLE state; human answer correctly stated CMDB unavailable and inferred no current state",
+      "post_promotion_smoke": "Source-matched /api/version, authenticated owner-dogfood login, canonical Memory read, health, and zero-restart smoke passed",
       "smoke_contract_classification": "ACCEPTANCE_CONTRACT_DEPENDENCY_STATE"
     },
-    "oci_revision": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "source_marker": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1"
+    "oci_revision": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+    "source_marker": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98"
   },
   "dogfood_tracking": {
-    "latest_green_candidate_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "owner_dogfood_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "latest_green_candidate_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+    "owner_dogfood_source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
     "commits_behind_candidate": 0,
-    "last_promotion": "2026-08-31T17:46:00-05:00",
+    "last_promotion": "2026-08-31T17:59:35-05:00",
     "status": "CURRENT with latest promoted candidate"
   },
   "latest_owner_validation": {
-    "candidate_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "owner_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-    "owner_read_only": "PASS; current-source OWNER-NETWORK-001; 1 stream; 0 mutations; 0 false success/duplicates/raw Results/abrupt EOF",
+    "candidate_source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+    "owner_source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
+    "owner_read_only": "PASS; post-promotion authenticated read-only smoke; source_match=true; zero restarts",
     "isolated_synthetic": "PASS; current-source Tier 1 browser slices recorded below; zero false success/duplicates/raw Results/abrupt EOF",
     "coverage": "current-source Network, Recipe, Memory, Household, Work, Reminder, Asset, lived-in, and visual acceptance slices",
-    "recorded_at": "2026-08-31T20:48:10Z"
+    "recorded_at": "2026-08-31T22:00:24Z"
   },
   "latest_exact_source_validation": {
-    "source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
     "compileall": "PASS",
-    "full_pytest": "PASS; 7139 passed, 9 skipped, 149 warnings in 306.49s",
+    "full_pytest": "PASS; 7145 passed, 9 skipped, 149 warnings in 307.00s",
     "hades_aci_security_contract": "PASS; 445 passed, 2 warnings in 21.38s",
-    "candidate_image": "odysseus:candidate-e482cbfe6b55; exact source-matched image",
-    "recorded_at": "2026-08-31T14:58:00-05:00"
+    "candidate_image": "odysseus:candidate-f61f66516671; exact source-matched image sha256:a80005df1bbe9d5f814a4f530964f309a203600762ec04681d63cb8f8ac64856",
+    "recorded_at": "2026-08-31T22:00:24Z"
   },
   "latest_semantic_holdout": {
     "source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
@@ -1273,7 +1273,7 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T16:44:10-05:00",
+    "measured_at": "2026-08-31T17:00:20-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "164 passed, 1 deprecation warning for Recipe projection migration on exact source 10506bb4",
     "full_regression": "7131 passed, 9 skipped, 149 warnings in 305.97s on exact application source 10506bb4",
