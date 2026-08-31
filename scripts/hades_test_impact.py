@@ -33,7 +33,9 @@ IMPACT_RULES = (
     ("persistence", ("core/", "src/database", "src/persistence", "migrations/")),
     ("browser_transport", ("static/js/chat", "scripts/browser_", "routes/chat")),
     ("frontend", ("static/", "templates/")),
-    ("semantic_retrieval", ("src/action_retriever.py", "src/semantic/", "benchmarks/")),
+    ("semantic_retrieval", ("src/action_retriever.py", "src/semantic/")),
+    ("evaluation", ("benchmarks/", ".github/scripts/")),
+    ("tooling", ("scripts/",)),
 )
 
 
