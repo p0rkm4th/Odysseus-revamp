@@ -1,0 +1,11 @@
+{
+  "schema": "hades-live-holdout-summary.v1",
+  "application_source_sha": "78bf0d1c7282486ce4f8252e805b3c467e041f6e",
+  "candidate_image": "odysseus:candidate-78bf0d1c",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "suite": "all", "continuation_trajectories": 43, "core": 25, "held_out": 18,
+  "errors": 0, "internal_leaks": 0, "duplicate_delivery": 0, "abrupt_eof": 0,
+  "tool_calls": 25, "tool_index_lookups": 2,
+  "status": "PASS; exact candidate; fresh and continuation owner-language corpus"
+}

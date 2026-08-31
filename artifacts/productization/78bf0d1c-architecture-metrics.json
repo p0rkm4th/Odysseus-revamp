@@ -1,0 +1,10 @@
+{
+  "schema": "hades-architecture-metrics-checkpoint.v1",
+  "application_source_sha": "78bf0d1c7282486ce4f8252e805b3c467e041f6e",
+  "semantic_control_plane_loc": 18824,
+  "central_domain_conditionals": 118,
+  "central_canonical_answer_functions": 4,
+  "canonical_answer_dispatch_mentions": 8,
+  "modules": {"src/agent_loop.py": 6583, "src/aci.py": 4696, "src/intent_contracts.py": 3433, "src/result_renderers/recipe.py": 220},
+  "notes": "Generated from the exact committed application source; code movement remains counted."
+}
