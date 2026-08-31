@@ -409,7 +409,7 @@
         {"prompt": "What recipes do I have?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "list", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["Acceptance Mixed Amounts"]}},
         {"prompt": "Reload. What is in Acceptance Mixed Amounts?", "expected": {"domain": "RECIPE", "operation": "READ", "action": "get", "tool_binding": "read_recipes", "answer_source": "DETERMINISTIC_RESULT", "must_include_all": ["rice", "salt", "oil"]}}
       ],
-      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "after": {"recipe_name": "Acceptance Mixed Amounts", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "requires_qualitative_amounts": true, "requires_source_text": true, "forbid_fabricated_quantities": true}, "terminal": {"done": 3, "abrupt_eof": false}}
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "after": {"recipe_name": "Acceptance Mixed Amounts", "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Mixed Amounts", "requires_qualitative_amounts": true, "requires_source_text": true, "forbid_fabricated_quantities": true}, "terminal": {"done": 3, "abrupt_eof": false}}
     }
   ]
 }

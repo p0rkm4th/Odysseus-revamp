@@ -4763,3 +4763,10 @@ not find the created acceptance-principal recipe. Classified
 `ACCEPTANCE/ENVIRONMENT_STATE` pending reconciliation of the browser
 principal's canonical readback path; this is not counted as a green owner
 journey.
+
+The readback investigation proved `/api/recipes` returned the canonical
+acceptance recipe after login; the scenario itself lacked `contains_name` and
+was corrected. The existing realistic Playwright acceptance now iterates all
+built-in themes and verifies ordinary navigation SVG colors equal their row
+theme color. It passed at desktop, narrow, and mobile setup paths with no
+inheritance failures; screenshots were captured at the established paths.
