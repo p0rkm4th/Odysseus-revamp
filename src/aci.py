@@ -5404,12 +5404,18 @@ def project_post_result_transition(
             state,
             answer_only=True,
             force_answer=True,
+            # A failed deterministic read is still a terminal response for
+            # this turn.  Marking the response complete prevents the stream
+            # from looking unfinished or re-entering model arbitration, while
+            # retaining BLOCKED and never implying that the Action succeeded.
+            completion_satisfied=True,
             framework_event="deterministic_read_failure",
             instruction=(
                 "HADES ACI READ FAILURE: the one canonical owner-safe read "
-                "attempt did not produce a valid Result. Explain that limitation "
-                "concisely; do not retry the same Action, invent evidence, or "
-                "claim that the read succeeded."
+                "attempt did not produce a valid Result. This failure response "
+                "is terminal for the turn. Explain that limitation concisely; "
+                "do not retry the same Action, invent evidence, or claim that "
+                "the read succeeded."
             ),
         )
     if (
