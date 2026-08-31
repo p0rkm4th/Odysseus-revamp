@@ -126,7 +126,6 @@ from src.aci import (
     resolved_tool_event_name,
     semanticize_internal_action_names,
     user_turn_count,
-    note_list_summary_from_tool_output,
     calendar_list_summary_from_tool_output,
     communications_calendar_summary_from_tool_output,
     email_list_summary_from_tool_output,
@@ -153,6 +152,7 @@ from src.aci import (
     compatibility_intent_projection,
     compile_turn_contract,
 )
+from src.result_renderers.notes import note_list_summary_from_tool_output
 from src.intent_contracts import (
     EXPLICIT_CONTINUATION_RE as _EXPLICIT_CONTINUATION_RE,
     HARD_TOOL_DOMAINS,
