@@ -341,7 +341,7 @@
     "measured_at": "2026-08-31T04:25:00-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "166 passed, 1 warning",
-    "full_regression": "7120 passed, 9 skipped, 149 warnings in 304.78s on content-identical application tree 6ce66c38; current source 7a208165 verified by focused 329 passed, 6 skipped plus renderer slice 166 passed",
+    "full_regression": "7119 passed, 9 skipped, 149 warnings in 303.73s on exact application source f0b3d848; artifact hades-v1-f0b3d848-full-regression.json",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "f0b3d8488958827d1d58aba92eaf252251073eda",
     "evidence_commit_sha": "f0b3d8488958827d1d58aba92eaf252251073eda",

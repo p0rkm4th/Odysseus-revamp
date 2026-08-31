@@ -1,0 +1,12 @@
+{
+  "schema": "hades-full-regression-summary.v1",
+  "application_source_sha": "f0b3d8488958827d1d58aba92eaf252251073eda",
+  "candidate_image": "odysseus:candidate-f0b3d848",
+  "candidate_image_digest": "sha256:36685b01bdc571953fb8ad54afd4eb7df6070e74a62bf77f7d64280c78d3c339",
+  "command": "venv/bin/python -m pytest -q",
+  "passed": 7119,
+  "skipped": 9,
+  "warnings": 149,
+  "duration_seconds": 303.73,
+  "status": "PASS"
+}
