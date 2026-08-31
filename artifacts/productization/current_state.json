@@ -1,16 +1,16 @@
 {
-  "captured_at": "2026-08-30T22:34:00-05:00",
+  "captured_at": "2026-08-30T23:05:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "a390d479",
-  "remote_head": "a390d479",
+  "source_head": "9e847a0426106c95ca08f592599fd1161ac2263f",
+  "remote_head": "9e847a0426106c95ca08f592599fd1161ac2263f",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "a87d8bc72ee71a1e19574d07a8525756b09e8137",
-    "image": "odysseus:candidate-a87d8bc72ee7",
-    "image_id": "sha256:cec356f2448122a593c5b75e3362761f90d42e8a2c31d35f55804b2943880866",
-    "oci_revision": "a87d8bc72ee71a1e19574d07a8525756b09e8137",
-    "source_marker": "a87d8bc72ee71a1e19574d07a8525756b09e8137"
+    "source_sha": "9e847a0426106c95ca08f592599fd1161ac2263f",
+    "image": "odysseus:candidate-9e847a042610",
+    "image_id": "sha256:1a7441292caab457cf5573700edbe6dc61728e64ff0d09a38434c2dc047d4028",
+    "oci_revision": "9e847a0426106c95ca08f592599fd1161ac2263f",
+    "source_marker": "9e847a0426106c95ca08f592599fd1161ac2263f"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -24,9 +24,9 @@
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
-    "candidate_source_sha": "6c775a586e123d502a8453d071d55e24e1973440",
-    "candidate_image": "odysseus:candidate-6c775a586e12",
-    "candidate_image_id": "sha256:e7f2948966bd13b005d1fd03f5730e0f433069c9a73d730ef7bb88d4a8751b8d",
+    "candidate_source_sha": "9e847a0426106c95ca08f592599fd1161ac2263f",
+    "candidate_image": "odysseus:candidate-9e847a042610",
+    "candidate_image_id": "sha256:1a7441292caab457cf5573700edbe6dc61728e64ff0d09a38434c2dc047d4028",
     "completion_trace_fix": "5e5bc0f7; focused ACI/dogfood tests 160 passed, 1 warning",
     "browser_replays_exact_candidate": {
       "OWNER-NETWORK-BOUNDED-CIDR-001": {
@@ -165,6 +165,20 @@
       },
       "comparison": "identical 142-case seed on a87 candidate: unchanged; aggregate mixes supported, unsupported, dependency, and evaluator-contract cases",
       "status": "held-out evidence; not release-quality supported-domain score"
+    },
+    "generated_qwen_holdout_20260831_candidate_9e847a04": {
+      "artifact": "artifacts/productization/hades-v1-9e847a04-holdout.json",
+      "cases": 142,
+      "functional_passes": 46,
+      "architectural_passes": 123,
+      "security_passes": 142,
+      "functional_rate": 0.3239,
+      "architectural_rate": 0.8662,
+      "security_rate": 1.0,
+      "reference_resolution_rate": 0.0,
+      "duplicate_rate": 0.0,
+      "comparison": "identical 142-case seed on 6c775a58: unchanged; reminder extraction did not improve holdout generalization",
+      "status": "held-out evidence; aggregate mixes supported, unsupported, dependency, and evaluator-contract cases"
     }
   },
   "release_status": "active; not frozen",
