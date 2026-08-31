@@ -89,6 +89,11 @@ def frontend_metrics() -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--state",
+        type=Path,
+        help="Update current_state.json architecture_current from the generated metrics.",
+    )
     args = parser.parse_args()
     counted_paths = [ROOT / item for item in COUNTED_MODULES]
     semantic_paths = [path for path in counted_paths if path.exists()]
@@ -143,6 +148,28 @@ def main() -> None:
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
+    if args.state:
+        state = json.loads(args.state.read_text(encoding="utf-8"))
+        current = state.get("architecture_current")
+        if not isinstance(current, dict):
+            current = {}
+        # Keep measured architecture numbers in one generated artifact.  The
+        # state file records where to read them, alongside human evidence that
+        # is not derivable from source metrics.
+        for key in (
+            "semantic_control_plane_loc", "agent_loop_py_loc", "aci_py_loc",
+            "intent_contracts_py_loc", "field_resolvers_py_loc",
+            "central_domain_conditionals", "central_canonical_answer_functions",
+            "canonical_answer_dispatch_mentions",
+        ):
+            current.pop(key, None)
+        current.update({
+            "measured_at": __import__("datetime").datetime.now().astimezone().isoformat(timespec="seconds"),
+            "artifact": str(args.output) if args.output else "generated stdout",
+            "metrics_artifact": str(args.output) if args.output else "generated stdout",
+        })
+        state["architecture_current"] = current
+        args.state.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     print(rendered, end="")
 
 
