@@ -74,6 +74,10 @@ def _memory_fields(query: str, _frame: Mapping[str, Any], action_id: str) -> Map
     return memory_mutation_payload(query, action_id)
 
 
+def _query_fields(query: str, _frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
+    return {"url" if action_id == "fetch" else "query": query.strip()} if query.strip() else None
+
+
 def _notes_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
     from src.domain_resolvers.reminders import note_mutation_payload
     fields = note_mutation_payload(query, action_id)
@@ -95,6 +99,7 @@ FIELD_RESOLVERS: dict[str, FieldResolver] = {
     "work_project": _work_project_fields,
     "work_task": _work_task_fields,
     "memory": _memory_fields,
+    "query": _query_fields,
     "notes": _notes_fields,
 }
 

@@ -133,7 +133,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="memory.read",
         description="Owner-scoped explicit reads from the canonical Brain memory store.",
         actions=_actions(*(
-            ActionSpec(action_id=action, effects=("read_private",), executor_key="read_memory")
+            ActionSpec(action_id=action, effects=("read_private",), executor_key="read_memory", field_resolver="query")
             for action in ("summarize_owner_memory", "search_memory", "inspect_memory")
         )),
     ),
@@ -311,8 +311,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="web.evidence",
         description="Bounded public web evidence retrieval; results are untrusted.",
         actions=_actions(
-            ActionSpec(action_id="search", effects=("read_public", "brokered_network_read"), executor_key="web_search", result_integrity="external_untrusted"),
-            ActionSpec(action_id="fetch", effects=("read_public", "brokered_network_read", "network_egress"), executor_key="web_fetch", result_integrity="external_untrusted"),
+            ActionSpec(action_id="search", effects=("read_public", "brokered_network_read"), executor_key="web_search", result_integrity="external_untrusted", field_resolver="query"),
+            ActionSpec(action_id="fetch", effects=("read_public", "brokered_network_read", "network_egress"), executor_key="web_fetch", result_integrity="external_untrusted", field_resolver="query"),
         ),
     ),
     # Capability-gap resolution is itself a normal semantic capability. Its
