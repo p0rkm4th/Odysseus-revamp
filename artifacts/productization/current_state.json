@@ -1,8 +1,8 @@
 {
   "captured_at": "2026-08-31T02:10:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "21ba90b527bef7693764850401599dea8ccec402",
-  "remote_head": "21ba90b527bef7693764850401599dea8ccec402",
+  "source_head": "844b7431391ba7dfa58245f88badb60b16014b7d",
+  "remote_head": "844b7431391ba7dfa58245f88badb60b16014b7d",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -35,6 +35,19 @@
       "raw_final_results": 0,
       "duplicate_delivery": 0,
       "abrupt_eof": 0
+    },
+    "generated_qwen_holdout": {
+      "cases": 74,
+      "functional_passes": 60,
+      "architectural_passes": 69,
+      "security_passes": 74,
+      "functional_rate": 0.8108,
+      "architectural_rate": 0.9324,
+      "median_latency_seconds": 0.2152,
+      "p95_latency_seconds": 4.6187,
+      "model_calls_per_task": 0.5811,
+      "duplicate_delivery": 0,
+      "status": "below release target; failures retained for generalized/evaluator follow-up"
     }
   },
   "release_status": "active; not frozen",
