@@ -5299,3 +5299,11 @@ synthetic scenarios. A mixed qualitative Recipe replay passed with 2
 scenarios, 8 turns/streams, 2 GUI mutations, and 4 canonical readbacks;
 false success, raw final Results, duplicate delivery, and abrupt EOF were all
 zero. The owner-dogfood lane was not touched.
+
+## Household/Kitchen acceptance replay — candidate `b91ff938` (2026-08-31)
+
+The isolated Household/Kitchen browser path passed with 3 GUI-originated
+canonical inventory read journeys against disposable seeded state. False
+success, raw final Results, duplicate delivery, and abrupt EOF were all zero.
+The executable candidate was unchanged and the owner-dogfood lane was not
+touched.
