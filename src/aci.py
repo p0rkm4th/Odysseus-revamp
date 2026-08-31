@@ -4075,7 +4075,16 @@ def canonical_tool_result_projection(
         "observation_location": payload.get("observation_location"),
         "freshness": payload.get("freshness"),
     }
-    if str(tool_name or "").strip() == "manage_homelab" and action == "plan_network_discovery":
+    if (
+        str(tool_name or "").strip() == "manage_homelab"
+        and str(payload.get("kind") or "").strip().lower() == "plan"
+        and action in {"plan_network_discovery", "execute_network_discovery"}
+    ):
+        # Homelab plans describe the eventual execute operation in their
+        # receipt. Lifecycle kind is authoritative here: a plan must remain a
+        # plan in the owner projection even when its operation action is the
+        # eventual execute action.
+        common["action"] = "plan_network_discovery"
         common.update({
             "operation_digest": payload.get("operation_digest"),
             "preflight": payload.get("preflight"),
