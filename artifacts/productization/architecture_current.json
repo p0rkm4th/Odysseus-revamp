@@ -18,6 +18,7 @@
     "src/result_renderers/memory.py",
     "src/result_renderers/homelab.py",
     "src/result_renderers/scheduled.py",
+    "src/result_renderers/calendar.py",
     "src/legacy_agent_loop.py"
   ],
   "modules": {
@@ -234,713 +235,708 @@
       ]
     },
     "src/aci.py": {
-      "loc": 5446,
+      "loc": 5417,
       "functions": [
         {
           "name": "project_action_selection",
-          "line": 4664,
+          "line": 4635,
           "loc": 267
         },
         {
           "name": "canonical_tool_result_projection",
-          "line": 3730,
+          "line": 3731,
           "loc": 264
         },
         {
           "name": "canonical_recipe_read_answer",
-          "line": 3397,
+          "line": 3398,
           "loc": 182
         },
         {
           "name": "canonical_network_read_answer",
-          "line": 3581,
+          "line": 3582,
           "loc": 147
         },
         {
           "name": "provisional_intent_projection",
-          "line": 2097,
+          "line": 2098,
           "loc": 123
         },
         {
           "name": "canonical_asset_read_answer",
-          "line": 3175,
+          "line": 3176,
           "loc": 120
         },
         {
           "name": "compile_composite_action",
-          "line": 4472,
+          "line": 4443,
           "loc": 104
         },
         {
           "name": "finalize_prompt_messages",
-          "line": 379,
+          "line": 380,
           "loc": 100
         },
         {
           "name": "canonical_household_read_answer",
-          "line": 3297,
+          "line": 3298,
           "loc": 98
         },
         {
           "name": "minimal_recent_notes_tool_context_message",
-          "line": 1082,
+          "line": 1083,
           "loc": 94
         },
         {
           "name": "ground_action_completion",
-          "line": 2247,
+          "line": 2248,
           "loc": 94
         },
         {
           "name": "append_tool_results",
-          "line": 748,
+          "line": 749,
           "loc": 93
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4977,
+          "line": 4948,
           "loc": 93
         },
         {
           "name": "compute_final_metrics",
-          "line": 1296,
+          "line": 1297,
           "loc": 88
         },
         {
           "name": "trim_route_request_messages",
-          "line": 481,
+          "line": 482,
           "loc": 76
         },
         {
           "name": "reference_resolution_hint",
-          "line": 1853,
+          "line": 1854,
           "loc": 75
         },
         {
           "name": "project_aci_trace",
-          "line": 1662,
+          "line": 1663,
           "loc": 73
         },
         {
           "name": "project_post_result_transition",
-          "line": 5230,
+          "line": 5201,
           "loc": 69
         },
         {
           "name": "build_base_prompt",
-          "line": 310,
+          "line": 311,
           "loc": 67
         },
         {
           "name": "minimal_aci_model_fallback_messages",
-          "line": 2552,
+          "line": 2553,
           "loc": 65
         },
         {
           "name": "minimal_odysseus_doc_messages",
-          "line": 1178,
+          "line": 1179,
           "loc": 62
         },
         {
           "name": "minimal_aci_answer_messages",
-          "line": 2490,
+          "line": 2491,
           "loc": 60
         },
         {
           "name": "classify_post_result",
-          "line": 5169,
+          "line": 5140,
           "loc": 59
         },
         {
           "name": "skill_index_prompt",
-          "line": 218,
+          "line": 219,
           "loc": 56
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 5383,
+          "line": 5354,
           "loc": 56
         },
         {
           "name": "canonical_read_failure_answer",
-          "line": 3996,
+          "line": 3997,
           "loc": 53
         },
         {
           "name": "canonical_action_failure_answer",
-          "line": 4051,
+          "line": 4052,
           "loc": 52
         },
         {
           "name": "assemble_prompt",
-          "line": 165,
+          "line": 166,
           "loc": 51
         },
         {
           "name": "parse_decision_json",
-          "line": 5087,
+          "line": 5058,
           "loc": 50
         },
         {
           "name": "email_list_summary_from_tool_output",
-          "line": 959,
+          "line": 960,
           "loc": 48
         },
         {
           "name": "email_read_summary_from_tool_output",
-          "line": 1009,
+          "line": 1010,
           "loc": 48
         },
         {
           "name": "project_model_decision",
-          "line": 3000,
+          "line": 3001,
           "loc": 48
         },
         {
           "name": "project_result_observation",
-          "line": 5301,
+          "line": 5272,
           "loc": 48
         },
         {
           "name": "project_final_answer",
-          "line": 4363,
+          "line": 4334,
           "loc": 47
         },
         {
           "name": "compile_turn_contract",
-          "line": 612,
+          "line": 613,
           "loc": 44
         },
         {
           "name": "classify_no_action_reason",
-          "line": 1457,
+          "line": 1458,
           "loc": 44
         },
         {
           "name": "is_aci_general_fallback_candidate",
-          "line": 1518,
+          "line": 1519,
           "loc": 44
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 4933,
+          "line": 4904,
           "loc": 42
         },
         {
           "name": "is_contextual_reference_followup",
-          "line": 1813,
+          "line": 1814,
           "loc": 38
         },
         {
           "name": "assistant_requested_followup",
-          "line": 1989,
+          "line": 1990,
           "loc": 38
         },
         {
           "name": "communications_calendar_summary_from_tool_output",
-          "line": 905,
+          "line": 906,
           "loc": 37
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 4608,
+          "line": 4579,
           "loc": 37
         },
         {
           "name": "canonical_recipe_mutation_answer",
-          "line": 4174,
+          "line": 4175,
           "loc": 34
         },
         {
           "name": "resolve_turn_intent",
-          "line": 559,
+          "line": 560,
           "loc": 33
         },
         {
           "name": "canonical_inventory_mutation_answer",
-          "line": 4139,
+          "line": 4140,
           "loc": 33
         },
         {
           "name": "select_prompt_tools",
-          "line": 276,
+          "line": 277,
           "loc": 32
         },
         {
           "name": "canonical_unverified_action_answer",
-          "line": 4105,
+          "line": 4106,
           "loc": 32
         },
         {
           "name": "canonical_structured_empty_read_answer",
-          "line": 4258,
+          "line": 4259,
           "loc": 32
         },
         {
           "name": "project_capability_palette",
-          "line": 4412,
+          "line": 4383,
           "loc": 32
         },
         {
           "name": "calendar_list_summary_from_tool_output",
-          "line": 872,
+          "line": 873,
           "loc": 31
         },
         {
           "name": "recent_context_for_retrieval",
-          "line": 2029,
+          "line": 2030,
           "loc": 31
         },
         {
           "name": "resolve_decision_outcome",
-          "line": 2967,
+          "line": 2968,
           "loc": 31
         },
         {
           "name": "action_trace",
-          "line": 2356,
+          "line": 2357,
           "loc": 30
         },
         {
           "name": "resolve_invalid_decision",
-          "line": 2936,
+          "line": 2937,
           "loc": 29
         },
         {
           "name": "should_project_safe_auto_continuation",
-          "line": 1632,
+          "line": 1633,
           "loc": 28
         },
         {
           "name": "canonical_notes_mutation_answer",
-          "line": 4228,
-          "loc": 28
-        },
-        {
-          "name": "canonical_communications_read_answer",
-          "line": 4292,
+          "line": 4229,
           "loc": 28
         },
         {
           "name": "selected_action_for_decision",
-          "line": 5139,
+          "line": 5110,
           "loc": 28
         },
         {
           "name": "note_list_summary_from_tool_output",
-          "line": 843,
+          "line": 844,
           "loc": 27
         },
         {
           "name": "resolve_turn_disposition",
-          "line": 2619,
+          "line": 2620,
           "loc": 27
         },
         {
           "name": "display_label",
-          "line": 3670,
+          "line": 3671,
           "loc": 27
         },
         {
           "name": "minimal_odysseus_general_messages",
-          "line": 1268,
+          "line": 1269,
           "loc": 26
         },
         {
           "name": "tiered",
-          "line": 2721,
+          "line": 2722,
           "loc": 26
         },
         {
           "name": "hard_turn_capability_directive",
-          "line": 721,
+          "line": 722,
           "loc": 25
         },
         {
           "name": "domain_rules_for_tools",
-          "line": 120,
+          "line": 121,
           "loc": 24
         },
         {
           "name": "minimal_odysseus_notes_messages",
-          "line": 1242,
+          "line": 1243,
           "loc": 24
         },
         {
           "name": "usage_bucket",
-          "line": 1564,
+          "line": 1565,
           "loc": 24
         },
         {
           "name": "classify_action_escalation",
-          "line": 4446,
+          "line": 4417,
           "loc": 24
         },
         {
           "name": "hard_action_followup_hint",
-          "line": 696,
+          "line": 697,
           "loc": 23
         },
         {
           "name": "build_active_plan_note",
-          "line": 1386,
+          "line": 1387,
           "loc": 23
         },
         {
           "name": "hard_filter_actions",
-          "line": 3126,
+          "line": 3127,
           "loc": 23
         },
         {
           "name": "stream_aci_turn",
-          "line": 49,
+          "line": 50,
           "loc": 22
         },
         {
           "name": "_recent_user_context",
-          "line": 1955,
+          "line": 1956,
           "loc": 22
         },
         {
           "name": "ody_qwen_terminal_tool_summary",
-          "line": 1059,
+          "line": 1060,
           "loc": 21
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 5351,
+          "line": 5322,
           "loc": 20
         },
         {
           "name": "from_runtime_profile",
-          "line": 3086,
+          "line": 3087,
           "loc": 20
         },
         {
           "name": "expects_canonical_action",
-          "line": 1436,
+          "line": 1437,
           "loc": 19
         },
         {
           "name": "workspace_coding_rules",
-          "line": 89,
+          "line": 90,
           "loc": 18
         },
         {
           "name": "build_actions_snapshot",
-          "line": 1606,
+          "line": 1607,
           "loc": 18
         },
         {
           "name": "has_stored_canonical_evidence",
-          "line": 2395,
+          "line": 2396,
           "loc": 18
         },
         {
           "name": "matches_resolved_canonical_read",
-          "line": 2451,
+          "line": 2452,
           "loc": 18
         },
         {
           "name": "domain_tools_for_projection",
-          "line": 146,
+          "line": 147,
           "loc": 17
         },
         {
           "name": "compatibility_intent_projection",
-          "line": 594,
+          "line": 595,
           "loc": 16
         },
         {
           "name": "resolve_decision_recovery",
-          "line": 2918,
+          "line": 2919,
           "loc": 16
         },
         {
           "name": "canonical_notes_read_answer",
-          "line": 4210,
+          "line": 4211,
           "loc": 16
         },
         {
           "name": "canonical_result_answer",
-          "line": 4345,
+          "line": 4316,
           "loc": 16
         },
         {
           "name": "has_canonical_memory_evidence",
-          "line": 2415,
+          "line": 2416,
           "loc": 15
         },
         {
           "name": "validate_capability_creation_request",
-          "line": 4647,
+          "line": 4618,
           "loc": 15
         },
         {
           "name": "_label",
-          "line": 3273,
+          "line": 3274,
           "loc": 15
         },
         {
           "name": "local_computer_rules",
-          "line": 73,
+          "line": 74,
           "loc": 14
         },
         {
           "name": "usage_bucket_summary",
-          "line": 1590,
+          "line": 1591,
           "loc": 14
         },
         {
           "name": "last_user_message",
-          "line": 2062,
+          "line": 2063,
           "loc": 14
         },
         {
           "name": "semanticize_internal_action_names",
-          "line": 2474,
+          "line": 2475,
           "loc": 14
         },
         {
           "name": "validate",
-          "line": 2863,
+          "line": 2864,
           "loc": 14
         },
         {
           "name": "_format_email_summary_item",
-          "line": 944,
+          "line": 945,
           "loc": 13
         },
         {
           "name": "is_canonical_read_contract",
-          "line": 1503,
+          "line": 1504,
           "loc": 13
         },
         {
           "name": "canonical_read_fast_path_payload",
-          "line": 3160,
+          "line": 3161,
           "loc": 13
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 5072,
+          "line": 5043,
           "loc": 13
         },
         {
           "name": "prepend_agent_directive",
-          "line": 1411,
+          "line": 1412,
           "loc": 12
         },
         {
           "name": "insert_before_latest_user",
-          "line": 2083,
+          "line": 2084,
           "loc": 12
         },
         {
           "name": "resolved_tool_event_name",
-          "line": 2343,
+          "line": 2344,
           "loc": 11
         },
         {
           "name": "effective_context",
-          "line": 3108,
+          "line": 3109,
           "loc": 11
         },
         {
           "name": "deterministic_reference_acknowledgement",
-          "line": 1930,
+          "line": 1931,
           "loc": 10
         },
         {
           "name": "model_projection",
-          "line": 2841,
+          "line": 2842,
           "loc": 10
         },
         {
           "name": "effective_tool_section",
-          "line": 109,
+          "line": 110,
           "loc": 9
         },
         {
           "name": "hard_action_fallback_command",
-          "line": 686,
+          "line": 687,
           "loc": 8
         },
         {
           "name": "is_contextual_retry_continuation",
-          "line": 1979,
+          "line": 1980,
           "loc": 8
         },
         {
           "name": "prefetched_explicit_memory_result",
-          "line": 2432,
+          "line": 2433,
           "loc": 8
         },
         {
           "name": "successful_deterministic_read_result",
-          "line": 2442,
+          "line": 2443,
           "loc": 7
         },
         {
           "name": "model_burden",
-          "line": 5441,
+          "line": 5412,
           "loc": 6
         },
         {
           "name": "freshness_line",
-          "line": 3606,
+          "line": 3607,
           "loc": 6
         },
         {
           "name": "without_protection",
-          "line": 497,
+          "line": 498,
           "loc": 5
         },
         {
           "name": "hard_action_hint",
-          "line": 671,
+          "line": 672,
           "loc": 4
         },
         {
           "name": "detect_runaway_call",
-          "line": 1626,
+          "line": 1627,
           "loc": 4
         },
         {
           "name": "adaptive_shortlist",
-          "line": 3151,
+          "line": 3152,
           "loc": 4
         },
         {
           "name": "with_fingerprint",
-          "line": 2716,
+          "line": 2717,
           "loc": 4
         },
         {
           "name": "intent_requires_action",
-          "line": 1431,
+          "line": 1432,
           "loc": 3
         },
         {
           "name": "user_turn_count",
-          "line": 2078,
+          "line": 2079,
           "loc": 3
         },
         {
           "name": "looks_like_destructive_request",
-          "line": 2242,
+          "line": 2243,
           "loc": 3
         },
         {
           "name": "state_fingerprint",
-          "line": 3121,
+          "line": 3122,
           "loc": 3
         },
         {
           "name": "looks_like_success_claim",
-          "line": 2238,
+          "line": 2239,
           "loc": 2
         }
       ],
       "largest_functions": [
         {
           "name": "project_action_selection",
-          "line": 4664,
+          "line": 4635,
           "loc": 267
         },
         {
           "name": "canonical_tool_result_projection",
-          "line": 3730,
+          "line": 3731,
           "loc": 264
         },
         {
           "name": "canonical_recipe_read_answer",
-          "line": 3397,
+          "line": 3398,
           "loc": 182
         },
         {
           "name": "canonical_network_read_answer",
-          "line": 3581,
+          "line": 3582,
           "loc": 147
         },
         {
           "name": "provisional_intent_projection",
-          "line": 2097,
+          "line": 2098,
           "loc": 123
         },
         {
           "name": "canonical_asset_read_answer",
-          "line": 3175,
+          "line": 3176,
           "loc": 120
         },
         {
           "name": "compile_composite_action",
-          "line": 4472,
+          "line": 4443,
           "loc": 104
         },
         {
           "name": "finalize_prompt_messages",
-          "line": 379,
+          "line": 380,
           "loc": 100
         },
         {
           "name": "canonical_household_read_answer",
-          "line": 3297,
+          "line": 3298,
           "loc": 98
         },
         {
           "name": "minimal_recent_notes_tool_context_message",
-          "line": 1082,
+          "line": 1083,
           "loc": 94
         },
         {
           "name": "ground_action_completion",
-          "line": 2247,
+          "line": 2248,
           "loc": 94
         },
         {
           "name": "append_tool_results",
-          "line": 748,
+          "line": 749,
           "loc": 93
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4977,
+          "line": 4948,
           "loc": 93
         },
         {
           "name": "compute_final_metrics",
-          "line": 1296,
+          "line": 1297,
           "loc": 88
         },
         {
           "name": "trim_route_request_messages",
-          "line": 481,
+          "line": 482,
           "loc": 76
         },
         {
           "name": "reference_resolution_hint",
-          "line": 1853,
+          "line": 1854,
           "loc": 75
         },
         {
           "name": "project_aci_trace",
-          "line": 1662,
+          "line": 1663,
           "loc": 73
         },
         {
           "name": "project_post_result_transition",
-          "line": 5230,
+          "line": 5201,
           "loc": 69
         },
         {
           "name": "build_base_prompt",
-          "line": 310,
+          "line": 311,
           "loc": 67
         },
         {
           "name": "minimal_aci_model_fallback_messages",
-          "line": 2552,
+          "line": 2553,
           "loc": 65
         }
       ]
@@ -2375,6 +2371,23 @@
         }
       ]
     },
+    "src/result_renderers/calendar.py": {
+      "loc": 22,
+      "functions": [
+        {
+          "name": "canonical_communications_read_answer",
+          "line": 5,
+          "loc": 18
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "canonical_communications_read_answer",
+          "line": 5,
+          "loc": 18
+        }
+      ]
+    },
     "src/legacy_agent_loop.py": {
       "loc": 26,
       "functions": [
@@ -2393,10 +2406,10 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18854,
+  "semantic_control_plane_loc": 18847,
   "central_domain_conditionals": 118,
-  "central_canonical_answer_functions": 14,
-  "canonical_answer_dispatch_mentions": 18,
+  "central_canonical_answer_functions": 13,
+  "canonical_answer_dispatch_mentions": 17,
   "compatibility_aliases": 4,
   "capability_action_map_declarations": 9,
   "production_legacy_semantic_imports": [
@@ -2434,7 +2447,7 @@
     "src/task_scheduler.py:2198:from routes.email_helpers import _get_email_config",
     "src/task_scheduler.py:2302:from routes.prefs_routes import _load_for_user",
     "src/tool_execution.py:2277:from routes.contacts_routes import _fetch_contacts",
-    "src/aci.py:236:from routes.prefs_routes import _load_for_user",
+    "src/aci.py:237:from routes.prefs_routes import _load_for_user",
     "src/agent_loop.py:945:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/agent_loop.py:2131:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/tools/calendar.py:23:from routes.calendar_routes import (",
@@ -2535,6 +2548,6 @@
       }
     ]
   },
-  "source_sha": "604849f12ace690dafa605d818e32c58b1b2d5b4",
+  "source_sha": "2d2d5644635ef5325a230984ba1ac557d8a5f14a",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
