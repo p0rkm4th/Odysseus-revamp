@@ -9,7 +9,6 @@ chain before a tool can run.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, replace
-import ipaddress
 import json
 import logging
 import re
@@ -1337,137 +1336,44 @@ def is_explicit_continuation(text: str) -> bool:
 
 
 def explicit_private_discovery_cidr(text: str) -> str | None:
-    """Extract an explicitly supplied, bounded private IPv4 discovery scope.
-
-    This is a semantic scope projection, not authorization.  It deliberately
-    ignores current interfaces, historical observations, and RFC1918 guesses;
-    the broker and normal ActionSpec policy remain authoritative for execution.
-    """
-    # Accept only unambiguous separators commonly produced by pasted or
-    # voice-transcribed owner text.  The backslash form is normalized to a
-    # slash before validation; ipaddress still decides whether the result is
-    # a valid bounded private network, so malformed prefixes never broaden
-    # scope or become an authorization surrogate.
-    for address, separator, prefix in re.findall(
-        r"(?<![\w.])((?:\d{1,3}\.){3}\d{1,3})\s*([/\\])\s*(\d{1,2})(?!\w)",
-        str(text or ""),
-    ):
-        candidate = f"{address}/{prefix}"
-        try:
-            network = ipaddress.ip_network(candidate, strict=False)
-        except ValueError:
-            continue
-        if network.version == 4 and network.is_private and network.num_addresses <= 256:
-            return str(network)
-    return None
+    """Compatibility entrypoint for the Network-owned scope resolver."""
+    from src.domain_resolvers.network import explicit_private_discovery_cidr as resolver
+    return resolver(text)
 
 
 def network_discovery_request_cidr(text: str) -> str | None:
-    """Return only a scope present in the current request.
-
-    A missing CIDR is unresolved.  Current host/VPN context and historical
-    observations are evidence, never implicit scan authorization.
-    """
-    return explicit_private_discovery_cidr(text)
+    from src.domain_resolvers.network import network_discovery_request_cidr as resolver
+    return resolver(text)
 
 
 def has_network_cidr_candidate(text: str) -> bool:
-    """Detect a CIDR-shaped owner target, including safely normalizable typos."""
-    return bool(re.search(
-        r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}\s*[/\\]\s*\d{1,2}(?!\w)",
-        str(text or ""),
-    ))
+    from src.domain_resolvers.network import has_network_cidr_candidate as resolver
+    return resolver(text)
 
 
 def is_network_prerequisite_request(text: str) -> bool:
-    """Recognize a request to prepare tools for bounded network work."""
-    return bool(re.search(
-        r"\b(?:install|setup|set up|prepare|need)\b.{0,100}"
-        r"\b(?:tools?|utilities|packages?)\b.{0,100}"
-        r"\b(?:network|nmap|scan|discovery)\b",
-        str(text or "").lower(),
-    ))
+    from src.domain_resolvers.network import is_network_prerequisite_request as resolver
+    return resolver(text)
 
 
 def is_explicit_network_discovery_request(text: str) -> bool:
-    """Recognize actionable network discovery language without authorizing it."""
-    query = str(text or "").lower()
-    if re.search(r"^\s*(?:what\s+is|what\s+are|define|explain|how\s+does)\b", query):
-        return False
-    return bool(
-        re.search(r"\b(?:scan|discover|map|enumerate|identify|find)\b", query)
-        and re.search(r"\b(?:network|lan|subnet|devices?|hosts?|192(?:\.168)?|rfc1918)\b", query)
-    )
+    from src.domain_resolvers.network import is_explicit_network_discovery_request as resolver
+    return resolver(text)
 
 
 def is_network_service_enumeration_request(text: str) -> bool:
-    """Recognize service-enumeration intent, not generic shell scanning."""
-    query = str(text or "").lower()
-    return bool(
-        re.search(r"\b(?:service(?:s)?|port(?:s)?|version|enumeration|deeper|deep(?:er)? scan)\b", query)
-        and re.search(r"\b(?:network|host(?:s)?|device(?:s)?|scan|discovery|nmap)\b", query)
-    )
+    from src.domain_resolvers.network import is_network_service_enumeration_request as resolver
+    return resolver(text)
 
 
 def explicitly_allows_diagnostic_install(query: str) -> bool:
-    """Project affirmative installation intent without granting authority.
-
-    This is semantic evidence for a bounded remediation plan.  Approval,
-    package allowlists, and the privileged broker remain authoritative for
-    whether anything may actually be installed.
-    """
-    q = str(query or "").lower().strip()
-    if re.search(
-        r"(?:"
-        r"\b(?:do\s+not|don't|dont|never)\b.{0,36}\b(?:install|add)\b|"
-        r"\bwithout\s+(?:installing|adding)\b|"
-        r"\bno\s+(?:package\s+)?installs?\b|"
-        r"\b(?:avoid|skip)\b.{0,28}\b(?:installing|installation|packages?)\b"
-        r")",
-        q,
-    ):
-        return False
-    if re.search(
-        r"(?:"
-        r"\b(?:you\s+can|you\s+may|you(?:'re|\s+are)\s+(?:allowed|authorized)|"
-        r"feel\s+free\s+to|go\s+ahead\s+and)\b.{0,32}\b(?:install|add)\b|"
-        r"\bpermission\s+(?:is\s+)?granted\b.{0,32}\b(?:install|add)\b"
-        r")",
-        q,
-    ):
-        return True
-    if re.search(
-        r"(?:"
-        r"(?:^|[.!?;:]\s+|\bthen\s+|\band\s+then\s+)"
-        r"(?:please\s+)?(?:install|add)\b"
-        r")",
-        q,
-    ):
-        return True
-    return bool(re.search(
-        r"(?:"
-        r"(?:^|[.!?;:]\s+|\bthen\s+|\band\s+then\s+)"
-        r"if\b.{0,36}\b(?:missing|needed|required|necessary|unavailable)\b"
-        r".{0,52}\b(?:install|add)\b|"
-        r"(?:^|[.!?;:]\s+|\bthen\s+|\band\s+then\s+)"
-        r"(?:please\s+)?(?:install|add)\b.{0,52}\bif\b.{0,40}"
-        r"\b(?:missing|needed|required|necessary|unavailable)\b"
-        r")",
-        q,
-    ))
+    from src.domain_resolvers.network import explicitly_allows_diagnostic_install as resolver
+    return resolver(query)
 
 
 def network_substantive_fallback_command(intent_domains, query: str) -> str:
-    """Return the legacy compatibility fallback for network remediation.
-
-    The command is only a projection used by the retired text-tool adapter;
-    it is not an executor or an authorization decision. Canonical ACI actions
-    remain preferred and the normal policy/broker path still gates execution.
-    """
-    if "network_ops" not in set(intent_domains or set()):
-        return ""
-    install_flag = "--install-authorized" if explicitly_allows_diagnostic_install(query) else ""
-    return ("python -m src.asset_inventory network-discover " + install_flag + " --record-observations").strip()
+    from src.domain_resolvers.network import network_substantive_fallback_command as resolver
+    return resolver(intent_domains, query)
 
 
 def _is_continuation_phrase(text: str) -> bool:
