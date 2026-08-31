@@ -147,7 +147,7 @@ def modularity_metrics() -> dict[str, Any]:
         ]
         feature_imports = top_level_imports_from(
             kernel_paths,
-            r"(?:from|import)\s+src\.(?:domain_resolvers|result_renderers)\.(?:recipe|inventory|memory|work|reminders)",
+            r"(?:from|import)\s+src\.(?:domain_resolvers|result_renderers)\.[A-Za-z0-9_]+",
         )
         dependency_cycles: list[tuple[str, ...]] = []
 
