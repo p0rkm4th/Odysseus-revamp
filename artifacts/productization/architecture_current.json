@@ -18,71 +18,71 @@
   ],
   "modules": {
     "src/agent_loop.py": {
-      "loc": 6585,
+      "loc": 6583,
       "functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1162,
+          "line": 1160,
           "loc": 5420
         },
         {
           "name": "_build_system_prompt",
-          "line": 535,
+          "line": 533,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2588,
+          "line": 2586,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3229,
+          "line": 3227,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1625,
+          "line": 1623,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2295,
+          "line": 2293,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3344,
+          "line": 3342,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 1105,
+          "line": 1103,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2341,
+          "line": 2339,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3402,
+          "line": 3400,
           "loc": 30
         },
         {
           "name": "_assemble_prompt",
-          "line": 489,
+          "line": 487,
           "loc": 22
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1606,
+          "line": 1604,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2856,
+          "line": 2854,
           "loc": 16
         },
         {
@@ -92,12 +92,12 @@
         },
         {
           "name": "_apply_candidate_compaction",
-          "line": 3316,
+          "line": 3314,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2874,
+          "line": 2872,
           "loc": 8
         },
         {
@@ -117,79 +117,79 @@
         },
         {
           "name": "_record_aci_framework",
-          "line": 1311,
+          "line": 1309,
           "loc": 3
         },
         {
           "name": "_record_aci_model",
-          "line": 1315,
+          "line": 1313,
           "loc": 3
         }
       ],
       "largest_functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1162,
+          "line": 1160,
           "loc": 5420
         },
         {
           "name": "_build_system_prompt",
-          "line": 535,
+          "line": 533,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2588,
+          "line": 2586,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3229,
+          "line": 3227,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1625,
+          "line": 1623,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2295,
+          "line": 2293,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3344,
+          "line": 3342,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 1105,
+          "line": 1103,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2341,
+          "line": 2339,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3402,
+          "line": 3400,
           "loc": 30
         },
         {
           "name": "_assemble_prompt",
-          "line": 489,
+          "line": 487,
           "loc": 22
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1606,
+          "line": 1604,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2856,
+          "line": 2854,
           "loc": 16
         },
         {
@@ -199,12 +199,12 @@
         },
         {
           "name": "_apply_candidate_compaction",
-          "line": 3316,
+          "line": 3314,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2874,
+          "line": 2872,
           "loc": 8
         },
         {
@@ -224,7 +224,7 @@
         },
         {
           "name": "_record_aci_framework",
-          "line": 1311,
+          "line": 1309,
           "loc": 3
         }
       ]
@@ -2276,7 +2276,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18827,
+  "semantic_control_plane_loc": 18825,
   "central_domain_conditionals": 118,
   "central_canonical_answer_functions": 23,
   "canonical_answer_dispatch_mentions": 27,
@@ -2299,8 +2299,8 @@
     "src/service_health.py:359:from routes.model_routes import _probe_endpoint as probe",
     "src/service_health.py:431:from routes.email_helpers import _list_email_accounts",
     "src/aci.py:219:from routes.prefs_routes import _load_for_user",
-    "src/agent_loop.py:947:from routes.prefs_routes import _load_for_user as _load_prefs",
-    "src/agent_loop.py:2133:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:945:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:2131:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/builtin_actions.py:1023:from routes.email_pollers import _run_auto_summarize_once",
     "src/builtin_actions.py:1042:from routes.email_pollers import _run_auto_summarize_once",
     "src/builtin_actions.py:1075:from routes.email_helpers import (",
@@ -2418,6 +2418,6 @@
       }
     ]
   },
-  "source_sha": "4319501833374e29543c99e8e47f62981dffb314",
+  "source_sha": "06ccc3c5380ed5c73619382523c5ad8c081e8646",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }

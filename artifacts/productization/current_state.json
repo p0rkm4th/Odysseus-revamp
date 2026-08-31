@@ -1,20 +1,20 @@
 {
-  "captured_at": "2026-08-31T02:10:00-05:00",
+  "captured_at": "2026-08-31T02:35:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "43195018",
-  "source_head": "4319501833374e29543c99e8e47f62981dffb314",
-  "remote_head": "43195018",
-  "evidence_commit_sha": "43195018",
+  "branch_head": "06ccc3c5",
+  "source_head": "06ccc3c5380ed5c73619382523c5ad8c081e8646",
+  "remote_head": "06ccc3c5",
+  "evidence_commit_sha": "06ccc3c5",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "4319501833374e29543c99e8e47f62981dffb314",
-    "image": "odysseus:candidate-43195018",
-    "image_id": "sha256:6e650a1f32dbd324f1df6365da2ac855632b64c7d94013b80e18291005cf1c0c",
-    "image_digest": "sha256:6e650a1f32dbd324f1df6365da2ac855632b64c7d94013b80e18291005cf1c0c",
-    "oci_revision": "4319501833374e29543c99e8e47f62981dffb314",
-    "source_marker": "4319501833374e29543c99e8e47f62981dffb314",
-    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; browser replay PASS; Qwen holdout 18/18 answers, 16/18 trajectory assertions; remaining assertions classified evaluator/environment"
+    "source_sha": "06ccc3c5380ed5c73619382523c5ad8c081e8646",
+    "image": "odysseus:candidate-06ccc3c5380e",
+    "image_id": "sha256:f1a5793f162ca62ef209369e0de31a73d747b718d00479f7d9968119301ff62e",
+    "image_digest": "sha256:f1a5793f162ca62ef209369e0de31a73d747b718d00479f7d9968119301ff62e",
+    "oci_revision": "06ccc3c5380ed5c73619382523c5ad8c081e8646",
+    "source_marker": "06ccc3c5380ed5c73619382523c5ad8c081e8646",
+    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; browser replay PASS; Qwen holdout 16/16 answers, 15/16 trajectory assertions; remaining assertion classified evaluator/environment"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -338,15 +338,15 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T02:21:36-05:00",
+    "measured_at": "2026-08-31T02:35:02-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
-    "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 79957ceb",
+    "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 06ccc3c5",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "4319501833374e29543c99e8e47f62981dffb314",
-    "evidence_commit_sha": "43195018",
-    "latest_candidate_browser_replay": "PASS: exact 43195018 candidate browser_realistic_acceptance; no owner data was touched",
-    "latest_candidate_holdout": "18/18 answers, 16/18 trajectory assertions; unchanged from 79957ceb; remaining assertions evaluator/environment"
+    "application_source_sha": "06ccc3c5380ed5c73619382523c5ad8c081e8646",
+    "evidence_commit_sha": "06ccc3c5",
+    "latest_candidate_browser_replay": "PASS: exact 06ccc3c5 candidate browser_realistic_acceptance; no owner data was touched",
+    "latest_candidate_holdout": "16/16 answers, 15/16 trajectory assertions; unchanged semantic behavior; remaining assertion evaluator/environment"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
