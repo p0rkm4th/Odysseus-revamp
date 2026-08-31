@@ -31,6 +31,9 @@ def canonical_asset_read_payload(frame: Mapping[str, Any] | None) -> dict[str, A
 
 
 def _asset_read_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
+    filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+    if not frame.get("entity_reference") and not any(filters.get(key) for key in ("asset_query", "asset_property", "asset_projection")):
+        return None
     payload = canonical_asset_read_payload(frame)
     payload["action"] = action_id
     if action_id in {"list", "search"} and payload.get("query") and re.search(
