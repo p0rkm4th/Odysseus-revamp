@@ -5221,3 +5221,11 @@ candidate: 2 scenarios and 6 turns/streams. Both bounded-scope execution and
 invalid-scope handling remained truthful; false success, raw final Results,
 duplicate delivery, and abrupt EOF were all zero. No active network operation
 was run against the owner deployment.
+
+## Asset reference and Memory correction replay — candidate `b91ff938` (2026-08-31)
+
+The accumulated-state Asset reference chain passed with 3 turns and 3 grounded
+reads. The populated Memory correction journey passed with 4 turns, 2 GUI
+mutations, and 2 canonical readbacks. Both exact-candidate replays recorded
+zero false success, raw final Results, duplicate delivery, or abrupt EOF. No
+new product defect was reproduced and the owner-dogfood lane was not touched.
