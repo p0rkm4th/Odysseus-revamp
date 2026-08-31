@@ -2962,8 +2962,11 @@
       "recipes",
       "work"
     ],
-    "eagerly_imported_feature_modules": [],
-    "feature_specific_kernel_import_count": 0,
+    "eagerly_imported_feature_modules": [
+      "src/aci.py:29:from src.result_renderers.registry import RENDERER_SPECS, render_result",
+      "src/agent_loop.py:156:from src.result_renderers.notes import note_list_summary_from_tool_output"
+    ],
+    "feature_specific_kernel_import_count": 2,
     "representative_activation": {
       "unrelated_request": [],
       "recipe_request": [
@@ -2974,6 +2977,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
+  "source_sha": "12b1ed3160eecd2b0b9283ce7d44fb837c590d6d",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
