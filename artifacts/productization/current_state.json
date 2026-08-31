@@ -29,13 +29,70 @@
     "candidate_image_id": "sha256:cec356f2448122a593c5b75e3362761f90d42e8a2c31d35f55804b2943880866",
     "completion_trace_fix": "5e5bc0f7; focused ACI/dogfood tests 160 passed, 1 warning",
     "browser_replays_exact_candidate": {
-      "OWNER-NETWORK-BOUNDED-CIDR-001": {"status": "PASS", "turns": 4, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
-      "OWNER-WORK-EMPTY-001": {"status": "PASS", "turns": 1, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
-      "OWNER-RECIPE-MUTATION-READBACK-001": {"status": "PASS", "turns": 3, "mutations": 1, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
-      "OWNER-RECIPE-MUTATION-READBACK-001@a87d8bc7": {"status": "PASS", "turns": 3, "mutations": 1, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
-      "OWNER-TODAY-EMPTY-001": {"status": "PASS", "turns": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
-      "OWNER-MEMORY-CORRECTION-READBACK-001": {"status": "PASS", "turns": 4, "mutations": 2, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
-      "OWNER-REMINDER-CORRECTION-001": {"status": "PASS", "turns": 3, "mutations": 2, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0}
+      "OWNER-NETWORK-BOUNDED-CIDR-001": {
+        "status": "PASS",
+        "turns": 4,
+        "false_success": 0,
+        "raw_final_results": 0,
+        "duplicate_delivery": 0,
+        "abrupt_eof": 0
+      },
+      "OWNER-WORK-EMPTY-001": {
+        "status": "PASS",
+        "turns": 1,
+        "false_success": 0,
+        "raw_final_results": 0,
+        "duplicate_delivery": 0,
+        "abrupt_eof": 0
+      },
+      "OWNER-RECIPE-MUTATION-READBACK-001": {
+        "status": "PASS",
+        "turns": 3,
+        "mutations": 1,
+        "readbacks": 2,
+        "false_success": 0,
+        "raw_final_results": 0,
+        "duplicate_delivery": 0,
+        "abrupt_eof": 0
+      },
+      "OWNER-RECIPE-MUTATION-READBACK-001@a87d8bc7": {
+        "status": "PASS",
+        "turns": 3,
+        "mutations": 1,
+        "readbacks": 2,
+        "false_success": 0,
+        "raw_final_results": 0,
+        "duplicate_delivery": 0,
+        "abrupt_eof": 0
+      },
+      "OWNER-TODAY-EMPTY-001": {
+        "status": "PASS",
+        "turns": 2,
+        "false_success": 0,
+        "raw_final_results": 0,
+        "duplicate_delivery": 0,
+        "abrupt_eof": 0
+      },
+      "OWNER-MEMORY-CORRECTION-READBACK-001": {
+        "status": "PASS",
+        "turns": 4,
+        "mutations": 2,
+        "readbacks": 2,
+        "false_success": 0,
+        "raw_final_results": 0,
+        "duplicate_delivery": 0,
+        "abrupt_eof": 0
+      },
+      "OWNER-REMINDER-CORRECTION-001": {
+        "status": "PASS",
+        "turns": 3,
+        "mutations": 2,
+        "readbacks": 2,
+        "false_success": 0,
+        "raw_final_results": 0,
+        "duplicate_delivery": 0,
+        "abrupt_eof": 0
+      }
     },
     "qwen_model": "qwen3:8b",
     "qwen_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
@@ -88,18 +145,11 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T03:12:00-05:00",
-    "artifact": "artifacts/productization/architecture_after_field_resolvers.json",
-    "semantic_control_plane_loc": 18891,
-    "agent_loop_py_loc": 6608,
-    "aci_py_loc": 5912,
-    "intent_contracts_py_loc": 3689,
-    "field_resolvers_py_loc": 123,
-    "central_domain_conditionals": 120,
-    "central_canonical_answer_functions": 22,
-    "canonical_answer_dispatch_mentions": 25,
+    "measured_at": "2026-08-30T22:49:50-05:00",
+    "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
-    "full_regression": "7116 passed, 9 skipped, 149 warnings"
+    "full_regression": "7116 passed, 9 skipped, 149 warnings",
+    "metrics_artifact": "artifacts/productization/architecture_current.json"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
@@ -107,7 +157,11 @@
     "final exact-candidate release reconciliation and main merge"
   ],
   "dependabot": {
-    "open_prs": [1, 2, 3],
+    "open_prs": [
+      1,
+      2,
+      3
+    ],
     "selected_updates_ported_or_adapted": true,
     "mcp_v2": "rejected for V1",
     "bombadil_0_7": "deferred"
