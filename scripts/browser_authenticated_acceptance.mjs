@@ -81,7 +81,12 @@ function loadJourneyScenarios() {
   return scenarios;
 }
 
-function assertIsolatedAcceptanceDataDir() {
+function assertIsolatedAcceptanceDataDir(scenarios) {
+  // Actual-owner journeys are explicitly limited to read-only scenarios and
+  // use an externally supplied session. They must not require a disposable
+  // APP_DATA_DIR that does not exist in the persistent owner deployment.
+  if (scenarios?.length && scenarios.every((scenario) =>
+    scenario.environment === 'actual_owner_read_only')) return;
   const configured = String(process.env.APP_DATA_DIR || '').trim();
   if (!configured) {
     throw new Error('refusing browser acceptance: APP_DATA_DIR must name a disposable data directory');
@@ -1222,8 +1227,8 @@ async function send(page, prompt, expectation = {}) {
 async function main() {
   // Validate scenario safety before any provisioning can enable the gated
   // acceptance facility or touch deployment state.
-  assertIsolatedAcceptanceDataDir();
   const scenarios = loadJourneyScenarios();
+  assertIsolatedAcceptanceDataDir(scenarios);
   const credentials = provision();
   validateCredentialFreshness(credentials);
   acceptanceUsername = String(credentials.username || acceptanceUsername);
