@@ -2230,6 +2230,14 @@ finalizations, and 0 abrupt EOF. It used 10 bounded canonical tool calls and 6
 bounded fallback model calls; latency P50 was 0.11s and P95 was 2.96s. This is
 a small live slice, not the full generated supported-domain score.
 
+## Full regression provenance checkpoint — application `b91ff938` / evidence `8666dcbb` (2026-08-31)
+
+The full pytest regression completed green from the clean current tree: `7120
+passed, 9 skipped, 149 warnings` in 304.83 seconds. The executable candidate
+remains the exact `b91ff938` image; commits after that application source are
+documentation and acceptance-harness changes only and were not represented as
+a rebuilt application image.
+
 ## Recipe composition and false-premise checkpoint — candidate `20d07aef` (2026-08-29)
 
 Fresh isolated exact-candidate stacks passed `OWNER-RECIPE-SHOPPING-REQUIREMENTS-001`
