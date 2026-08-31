@@ -2794,24 +2794,24 @@
       "largest_functions": []
     },
     "src/legacy_agent_loop.py": {
-      "loc": 26,
+      "loc": 30,
       "functions": [
         {
           "name": "stream_agent_loop",
           "line": 13,
-          "loc": 11
+          "loc": 15
         }
       ],
       "largest_functions": [
         {
           "name": "stream_agent_loop",
           "line": 13,
-          "loc": 11
+          "loc": 15
         }
       ]
     }
   },
-  "semantic_control_plane_loc": 19158,
+  "semantic_control_plane_loc": 19162,
   "central_domain_conditionals": 112,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -2979,6 +2979,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "d0cb342ca4c8e562b1e64e88a5ff0147a414b5dd",
+  "source_sha": "9357dddceacb1fa1fa7627394323717d1f647f02",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
