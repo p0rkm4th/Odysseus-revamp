@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
+
 from src.aci import project_action_selection
 from src.module_manager import ModuleManager, ModuleSpec, ModuleState
 from src.result_renderers import registry as renderer_registry
@@ -102,3 +105,14 @@ def test_disabled_recipe_is_not_loaded_by_unrelated_result_projection(monkeypatc
         [], enabled_module_ids=frozenset({"work"}),
     )
     assert not any(name.endswith(".recipe") for name in imported)
+
+
+def test_intent_contract_import_does_not_eagerly_load_feature_resolvers():
+    probe = (
+        "import sys; import src.intent_contracts; "
+        "print(any(name.startswith('src.domain_resolvers.') for name in sys.modules))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=True,
+    )
+    assert result.stdout.strip() == "False"
