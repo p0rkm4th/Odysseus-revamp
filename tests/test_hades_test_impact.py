@@ -39,3 +39,29 @@ def test_retriever_change_escalates_semantic_but_not_authority_checks():
         "broad_authority": False,
         "browser": False,
     }
+
+
+def test_impact_reports_feature_and_capability_surfaces():
+    result = MODULE.analyze([
+        "src/domain_resolvers/recipe.py",
+        "src/capability_registry.py",
+    ])
+
+    assert result["affected_modules"] == ["recipes"]
+    assert result["affected_capabilities"] == ["*"]
+
+
+def test_committed_diff_mode_is_explicit_and_does_not_use_dirty_worktree(monkeypatch):
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+
+        class Completed:
+            stdout = "src/domain_resolvers/recipe.py\n"
+
+        return Completed()
+
+    monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
+    assert MODULE.changed_paths("base-sha", "head-sha") == ["src/domain_resolvers/recipe.py"]
+    assert calls == [["git", "diff", "--name-only", "base-sha", "head-sha"]]

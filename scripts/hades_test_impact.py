@@ -12,6 +12,8 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import PurePosixPath
+import re
+import subprocess
 import sys
 
 
@@ -38,6 +40,17 @@ IMPACT_RULES = (
     ("tooling", ("scripts/",)),
 )
 
+MODULE_PATH_HINTS = (
+    ("recipes", ("recipe", "cookbook")),
+    ("automation", ("reminder", "scheduled", "automation")),
+    ("household", ("household", "inventory")),
+    ("memory", ("memory",)),
+    ("work", ("work", "task", "project")),
+    ("network", ("network", "homelab")),
+    ("notes", ("note",)),
+)
+CAPABILITY_ID = re.compile(r"\b[a-z][a-z0-9_-]*\.[a-z][a-z0-9_.-]*\b")
+
 
 def classify_path(path: str) -> set[str]:
     """Return stable impact labels for one repository-relative path."""
@@ -59,6 +72,43 @@ def classify_path(path: str) -> set[str]:
     return labels or {"unknown"}
 
 
+def _module_hints(path: str) -> set[str]:
+    """Infer feature ownership from paths without importing application code."""
+    haystack = PurePosixPath(path).as_posix().casefold()
+    return {
+        module
+        for module, hints in MODULE_PATH_HINTS
+        if any(hint in haystack for hint in hints)
+    }
+
+
+def _capability_hints(path: str) -> set[str]:
+    """Extract explicit capability IDs from a changed path when present.
+
+    This is intentionally evidence-only.  A path that changes shared semantic
+    code reports ``*`` rather than guessing a capability and thereby causing a
+    narrow lane to hide a broad regression.
+    """
+    if path in SHARED_ESCALATION or path.startswith("src/capability_"):
+        return {"*"}
+    return {
+        token
+        for token in CAPABILITY_ID.findall(path)
+        if not token.endswith((".py", ".js", ".json", ".jsonl"))
+    }
+
+
+def changed_paths(base: str, head: str) -> list[str]:
+    """Read an explicit committed diff; never silently fall back to the worktree."""
+    completed = subprocess.run(
+        ["git", "diff", "--name-only", base, head],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return [line for line in completed.stdout.splitlines() if line]
+
+
 def recommend_lane(labels: set[str]) -> str:
     """Choose a conservative lane from impact, with shared authority winning."""
     if labels & {"policy", "approval", "execution", "dependencies", "persistence", "completion", "kernel_runtime"}:
@@ -72,11 +122,25 @@ def analyze(paths: list[str]) -> dict[str, object]:
     labels_by_path = {path: sorted(classify_path(path)) for path in sorted(set(paths))}
     labels = {label for values in labels_by_path.values() for label in values}
     lane = recommend_lane(labels)
+    modules = {
+        module
+        for path in labels_by_path
+        for module in _module_hints(path)
+    }
+    capabilities = {
+        capability
+        for path in labels_by_path
+        for capability in _capability_hints(path)
+    }
+    if labels & {"kernel_runtime", "semantic_contract", "capability_registry", "module_lifecycle"}:
+        capabilities.add("*")
     return {
         "schema": "hades-test-impact.v1",
         "paths": labels_by_path,
         "impact_labels": sorted(labels),
         "recommended_lane": lane,
+        "affected_modules": sorted(modules),
+        "affected_capabilities": sorted(capabilities),
         "escalations": {
             "semantic": bool(labels & {"semantic_contract", "capability_registry", "semantic_retrieval", "module_semantics"}),
             "broad_authority": bool(labels & {"policy", "approval", "execution", "dependencies", "persistence", "completion", "kernel_runtime"}),
@@ -88,9 +152,16 @@ def analyze(paths: list[str]) -> dict[str, object]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paths", nargs="*", help="Changed repository-relative paths; stdin is used when omitted.")
+    parser.add_argument("--base", help="Committed Git base revision for automatic diff analysis.")
+    parser.add_argument("--head", help="Committed Git head revision for automatic diff analysis (defaults to HEAD).")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     args = parser.parse_args(argv)
-    paths = args.paths or [line.strip() for line in sys.stdin if line.strip()]
+    if args.base and args.paths:
+        parser.error("paths cannot be combined with --base")
+    if args.base:
+        paths = changed_paths(args.base, args.head or "HEAD")
+    else:
+        paths = args.paths or [line.strip() for line in sys.stdin if line.strip()]
     result = analyze(paths)
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
