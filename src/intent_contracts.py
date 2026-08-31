@@ -26,7 +26,6 @@ from src.deterministic_reads import (
     is_recipe_pantry_candidates_query,
 )
 from src.domain_resolvers.reminders import note_mutation_payload, scheduled_task_create_payload
-from src.domain_resolvers.recipe import requested_name as recipe_requested_name, source_url as recipe_source_url
 from src.domain_resolvers.inventory import (
     inventory_add_item_payload,
     inventory_consume_stock_payload,
@@ -36,6 +35,18 @@ from src.domain_resolvers.memory import memory_mutation_payload
 from src.domain_resolvers.work import work_project_create_payload, work_task_create_payload
 
 logger = logging.getLogger(__name__)
+
+
+def recipe_requested_name(text: str) -> str | None:
+    """Load Recipe grammar only when semantic resolution needs it."""
+    from src.domain_resolvers.recipe import requested_name
+    return requested_name(text)
+
+
+def recipe_source_url(text: str) -> str | None:
+    """Load Recipe URL grammar only for Recipe/source requests."""
+    from src.domain_resolvers.recipe import source_url
+    return source_url(text)
 
 
 @dataclass(frozen=True)
