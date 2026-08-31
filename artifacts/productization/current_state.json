@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-31T21:16:31Z",
+  "captured_at": "2026-08-31T21:24:00Z",
   "branch": "hades-v1-productization",
-  "branch_head": "a9c62088244ffc5677103dab1b1ecb25e1ff1bd6",
-  "development_head": "a9c62088244ffc5677103dab1b1ecb25e1ff1bd6",
+  "branch_head": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
+  "development_head": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
   "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
-  "remote_head": "a9c62088244ffc5677103dab1b1ecb25e1ff1bd6",
-  "evidence_commit_sha": "a9c62088244ffc5677103dab1b1ecb25e1ff1bd6",
+  "remote_head": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
+  "evidence_commit_sha": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "ahead_behind_main": {
@@ -113,7 +113,10 @@
   "latest_network_scope_replay": {
     "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
     "harness_source_sha": "716b5588896033b7d89e65c7b5d7f7365b532b3c",
-    "scenarios": ["OWNER-NETWORK-BOUNDED-CIDR-001", "OWNER-NETWORK-INVALID-CIDR-001"],
+    "scenarios": [
+      "OWNER-NETWORK-BOUNDED-CIDR-001",
+      "OWNER-NETWORK-INVALID-CIDR-001"
+    ],
     "environment": "deterministic_synthetic",
     "status": "PASS",
     "turns": 6,
@@ -130,7 +133,11 @@
   "latest_read_only_tier1_slice": {
     "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
     "harness_source_sha": "85e3503035e94ae23e0a81214cfab84396905bc8",
-    "scenarios": ["OWNER-ASSET-FILTER-NO-MATCH-001", "OWNER-RECIPE-EMPTY-001", "OWNER-MEMORY-EMPTY-001"],
+    "scenarios": [
+      "OWNER-ASSET-FILTER-NO-MATCH-001",
+      "OWNER-RECIPE-EMPTY-001",
+      "OWNER-MEMORY-EMPTY-001"
+    ],
     "environment": "isolated_synthetic",
     "status": "PASS",
     "turns": 3,
@@ -146,7 +153,13 @@
   "latest_context_tier1_slice": {
     "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
     "harness_source_sha": "a4d96221e8523b26ba25365f97bf24d080c1b08e",
-    "scenarios": ["OWNER-ASSET-REFERENCE-CHAIN-001", "OWNER-RECIPE-COMPOSITION-001", "OWNER-WORK-EMPTY-001", "OWNER-AMBIGUOUS-RESTART-001", "OWNER-CONTINUE-NO-ACTIVE-001"],
+    "scenarios": [
+      "OWNER-ASSET-REFERENCE-CHAIN-001",
+      "OWNER-RECIPE-COMPOSITION-001",
+      "OWNER-WORK-EMPTY-001",
+      "OWNER-AMBIGUOUS-RESTART-001",
+      "OWNER-CONTINUE-NO-ACTIVE-001"
+    ],
     "environment": "isolated_synthetic",
     "status": "PASS",
     "turns": 9,
@@ -770,7 +783,13 @@
     "harness_source_sha": "184994ae8ccd111aefb62f210d955d0b46d8477e",
     "environment": "isolated_synthetic",
     "status": "PASS",
-    "checks": ["authenticated shell", "theme inheritance", "navigation", "responsive layout", "shared-window visual contract"],
+    "checks": [
+      "authenticated shell",
+      "theme inheritance",
+      "navigation",
+      "responsive layout",
+      "shared-window visual contract"
+    ],
     "raw_artifact": "/tmp/hades-browser-realistic-current-e482cbfe.log",
     "recorded_at": "2026-08-31T21:02:54Z"
   },
@@ -778,7 +797,9 @@
     "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
     "evidence_source_sha": "d9908686321e78348357c748857632714f2af410",
     "harness_source_sha": "d9908686321e78348357c748857632714f2af410",
-    "scenarios": ["OWNER-RECIPE-URL-IMPORT-COMPLETE-001"],
+    "scenarios": [
+      "OWNER-RECIPE-URL-IMPORT-COMPLETE-001"
+    ],
     "environment": "deterministic_synthetic",
     "fixture_profile": "complete-url-recipes",
     "status": "PASS",
@@ -798,7 +819,9 @@
     "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
     "evidence_source_sha": "6955b9d80dddcc0725f2fa0f5c30544e9166c03e",
     "harness_source_sha": "6955b9d80dddcc0725f2fa0f5c30544e9166c03e",
-    "scenarios": ["OWNER-ASSET-FILTER-NO-MATCH-001"],
+    "scenarios": [
+      "OWNER-ASSET-FILTER-NO-MATCH-001"
+    ],
     "environment": "realistic_messy_synthetic",
     "fixture_profile": "assets-incomplete-duplicate-like",
     "status": "PASS",
@@ -854,8 +877,22 @@
     "duplicate_delivery": 0,
     "abrupt_eof": 0,
     "batches": [
-      {"index": 1, "scenarios": 20, "turns": 38, "streams": 38, "mutations": 14, "readbacks": 30},
-      {"index": 2, "scenarios": 19, "turns": 65, "streams": 65, "mutations": 22, "readbacks": 24}
+      {
+        "index": 1,
+        "scenarios": 20,
+        "turns": 38,
+        "streams": 38,
+        "mutations": 14,
+        "readbacks": 30
+      },
+      {
+        "index": 2,
+        "scenarios": 19,
+        "turns": 65,
+        "streams": 65,
+        "mutations": 22,
+        "readbacks": 24
+      }
     ],
     "recorded_at": "2026-08-31T21:41:27Z"
   },
@@ -1236,7 +1273,7 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T12:01:02-05:00",
+    "measured_at": "2026-08-31T16:44:10-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "164 passed, 1 deprecation warning for Recipe projection migration on exact source 10506bb4",
     "full_regression": "7131 passed, 9 skipped, 149 warnings in 305.97s on exact application source 10506bb4",

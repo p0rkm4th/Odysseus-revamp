@@ -9,6 +9,7 @@
     "src/tool_capabilities.py",
     "src/capability_dependencies.py",
     "src/module_manager.py",
+    "src/action_retriever.py",
     "src/result_renderers/registry.py",
     "src/field_resolvers.py",
     "src/domain_resolvers/reminders.py",
@@ -248,11 +249,11 @@
       ]
     },
     "src/aci.py": {
-      "loc": 4485,
+      "loc": 4429,
       "functions": [
         {
           "name": "project_action_selection",
-          "line": 3691,
+          "line": 3635,
           "loc": 279
         },
         {
@@ -262,7 +263,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3499,
+          "line": 3443,
           "loc": 104
         },
         {
@@ -287,7 +288,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4016,
+          "line": 3960,
           "loc": 93
         },
         {
@@ -312,13 +313,8 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4269,
+          "line": 4213,
           "loc": 69
-        },
-        {
-          "name": "canonical_tool_result_projection",
-          "line": 3151,
-          "loc": 68
         },
         {
           "name": "build_base_prompt",
@@ -342,7 +338,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4208,
+          "line": 4152,
           "loc": 59
         },
         {
@@ -352,17 +348,17 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 4422,
+          "line": 4366,
           "loc": 56
         },
         {
           "name": "canonical_read_failure_answer",
-          "line": 3221,
+          "line": 3165,
           "loc": 53
         },
         {
           "name": "canonical_action_failure_answer",
-          "line": 3276,
+          "line": 3220,
           "loc": 52
         },
         {
@@ -372,12 +368,12 @@
         },
         {
           "name": "project_final_answer",
-          "line": 3387,
+          "line": 3331,
           "loc": 50
         },
         {
           "name": "parse_decision_json",
-          "line": 4126,
+          "line": 4070,
           "loc": 50
         },
         {
@@ -397,7 +393,7 @@
         },
         {
           "name": "project_result_observation",
-          "line": 4340,
+          "line": 4284,
           "loc": 48
         },
         {
@@ -417,7 +413,7 @@
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 3972,
+          "line": 3916,
           "loc": 42
         },
         {
@@ -437,7 +433,7 @@
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 3635,
+          "line": 3579,
           "loc": 37
         },
         {
@@ -452,12 +448,12 @@
         },
         {
           "name": "canonical_unverified_action_answer",
-          "line": 3330,
+          "line": 3274,
           "loc": 32
         },
         {
           "name": "project_capability_palette",
-          "line": 3439,
+          "line": 3383,
           "loc": 32
         },
         {
@@ -492,7 +488,7 @@
         },
         {
           "name": "selected_action_for_decision",
-          "line": 4178,
+          "line": 4122,
           "loc": 28
         },
         {
@@ -532,7 +528,7 @@
         },
         {
           "name": "classify_action_escalation",
-          "line": 3473,
+          "line": 3417,
           "loc": 24
         },
         {
@@ -567,12 +563,12 @@
         },
         {
           "name": "canonical_result_answer",
-          "line": 3364,
+          "line": 3308,
           "loc": 21
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 4390,
+          "line": 4334,
           "loc": 20
         },
         {
@@ -627,7 +623,7 @@
         },
         {
           "name": "validate_capability_creation_request",
-          "line": 3674,
+          "line": 3618,
           "loc": 15
         },
         {
@@ -672,7 +668,7 @@
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 4111,
+          "line": 4055,
           "loc": 13
         },
         {
@@ -683,6 +679,11 @@
         {
           "name": "insert_before_latest_user",
           "line": 2057,
+          "loc": 12
+        },
+        {
+          "name": "canonical_tool_result_projection",
+          "line": 3151,
           "loc": 12
         },
         {
@@ -737,7 +738,7 @@
         },
         {
           "name": "model_burden",
-          "line": 4480,
+          "line": 4424,
           "loc": 6
         },
         {
@@ -794,7 +795,7 @@
       "largest_functions": [
         {
           "name": "project_action_selection",
-          "line": 3691,
+          "line": 3635,
           "loc": 279
         },
         {
@@ -804,7 +805,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3499,
+          "line": 3443,
           "loc": 104
         },
         {
@@ -829,7 +830,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4016,
+          "line": 3960,
           "loc": 93
         },
         {
@@ -854,13 +855,8 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4269,
+          "line": 4213,
           "loc": 69
-        },
-        {
-          "name": "canonical_tool_result_projection",
-          "line": 3151,
-          "loc": 68
         },
         {
           "name": "build_base_prompt",
@@ -884,12 +880,17 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4208,
+          "line": 4152,
           "loc": 59
         },
         {
           "name": "skill_index_prompt",
           "line": 221,
+          "loc": 56
+        },
+        {
+          "name": "run_legacy_completion_verifier",
+          "line": 4366,
           "loc": 56
         }
       ]
@@ -2001,19 +2002,96 @@
         }
       ]
     },
-    "src/result_renderers/registry.py": {
-      "loc": 62,
+    "src/action_retriever.py": {
+      "loc": 145,
       "functions": [
         {
+          "name": "__init__",
+          "line": 63,
+          "loc": 36
+        },
+        {
+          "name": "retrieve",
+          "line": 110,
+          "loc": 33
+        },
+        {
+          "name": "from_default_registry",
+          "line": 101,
+          "loc": 4
+        },
+        {
+          "name": "_tokens",
+          "line": 33,
+          "loc": 2
+        },
+        {
+          "name": "canonical_id",
+          "line": 47,
+          "loc": 2
+        },
+        {
+          "name": "indexed_action_count",
+          "line": 107,
+          "loc": 2
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "__init__",
+          "line": 63,
+          "loc": 36
+        },
+        {
+          "name": "retrieve",
+          "line": 110,
+          "loc": 33
+        },
+        {
+          "name": "from_default_registry",
+          "line": 101,
+          "loc": 4
+        },
+        {
+          "name": "_tokens",
+          "line": 33,
+          "loc": 2
+        },
+        {
+          "name": "canonical_id",
+          "line": 47,
+          "loc": 2
+        },
+        {
+          "name": "indexed_action_count",
+          "line": 107,
+          "loc": 2
+        }
+      ]
+    },
+    "src/result_renderers/registry.py": {
+      "loc": 110,
+      "functions": [
+        {
+          "name": "project_result",
+          "line": 51,
+          "loc": 32
+        },
+        {
           "name": "render_result",
-          "line": 37,
+          "line": 85,
           "loc": 23
         }
       ],
       "largest_functions": [
         {
+          "name": "project_result",
+          "line": 51,
+          "loc": 32
+        },
+        {
           "name": "render_result",
-          "line": 37,
+          "line": 85,
           "loc": 23
         }
       ]
@@ -2512,98 +2590,98 @@
       ]
     },
     "src/result_renderers/homelab.py": {
-      "loc": 304,
+      "loc": 305,
       "functions": [
         {
           "name": "canonical_network_read_answer",
-          "line": 48,
+          "line": 49,
           "loc": 147
-        },
-        {
-          "name": "canonical_network_plan_answer",
-          "line": 199,
-          "loc": 39
         },
         {
           "name": "project_homelab_result",
           "line": 9,
-          "loc": 38
+          "loc": 39
+        },
+        {
+          "name": "canonical_network_plan_answer",
+          "line": 200,
+          "loc": 39
         },
         {
           "name": "canonical_service_read_answer",
-          "line": 278,
+          "line": 279,
           "loc": 27
         },
         {
           "name": "display_label",
-          "line": 137,
+          "line": 138,
           "loc": 27
         },
         {
           "name": "canonical_homelab_read_answer",
-          "line": 262,
+          "line": 263,
           "loc": 14
         },
         {
           "name": "_homelab_event",
-          "line": 250,
+          "line": 251,
           "loc": 10
         },
         {
           "name": "_homelab_payload",
-          "line": 240,
+          "line": 241,
           "loc": 8
         },
         {
           "name": "freshness_line",
-          "line": 73,
+          "line": 74,
           "loc": 6
         }
       ],
       "largest_functions": [
         {
           "name": "canonical_network_read_answer",
-          "line": 48,
+          "line": 49,
           "loc": 147
-        },
-        {
-          "name": "canonical_network_plan_answer",
-          "line": 199,
-          "loc": 39
         },
         {
           "name": "project_homelab_result",
           "line": 9,
-          "loc": 38
+          "loc": 39
+        },
+        {
+          "name": "canonical_network_plan_answer",
+          "line": 200,
+          "loc": 39
         },
         {
           "name": "canonical_service_read_answer",
-          "line": 278,
+          "line": 279,
           "loc": 27
         },
         {
           "name": "display_label",
-          "line": 137,
+          "line": 138,
           "loc": 27
         },
         {
           "name": "canonical_homelab_read_answer",
-          "line": 262,
+          "line": 263,
           "loc": 14
         },
         {
           "name": "_homelab_event",
-          "line": 250,
+          "line": 251,
           "loc": 10
         },
         {
           "name": "_homelab_payload",
-          "line": 240,
+          "line": 241,
           "loc": 8
         },
         {
           "name": "freshness_line",
-          "line": 73,
+          "line": 74,
           "loc": 6
         }
       ]
@@ -2863,7 +2941,7 @@
       "largest_functions": []
     }
   },
-  "semantic_control_plane_loc": 19035,
+  "semantic_control_plane_loc": 19173,
   "central_domain_conditionals": 111,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -3042,6 +3120,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "b2f50909be5be85491f9e53ec62de01145cb2502",
+  "source_sha": "b22197366c009aee3cbc4b6876a855fbaf99b7e4",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
