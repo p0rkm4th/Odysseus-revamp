@@ -4075,6 +4075,14 @@ def canonical_tool_result_projection(
         "observation_location": payload.get("observation_location"),
         "freshness": payload.get("freshness"),
     }
+    if str(tool_name or "").strip() == "manage_homelab" and action == "plan_network_discovery":
+        common.update({
+            "operation_digest": payload.get("operation_digest"),
+            "preflight": payload.get("preflight"),
+            "scanner_available": payload.get("scanner_available"),
+            "broker_scanner_available": payload.get("broker_scanner_available"),
+        })
+        return common
     if action == "read_network_context":
         interfaces = payload.get("interfaces")
         routes = payload.get("default_routes")
