@@ -727,6 +727,16 @@
     "raw_artifact": "/tmp/hades-live-fuzz-all-seed73-e482cbfe.json",
     "recorded_at": "2026-08-31T21:01:49Z"
   },
+  "latest_current_source_visual_acceptance": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "184994ae8ccd111aefb62f210d955d0b46d8477e",
+    "harness_source_sha": "184994ae8ccd111aefb62f210d955d0b46d8477e",
+    "environment": "isolated_synthetic",
+    "status": "PASS",
+    "checks": ["authenticated shell", "theme inheritance", "navigation", "responsive layout", "shared-window visual contract"],
+    "raw_artifact": "/tmp/hades-browser-realistic-current-e482cbfe.log",
+    "recorded_at": "2026-08-31T21:02:54Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
