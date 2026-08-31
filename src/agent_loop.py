@@ -1514,25 +1514,21 @@ async def stream_aci_runtime(
             _intent.setdefault("domains", set()).update(canonical_domains)
     except Exception:
         logger.debug("intent contract compilation unavailable", exc_info=True)
-    # Recurring reminders are effectful scheduler requests. Keep their
-    # bounded Action deterministic even when a route-specific model/tool
-    # projection declines to expose the ACI fast path.
-    if (
-        _aci_enabled
-        and _aci_mode == "aci"
-        and _aci_fast_path_block is None
-        and isinstance(_intent.get("intent_frame"), dict)
-        and _intent["intent_frame"].get("domain_concept") == "SCHEDULED_TASK"
-        and _intent["intent_frame"].get("operation_class") == "CREATE"
-        and "manage_tasks" not in disabled_tools
-    ):
-        from src.intent_contracts import scheduled_task_create_payload
-        _scheduled_payload = scheduled_task_create_payload(_last_user)
-        if _scheduled_payload:
-            _aci_fast_path_block = ToolBlock(
-                "manage_tasks", json.dumps(_scheduled_payload, sort_keys=True)
-            )
-            _record_aci_framework("scheduled_task_deterministic_action")
+    # Deterministic schema resolution may bypass model arbitration, but the
+    # resolver is selected from the canonical contract rather than a domain
+    # branch in this runtime.
+    if _aci_enabled and _aci_mode == "aci" and _aci_fast_path_block is None:
+        from src.field_resolvers import deterministic_action_for_contract
+        resolved_action = deterministic_action_for_contract(
+            _intent.get("resolved_contract"),
+            query=_last_user,
+            frame=_intent.get("intent_frame") or {},
+            disabled_tools=disabled_tools,
+        )
+        if resolved_action:
+            binding, payload = resolved_action
+            _aci_fast_path_block = ToolBlock(binding, json.dumps(payload, sort_keys=True))
+            _record_aci_framework("deterministic_schema_action")
     _low_signal_turn = bool(_intent.get("low_signal"))
     # ACI uses the canonical intent-contract implementation directly. Keep
     # the loop-local wrapper only for explicit legacy compatibility callers.

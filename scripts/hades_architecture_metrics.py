@@ -26,6 +26,7 @@ COUNTED_MODULES = (
     "src/action_intents.py",
     "src/tool_capabilities.py",
     "src/capability_dependencies.py",
+    "src/field_resolvers.py",
     "src/legacy_agent_loop.py",
 )
 
