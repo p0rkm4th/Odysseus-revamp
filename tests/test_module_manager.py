@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from src.aci import project_action_selection
 from src.module_manager import ModuleManager, ModuleSpec, ModuleState
+from src.result_renderers import registry as renderer_registry
 
 
 def _recipe_intent(action: str = "add") -> dict:
@@ -86,3 +87,18 @@ def test_module_entrypoint_imports_only_on_activation(monkeypatch):
     manager.activate_for_capability("demo.capability")
     assert calls == ["feature.demo"]
     assert manager.state("demo") is ModuleState.ACTIVE
+
+
+def test_disabled_recipe_is_not_loaded_by_unrelated_result_projection(monkeypatch):
+    imported: list[str] = []
+    real_import = renderer_registry.importlib.import_module
+
+    def tracking_import(name: str):
+        imported.append(name)
+        return real_import(name)
+
+    monkeypatch.setattr(renderer_registry.importlib, "import_module", tracking_import)
+    renderer_registry.render_result(
+        [], enabled_module_ids=frozenset({"work"}),
+    )
+    assert not any(name.endswith(".recipe") for name in imported)
