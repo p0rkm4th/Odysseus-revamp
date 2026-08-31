@@ -359,6 +359,15 @@ def test_network_plan_receipt_projection_preserves_exact_scope():
         "scanner_available": None,
         "broker_scanner_available": None,
     }
+    wrapped = canonical_tool_result_projection("manage_homelab", {
+        "output": json.dumps({
+            "kind": "plan", "action": "plan_network_discovery",
+            "target": "192.168.10.0/24", "operation_digest": "digest",
+        }),
+        "success": True, "exit_code": 0,
+    })
+    assert wrapped is not None
+    assert wrapped["target"] == "192.168.10.0/24"
 def test_canonical_network_plan_does_not_answer_for_failed_plan():
     answer = canonical_result_answer([{
         "tool": "manage_homelab", "exit_code": 1,
