@@ -110,6 +110,23 @@
     "note": "Acceptance harness permits explicitly supplied actual-owner read-only credentials without requiring disposable APP_DATA_DIR; synthetic and mutating journeys remain disposable-only.",
     "recorded_at": "2026-08-31T13:36:00-05:00"
   },
+  "latest_network_scope_replay": {
+    "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "harness_source_sha": "716b5588896033b7d89e65c7b5d7f7365b532b3c",
+    "scenarios": ["OWNER-NETWORK-BOUNDED-CIDR-001", "OWNER-NETWORK-INVALID-CIDR-001"],
+    "environment": "deterministic_synthetic",
+    "status": "PASS",
+    "turns": 6,
+    "streams": 6,
+    "mutations": 6,
+    "readbacks": 0,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "scope_cases": "valid /24, backslash /24 normalization, spaced slash /24, and invalid /33 clarification",
+    "recorded_at": "2026-08-31T14:28:00-05:00"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
