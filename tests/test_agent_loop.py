@@ -37,7 +37,6 @@ _IMPORTED_AGENT_LOOP = None
 try:
     from src.agent_loop import (
         _detect_admin_intent,
-        _classify_agent_request,
         _append_tool_results,
         _select_local_mcp_schemas,
     )
@@ -65,6 +64,7 @@ from src.aci import (
     prefetched_explicit_memory_result,
     successful_deterministic_read_result,
 )
+from src.intent_contracts import classify_compatibility_request as _classify_agent_request
 from src.mcp_manager import MCP_KEYWORDS as _MCP_KEYWORDS
 
 

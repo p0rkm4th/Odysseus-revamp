@@ -15,56 +15,56 @@
   ],
   "modules": {
     "src/agent_loop.py": {
-      "loc": 6608,
+      "loc": 6591,
       "functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1185,
+          "line": 1168,
           "loc": 5420
         },
         {
           "name": "_build_system_prompt",
-          "line": 558,
+          "line": 541,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2611,
+          "line": 2594,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3252,
+          "line": 3235,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1648,
+          "line": 1631,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2318,
+          "line": 2301,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3367,
+          "line": 3350,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 1128,
+          "line": 1111,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2364,
+          "line": 2347,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3425,
+          "line": 3408,
           "loc": 30
         },
         {
@@ -74,12 +74,12 @@
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1629,
+          "line": 1612,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2879,
+          "line": 2862,
           "loc": 16
         },
         {
@@ -88,18 +88,13 @@
           "loc": 13
         },
         {
-          "name": "_classify_agent_request",
-          "line": 534,
-          "loc": 13
-        },
-        {
           "name": "_apply_candidate_compaction",
-          "line": 3339,
+          "line": 3322,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2897,
+          "line": 2880,
           "loc": 8
         },
         {
@@ -119,64 +114,64 @@
         },
         {
           "name": "_record_aci_framework",
-          "line": 1334,
+          "line": 1317,
           "loc": 3
         },
         {
           "name": "_record_aci_model",
-          "line": 1338,
+          "line": 1321,
           "loc": 3
         }
       ],
       "largest_functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1185,
+          "line": 1168,
           "loc": 5420
         },
         {
           "name": "_build_system_prompt",
-          "line": 558,
+          "line": 541,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2611,
+          "line": 2594,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3252,
+          "line": 3235,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1648,
+          "line": 1631,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2318,
+          "line": 2301,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3367,
+          "line": 3350,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 1128,
+          "line": 1111,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2364,
+          "line": 2347,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3425,
+          "line": 3408,
           "loc": 30
         },
         {
@@ -186,12 +181,12 @@
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1629,
+          "line": 1612,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2879,
+          "line": 2862,
           "loc": 16
         },
         {
@@ -200,18 +195,13 @@
           "loc": 13
         },
         {
-          "name": "_classify_agent_request",
-          "line": 534,
-          "loc": 13
-        },
-        {
           "name": "_apply_candidate_compaction",
-          "line": 3339,
+          "line": 3322,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2897,
+          "line": 2880,
           "loc": 8
         },
         {
@@ -228,6 +218,11 @@
           "name": "_suppress_automatic_skills",
           "line": 208,
           "loc": 6
+        },
+        {
+          "name": "_record_aci_framework",
+          "line": 1317,
+          "loc": 3
         }
       ]
     },
@@ -989,7 +984,7 @@
       ]
     },
     "src/intent_contracts.py": {
-      "loc": 3614,
+      "loc": 3632,
       "functions": [
         {
           "name": "compile_intent",
@@ -1004,7 +999,7 @@
         {
           "name": "classify_compatibility_request",
           "line": 3445,
-          "loc": 170
+          "loc": 188
         },
         {
           "name": "resolve_structured_reference",
@@ -1318,7 +1313,7 @@
         },
         {
           "name": "has",
-          "line": 3507,
+          "line": 3525,
           "loc": 2
         }
       ],
@@ -1336,7 +1331,7 @@
         {
           "name": "classify_compatibility_request",
           "line": 3445,
-          "loc": 170
+          "loc": 188
         },
         {
           "name": "resolve_structured_reference",
@@ -2177,7 +2172,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18871,
+  "semantic_control_plane_loc": 18872,
   "central_domain_conditionals": 120,
   "central_canonical_answer_functions": 23,
   "canonical_answer_dispatch_mentions": 27,
@@ -2186,19 +2181,8 @@
   "production_legacy_semantic_imports": [
     "src/agent_loop.py:281:from src.legacy_agent_loop import stream_agent_loop"
   ],
-  "product_tests_private_legacy_classifier_imports": [
-    "tests/test_api_call_integration_routing.py:26:`_intent['domains']` that updates `_relevant_tools` from `_DOMAIN_TOOL_MAP`).\"\"\"",
-    "tests/test_bg_job_tools.py:159:from src.agent_loop import _classify_agent_request, _DOMAIN_TOOL_MAP",
-    "tests/test_bg_job_tools.py:172:from src.agent_loop import _classify_agent_request",
-    "tests/test_aci_model_fallback.py:8:from src.agent_loop import _classify_agent_request",
-    "tests/test_deterministic_read_paraphrases.py:9:from src.agent_loop import _classify_agent_request",
-    "tests/test_deterministic_read_paraphrases.py:590:from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence",
-    "tests/test_deterministic_read_paraphrases.py:628:from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence",
-    "tests/test_local_continuity_and_dependencies.py:82:from src.agent_loop import _assemble_prompt, _classify_agent_request, _normalize_homelab_intent",
-    "tests/test_p0_chat_continuity.py:4:from src.agent_loop import _classify_agent_request",
-    "tests/test_tool_binding_projections.py:2:from src.agent_loop import TOOL_SECTIONS, _DOMAIN_TOOL_MAP",
-    "tests/test_workspace_confine.py:387:from src.agent_loop import _classify_agent_request"
-  ],
+  "product_tests_private_legacy_classifier_imports": [],
+  "product_tests_legacy_tool_map_imports": [],
   "src_to_routes_imports": [
     "src/ai_interaction.py:746:from routes.prefs_routes import _load as _load_prefs",
     "src/caldav_sync.py:278:from routes.calendar_routes import _ensure_positive_duration",
@@ -2211,8 +2195,8 @@
     "src/service_health.py:359:from routes.model_routes import _probe_endpoint as probe",
     "src/service_health.py:431:from routes.email_helpers import _list_email_accounts",
     "src/aci.py:219:from routes.prefs_routes import _load_for_user",
-    "src/agent_loop.py:970:from routes.prefs_routes import _load_for_user as _load_prefs",
-    "src/agent_loop.py:2156:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:953:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:2139:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/builtin_actions.py:1023:from routes.email_pollers import _run_auto_summarize_once",
     "src/builtin_actions.py:1042:from routes.email_pollers import _run_auto_summarize_once",
     "src/builtin_actions.py:1075:from routes.email_helpers import (",
@@ -2330,6 +2314,6 @@
       }
     ]
   },
-  "source_sha": "1fc44cf3bc42c1aca795a3a1f4a392f0ba461e65",
+  "source_sha": "055acaf50beaaa31b59e93387b9353763a9cb3dc",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }

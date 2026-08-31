@@ -17,6 +17,8 @@ are absent, and run in CI where they are installed.
 import pytest
 
 agent_loop = pytest.importorskip("src.agent_loop")
+from src.intent_contracts import classify_compatibility_request
+from src.legacy_domain_contract import DOMAIN_TOOL_MAP
 
 REPRO = "Use the api_call tool to call Home Assistant GET /api/states"
 
@@ -26,7 +28,7 @@ def _selected_tools(domains):
     `_intent['domains']` that updates `_relevant_tools` from `_DOMAIN_TOOL_MAP`)."""
     tools = set()
     for domain in domains:
-        tools |= agent_loop._DOMAIN_TOOL_MAP.get(domain, set())
+        tools |= DOMAIN_TOOL_MAP.get(domain, set())
     return tools
 
 
@@ -49,13 +51,13 @@ def _schema_names_sent(tools):
     ],
 )
 def test_integration_prompts_are_not_low_signal(prompt):
-    intent = agent_loop._classify_agent_request([], prompt)
+    intent = classify_compatibility_request([], prompt)
     assert intent["low_signal"] is False, intent
     assert "integrations" in intent["domains"], intent
 
 
 def test_repro_selects_and_sends_api_call_schema():
-    intent = agent_loop._classify_agent_request([], REPRO)
+    intent = classify_compatibility_request([], REPRO)
     selected = _selected_tools(intent["domains"])
     assert "api_call" in selected, selected
     # The schema filter must actually advertise api_call to the model.
@@ -73,6 +75,6 @@ def test_integrations_domain_has_a_rule_pack():
 def test_plain_greeting_does_not_pull_api_call():
     # Guard against over-matching: an unrelated message stays low-signal and must
     # not drag the integration tool into context.
-    intent = agent_loop._classify_agent_request([], "hey there, how are you")
+    intent = classify_compatibility_request([], "hey there, how are you")
     assert "integrations" not in intent["domains"], intent
     assert "api_call" not in _selected_tools(intent["domains"])

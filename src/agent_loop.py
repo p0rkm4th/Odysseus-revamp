@@ -531,23 +531,6 @@ from src.legacy_domain_contract import (
 _TOOL_SELECTION_TIMEOUT_SECONDS = 1.5
 
 
-def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, object]:
-    """Compatibility wrapper around the canonical intent-contract projection."""
-    return classify_compatibility_request(
-        messages,
-        last_user,
-        recent_context_for_retrieval=recent_context_for_retrieval,
-        explicit_memory_query=is_explicit_memory_query,
-        contextual_retry_continuation=is_contextual_retry_continuation,
-        contextual_reference_followup=is_contextual_reference_followup,
-        explicit_continuation=is_explicit_continuation,
-        assistant_requested_followup=assistant_requested_followup,
-        specialized_operational_domains=_SPECIALIZED_OPERATIONAL_DOMAINS,
-    )
-
-
-
-
 _SAVED_MEMORY_PROVENANCE_RE = re.compile(
     r"\b(?:I remember|saved (?:Hades )?memory|your saved memory|I have stored|"
     r"stored (?:memory|profile)|from your profile|remembered profile)\b",
@@ -1374,7 +1357,7 @@ async def stream_aci_runtime(
         _last_user,
         aci_enabled=_aci_enabled,
         provisional_resolver=provisional_intent_projection,
-        compatibility_classifier=_classify_agent_request,
+        compatibility_classifier=classify_compatibility_request,
         compatibility_normalizers=(
             _normalize_asset_inventory_intent,
             _normalize_homelab_intent,

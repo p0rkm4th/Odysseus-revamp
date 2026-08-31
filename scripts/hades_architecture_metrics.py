@@ -131,7 +131,10 @@ def main() -> None:
             r"(?:from|import)\s+.*(?:legacy_agent_loop|_classify_agent_request)",
         ),
         "product_tests_private_legacy_classifier_imports": imports_from(
-            tests, r"(?:from|import)\s+.*(?:_classify_agent_request|_DOMAIN_TOOL_MAP)"
+            tests, r"(?:from|import)\s+src\.agent_loop.*_classify_agent_request"
+        ),
+        "product_tests_legacy_tool_map_imports": imports_from(
+            tests, r"(?:from|import)\s+src\.agent_loop.*_DOMAIN_TOOL_MAP"
         ),
         "src_to_routes_imports": imports_from(production_paths, r"(?:from|import)\s+routes(?:\.|\s)"),
         "frontend": frontend_metrics(),

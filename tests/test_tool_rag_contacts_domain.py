@@ -14,12 +14,12 @@ The classifier is deterministic string matching (no embeddings / no DB), so it
 can be exercised directly.
 """
 
+from src.intent_contracts import classify_compatibility_request as _classify_agent_request
 from src.agent_loop import (
-    _classify_agent_request,
-    _DOMAIN_TOOL_MAP,
     _DOMAIN_RULES,
     _domain_rules_for_tools,
 )
+from src.legacy_domain_contract import DOMAIN_TOOL_MAP
 
 
 def _classify(text):
@@ -53,7 +53,7 @@ def test_contact_management_requests_get_contacts_domain():
 def test_contacts_domain_seeds_resolve_and_manage_contact():
     """The domain must seed the actual contacts tools so they are offered even
     when semantic retrieval misses."""
-    assert _DOMAIN_TOOL_MAP["contacts"] == {"resolve_contact", "manage_contact"}
+    assert DOMAIN_TOOL_MAP["contacts"] == {"resolve_contact", "manage_contact"}
 
 
 def test_contacts_domain_has_a_rule_pack():

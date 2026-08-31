@@ -1,5 +1,6 @@
 from src.agent_tools import FUNCTION_TOOL_SCHEMAS, TOOL_TAGS, ToolBlock
-from src.agent_loop import TOOL_SECTIONS, _DOMAIN_TOOL_MAP
+from src.agent_loop import TOOL_SECTIONS
+from src.legacy_domain_contract import DOMAIN_TOOL_MAP
 from src.capability_registry import capability_for_tool
 from src.tool_bindings import TOOL_BINDINGS, binding_for_tool
 import asyncio
@@ -35,7 +36,7 @@ def test_tags_contracts_domains_and_executors_are_projected():
             assert all(action.executor_key == binding.executor_key
                        for action in capability.actions.values())
         for domain in binding.domains:
-            assert name in _DOMAIN_TOOL_MAP[domain]
+            assert name in DOMAIN_TOOL_MAP[domain]
 
 
 def test_native_action_enums_cover_every_registered_action():
@@ -164,7 +165,7 @@ def test_network_binding_preserves_host_broker_boundary():
     assert binding.execution_location == "host_broker"
     assert binding.target_scope == "private_network"
     assert binding.requires_direct_container_access is False
-    assert "manage_homelab" in _DOMAIN_TOOL_MAP["network_ops"]
+    assert "manage_homelab" in DOMAIN_TOOL_MAP["network_ops"]
 
 
 def test_network_read_views_project_owner_scoped_canonical_data(monkeypatch):
