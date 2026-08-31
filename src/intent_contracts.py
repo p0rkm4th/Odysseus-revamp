@@ -26,6 +26,7 @@ from src.deterministic_reads import (
     is_recipe_pantry_candidates_query,
 )
 from src.domain_resolvers.reminders import note_mutation_payload, scheduled_task_create_payload
+from src.domain_resolvers.recipe import requested_name as recipe_requested_name, source_url as recipe_source_url
 
 logger = logging.getLogger(__name__)
 
@@ -747,17 +748,6 @@ def recipe_import_review_draft_from_payload(
 def recipe_create_payload(query: str) -> dict[str, Any] | None:
     draft = recipe_create_draft(query)
     return draft.as_payload() if draft else None
-
-
-def recipe_requested_name(query: str) -> str | None:
-    """Extract an explicit owner naming override for an import proposal."""
-    return _recipe_name(str(query or ""))
-
-
-def recipe_source_url(query: str) -> str | None:
-    """Extract the bounded public source URL from a recipe request."""
-    match = re.search(r"https?://[^\s)>]+", str(query or ""), re.IGNORECASE)
-    return match.group(0).rstrip(".,") if match else None
 
 
 def memory_mutation_payload(query: str, action: str) -> dict[str, Any] | None:
