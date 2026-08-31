@@ -1,16 +1,16 @@
 {
-  "captured_at": "2026-08-30T23:05:00-05:00",
+  "captured_at": "2026-08-30T23:41:36-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "9e847a0426106c95ca08f592599fd1161ac2263f",
-  "remote_head": "9e847a0426106c95ca08f592599fd1161ac2263f",
+  "source_head": "152cd8700087cd62577950226cd18c0ad20b3833",
+  "remote_head": "152cd8700087cd62577950226cd18c0ad20b3833",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "9e847a0426106c95ca08f592599fd1161ac2263f",
-    "image": "odysseus:candidate-9e847a042610",
-    "image_id": "sha256:1a7441292caab457cf5573700edbe6dc61728e64ff0d09a38434c2dc047d4028",
-    "oci_revision": "9e847a0426106c95ca08f592599fd1161ac2263f",
-    "source_marker": "9e847a0426106c95ca08f592599fd1161ac2263f"
+    "source_sha": "663653171674670cbd2f1a8bdad806a448f71a8b",
+    "image": "odysseus:candidate-663653171674",
+    "image_id": "sha256:820cc58d1a4df7d2212505000470038fd8477a6904a7324c7e385bab1d421c35",
+    "oci_revision": "663653171674670cbd2f1a8bdad806a448f71a8b",
+    "source_marker": "663653171674670cbd2f1a8bdad806a448f71a8b"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -190,8 +190,8 @@
       "model_calls": 10,
       "internal_leaks": 0,
       "status": "live-fuzz subset; not directly comparable to the combined 142-case holdout"
-    }
-    ,"live_qwen_held_out_20260831_candidate_66365317": {
+    },
+    "live_qwen_held_out_20260831_candidate_66365317": {
       "artifact": "artifacts/productization/hades-v1-66365317-authoritative-live-holdout.json",
       "cases": 42,
       "functional_passes": 41,
@@ -214,7 +214,7 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-30T23:35:57-05:00",
+    "measured_at": "2026-08-30T23:42:01-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
     "full_regression": "7116 passed, 9 skipped, 149 warnings",
