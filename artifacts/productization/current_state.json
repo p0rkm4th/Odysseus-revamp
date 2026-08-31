@@ -29,24 +29,30 @@
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
     "port": 7020,
-    "source_sha": "2f05d500",
-    "image_id": "sha256:2884fe86a1a6f32f3c7ac8c1ed6b6be4bdac3d7298b389a1a7181e4a2639285a",
-    "health": "running",
+    "source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "image": "odysseus:candidate-896473de",
+    "image_id": "sha256:85d3a875f0f5bfd5e5dcd40f6f182dacd501693f9fe5c7f74e82fab3a8e12130",
+    "health": "healthy",
     "restarts": 0,
     "automated_mutation": false,
     "promotion_attempt": {
       "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
-      "status": "DEFERRED_AFTER_SAFE_RECOVERY",
-      "reason": "Compose attempted to recreate the active owner network and detached the container; prior container was restored and network reconnected",
+      "status": "PROMOTED",
+      "reason": "Promoted with the existing owner network subnet after verified backup and safe recovery rehearsal",
       "backup": "/home/scootz/hades-owner-dogfood-recovery/pre-promotion-896473de.tar.gz",
-      "backup_verified": true
-    }
+      "backup_verified": true,
+      "post_promotion_smoke": "GUI read-only network journey reached canonical UNAVAILABLE state; human answer correctly stated CMDB unavailable and inferred no current state",
+      "smoke_contract_classification": "ACCEPTANCE_CONTRACT_DEPENDENCY_STATE"
+    },
+    "oci_revision": "896473de81075178297eb510fa13b37810e514b6",
+    "source_marker": "896473de81075178297eb510fa13b37810e514b6"
   },
   "dogfood_tracking": {
     "latest_green_candidate_sha": "896473de81075178297eb510fa13b37810e514b6",
-    "owner_dogfood_source_sha": "2f05d500",
-    "commits_behind_candidate": "not promoted; owner runtime remains intentionally unchanged",
-    "status": "STALE relative to latest candidate; promotion requires explicit coherent-slice gate and persistent-state smoke"
+    "owner_dogfood_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "commits_behind_candidate": 0,
+    "last_promotion": "2026-08-31T17:46:00-05:00",
+    "status": "CURRENT with latest promoted candidate"
   },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
