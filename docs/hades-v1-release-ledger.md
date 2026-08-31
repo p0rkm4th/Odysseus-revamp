@@ -5204,3 +5204,12 @@ mutation, and 2 canonical readbacks. Both preserved qualitative semantics
 through reload; false success, raw final Results, duplicate delivery, and
 abrupt EOF were all zero. The scenarios intentionally ran separately because
 their declared environments differ. The owner-dogfood lane was not touched.
+
+## Today/reminder isolated matrix — candidate `b91ff938` (2026-08-31)
+
+The acceptance harness now also clears disposable Notes and scheduled Tasks
+between `empty-daily-driver` scenarios through their normal owner-scoped APIs.
+The complete Today/reminder matrix passed on the exact candidate: 6 scenarios,
+14 turns/streams, 7 GUI mutations, and 10 independent canonical readbacks.
+False success, raw final Results, duplicate delivery, and abrupt EOF were all
+zero. The owner-dogfood lane was not touched.

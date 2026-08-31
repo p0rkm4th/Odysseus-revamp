@@ -355,6 +355,39 @@ async function clearMemoryAcceptanceState(page) {
   });
 }
 
+async function resetDailyDriverAcceptanceState(page, scenario) {
+  if (!externalAcceptance || scenario?.fixture_profile !== 'empty-daily-driver') return null;
+  // Daily-driver scenarios are isolated on the disposable acceptance
+  // principal. Clear both reminder owners through their normal owner-scoped
+  // APIs so one scenario cannot satisfy or invalidate another scenario's
+  // readback. This is never allowed against the owner-dogfood lane.
+  return page.evaluate(async () => {
+    const collect = async (endpoint, key) => {
+      const response = await fetch(endpoint, {credentials: 'same-origin'});
+      if (!response.ok) throw new Error(`daily-driver fixture cleanup failed (${response.status})`);
+      const payload = await response.json().catch(() => ({}));
+      return Array.isArray(payload) ? payload : (Array.isArray(payload?.[key]) ? payload[key] : []);
+    };
+    const notes = await collect('/api/notes', 'notes');
+    for (const note of notes) {
+      if (!note?.id) continue;
+      const deleted = await fetch(`/api/notes/${encodeURIComponent(note.id)}`, {
+        method: 'DELETE', credentials: 'same-origin',
+      });
+      if (!deleted.ok) throw new Error(`daily-driver note cleanup failed (${deleted.status})`);
+    }
+    const tasks = await collect('/api/tasks?include_last_run=true', 'tasks');
+    for (const task of tasks) {
+      if (!task?.id) continue;
+      const deleted = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, {
+        method: 'DELETE', credentials: 'same-origin',
+      });
+      if (!deleted.ok) throw new Error(`daily-driver scheduled-task cleanup failed (${deleted.status})`);
+    }
+    return {notes: notes.length, scheduledTasks: tasks.length};
+  });
+}
+
 function resetDisposableCanonicalFixture(scenarios) {
   if (!externalAcceptance || !scenarios?.length) return null;
   const profiles = new Set(scenarios.map((scenario) => String(scenario.fixture_profile || '').trim()));
@@ -911,6 +944,7 @@ async function prepareScenarioFixture(page, scenario) {
   return {
     fixtureReset: resetDisposableCanonicalFixture(scenarios),
     assetReset: resetDisposableAssetFixture(scenarios),
+    dailyDriverReset: await resetDailyDriverAcceptanceState(page, scenario),
     memorySeed: scenario.fixture_profile === 'empty-memory'
       ? await clearMemoryAcceptanceState(page) : null,
     assetSeed: seedCanonicalAssetFixture(scenarios),
