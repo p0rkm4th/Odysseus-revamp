@@ -36,6 +36,7 @@ COUNTED_MODULES = (
     "src/domain_resolvers/work.py",
     "src/result_renderers/work.py",
     "src/result_renderers/memory.py",
+    "src/result_renderers/homelab.py",
     "src/legacy_agent_loop.py",
 )
 
