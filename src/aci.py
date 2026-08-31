@@ -46,7 +46,10 @@ from src.result_renderers.calendar import canonical_communications_read_answer
 from src.result_renderers.recipe import canonical_recipe_mutation_answer
 from src.result_renderers.generic import canonical_structured_empty_read_answer
 from src.result_renderers.assets import canonical_asset_read_answer
-from src.result_renderers.household import canonical_household_read_answer
+from src.result_renderers.household import (
+    canonical_household_read_answer,
+    canonical_inventory_mutation_answer,
+)
 from src.result_renderers.notes import (
     canonical_notes_mutation_answer,
     canonical_notes_read_answer,
@@ -3893,41 +3896,6 @@ def canonical_unverified_action_answer(
             provenance="Action Result without renderable verification",
         )
     return None
-
-
-def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Render the terminal inventory mutation from its structured Result."""
-    event = next(iter(reversed(tuple(tool_events or ()))), None)
-    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
-        return None
-    try:
-        request = json.loads(str(event.get("command") or "{}"))
-        payload = json.loads(str(event.get("output") or ""))
-    except (TypeError, ValueError):
-        return None
-    if not isinstance(request, Mapping) or request.get("action") not in {
-        "add_item", "add_stock", "consume_stock", "adjust_stock", "move_item", "update_asset",
-    } or not isinstance(payload, Mapping):
-        return None
-    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
-        return "The inventory change was not completed; no change is confirmed."
-    action = str(request.get("action"))
-    verification = payload.get("verification")
-    verified = isinstance(verification, Mapping) and verification.get("status") == "VERIFIED"
-    item = payload.get("item") or payload.get("asset") or {}
-    name = item.get("name") if isinstance(item, Mapping) else None
-    label = str(name or request.get("name") or "the inventory item").strip()
-    verb = {
-        "add_item": "Recorded",
-        "add_stock": "Added stock for",
-        "consume_stock": "Consumed stock for",
-        "adjust_stock": "Adjusted stock for",
-        "update_asset": "Updated",
-        "move_item": "Moved",
-    }[action]
-    if verified:
-        return f"{verb} {label}; the canonical inventory readback is verified."
-    return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."
 
 
 RESULT_RENDERER_REGISTRY: tuple[tuple[str, Callable[[Sequence[Mapping[str, Any]]], str | None]], ...] = (
