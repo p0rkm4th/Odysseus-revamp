@@ -5056,11 +5056,11 @@ def project_action_selection(
     """Build one bounded ActionCard packet from canonical semantic inputs."""
     frame = intent.get("intent_frame") if isinstance(intent.get("intent_frame"), Mapping) else {}
     frame = dict(frame)
+    contract = intent.get("resolved_contract") if isinstance(intent.get("resolved_contract"), Mapping) else {}
     if network_cidr:
         frame["network_cidr"] = str(network_cidr)
     if "filters" not in frame and isinstance(contract.get("filters"), Mapping):
         frame["filters"] = dict(contract["filters"])
-    contract = intent.get("resolved_contract") if isinstance(intent.get("resolved_contract"), Mapping) else {}
     disabled = set(disabled_tools or ())
     desired_binding = str(contract.get("binding") or "")
     desired_action = str(contract.get("action_id") or "")
