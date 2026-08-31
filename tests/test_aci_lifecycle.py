@@ -1848,7 +1848,17 @@ def test_post_result_transition_projects_completion_without_loop_authority():
     )
     assert failed.state.value == "BLOCKED"
     assert failed.answer_only is True
+    assert failed.completion_satisfied is False
     assert failed.framework_event == "canonical_action_failure"
+
+    failed_read = project_post_result_transition(
+        {"error": "host context unavailable", "exit_code": 1},
+        deterministic_fast_path=True,
+    )
+    assert failed_read.state.value == "BLOCKED"
+    assert failed_read.answer_only is True
+    assert failed_read.completion_satisfied is True
+    assert failed_read.framework_event == "deterministic_read_failure"
 
 
 def test_verified_effectful_result_is_terminal_and_cannot_reselect_action():
