@@ -473,7 +473,20 @@ class HomelabOperations:
                 addresses = json.loads(raw.get("addresses") or "[]")
                 routes = json.loads(raw.get("routes") or "[]")
             except (TypeError, ValueError) as exc:
-                return {"status": "INVALID_RESULT", "error_code": "RESULT_INVALID", "action": action, "error": f"host network context was not structured: {exc}", "source": "host_network_broker", "observation_location": "HOST"}
+                # The raw parser exception is server-side technical
+                # disclosure.  Keep only a stable owner-safe readiness state
+                # in the canonical result; detailed diagnostics remain in
+                # logs/telemetry.
+                logger.warning("host network context payload was malformed: %s", exc)
+                return {
+                    "status": "INVALID_RESULT",
+                    "error_code": "RESULT_INVALID",
+                    "action": action,
+                    "message": "Current host network context is unavailable because the trusted host collector returned malformed data. Network observations already recorded in Hades remain available.",
+                    "source": "host_network_broker",
+                    "observation_location": "HOST",
+                    "technical_error": type(exc).__name__,
+                }
             interfaces = []
             for item in addresses if isinstance(addresses, list) else []:
                 name = str(item.get("ifname") or "").strip()
