@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-08-31T03:20:00-05:00",
+  "captured_at": "2026-08-31T03:40:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "e81bdb77c451d7a7a5da1e89b04d521c39baf9cc",
-  "remote_head": "e81bdb77c451d7a7a5da1e89b04d521c39baf9cc",
+  "source_head": "f483877cf46829c5bac813e8ab0c92efe2d65304",
+  "remote_head": "f483877cf46829c5bac813e8ab0c92efe2d65304",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -73,7 +73,8 @@
     "central_domain_conditionals": 120,
     "central_canonical_answer_functions": 22,
     "canonical_answer_dispatch_mentions": 44,
-    "focused_migration_tests": "596 passed, 6 skipped, 1 warning"
+    "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
+    "full_regression": "7116 passed, 9 skipped, 149 warnings"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",

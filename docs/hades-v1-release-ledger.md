@@ -23,6 +23,35 @@ production state was modified. The V1 release remains active and unfrozen;
 generated Qwen functional performance and remaining release gates are still
 open.
 
+## Architectural compression checkpoint — application source `f483877c` (2026-08-31)
+
+The first deletion-capable semantic slice moved recipe, inventory, Work,
+Memory, Notes, and scheduled-task field projection out of the central ACI
+action loop into `src/field_resolvers.py`, dispatching by canonical
+CapabilitySpec identity. The central ACI projection lost 133 lines and the
+legacy scheduled fast path lost 25 lines; no policy, approval, executor, or
+verification authority moved into the resolver. A subsequent renderer slice
+replaced the ordered canonical-answer call tuple with a declarative renderer
+registry, reducing dispatcher mentions from 44 to 25 while preserving grounded
+renderer precedence.
+
+Measured against the reset baseline: counted semantic-control-plane LOC is
+18,893 versus 18,897; `agent_loop.py` is 6,608 versus 6,612; `aci.py` is
+5,912 versus 6,006 in the historical reset artifact (5,915 at the immediate
+pre-renderer checkpoint); and the new resolver is 123 LOC. The architecture
+metric artifacts are `architecture_baseline_reset.json` and
+`architecture_after_field_resolvers.json`. The remaining 120 central
+domain-condition matches, 22 renderer functions, 13 product-test private
+legacy references, and the 5,424-line `stream_aci_runtime` are explicitly
+unfinished strangler work.
+
+After fixing the Memory `add` versus `create` Action-ID mismatch exposed by the
+first full replay, the full suite passed at 7,116 passed, 9 skipped, and 149
+warnings. The broad focused semantic set passed at 601 passed, 6 skipped, and
+1 warning. The running exact candidate remains source `5e5bc0f`; this source
+checkpoint has not yet been rebuilt or browser-replayed. V1 remains active and
+unfrozen, and no owner-dogfood or production state was changed.
+
 ## Isolated application backup/restore replay — exact candidate `fc18ebed` (2026-08-31)
 
 The fresh-install lane was snapshotted to
