@@ -5160,3 +5160,21 @@ raw final Results, duplicate delivery, or abrupt EOF. Broader
 `browser_realistic_acceptance.mjs` also passed. The candidate was healthy with
 zero restarts and Qwen3:8B remained reachable. The persistent owner-dogfood
 lane was not touched.
+
+## Exact-source approval replay and regression checkpoint — `b91ff938` (2026-08-31)
+
+The cache-bust follow-up was pushed as `b91ff938` and rebuilt as
+`odysseus:candidate-b91ff9388be1`, image ID
+`sha256:f73cc7a43e704799a24300f0ca02c48a37e914e268590b9ab4c82b77ad2f74ee`.
+The candidate source marker and OCI revision match the full application SHA.
+
+The authoritative full regression initially exposed two stale approval
+cache-busting assertions; after updating those tests for the new single-path
+continuation, the focused approval/security gate passed `167` tests and the
+full suite passed `7117` tests, `9` skipped, with `149` warnings. The two
+approval-bearing GUI journeys were replayed on the exact `b91ff938` image:
+`OWNER-RECIPE-URL-IMPORT-NAMED-001` and
+`OWNER-RECIPE-COPIED-WEBPAGE-PASTE-001`. Both passed with one GUI mutation and
+two canonical readbacks; false success, raw final Results, duplicate delivery,
+and abrupt EOF were all zero. The persistent owner-dogfood lane was not
+restarted or mutated.
