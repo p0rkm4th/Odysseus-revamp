@@ -3559,10 +3559,16 @@ def canonical_unverified_action_answer(
 
 def canonical_result_answer(
     tool_events: Sequence[Mapping[str, Any]],
+    *,
+    enabled_module_ids: frozenset[str] | None = None,
 ) -> CanonicalAnswer | None:
     rendered = render_result(
         tool_events,
-        enabled_module_ids=default_module_manager().enabled_module_ids(),
+        enabled_module_ids=(
+            enabled_module_ids
+            if enabled_module_ids is not None
+            else default_module_manager().enabled_module_ids()
+        ),
     )
     if rendered is not None:
         provenance, content = rendered
@@ -3583,9 +3589,12 @@ def project_final_answer(
     clarification_only: bool = False,
     clarification_text: str = "",
     effectful_request: bool = False,
+    enabled_module_ids: frozenset[str] | None = None,
 ) -> tuple[str, CanonicalAnswer | None]:
     """Select the authoritative answer before the transport emits it."""
-    canonical = canonical_result_answer(tool_events)
+    canonical = canonical_result_answer(
+        tool_events, enabled_module_ids=enabled_module_ids,
+    )
     if canonical is not None:
         return canonical.content, canonical
     if clarification_only:
