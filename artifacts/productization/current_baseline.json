@@ -1,0 +1,42 @@
+{
+  "captured_at": "2026-08-31T01:08:00-05:00",
+  "branch": "hades-v1-productization",
+  "local_head": "af9439b5b5839dba1d25bf4f56e864b5a93f8d52",
+  "remote_head": "af9439b5b5839dba1d25bf4f56e864b5a93f8d52",
+  "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
+  "ahead_behind_main": {"behind": 0, "ahead": 838},
+  "worktree": "clean",
+  "running": {
+    "acceptance": {
+      "source_marker": "502018f6",
+      "image": "odysseus:candidate-502018f6",
+      "image_digest": "sha256:8b39ecb2c8d43b8cba91c2eade47852c3559f302bca350006c9975e38e1c0fa8",
+      "health": "running",
+      "restart_count": 0
+    },
+    "owner_dogfood": {
+      "source_marker": "2f05d500",
+      "image": "odysseus:candidate-2f05d500",
+      "image_digest": "sha256:2884fe86a1a6f32f3c7ac8c1ed6b6be4bdac3d7298b389a1a7181e4a2639285a",
+      "health": "running",
+      "restart_count": 0,
+      "port": 7020,
+      "data_root": "/tmp/hades-owner-dogfood"
+    }
+  },
+  "built_not_deployed": {
+    "source": "af9439b5",
+    "image": "odysseus:candidate-af9439b5",
+    "image_digest": "sha256:76f74fab96ff463baa1cc26072df1ea291052357e93b0dd84d7067ce4aaed6ef",
+    "oci_revision": "af9439b5"
+  },
+  "qwen": {
+    "model": "qwen3:8b",
+    "endpoint": "http://host.docker.internal:11434",
+    "reachable_from_acceptance_container": true,
+    "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41"
+  },
+  "chroma": {"reachable_from_acceptance_container": true},
+  "loc": {"agent_loop_py": 6612, "aci_py": 6006, "combined": 12618},
+  "baseline_note": "Browser acceptance is currently on 502018f6; the af9439b5 candidate is built but awaits replay."
+}
