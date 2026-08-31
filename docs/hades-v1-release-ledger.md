@@ -5070,3 +5070,21 @@ while the manually restarted container had acceptance-principal enablement
 disabled. No production code or owner data was changed. The acceptance stack
 was recreated on an isolated Docker network and returned healthy with zero
 restarts. The persistent owner-dogfood lane remained untouched.
+
+## Generated Qwen sample and acceptance-network diagnosis — candidate `ed3e8885` (2026-08-30)
+
+A bounded in-container dogfood run used Qwen3:8B against the exact candidate
+source and covered 300 baseline, generated, metamorphic, near-miss,
+minimal-pair, and hidden-holdout cases. The report measured 258/300 functional
+(86%), 288/300 architectural (96%), and 300/300 security (100%), with zero
+duplicate delivery. Reference resolution was 52.17%; the largest clusters were
+`DOMAIN_ROUTING_FAILURE` (12), `BURDEN_REGRESSION` (12), and `INTENT_FAILURE`
+(9). This remains below the release bar and is diagnostic evidence, not a
+release claim.
+
+The candidate's Chroma container was initially running but detached from the
+isolated acceptance network, producing an environment failure rather than a
+semantic failure. The container was attached with the service alias inside the
+disposable network; no owner-dogfood or production data was touched. The
+sanitized report is retained at `/tmp/hades-v1-current-sample.json` and its
+summary is recorded in `artifacts/productization/current_state.json`.
