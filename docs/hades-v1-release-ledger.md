@@ -5371,4 +5371,20 @@ collection/reference/false-premise, Memory empty/populated/correction, and
 Work project/task/empty/overview journeys. It recorded 4 GUI mutations, 10
 canonical readbacks, and 17 grounded reads, with false success, raw final
 Results, duplicate delivery, and abrupt EOF all zero. No owner-dogfood or
-production state was touched.
+ production state was touched.
+
+## Recipe import and scoped-network replay — candidate `b91ff938` (2026-08-31)
+
+The remaining isolated Recipe acceptance cluster passed on the exact
+candidate: 9 scenarios, 14 turns/streams, 9 GUI-originated mutations, and 18
+independent canonical readbacks. Coverage included normal mutation/readback,
+named URL import, copied webpage-shaped paste, complete import, and video
+provider review/insufficient-evidence/positive/title paths. False success, raw
+final Results, duplicate delivery, and abrupt EOF were all zero.
+
+The ambiguity and bounded-network cluster then passed 3 scenarios and 7
+turns/streams, including explicit scope, invalid scope, and ambiguous restart
+handling. False success, raw final Results, duplicate delivery, and abrupt EOF
+were all zero. The acceptance principal was rotated only in the isolated
+candidate data root; the candidate restarted healthy and the owner-dogfood and
+production deployments were not touched.
