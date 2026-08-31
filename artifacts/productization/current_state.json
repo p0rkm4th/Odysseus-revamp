@@ -195,7 +195,7 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-30T23:33:10-05:00",
+    "measured_at": "2026-08-30T23:33:41-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
     "full_regression": "7116 passed, 9 skipped, 149 warnings",
