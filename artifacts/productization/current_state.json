@@ -143,6 +143,23 @@
     "abrupt_eof": 0,
     "recorded_at": "2026-08-31T14:35:00-05:00"
   },
+  "latest_context_tier1_slice": {
+    "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "harness_source_sha": "a4d96221e8523b26ba25365f97bf24d080c1b08e",
+    "scenarios": ["OWNER-ASSET-REFERENCE-CHAIN-001", "OWNER-RECIPE-COMPOSITION-001", "OWNER-WORK-EMPTY-001", "OWNER-AMBIGUOUS-RESTART-001", "OWNER-CONTINUE-NO-ACTIVE-001"],
+    "environment": "isolated_synthetic",
+    "status": "PASS",
+    "turns": 9,
+    "streams": 9,
+    "read_journeys": 8,
+    "fixture_setup_mutations": 1,
+    "readbacks": 2,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "recorded_at": "2026-08-31T14:45:00-05:00"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
