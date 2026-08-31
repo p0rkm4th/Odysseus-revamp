@@ -2230,6 +2230,14 @@ finalizations, and 0 abrupt EOF. It used 10 bounded canonical tool calls and 6
 bounded fallback model calls; latency P50 was 0.11s and P95 was 2.96s. This is
 a small live slice, not the full generated supported-domain score.
 
+## Unseeded owner walkabout — candidate `b91ff938` (2026-08-31)
+
+The exact candidate completed the default unseeded browser walkabout: 7
+ordinary owner read journeys across Network, Homelab, Memory, Assets, and
+Work. All 7 streams completed with zero false success, raw final Results,
+duplicate delivery, or abrupt EOF. No synthetic canonical mutation and no
+owner-dogfood state change occurred.
+
 ## Full regression provenance checkpoint — application `b91ff938` / evidence `8666dcbb` (2026-08-31)
 
 The full pytest regression completed green from the clean current tree: `7120
