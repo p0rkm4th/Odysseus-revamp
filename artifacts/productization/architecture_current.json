@@ -9,6 +9,7 @@
     "src/tool_capabilities.py",
     "src/capability_dependencies.py",
     "src/module_manager.py",
+    "src/result_renderers/registry.py",
     "src/field_resolvers.py",
     "src/domain_resolvers/reminders.py",
     "src/domain_resolvers/recipe.py",
@@ -241,1070 +242,1105 @@
       ]
     },
     "src/aci.py": {
-      "loc": 4717,
+      "loc": 4670,
       "functions": [
         {
           "name": "project_action_selection",
-          "line": 3923,
+          "line": 3876,
           "loc": 279
         },
         {
           "name": "canonical_tool_result_projection",
-          "line": 3172,
+          "line": 3149,
           "loc": 264
         },
         {
           "name": "provisional_intent_projection",
-          "line": 2094,
+          "line": 2071,
           "loc": 123
         },
         {
           "name": "compile_composite_action",
-          "line": 3731,
+          "line": 3684,
           "loc": 104
         },
         {
           "name": "finalize_prompt_messages",
-          "line": 405,
+          "line": 382,
           "loc": 100
         },
         {
           "name": "minimal_recent_notes_tool_context_message",
-          "line": 1079,
+          "line": 1056,
           "loc": 94
         },
         {
           "name": "ground_action_completion",
-          "line": 2244,
+          "line": 2221,
           "loc": 94
         },
         {
           "name": "append_tool_results",
-          "line": 774,
+          "line": 751,
           "loc": 93
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4248,
+          "line": 4201,
           "loc": 93
         },
         {
           "name": "compute_final_metrics",
-          "line": 1293,
+          "line": 1270,
           "loc": 88
         },
         {
           "name": "trim_route_request_messages",
-          "line": 507,
+          "line": 484,
           "loc": 76
         },
         {
           "name": "reference_resolution_hint",
-          "line": 1850,
+          "line": 1827,
           "loc": 75
         },
         {
           "name": "project_aci_trace",
-          "line": 1659,
+          "line": 1636,
           "loc": 73
         },
         {
           "name": "project_post_result_transition",
-          "line": 4501,
+          "line": 4454,
           "loc": 69
         },
         {
           "name": "build_base_prompt",
-          "line": 336,
+          "line": 313,
           "loc": 67
         },
         {
           "name": "minimal_aci_model_fallback_messages",
-          "line": 2549,
+          "line": 2526,
           "loc": 65
         },
         {
           "name": "minimal_odysseus_doc_messages",
-          "line": 1175,
+          "line": 1152,
           "loc": 62
         },
         {
           "name": "minimal_aci_answer_messages",
-          "line": 2487,
+          "line": 2464,
           "loc": 60
         },
         {
           "name": "classify_post_result",
-          "line": 4440,
+          "line": 4393,
           "loc": 59
         },
         {
           "name": "skill_index_prompt",
-          "line": 244,
+          "line": 221,
           "loc": 56
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 4654,
+          "line": 4607,
           "loc": 56
         },
         {
           "name": "canonical_read_failure_answer",
-          "line": 3438,
+          "line": 3415,
           "loc": 53
         },
         {
           "name": "canonical_action_failure_answer",
-          "line": 3493,
+          "line": 3470,
           "loc": 52
         },
         {
           "name": "assemble_prompt",
-          "line": 191,
+          "line": 168,
           "loc": 51
         },
         {
           "name": "parse_decision_json",
-          "line": 4358,
+          "line": 4311,
           "loc": 50
         },
         {
           "name": "email_list_summary_from_tool_output",
-          "line": 956,
+          "line": 933,
           "loc": 48
         },
         {
           "name": "email_read_summary_from_tool_output",
-          "line": 1006,
+          "line": 983,
           "loc": 48
         },
         {
           "name": "project_model_decision",
-          "line": 2997,
+          "line": 2974,
           "loc": 48
         },
         {
           "name": "project_result_observation",
-          "line": 4572,
+          "line": 4525,
           "loc": 48
         },
         {
           "name": "project_final_answer",
-          "line": 3622,
+          "line": 3575,
           "loc": 47
         },
         {
           "name": "compile_turn_contract",
-          "line": 638,
+          "line": 615,
           "loc": 44
         },
         {
           "name": "classify_no_action_reason",
-          "line": 1454,
+          "line": 1431,
           "loc": 44
         },
         {
           "name": "is_aci_general_fallback_candidate",
-          "line": 1515,
+          "line": 1492,
           "loc": 44
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 4204,
+          "line": 4157,
           "loc": 42
         },
         {
           "name": "is_contextual_reference_followup",
-          "line": 1810,
+          "line": 1787,
           "loc": 38
         },
         {
           "name": "assistant_requested_followup",
-          "line": 1986,
+          "line": 1963,
           "loc": 38
         },
         {
           "name": "communications_calendar_summary_from_tool_output",
-          "line": 902,
+          "line": 879,
           "loc": 37
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 3867,
+          "line": 3820,
           "loc": 37
         },
         {
           "name": "resolve_turn_intent",
-          "line": 585,
+          "line": 562,
           "loc": 33
         },
         {
           "name": "select_prompt_tools",
-          "line": 302,
+          "line": 279,
           "loc": 32
         },
         {
           "name": "canonical_unverified_action_answer",
-          "line": 3547,
+          "line": 3524,
           "loc": 32
         },
         {
           "name": "project_capability_palette",
-          "line": 3671,
+          "line": 3624,
           "loc": 32
         },
         {
           "name": "calendar_list_summary_from_tool_output",
-          "line": 869,
+          "line": 846,
           "loc": 31
         },
         {
           "name": "recent_context_for_retrieval",
-          "line": 2026,
+          "line": 2003,
           "loc": 31
         },
         {
           "name": "resolve_decision_outcome",
-          "line": 2964,
+          "line": 2941,
           "loc": 31
         },
         {
           "name": "action_trace",
-          "line": 2353,
+          "line": 2330,
           "loc": 30
         },
         {
           "name": "resolve_invalid_decision",
-          "line": 2933,
+          "line": 2910,
           "loc": 29
         },
         {
           "name": "should_project_safe_auto_continuation",
-          "line": 1629,
+          "line": 1606,
           "loc": 28
         },
         {
           "name": "selected_action_for_decision",
-          "line": 4410,
+          "line": 4363,
           "loc": 28
         },
         {
           "name": "resolve_turn_disposition",
-          "line": 2616,
+          "line": 2593,
           "loc": 27
         },
         {
           "name": "minimal_odysseus_general_messages",
-          "line": 1265,
+          "line": 1242,
           "loc": 26
         },
         {
           "name": "tiered",
-          "line": 2718,
+          "line": 2695,
           "loc": 26
         },
         {
           "name": "hard_turn_capability_directive",
-          "line": 747,
+          "line": 724,
           "loc": 25
         },
         {
           "name": "domain_rules_for_tools",
-          "line": 146,
+          "line": 123,
           "loc": 24
         },
         {
           "name": "minimal_odysseus_notes_messages",
-          "line": 1239,
+          "line": 1216,
           "loc": 24
         },
         {
           "name": "usage_bucket",
-          "line": 1561,
+          "line": 1538,
           "loc": 24
         },
         {
           "name": "classify_action_escalation",
-          "line": 3705,
+          "line": 3658,
           "loc": 24
         },
         {
           "name": "hard_action_followup_hint",
-          "line": 722,
+          "line": 699,
           "loc": 23
         },
         {
           "name": "build_active_plan_note",
-          "line": 1383,
+          "line": 1360,
           "loc": 23
         },
         {
           "name": "hard_filter_actions",
-          "line": 3123,
+          "line": 3100,
           "loc": 23
         },
         {
           "name": "stream_aci_turn",
-          "line": 75,
+          "line": 52,
           "loc": 22
         },
         {
           "name": "_recent_user_context",
-          "line": 1952,
+          "line": 1929,
           "loc": 22
         },
         {
           "name": "ody_qwen_terminal_tool_summary",
-          "line": 1056,
+          "line": 1033,
           "loc": 21
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 4622,
+          "line": 4575,
           "loc": 20
         },
         {
           "name": "from_runtime_profile",
-          "line": 3083,
+          "line": 3060,
           "loc": 20
         },
         {
           "name": "expects_canonical_action",
-          "line": 1433,
+          "line": 1410,
           "loc": 19
         },
         {
           "name": "workspace_coding_rules",
-          "line": 115,
+          "line": 92,
           "loc": 18
         },
         {
           "name": "build_actions_snapshot",
-          "line": 1603,
+          "line": 1580,
           "loc": 18
         },
         {
           "name": "has_stored_canonical_evidence",
-          "line": 2392,
+          "line": 2369,
           "loc": 18
         },
         {
           "name": "matches_resolved_canonical_read",
-          "line": 2448,
+          "line": 2425,
           "loc": 18
         },
         {
           "name": "domain_tools_for_projection",
-          "line": 172,
+          "line": 149,
           "loc": 17
         },
         {
           "name": "compatibility_intent_projection",
-          "line": 620,
+          "line": 597,
           "loc": 16
         },
         {
           "name": "resolve_decision_recovery",
-          "line": 2915,
-          "loc": 16
-        },
-        {
-          "name": "canonical_result_answer",
-          "line": 3604,
+          "line": 2892,
           "loc": 16
         },
         {
           "name": "has_canonical_memory_evidence",
-          "line": 2412,
+          "line": 2389,
+          "loc": 15
+        },
+        {
+          "name": "canonical_result_answer",
+          "line": 3558,
           "loc": 15
         },
         {
           "name": "validate_capability_creation_request",
-          "line": 3906,
+          "line": 3859,
           "loc": 15
         },
         {
           "name": "local_computer_rules",
-          "line": 99,
+          "line": 76,
           "loc": 14
         },
         {
           "name": "usage_bucket_summary",
-          "line": 1587,
+          "line": 1564,
           "loc": 14
         },
         {
           "name": "last_user_message",
-          "line": 2059,
+          "line": 2036,
           "loc": 14
         },
         {
           "name": "semanticize_internal_action_names",
-          "line": 2471,
+          "line": 2448,
           "loc": 14
         },
         {
           "name": "validate",
-          "line": 2860,
+          "line": 2837,
           "loc": 14
         },
         {
           "name": "_format_email_summary_item",
-          "line": 941,
+          "line": 918,
           "loc": 13
         },
         {
           "name": "is_canonical_read_contract",
-          "line": 1500,
+          "line": 1477,
           "loc": 13
         },
         {
           "name": "canonical_read_fast_path_payload",
-          "line": 3157,
+          "line": 3134,
           "loc": 13
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 4343,
+          "line": 4296,
           "loc": 13
         },
         {
           "name": "prepend_agent_directive",
-          "line": 1408,
+          "line": 1385,
           "loc": 12
         },
         {
           "name": "insert_before_latest_user",
-          "line": 2080,
+          "line": 2057,
           "loc": 12
         },
         {
           "name": "resolved_tool_event_name",
-          "line": 2340,
+          "line": 2317,
           "loc": 11
         },
         {
           "name": "effective_context",
-          "line": 3105,
+          "line": 3082,
           "loc": 11
         },
         {
           "name": "deterministic_reference_acknowledgement",
-          "line": 1927,
+          "line": 1904,
           "loc": 10
         },
         {
           "name": "model_projection",
-          "line": 2838,
+          "line": 2815,
           "loc": 10
         },
         {
           "name": "effective_tool_section",
-          "line": 135,
+          "line": 112,
           "loc": 9
         },
         {
           "name": "hard_action_fallback_command",
-          "line": 712,
+          "line": 689,
           "loc": 8
         },
         {
           "name": "is_contextual_retry_continuation",
-          "line": 1976,
+          "line": 1953,
           "loc": 8
         },
         {
           "name": "prefetched_explicit_memory_result",
-          "line": 2429,
+          "line": 2406,
           "loc": 8
         },
         {
+          "name": "__getattr__",
+          "line": 43,
+          "loc": 7
+        },
+        {
           "name": "successful_deterministic_read_result",
-          "line": 2439,
+          "line": 2416,
           "loc": 7
         },
         {
           "name": "model_burden",
-          "line": 4712,
+          "line": 4665,
           "loc": 6
         },
         {
           "name": "without_protection",
-          "line": 523,
+          "line": 500,
           "loc": 5
         },
         {
-          "name": "canonical_recipe_mutation_answer",
-          "line": 63,
-          "loc": 4
-        },
-        {
-          "name": "canonical_recipe_read_answer",
-          "line": 69,
-          "loc": 4
-        },
-        {
           "name": "hard_action_hint",
-          "line": 697,
+          "line": 674,
           "loc": 4
         },
         {
           "name": "detect_runaway_call",
-          "line": 1623,
+          "line": 1600,
           "loc": 4
         },
         {
           "name": "adaptive_shortlist",
-          "line": 3148,
+          "line": 3125,
           "loc": 4
         },
         {
           "name": "with_fingerprint",
-          "line": 2713,
+          "line": 2690,
           "loc": 4
         },
         {
           "name": "intent_requires_action",
-          "line": 1428,
+          "line": 1405,
           "loc": 3
         },
         {
           "name": "user_turn_count",
-          "line": 2075,
+          "line": 2052,
           "loc": 3
         },
         {
           "name": "looks_like_destructive_request",
-          "line": 2239,
+          "line": 2216,
           "loc": 3
         },
         {
           "name": "state_fingerprint",
-          "line": 3118,
+          "line": 3095,
           "loc": 3
         },
         {
           "name": "looks_like_success_claim",
-          "line": 2235,
+          "line": 2212,
           "loc": 2
         }
       ],
       "largest_functions": [
         {
           "name": "project_action_selection",
-          "line": 3923,
+          "line": 3876,
           "loc": 279
         },
         {
           "name": "canonical_tool_result_projection",
-          "line": 3172,
+          "line": 3149,
           "loc": 264
         },
         {
           "name": "provisional_intent_projection",
-          "line": 2094,
+          "line": 2071,
           "loc": 123
         },
         {
           "name": "compile_composite_action",
-          "line": 3731,
+          "line": 3684,
           "loc": 104
         },
         {
           "name": "finalize_prompt_messages",
-          "line": 405,
+          "line": 382,
           "loc": 100
         },
         {
           "name": "minimal_recent_notes_tool_context_message",
-          "line": 1079,
+          "line": 1056,
           "loc": 94
         },
         {
           "name": "ground_action_completion",
-          "line": 2244,
+          "line": 2221,
           "loc": 94
         },
         {
           "name": "append_tool_results",
-          "line": 774,
+          "line": 751,
           "loc": 93
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4248,
+          "line": 4201,
           "loc": 93
         },
         {
           "name": "compute_final_metrics",
-          "line": 1293,
+          "line": 1270,
           "loc": 88
         },
         {
           "name": "trim_route_request_messages",
-          "line": 507,
+          "line": 484,
           "loc": 76
         },
         {
           "name": "reference_resolution_hint",
-          "line": 1850,
+          "line": 1827,
           "loc": 75
         },
         {
           "name": "project_aci_trace",
-          "line": 1659,
+          "line": 1636,
           "loc": 73
         },
         {
           "name": "project_post_result_transition",
-          "line": 4501,
+          "line": 4454,
           "loc": 69
         },
         {
           "name": "build_base_prompt",
-          "line": 336,
+          "line": 313,
           "loc": 67
         },
         {
           "name": "minimal_aci_model_fallback_messages",
-          "line": 2549,
+          "line": 2526,
           "loc": 65
         },
         {
           "name": "minimal_odysseus_doc_messages",
-          "line": 1175,
+          "line": 1152,
           "loc": 62
         },
         {
           "name": "minimal_aci_answer_messages",
-          "line": 2487,
+          "line": 2464,
           "loc": 60
         },
         {
           "name": "classify_post_result",
-          "line": 4440,
+          "line": 4393,
           "loc": 59
         },
         {
           "name": "skill_index_prompt",
-          "line": 244,
+          "line": 221,
           "loc": 56
         }
       ]
     },
     "src/intent_contracts.py": {
-      "loc": 3444,
+      "loc": 3479,
       "functions": [
         {
           "name": "compile_intent",
-          "line": 2101,
+          "line": 2136,
           "loc": 778
         },
         {
           "name": "normalize_operational_intent_evidence",
-          "line": 1026,
+          "line": 1061,
           "loc": 210
         },
         {
           "name": "classify_compatibility_request",
-          "line": 3275,
+          "line": 3310,
           "loc": 170
         },
         {
           "name": "resolve_structured_reference",
-          "line": 1900,
+          "line": 1935,
           "loc": 130
         },
         {
           "name": "recipe_import_review_draft",
-          "line": 583,
+          "line": 618,
           "loc": 111
         },
         {
           "name": "_recipe_ingredients",
-          "line": 263,
+          "line": 298,
           "loc": 109
         },
         {
           "name": "validate_bound_result",
-          "line": 3171,
+          "line": 3206,
           "loc": 102
         },
         {
           "name": "recipe_import_draft",
-          "line": 443,
+          "line": 478,
           "loc": 95
         },
         {
           "name": "resolve_intent",
-          "line": 2938,
+          "line": 2973,
           "loc": 91
         },
         {
           "name": "recipe_import_review_draft_from_payload",
-          "line": 696,
+          "line": 731,
           "loc": 68
         },
         {
           "name": "_operation",
-          "line": 2032,
+          "line": 2067,
           "loc": 67
         },
         {
           "name": "from_payload",
-          "line": 85,
+          "line": 120,
           "loc": 66
         },
         {
           "name": "apply_recipe_owner_transformations",
-          "line": 153,
+          "line": 188,
           "loc": 56
         },
         {
           "name": "resolve_continuation",
-          "line": 2881,
+          "line": 2916,
           "loc": 55
         },
         {
           "name": "validate_result",
-          "line": 3120,
+          "line": 3155,
           "loc": 49
         },
         {
           "name": "explicitly_allows_diagnostic_install",
-          "line": 1429,
+          "line": 1464,
           "loc": 46
         },
         {
           "name": "validate_contracts",
-          "line": 3031,
+          "line": 3066,
           "loc": 46
         },
         {
           "name": "recipe_import_review",
-          "line": 540,
+          "line": 575,
           "loc": 41
         },
         {
           "name": "canonical_read_action",
-          "line": 1850,
+          "line": 1885,
           "loc": 39
         },
         {
           "name": "recipe_create_draft",
-          "line": 403,
+          "line": 438,
           "loc": 38
         },
         {
           "name": "suppress_automatic_skills",
-          "line": 845,
+          "line": 880,
           "loc": 33
         },
         {
           "name": "is_bounded_owner_capability_turn",
-          "line": 1539,
+          "line": 1574,
           "loc": 30
         },
         {
           "name": "_recipe_name",
-          "line": 234,
+          "line": 269,
           "loc": 27
         },
         {
           "name": "_video_recipe_sections",
-          "line": 374,
+          "line": 409,
           "loc": 27
         },
         {
           "name": "normalize_asset_inventory_intent",
-          "line": 1239,
+          "line": 1274,
           "loc": 25
         },
         {
           "name": "explicit_private_discovery_cidr",
-          "line": 1356,
+          "line": 1391,
           "loc": 24
         },
         {
           "name": "normalize_homelab_intent",
-          "line": 1283,
+          "line": 1318,
           "loc": 23
         },
         {
           "name": "_recipe_section",
-          "line": 211,
+          "line": 246,
           "loc": 21
         },
         {
           "name": "generated_parity_matrix",
-          "line": 3079,
+          "line": 3114,
           "loc": 21
         },
         {
           "name": "looks_like_notes_calendar_followup",
-          "line": 1007,
+          "line": 1042,
           "loc": 18
         },
         {
           "name": "looks_like_notes_request",
-          "line": 988,
+          "line": 1023,
           "loc": 17
         },
         {
           "name": "looks_like_explicit_skill_request",
-          "line": 827,
+          "line": 862,
           "loc": 16
         },
         {
           "name": "is_casual_low_signal",
-          "line": 894,
+          "line": 929,
           "loc": 16
         },
         {
           "name": "result_status",
-          "line": 3102,
+          "line": 3137,
           "loc": 16
         },
         {
           "name": "detect_admin_intent",
-          "line": 810,
+          "line": 845,
           "loc": 15
         },
         {
           "name": "looks_like_local_computer_request",
-          "line": 930,
+          "line": 965,
           "loc": 15
         },
         {
           "name": "asset_read_request",
-          "line": 1266,
+          "line": 1301,
           "loc": 15
         },
         {
           "name": "_is_continuation_phrase",
-          "line": 1490,
+          "line": 1525,
           "loc": 15
         },
         {
           "name": "as_payload",
-          "line": 69,
+          "line": 104,
           "loc": 14
         },
         {
           "name": "as_dict",
-          "line": 1592,
+          "line": 1627,
           "loc": 13
         },
         {
           "name": "is_explicit_continuation",
-          "line": 1342,
+          "line": 1377,
           "loc": 12
         },
         {
           "name": "network_substantive_fallback_command",
-          "line": 1477,
+          "line": 1512,
           "loc": 11
         },
         {
           "name": "fuzzy",
-          "line": 1041,
+          "line": 1076,
           "loc": 10
         },
         {
           "name": "is_explicit_network_discovery_request",
-          "line": 1409,
+          "line": 1444,
           "loc": 9
         },
         {
           "name": "looks_like_workspace_coding_request",
-          "line": 968,
+          "line": 1003,
           "loc": 8
         },
         {
           "name": "explicitly_references_missing_workspace",
-          "line": 978,
+          "line": 1013,
           "loc": 8
         },
         {
           "name": "is_network_prerequisite_request",
-          "line": 1399,
+          "line": 1434,
           "loc": 8
         },
         {
           "name": "as_dict",
-          "line": 1617,
+          "line": 1652,
           "loc": 8
         },
         {
           "name": "network_discovery_request_cidr",
-          "line": 1382,
+          "line": 1417,
           "loc": 7
         },
         {
           "name": "is_network_service_enumeration_request",
-          "line": 1420,
+          "line": 1455,
           "loc": 7
         },
         {
           "name": "_depth",
-          "line": 1891,
+          "line": 1926,
           "loc": 7
         },
         {
           "name": "has_network_cidr_candidate",
-          "line": 1391,
+          "line": 1426,
           "loc": 6
         },
         {
           "name": "_number",
-          "line": 319,
+          "line": 354,
           "loc": 6
         },
         {
           "name": "as_dict",
-          "line": 1525,
+          "line": 1560,
           "loc": 5
         },
         {
           "name": "recipe_requested_name",
-          "line": 40,
+          "line": 75,
           "loc": 4
         },
         {
           "name": "recipe_source_url",
-          "line": 46,
+          "line": 81,
           "loc": 4
         },
         {
           "name": "canonical_domain_projection",
-          "line": 1844,
+          "line": 1879,
           "loc": 4
         },
         {
+          "name": "note_mutation_payload",
+          "line": 35,
+          "loc": 3
+        },
+        {
+          "name": "scheduled_task_create_payload",
+          "line": 40,
+          "loc": 3
+        },
+        {
+          "name": "inventory_add_item_payload",
+          "line": 45,
+          "loc": 3
+        },
+        {
+          "name": "inventory_consume_stock_payload",
+          "line": 50,
+          "loc": 3
+        },
+        {
+          "name": "inventory_move_item_payload",
+          "line": 55,
+          "loc": 3
+        },
+        {
+          "name": "memory_mutation_payload",
+          "line": 60,
+          "loc": 3
+        },
+        {
+          "name": "work_project_create_payload",
+          "line": 65,
+          "loc": 3
+        },
+        {
+          "name": "work_task_create_payload",
+          "line": 70,
+          "loc": 3
+        },
+        {
           "name": "recipe_create_payload",
-          "line": 766,
+          "line": 801,
           "loc": 3
         },
         {
           "name": "targets",
-          "line": 162,
+          "line": 197,
           "loc": 3
         },
         {
           "name": "matches",
-          "line": 166,
+          "line": 201,
           "loc": 3
         },
         {
           "name": "phrase",
-          "line": 1038,
+          "line": 1073,
           "loc": 2
         },
         {
           "name": "has",
-          "line": 3337,
+          "line": 3372,
           "loc": 2
         }
       ],
       "largest_functions": [
         {
           "name": "compile_intent",
-          "line": 2101,
+          "line": 2136,
           "loc": 778
         },
         {
           "name": "normalize_operational_intent_evidence",
-          "line": 1026,
+          "line": 1061,
           "loc": 210
         },
         {
           "name": "classify_compatibility_request",
-          "line": 3275,
+          "line": 3310,
           "loc": 170
         },
         {
           "name": "resolve_structured_reference",
-          "line": 1900,
+          "line": 1935,
           "loc": 130
         },
         {
           "name": "recipe_import_review_draft",
-          "line": 583,
+          "line": 618,
           "loc": 111
         },
         {
           "name": "_recipe_ingredients",
-          "line": 263,
+          "line": 298,
           "loc": 109
         },
         {
           "name": "validate_bound_result",
-          "line": 3171,
+          "line": 3206,
           "loc": 102
         },
         {
           "name": "recipe_import_draft",
-          "line": 443,
+          "line": 478,
           "loc": 95
         },
         {
           "name": "resolve_intent",
-          "line": 2938,
+          "line": 2973,
           "loc": 91
         },
         {
           "name": "recipe_import_review_draft_from_payload",
-          "line": 696,
+          "line": 731,
           "loc": 68
         },
         {
           "name": "_operation",
-          "line": 2032,
+          "line": 2067,
           "loc": 67
         },
         {
           "name": "from_payload",
-          "line": 85,
+          "line": 120,
           "loc": 66
         },
         {
           "name": "apply_recipe_owner_transformations",
-          "line": 153,
+          "line": 188,
           "loc": 56
         },
         {
           "name": "resolve_continuation",
-          "line": 2881,
+          "line": 2916,
           "loc": 55
         },
         {
           "name": "validate_result",
-          "line": 3120,
+          "line": 3155,
           "loc": 49
         },
         {
           "name": "explicitly_allows_diagnostic_install",
-          "line": 1429,
+          "line": 1464,
           "loc": 46
         },
         {
           "name": "validate_contracts",
-          "line": 3031,
+          "line": 3066,
           "loc": 46
         },
         {
           "name": "recipe_import_review",
-          "line": 540,
+          "line": 575,
           "loc": 41
         },
         {
           "name": "canonical_read_action",
-          "line": 1850,
+          "line": 1885,
           "loc": 39
         },
         {
           "name": "recipe_create_draft",
-          "line": 403,
+          "line": 438,
           "loc": 38
         }
       ]
@@ -1966,6 +2002,23 @@
           "name": "active_module_ids",
           "line": 117,
           "loc": 2
+        }
+      ]
+    },
+    "src/result_renderers/registry.py": {
+      "loc": 62,
+      "functions": [
+        {
+          "name": "render_result",
+          "line": 37,
+          "loc": 23
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "render_result",
+          "line": 37,
+          "loc": 23
         }
       ]
     },
@@ -2639,10 +2692,10 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 19029,
+  "semantic_control_plane_loc": 19079,
   "central_domain_conditionals": 118,
-  "central_canonical_answer_functions": 6,
-  "canonical_answer_dispatch_mentions": 10,
+  "central_canonical_answer_functions": 4,
+  "canonical_answer_dispatch_mentions": 8,
   "compatibility_aliases": 4,
   "capability_action_map_declarations": 9,
   "production_legacy_semantic_imports": [
@@ -2680,7 +2733,7 @@
     "src/task_scheduler.py:2198:from routes.email_helpers import _get_email_config",
     "src/task_scheduler.py:2302:from routes.prefs_routes import _load_for_user",
     "src/tool_execution.py:2277:from routes.contacts_routes import _fetch_contacts",
-    "src/aci.py:262:from routes.prefs_routes import _load_for_user",
+    "src/aci.py:239:from routes.prefs_routes import _load_for_user",
     "src/agent_loop.py:946:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/agent_loop.py:2137:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/tools/calendar.py:23:from routes.calendar_routes import (",
@@ -2795,15 +2848,8 @@
       "recipes",
       "work"
     ],
-    "eagerly_imported_feature_modules": [
-      "src/aci.py:29:from src.result_renderers.work import (",
-      "src/aci.py:33:from src.result_renderers.memory import (",
-      "src/intent_contracts.py:28:from src.domain_resolvers.reminders import note_mutation_payload, scheduled_task_create_payload",
-      "src/intent_contracts.py:29:from src.domain_resolvers.inventory import (",
-      "src/intent_contracts.py:34:from src.domain_resolvers.memory import memory_mutation_payload",
-      "src/intent_contracts.py:35:from src.domain_resolvers.work import work_project_create_payload, work_task_create_payload"
-    ],
-    "feature_specific_kernel_import_count": 6,
+    "eagerly_imported_feature_modules": [],
+    "feature_specific_kernel_import_count": 0,
     "representative_activation": {
       "unrelated_request": [],
       "recipe_request": [
@@ -2814,6 +2860,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "15b2b8a9113c91a4f5bee6b0f7ec88e0c34ed9b8",
+  "source_sha": "ac511bb554d4b453953edafb9c2b42d32758fe30",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
