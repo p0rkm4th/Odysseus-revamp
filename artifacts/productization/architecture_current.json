@@ -248,17 +248,17 @@
       ]
     },
     "src/aci.py": {
-      "loc": 4681,
+      "loc": 4677,
       "functions": [
         {
           "name": "project_action_selection",
-          "line": 3887,
+          "line": 3883,
           "loc": 279
         },
         {
           "name": "canonical_tool_result_projection",
           "line": 3151,
-          "loc": 264
+          "loc": 260
         },
         {
           "name": "provisional_intent_projection",
@@ -267,7 +267,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3695,
+          "line": 3691,
           "loc": 104
         },
         {
@@ -292,7 +292,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4212,
+          "line": 4208,
           "loc": 93
         },
         {
@@ -317,7 +317,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4465,
+          "line": 4461,
           "loc": 69
         },
         {
@@ -342,7 +342,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4404,
+          "line": 4400,
           "loc": 59
         },
         {
@@ -352,17 +352,17 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 4618,
+          "line": 4614,
           "loc": 56
         },
         {
           "name": "canonical_read_failure_answer",
-          "line": 3417,
+          "line": 3413,
           "loc": 53
         },
         {
           "name": "canonical_action_failure_answer",
-          "line": 3472,
+          "line": 3468,
           "loc": 52
         },
         {
@@ -372,12 +372,12 @@
         },
         {
           "name": "project_final_answer",
-          "line": 3583,
+          "line": 3579,
           "loc": 50
         },
         {
           "name": "parse_decision_json",
-          "line": 4322,
+          "line": 4318,
           "loc": 50
         },
         {
@@ -397,7 +397,7 @@
         },
         {
           "name": "project_result_observation",
-          "line": 4536,
+          "line": 4532,
           "loc": 48
         },
         {
@@ -417,7 +417,7 @@
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 4168,
+          "line": 4164,
           "loc": 42
         },
         {
@@ -437,7 +437,7 @@
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 3831,
+          "line": 3827,
           "loc": 37
         },
         {
@@ -452,12 +452,12 @@
         },
         {
           "name": "canonical_unverified_action_answer",
-          "line": 3526,
+          "line": 3522,
           "loc": 32
         },
         {
           "name": "project_capability_palette",
-          "line": 3635,
+          "line": 3631,
           "loc": 32
         },
         {
@@ -492,7 +492,7 @@
         },
         {
           "name": "selected_action_for_decision",
-          "line": 4374,
+          "line": 4370,
           "loc": 28
         },
         {
@@ -532,7 +532,7 @@
         },
         {
           "name": "classify_action_escalation",
-          "line": 3669,
+          "line": 3665,
           "loc": 24
         },
         {
@@ -567,12 +567,12 @@
         },
         {
           "name": "canonical_result_answer",
-          "line": 3560,
+          "line": 3556,
           "loc": 21
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 4586,
+          "line": 4582,
           "loc": 20
         },
         {
@@ -627,7 +627,7 @@
         },
         {
           "name": "validate_capability_creation_request",
-          "line": 3870,
+          "line": 3866,
           "loc": 15
         },
         {
@@ -672,7 +672,7 @@
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 4307,
+          "line": 4303,
           "loc": 13
         },
         {
@@ -737,7 +737,7 @@
         },
         {
           "name": "model_burden",
-          "line": 4676,
+          "line": 4672,
           "loc": 6
         },
         {
@@ -794,13 +794,13 @@
       "largest_functions": [
         {
           "name": "project_action_selection",
-          "line": 3887,
+          "line": 3883,
           "loc": 279
         },
         {
           "name": "canonical_tool_result_projection",
           "line": 3151,
-          "loc": 264
+          "loc": 260
         },
         {
           "name": "provisional_intent_projection",
@@ -809,7 +809,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3695,
+          "line": 3691,
           "loc": 104
         },
         {
@@ -834,7 +834,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4212,
+          "line": 4208,
           "loc": 93
         },
         {
@@ -859,7 +859,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4465,
+          "line": 4461,
           "loc": 69
         },
         {
@@ -884,7 +884,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4404,
+          "line": 4400,
           "loc": 59
         },
         {
@@ -2465,29 +2465,39 @@
       ]
     },
     "src/result_renderers/memory.py": {
-      "loc": 76,
+      "loc": 79,
       "functions": [
         {
           "name": "canonical_memory_mutation_answer",
-          "line": 42,
+          "line": 46,
           "loc": 34
         },
         {
           "name": "canonical_memory_read_answer",
-          "line": 9,
+          "line": 13,
           "loc": 31
+        },
+        {
+          "name": "project_memory_result",
+          "line": 9,
+          "loc": 2
         }
       ],
       "largest_functions": [
         {
           "name": "canonical_memory_mutation_answer",
-          "line": 42,
+          "line": 46,
           "loc": 34
         },
         {
           "name": "canonical_memory_read_answer",
-          "line": 9,
+          "line": 13,
           "loc": 31
+        },
+        {
+          "name": "project_memory_result",
+          "line": 9,
+          "loc": 2
         }
       ]
     },
@@ -2793,7 +2803,7 @@
       "largest_functions": []
     }
   },
-  "semantic_control_plane_loc": 19128,
+  "semantic_control_plane_loc": 19127,
   "central_domain_conditionals": 112,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -2972,6 +2982,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "e9930b0af118c1eacc9e999b49eaf86fab54185c",
+  "source_sha": "25d2569f640e3d95008ce015e5ff92c44e9a083e",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
