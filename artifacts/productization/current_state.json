@@ -338,15 +338,15 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T02:43:15-05:00",
+    "measured_at": "2026-08-31T03:01:00-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
-    "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
-    "full_regression": "7120 passed, 9 skipped, 149 warnings in 304.78s on content-identical application tree 6ce66c38; current source 18c03dab verified by focused 329 passed, 6 skipped",
+    "focused_migration_tests": "166 passed, 1 warning",
+    "full_regression": "7120 passed, 9 skipped, 149 warnings in 304.78s on content-identical application tree 6ce66c38; current source 7a208165 verified by focused 329 passed, 6 skipped plus renderer slice 166 passed",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "18c03dab81ae61a1eb69ca15d9fcd48d73577bd8",
-    "evidence_commit_sha": "18c03dab",
-    "latest_candidate_browser_replay": "PASS: exact 18c03dab candidate browser_realistic_acceptance; no owner data was touched",
-    "latest_candidate_holdout": "16/16 answers, 15/16 trajectory assertions; unchanged semantic behavior; remaining assertion evaluator/environment"
+    "application_source_sha": "7a20816561d143a1331ca4830af7fbe6634e53f5",
+    "evidence_commit_sha": "7a208165",
+    "latest_candidate_browser_replay": "PASS: exact 18c03dab candidate browser_realistic_acceptance; source 7a208165 is not yet built; no owner data was touched",
+    "latest_candidate_holdout": "16/16 answers, 15/16 trajectory assertions on exact 18c03dab; source 7a208165 requires candidate rebuild"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
