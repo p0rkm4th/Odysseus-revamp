@@ -165,6 +165,16 @@ def modularity_metrics() -> dict[str, Any]:
             "installed_modules": len(manifests),
             "enabled_modules": len(enabled),
             "enabled_module_ids": sorted(enabled),
+            "enabled_capabilities": len(manager.enabled_capability_ids()),
+            "capabilities_by_enabled_module": {
+                module_id: len(manifests[module_id].capability_ids)
+                for module_id in sorted(enabled)
+            },
+            # This is the cheap pre-selection burden visible to the kernel.
+            # Request-specific shortlist/schema counts are emitted by runtime
+            # telemetry; keeping the catalog count here makes boot/config
+            # regressions measurable without importing feature implementations.
+            "schemas_available_before_selection": len(manager.enabled_capability_ids()),
             "eagerly_imported_feature_modules": feature_imports,
             "feature_specific_kernel_import_count": len(feature_imports),
             "representative_activation": {
