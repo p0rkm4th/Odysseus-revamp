@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-31T14:36:00-05:00",
+  "captured_at": "2026-08-31T14:45:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
+  "branch_head": "ab40524b2b6e4da5158e5cfa7b2eedaaf0f11c87",
   "application_source_sha": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
   "source_head": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
-  "remote_head": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
-  "evidence_commit_sha": "e4e1c8f9d6b61225ccb107f0feddb3c759fc4f1d",
+  "remote_head": "ab40524b2b6e4da5158e5cfa7b2eedaaf0f11c87",
+  "evidence_commit_sha": "ab40524b2b6e4da5158e5cfa7b2eedaaf0f11c87",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "ahead_behind_main": {
@@ -19,7 +19,7 @@
     "image_digest": "odysseus@sha256:d68a1329d075a312dd8d64a48603204aa8289d1462d007c44eb2d94d14a3de70",
     "oci_revision": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
     "source_marker": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
-    "status": "ISOLATED CANDIDATE; exact application source/marker/health verified; browser_realistic_acceptance PASS; Qwen holdout pending; no owner data touched"
+    "status": "ISOLATED CANDIDATE; exact application source/marker/health verified; browser_realistic_acceptance PASS; post-Recipe Qwen structural holdout replayed; no owner data touched"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -360,13 +360,13 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T09:27:43-05:00",
+    "measured_at": "2026-08-31T14:45:00-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
-    "focused_migration_tests": "104 passed, 1 warning after prompt-contract relocation on exact source 57db4024",
-    "full_regression": "7126 passed, 9 skipped, 149 warnings in 305.00s on exact committed source 57db4024",
+    "focused_migration_tests": "154 passed, 1 warning for Recipe/ACI lifecycle and resolver extraction on exact application source b141781e",
+    "full_regression": "7127 passed, 9 skipped, 149 warnings in 303.36s on exact application source b141781e",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "57db4024483d46d3dad3244175c5640a3302f293",
-    "evidence_commit_sha": "57db4024483d46d3dad3244175c5640a3302f293",
+    "application_source_sha": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
+    "evidence_commit_sha": "ab40524b2b6e4da5158e5cfa7b2eedaaf0f11c87",
     "latest_candidate_browser_replay": "PASS: exact b141781e candidate browser_realistic_acceptance on disposable port 7006; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
     "latest_candidate_holdout": "Exact b141781e post-Recipe-extraction live Qwen run: 9/9 structural trajectories, 0 errors/internal leaks/duplicate finals/abrupt EOF, 5 tool calls, 0 tool-index lookups; compact summary artifacts/productization/b141781e-live-holdout-summary.json; raw report retained at /tmp/b141781e-live-holdout.json; not a supported-domain functional score"
   },
