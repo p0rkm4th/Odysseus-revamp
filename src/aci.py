@@ -5232,7 +5232,17 @@ def project_action_selection(
     clarification_instruction = "HADES ACI CLARIFICATION MODE. Ask only for the missing bounded target or scope; do not claim execution."
     fast_path = None
     if (
-        frame.get("operation_class") == "READ" and frame.get("read_explicit") is True
+        (
+            (
+                frame.get("operation_class") == "READ" and frame.get("read_explicit") is True
+            )
+            or (
+                frame.get("domain_concept") == "NETWORK"
+                and frame.get("operation_class") == "EXECUTE"
+                and desired_action == "plan_network_discovery"
+                and network_cidr
+            )
+        )
         and desired_binding and desired_action and desired_binding in candidate_bindings
         and desired_binding not in disabled
         and contract.get("reason") not in {"target_required", "recipe_reference_required"}
@@ -5251,6 +5261,8 @@ def project_action_selection(
                     fast_path = {"action": "get", "asset": str(frame.get("entity_reference") or "")}
                 if desired_action == "summarize_owner_memory":
                     fast_path["query"] = query
+            if desired_action == "plan_network_discovery" and network_cidr:
+                fast_path["cidr"] = str(network_cidr)
             mode = SelectionMode.DIRECT_ACTION
     # Memory mutations are fully projected from the owner's ordinary request
     # above.  Do not ask a weak model to rediscover a bounded add/delete
