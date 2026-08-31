@@ -5307,3 +5307,16 @@ canonical inventory read journeys against disposable seeded state. False
 success, raw final Results, duplicate delivery, and abrupt EOF were all zero.
 The executable candidate was unchanged and the owner-dogfood lane was not
 touched.
+
+## Qualitative Recipe review-oracle correction — candidate `b91ff938` (2026-08-31)
+
+`OWNER-RECIPE-QUALITATIVE-REVIEW-001` initially failed because its acceptance
+contract required a review dialog for a complete owner-authored recipe whose
+non-numeric amounts were already semantically clear (`to taste` and `as
+needed`). This was classified as `TEST_ORACLE / ACCEPTANCE_CONTRACT`, not a
+runtime Recipe defect: the canonical lifecycle correctly committed and
+verified the recipe. The scenario now requires the GUI mutation, canonical
+qualitative/source-text readback, and reload durability, without requiring a
+review for normal culinary language. The exact candidate replay passed with 1
+turn, 1 mutation, 2 canonical readbacks, and zero false success, raw final
+Results, duplicate delivery, or abrupt EOF. No owner-dogfood state was touched.

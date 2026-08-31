@@ -217,9 +217,10 @@ async function seedRecipeCompositionAcceptanceState(page, {expiring = false, sho
 }
 
 async function seedQualitativeRecipeAcceptanceState(page) {
-  // Establish only the existing canonical recipe required by the review
-  // journey. The recipe under test still enters through owner chat and must
-  // remain uncommitted while qualitative amounts are reviewed.
+  // Establish only an existing canonical recipe so the recipe under test
+  // proves a new owner-chat mutation in a non-empty recipe book. Qualitative
+  // amounts with clear semantics are commit-ready and must not be routed to
+  // review merely because they are non-numeric.
   return page.evaluate(async () => {
     const response = await fetch('/api/recipes', {
       method: 'POST', credentials: 'same-origin',

@@ -122,9 +122,9 @@
       "fixture_profile": "qualitative-review-existing-recipe",
       "fixture_setup": "canonical_qualitative_existing_recipe",
       "turns": [
-        {"prompt": "Save this in my recipe book as \"Acceptance Taste Test\".\n\nIngredients\n- 1 cup rice\n- salt to taste\n- oil as needed\n\nInstructions\nCook the rice and season it.\n", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "commit_import", "tool_binding": "manage_recipes", "requires_effect": false, "ui_event": "recipe_import_review", "review_dialog": true, "editable_review_fields": ["name", "servings", "ingredient quantity", "ingredient unit", "instructions"], "must_include_any": ["review", "nothing has been saved", "amount"], "forbidden": ["successfully added", "saved successfully", "Done"]}}
+        {"prompt": "Save this in my recipe book as \"Acceptance Taste Test\".\n\nIngredients\n- 1 cup rice\n- salt to taste\n- oil as needed\n\nInstructions\nCook the rice and season it.\n", "expected": {"domain": "RECIPE", "operation": "CREATE", "answer_source": "DETERMINISTIC_RESULT", "action": "commit_import", "tool_binding": "manage_recipes", "requires_effect": true, "must_include_all": ["Acceptance Taste Test"], "forbidden": ["needs review", "nothing has been saved", "successfully added", "saved successfully", "Done"]}}
       ],
-      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 1}, "after": {"recipe_count": 1}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "recipe_count": 1}, "terminal": {"done": 1, "abrupt_eof": false}}
+      "expected": {"action": "manage_recipes", "tool_binding": "manage_recipes", "policy": "allowed", "approval": "not_required", "before": {"recipe_count": 1}, "after": {"recipe_name": "Acceptance Taste Test", "recipe_count": 2, "readback": true}, "readback": {"kind": "recipes", "endpoint": "/api/recipes", "contains_name": "Acceptance Taste Test", "requires_qualitative_amounts": true, "requires_source_text": true, "forbid_fabricated_quantities": true}, "terminal": {"done": 1, "abrupt_eof": false}}
     },
     {
       "id": "OWNER-RECIPE-URL-IMPORT-COMPLETE-001",
