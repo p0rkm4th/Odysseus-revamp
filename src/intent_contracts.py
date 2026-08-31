@@ -2702,7 +2702,24 @@ def compile_intent(
         concept = "HOMELAB_HOST"
         operation = "READ"
         read_explicit = True
-    if concept == "NETWORK" and _network_discovery_language:
+    # A discovery objective becomes an executable bounded plan only when the
+    # owner supplied a CIDR candidate.  Unscoped "deep dive" language remains
+    # a research/clarification outcome; current-network wording is not an
+    # authorization substitute.
+    if (
+        concept == "NETWORK"
+        and _network_discovery_language
+        and (
+            network_discovery_request_cidr(q)
+            or has_network_cidr_candidate(q)
+            or re.search(
+                r"\b(?:scan\w*|discover\w*|enumerat\w*|probe\w*|map)\b|"
+                r"\bdiscovery\s+(?:dive|mission)\b",
+                q,
+                re.IGNORECASE,
+            )
+        )
+    ):
         # The question can contain "what" and still be an executable
         # discovery objective.  A missing CIDR remains unauthorized/clarify-
         # bound below; current host context is not silently promoted to scope.

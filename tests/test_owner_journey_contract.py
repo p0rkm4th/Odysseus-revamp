@@ -36,7 +36,10 @@ def test_turn_expectations_pin_each_action_and_binding_without_inheriting_wrong_
     for case in payload["scenarios"]:
         for turn in case["turns"]:
             expected = turn["expected"]
-            if expected["operation"] in {"READ", "CREATE", "UPDATE", "DELETE", "EXECUTE"}:
+            if (
+                expected["operation"] in {"READ", "CREATE", "UPDATE", "DELETE", "EXECUTE"}
+                and expected.get("answer_source") != "CLARIFICATION"
+            ):
                 assert expected.get("action"), f"{case['id']} turn lacks action"
                 assert expected.get("tool_binding"), f"{case['id']} turn lacks tool binding"
                 capability = capability_for_tool(expected["tool_binding"])
