@@ -430,9 +430,10 @@
       "fixture_profile": "network-discovery-synthetic",
       "turns": [
         {"prompt": "deep dive my 192.168.10.0/33 network", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "CLARIFICATION", "must_include_any": ["valid", "scope", "CIDR", "clarif"]}},
-        {"prompt": "scan 192.168.10.0\\33", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "CLARIFICATION", "must_include_any": ["valid", "scope", "CIDR", "clarif"]}}
+        {"prompt": "scan 192.168.10.0\\33", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "CLARIFICATION", "must_include_any": ["valid", "scope", "CIDR", "clarif"]}},
+        {"prompt": "deep dive my 192.168.10.0\\xx network", "expected": {"domain": "NETWORK", "operation": "EXECUTE", "answer_source": "CLARIFICATION", "must_include_any": ["valid", "scope", "CIDR", "clarif"], "forbidden": ["192.168.10.0/24", "192.168.10.0/16", "scan started", "discovery complete"]}}
       ],
-      "expected": {"policy": "allowed", "terminal": {"done": 2, "abrupt_eof": false}}
+      "expected": {"policy": "allowed", "terminal": {"done": 3, "abrupt_eof": false}}
     }
   ]
 }
