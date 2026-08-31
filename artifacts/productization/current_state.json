@@ -1,20 +1,20 @@
 {
-  "captured_at": "2026-08-31T05:12:00-05:00",
+  "captured_at": "2026-08-31T05:25:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "2c2b089b",
-  "source_head": "50ae6e6b",
-  "remote_head": "2c2b089b",
+  "branch_head": "efd951d6",
+  "source_head": "efd951d6",
+  "remote_head": "efd951d6",
   "evidence_commit_sha": "2c2b089b",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "50ae6e6bec6b0953c2001f192baf0bd6e094c085",
-    "image": "odysseus:candidate-50ae6e6b",
-    "image_id": "sha256:b9a30a85eb42f8630857a163f012d22ecb195c1e51f259b3031c7be5f824ab08",
-    "image_digest": "sha256:b9a30a85eb42f8630857a163f012d22ecb195c1e51f259b3031c7be5f824ab08",
-    "oci_revision": "50ae6e6b",
-    "source_marker": "50ae6e6bec6b0953c2001f192baf0bd6e094c085",
-    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; focused regression 114 passed, 3 warnings; browser_realistic_acceptance PASS; full regression not rerun; no owner data touched"
+    "source_sha": "efd951d69031b9b35ca3eb62e4775f17582ec050",
+    "image": "odysseus:candidate-efd951d6",
+    "image_id": "sha256:6c589a2be2c71123a0ca400d71e77757ec7c5682c458114e97b2c41b4d68fe7d",
+    "image_digest": "sha256:6c589a2be2c71123a0ca400d71e77757ec7c5682c458114e97b2c41b4d68fe7d",
+    "oci_revision": "efd951d6",
+    "source_marker": "efd951d69031b9b35ca3eb62e4775f17582ec050",
+    "status": "ISOLATED CANDIDATE BUILT; exact source/marker/health verified; focused regression 113 passed, 3 warnings; browser_realistic_acceptance PASS; live owner corpus 43/43; full regression not rerun; no owner data touched"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -355,15 +355,15 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T05:12:00-05:00",
-    "artifact": "artifacts/productization/50ae6e6b-checkpoint.json",
-    "focused_migration_tests": "114 passed, 3 warnings on exact application source 50ae6e6b",
+    "measured_at": "2026-08-31T05:25:00-05:00",
+    "artifact": "artifacts/productization/efd951d6-architecture-metrics.json",
+    "focused_migration_tests": "113 passed, 3 warnings on exact application source efd951d6",
     "full_regression": "7119 passed, 9 skipped, 149 warnings in 306.92s on exact application source 49467b32",
-    "metrics_artifact": "artifacts/productization/50ae6e6b-checkpoint.json",
-    "application_source_sha": "50ae6e6bec6b0953c2001f192baf0bd6e094c085",
-    "evidence_commit_sha": "f5770225",
-    "latest_candidate_browser_replay": "PASS: exact 50ae6e6b candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
-    "latest_candidate_holdout": "Latest exact live holdout remains c575b959: 43/43 trajectories passed (core 25/25, held-out 18/18), 0 errors, 0 internal leaks, 0 duplicate delivery, 0 abrupt EOF; 49467b32 renderer-only candidate was not rerun through this holdout"
+    "metrics_artifact": "artifacts/productization/efd951d6-architecture-metrics.json",
+    "application_source_sha": "efd951d69031b9b35ca3eb62e4775f17582ec050",
+    "evidence_commit_sha": "2b6a8f27",
+    "latest_candidate_browser_replay": "PASS: exact efd951d6 candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
+    "latest_candidate_holdout": "43/43 trajectories on exact efd951d6 (core 25/25, held-out 18/18), 0 errors, 0 internal leaks, 0 duplicate delivery, 0 abrupt EOF; artifact efd951d6-live-holdout-summary.json"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
