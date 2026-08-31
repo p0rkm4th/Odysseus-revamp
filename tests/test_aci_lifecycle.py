@@ -458,6 +458,24 @@ def test_project_final_answer_owns_malformed_asset_read_without_model_fallback()
     assert "several servers" not in response
 
 
+def test_project_final_answer_never_leaves_unrenderable_action_result_empty():
+    response, answer = project_final_answer(
+        "",
+        [{
+            "tool": "manage_memory",
+            "exit_code": 0,
+            "command": '{"action":"delete","id":"memory-1"}',
+            "output": '{"status":"SUCCESS"}',
+        }],
+        intent_domains=("memory",),
+        effectful_request=True,
+    )
+    assert answer is not None
+    assert answer.source is AnswerSource.ERROR
+    assert "couldn't produce a verified final result" in response
+    assert "successful change is confirmed" in response
+
+
 def test_canonical_network_read_answer_uses_structured_host_context():
     answer = canonical_network_read_answer([{
         "tool": "manage_homelab", "exit_code": 0,

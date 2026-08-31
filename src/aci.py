@@ -4268,6 +4268,40 @@ def canonical_action_failure_answer(
     return None
 
 
+def canonical_unverified_action_answer(
+    tool_events: Sequence[Mapping[str, Any]],
+) -> CanonicalAnswer | None:
+    """Prevent a terminal Action Result from producing an empty owner turn.
+
+    A successful transport exit is not by itself proof of a canonical effect,
+    and some legacy/partially shaped Results cannot be rendered by a
+    capability-specific renderer yet.  In that narrow case, return a bounded
+    honest recovery message instead of allowing an empty model response or
+    prose fallback to imply completion.
+    """
+    for event in reversed(tuple(tool_events or ())):
+        if not isinstance(event, Mapping) or event.get("ask_user"):
+            continue
+        if event.get("exit_code") not in (None, 0):
+            continue
+        command = event.get("command")
+        try:
+            request = json.loads(str(command or "{}"))
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(request, Mapping) or not str(request.get("action") or "").strip():
+            continue
+        return CanonicalAnswer(
+            content=(
+                "The request reached Hades, but I couldn't produce a verified "
+                "final result for it. No successful change is confirmed."
+            ),
+            source=AnswerSource.ERROR,
+            provenance="Action Result without renderable verification",
+        )
+    return None
+
+
 def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the terminal inventory mutation from its structured Result."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
@@ -4699,7 +4733,11 @@ def canonical_result_answer(
                 source=AnswerSource.DETERMINISTIC_RESULT,
                 provenance=provenance,
             )
-    return canonical_read_failure_answer(tool_events) or canonical_action_failure_answer(tool_events)
+    return (
+        canonical_read_failure_answer(tool_events)
+        or canonical_action_failure_answer(tool_events)
+        or canonical_unverified_action_answer(tool_events)
+    )
 
 
 def project_final_answer(
