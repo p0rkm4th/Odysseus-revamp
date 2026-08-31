@@ -2860,6 +2860,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "ffd7f47d46cbb1197624392166ad14e66f9fec0c",
+  "source_sha": "57db4024483d46d3dad3244175c5640a3302f293",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
