@@ -955,6 +955,26 @@ async function selectAcceptanceSession(page, sessionId) {
   }
 }
 
+async function clearStaleIsolatedSessions(page) {
+  if (!isolatedAcceptance) return 0;
+  return page.evaluate(async () => {
+    const response = await fetch('/api/sessions', {credentials: 'same-origin'});
+    if (!response.ok) throw new Error(`could not enumerate stale acceptance sessions (${response.status})`);
+    const payload = await response.json();
+    const sessions = Array.isArray(payload) ? payload : (payload.sessions || []);
+    let deleted = 0;
+    for (const session of sessions) {
+      const id = String(session.id || '').trim();
+      if (!id) continue;
+      const result = await fetch(`/api/session/${encodeURIComponent(id)}`, {
+        method: 'DELETE', credentials: 'same-origin',
+      });
+      if (result.ok) deleted += 1;
+    }
+    return deleted;
+  });
+}
+
 async function prepareScenarioFixture(page, scenario) {
   const scenarios = [scenario];
   return {
@@ -1343,6 +1363,7 @@ async function main() {
       const currentPath = new URL(page.url()).pathname;
       if (currentPath !== '/' && currentPath !== '') throw error;
     }
+    await clearStaleIsolatedSessions(page);
     const shouldCreateSession = Boolean(process.env.HADES_BROWSER_SESSION_ENDPOINT_ID) || Boolean(scenarios);
     if (shouldCreateSession) {
       const session = await page.evaluate(async ({ endpointId, model }) => {
