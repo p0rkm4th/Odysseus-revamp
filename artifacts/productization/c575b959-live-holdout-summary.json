@@ -1,0 +1,21 @@
+{
+  "schema": "hades-live-holdout-summary.v1",
+  "application_source_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
+  "candidate_image": "odysseus:candidate-c575b959",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "seed": 20260831,
+  "cases": 43,
+  "trajectory_passes": 43,
+  "core_cases": 25,
+  "held_out_cases": 18,
+  "errors": 0,
+  "internal_leaks": 0,
+  "duplicate_delivery": 0,
+  "abrupt_eof": 0,
+  "total_tool_calls": 25,
+  "tool_index_lookups": 2,
+  "classification": "The continuation_resume fallback is correct: the starter is a completed read, not an active resumable Run. The acceptance expectation was corrected and replayed.",
+  "raw_artifact": "/tmp/hades-c575b959-live-all-corrected.json",
+  "status": "exact application candidate live owner-language trajectory evidence; not the full generated functional score"
+}

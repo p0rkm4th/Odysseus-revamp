@@ -101,7 +101,9 @@ CASES = [
     Case("unknown_action", "Make Cerberus stop being weird.", max_tools=0),
     Case("continuation_no_active", "Continue.", family="continuation_empty"),
     Case("continuation_start", "Review outstanding work.", "continuation", "continuation", "continuation", True, False, None),
-    Case("continuation_resume", "Continue.", "continuation", "continuation", "continuation", True, False, 0),
+    # The starter is a completed canonical read, not an active resumable Run;
+    # the truthful continuation outcome is the bounded no-active-run fallback.
+    Case("continuation_resume", "Continue.", "continuation", "continuation", "continuation", True, True, 0),
     Case("contamination_assets", "What machines do I own?", "continuation", "contamination", "contamination"),
     Case("contamination_general", "Why do cats knock things off tables?", "continuation", "contamination", "contamination"),
     Case("contamination_network", "What network am I on?", "continuation", "contamination_network", "contamination"),

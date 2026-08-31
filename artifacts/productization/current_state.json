@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-31T04:48:00-05:00",
+  "captured_at": "2026-08-31T04:55:00-05:00",
   "branch": "hades-v1-productization",
   "branch_head": "c575b959",
   "source_head": "c575b959",
@@ -346,7 +346,7 @@
     "application_source_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
     "evidence_commit_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
     "latest_candidate_browser_replay": "PASS: exact c575b959 candidate browser_realistic_acceptance on disposable port 7006; no owner data was touched",
-    "latest_candidate_holdout": "18-case live held-out trajectory subset on exact c575b959: 18/18 trajectories passed, 0 errors, 0 internal leaks, 0 duplicate delivery, 0 abrupt EOF; this is not the full supported-domain score; artifact /tmp/hades-39944460-heldout.json"
+    "latest_candidate_holdout": "43-case live owner-language corpus on exact c575b959: 43/43 trajectories passed (core 25/25, held-out 18/18), 0 errors, 0 internal leaks, 0 duplicate delivery, 0 abrupt EOF; continuation fallback expectation corrected as evaluator defect; artifact c575b959-live-holdout-summary.json"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
