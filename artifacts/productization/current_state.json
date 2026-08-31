@@ -1,10 +1,10 @@
 {
   "captured_at": "2026-08-31T00:13:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "ebaa339d9eb6dd7fb4a65eed74c077ce41be422f",
+  "branch_head": "64ed518f50857cdc255e295144a5d92bb662d70f",
   "source_head": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
   "remote_head": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
-  "evidence_commit_sha": "ebaa339d9eb6dd7fb4a65eed74c077ce41be422f",
+  "evidence_commit_sha": "64ed518f50857cdc255e295144a5d92bb662d70f",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -283,7 +283,7 @@
     "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 945b5fb1",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
-    "evidence_commit_sha": "ebaa339d9eb6dd7fb4a65eed74c077ce41be422f",
+    "evidence_commit_sha": "64ed518f50857cdc255e295144a5d92bb662d70f",
     "latest_candidate_browser_replay": "ENVIRONMENT_FAILURE: candidate acceptance principal disabled at runtime; direct login 401; no product journey claimed"
   },
   "known_evidence_gaps": [
