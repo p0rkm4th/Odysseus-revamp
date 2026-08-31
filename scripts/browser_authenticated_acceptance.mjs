@@ -1083,11 +1083,12 @@ async function send(page, prompt, expectation = {}) {
     }
   }
   const expectedSource = expectation.answer_source;
-  if (expectedSource) {
+  const expectedSources = expectation.answer_source_any || (expectedSource ? [expectedSource] : []);
+  if (expectedSources.length) {
     const sources = turnStreams.flatMap((candidate) => candidate.events || [])
       .filter((event) => event.answerSource).map((event) => event.answerSource);
-    if (!sources.includes(expectedSource)) {
-      throw new Error(`expected AnswerSource ${expectedSource} was not observed for ${prompt}: ${sources.join(', ') || 'none'}`);
+    if (!expectedSources.some((source) => sources.includes(source))) {
+      throw new Error(`expected one of AnswerSources ${expectedSources.join(', ')} for ${prompt}: ${sources.join(', ') || 'none'}`);
     }
   }
   if (expectation.domain && expectation.operation) {
