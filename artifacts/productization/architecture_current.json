@@ -227,26 +227,26 @@
       ]
     },
     "src/aci.py": {
-      "loc": 5832,
+      "loc": 5826,
       "functions": [
         {
           "name": "canonical_tool_result_projection",
-          "line": 3914,
+          "line": 3908,
           "loc": 264
         },
         {
           "name": "project_action_selection",
-          "line": 5062,
+          "line": 5056,
           "loc": 261
         },
         {
           "name": "canonical_recipe_read_answer",
-          "line": 3454,
+          "line": 3448,
           "loc": 182
         },
         {
           "name": "canonical_network_read_answer",
-          "line": 3638,
+          "line": 3632,
           "loc": 147
         },
         {
@@ -256,12 +256,12 @@
         },
         {
           "name": "canonical_asset_read_answer",
-          "line": 3232,
+          "line": 3226,
           "loc": 120
         },
         {
           "name": "compile_composite_action",
-          "line": 4870,
+          "line": 4864,
           "loc": 104
         },
         {
@@ -271,7 +271,7 @@
         },
         {
           "name": "canonical_household_read_answer",
-          "line": 3354,
+          "line": 3348,
           "loc": 98
         },
         {
@@ -291,7 +291,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 5369,
+          "line": 5363,
           "loc": 93
         },
         {
@@ -315,13 +315,8 @@
           "loc": 73
         },
         {
-          "name": "canonical_read_fast_path_payload",
-          "line": 3158,
-          "loc": 72
-        },
-        {
           "name": "canonical_work_read_answer",
-          "line": 4585,
+          "line": 4579,
           "loc": 69
         },
         {
@@ -330,13 +325,18 @@
           "loc": 67
         },
         {
+          "name": "canonical_read_fast_path_payload",
+          "line": 3158,
+          "loc": 66
+        },
+        {
           "name": "minimal_aci_model_fallback_messages",
           "line": 2535,
           "loc": 65
         },
         {
           "name": "project_post_result_transition",
-          "line": 5622,
+          "line": 5616,
           "loc": 63
         },
         {
@@ -351,7 +351,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 5561,
+          "line": 5555,
           "loc": 59
         },
         {
@@ -361,17 +361,17 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 5769,
+          "line": 5763,
           "loc": 56
         },
         {
           "name": "canonical_read_failure_answer",
-          "line": 4180,
+          "line": 4174,
           "loc": 53
         },
         {
           "name": "canonical_action_failure_answer",
-          "line": 4235,
+          "line": 4229,
           "loc": 52
         },
         {
@@ -381,7 +381,7 @@
         },
         {
           "name": "parse_decision_json",
-          "line": 5479,
+          "line": 5473,
           "loc": 50
         },
         {
@@ -401,17 +401,17 @@
         },
         {
           "name": "project_result_observation",
-          "line": 5687,
+          "line": 5681,
           "loc": 48
         },
         {
           "name": "project_final_answer",
-          "line": 4761,
+          "line": 4755,
           "loc": 47
         },
         {
           "name": "canonical_network_plan_answer",
-          "line": 3787,
+          "line": 3781,
           "loc": 46
         },
         {
@@ -431,17 +431,17 @@
         },
         {
           "name": "canonical_service_read_answer",
-          "line": 3868,
+          "line": 3862,
           "loc": 44
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 5325,
+          "line": 5319,
           "loc": 42
         },
         {
           "name": "canonical_memory_read_answer",
-          "line": 4394,
+          "line": 4388,
           "loc": 39
         },
         {
@@ -461,17 +461,17 @@
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 5006,
+          "line": 5000,
           "loc": 37
         },
         {
           "name": "canonical_recipe_mutation_answer",
-          "line": 4358,
+          "line": 4352,
           "loc": 34
         },
         {
           "name": "canonical_memory_mutation_answer",
-          "line": 4435,
+          "line": 4429,
           "loc": 34
         },
         {
@@ -481,7 +481,7 @@
         },
         {
           "name": "canonical_inventory_mutation_answer",
-          "line": 4323,
+          "line": 4317,
           "loc": 33
         },
         {
@@ -491,17 +491,17 @@
         },
         {
           "name": "canonical_unverified_action_answer",
-          "line": 4289,
+          "line": 4283,
           "loc": 32
         },
         {
           "name": "canonical_structured_empty_read_answer",
-          "line": 4656,
+          "line": 4650,
           "loc": 32
         },
         {
           "name": "project_capability_palette",
-          "line": 4810,
+          "line": 4804,
           "loc": 32
         },
         {
@@ -521,7 +521,7 @@
         },
         {
           "name": "canonical_homelab_read_answer",
-          "line": 3835,
+          "line": 3829,
           "loc": 31
         },
         {
@@ -541,17 +541,17 @@
         },
         {
           "name": "canonical_notes_mutation_answer",
-          "line": 4508,
+          "line": 4502,
           "loc": 28
         },
         {
           "name": "canonical_communications_read_answer",
-          "line": 4690,
+          "line": 4684,
           "loc": 28
         },
         {
           "name": "selected_action_for_decision",
-          "line": 5531,
+          "line": 5525,
           "loc": 28
         },
         {
@@ -566,7 +566,7 @@
         },
         {
           "name": "display_label",
-          "line": 3727,
+          "line": 3721,
           "loc": 27
         },
         {
@@ -586,7 +586,7 @@
         },
         {
           "name": "canonical_work_mutation_answer",
-          "line": 4558,
+          "line": 4552,
           "loc": 25
         },
         {
@@ -606,7 +606,7 @@
         },
         {
           "name": "classify_action_escalation",
-          "line": 4844,
+          "line": 4838,
           "loc": 24
         },
         {
@@ -641,7 +641,7 @@
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 5737,
+          "line": 5731,
           "loc": 20
         },
         {
@@ -676,7 +676,7 @@
         },
         {
           "name": "canonical_scheduled_task_mutation_answer",
-          "line": 4538,
+          "line": 4532,
           "loc": 18
         },
         {
@@ -686,7 +686,7 @@
         },
         {
           "name": "canonical_scheduled_task_read_answer",
-          "line": 4489,
+          "line": 4483,
           "loc": 17
         },
         {
@@ -706,12 +706,12 @@
         },
         {
           "name": "canonical_notes_read_answer",
-          "line": 4471,
+          "line": 4465,
           "loc": 16
         },
         {
           "name": "canonical_result_answer",
-          "line": 4743,
+          "line": 4737,
           "loc": 16
         },
         {
@@ -721,12 +721,12 @@
         },
         {
           "name": "validate_capability_creation_request",
-          "line": 5045,
+          "line": 5039,
           "loc": 15
         },
         {
           "name": "_label",
-          "line": 3330,
+          "line": 3324,
           "loc": 15
         },
         {
@@ -766,7 +766,7 @@
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 5464,
+          "line": 5458,
           "loc": 13
         },
         {
@@ -826,12 +826,12 @@
         },
         {
           "name": "model_burden",
-          "line": 5827,
+          "line": 5821,
           "loc": 6
         },
         {
           "name": "freshness_line",
-          "line": 3663,
+          "line": 3657,
           "loc": 6
         },
         {
@@ -888,22 +888,22 @@
       "largest_functions": [
         {
           "name": "canonical_tool_result_projection",
-          "line": 3914,
+          "line": 3908,
           "loc": 264
         },
         {
           "name": "project_action_selection",
-          "line": 5062,
+          "line": 5056,
           "loc": 261
         },
         {
           "name": "canonical_recipe_read_answer",
-          "line": 3454,
+          "line": 3448,
           "loc": 182
         },
         {
           "name": "canonical_network_read_answer",
-          "line": 3638,
+          "line": 3632,
           "loc": 147
         },
         {
@@ -913,12 +913,12 @@
         },
         {
           "name": "canonical_asset_read_answer",
-          "line": 3232,
+          "line": 3226,
           "loc": 120
         },
         {
           "name": "compile_composite_action",
-          "line": 4870,
+          "line": 4864,
           "loc": 104
         },
         {
@@ -928,7 +928,7 @@
         },
         {
           "name": "canonical_household_read_answer",
-          "line": 3354,
+          "line": 3348,
           "loc": 98
         },
         {
@@ -948,7 +948,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 5369,
+          "line": 5363,
           "loc": 93
         },
         {
@@ -972,19 +972,19 @@
           "loc": 73
         },
         {
-          "name": "canonical_read_fast_path_payload",
-          "line": 3158,
-          "loc": 72
-        },
-        {
           "name": "canonical_work_read_answer",
-          "line": 4585,
+          "line": 4579,
           "loc": 69
         },
         {
           "name": "build_base_prompt",
           "line": 293,
           "loc": 67
+        },
+        {
+          "name": "canonical_read_fast_path_payload",
+          "line": 3158,
+          "loc": 66
         }
       ]
     },
@@ -1989,7 +1989,7 @@
       ]
     },
     "src/field_resolvers.py": {
-      "loc": 146,
+      "loc": 147,
       "functions": [
         {
           "name": "_recipe_fields",
@@ -1998,17 +1998,17 @@
         },
         {
           "name": "resolve_action_fields",
-          "line": 107,
+          "line": 108,
           "loc": 20
         },
         {
           "name": "deterministic_action_for_contract",
-          "line": 129,
+          "line": 130,
           "loc": 18
         },
         {
           "name": "_notes_fields",
-          "line": 81,
+          "line": 82,
           "loc": 9
         },
         {
@@ -2049,7 +2049,7 @@
         {
           "name": "_query_fields",
           "line": 77,
-          "loc": 2
+          "loc": 3
         }
       ],
       "largest_functions": [
@@ -2060,17 +2060,17 @@
         },
         {
           "name": "resolve_action_fields",
-          "line": 107,
+          "line": 108,
           "loc": 20
         },
         {
           "name": "deterministic_action_for_contract",
-          "line": 129,
+          "line": 130,
           "loc": 18
         },
         {
           "name": "_notes_fields",
-          "line": 81,
+          "line": 82,
           "loc": 9
         },
         {
@@ -2111,7 +2111,7 @@
         {
           "name": "_query_fields",
           "line": 77,
-          "loc": 2
+          "loc": 3
         }
       ]
     },
@@ -2187,7 +2187,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18866,
+  "semantic_control_plane_loc": 18861,
   "central_domain_conditionals": 120,
   "central_canonical_answer_functions": 23,
   "canonical_answer_dispatch_mentions": 27,
@@ -2329,6 +2329,6 @@
       }
     ]
   },
-  "source_sha": "1017813932927c0954fec73ae7ae26cb1437d8af",
+  "source_sha": "945b5fb1496b0de899d0a544f8632d24d8778cd2",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
