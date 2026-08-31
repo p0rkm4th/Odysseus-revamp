@@ -5388,3 +5388,11 @@ handling. False success, raw final Results, duplicate delivery, and abrupt EOF
 were all zero. The acceptance principal was rotated only in the isolated
 candidate data root; the candidate restarted healthy and the owner-dogfood and
 production deployments were not touched.
+
+## Lived-in Tier 1 walkabout replay — candidate `b91ff938` (2026-08-31)
+
+The accumulated-state daily-driver scenario passed on the exact isolated
+candidate: 1 scenario, 20 turns/streams, and 20 grounded canonical reads.
+False success, raw final Results, duplicate delivery, and abrupt EOF were all
+zero. The replay used the disposable lived-in fixture and did not touch the
+owner-dogfood or production deployments.
