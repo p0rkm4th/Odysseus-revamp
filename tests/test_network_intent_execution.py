@@ -208,6 +208,9 @@ def test_qwen_prose_only_network_request_does_not_get_a_stale_scope_repair(monke
             max_rounds=3,
             relevant_tools={"manage_homelab"},
             owner="alice",
+            # This regression characterizes the retired compatibility route;
+            # the historical facade no longer selects it implicitly.
+            aci_mode="legacy",
         )
     )
 

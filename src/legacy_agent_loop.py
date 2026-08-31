@@ -14,7 +14,11 @@ async def stream_agent_loop(*args: Any, **kwargs: Any):
     """Delegate an explicit legacy call without creating a second runtime."""
     from src import agent_loop
 
-    kwargs.setdefault("aci_mode", "legacy")
+    # The historical name remains import-compatible, but it must no longer
+    # select a second semantic runtime.  Callers that need compatibility
+    # behavior can still opt in explicitly while ordinary callers converge on
+    # the canonical ACI lifecycle.
+    kwargs.setdefault("aci_mode", "aci")
     delegated = agent_loop.stream_aci_runtime(*args, **kwargs)
     try:
         async for event in delegated:
