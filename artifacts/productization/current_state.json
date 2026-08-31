@@ -24,11 +24,13 @@
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
-    "candidate_source_sha": "9e847a0426106c95ca08f592599fd1161ac2263f",
-    "candidate_image": "odysseus:candidate-9e847a042610",
-    "candidate_image_id": "sha256:1a7441292caab457cf5573700edbe6dc61728e64ff0d09a38434c2dc047d4028",
+    "candidate_source_sha": "6012d6648b2b67b6f0018f271603a5c60996d81d",
+    "candidate_image": "odysseus:candidate-6012d6648b2",
+    "candidate_image_id": "sha256:f5c5f708b540a7136d3aabd3f257e74a95fe5cf79b6bba15fcfa38528fa91ace",
     "completion_trace_fix": "5e5bc0f7; focused ACI/dogfood tests 160 passed, 1 warning",
     "browser_replays_exact_candidate": {
+      "candidate_source_sha": "6012d6648b2b67b6f0018f271603a5c60996d81d",
+      "status": "PASS; browser_realistic_acceptance.mjs; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
       "OWNER-NETWORK-BOUNDED-CIDR-001": {
         "status": "PASS",
         "turns": 4,
