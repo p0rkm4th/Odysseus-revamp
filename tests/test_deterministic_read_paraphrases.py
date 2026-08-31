@@ -18,7 +18,8 @@ from src.aci import (
 )
 from src.context_compactor import strip_agent_injected_messages as _strip_agent_injected_messages
 from src.deterministic_reads import deterministic_read_concept
-from src.intent_contracts import canonical_read_action, compile_intent, inventory_add_item_payload, inventory_consume_stock_payload, inventory_move_item_payload, recipe_create_draft, recipe_create_payload, recipe_requested_name, resolve_intent
+from src.intent_contracts import canonical_read_action, compile_intent, recipe_create_draft, recipe_create_payload, recipe_requested_name, resolve_intent
+from src.domain_resolvers.inventory import inventory_add_item_payload, inventory_consume_stock_payload, inventory_move_item_payload
 from src.memory_grounding import is_explicit_memory_query
 from src.tool_parsing import ToolBlock
 

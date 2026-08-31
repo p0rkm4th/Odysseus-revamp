@@ -50,7 +50,11 @@ def _reference_id(frame: Mapping[str, Any]) -> str | None:
 
 
 def _inventory_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
-    from src.intent_contracts import inventory_add_item_payload, inventory_consume_stock_payload, inventory_move_item_payload
+    from src.domain_resolvers.inventory import (
+        inventory_add_item_payload,
+        inventory_consume_stock_payload,
+        inventory_move_item_payload,
+    )
 
     ref = _reference_id(frame)
     resolver = {"add_item": inventory_add_item_payload, "consume_stock": inventory_consume_stock_payload, "move_item": inventory_move_item_payload}.get(action_id)
