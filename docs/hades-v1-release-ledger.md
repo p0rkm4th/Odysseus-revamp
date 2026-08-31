@@ -2,6 +2,23 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Dependency gate refresh — productization head `5c71fe9b` (2026-08-31)
+
+GitHub currently still shows Dependabot PRs #1, #2, and #3, all based on
+`main` (`364380ed`) rather than this productization head. Their current heads
+are `a6af2fbd` (Bombadil 0.7.2), `e3268fc2` (grouped Python updates), and
+`cc459f67` (grouped Actions updates). None is merged into this branch or main.
+
+The selected updates are already ported/adapted on productization: `httpcore`
+1.0.9 security fix (`PORT`), optional `markitdown` 0.1.7 (`PORT`), and
+`pydantic-settings` 2.15 compatibility (`ADAPT`). MCP remains explicitly
+`mcp<2` (`REJECT` for the V1 bump); Bombadil 0.7.2 remains `DEFER` because it
+is a breaking, nonessential upgrade. The Action/CodeQL/Docker refresh is
+`PORT`ed in commit `7740b97b`. The current requirements files and workflow
+pins match those decisions. Full regression at the current executable
+checkpoint remains green; dependency PR branches remain stale and must be
+rebased/recreated only after main reconciliation.
+
 ## Broad regression and provenance checkpoint — branch `ae7beabb` (2026-08-31)
 
 The supported full regression passed: `7114 passed, 9 skipped, 149 warnings` in
