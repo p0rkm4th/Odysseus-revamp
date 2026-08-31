@@ -5112,3 +5112,28 @@ invoked, and that acceptance credentials require an app restart after
 provisioning. The isolated candidate was recreated with the declared
 `/tmp/hades-fresh-current/data` mount and passed; no owner or persistent
 dogfood state was touched.
+
+## Current owner-dogfood harvest — exact candidate `78bf0d1c` / branch `49cb07df` (2026-08-31)
+
+The exact isolated candidate was replayed through the authenticated GUI for
+the daily-driver reminder matrix (6 scenarios, 14 streams, 7 mutations, 10
+canonical readbacks), bounded/invalid Network scope (2 scenarios, 6 streams),
+and qualitative Recipe amounts (5 streams, 1 mutation, 2 readbacks). All three
+replays passed with zero false success, raw final Results, duplicate delivery,
+or abrupt EOF. Browser responsive acceptance also passed.
+
+The actual persistent owner-dogfood read-only Network journey was separately
+replayed and failed with `AnswerSource.ERROR`. This is classified as
+`ENVIRONMENT_FAILURE / RUNTIME_PROVENANCE_MISMATCH`, not candidate feature
+evidence: the owner lane still runs `2f05d500` and its mounted
+`/tmp/hades-owner-dogfood/host-broker` has no `network.sock`; the exact current
+candidate runs with its broker socket and passes the same journey. No owner
+data was changed and the owner lane was not redeployed.
+
+The exact current-candidate mixed 142-case Qwen holdout is retained at
+`artifacts/productization/49cb07df-heldout.json`: 46 functional, 123
+architectural, and 142 security passes. Its denominator includes unsupported,
+dependency, and evaluator-contract cases, so it is diagnostic rather than a
+supported-domain release score. Dominant clusters were
+`DOMAIN_ROUTING_FAILURE` (63), `VERIFICATION_FAILURE` (22), and
+`INTENT_FAILURE` (22); zero duplicate delivery was observed.
