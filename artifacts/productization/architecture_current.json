@@ -8,6 +8,7 @@
     "src/action_intents.py",
     "src/tool_capabilities.py",
     "src/capability_dependencies.py",
+    "src/module_manager.py",
     "src/field_resolvers.py",
     "src/domain_resolvers/reminders.py",
     "src/domain_resolvers/recipe.py",
@@ -1871,6 +1872,103 @@
         }
       ]
     },
+    "src/module_manager.py": {
+      "loc": 166,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 80,
+          "loc": 24
+        },
+        {
+          "name": "activate_for_capability",
+          "line": 143,
+          "loc": 16
+        },
+        {
+          "name": "state",
+          "line": 105,
+          "loc": 8
+        },
+        {
+          "name": "enabled_capability_ids",
+          "line": 120,
+          "loc": 8
+        },
+        {
+          "name": "disabled_tool_names",
+          "line": 129,
+          "loc": 6
+        },
+        {
+          "name": "owner_for_capability",
+          "line": 136,
+          "loc": 6
+        },
+        {
+          "name": "default_module_manager",
+          "line": 161,
+          "loc": 3
+        },
+        {
+          "name": "enabled_module_ids",
+          "line": 114,
+          "loc": 2
+        },
+        {
+          "name": "active_module_ids",
+          "line": 117,
+          "loc": 2
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "__init__",
+          "line": 80,
+          "loc": 24
+        },
+        {
+          "name": "activate_for_capability",
+          "line": 143,
+          "loc": 16
+        },
+        {
+          "name": "state",
+          "line": 105,
+          "loc": 8
+        },
+        {
+          "name": "enabled_capability_ids",
+          "line": 120,
+          "loc": 8
+        },
+        {
+          "name": "disabled_tool_names",
+          "line": 129,
+          "loc": 6
+        },
+        {
+          "name": "owner_for_capability",
+          "line": 136,
+          "loc": 6
+        },
+        {
+          "name": "default_module_manager",
+          "line": 161,
+          "loc": 3
+        },
+        {
+          "name": "enabled_module_ids",
+          "line": 114,
+          "loc": 2
+        },
+        {
+          "name": "active_module_ids",
+          "line": 117,
+          "loc": 2
+        }
+      ]
+    },
     "src/field_resolvers.py": {
       "loc": 222,
       "functions": [
@@ -2541,7 +2639,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18863,
+  "semantic_control_plane_loc": 19029,
   "central_domain_conditionals": 118,
   "central_canonical_answer_functions": 6,
   "canonical_answer_dispatch_mentions": 10,
@@ -2716,6 +2814,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "9f662b2b3e38b069eee4fee36e97b8b8e755bfda",
+  "source_sha": "15b2b8a9113c91a4f5bee6b0f7ec88e0c34ed9b8",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }

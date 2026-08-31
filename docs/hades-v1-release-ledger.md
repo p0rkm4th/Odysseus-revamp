@@ -5389,6 +5389,30 @@ were all zero. The acceptance principal was rotated only in the isolated
 candidate data root; the candidate restarted healthy and the owner-dogfood and
 production deployments were not touched.
 
+## Exact-source CI and Recipe module lifecycle pilot — source `15b2b8a9` (2026-08-31)
+
+The authoritative exact-source gates passed after the modular-kernel pilot:
+`compileall` passed, the ACI/lifecycle/security slice passed `228` tests, and
+the full regression passed `7124` tests with `9` skips and `149` warnings.
+
+The pilot adds a cheap internal ModuleSpec/ModuleManager lifecycle with
+`AVAILABLE`, `ENABLED`, and `ACTIVE` states. Recipe capability projection is
+excluded when the module is disabled, enabled-but-unused Recipe remains
+inactive during an unrelated request, and a selected Recipe request activates
+the resolver lazily. The exact candidate image was rebuilt with matching OCI
+revision and embedded source marker, deployed only to the isolated acceptance
+project, and passed Recipe mutation/readback plus unrelated Work readback:
+`2` scenarios, `4` turns, `1` mutation, and `2` independent readbacks. False
+success, raw final Results, duplicate delivery, and abrupt EOF were all zero.
+
+Clean metrics for this source count `19029` semantic-control-plane LOC and
+`118` central domain conditionals. The increase is reported honestly because
+the new module manager is included in the counted set; physical legacy
+compression remains unfinished. Six unrelated feature imports remain eager
+in kernel files and are explicit next deletion targets. The prior `b91ff938`
+candidate remains retained as rollback; owner-dogfood and production state were
+not changed.
+
 ## Lived-in Tier 1 walkabout replay — candidate `b91ff938` (2026-08-31)
 
 The accumulated-state daily-driver scenario passed on the exact isolated
