@@ -1,11 +1,11 @@
 {
   "captured_at": "2026-08-31T09:48:31-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "ea746e6b0f5846d8b59f5657d81d66b902913713",
-  "application_source_sha": "ea746e6b0f5846d8b59f5657d81d66b902913713",
-  "source_head": "ea746e6b0f5846d8b59f5657d81d66b902913713",
-  "remote_head": "ea746e6b0f5846d8b59f5657d81d66b902913713",
-  "evidence_commit_sha": "ea746e6b0f5846d8b59f5657d81d66b902913713",
+  "branch_head": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
+  "application_source_sha": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
+  "source_head": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
+  "remote_head": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
+  "evidence_commit_sha": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "ahead_behind_main": {
@@ -360,15 +360,15 @@
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-31T09:48:31-05:00",
+    "measured_at": "2026-08-31T09:58:51-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
-    "focused_migration_tests": "133 passed, 1 warning for module lifecycle/ACI contracts on exact application source ea746e6b",
-    "full_regression": "7129 passed, 9 skipped, 149 warnings in 303.50s on exact application source ea746e6b",
+    "focused_migration_tests": "193 passed, 1 warning for module lifecycle/ACI/cutover/memory contracts on exact application source 31fb9a3f",
+    "full_regression": "7130 passed, 9 skipped, 149 warnings in 303.95s on exact application source 31fb9a3f",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "ea746e6b0f5846d8b59f5657d81d66b902913713",
-    "evidence_commit_sha": "ea746e6b0f5846d8b59f5657d81d66b902913713",
-    "latest_candidate_browser_replay": "STALE: last exact browser replay was b141781e before ea746e6b module-contract tests; rebuild required",
-    "latest_candidate_holdout": "STALE: last exact live Qwen run was b141781e before ea746e6b module-contract tests; rerun required for candidate evidence",
+    "application_source_sha": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
+    "evidence_commit_sha": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
+    "latest_candidate_browser_replay": "STALE: last exact browser replay was b141781e before 31fb9a3f; rebuild required",
+    "latest_candidate_holdout": "STALE: last exact live Qwen run was b141781e before 31fb9a3f; rerun required for candidate evidence",
     "module_lifecycle": "Recipe AVAILABLE/ENABLED/ACTIVE contracts proven; disabled schema exclusion, lazy activation, and explicit dependency non-self-enable tests pass",
     "network_resolver_extraction": "Network grammar moved from intent_contracts into counted src/domain_resolvers/network.py; focused contracts pass"
   },
@@ -387,7 +387,7 @@
     "mcp_v2": "rejected for V1",
     "bombadil_0_7": "deferred"
   },
-  "source_sha": "ea746e6b0f5846d8b59f5657d81d66b902913713",
+  "source_sha": "31fb9a3facdcaa45aa899d1f007804481dd9dc54",
   "latest_owner_walkabout": {
     "candidate_source_sha": "78bf0d1c7282486ce4f8252e805b3c467e041f6e",
     "candidate_browser": {
