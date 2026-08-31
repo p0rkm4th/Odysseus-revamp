@@ -3932,6 +3932,23 @@ def canonical_tool_result_projection(
                 if isinstance(payload.get("low_stock"), list) else [],
         }
         return projection
+    # Planning receipts are already structured Results.  In particular, the
+    # bounded network plan has no subprocess ``output`` field; dropping this
+    # top-level receipt would leave the owner-facing finalizer without the
+    # exact target it needs to render a safe answer.
+    if str(tool_name or "").strip() == "manage_homelab":
+        structured_action = str(result.get("action") or "").strip()
+        if structured_action == "plan_network_discovery":
+            return {
+                "action": structured_action,
+                "status": result.get("status") or "SUCCESS",
+                "kind": result.get("kind"),
+                "target": result.get("target") or result.get("cidr"),
+                "operation_digest": result.get("operation_digest"),
+                "preflight": result.get("preflight"),
+                "scanner_available": result.get("scanner_available"),
+                "broker_scanner_available": result.get("broker_scanner_available"),
+            }
     raw = result.get("output")
     if isinstance(raw, Mapping):
         payload = raw
