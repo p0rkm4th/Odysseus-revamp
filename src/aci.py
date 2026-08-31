@@ -44,6 +44,7 @@ from src.result_renderers.scheduled import (
 )
 from src.result_renderers.calendar import canonical_communications_read_answer
 from src.result_renderers.recipe import canonical_recipe_mutation_answer
+from src.result_renderers.generic import canonical_structured_empty_read_answer
 
 logger = logging.getLogger(__name__)
 
@@ -4218,40 +4219,6 @@ def canonical_notes_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         return f'Reminder updated: "{title}"{suffix}. It is saved.'
     if action == "delete":
         return "Reminder deleted."
-    return None
-
-
-def canonical_structured_empty_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Render a successful structured empty read without model synthesis.
-
-    This is intentionally limited to empty projections. Non-empty service,
-    security, and developer results still require their domain renderer or
-    bounded synthesis; this helper never invents records from a tool name.
-    """
-    supported = {
-        "manage_homelab": "homelab state",
-        "manage_osint": "research",
-        "manage_security_assessment": "security assessment",
-        "developer_read": "workspace state",
-        "read_setup": "integration/setup state",
-    }
-    for event in reversed(tuple(tool_events or ())):
-        if not isinstance(event, Mapping):
-            continue
-        tool = str(event.get("tool") or "").strip()
-        label = supported.get(tool)
-        if not label or event.get("exit_code") not in (None, 0):
-            continue
-        try:
-            payload = json.loads(str(event.get("output") or ""))
-        except (TypeError, ValueError):
-            continue
-        if not isinstance(payload, Mapping):
-            continue
-        status = str(payload.get("status") or "").strip().upper()
-        collections = [value for value in payload.values() if isinstance(value, list)]
-        if status in {"SUCCESS_EMPTY", "EMPTY_RESULT", "ZERO_RESULT"} and collections and not any(collections):
-            return f"No {label} records were returned by the canonical read."
     return None
 
 
