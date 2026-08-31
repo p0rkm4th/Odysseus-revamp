@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-31T06:02:00-05:00",
+  "captured_at": "2026-08-31T06:20:00-05:00",
   "branch": "hades-v1-productization",
   "branch_head": "51663983",
   "source_head": "78bf0d1c",
@@ -358,7 +358,7 @@
     "measured_at": "2026-08-31T06:02:00-05:00",
     "artifact": "artifacts/productization/78bf0d1c-architecture-metrics.json",
     "focused_migration_tests": "160 passed, 1 warning on exact application source 78bf0d1c",
-    "full_regression": "7119 passed, 9 skipped, 149 warnings in 304.37s on docs-only descendant 51cd3267; executable source remains 78bf0d1c",
+    "full_regression": "7119 passed, 9 skipped, 149 warnings in 304.37s on docs-only descendant 1d3e1d1f; executable source remains 78bf0d1c; artifact 78bf0d1c-full-regression.json",
     "metrics_artifact": "artifacts/productization/78bf0d1c-architecture-metrics.json",
     "application_source_sha": "78bf0d1c7282486ce4f8252e805b3c467e041f6e",
     "evidence_commit_sha": "51cd3267",
