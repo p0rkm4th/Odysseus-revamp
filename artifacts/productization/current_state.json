@@ -1,16 +1,16 @@
 {
-  "captured_at": "2026-08-30T22:16:00-05:00",
+  "captured_at": "2026-08-30T22:34:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "f2df83b56029853d662d7560d82f457e48b5138a",
-  "remote_head": "f2df83b56029853d662d7560d82f457e48b5138a",
+  "source_head": "a87d8bc72ee71a1e19574d07a8525756b09e8137",
+  "remote_head": "a87d8bc72ee71a1e19574d07a8525756b09e8137",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
-    "source_sha": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
-    "image": "odysseus:candidate-ed3e888-exact",
-    "image_id": "sha256:2206fbc63e2a2735b2ea6e19284f8b53c3d5d62e6eff683bffcea4923fa732fd",
-    "oci_revision": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
-    "source_marker": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4"
+    "source_sha": "a87d8bc72ee71a1e19574d07a8525756b09e8137",
+    "image": "odysseus:candidate-a87d8bc72ee7",
+    "image_id": "sha256:cec356f2448122a593c5b75e3362761f90d42e8a2c31d35f55804b2943880866",
+    "oci_revision": "a87d8bc72ee71a1e19574d07a8525756b09e8137",
+    "source_marker": "a87d8bc72ee71a1e19574d07a8525756b09e8137"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -24,14 +24,15 @@
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
-    "candidate_source_sha": "ed3e888514e3494f142c8cd5a7dc0f5f45565ad4",
-    "candidate_image": "odysseus:candidate-ed3e888-exact",
-    "candidate_image_id": "sha256:2206fbc63e2a2735b2ea6e19284f8b53c3d5d62e6eff683bffcea4923fa732fd",
+    "candidate_source_sha": "a87d8bc72ee71a1e19574d07a8525756b09e8137",
+    "candidate_image": "odysseus:candidate-a87d8bc72ee7",
+    "candidate_image_id": "sha256:cec356f2448122a593c5b75e3362761f90d42e8a2c31d35f55804b2943880866",
     "completion_trace_fix": "5e5bc0f7; focused ACI/dogfood tests 160 passed, 1 warning",
     "browser_replays_exact_candidate": {
       "OWNER-NETWORK-BOUNDED-CIDR-001": {"status": "PASS", "turns": 4, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
       "OWNER-WORK-EMPTY-001": {"status": "PASS", "turns": 1, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
       "OWNER-RECIPE-MUTATION-READBACK-001": {"status": "PASS", "turns": 3, "mutations": 1, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
+      "OWNER-RECIPE-MUTATION-READBACK-001@a87d8bc7": {"status": "PASS", "turns": 3, "mutations": 1, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
       "OWNER-TODAY-EMPTY-001": {"status": "PASS", "turns": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
       "OWNER-MEMORY-CORRECTION-READBACK-001": {"status": "PASS", "turns": 4, "mutations": 2, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0},
       "OWNER-REMINDER-CORRECTION-001": {"status": "PASS", "turns": 3, "mutations": 2, "readbacks": 2, "false_success": 0, "raw_final_results": 0, "duplicate_delivery": 0, "abrupt_eof": 0}

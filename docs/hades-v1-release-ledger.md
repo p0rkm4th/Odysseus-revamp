@@ -5088,3 +5088,27 @@ semantic failure. The container was attached with the service alias inside the
 disposable network; no owner-dogfood or production data was touched. The
 sanitized report is retained at `/tmp/hades-v1-current-sample.json` and its
 summary is recorded in `artifacts/productization/current_state.json`.
+
+## Unverified Action Result fallback — candidate `a87d8bc7` (2026-08-30)
+
+Generated dogfood exposed a generalized completion/rendering defect: a
+terminal Action could exit successfully but leave the owner-facing answer
+empty when its Result did not match a domain renderer's verification shape.
+`src/aci.py` now emits a bounded error projection stating that no successful
+change is confirmed. It does not infer success, retry, approve, or persist
+anything. The regression is covered in `test_aci_lifecycle.py`; focused ACI,
+field-resolver, and Memory tests passed `114` tests with one existing warning.
+
+The exact candidate `odysseus:candidate-a87d8bc72ee7` has image ID
+`sha256:cec356f2448122a593c5b75e3362761f90d42e8a2c31d35f55804b2943880866`,
+matching OCI revision and source marker `a87d8bc72ee71a1e19574d07a8525756b09e8137`.
+Its authenticated Recipe mutation/readback replay passed with 3 turns, one
+GUI mutation, two canonical readbacks, and zero false success, raw Result,
+duplicate-delivery, or abrupt-EOF signals.
+
+During deployment, acceptance infrastructure also revealed that the Compose
+overlay did not inherit the browser process's `APP_DATA_DIR` when manually
+invoked, and that acceptance credentials require an app restart after
+provisioning. The isolated candidate was recreated with the declared
+`/tmp/hades-fresh-current/data` mount and passed; no owner or persistent
+dogfood state was touched.
