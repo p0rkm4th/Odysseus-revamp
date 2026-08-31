@@ -25,16 +25,51 @@ from src.deterministic_reads import (
     is_recipe_pantry_coverage_query,
     is_recipe_pantry_candidates_query,
 )
-from src.domain_resolvers.reminders import note_mutation_payload, scheduled_task_create_payload
-from src.domain_resolvers.inventory import (
-    inventory_add_item_payload,
-    inventory_consume_stock_payload,
-    inventory_move_item_payload,
-)
-from src.domain_resolvers.memory import memory_mutation_payload
-from src.domain_resolvers.work import work_project_create_payload, work_task_create_payload
-
 logger = logging.getLogger(__name__)
+
+
+# Feature grammar is deliberately lazy.  Intent contracts expose the stable
+# resolver API, but importing the contracts must not initialize every feature
+# implementation for an unrelated turn.  These small adapters preserve the
+# historical import surface while making module activation request-driven.
+def note_mutation_payload(*args: Any, **kwargs: Any) -> Any:
+    from src.domain_resolvers.reminders import note_mutation_payload as resolver
+    return resolver(*args, **kwargs)
+
+
+def scheduled_task_create_payload(*args: Any, **kwargs: Any) -> Any:
+    from src.domain_resolvers.reminders import scheduled_task_create_payload as resolver
+    return resolver(*args, **kwargs)
+
+
+def inventory_add_item_payload(*args: Any, **kwargs: Any) -> Any:
+    from src.domain_resolvers.inventory import inventory_add_item_payload as resolver
+    return resolver(*args, **kwargs)
+
+
+def inventory_consume_stock_payload(*args: Any, **kwargs: Any) -> Any:
+    from src.domain_resolvers.inventory import inventory_consume_stock_payload as resolver
+    return resolver(*args, **kwargs)
+
+
+def inventory_move_item_payload(*args: Any, **kwargs: Any) -> Any:
+    from src.domain_resolvers.inventory import inventory_move_item_payload as resolver
+    return resolver(*args, **kwargs)
+
+
+def memory_mutation_payload(*args: Any, **kwargs: Any) -> Any:
+    from src.domain_resolvers.memory import memory_mutation_payload as resolver
+    return resolver(*args, **kwargs)
+
+
+def work_project_create_payload(*args: Any, **kwargs: Any) -> Any:
+    from src.domain_resolvers.work import work_project_create_payload as resolver
+    return resolver(*args, **kwargs)
+
+
+def work_task_create_payload(*args: Any, **kwargs: Any) -> Any:
+    from src.domain_resolvers.work import work_task_create_payload as resolver
+    return resolver(*args, **kwargs)
 
 
 def recipe_requested_name(text: str) -> str | None:
