@@ -5347,3 +5347,13 @@ hourly timing, correction, and recurring schedule journeys. All terminal
 streams completed with zero false success, raw final Results, duplicate
 delivery, and abrupt EOF. The owner-dogfood lane and production deployment
 were not touched.
+
+## Household and Recipe composition replay — candidate `b91ff938` (2026-08-31)
+
+The isolated Household/Recipe cluster passed on the exact candidate: 7
+scenarios, 22 turns/streams, 6 GUI-originated mutations, 14 independent
+canonical readbacks, and 16 grounded reads. Coverage included pantry
+feasibility, expiring ingredients, qualitative shopping requirements, exact
+and sloppy Household mutations, and mixed qualitative Recipe amounts. False
+success, raw final Results, duplicate delivery, and abrupt EOF were all zero.
+No owner-dogfood or production state was touched.
