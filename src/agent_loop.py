@@ -46,7 +46,7 @@ from src.endpoint_resolver import (
     is_ollama_openai_compat_url as _is_ollama_openai_compat_url,
 )
 from src.prompt_security import untrusted_context_message
-from src.capability_registry import action_for_tool, requires_exact_approval
+from src.capability_registry import requires_exact_approval
 from src.memory_grounding import (
     is_explicit_memory_query,
     build_runtime_self_state,
@@ -5993,12 +5993,6 @@ async def stream_aci_runtime(
                     "MEMORY" if block.tool_type == "read_memory" else None
                 ),
             }
-            # Result rendering is declared by the selected ActionSpec.  This
-            # metadata is evidence routing only; it never changes execution,
-            # policy, approval, or verification authority.
-            _result_spec = action_for_tool(block.tool_type, block.content)
-            if _result_spec and _result_spec.result_renderer:
-                tool_event["result_renderer"] = _result_spec.result_renderer
             if block.tool_type == "manage_notes":
                 try:
                     _note_request = json.loads(block.content or "{}")

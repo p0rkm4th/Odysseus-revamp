@@ -157,7 +157,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="work.read",
         description="Owner-scoped read projections over the canonical Work Engine.",
         actions=_actions(*(
-            ActionSpec(action_id=action, effects=("read_private",), executor_key="read_work", result_renderer="work_read")
+            ActionSpec(action_id=action, effects=("read_private",), executor_key="read_work")
             for action in ("overview", "review", "attention", "context", "list_goals", "list_projects", "list_tasks", "list_runs", "list_commitments", "list_missions", "list_watches")
         )),
     ),
@@ -392,8 +392,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
     "work.goal.manage": CapabilitySpec("work.goal.manage", _actions(*(ActionSpec(action_id=a, effects=("write_private",), executor_key="manage_work") for a in ("create", "update"))), "Manage desired outcomes."),
     "work.project.read": CapabilitySpec("work.project.read", _actions(ActionSpec("list", effects=("read_private",), executor_key="manage_work")), "Read work projects."),
     "work.project.manage": CapabilitySpec("work.project.manage", _actions(
-        ActionSpec("create", effects=("write_private",), executor_key="manage_work", field_resolver="work_project", result_renderer="work_mutation"),
-        ActionSpec("create_task", effects=("write_private",), executor_key="manage_work", field_resolver="work_task", result_renderer="work_mutation"),
+        ActionSpec("create", effects=("write_private",), executor_key="manage_work", field_resolver="work_project"),
+        ActionSpec("create_task", effects=("write_private",), executor_key="manage_work", field_resolver="work_task"),
     ), "Manage work projects and explicitly scoped tasks."),
     "work.task.read": CapabilitySpec("work.task.read", _actions(ActionSpec("list", effects=("read_private",), executor_key="manage_work")), "Read work tasks."),
     "work.task.manage": CapabilitySpec("work.task.manage", _actions(*(ActionSpec(action_id=a, effects=("write_private",), executor_key="manage_work") for a in ("create", "dependency"))), "Manage bounded task state."),
