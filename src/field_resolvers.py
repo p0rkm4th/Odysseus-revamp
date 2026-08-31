@@ -85,11 +85,16 @@ def resolve_action_fields(
     *,
     capability_id: str | None,
     action_id: str | None,
+    binding: str | None = None,
     query: str,
     frame: Mapping[str, Any],
 ) -> dict[str, Any]:
     capability = str(capability_id or "")
     action = str(action_id or "")
+    if not capability and binding:
+        from src.capability_registry import capability_for_tool
+        spec = capability_for_tool(str(binding))
+        capability = spec.capability_id if spec else ""
     key = (capability, action)
     resolver = FIELD_RESOLVERS.get(key)
     values = resolver(str(query or ""), frame) if resolver else _capability_fields(
