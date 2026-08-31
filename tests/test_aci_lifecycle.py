@@ -317,6 +317,40 @@ def test_canonical_answer_suppresses_intermediate_untrusted_summary():
     assert answer.content == "Current host network context (observed):\n- enp1s0 (PHYSICAL_LAN)\nNo default route was observed."
 
 
+def test_canonical_network_plan_has_bounded_owner_facing_answer():
+    response, answer = project_final_answer(
+        "I can scan that network now.",
+        [{
+            "tool": "manage_homelab", "exit_code": 0,
+            "command": '{"action":"plan_network_discovery","cidr":"192.168.10.0/24"}',
+            "result_projection": {
+                "action": "plan_network_discovery",
+                "status": "SUCCESS",
+                "target": "192.168.10.0/24",
+            },
+        }],
+        intent_domains=("network_ops",),
+    )
+    assert answer is not None
+    assert answer.provenance == "canonical bounded Network plan"
+    assert response == (
+        "I interpreted that as 192.168.10.0/24. I prepared a bounded network discovery "
+        "plan for exactly 192.168.10.0/24. No scan has started; active discovery still "
+        "requires exact approval for this scope."
+    )
+
+
+def test_canonical_network_plan_does_not_answer_for_failed_plan():
+    answer = canonical_result_answer([{
+        "tool": "manage_homelab", "exit_code": 1,
+        "command": '{"action":"plan_network_discovery","cidr":"192.168.10.0/24"}',
+        "output": json.dumps({"status": "FAILED", "action": "plan_network_discovery"}),
+    }])
+    assert answer is not None
+    assert answer.source is AnswerSource.ERROR
+    assert "No successful change is confirmed" in answer.content
+
+
 def test_project_final_answer_prefers_canonical_result_over_model_prose():
     response, answer = project_final_answer(
         "The network has a Kubernetes cluster with four nodes.",
