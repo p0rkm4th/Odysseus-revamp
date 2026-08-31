@@ -1,0 +1,52 @@
+{
+  "captured_at": "2026-08-31T02:10:00-05:00",
+  "branch": "hades-v1-productization",
+  "source_head": "21ba90b527bef7693764850401599dea8ccec402",
+  "remote_head": "21ba90b527bef7693764850401599dea8ccec402",
+  "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
+  "worktree": "clean",
+  "executable_candidate": {
+    "source_sha": "fc18ebed",
+    "image": "odysseus:candidate-fc18ebed",
+    "image_id": "sha256:c8bfd01eb2fc143768a71fd648544441e2a9ad4a11523faa68405f24051fe045"
+  },
+  "owner_dogfood": {
+    "project": "hades-owner-dogfood",
+    "port": 7020,
+    "source_sha": "2f05d500",
+    "image_id": "sha256:2884fe86a1a6f32f3c7ac8c1ed6b6be4bdac3d7298b389a1a7181e4a2639285a",
+    "health": "running",
+    "restarts": 0,
+    "automated_mutation": false
+  },
+  "acceptance": {
+    "stable_url": "http://127.0.0.1:7002",
+    "fresh_install_url": "http://127.0.0.1:7013",
+    "candidate_source_sha": "fc18ebed",
+    "qwen_model": "qwen3:8b",
+    "qwen_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+    "fresh_install_restart": "pass",
+    "full_regression": "7114 passed, 9 skipped, 149 warnings",
+    "focused_semantic_recovery": "382 passed, 1 warning",
+    "lived_in_walkabout": {
+      "turns": 20,
+      "streams": 20,
+      "false_success": 0,
+      "raw_final_results": 0,
+      "duplicate_delivery": 0,
+      "abrupt_eof": 0
+    }
+  },
+  "release_status": "active; not frozen",
+  "known_evidence_gaps": [
+    "mutation-adversarial browser matrix",
+    "partial dependency failure/recovery browser coverage",
+    "final exact-candidate release reconciliation and main merge"
+  ],
+  "dependabot": {
+    "open_prs": [1, 2, 3],
+    "selected_updates_ported_or_adapted": true,
+    "mcp_v2": "rejected for V1",
+    "bombadil_0_7": "deferred"
+  }
+}
