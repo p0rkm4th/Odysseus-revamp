@@ -535,15 +535,19 @@ import json, sqlite3, sys
 database, owner = sys.argv[1:]
 connection = sqlite3.connect(database)
 try:
+    # Fixture databases can outlive the short-lived acceptance principal.
+    # Scope cleanup by the fixture provenance marker rather than the current
+    # username so principal rotation cannot leave fixed IDs behind for the
+    # next disposable run. Non-fixture owner data is never selected here.
     asset_ids = [row[0] for row in connection.execute(
-        "select id from assets where owner=? and source='acceptance-fixture'", (owner,)
+        "select id from assets where source='acceptance-fixture'"
     ).fetchall()]
     if not asset_ids:
         print(json.dumps({'assets': 0}, sort_keys=True))
         raise SystemExit(0)
     marks = ','.join('?' for _ in asset_ids)
     counts = {'assets': connection.execute(
-        f"select count(*) from assets where owner=? and source='acceptance-fixture'", (owner,)
+        "select count(*) from assets where source='acceptance-fixture'"
     ).fetchone()[0]}
     connection.execute(f"delete from identifiers where asset_id in ({marks})", asset_ids)
     connection.execute(f"delete from observations where asset_id in ({marks})", asset_ids)
@@ -556,7 +560,7 @@ try:
         [*asset_ids, *asset_ids],
     )
     connection.execute(
-        "delete from assets where owner=? and source='acceptance-fixture'", (owner,)
+        "delete from assets where source='acceptance-fixture'"
     )
     connection.commit()
     print(json.dumps(counts, sort_keys=True))
