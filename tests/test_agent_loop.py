@@ -64,7 +64,7 @@ from src.aci import (
     prefetched_explicit_memory_result,
     successful_deterministic_read_result,
 )
-from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+from src.aci import compatibility_intent_projection as _classify_agent_request
 from src.mcp_manager import MCP_KEYWORDS as _MCP_KEYWORDS
 
 

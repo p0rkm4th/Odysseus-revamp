@@ -151,6 +151,7 @@ from src.aci import (
     finalize_prompt_messages,
     trim_route_request_messages,
     resolve_turn_intent,
+    compatibility_intent_projection,
     compile_turn_contract,
 )
 from src.intent_contracts import (
@@ -176,7 +177,6 @@ from src.intent_contracts import (
     looks_like_notes_request,
     looks_like_notes_calendar_followup,
     is_casual_low_signal,
-    classify_compatibility_request,
     detect_admin_intent,
     looks_like_explicit_skill_request,
     suppress_automatic_skills,
@@ -1357,7 +1357,7 @@ async def stream_aci_runtime(
         _last_user,
         aci_enabled=_aci_enabled,
         provisional_resolver=provisional_intent_projection,
-        compatibility_classifier=classify_compatibility_request,
+        compatibility_classifier=compatibility_intent_projection,
         compatibility_normalizers=(
             _normalize_asset_inventory_intent,
             _normalize_homelab_intent,

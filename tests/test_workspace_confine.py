@@ -384,7 +384,7 @@ def test_named_host_signal_requires_computer_action_context():
 
 
 def test_bare_start_does_not_select_cookbook_domain():
-    from src.intent_contracts import classify_compatibility_request as _classify_agent_request
+    from src.aci import compatibility_intent_projection as _classify_agent_request
 
     assert "cookbook" not in _classify_agent_request([], "Start working on Hades.")["domains"]
     assert "cookbook" in _classify_agent_request([], "Start serving the model on gpu-box.")["domains"]
