@@ -14,7 +14,8 @@ def _scheduled_task_fields(query: str, _frame: Mapping[str, Any], _action_id: st
 
 
 def _recipe_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
-    from src.intent_contracts import recipe_create_payload, recipe_requested_name, recipe_source_url
+    from src.domain_resolvers.recipe import requested_name, source_url
+    from src.intent_contracts import recipe_create_payload
 
     filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
     draft = recipe_create_payload(query)
@@ -22,8 +23,8 @@ def _recipe_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapp
         if action_id in {"add", "commit_import"} and filters.get("recipe_import") is True:
             draft = {**draft, "action": "commit_import", "source_text": query}
         return draft
-    url = str(filters.get("recipe_source_url") or "").strip() or recipe_source_url(query)
-    name = str(filters.get("recipe_requested_name") or "").strip() or recipe_requested_name(query)
+    url = str(filters.get("recipe_source_url") or "").strip() or source_url(query)
+    name = str(filters.get("recipe_requested_name") or "").strip() or requested_name(query)
     if url:
         return {"action": action_id, "source_url": url, **({"requested_name": name} if name else {})}
     if action_id == "prepare_import":

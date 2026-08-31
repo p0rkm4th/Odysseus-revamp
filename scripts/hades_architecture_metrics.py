@@ -28,6 +28,7 @@ COUNTED_MODULES = (
     "src/capability_dependencies.py",
     "src/field_resolvers.py",
     "src/domain_resolvers/reminders.py",
+    "src/domain_resolvers/recipe.py",
     "src/legacy_agent_loop.py",
 )
 

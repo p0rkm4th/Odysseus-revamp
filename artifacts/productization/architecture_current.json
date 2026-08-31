@@ -9,6 +9,8 @@
     "src/tool_capabilities.py",
     "src/capability_dependencies.py",
     "src/field_resolvers.py",
+    "src/domain_resolvers/reminders.py",
+    "src/domain_resolvers/recipe.py",
     "src/legacy_agent_loop.py"
   ],
   "modules": {
@@ -987,459 +989,439 @@
       ]
     },
     "src/intent_contracts.py": {
-      "loc": 3689,
+      "loc": 3614,
       "functions": [
         {
           "name": "compile_intent",
-          "line": 2344,
+          "line": 2269,
           "loc": 778
         },
         {
           "name": "normalize_operational_intent_evidence",
-          "line": 1271,
+          "line": 1196,
           "loc": 210
         },
         {
           "name": "classify_compatibility_request",
-          "line": 3520,
+          "line": 3445,
           "loc": 170
         },
         {
           "name": "resolve_structured_reference",
-          "line": 2143,
+          "line": 2068,
           "loc": 130
         },
         {
           "name": "recipe_import_review_draft",
-          "line": 563,
+          "line": 565,
           "loc": 111
         },
         {
           "name": "_recipe_ingredients",
-          "line": 243,
+          "line": 245,
           "loc": 109
         },
         {
           "name": "validate_bound_result",
-          "line": 3416,
+          "line": 3341,
           "loc": 102
         },
         {
           "name": "recipe_import_draft",
-          "line": 423,
+          "line": 425,
           "loc": 95
         },
         {
           "name": "resolve_intent",
-          "line": 3181,
+          "line": 3106,
           "loc": 93
         },
         {
           "name": "recipe_import_review_draft_from_payload",
-          "line": 676,
+          "line": 678,
           "loc": 68
         },
         {
           "name": "_operation",
-          "line": 2275,
+          "line": 2200,
           "loc": 67
         },
         {
           "name": "from_payload",
-          "line": 65,
+          "line": 67,
           "loc": 66
         },
         {
           "name": "apply_recipe_owner_transformations",
-          "line": 133,
+          "line": 135,
           "loc": 56
         },
         {
           "name": "resolve_continuation",
-          "line": 3124,
+          "line": 3049,
           "loc": 55
         },
         {
           "name": "validate_result",
-          "line": 3365,
+          "line": 3290,
           "loc": 49
         },
         {
           "name": "explicitly_allows_diagnostic_install",
-          "line": 1674,
+          "line": 1599,
           "loc": 46
         },
         {
           "name": "validate_contracts",
-          "line": 3276,
+          "line": 3201,
           "loc": 46
         },
         {
           "name": "recipe_import_review",
-          "line": 520,
+          "line": 522,
           "loc": 41
         },
         {
-          "name": "note_mutation_payload",
-          "line": 800,
-          "loc": 40
-        },
-        {
           "name": "canonical_read_action",
-          "line": 2093,
+          "line": 2018,
           "loc": 39
         },
         {
           "name": "recipe_create_draft",
-          "line": 383,
+          "line": 385,
           "loc": 38
         },
         {
           "name": "inventory_add_item_payload",
-          "line": 920,
+          "line": 845,
           "loc": 37
         },
         {
           "name": "memory_mutation_payload",
-          "line": 762,
+          "line": 753,
           "loc": 36
         },
         {
           "name": "suppress_automatic_skills",
-          "line": 1090,
+          "line": 1015,
           "loc": 33
         },
         {
           "name": "work_task_create_payload",
-          "line": 886,
+          "line": 811,
           "loc": 32
         },
         {
           "name": "inventory_consume_stock_payload",
-          "line": 959,
+          "line": 884,
           "loc": 30
         },
         {
           "name": "is_bounded_owner_capability_turn",
-          "line": 1784,
+          "line": 1709,
           "loc": 30
         },
         {
           "name": "_recipe_name",
-          "line": 214,
+          "line": 216,
           "loc": 27
         },
         {
           "name": "_video_recipe_sections",
-          "line": 354,
+          "line": 356,
           "loc": 27
         },
         {
           "name": "normalize_asset_inventory_intent",
-          "line": 1484,
+          "line": 1409,
           "loc": 25
         },
         {
           "name": "explicit_private_discovery_cidr",
-          "line": 1601,
+          "line": 1526,
           "loc": 24
         },
         {
           "name": "inventory_move_item_payload",
-          "line": 991,
+          "line": 916,
           "loc": 23
         },
         {
           "name": "normalize_homelab_intent",
-          "line": 1528,
+          "line": 1453,
           "loc": 23
         },
         {
-          "name": "scheduled_task_create_payload",
-          "line": 842,
-          "loc": 22
-        },
-        {
           "name": "_recipe_section",
-          "line": 191,
+          "line": 193,
           "loc": 21
         },
         {
           "name": "generated_parity_matrix",
-          "line": 3324,
+          "line": 3249,
           "loc": 21
         },
         {
           "name": "work_project_create_payload",
-          "line": 866,
+          "line": 791,
           "loc": 18
         },
         {
           "name": "looks_like_notes_calendar_followup",
-          "line": 1252,
+          "line": 1177,
           "loc": 18
         },
         {
           "name": "looks_like_notes_request",
-          "line": 1233,
+          "line": 1158,
           "loc": 17
         },
         {
           "name": "looks_like_explicit_skill_request",
-          "line": 1072,
+          "line": 997,
           "loc": 16
         },
         {
           "name": "is_casual_low_signal",
-          "line": 1139,
+          "line": 1064,
           "loc": 16
         },
         {
           "name": "result_status",
-          "line": 3347,
+          "line": 3272,
           "loc": 16
         },
         {
           "name": "detect_admin_intent",
-          "line": 1055,
+          "line": 980,
           "loc": 15
         },
         {
           "name": "looks_like_local_computer_request",
-          "line": 1175,
+          "line": 1100,
           "loc": 15
         },
         {
           "name": "asset_read_request",
-          "line": 1511,
+          "line": 1436,
           "loc": 15
         },
         {
           "name": "_is_continuation_phrase",
-          "line": 1735,
+          "line": 1660,
           "loc": 15
         },
         {
           "name": "as_payload",
-          "line": 49,
+          "line": 51,
           "loc": 14
         },
         {
           "name": "is_explicit_continuation",
-          "line": 1587,
+          "line": 1512,
           "loc": 12
         },
         {
           "name": "as_dict",
-          "line": 1836,
+          "line": 1761,
           "loc": 12
         },
         {
           "name": "network_substantive_fallback_command",
-          "line": 1722,
+          "line": 1647,
           "loc": 11
         },
         {
           "name": "fuzzy",
-          "line": 1286,
+          "line": 1211,
           "loc": 10
         },
         {
           "name": "is_explicit_network_discovery_request",
-          "line": 1654,
+          "line": 1579,
           "loc": 9
         },
         {
           "name": "looks_like_workspace_coding_request",
-          "line": 1213,
+          "line": 1138,
           "loc": 8
         },
         {
           "name": "explicitly_references_missing_workspace",
-          "line": 1223,
+          "line": 1148,
           "loc": 8
         },
         {
           "name": "is_network_prerequisite_request",
-          "line": 1644,
+          "line": 1569,
           "loc": 8
         },
         {
           "name": "as_dict",
-          "line": 1860,
+          "line": 1785,
           "loc": 8
         },
         {
           "name": "network_discovery_request_cidr",
-          "line": 1627,
+          "line": 1552,
           "loc": 7
         },
         {
           "name": "is_network_service_enumeration_request",
-          "line": 1665,
+          "line": 1590,
           "loc": 7
         },
         {
           "name": "_depth",
-          "line": 2134,
+          "line": 2059,
           "loc": 7
         },
         {
           "name": "has_network_cidr_candidate",
-          "line": 1636,
+          "line": 1561,
           "loc": 6
         },
         {
           "name": "_number",
-          "line": 299,
+          "line": 301,
           "loc": 6
         },
         {
           "name": "as_dict",
-          "line": 1770,
+          "line": 1695,
           "loc": 5
         },
         {
-          "name": "recipe_source_url",
-          "line": 756,
-          "loc": 4
-        },
-        {
           "name": "canonical_domain_projection",
-          "line": 2087,
+          "line": 2012,
           "loc": 4
         },
         {
           "name": "recipe_create_payload",
-          "line": 746,
-          "loc": 3
-        },
-        {
-          "name": "recipe_requested_name",
-          "line": 751,
+          "line": 748,
           "loc": 3
         },
         {
           "name": "targets",
-          "line": 142,
+          "line": 144,
           "loc": 3
         },
         {
           "name": "matches",
-          "line": 146,
+          "line": 148,
           "loc": 3
         },
         {
           "name": "phrase",
-          "line": 1283,
+          "line": 1208,
           "loc": 2
         },
         {
           "name": "has",
-          "line": 3582,
+          "line": 3507,
           "loc": 2
         }
       ],
       "largest_functions": [
         {
           "name": "compile_intent",
-          "line": 2344,
+          "line": 2269,
           "loc": 778
         },
         {
           "name": "normalize_operational_intent_evidence",
-          "line": 1271,
+          "line": 1196,
           "loc": 210
         },
         {
           "name": "classify_compatibility_request",
-          "line": 3520,
+          "line": 3445,
           "loc": 170
         },
         {
           "name": "resolve_structured_reference",
-          "line": 2143,
+          "line": 2068,
           "loc": 130
         },
         {
           "name": "recipe_import_review_draft",
-          "line": 563,
+          "line": 565,
           "loc": 111
         },
         {
           "name": "_recipe_ingredients",
-          "line": 243,
+          "line": 245,
           "loc": 109
         },
         {
           "name": "validate_bound_result",
-          "line": 3416,
+          "line": 3341,
           "loc": 102
         },
         {
           "name": "recipe_import_draft",
-          "line": 423,
+          "line": 425,
           "loc": 95
         },
         {
           "name": "resolve_intent",
-          "line": 3181,
+          "line": 3106,
           "loc": 93
         },
         {
           "name": "recipe_import_review_draft_from_payload",
-          "line": 676,
+          "line": 678,
           "loc": 68
         },
         {
           "name": "_operation",
-          "line": 2275,
+          "line": 2200,
           "loc": 67
         },
         {
           "name": "from_payload",
-          "line": 65,
+          "line": 67,
           "loc": 66
         },
         {
           "name": "apply_recipe_owner_transformations",
-          "line": 133,
+          "line": 135,
           "loc": 56
         },
         {
           "name": "resolve_continuation",
-          "line": 3124,
+          "line": 3049,
           "loc": 55
         },
         {
           "name": "validate_result",
-          "line": 3365,
+          "line": 3290,
           "loc": 49
         },
         {
           "name": "explicitly_allows_diagnostic_install",
-          "line": 1674,
+          "line": 1599,
           "loc": 46
         },
         {
           "name": "validate_contracts",
-          "line": 3276,
+          "line": 3201,
           "loc": 46
         },
         {
           "name": "recipe_import_review",
-          "line": 520,
+          "line": 522,
           "loc": 41
         },
         {
-          "name": "note_mutation_payload",
-          "line": 800,
-          "loc": 40
+          "name": "canonical_read_action",
+          "line": 2018,
+          "loc": 39
         },
         {
-          "name": "canonical_read_action",
-          "line": 2093,
-          "loc": 39
+          "name": "recipe_create_draft",
+          "line": 385,
+          "loc": 38
         }
       ]
     },
@@ -2007,31 +1989,31 @@
       ]
     },
     "src/field_resolvers.py": {
-      "loc": 140,
+      "loc": 141,
       "functions": [
         {
           "name": "_recipe_fields",
           "line": 16,
-          "loc": 22
+          "loc": 23
         },
         {
           "name": "resolve_action_fields",
-          "line": 101,
+          "line": 102,
           "loc": 20
         },
         {
           "name": "deterministic_action_for_contract",
-          "line": 123,
+          "line": 124,
           "loc": 18
         },
         {
           "name": "_notes_fields",
-          "line": 76,
+          "line": 77,
           "loc": 9
         },
         {
           "name": "_inventory_fields",
-          "line": 51,
+          "line": 52,
           "loc": 8
         },
         {
@@ -2041,27 +2023,27 @@
         },
         {
           "name": "_reference_id",
-          "line": 45,
+          "line": 46,
           "loc": 4
         },
         {
           "name": "_network_fields",
-          "line": 40,
+          "line": 41,
           "loc": 3
         },
         {
           "name": "_work_project_fields",
-          "line": 61,
+          "line": 62,
           "loc": 3
         },
         {
           "name": "_work_task_fields",
-          "line": 66,
+          "line": 67,
           "loc": 3
         },
         {
           "name": "_memory_fields",
-          "line": 71,
+          "line": 72,
           "loc": 3
         }
       ],
@@ -2069,26 +2051,26 @@
         {
           "name": "_recipe_fields",
           "line": 16,
-          "loc": 22
+          "loc": 23
         },
         {
           "name": "resolve_action_fields",
-          "line": 101,
+          "line": 102,
           "loc": 20
         },
         {
           "name": "deterministic_action_for_contract",
-          "line": 123,
+          "line": 124,
           "loc": 18
         },
         {
           "name": "_notes_fields",
-          "line": 76,
+          "line": 77,
           "loc": 9
         },
         {
           "name": "_inventory_fields",
-          "line": 51,
+          "line": 52,
           "loc": 8
         },
         {
@@ -2098,28 +2080,82 @@
         },
         {
           "name": "_reference_id",
-          "line": 45,
+          "line": 46,
           "loc": 4
         },
         {
           "name": "_network_fields",
-          "line": 40,
+          "line": 41,
           "loc": 3
         },
         {
           "name": "_work_project_fields",
-          "line": 61,
+          "line": 62,
           "loc": 3
         },
         {
           "name": "_work_task_fields",
-          "line": 66,
+          "line": 67,
           "loc": 3
         },
         {
           "name": "_memory_fields",
-          "line": 71,
+          "line": 72,
           "loc": 3
+        }
+      ]
+    },
+    "src/domain_resolvers/reminders.py": {
+      "loc": 64,
+      "functions": [
+        {
+          "name": "note_mutation_payload",
+          "line": 6,
+          "loc": 37
+        },
+        {
+          "name": "scheduled_task_create_payload",
+          "line": 44,
+          "loc": 21
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "note_mutation_payload",
+          "line": 6,
+          "loc": 37
+        },
+        {
+          "name": "scheduled_task_create_payload",
+          "line": 44,
+          "loc": 21
+        }
+      ]
+    },
+    "src/domain_resolvers/recipe.py": {
+      "loc": 38,
+      "functions": [
+        {
+          "name": "requested_name",
+          "line": 12,
+          "loc": 21
+        },
+        {
+          "name": "source_url",
+          "line": 35,
+          "loc": 4
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "requested_name",
+          "line": 12,
+          "loc": 21
+        },
+        {
+          "name": "source_url",
+          "line": 35,
+          "loc": 4
         }
       ]
     },
@@ -2141,7 +2177,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18838,
+  "semantic_control_plane_loc": 18866,
   "central_domain_conditionals": 120,
   "central_canonical_answer_functions": 23,
   "canonical_answer_dispatch_mentions": 27,
@@ -2294,6 +2330,6 @@
       }
     ]
   },
-  "source_sha": "6c775a586e123d502a8453d071d55e24e1973440",
+  "source_sha": "857c6e42375ba0a600cdd18fb34c424db6c4f639",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
