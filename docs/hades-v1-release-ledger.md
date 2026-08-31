@@ -60,6 +60,28 @@ rejected by the harness and classified as an acceptance constraint; individual
 valid-fixture replays were used instead. Owner-dogfood and production data
 remained untouched.
 
+# Fresh-install/restart replay — exact candidate `fc18ebed` (2026-08-31)
+
+An additional empty disposable Compose lane was created at
+`/tmp/hades-fresh-v1-current` on isolated host port `7013` after the first
+attempt correctly stopped on an `8094` port collision (`ENVIRONMENT_FAILURE`).
+The retry used image `odysseus:candidate-fc18ebed` (image
+`sha256:c8bfd01eb2fc143768a71fd648544441e2a9ad4a11523faa68405f24051fe045`),
+an isolated Docker network, and a fresh application data root. Normal first
+boot created the disposable admin; the acceptance principal was provisioned
+only in this lane. The browser initially exposed the expected setup gap that
+no Qwen model endpoint was registered, so the isolated admin registered the
+Ollama endpoint through the normal model-endpoint API. The endpoint reported
+`qwen3:8b` and online status.
+
+After restarting the app to load the acceptance principal, the authenticated
+`OWNER-WORK-EMPTY-001` browser journey passed once before restart and once
+after restart: two GUI reads/streams total, zero mutations, zero false
+successes, raw final Results, duplicate delivery, or abrupt EOF. The app was
+healthy with zero restarts after recovery. The initial missing-model and
+credential-reload observations are setup/readiness evidence, not feature
+failures. Existing owner-dogfood and production deployments were untouched.
+
 ## Network scoped-discovery owner defect and convergence replay (2026-08-31)
 
 Owner dogfood exposed two related Network/Homelab failures: the obvious CIDR
