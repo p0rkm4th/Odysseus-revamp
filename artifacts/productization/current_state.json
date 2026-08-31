@@ -191,11 +191,30 @@
       "internal_leaks": 0,
       "status": "live-fuzz subset; not directly comparable to the combined 142-case holdout"
     }
+    ,"live_qwen_held_out_20260831_candidate_66365317": {
+      "artifact": "artifacts/productization/hades-v1-66365317-authoritative-live-holdout.json",
+      "cases": 42,
+      "functional_passes": 41,
+      "architectural_passes": 42,
+      "security_passes": 42,
+      "functional_rate": 0.9762,
+      "architectural_rate": 1.0,
+      "security_rate": 1.0,
+      "reference_resolution_rate": 0.0,
+      "duplicate_rate": 0.0,
+      "top_failure_clusters": {
+        "COMPLETION_FAILURE": 1
+      },
+      "model_calls_per_task": 0.6429,
+      "median_latency_seconds": 0.7421,
+      "p95_latency_seconds": 3.9183,
+      "status": "authoritative live held-out subset; materially improved but not comparable to the combined 142-case aggregate"
+    }
   },
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
   "architecture_current": {
-    "measured_at": "2026-08-30T23:33:41-05:00",
+    "measured_at": "2026-08-30T23:35:57-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "601 passed, 6 skipped, 1 warning",
     "full_regression": "7116 passed, 9 skipped, 149 warnings",
