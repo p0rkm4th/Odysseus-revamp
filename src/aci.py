@@ -3038,7 +3038,9 @@ class ResultProjection:
 class ACIProfile:
     name: str = "standard"
     target_context_tokens: int = 6000
-    max_action_cards: int = 5
+    # Keep model arbitration bounded.  A capability resolver should present a
+    # tiny candidate set, not recreate the old full tool inventory.
+    max_action_cards: int = 3
     max_context_expansions: int = 2
     max_decision_repairs: int = 1
     strict_decision_json: bool = True
@@ -4002,7 +4004,7 @@ def project_action_selection(
         if preferred is not None:
             filtered.insert(0, preferred)
     filtered.sort(key=lambda item: 0 if item["binding"] == desired_binding and item["action_id"] == desired_action else 1)
-    limit = getattr(profile, "max_action_cards", 5) if profile else 5
+    limit = min(getattr(profile, "max_action_cards", 3) if profile else 3, 3)
     selected = adaptive_shortlist(filtered, "high" if desired_action else "medium", limit=limit)
     choices: dict[str, dict[str, Any]] = {}
     for index, item in enumerate(selected):
