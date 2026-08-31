@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-31T18:00:00-05:00",
+  "captured_at": "2026-08-31T13:04:39-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "e68fee0f791702bbf8592adbbf35946ca41d3e4",
+  "branch_head": "49711ac72ba622891259a21351ef72868a6a5df7",
   "application_source_sha": "896473de81075178297eb510fa13b37810e514b6",
-  "source_head": "e68fee0f791702bbf8592adbbf35946ca41d3e4",
-  "remote_head": "e68fee0f791702bbf8592adbbf35946ca41d3e4",
-  "evidence_commit_sha": "e68fee0f791702bbf8592adbbf35946ca41d3e4",
+  "source_head": "49711ac72ba622891259a21351ef72868a6a5df7",
+  "remote_head": "49711ac72ba622891259a21351ef72868a6a5df7",
+  "evidence_commit_sha": "49711ac72ba622891259a21351ef72868a6a5df7",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "ahead_behind_main": {
