@@ -243,16 +243,16 @@
       ]
     },
     "src/aci.py": {
-      "loc": 4670,
+      "loc": 4672,
       "functions": [
         {
           "name": "project_action_selection",
-          "line": 3876,
+          "line": 3878,
           "loc": 279
         },
         {
           "name": "canonical_tool_result_projection",
-          "line": 3149,
+          "line": 3151,
           "loc": 264
         },
         {
@@ -262,7 +262,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3684,
+          "line": 3686,
           "loc": 104
         },
         {
@@ -287,7 +287,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4201,
+          "line": 4203,
           "loc": 93
         },
         {
@@ -312,7 +312,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4454,
+          "line": 4456,
           "loc": 69
         },
         {
@@ -337,7 +337,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4393,
+          "line": 4395,
           "loc": 59
         },
         {
@@ -347,17 +347,17 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 4607,
+          "line": 4609,
           "loc": 56
         },
         {
           "name": "canonical_read_failure_answer",
-          "line": 3415,
+          "line": 3417,
           "loc": 53
         },
         {
           "name": "canonical_action_failure_answer",
-          "line": 3470,
+          "line": 3472,
           "loc": 52
         },
         {
@@ -367,7 +367,7 @@
         },
         {
           "name": "parse_decision_json",
-          "line": 4311,
+          "line": 4313,
           "loc": 50
         },
         {
@@ -387,12 +387,12 @@
         },
         {
           "name": "project_result_observation",
-          "line": 4525,
+          "line": 4527,
           "loc": 48
         },
         {
           "name": "project_final_answer",
-          "line": 3575,
+          "line": 3577,
           "loc": 47
         },
         {
@@ -412,7 +412,7 @@
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 4157,
+          "line": 4159,
           "loc": 42
         },
         {
@@ -432,7 +432,7 @@
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 3820,
+          "line": 3822,
           "loc": 37
         },
         {
@@ -447,12 +447,12 @@
         },
         {
           "name": "canonical_unverified_action_answer",
-          "line": 3524,
+          "line": 3526,
           "loc": 32
         },
         {
           "name": "project_capability_palette",
-          "line": 3624,
+          "line": 3626,
           "loc": 32
         },
         {
@@ -487,7 +487,7 @@
         },
         {
           "name": "selected_action_for_decision",
-          "line": 4363,
+          "line": 4365,
           "loc": 28
         },
         {
@@ -527,7 +527,7 @@
         },
         {
           "name": "classify_action_escalation",
-          "line": 3658,
+          "line": 3660,
           "loc": 24
         },
         {
@@ -542,7 +542,7 @@
         },
         {
           "name": "hard_filter_actions",
-          "line": 3100,
+          "line": 3102,
           "loc": 23
         },
         {
@@ -562,12 +562,12 @@
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 4575,
+          "line": 4577,
           "loc": 20
         },
         {
           "name": "from_runtime_profile",
-          "line": 3060,
+          "line": 3062,
           "loc": 20
         },
         {
@@ -617,12 +617,12 @@
         },
         {
           "name": "canonical_result_answer",
-          "line": 3558,
+          "line": 3560,
           "loc": 15
         },
         {
           "name": "validate_capability_creation_request",
-          "line": 3859,
+          "line": 3861,
           "loc": 15
         },
         {
@@ -662,12 +662,12 @@
         },
         {
           "name": "canonical_read_fast_path_payload",
-          "line": 3134,
+          "line": 3136,
           "loc": 13
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 4296,
+          "line": 4298,
           "loc": 13
         },
         {
@@ -687,7 +687,7 @@
         },
         {
           "name": "effective_context",
-          "line": 3082,
+          "line": 3084,
           "loc": 11
         },
         {
@@ -732,7 +732,7 @@
         },
         {
           "name": "model_burden",
-          "line": 4665,
+          "line": 4667,
           "loc": 6
         },
         {
@@ -752,7 +752,7 @@
         },
         {
           "name": "adaptive_shortlist",
-          "line": 3125,
+          "line": 3127,
           "loc": 4
         },
         {
@@ -777,7 +777,7 @@
         },
         {
           "name": "state_fingerprint",
-          "line": 3095,
+          "line": 3097,
           "loc": 3
         },
         {
@@ -789,12 +789,12 @@
       "largest_functions": [
         {
           "name": "project_action_selection",
-          "line": 3876,
+          "line": 3878,
           "loc": 279
         },
         {
           "name": "canonical_tool_result_projection",
-          "line": 3149,
+          "line": 3151,
           "loc": 264
         },
         {
@@ -804,7 +804,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 3684,
+          "line": 3686,
           "loc": 104
         },
         {
@@ -829,7 +829,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 4201,
+          "line": 4203,
           "loc": 93
         },
         {
@@ -854,7 +854,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 4454,
+          "line": 4456,
           "loc": 69
         },
         {
@@ -879,7 +879,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 4393,
+          "line": 4395,
           "loc": 59
         },
         {
@@ -2698,7 +2698,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 19132,
+  "semantic_control_plane_loc": 19134,
   "central_domain_conditionals": 118,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -2866,6 +2866,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "3b73edffc7c44daa26f3e2ef4f40fbcdb9355eb7",
+  "source_sha": "1cb42673a8c3e868c1ce53f0afdf293c90376214",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
