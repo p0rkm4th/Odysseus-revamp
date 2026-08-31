@@ -40,7 +40,11 @@ if [ "$bulk_device" = "$root_device" ]; then
   exit 2
 fi
 
-docker_report="$(docker system df --format 'TYPE={{.Type}} TOTAL={{.TotalCount}} ACTIVE={{.Active}} SIZE={{.Size}} RECLAIMABLE={{.Reclaimable}}' 2>/dev/null || true)"
+# Usage reporting is advisory; the filesystem thresholds above are the
+# fail-closed safety gate.  Bound Docker's usage endpoint so a daemon/API
+# stall cannot hang a release build or the full regression indefinitely.
+docker_df_timeout="${ODYSSEUS_DOCKER_DF_TIMEOUT_SECONDS:-15}"
+docker_report="$(timeout "$docker_df_timeout" docker system df --format 'TYPE={{.Type}} TOTAL={{.TotalCount}} ACTIVE={{.Active}} SIZE={{.Size}} RECLAIMABLE={{.Reclaimable}}' 2>/dev/null || true)"
 candidate_count="$(docker images --format '{{.Repository}}:{{.Tag}}' | awk '/^odysseus:candidate-/ {count++} END {print count+0}')"
 rollback_count="$(docker images --format '{{.Repository}}:{{.Tag}}' | awk '/^odysseus:rollback-/ {count++} END {print count+0}')"
 running_images="$(docker ps --format '{{.Image}}' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//' || true)"
