@@ -1,43 +1,31 @@
-"""Grounded owner-facing renderers for scheduled reminders."""
-
 from __future__ import annotations
-
 import json
 from typing import Any, Mapping, Sequence
 
+def _event(tool_events: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
+    event = next((item for item in reversed(tuple(tool_events or ())) if isinstance(item, Mapping) and item.get("tool") == "manage_tasks"), None)
+    return event if event and event.get("exit_code") in (None, 0) else None
+
+def _request(event: Mapping[str, Any]) -> Mapping[str, Any]:
+    try:
+        value = json.loads(str(event.get("command") or "{}"))
+    except (TypeError, ValueError):
+        value = {}
+    return value if isinstance(value, Mapping) else {}
 
 def canonical_scheduled_task_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Render the existing scheduler list as a deterministic owner answer."""
-    event = next(
-        (item for item in reversed(tuple(tool_events or ()))
-         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_tasks"),
-        None,
-    )
-    if event is None or event.get("exit_code") not in (None, 0):
-        return None
-    try:
-        request = json.loads(str(event.get("command") or "{}"))
-    except (TypeError, ValueError):
-        request = {}
-    if not isinstance(request, Mapping) or str(request.get("action") or "").strip().lower() != "list":
+    event = _event(tool_events)
+    request = _request(event) if event else {}
+    if str(request.get("action") or "").strip().lower() != "list":
         return None
     return str(event.get("output") or "").strip() or "No scheduled reminders found."
 
-
 def canonical_scheduled_task_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Render a successful scheduled reminder from the scheduler Result."""
-    event = next(
-        (item for item in reversed(tuple(tool_events or ()))
-         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "manage_tasks"),
-        None,
-    )
-    if event is None or event.get("exit_code") not in (None, 0) or event.get("success") is False:
+    event = _event(tool_events)
+    if event is None or event.get("success") is False:
         return None
-    try:
-        request = json.loads(str(event.get("command") or "{}"))
-    except (TypeError, ValueError):
-        request = {}
-    if not isinstance(request, Mapping) or str(request.get("action") or "").strip().lower() != "create":
+    request = _request(event)
+    if str(request.get("action") or "").strip().lower() != "create":
         return None
     title = str(event.get("task_name") or request.get("name") or request.get("prompt") or "the reminder").strip()
     schedule = str(request.get("schedule") or "daily").strip()
