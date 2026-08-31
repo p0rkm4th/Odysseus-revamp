@@ -46,6 +46,18 @@
       "full_regression": "not rerun on b3 docs/metrics descendant; latest exact application regression is ffe1c424",
       "owner_runtime": "unchanged on candidate-2f05d500 at :7020"
     },
+    "supported_holdout_b3c20af5": {
+      "artifact": "/tmp/b3c20af5-supported-holdout.json",
+      "suite": "held_out",
+      "cases": 37,
+      "trajectory_passes": 37,
+      "internal_leaks": 0,
+      "model_calls": 10,
+      "tool_index_lookups": 0,
+      "duplicate_delivery": 0,
+      "abrupt_eof": 0,
+      "status": "live structural holdout; trajectory assertions passed; not a complete functional score"
+    },
     "latest_exact_candidate_50ae6e6b": {
       "source_sha": "50ae6e6bec6b0953c2001f192baf0bd6e094c085",
       "image": "odysseus:candidate-50ae6e6b",
