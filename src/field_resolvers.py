@@ -1,9 +1,3 @@
-"""Generic schema-field resolution for canonical Action payloads.
-
-Resolvers propose validated fields only. They never select capabilities,
-authorize Actions, execute tools, or persist state.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -55,22 +49,23 @@ def _inventory_fields(query: str, frame: Mapping[str, Any], action_id: str) -> M
     return resolver(query, item_reference=ref) if action_id != "add_item" else resolver(query)
 
 
-def _domain_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
-    domain = str(frame.get("domain_concept") or "")
-    if domain == "RECIPE" and action_id in {"add", "commit_import"}:
+def _capability_fields(
+    query: str, frame: Mapping[str, Any], capability_id: str, action_id: str,
+) -> Mapping[str, Any] | None:
+    if capability_id == "recipe.manage" and action_id in {"add", "commit_import"}:
         return _recipe_fields(query, frame, action_id)
-    if domain in {"HOUSEHOLD_ITEM", "INVENTORY_MUTATION"} and action_id in {"add_item", "consume_stock", "move_item"}:
+    if capability_id == "inventory.manage" and action_id in {"add_item", "consume_stock", "move_item"}:
         return _inventory_fields(query, frame, action_id)
-    if domain == "PROJECT" and action_id == "create":
+    if capability_id == "work.project.manage" and action_id == "create":
         from src.intent_contracts import work_project_create_payload
         return work_project_create_payload(query)
-    if domain == "TASK" and action_id == "create_task":
+    if capability_id == "work.project.manage" and action_id == "create_task":
         from src.intent_contracts import work_task_create_payload
         return work_task_create_payload(query)
-    if domain == "MEMORY" and action_id in {"create", "update", "delete"}:
+    if capability_id == "memory.manage" and action_id in {"create", "update", "delete"}:
         from src.intent_contracts import memory_mutation_payload
         return memory_mutation_payload(query, action_id)
-    if domain == "NOTES_MUTATION" and action_id in {"add", "update", "delete"}:
+    if capability_id == "notes.manage" and action_id in {"add", "update", "delete"}:
         from src.intent_contracts import note_mutation_payload
         fields = note_mutation_payload(query, action_id)
         if not fields and action_id in {"update", "delete"} and _reference_id(frame):
@@ -93,9 +88,13 @@ def resolve_action_fields(
     query: str,
     frame: Mapping[str, Any],
 ) -> dict[str, Any]:
-    key = (str(capability_id or ""), str(action_id or ""))
+    capability = str(capability_id or "")
+    action = str(action_id or "")
+    key = (capability, action)
     resolver = FIELD_RESOLVERS.get(key)
-    values = resolver(str(query or ""), frame) if resolver else _domain_fields(str(query or ""), frame, key[1])
+    values = resolver(str(query or ""), frame) if resolver else _capability_fields(
+        str(query or ""), frame, capability, action,
+    )
     return dict(values or {})
 
 
@@ -106,7 +105,6 @@ def deterministic_action_for_contract(
     frame: Mapping[str, Any],
     disabled_tools: set[str],
 ) -> tuple[str, dict[str, Any]] | None:
-    """Return a payload only when a registered schema resolver can fill it."""
     contract = contract if isinstance(contract, Mapping) else {}
     binding = str(contract.get("binding") or "")
     fields = resolve_action_fields(
