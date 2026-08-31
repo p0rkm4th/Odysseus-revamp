@@ -4764,6 +4764,14 @@ not find the created acceptance-principal recipe. Classified
 principal's canonical readback path; this is not counted as a green owner
 journey.
 
+After correcting the scenario's `contains_name`, a replay on `81e5ccff`
+completed the first two Qwen3:8B turns and reached the canonical recipe detail
+projection, but the third model-mediated turn exceeded the browser's 30-second
+completion budget. Direct `/api/chat` from the same Hades container namespace
+completed a small `qwen3:8b` request in under a second, so this remains a
+model-mediated accumulated-context reliability investigation rather than
+evidence to relax the owner latency gate.
+
 The readback investigation proved `/api/recipes` returned the canonical
 acceptance recipe after login; the scenario itself lacked `contains_name` and
 was corrected. The existing realistic Playwright acceptance now iterates all
