@@ -1,0 +1,8 @@
+{
+  "schema": "hades-full-regression.v1",
+  "application_source_sha": "78bf0d1c7282486ce4f8252e805b3c467e041f6e",
+  "evidence_tree": "1d3e1d1f8f517d4f72d06f31e7f4074029c3cbac",
+  "result": "7119 passed, 9 skipped, 149 warnings",
+  "duration_seconds": 304.37,
+  "scope": "venv/bin/pytest -q; evidence tree differs from application source only by documentation"
+}
