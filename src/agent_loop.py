@@ -461,8 +461,6 @@ def _domain_tools_for_projection(domain: str, *, canonical: bool = False) -> set
     from src.legacy_domain_contract import DOMAIN_TOOL_MAP
     return set(DOMAIN_TOOL_MAP.get(str(domain), set()))
 
-_HARD_TOOL_DOMAINS = HARD_TOOL_DOMAINS
-_DETERMINISTIC_TOOL_DOMAINS = DETERMINISTIC_TOOL_DOMAINS
 
 # Compatibility export used by prompt reconstruction callers.  This is a
 # pure message transformation, not a semantic or execution authority.
@@ -1917,7 +1915,7 @@ async def stream_aci_runtime(
         _tool_index_bypassed = bool(_canonical_read_fast)
         logger.info("[tool-rag] Canonical contract binding projected: %s", _canonical_binding)
     _t1 = time.time()
-    _deterministic_intent_domains = set(_intent.get("domains") or set()) & _DETERMINISTIC_TOOL_DOMAINS
+    _deterministic_intent_domains = set(_intent.get("domains") or set()) & DETERMINISTIC_TOOL_DOMAINS
     if not _aci_canonical_tool_projection and not guide_only and not _relevant_tools and _deterministic_intent_domains:
         from src.tool_index import ALWAYS_AVAILABLE
         _relevant_tools = set(ALWAYS_AVAILABLE)
@@ -4534,7 +4532,7 @@ async def stream_aci_runtime(
             logger.info(
                 "[agent] hard action no-action repair on round %s domains=%s: %r",
                 round_num,
-                sorted(set(_intent_domains or set()) & _HARD_TOOL_DOMAINS),
+                sorted(set(_intent_domains or set()) & HARD_TOOL_DOMAINS),
                 strip_think_blocks(round_response).strip()[:160],
             )
             if round_response and full_response.endswith(round_response):
@@ -4565,7 +4563,7 @@ async def stream_aci_runtime(
             ):
                 logger.info(
                     "[agent] repair budget exhausted; injecting substantive network fallback in current round domains=%s install_authorized=%s",
-                    sorted(set(_intent_domains or set()) & _HARD_TOOL_DOMAINS),
+                    sorted(set(_intent_domains or set()) & HARD_TOOL_DOMAINS),
                     explicitly_allows_diagnostic_install(_retrieval_query),
                 )
                 _hard_action_substantive_attempted = True
@@ -4585,7 +4583,7 @@ async def stream_aci_runtime(
         ):
             logger.info(
                 "[agent] hard action deterministic fallback domains=%s command=%r",
-                sorted(set(_intent_domains or set()) & _HARD_TOOL_DOMAINS),
+                sorted(set(_intent_domains or set()) & HARD_TOOL_DOMAINS),
                 _hard_action_fallback,
             )
             if round_response and full_response.endswith(round_response):
