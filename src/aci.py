@@ -3453,6 +3453,37 @@ def canonical_recipe_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
         name = str(draft.get("name") or "the recipe").strip()
         ingredients = draft.get("ingredients") if isinstance(draft.get("ingredients"), list) else []
         return f"Prepared {name!r} as an unpersisted draft with {len(ingredients)} ingredient(s). Review it before committing."
+    if action == "get":
+        recipe = payload.get("recipe")
+        if not isinstance(recipe, Mapping):
+            return None
+        name = str(recipe.get("name") or "the recipe").strip()
+        lines = [f"{name} ({recipe.get('servings', 1)} servings):"]
+        ingredients = recipe.get("ingredients") if isinstance(recipe.get("ingredients"), list) else []
+        if ingredients:
+            lines.append("Ingredients:")
+            for item in ingredients[:100]:
+                if not isinstance(item, Mapping):
+                    continue
+                kind = str(item.get("amount_kind") or "EXACT").upper()
+                source = str(item.get("source_text") or "").strip()
+                if kind in {"TO_TASTE", "AS_NEEDED", "OPTIONAL", "UNSPECIFIED", "NOMINAL"}:
+                    amount = source or str(item.get("modifier") or kind.lower().replace("_", " "))
+                    line = f"- {amount}"
+                    if source and str(item.get("name") or "").casefold() not in source.casefold():
+                        line += f" {item.get('name')}"
+                elif kind == "RANGE" and item.get("quantity_min") is not None:
+                    line = f"- {item.get('quantity_min')}-{item.get('quantity_max')} {item.get('unit') or ''} {item.get('name') or 'ingredient'}"
+                else:
+                    line = f"- {item.get('quantity')} {item.get('unit') or ''} {item.get('name') or 'ingredient'}"
+                lines.append(line.strip())
+        notes = str(recipe.get("notes") or "").strip()
+        if notes:
+            lines.extend(["Notes:", notes])
+        instructions = str(recipe.get("instructions") or "").strip()
+        if instructions:
+            lines.extend(["Instructions:", instructions])
+        return "\n".join(lines)
     if action == "can_make":
         can_make = payload.get("can_make")
         shortages = payload.get("shortages") if isinstance(payload.get("shortages"), list) else []
