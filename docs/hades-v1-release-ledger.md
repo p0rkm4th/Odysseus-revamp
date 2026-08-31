@@ -2,6 +2,22 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Lived-in Tier 1 walkabout replay — exact candidate `fc18ebed` (2026-08-31)
+
+`OWNER-TIER1-LIVED-IN-WALKABOUT-001` passed through the authenticated GUI on
+the isolated stable acceptance lane: 20 mixed-domain owner turns, 20 streams,
+and 20 grounded read journeys. The conversation switched among Today,
+reminders, Household, Recipes, Assets, references/corrections, Work, Memory,
+and Network, including returning to an earlier computer reference. No
+effectful mutation was requested in this corpus. False success, raw final
+Results, duplicate delivery, and abrupt EOF were all zero.
+
+The companion `OWNER-AMBIGUOUS-RESTART-001` and
+`OWNER-CONTINUE-NO-ACTIVE-001` safety pair also passed: both requests remained
+bounded clarification/no-active-run outcomes, with no unsafe restart and zero
+false success, raw final Results, duplicate delivery, or abrupt EOF. No owner
+or persistent dogfood state was used.
+
 ## Qualitative Recipe amounts replay — exact candidate `fc18ebed` (2026-08-31)
 
 `OWNER-RECIPE-QUALITATIVE-AMOUNTS-001` passed in the isolated stable
