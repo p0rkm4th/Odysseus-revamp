@@ -5246,6 +5246,13 @@ mutation (2 turns, 1 mutation, 2 readbacks), and Work overview (3 turns, 2
 canonical readback checks). False success, raw final Results, duplicate
 delivery, and abrupt EOF were zero. No owner-dogfood state was touched.
 
+## Realistic UI acceptance replay — candidate `b91ff938` (2026-08-31)
+
+`browser_realistic_acceptance.mjs` passed against the exact candidate. The
+replay covered authenticated navigation, duplicate-icon checks, built-in theme
+propagation, responsive viewports, shared-window geometry, and containment of
+long unbroken content. No owner-dogfood state was touched.
+
 ## Mixed synthetic corpus isolation — candidate `b91ff938` (2026-08-31)
 
 The browser harness no longer rejects mixed synthetic fixture profiles or
