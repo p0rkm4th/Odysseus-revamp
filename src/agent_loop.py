@@ -145,7 +145,6 @@ from src.aci import (
     hard_action_fallback_command,
     hard_action_followup_hint,
     hard_turn_capability_directive,
-    domain_tools_for_projection,
     assemble_prompt,
     build_base_prompt,
     finalize_prompt_messages,
@@ -158,7 +157,6 @@ from src.intent_contracts import (
     EXPLICIT_CONTINUATION_RE as _EXPLICIT_CONTINUATION_RE,
     HARD_TOOL_DOMAINS,
     DETERMINISTIC_TOOL_DOMAINS,
-    SPECIALIZED_OPERATIONAL_DOMAINS,
     explicit_private_discovery_cidr,
     explicitly_allows_diagnostic_install,
     is_explicit_continuation,
@@ -198,9 +196,10 @@ _looks_like_notes_calendar_followup = looks_like_notes_calendar_followup
 _is_casual_low_signal = is_casual_low_signal
 _detect_admin_intent = detect_admin_intent
 def _domain_rules_for_tools(tool_names: set) -> list[str]:
+    from src.legacy_domain_contract import DOMAIN_TOOL_MAP
     return domain_rules_for_tools(
         tool_names,
-        domain_tool_map=_DOMAIN_TOOL_MAP,
+        domain_tool_map=DOMAIN_TOOL_MAP,
         domain_rules={**_DOMAIN_RULES, "_LINK_RULES": _LINK_RULES},
     )
 
@@ -442,9 +441,8 @@ _DOMAIN_RULES["career"] = (
 
 # Capability V1 domain projection. These hints affect discovery/visibility;
 # policy, security gates, and execution remain owned by their existing layers.
-# Keep the legacy domain map below as a compatibility prompt projection, but
-# source ACI's binding registry directly from its canonical owners.
-from src.legacy_domain_contract import DOMAIN_TOOL_MAP as _DOMAIN_TOOL_MAP
+# The legacy map is loaded only for explicit compatibility projection below;
+# canonical ACI turns use the ToolBinding projection directly.
 from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings, tools_for_domains
 from src.tool_overrides import get_builtin_overrides
 _canonical_tools_for_domains = tools_for_domains
@@ -458,20 +456,19 @@ _DOMAIN_RULES["asset_inventory"] = (
 
 
 def _domain_tools_for_projection(domain: str, *, canonical: bool = False) -> set[str]:
-    return domain_tools_for_projection(
-        domain,
-        canonical=canonical,
-        legacy_map=_DOMAIN_TOOL_MAP,
-        canonical_tools_for_domains=_canonical_tools_for_domains,
-    )
+    if canonical:
+        return set(tools_for_domains({str(domain)}))
+    from src.legacy_domain_contract import DOMAIN_TOOL_MAP
+    return set(DOMAIN_TOOL_MAP.get(str(domain), set()))
 
 _HARD_TOOL_DOMAINS = HARD_TOOL_DOMAINS
 _DETERMINISTIC_TOOL_DOMAINS = DETERMINISTIC_TOOL_DOMAINS
-_SPECIALIZED_OPERATIONAL_DOMAINS = SPECIALIZED_OPERATIONAL_DOMAINS
 
 _intent_requires_action = intent_requires_action
 _usage_bucket = usage_bucket
 
+# Compatibility export used by prompt reconstruction callers.  This is a
+# pure message transformation, not a semantic or execution authority.
 _strip_agent_injected_messages = strip_agent_injected_messages
 _hard_action_hint = hard_action_hint
 _hard_action_fallback_command = hard_action_fallback_command
@@ -480,7 +477,10 @@ _hard_turn_capability_directive = hard_turn_capability_directive
 
 
 _WORKSPACE_TERMINUS_TOOLS = (
-    _DOMAIN_TOOL_MAP["files"]
+    {
+        "bash", "python", "read_file", "write_file", "edit_file", "apply_patch",
+        "todowrite", "grep", "glob", "ls", "get_workspace", "manage_bg_jobs",
+    }
     | {"manage_skills", "ask_teacher", "web_search", "web_fetch", "ask_user", "update_plan"}
 )
 
