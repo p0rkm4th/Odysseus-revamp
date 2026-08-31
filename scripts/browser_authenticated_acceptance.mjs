@@ -922,7 +922,13 @@ async function createAcceptanceSession(page) {
 async function selectAcceptanceSession(page, sessionId) {
   await page.evaluate((id) => localStorage.setItem('lastSessionId', id), sessionId);
   await page.goto(`${baseURL}/#${sessionId}`, {waitUntil: 'domcontentloaded'});
-  await page.locator('textarea#message:visible').first().waitFor({state: 'visible', timeout: 30000});
+  await page.waitForFunction(() =>
+    Boolean(window.sessionModule?.loadSessions) &&
+    (() => {
+      const textarea = document.querySelector('textarea#message');
+      return Boolean(textarea && (textarea.offsetWidth || textarea.offsetHeight || textarea.getClientRects().length));
+    })(),
+  {timeout: 30000});
   try {
     await page.waitForFunction((id) =>
       document.readyState === 'complete' &&
