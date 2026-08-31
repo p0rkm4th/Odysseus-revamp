@@ -6202,6 +6202,7 @@ async def stream_aci_runtime(
         clarification_only=_aci_clarification_only,
         clarification_text=_aci_clarification_text,
         effectful_request=_intent_frame.operation_class in {"CREATE", "UPDATE", "DELETE", "EXECUTE"},
+        enabled_module_ids=module_manager.enabled_module_ids(),
     )
     logger.info(
         "[hades-aci] final_projection tools=%s full_chars=%s projected_chars=%s canonical=%s",

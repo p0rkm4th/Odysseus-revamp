@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 
-from src.aci import project_action_selection, project_route_tool_schemas
+from src.aci import canonical_result_answer, project_action_selection, project_route_tool_schemas
 from src.module_manager import ModuleManager, ModuleSpec, ModuleState
 from src.result_renderers import registry as renderer_registry
 
@@ -105,6 +105,22 @@ def test_disabled_recipe_is_not_loaded_by_unrelated_result_projection(monkeypatc
         [], enabled_module_ids=frozenset({"work"}),
     )
     assert not any(name.endswith(".recipe") for name in imported)
+
+
+def test_disabled_recipe_cannot_supply_terminal_result_renderer():
+    answer = canonical_result_answer(
+        [{
+            "tool": "manage_recipes",
+            "exit_code": 0,
+            "success": True,
+            "output": '{"status":"VERIFIED","recipe":{"id":"r1","name":"Dinner"}}',
+            "command": '{"action":"add"}',
+        }],
+        enabled_module_ids=frozenset({"core", "work"}),
+    )
+    assert answer is not None
+    assert answer.source.value == "ERROR"
+    assert "verified final result" in answer.content
 
 
 def test_disabled_recipe_schema_never_reaches_api_model_context():
