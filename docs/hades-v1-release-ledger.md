@@ -2,6 +2,20 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Isolated application backup/restore replay — exact candidate `fc18ebed` (2026-08-31)
+
+The fresh-install lane was snapshotted to
+`/tmp/hades-fresh-v1-current/backups/recovery-20260831-0215.tar.gz` and
+verified with 26 archive members. A deliberate isolated drift marker was
+removed by `restore --yes`, which retained the previous data root as a safety
+stash. The first post-restore login returned 401 because the snapshot held an
+expired disposable acceptance principal (`AUTH_SESSION_FAILURE`); only that
+principal was rotated and the app restarted. The lane then returned healthy
+with zero restarts, login succeeded, and the authenticated empty-Work browser
+read passed. The final replay recorded zero false success, raw final Results,
+duplicate delivery, or abrupt EOF. No owner or persistent dogfood data was
+touched.
+
 ## In-container Qwen generated/holdout checkpoint — exact candidate `fc18ebed` (2026-08-31)
 
 The existing synthetic ACI evaluator was rerun inside the exact candidate
