@@ -132,12 +132,13 @@ def test_canonical_read_contract_eligibility_is_owned_by_aci():
     ) is False
 
 
-def test_canonical_runtime_defaults_to_aci_and_historical_name_is_an_alias():
+def test_canonical_runtime_defaults_to_aci_and_historical_name_is_compatibility_adapter():
     from src import agent_loop
 
     parameter = inspect.signature(agent_loop.stream_aci_runtime).parameters["aci_mode"]
     assert parameter.default == "aci"
-    assert agent_loop.stream_agent_loop is agent_loop.stream_aci_runtime
+    assert agent_loop.stream_agent_loop is not agent_loop.stream_aci_runtime
+    assert agent_loop.stream_agent_loop.__name__ == "stream_agent_loop"
     assert expects_canonical_action(
         answer_only=True, clarification_only=False,
         asset_read_explicit=True, read_binding="manage_assets",

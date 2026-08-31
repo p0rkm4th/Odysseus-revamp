@@ -6426,10 +6426,15 @@ async def stream_aci_runtime(
     yield "data: [DONE]\n\n"
 
 
-# Historical imports now resolve to the canonical runtime directly.  Keeping
-# the name as a plain alias preserves callers' async-generator contract without
-# retaining a second compatibility module or implicit legacy mode.
-stream_agent_loop = stream_aci_runtime
+# Historical direct callers are compatibility-only.  Keep this adapter thin:
+# production routes enter through ``src.aci.stream_aci_turn`` and therefore
+# cannot select legacy behavior, while old integrations/tests that explicitly
+# call the historical symbol retain their documented transport contract until
+# they are migrated and removed.  The adapter owns no semantic decisions.
+def stream_agent_loop(*args: Any, **kwargs: Any):
+    kwargs = dict(kwargs)
+    kwargs.setdefault("aci_mode", "legacy")
+    return stream_aci_runtime(*args, **kwargs)
 
 # V3.4/V3.5/V3.6.2 domain, visibility, and textual-contract seams were
 # replaced by the Capability V1 projection above. Their patch scripts remain
