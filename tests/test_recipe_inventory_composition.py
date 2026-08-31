@@ -352,6 +352,57 @@ def test_inventory_recipe_prepare_import_preserves_name_override_and_does_not_wr
     assert service.manage_recipes({"action": "list"}, owner="alice")["recipes"] == []
 
 
+def test_recipe_import_owner_transformations_validate_final_draft_and_persist_notes():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    source = json.dumps({
+        "@type": "Recipe", "name": "Imported Dinner", "recipeIngredient": [
+            "1 cup rice", "salt to taste", "pepper to taste",
+        ], "recipeInstructions": "Cook the rice.",
+    })
+    transformations = [
+        {"operation": "exclude", "ingredient": "salt and pepper"},
+        {"operation": "add_note", "note": "Salt and pepper can be used to taste."},
+    ]
+    prepared = service.manage_recipes({
+        "action": "prepare_import", "source_text": source,
+        "source_url": "https://example.test/dinner",
+        "owner_transformations": transformations,
+    }, owner="alice")
+    draft = prepared["draft"]
+    assert {item["name"] for item in draft["ingredients"]} == {"rice"}
+    assert draft["notes"] == "Salt and pepper can be used to taste."
+    assert "salt" not in " ".join(draft.get("review", {}).get("missing_fields", []))
+
+    committed = service.manage_recipes({
+        "action": "commit_import", "draft": draft,
+        "owner_transformations": transformations,
+    }, owner="alice")
+    recipe = service.get_recipe("alice", committed["recipe"]["id"])
+    assert {item["name"] for item in recipe["ingredients"]} == {"rice"}
+    assert recipe["notes"] == "Salt and pepper can be used to taste."
+    assert recipe["source_url"] == "https://example.test/dinner"
+
+
+def test_recipe_owner_transformations_replace_and_mark_optional_without_touching_source_text():
+    draft = RecipeDraft.from_payload({
+        "name": "Dinner", "servings": 2,
+        "ingredients": [
+            {"name": "chicken broth", "quantity": 1, "unit": "cup", "source_text": "1 cup chicken broth"},
+            {"name": "parsley", "quantity": 1, "unit": "tbsp", "source_text": "1 tbsp parsley"},
+        ], "instructions": "Cook.",
+    })
+    transformed = __import__("src.intent_contracts", fromlist=["apply_recipe_owner_transformations"]).apply_recipe_owner_transformations(
+        draft, [
+            {"operation": "replace", "ingredient": "chicken broth", "replacement": "vegetable broth"},
+            {"operation": "optional", "ingredient": "parsley"},
+        ],
+    )
+    assert transformed.ingredients[0]["name"] == "vegetable broth"
+    assert transformed.ingredients[0]["source_text"] == "1 cup chicken broth"
+    assert transformed.ingredients[1]["amount_kind"] == "OPTIONAL"
+
+
 def test_recipe_import_prepare_accepts_validated_draft_json_without_persisting():
     draft = recipe_import_draft(json.dumps({
         "name": "Photo Dinner", "servings": 2,

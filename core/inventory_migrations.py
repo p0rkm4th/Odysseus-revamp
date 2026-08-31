@@ -204,6 +204,26 @@ register_schema_migration(SchemaMigration(
     apply=apply_inventory_v4,
 ))
 
+INVENTORY_V5_VERSION = "20260830_005_recipe_notes"
+INVENTORY_V5_DEFINITION = "inventory-v5\ninventory_recipes:durable-owner-notes\n"
+INVENTORY_V5_CHECKSUM = migration_checksum(INVENTORY_V5_DEFINITION)
+
+
+def apply_inventory_v5(connection: Connection) -> None:
+    """Add the human-visible recipe notes field without rewriting recipes."""
+    inspector = inspect(connection)
+    if not inspector.has_table("inventory_recipes"):
+        return
+    columns = {column["name"] for column in inspector.get_columns("inventory_recipes")}
+    if "notes" not in columns:
+        connection.exec_driver_sql("ALTER TABLE inventory_recipes ADD COLUMN notes TEXT")
+
+
+register_schema_migration(SchemaMigration(
+    version=INVENTORY_V5_VERSION, checksum=INVENTORY_V5_CHECKSUM,
+    apply=apply_inventory_v5,
+))
+
 
 def apply_inventory_v2(connection: Connection) -> None:
     """Allow persisted review drafts produced by bounded network discovery.

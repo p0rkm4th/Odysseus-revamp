@@ -2119,12 +2119,15 @@ async def _execute_manage_recipes_binding(block, owner=None):
         if payload.get("review_required"):
             # Preserve the strict commit boundary while giving incomplete
             # owner-pasted recipes the existing editable review projection.
-            prepared = service.manage_recipes({
+            prepare_payload = {
                 "action": "prepare_import",
                 "source_text": str(payload.get("source_text") or ""),
                 "source_url": payload.get("source_url"),
                 "requested_name": payload.get("requested_name"),
-            }, owner=owner)
+            }
+            if payload.get("owner_transformations"):
+                prepare_payload["owner_transformations"] = payload["owner_transformations"]
+            prepared = service.manage_recipes(prepare_payload, owner=owner)
             draft_payload = prepared.get("draft") if isinstance(prepared, dict) else None
             if not isinstance(draft_payload, dict):
                 raise ValueError(str(payload.get("review_reason") or "recipe needs review before saving; nothing was saved"))
@@ -2158,12 +2161,15 @@ async def _execute_manage_recipes_binding(block, owner=None):
             if source_error:
                 raise ValueError(source_error)
             requested_name = str(payload.get("requested_name") or "").strip() or None
-            prepared = service.manage_recipes({
+            prepare_payload = {
                 "action": "prepare_import",
                 "source_text": source_text,
                 "source_url": str(payload["source_url"]),
                 "requested_name": requested_name,
-            }, owner=owner)
+            }
+            if payload.get("owner_transformations"):
+                prepare_payload["owner_transformations"] = payload["owner_transformations"]
+            prepared = service.manage_recipes(prepare_payload, owner=owner)
             draft_payload = prepared.get("draft") if isinstance(prepared, dict) else None
             if not isinstance(draft_payload, dict):
                 review = prepared.get("review") if isinstance(prepared, dict) else {}
@@ -2172,7 +2178,8 @@ async def _execute_manage_recipes_binding(block, owner=None):
                     "recipe import needs review; missing verified fields: "
                     + ", ".join(str(item) for item in missing[:8])
                 )
-            payload = {"action": "commit_import", "draft": draft_payload}
+            payload = {"action": "commit_import", "draft": draft_payload,
+                       "owner_transformations": payload.get("owner_transformations")}
         try:
             created = service.manage_recipes(payload, owner=owner)
         except (TypeError, ValueError) as exc:

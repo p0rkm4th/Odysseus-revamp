@@ -213,6 +213,7 @@ MANAGE_RECIPES_SCHEMA = {
             "instructions": {"type": "string", "maxLength": 20000},
             "source_url": {"type": "string", "maxLength": 4000},
             "requested_name": {"type": "string", "maxLength": 200},
+            "owner_transformations": {"type": "array", "maxItems": 32, "items": {"type": "object"}},
             "tags": {"type": "array", "maxItems": 32, "items": {"type": "string", "maxLength": 80}},
             "image_refs": {"type": "array", "maxItems": 16, "items": {"type": "string", "maxLength": 500}},
             "draft": {"type": "object"},
