@@ -2221,6 +2221,15 @@ existing fresh-install/restart/Qwen and isolated Chroma backup/restore
 rehearsals remain recorded below as separate release gates. Owner state was not
 changed.
 
+## Live Qwen held-out slice — candidate `b91ff938` (2026-08-31)
+
+The exact candidate was exercised through the live HTTP chat path with Qwen3:8B
+from the candidate namespace. The 16-case held-out slice achieved 16/16
+trajectory passes with 0 transport errors, 0 internal leaks, 0 duplicate
+finalizations, and 0 abrupt EOF. It used 10 bounded canonical tool calls and 6
+bounded fallback model calls; latency P50 was 0.11s and P95 was 2.96s. This is
+a small live slice, not the full generated supported-domain score.
+
 ## Recipe composition and false-premise checkpoint — candidate `20d07aef` (2026-08-29)
 
 Fresh isolated exact-candidate stacks passed `OWNER-RECIPE-SHOPPING-REQUIREMENTS-001`
