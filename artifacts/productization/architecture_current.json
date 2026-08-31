@@ -2947,6 +2947,19 @@
       "recipes",
       "work"
     ],
+    "enabled_capabilities": 44,
+    "capabilities_by_enabled_module": {
+      "automation": 1,
+      "core": 0,
+      "household": 2,
+      "legacy-capabilities": 23,
+      "memory": 2,
+      "network": 1,
+      "notes": 2,
+      "recipes": 2,
+      "work": 11
+    },
+    "schemas_available_before_selection": 44,
     "eagerly_imported_feature_modules": [],
     "feature_specific_kernel_import_count": 0,
     "representative_activation": {
@@ -2959,6 +2972,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "ff22567dbab8487f1aa5b42cb62cbd7c9c780b82",
+  "source_sha": "e9930b0af118c1eacc9e999b49eaf86fab54185c",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
