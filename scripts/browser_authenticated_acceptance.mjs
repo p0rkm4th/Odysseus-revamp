@@ -543,6 +543,21 @@ function resetDisposableAssetFixture(scenarios) {
   if (!database.startsWith(`${dataDirectory}${path.sep}`)) {
     throw new Error('canonical asset fixture database must be inside APP_DATA_DIR so reset remains disposable');
   }
+  // The asset inventory database is created lazily by the application.  A
+  // fresh isolated candidate therefore has no assets/ directory yet; create
+  // only this disposable parent before the cleanup probe.  This keeps the
+  // fixture reset independent of boot order without ever touching owner data.
+  fs.mkdirSync(path.dirname(database), {recursive: true});
+  // Initialize the canonical schema through the same bounded asset module
+  // used by fixture seeding.  A newly created SQLite file otherwise exists
+  // but has no tables for the cleanup query below.
+  run(python, ['-c', [
+    'import sys',
+    'from pathlib import Path',
+    'from src import asset_inventory',
+    'asset_inventory.DB_PATH = Path(sys.argv[1])',
+    'asset_inventory.db().close()',
+  ].join('; '), database], process.env);
   const resetScript = String.raw`
 import json, sqlite3, sys
 database, owner = sys.argv[1:]
