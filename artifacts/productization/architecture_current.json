@@ -32,213 +32,218 @@
   ],
   "modules": {
     "src/agent_loop.py": {
-      "loc": 6441,
+      "loc": 6445,
       "functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1011,
+          "line": 1015,
           "loc": 5427
         },
         {
           "name": "_build_system_prompt",
-          "line": 384,
+          "line": 388,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2443,
+          "line": 2447,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3084,
+          "line": 3088,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1479,
+          "line": 1483,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2149,
+          "line": 2153,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3199,
+          "line": 3203,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 954,
+          "line": 958,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2195,
+          "line": 2199,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3257,
+          "line": 3261,
           "loc": 30
         },
         {
           "name": "_assemble_prompt",
-          "line": 338,
+          "line": 342,
           "loc": 22
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1460,
+          "line": 1464,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2711,
+          "line": 2715,
           "loc": 16
         },
         {
           "name": "__getattr__",
-          "line": 276,
+          "line": 280,
           "loc": 13
         },
         {
           "name": "_apply_candidate_compaction",
-          "line": 3171,
+          "line": 3175,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2729,
+          "line": 2733,
           "loc": 8
         },
         {
           "name": "_domain_rules_for_tools",
-          "line": 209,
+          "line": 213,
           "loc": 7
         },
         {
           "name": "_suppress_automatic_skills",
-          "line": 201,
+          "line": 205,
           "loc": 6
         },
         {
           "name": "_domain_tools_for_projection",
-          "line": 309,
+          "line": 313,
           "loc": 5
         },
         {
+          "name": "note_list_summary_from_tool_output",
+          "line": 184,
+          "loc": 3
+        },
+        {
           "name": "_record_aci_framework",
-          "line": 1165,
+          "line": 1169,
           "loc": 3
         },
         {
           "name": "_record_aci_model",
-          "line": 1169,
+          "line": 1173,
           "loc": 3
         }
       ],
       "largest_functions": [
         {
           "name": "stream_aci_runtime",
-          "line": 1011,
+          "line": 1015,
           "loc": 5427
         },
         {
           "name": "_build_system_prompt",
-          "line": 384,
+          "line": 388,
           "loc": 568
         },
         {
           "name": "_build_route_request_state",
-          "line": 2443,
+          "line": 2447,
           "loc": 116
         },
         {
           "name": "_candidate_request",
-          "line": 3084,
+          "line": 3088,
           "loc": 86
         },
         {
           "name": "_direct_terminal_event",
-          "line": 1479,
+          "line": 1483,
           "loc": 53
         },
         {
           "name": "_route_finetune_modes",
-          "line": 2149,
+          "line": 2153,
           "loc": 45
         },
         {
           "name": "_finalize_round_usage",
-          "line": 3199,
+          "line": 3203,
           "loc": 34
         },
         {
           "name": "_build_base_prompt",
-          "line": 954,
+          "line": 958,
           "loc": 32
         },
         {
           "name": "_route_relevant_tools",
-          "line": 2195,
+          "line": 2199,
           "loc": 31
         },
         {
           "name": "_round_stream",
-          "line": 3257,
+          "line": 3261,
           "loc": 30
         },
         {
           "name": "_assemble_prompt",
-          "line": 338,
+          "line": 342,
           "loc": 22
         },
         {
           "name": "_direct_candidate_request",
-          "line": 1460,
+          "line": 1464,
           "loc": 18
         },
         {
           "name": "_tool_schemas_for_route",
-          "line": 2711,
+          "line": 2715,
           "loc": 16
         },
         {
           "name": "__getattr__",
-          "line": 276,
+          "line": 280,
           "loc": 13
         },
         {
           "name": "_apply_candidate_compaction",
-          "line": 3171,
+          "line": 3175,
           "loc": 11
         },
         {
           "name": "_effectful_call_signature",
-          "line": 2729,
+          "line": 2733,
           "loc": 8
         },
         {
           "name": "_domain_rules_for_tools",
-          "line": 209,
+          "line": 213,
           "loc": 7
         },
         {
           "name": "_suppress_automatic_skills",
-          "line": 201,
+          "line": 205,
           "loc": 6
         },
         {
           "name": "_domain_tools_for_projection",
-          "line": 309,
+          "line": 313,
           "loc": 5
         },
         {
-          "name": "_record_aci_framework",
-          "line": 1165,
+          "name": "note_list_summary_from_tool_output",
+          "line": 184,
           "loc": 3
         }
       ]
@@ -2806,14 +2811,14 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 19154,
+  "semantic_control_plane_loc": 19158,
   "central_domain_conditionals": 112,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
   "compatibility_aliases": 4,
   "capability_action_map_declarations": 9,
   "production_legacy_semantic_imports": [
-    "src/agent_loop.py:285:from src.legacy_agent_loop import stream_agent_loop"
+    "src/agent_loop.py:289:from src.legacy_agent_loop import stream_agent_loop"
   ],
   "product_tests_private_legacy_classifier_imports": [],
   "product_tests_legacy_tool_map_imports": [],
@@ -2848,8 +2853,8 @@
     "src/task_scheduler.py:2302:from routes.prefs_routes import _load_for_user",
     "src/tool_execution.py:2277:from routes.contacts_routes import _fetch_contacts",
     "src/aci.py:239:from routes.prefs_routes import _load_for_user",
-    "src/agent_loop.py:796:from routes.prefs_routes import _load_for_user as _load_prefs",
-    "src/agent_loop.py:1987:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:800:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:1991:from routes.prefs_routes import _load_for_user as _load_prefs",
     "src/tools/calendar.py:23:from routes.calendar_routes import (",
     "src/tools/contacts.py:33:from routes import contacts_routes as cc",
     "src/tools/contacts.py:92:from routes import contacts_routes as cc",
@@ -2962,11 +2967,8 @@
       "recipes",
       "work"
     ],
-    "eagerly_imported_feature_modules": [
-      "src/aci.py:29:from src.result_renderers.registry import RENDERER_SPECS, render_result",
-      "src/agent_loop.py:156:from src.result_renderers.notes import note_list_summary_from_tool_output"
-    ],
-    "feature_specific_kernel_import_count": 2,
+    "eagerly_imported_feature_modules": [],
+    "feature_specific_kernel_import_count": 0,
     "representative_activation": {
       "unrelated_request": [],
       "recipe_request": [
@@ -2977,6 +2979,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "12b1ed3160eecd2b0b9283ce7d44fb837c590d6d",
+  "source_sha": "d0cb342ca4c8e562b1e64e88a5ff0147a414b5dd",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
