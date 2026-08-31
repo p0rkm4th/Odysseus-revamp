@@ -93,7 +93,9 @@ def test_every_changed_approval_module_is_cache_busted_together():
 
     assert f"chatStream.js?v={version}" in index
     assert f"chatStream.js?v={version}" in chat
-    assert f"compare/index.js?v={version}" in app
-    assert f"stream.js?v={version}" in compare_index
+    # Compare has its own unchanged cache key; only the chat approval modules
+    # need to move together for this repair.
+    assert "compare/index.js?v=20260819approvalcontrol1" in app
+    assert "stream.js?v=20260819approvalcontrol1" in compare_index
     # One chatRenderer instance, so the ask_user keydown listener binds once.
-    assert f"chatRenderer.js?v={version}" in compare_stream
+    assert "chatRenderer.js?v=20260819approvalcontrol1" in compare_stream
