@@ -4665,38 +4665,34 @@ def canonical_communications_read_answer(tool_events: Sequence[Mapping[str, Any]
     return None
 
 
+RESULT_RENDERER_REGISTRY: tuple[tuple[str, Callable[[Sequence[Mapping[str, Any]]], str | None]], ...] = (
+    ("recipe mutation Result", canonical_recipe_mutation_answer),
+    ("inventory mutation Result", canonical_inventory_mutation_answer),
+    ("Work mutation Result", canonical_work_mutation_answer),
+    ("Memory mutation Result", canonical_memory_mutation_answer),
+    ("canonical Notes Result", canonical_notes_read_answer),
+    ("canonical scheduled task Result", canonical_scheduled_task_read_answer),
+    ("notes mutation Result", canonical_notes_mutation_answer),
+    ("scheduled task Result", canonical_scheduled_task_mutation_answer),
+    ("canonical Memory Result", canonical_memory_read_answer),
+    ("canonical Work Result", canonical_work_read_answer),
+    ("canonical Calendar Result", canonical_communications_read_answer),
+    ("canonical bounded Network plan", canonical_network_plan_answer),
+    ("canonical Network Result", canonical_network_read_answer),
+    ("canonical Homelab Result", canonical_homelab_read_answer),
+    ("canonical Service Result", canonical_service_read_answer),
+    ("canonical Asset Result", canonical_asset_read_answer),
+    ("canonical Household Result", canonical_household_read_answer),
+    ("canonical Recipe Result", canonical_recipe_read_answer),
+    ("canonical structured empty Result", canonical_structured_empty_read_answer),
+)
+
+
 def canonical_result_answer(
     tool_events: Sequence[Mapping[str, Any]],
 ) -> CanonicalAnswer | None:
-    """Select one deterministic owner-state answer for a completed turn.
-
-    The individual renderers remain small resource projections, but final
-    answer selection belongs here.  Returning provenance with the content
-    prevents transport code from having to infer whether a replacement is
-    authoritative or merely another piece of model prose.
-    """
-    candidates = (
-        (canonical_recipe_mutation_answer(tool_events), "recipe mutation Result"),
-        (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
-        (canonical_work_mutation_answer(tool_events), "Work mutation Result"),
-        (canonical_memory_mutation_answer(tool_events), "Memory mutation Result"),
-        (canonical_notes_read_answer(tool_events), "canonical Notes Result"),
-        (canonical_scheduled_task_read_answer(tool_events), "canonical scheduled task Result"),
-        (canonical_notes_mutation_answer(tool_events), "notes mutation Result"),
-        (canonical_scheduled_task_mutation_answer(tool_events), "scheduled task Result"),
-        (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
-        (canonical_work_read_answer(tool_events), "canonical Work Result"),
-        (canonical_communications_read_answer(tool_events), "canonical Calendar Result"),
-        (canonical_network_plan_answer(tool_events), "canonical bounded Network plan"),
-        (canonical_network_read_answer(tool_events), "canonical Network Result"),
-        (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
-        (canonical_service_read_answer(tool_events), "canonical Service Result"),
-        (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
-        (canonical_household_read_answer(tool_events), "canonical Household Result"),
-        (canonical_recipe_read_answer(tool_events), "canonical Recipe Result"),
-        (canonical_structured_empty_read_answer(tool_events), "canonical structured empty Result"),
-    )
-    for content, provenance in candidates:
+    for provenance, renderer in RESULT_RENDERER_REGISTRY:
+        content = renderer(tool_events)
         if content:
             return CanonicalAnswer(
                 content=content,
@@ -5123,6 +5119,7 @@ def project_action_selection(
         payload.update(resolve_action_fields(
             capability_id=contract.get("capability_id"),
             action_id=item.get("action_id"),
+            binding=item.get("binding"),
             query=query,
             frame=frame,
         ))
