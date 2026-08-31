@@ -94,6 +94,22 @@
     "health_probe_note": "Chroma /api/v1/heartbeat is intentionally 410; /api/v2/heartbeat is authoritative",
     "recorded_at": "2026-08-31T13:24:00-05:00"
   },
+  "latest_owner_read_only_replay": {
+    "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "harness_source_sha": "c4fd7c0037f8d6b18d23c5682c4773e5c19023c9",
+    "scenario": "OWNER-NETWORK-001",
+    "environment": "actual_owner_read_only",
+    "status": "PASS",
+    "streams": 1,
+    "read_journeys": 1,
+    "mutations": 0,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "note": "Acceptance harness permits explicitly supplied actual-owner read-only credentials without requiring disposable APP_DATA_DIR; synthetic and mutating journeys remain disposable-only.",
+    "recorded_at": "2026-08-31T13:36:00-05:00"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
