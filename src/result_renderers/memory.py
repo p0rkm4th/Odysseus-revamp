@@ -7,13 +7,7 @@ from typing import Any, Mapping, Sequence
 
 
 def project_memory_result(result: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Keep only bounded evidence needed by the Memory result renderer."""
-    return {
-        "success": result.get("success"),
-        "action": result.get("action"),
-        "canonical_store": result.get("canonical_store"),
-        "verification": result.get("verification"),
-    }
+    return {key: result.get(key) for key in ("success", "action", "canonical_store", "verification")}
 
 
 def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
