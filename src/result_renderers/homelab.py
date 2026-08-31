@@ -6,6 +6,45 @@ import json
 import re
 from typing import Any, Mapping, Sequence
 
+def project_homelab_result(payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """Bound network/service evidence before it enters history or prompts."""
+    action = str(payload.get("action") or "").strip()
+    common = {"action": action, "status": payload.get("status"), "kind": payload.get("kind"),
+              "target": payload.get("target"), "observation_location": payload.get("observation_location"),
+              "freshness": payload.get("freshness")}
+    if str(payload.get("kind") or "").strip().lower() == "plan" and action in {"plan_network_discovery", "execute_network_discovery"}:
+        common.update({"action": "plan_network_discovery", "operation_digest": payload.get("operation_digest"),
+                       "preflight": payload.get("preflight"), "scanner_available": payload.get("scanner_available"),
+                       "broker_scanner_available": payload.get("broker_scanner_available")})
+        return common
+    if action == "read_network_context":
+        common.update({"interfaces": list(payload.get("interfaces", [])[:32]) if isinstance(payload.get("interfaces"), list) else [],
+                       "default_routes": list(payload.get("default_routes", [])[:8]) if isinstance(payload.get("default_routes"), list) else []})
+        return common
+    if action == "read_network_observations":
+        nodes = []
+        for node in (payload.get("nodes", [])[:50] if isinstance(payload.get("nodes"), list) else []):
+            if not isinstance(node, Mapping):
+                continue
+            attrs = node.get("attributes") if isinstance(node.get("attributes"), Mapping) else {}
+            nodes.append({"id": node.get("id"), "name": node.get("name"), "status": node.get("status"),
+                          "canonical": node.get("canonical"), "resolution_state": node.get("resolution_state"),
+                          "attributes": {key: attrs.get(key) for key in ("hostname", "observed_ip", "ip") if attrs.get(key) not in (None, "")}})
+        common.update({"nodes": nodes, "edges": list(payload.get("edges", [])[:50]) if isinstance(payload.get("edges"), list) else [],
+                       "node_count": payload.get("node_count"), "edge_count": payload.get("edge_count")})
+        return common
+    if action == "inspect_host":
+        common["output"] = str(payload.get("output") or "")[:2000]
+        return common
+    if action == "service_status":
+        services = payload.get("services")
+        common.update({"overall": payload.get("overall"), "output": str(payload.get("output") or "")[:2000],
+                       "services": [{"name": item.get("name"), "status": item.get("status"), "detail": item.get("detail")}
+                                     for item in (services[:50] if isinstance(services, list) else []) if isinstance(item, Mapping)],
+                       "service_count": len(services) if isinstance(services, list) else 0})
+        return common
+    return None
+
 def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render network observations/context without model-invented topology."""
     event = next(

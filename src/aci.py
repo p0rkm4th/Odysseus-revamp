@@ -3212,84 +3212,9 @@ def canonical_tool_result_projection(
     if str(tool_name or "").strip() == "read_work":
         from src.result_renderers.work import project_work_result
         return project_work_result(payload)
-    action = str(payload.get("action") or "").strip()
-    common = {
-        "action": action,
-        "status": payload.get("status"),
-        "kind": payload.get("kind"),
-        "target": payload.get("target"),
-        "observation_location": payload.get("observation_location"),
-        "freshness": payload.get("freshness"),
-    }
-    if (
-        str(tool_name or "").strip() == "manage_homelab"
-        and str(payload.get("kind") or "").strip().lower() == "plan"
-        and action in {"plan_network_discovery", "execute_network_discovery"}
-    ):
-        # Homelab plans describe the eventual execute operation in their
-        # receipt. Lifecycle kind is authoritative here: a plan must remain a
-        # plan in the owner projection even when its operation action is the
-        # eventual execute action.
-        common["action"] = "plan_network_discovery"
-        common.update({
-            "operation_digest": payload.get("operation_digest"),
-            "preflight": payload.get("preflight"),
-            "scanner_available": payload.get("scanner_available"),
-            "broker_scanner_available": payload.get("broker_scanner_available"),
-        })
-        return common
-    if action == "read_network_context":
-        interfaces = payload.get("interfaces")
-        routes = payload.get("default_routes")
-        common["interfaces"] = list(interfaces[:32]) if isinstance(interfaces, list) else []
-        common["default_routes"] = list(routes[:8]) if isinstance(routes, list) else []
-        return common
-    if action == "read_network_observations":
-        nodes = []
-        raw_nodes = payload.get("nodes")
-        for node in (raw_nodes[:50] if isinstance(raw_nodes, list) else []):
-            if not isinstance(node, Mapping):
-                continue
-            attrs = node.get("attributes") if isinstance(node.get("attributes"), Mapping) else {}
-            nodes.append({
-                "id": node.get("id"),
-                "name": node.get("name"),
-                "status": node.get("status"),
-                "canonical": node.get("canonical"),
-                "resolution_state": node.get("resolution_state"),
-                "attributes": {
-                    key: attrs.get(key)
-                    for key in ("hostname", "observed_ip", "ip") if attrs.get(key) not in (None, "")
-                },
-            })
-        raw_edges = payload.get("edges")
-        common.update({
-            "nodes": nodes,
-            "edges": list(raw_edges[:50]) if isinstance(raw_edges, list) else [],
-            "node_count": payload.get("node_count"),
-            "edge_count": payload.get("edge_count"),
-        })
-        return common
-    if action == "inspect_host":
-        common["output"] = str(payload.get("output") or "")[:2000]
-        return common
-    if action == "service_status":
-        services = payload.get("services")
-        common.update({
-            "overall": payload.get("overall"),
-            "output": str(payload.get("output") or "")[:2000],
-            "services": [
-                {
-                    "name": service.get("name"),
-                    "status": service.get("status"),
-                    "detail": service.get("detail"),
-                }
-                for service in (services[:50] if isinstance(services, list) else [])
-                if isinstance(service, Mapping)
-            ],
-            "service_count": len(services) if isinstance(services, list) else 0,
-        })
-        return common
+    if str(tool_name or "").strip() == "manage_homelab":
+        from src.result_renderers.homelab import project_homelab_result
+        return project_homelab_result(payload)
     return None
 
 
