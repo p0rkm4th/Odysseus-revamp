@@ -3161,12 +3161,8 @@ def canonical_tool_result_projection(
     if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_household", "read_work", "read_recipes", "manage_recipes", "manage_memory"} or not isinstance(result, Mapping):
         return None
     if str(tool_name or "").strip() == "manage_memory":
-        return {
-            "success": result.get("success"),
-            "action": result.get("action"),
-            "canonical_store": result.get("canonical_store"),
-            "verification": result.get("verification"),
-        }
+        from src.result_renderers.memory import project_memory_result
+        return project_memory_result(result)
     if str(tool_name or "").strip() == "read_household":
         raw = result.get("data") if isinstance(result.get("data"), Mapping) else result.get("output")
         if isinstance(raw, Mapping):

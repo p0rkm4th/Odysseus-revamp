@@ -6,6 +6,16 @@ import json
 from typing import Any, Mapping, Sequence
 
 
+def project_memory_result(result: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Keep only bounded evidence needed by the Memory result renderer."""
+    return {
+        "success": result.get("success"),
+        "action": result.get("action"),
+        "canonical_store": result.get("canonical_store"),
+        "verification": result.get("verification"),
+    }
+
+
 def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render a protected Memory projection without exposing its telemetry."""
     event = next(
@@ -73,4 +83,3 @@ def canonical_memory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -
     if action == "delete":
         return "Removed that memory; the canonical Memory readback is verified."
     return None
-

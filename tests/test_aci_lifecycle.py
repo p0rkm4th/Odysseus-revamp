@@ -156,6 +156,18 @@ def test_recipe_mutation_answer_requires_verified_canonical_result():
     assert canonical_recipe_mutation_answer([]) is None
 
 
+def test_memory_result_projection_is_owned_by_memory_renderer():
+    from src.result_renderers.memory import project_memory_result
+
+    result = {"success": True, "action": "add", "canonical_store": "memory", "verification": {"status": "VERIFIED"}, "private": "omit"}
+    assert project_memory_result(result) == {
+        "success": True,
+        "action": "add",
+        "canonical_store": "memory",
+        "verification": {"status": "VERIFIED"},
+    }
+
+
 def test_large_recipe_mutation_uses_bounded_projection_after_raw_output_truncation():
     from src.aci import canonical_tool_result_projection
 
