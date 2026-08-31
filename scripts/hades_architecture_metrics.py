@@ -30,6 +30,7 @@ COUNTED_MODULES = (
     "src/action_intents.py",
     "src/tool_capabilities.py",
     "src/capability_dependencies.py",
+    "src/module_manager.py",
     "src/field_resolvers.py",
     "src/domain_resolvers/reminders.py",
     "src/domain_resolvers/recipe.py",
