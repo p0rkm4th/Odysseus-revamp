@@ -87,7 +87,7 @@
         },
         {
           "name": "__getattr__",
-          "line": 272,
+          "line": 271,
           "loc": 13
         },
         {
@@ -101,19 +101,19 @@
           "loc": 8
         },
         {
-          "name": "_domain_tools_for_projection",
-          "line": 460,
+          "name": "_domain_rules_for_tools",
+          "line": 198,
           "loc": 7
         },
         {
-          "name": "_domain_rules_for_tools",
-          "line": 200,
+          "name": "_suppress_automatic_skills",
+          "line": 207,
           "loc": 6
         },
         {
-          "name": "_suppress_automatic_skills",
-          "line": 208,
-          "loc": 6
+          "name": "_domain_tools_for_projection",
+          "line": 458,
+          "loc": 5
         },
         {
           "name": "_record_aci_framework",
@@ -194,7 +194,7 @@
         },
         {
           "name": "__getattr__",
-          "line": 272,
+          "line": 271,
           "loc": 13
         },
         {
@@ -208,19 +208,19 @@
           "loc": 8
         },
         {
-          "name": "_domain_tools_for_projection",
-          "line": 460,
+          "name": "_domain_rules_for_tools",
+          "line": 198,
           "loc": 7
         },
         {
-          "name": "_domain_rules_for_tools",
-          "line": 200,
+          "name": "_suppress_automatic_skills",
+          "line": 207,
           "loc": 6
         },
         {
-          "name": "_suppress_automatic_skills",
-          "line": 208,
-          "loc": 6
+          "name": "_domain_tools_for_projection",
+          "line": 458,
+          "loc": 5
         },
         {
           "name": "_record_aci_framework",
@@ -2283,7 +2283,7 @@
   "compatibility_aliases": 4,
   "capability_action_map_declarations": 9,
   "production_legacy_semantic_imports": [
-    "src/agent_loop.py:281:from src.legacy_agent_loop import stream_agent_loop"
+    "src/agent_loop.py:280:from src.legacy_agent_loop import stream_agent_loop"
   ],
   "product_tests_private_legacy_classifier_imports": [],
   "product_tests_legacy_tool_map_imports": [],
@@ -2418,6 +2418,6 @@
       }
     ]
   },
-  "source_sha": "763f118df96a3cba005d1e7b36d3abc109bfc5f6",
+  "source_sha": "2248b55c50520900a1c4c84fb595c85c49c5cff4",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
