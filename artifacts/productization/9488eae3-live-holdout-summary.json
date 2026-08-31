@@ -1,0 +1,22 @@
+{
+  "schema": "hades-live-holdout-summary.v1",
+  "application_source_sha": "9488eae30402b748f4773c203e422812421df70a",
+  "candidate_image": "odysseus:candidate-9488eae3",
+  "candidate_image_digest": "odysseus@sha256:830fdd867768ad0be59b2079a30ff7c3f14c21e9949b3a6b50c55416bb38e31e",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "suite": "held_out",
+  "seed": 9488,
+  "case_count": 9,
+  "trajectory_pass": 9,
+  "answer_success": 9,
+  "errors": 0,
+  "internal_leaks": 0,
+  "total_tool_calls": 5,
+  "tool_index_lookups": 0,
+  "duplicate_delivery": 0,
+  "duplicate_finalization": 0,
+  "abrupt_eof": 0,
+  "raw_trace": "/tmp/9488eae3-live-holdout.json",
+  "notes": "Exact isolated candidate; compact live holdout subset. Canonical reads remained deterministic where applicable."
+}
