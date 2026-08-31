@@ -181,6 +181,15 @@
       "duplicate_rate": 0.0,
       "comparison": "identical 142-case seed on 6c775a58: unchanged; reminder extraction did not improve holdout generalization",
       "status": "held-out evidence; aggregate mixes supported, unsupported, dependency, and evaluator-contract cases"
+    },
+    "live_qwen_held_out_20260831_candidate_1fc44cf3": {
+      "artifact": "artifacts/productization/hades-v1-1fc44cf3-live-fuzz.json",
+      "cases": 38,
+      "trajectory_passes": 33,
+      "generated_variants": 19,
+      "model_calls": 10,
+      "internal_leaks": 0,
+      "status": "live-fuzz subset; not directly comparable to the combined 142-case holdout"
     }
   },
   "release_status": "active; not frozen",
