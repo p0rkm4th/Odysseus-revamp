@@ -33,7 +33,14 @@
     "image_id": "sha256:2884fe86a1a6f32f3c7ac8c1ed6b6be4bdac3d7298b389a1a7181e4a2639285a",
     "health": "running",
     "restarts": 0,
-    "automated_mutation": false
+    "automated_mutation": false,
+    "promotion_attempt": {
+      "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+      "status": "DEFERRED_AFTER_SAFE_RECOVERY",
+      "reason": "Compose attempted to recreate the active owner network and detached the container; prior container was restored and network reconnected",
+      "backup": "/home/scootz/hades-owner-dogfood-recovery/pre-promotion-896473de.tar.gz",
+      "backup_verified": true
+    }
   },
   "dogfood_tracking": {
     "latest_green_candidate_sha": "896473de81075178297eb510fa13b37810e514b6",
