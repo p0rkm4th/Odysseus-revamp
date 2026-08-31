@@ -15,9 +15,19 @@ import re
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import requests
+
+
+# Direct execution puts ``scripts/`` on sys.path, while the benchmark package
+# lives at the repository root. Establish the same import boundary used by
+# the test/in-process runner so live holdout failures reflect the candidate,
+# not the invocation form.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 INTERNAL = re.compile(
