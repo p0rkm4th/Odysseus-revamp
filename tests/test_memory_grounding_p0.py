@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.agent_loop import _classify_agent_request, _suppress_automatic_skills
+from src.agent_loop import _suppress_automatic_skills
 from src.memory_grounding import minimal_saved_memory_message
 from src.memory_grounding import is_explicit_memory_query
 from src.context_compactor import context_trace, tool_projection_trace
@@ -13,9 +13,10 @@ from src.tool_execution import _resolve_memory_delete_id
 def test_breakdown_wording_is_an_explicit_canonical_memory_query():
     query = "give me a concise breakdown of all the information you have about me."
     assert is_explicit_memory_query(query)
-    intent = _classify_agent_request([], query)
-    assert intent["explicit_memory_query"] is True
-    assert intent["domains"] == {"memory"}
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "MEMORY"
+    assert resolved.binding_name == "read_memory"
 
 
 def test_explicit_memory_queries_suppress_procedural_skills():
