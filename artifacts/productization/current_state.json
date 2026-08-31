@@ -1,10 +1,10 @@
 {
   "captured_at": "2026-08-31T01:34:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "763f118df96a3cba005d1e7b36d3abc109bfc5f6",
+  "branch_head": "3a4f9a6661f7272163af4ee7f4a7cd0d182e1bdf",
   "source_head": "763f118df96a3cba005d1e7b36d3abc109bfc5f6",
-  "remote_head": "763f118df96a3cba005d1e7b36d3abc109bfc5f6",
-  "evidence_commit_sha": "763f118df96a3cba005d1e7b36d3abc109bfc5f6",
+  "remote_head": "3a4f9a6661f7272163af4ee7f4a7cd0d182e1bdf",
+  "evidence_commit_sha": "3a4f9a6661f7272163af4ee7f4a7cd0d182e1bdf",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -344,7 +344,7 @@
     "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 5478b598",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "763f118df96a3cba005d1e7b36d3abc109bfc5f6",
-    "evidence_commit_sha": "763f118df96a3cba005d1e7b36d3abc109bfc5f6",
+    "evidence_commit_sha": "3a4f9a6661f7272163af4ee7f4a7cd0d182e1bdf",
     "latest_candidate_browser_replay": "PASS: exact 763f118d candidate browser_realistic_acceptance; no owner data was touched"
   },
   "known_evidence_gaps": [
