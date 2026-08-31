@@ -8,8 +8,8 @@
 import Storage from './storage.js';
 import uiModule from './ui.js';
 import sessionModule from './sessions.js';
-import chatRenderer from './chatRenderer.js?v=20260819approvalcontrol1';
-import chatStream from './chatStream.js?v=20260819approvalcontrol1';
+import chatRenderer from './chatRenderer.js?v=20260831approvaldirect1';
+import chatStream from './chatStream.js?v=20260831approvaldirect1';
 import { addAITTSButton } from './tts-ai.js';
 import markdownModule from './markdown.js';
 import spinnerModule from './spinner.js';
@@ -80,8 +80,18 @@ import { loadPanel } from './panels.js';
     if (input) {
       _pendingToolApproval.draft = input.value || '';
     }
-    const sendButton = document.querySelector('.send-btn');
-    if (sendButton) sendButton.click();
+    // Approval is already a sealed control-plane continuation.  Sending it
+    // through the dual-purpose composer button is unsafe: that button can be
+    // in stop/new-chat/microphone mode while the proposal stream is settling,
+    // and the form wrapper may consume the synthetic click without reaching
+    // the approval branch.  Invoke the canonical submit path directly so the
+    // approval id/decision are serialized exactly once.
+    handleChatSubmit({ preventDefault() {} }).catch((error) => {
+      console.error('tool approval continuation failed', error);
+      uiModule.showError && uiModule.showError(
+        'The approval could not be submitted. Reload the chat to try again.'
+      );
+    });
   }
 
   document.addEventListener('odysseus:tool-approval', (event) => {
