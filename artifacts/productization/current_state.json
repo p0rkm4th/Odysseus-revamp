@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-31T14:33:00-05:00",
+  "captured_at": "2026-08-31T14:36:00-05:00",
   "branch": "hades-v1-productization",
   "branch_head": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
   "application_source_sha": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
@@ -13,13 +13,13 @@
     "behind": 0
   },
   "executable_candidate": {
-    "source_sha": "e4e1c8f9d6b61225ccb107f0feddb3c759fc4f1d",
-    "image": "odysseus:candidate-e4e1c8f9",
-    "image_id": "sha256:56fd574f63063e6f796a74a96a2a0ece72492f53ddfc81f8e0141ef16384da38",
-    "image_digest": "odysseus@sha256:56fd574f63063e6f796a74a96a2a0ece72492f53ddfc81f8e0141ef16384da38",
-    "oci_revision": "e4e1c8f9d6b61225ccb107f0feddb3c759fc4f1d",
-    "source_marker": "e4e1c8f9d6b61225ccb107f0feddb3c759fc4f1d",
-    "status": "previous exact isolated candidate; stale after Recipe resolver extraction; rebuild required before application evidence"
+    "source_sha": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
+    "image": "odysseus:candidate-b141781e",
+    "image_id": "sha256:d68a1329d075a312dd8d64a48603204aa8289d1462d007c44eb2d94d14a3de70",
+    "image_digest": "odysseus@sha256:d68a1329d075a312dd8d64a48603204aa8289d1462d007c44eb2d94d14a3de70",
+    "oci_revision": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
+    "source_marker": "b141781e1c5b6fae8fb9ea359ef7cc70d96377af",
+    "status": "ISOLATED CANDIDATE; exact application source/marker/health verified; browser_realistic_acceptance PASS; Qwen holdout pending; no owner data touched"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -367,8 +367,8 @@
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "57db4024483d46d3dad3244175c5640a3302f293",
     "evidence_commit_sha": "57db4024483d46d3dad3244175c5640a3302f293",
-    "latest_candidate_browser_replay": "PASS: exact e4e1c8f9 candidate browser_realistic_acceptance on disposable port 7006; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
-    "latest_candidate_holdout": "Exact e4e1c8f9 candidate held-out live Qwen run: 9/9 structural trajectories, 0 errors/internal leaks/duplicate finals/abrupt EOF, 5 tool calls, 0 tool-index lookups; compact summary artifacts/productization/e4e1c8f9-live-holdout-summary.json; raw report retained at /tmp/e4e1c8f9-live-holdout.json; not a supported-domain functional score"
+    "latest_candidate_browser_replay": "PASS: exact b141781e candidate browser_realistic_acceptance on disposable port 7006; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
+    "latest_candidate_holdout": "Exact b141781e post-Recipe-extraction live Qwen run: 9/9 structural trajectories, 0 errors/internal leaks/duplicate finals/abrupt EOF, 5 tool calls, 0 tool-index lookups; compact summary artifacts/productization/b141781e-live-holdout-summary.json; raw report retained at /tmp/b141781e-live-holdout.json; not a supported-domain functional score"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
