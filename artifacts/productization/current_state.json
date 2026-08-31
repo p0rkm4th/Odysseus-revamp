@@ -46,6 +46,31 @@
       "full_regression": "not rerun on b3 docs/metrics descendant; latest exact application regression is ffe1c424",
       "owner_runtime": "unchanged on candidate-2f05d500 at :7020"
     },
+    "latest_exact_candidate_d0d291f3": {
+      "source_sha": "d0d291f3d6b01d6ee4ecd13fe1201d7513376f7f",
+      "image": "odysseus:candidate-d0d291f3",
+      "image_id": "sha256:9aca61421b1ba0988d190b1eb4210a174575daf7f8f597824a3a0e61f0d554e6",
+      "image_digest": "odysseus@sha256:9aca61421b1ba0988d190b1eb4210a174575daf7f8f597824a3a0e61f0d554e6",
+      "oci_revision": "d0d291f3d6b01d6ee4ecd13fe1201d7513376f7f",
+      "source_marker": "d0d291f3d6b01d6ee4ecd13fe1201d7513376f7f",
+      "browser_realistic_acceptance": "PASS; authenticated desktop/narrow responsive/theme/navigation checks",
+      "qwen_model": "qwen3:8b",
+      "qwen_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "qwen_holdout": {
+        "artifact": "/tmp/d0d291f3-heldout.json",
+        "cases": 18,
+        "trajectory_passes": 18,
+        "answers": 18,
+        "internal_leaks": 0,
+        "tool_index_lookups": 0,
+        "duplicate_delivery": 0,
+        "abrupt_eof": 0,
+        "transport_errors": 0
+      },
+      "health": "api/health healthy; running; 0 restarts; Docker healthcheck absent",
+      "owner_runtime": "unchanged on candidate-2f05d500 at :7020",
+      "status": "exact candidate; current-source full regression green on ff22567d code ancestor; d0d291f3 is docs/metrics descendant"
+    },
     "supported_holdout_b3c20af5": {
       "artifact": "/tmp/b3c20af5-supported-holdout.json",
       "suite": "held_out",
@@ -389,8 +414,8 @@
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "ff22567dbab8487f1aa5b42cb62cbd7c9c780b82",
     "evidence_commit_sha": "ff22567dbab8487f1aa5b42cb62cbd7c9c780b82",
-    "latest_candidate_browser_replay": "STALE: exact 3832a722 candidate; browser replay predates ff22567d and must be rebuilt/replayed",
-    "latest_candidate_holdout": "STALE: last exact live Qwen run was b141781e before ffe1c424; rerun required for candidate evidence",
+    "latest_candidate_browser_replay": "PASS: exact d0d291f3 candidate; browser_realistic_acceptance authenticated responsive/theme/navigation checks",
+    "latest_candidate_holdout": "PASS: exact d0d291f3 candidate; 18/18 held-out trajectory assertions, zero leaks/duplicates/abrupt EOF/transport errors",
     "module_lifecycle": "Recipe AVAILABLE/ENABLED/ACTIVE contracts proven; disabled schema exclusion, lazy activation, and explicit dependency non-self-enable tests pass",
     "network_resolver_extraction": "Network grammar moved from intent_contracts into counted src/domain_resolvers/network.py; focused contracts pass"
   },
