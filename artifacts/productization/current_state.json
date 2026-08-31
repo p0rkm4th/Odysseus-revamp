@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-31T07:27:08-05:00",
+  "captured_at": "2026-08-31T08:52:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "44b447af970206a959756df2c45f993c040308ee",
-  "application_source_sha": "b91ff9388be13e6e183641b19f158e1a4e0ea796",
-  "source_head": "b91ff9388be13e6e183641b19f158e1a4e0ea796",
-  "remote_head": "44b447af970206a959756df2c45f993c040308ee",
-  "evidence_commit_sha": "44b447af970206a959756df2c45f993c040308ee",
+  "branch_head": "de06aeb50cf10265a18da4cc51c64e332296987e",
+  "application_source_sha": "de06aeb50cf10265a18da4cc51c64e332296987e",
+  "source_head": "de06aeb50cf10265a18da4cc51c64e332296987e",
+  "remote_head": "de06aeb50cf10265a18da4cc51c64e332296987e",
+  "evidence_commit_sha": "de06aeb50cf10265a18da4cc51c64e332296987e",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "ahead_behind_main": {
@@ -13,13 +13,13 @@
     "behind": 0
   },
   "executable_candidate": {
-    "source_sha": "b91ff9388be13e6e183641b19f158e1a4e0ea796",
-    "image": "odysseus:candidate-b91ff9388be1",
-    "image_id": "sha256:f73cc7a43e704799a24300f0ca02c48a37e914e268590b9ab4c82b77ad2f74ee",
-    "image_digest": "sha256:f73cc7a43e704799a24300f0ca02c48a37e914e268590b9ab4c82b77ad2f74ee",
-    "oci_revision": "b91ff9388be13e6e183641b19f158e1a4e0ea796",
-    "source_marker": "b91ff9388be13e6e183641b19f158e1a4e0ea796",
-    "status": "ISOLATED CANDIDATE; application source/marker/health verified; approval-bearing Recipe journeys PASS; scenario-isolation harness replay PASS; no owner data touched"
+    "source_sha": "de06aeb50cf10265a18da4cc51c64e332296987e",
+    "image": "odysseus:candidate-de06aeb5",
+    "image_id": "sha256:31f4261d3df2052c9e6a4d42f5ea62ca3d76b5a26d73dd87e15156235c5a560a",
+    "image_digest": "odysseus@sha256:31f4261d3df2052c9e6a4d42f5ea62ca3d76b5a26d73dd87e15156235c5a560a",
+    "oci_revision": "de06aeb50cf10265a18da4cc51c64e332296987e",
+    "source_marker": "de06aeb50cf10265a18da4cc51c64e332296987e",
+    "status": "ISOLATED CANDIDATE; exact source/marker/health verified; browser_realistic_acceptance PASS; no owner data touched"
   },
   "owner_dogfood": {
     "project": "hades-owner-dogfood",
@@ -363,11 +363,11 @@
     "measured_at": "2026-08-31T08:39:35-05:00",
     "artifact": "artifacts/productization/architecture_current.json",
     "focused_migration_tests": "195 passed, 1 warning on exact application source ac511bb5",
-    "full_regression": "7125 passed, 9 skipped, 149 warnings in 303.54s on exact application source 5c8e1ea8; ac511bb5 has only lazy resolver adapters/tests since that run",
+    "full_regression": "7126 passed, 9 skipped, 149 warnings in 303.74s on exact committed source de06aeb5",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
-    "application_source_sha": "ac511bb554d4b453953edafb9c2b42d32758fe30",
-    "evidence_commit_sha": "ac511bb554d4b453953edafb9c2b42d32758fe30",
-    "latest_candidate_browser_replay": "PASS: exact 15b2b8a9 candidate browser_realistic_acceptance on disposable port 7006; newer source ac511bb5 is not yet built/deployed",
+    "application_source_sha": "de06aeb50cf10265a18da4cc51c64e332296987e",
+    "evidence_commit_sha": "de06aeb50cf10265a18da4cc51c64e332296987e",
+    "latest_candidate_browser_replay": "PASS: exact de06aeb5 candidate browser_realistic_acceptance on disposable port 7006; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
     "latest_candidate_holdout": "49cb07df exact candidate mixed 142-case holdout: 46 functional, 123 architectural, 142 security; diagnostic denominator includes unsupported/dependency/evaluator cases; compact summary artifacts/productization/49cb07df-heldout-summary.json; raw report retained at /tmp/49cb07df-heldout.json"
   },
   "known_evidence_gaps": [
