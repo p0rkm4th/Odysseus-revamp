@@ -2,6 +2,29 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Network scoped-discovery owner defect and convergence replay (2026-08-31)
+
+Owner dogfood exposed two related Network/Homelab failures: the obvious CIDR
+typo `192.168.10.0\\24` was reported as if no bounded target existed, and a
+successful bounded plan could terminate without an owner-facing answer. The
+same journey also exposed raw host-context ENOENT text in an earlier runtime.
+The repair normalizes only valid unambiguous CIDR candidates, keeps ownership
+assertion separate from exact approval, maps exhaustive language to a bounded
+plan, preserves plan lifecycle kind through serialized Result projection, and
+projects host-context unavailability without raw errno text.
+
+Focused semantic/control-plane coverage passed 368 tests with 1 warning. The
+exact candidate `fc18ebed` was built as `odysseus:candidate-fc18ebed`, image
+`sha256:c8bfd01eb2fc143768a71fd648544441e2a9ad4a11523faa68405f24051fe045`,
+with source marker and OCI revision matching `fc18ebed`; the disposable
+acceptance runtime was running with zero restarts. Synthetic authenticated GUI
+acceptance passed four natural bounded-CIDR plan variants and two invalid-CIDR
+clarification variants. Across the six turns: false success `0`, raw final
+Results `0`, duplicate delivery `0`, abrupt EOF `0`. No active scan was run;
+the plan-only path explicitly states that exact approval is still required.
+The persistent owner-dogfood lane and production owner deployment were not
+modified.
+
 ## Accumulated-state Tier 1 dogfood replay (2026-08-30)
 
 On the source-matched disposable runtime `d1f8ebc9`, the existing realistic
