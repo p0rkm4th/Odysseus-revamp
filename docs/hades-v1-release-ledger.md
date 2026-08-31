@@ -5130,10 +5130,33 @@ evidence: the owner lane still runs `2f05d500` and its mounted
 candidate runs with its broker socket and passes the same journey. No owner
 data was changed and the owner lane was not redeployed.
 
-The exact current-candidate mixed 142-case Qwen holdout is retained at
-`artifacts/productization/49cb07df-heldout.json`: 46 functional, 123
+The exact current-candidate mixed 142-case Qwen holdout has a compact tracked
+summary at `artifacts/productization/49cb07df-heldout-summary.json`; the full
+raw report is retained outside Git at `/tmp/49cb07df-heldout.json`: 46 functional, 123
 architectural, and 142 security passes. Its denominator includes unsupported,
 dependency, and evaluator-contract cases, so it is diagnostic rather than a
 supported-domain release score. Dominant clusters were
 `DOMAIN_ROUTING_FAILURE` (63), `VERIFICATION_FAILURE` (22), and
 `INTENT_FAILURE` (22); zero duplicate delivery was observed.
+
+## Approval continuation repair — candidate `40958f81` (2026-08-31)
+
+Owner-facing Recipe URL import exposed a shared `UI / STREAM /
+APPROVAL_CONTINUATION` defect. The server emitted the complete sealed approval
+payload and all three options, but the browser routed the click through the
+polymorphic composer button; the proposal stream ended without posting the
+approval continuation.
+
+`40958f81` routes the sealed approval directly through the canonical chat
+submit handler and removes the obsolete synthetic-click interceptor. The exact
+candidate image `odysseus:candidate-40958f8190ea` has image ID
+`sha256:f1db296011a560311cc8ce7c72bfa678a7a892a37461d2e5913d257a77043d1b`,
+matching source marker and OCI revision
+`40958f8190ea0dbd1343166a3eca30ba9ea552d0`.
+
+Authenticated isolated replay of `OWNER-RECIPE-URL-IMPORT-NAMED-001` passed:
+one GUI-originated mutation, two canonical readbacks, and zero false success,
+raw final Results, duplicate delivery, or abrupt EOF. Broader
+`browser_realistic_acceptance.mjs` also passed. The candidate was healthy with
+zero restarts and Qwen3:8B remained reachable. The persistent owner-dogfood
+lane was not touched.
