@@ -727,6 +727,24 @@
     "raw_artifact": "/tmp/hades-live-fuzz-all-seed73-e482cbfe.json",
     "recorded_at": "2026-08-31T21:01:49Z"
   },
+  "latest_current_source_live_fuzz_heldout_seed101": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "c8c31616bd576a59f6c0e732e7353a81a58ac737",
+    "harness_source_sha": "c8c31616bd576a59f6c0e732e7353a81a58ac737",
+    "suite": "held_out",
+    "seed": 101,
+    "scenario_count": 37,
+    "trajectory_pass": 37,
+    "model": "qwen3:8b",
+    "model_calls": 10,
+    "tool_index_lookups": 0,
+    "internal_leaks": 0,
+    "duplicate_finalization": 0,
+    "abrupt_eof": 0,
+    "status": "PASS",
+    "raw_artifact": "/tmp/hades-live-fuzz-heldout-seed101-e482cbfe.json",
+    "recorded_at": "2026-08-31T21:13:34Z"
+  },
   "latest_current_source_visual_acceptance": {
     "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
     "evidence_source_sha": "184994ae8ccd111aefb62f210d955d0b46d8477e",
