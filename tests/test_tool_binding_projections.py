@@ -287,6 +287,23 @@ def test_homelab_binding_preserves_structured_executor_failure(monkeypatch):
     assert result["data"]["error_code"] == "HOST_NETWORK_CONTEXT_UNAVAILABLE"
 
 
+def test_malformed_host_network_context_is_owner_safe(monkeypatch):
+    def malformed_request(*args, **kwargs):
+        return {"ok": True, "execution_location": "HOST", "addresses": "not-json", "routes": "[]"}
+
+    monkeypatch.setattr("src.privileged_broker.client_request", malformed_request)
+    from src.homelab_operations import HomelabOperations
+
+    result = asyncio.run(HomelabOperations().execute(
+        {"action": "read_network_context"}, owner="alice",
+    ))
+    assert result["status"] == "INVALID_RESULT"
+    assert result["error_code"] == "RESULT_INVALID"
+    assert result["technical_error"] == "JSONDecodeError"
+    assert "not-json" not in str(result)
+    assert "malformed data" in result["message"]
+
+
 def test_registered_binding_cannot_bypass_disabled_or_tool_policy(monkeypatch):
     calls = []
 
