@@ -31,6 +31,9 @@ COUNTED_MODULES = (
     "src/tool_capabilities.py",
     "src/capability_dependencies.py",
     "src/module_manager.py",
+    # Retrieval is semantic-control-plane code even while it remains in
+    # shadow mode; moving it here must not make the metric look smaller.
+    "src/action_retriever.py",
     "src/result_renderers/registry.py",
     "src/field_resolvers.py",
     "src/domain_resolvers/reminders.py",
