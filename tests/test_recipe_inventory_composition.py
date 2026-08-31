@@ -47,6 +47,25 @@ def _recipe_fixture():
     return service, recipe
 
 
+def test_recipe_detail_read_projection_is_human_readable():
+    answer = canonical_recipe_read_answer([{
+        "tool": "read_recipes", "exit_code": 0,
+        "command": '{"action":"get"}',
+        "output": json.dumps({"status": "SUCCESS", "recipe": {
+            "name": "Taste Test", "servings": 2,
+            "ingredients": [
+                {"name": "salt", "quantity": None, "unit": None,
+                 "amount_kind": "TO_TASTE", "source_text": "salt to taste"},
+            ], "notes": "Season gently.", "instructions": "Cook.",
+        }}),
+    }])
+    assert answer is not None
+    assert "Taste Test" in answer
+    assert "salt to taste" in answer
+    assert "Season gently." in answer
+    assert answer.lstrip().startswith("Taste Test")
+
+
 def test_recipe_reads_and_pantry_coverage_use_one_persisted_inventory_owner():
     service, recipe = _recipe_fixture()
 
