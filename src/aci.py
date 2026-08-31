@@ -26,50 +26,27 @@ from src.tool_capabilities import (
     capabilities_for_action,
     tool_result_should_arm_gate,
 )
-from src.result_renderers.work import (
-    canonical_work_mutation_answer,
-    canonical_work_read_answer,
-)
-from src.result_renderers.memory import (
-    canonical_memory_mutation_answer,
-    canonical_memory_read_answer,
-)
-from src.result_renderers.homelab import (
-    canonical_homelab_read_answer,
-    canonical_network_plan_answer,
-    canonical_network_read_answer,
-    canonical_service_read_answer,
-)
-from src.result_renderers.scheduled import (
-    canonical_scheduled_task_mutation_answer,
-    canonical_scheduled_task_read_answer,
-)
-from src.result_renderers.calendar import canonical_communications_read_answer
-from src.result_renderers.generic import canonical_structured_empty_read_answer
-from src.result_renderers.assets import canonical_asset_read_answer
-from src.result_renderers.household import (
-    canonical_household_read_answer,
-    canonical_inventory_mutation_answer,
-)
-from src.result_renderers.notes import (
-    canonical_notes_mutation_answer,
-    canonical_notes_read_answer,
-    note_list_summary_from_tool_output,
-)
+from src.result_renderers.registry import RENDERER_SPECS, render_result
 
 logger = logging.getLogger(__name__)
 
 
-def canonical_recipe_mutation_answer(events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Activate the Recipe renderer only for a Recipe Result."""
-    from src.result_renderers.recipe import canonical_recipe_mutation_answer as render
-    return render(events)
+_LAZY_RENDERER_EXPORTS = {
+    name: (module_name, name)
+    for _provenance, module_name, name in RENDERER_SPECS
+}
+_LAZY_RENDERER_EXPORTS["note_list_summary_from_tool_output"] = (
+    "src.result_renderers.notes", "note_list_summary_from_tool_output",
+)
 
 
-def canonical_recipe_read_answer(events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Activate the Recipe renderer only for a Recipe Result."""
-    from src.result_renderers.recipe import canonical_recipe_read_answer as render
-    return render(events)
+def __getattr__(name: str):
+    """Keep historical renderer imports lazy during the strangler migration."""
+    target = _LAZY_RENDERER_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(name)
+    import importlib
+    return getattr(importlib.import_module(target[0]), target[1])
 
 
 def stream_aci_turn(*args: Any, **kwargs: Any):
@@ -3578,40 +3555,16 @@ def canonical_unverified_action_answer(
     return None
 
 
-RESULT_RENDERER_REGISTRY: tuple[tuple[str, Callable[[Sequence[Mapping[str, Any]]], str | None]], ...] = (
-    ("recipe mutation Result", canonical_recipe_mutation_answer),
-    ("inventory mutation Result", canonical_inventory_mutation_answer),
-    ("Work mutation Result", canonical_work_mutation_answer),
-    ("Memory mutation Result", canonical_memory_mutation_answer),
-    ("canonical Notes Result", canonical_notes_read_answer),
-    ("canonical scheduled task Result", canonical_scheduled_task_read_answer),
-    ("notes mutation Result", canonical_notes_mutation_answer),
-    ("scheduled task Result", canonical_scheduled_task_mutation_answer),
-    ("canonical Memory Result", canonical_memory_read_answer),
-    ("canonical Work Result", canonical_work_read_answer),
-    ("canonical Calendar Result", canonical_communications_read_answer),
-    ("canonical bounded Network plan", canonical_network_plan_answer),
-    ("canonical Network Result", canonical_network_read_answer),
-    ("canonical Homelab Result", canonical_homelab_read_answer),
-    ("canonical Service Result", canonical_service_read_answer),
-    ("canonical Asset Result", canonical_asset_read_answer),
-    ("canonical Household Result", canonical_household_read_answer),
-    ("canonical Recipe Result", canonical_recipe_read_answer),
-    ("canonical structured empty Result", canonical_structured_empty_read_answer),
-)
-
-
 def canonical_result_answer(
     tool_events: Sequence[Mapping[str, Any]],
 ) -> CanonicalAnswer | None:
-    for provenance, renderer in RESULT_RENDERER_REGISTRY:
-        content = renderer(tool_events)
-        if content:
-            return CanonicalAnswer(
-                content=content,
-                source=AnswerSource.DETERMINISTIC_RESULT,
-                provenance=provenance,
-            )
+    rendered = render_result(
+        tool_events,
+        enabled_module_ids=default_module_manager().enabled_module_ids(),
+    )
+    if rendered is not None:
+        provenance, content = rendered
+        return CanonicalAnswer(content=content, source=AnswerSource.DETERMINISTIC_RESULT, provenance=provenance)
     return (
         canonical_read_failure_answer(tool_events)
         or canonical_action_failure_answer(tool_events)
