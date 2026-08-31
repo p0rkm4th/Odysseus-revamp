@@ -1288,6 +1288,9 @@ def test_canonical_read_payload_builder_owns_memory_and_developer_shapes():
         "read_memory", "summarize_owner_memory", {}, query="what did I save"
     ) == {"action": "summarize_owner_memory", "query": "what did I save"}
     assert canonical_read_fast_path_payload(
+        "read_memory", "summarize_owner_memory", {}
+    ) == {"action": "summarize_owner_memory", "query": "what do you remember about me"}
+    assert canonical_read_fast_path_payload(
         "developer_read", "search_code", {}, query="search for compile_intent"
     ) == {"action": "search_code", "query": "compile_intent"}
     assert canonical_read_fast_path_payload(
