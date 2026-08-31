@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Broad regression and provenance checkpoint — branch `ae7beabb` (2026-08-31)
+
+The supported full regression passed: `7114 passed, 9 skipped, 149 warnings` in
+`350.76s`. `src` compilation and `npm run test:frontend` also passed. The
+branch is clean and equals `origin/hades-v1-productization` at `ae7beabb`; the
+executable candidate remains the exact image `odysseus:candidate-fc18ebed`
+(`sha256:c8bfd01eb2fc143768a71fd648544441e2a9ad4a11523faa68405f24051fe045`)
+because the intervening commits are docs-only. The stable isolated acceptance,
+the new fresh-install lane on port 7013, and the persistent owner-dogfood lane
+are healthy with zero restarts. Qwen3:8B is reachable from the fresh app
+container at the Ollama host endpoint with digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`; Chroma
+heartbeat is healthy. The owner-dogfood lane remains on its known-good
+`2f05d500` image and was not changed.
+
 ## Recipe video import/review replay (2026-08-31)
 
 The exact executable candidate `fc18ebed` passed all four remaining video
