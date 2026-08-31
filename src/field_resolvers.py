@@ -74,7 +74,7 @@ def _work_task_fields(query: str, _frame: Mapping[str, Any], _action_id: str) ->
 
 
 def _memory_fields(query: str, _frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
-    from src.intent_contracts import memory_mutation_payload
+    from src.domain_resolvers.memory import memory_mutation_payload
     return memory_mutation_payload(query, action_id)
 
 
