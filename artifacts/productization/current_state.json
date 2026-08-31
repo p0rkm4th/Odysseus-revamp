@@ -1,10 +1,10 @@
 {
-  "captured_at": "2026-08-31T09:08:00-05:00",
+  "captured_at": "2026-08-31T09:15:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "57db4024483d46d3dad3244175c5640a3302f293",
-  "application_source_sha": "57db4024483d46d3dad3244175c5640a3302f293",
-  "source_head": "57db4024483d46d3dad3244175c5640a3302f293",
-  "remote_head": "57db4024483d46d3dad3244175c5640a3302f293",
+  "branch_head": "9488eae30402b748f4773c203e422812421df70a",
+  "application_source_sha": "9488eae30402b748f4773c203e422812421df70a",
+  "source_head": "9488eae30402b748f4773c203e422812421df70a",
+  "remote_head": "9488eae30402b748f4773c203e422812421df70a",
   "evidence_commit_sha": "57db4024483d46d3dad3244175c5640a3302f293",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
@@ -13,12 +13,12 @@
     "behind": 0
   },
   "executable_candidate": {
-    "source_sha": "de06aeb50cf10265a18da4cc51c64e332296987e",
-    "image": "odysseus:candidate-de06aeb5",
-    "image_id": "sha256:31f4261d3df2052c9e6a4d42f5ea62ca3d76b5a26d73dd87e15156235c5a560a",
-    "image_digest": "odysseus@sha256:31f4261d3df2052c9e6a4d42f5ea62ca3d76b5a26d73dd87e15156235c5a560a",
-    "oci_revision": "de06aeb50cf10265a18da4cc51c64e332296987e",
-    "source_marker": "de06aeb50cf10265a18da4cc51c64e332296987e",
+    "source_sha": "9488eae30402b748f4773c203e422812421df70a",
+    "image": "odysseus:candidate-9488eae3",
+    "image_id": "sha256:830fdd867768ad0be59b2079a30ff7c3f14c21e9949b3a6b50c55416bb38e31e",
+    "image_digest": "odysseus@sha256:830fdd867768ad0be59b2079a30ff7c3f14c21e9949b3a6b50c55416bb38e31e",
+    "oci_revision": "9488eae30402b748f4773c203e422812421df70a",
+    "source_marker": "9488eae30402b748f4773c203e422812421df70a",
     "status": "ISOLATED CANDIDATE; exact source/marker/health verified; browser_realistic_acceptance PASS; no owner data touched"
   },
   "owner_dogfood": {
@@ -33,7 +33,7 @@
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
-    "candidate_source_sha": "c575b9594a06deab8e5fe9fd1a2daef2e9196dd6",
+    "candidate_source_sha": "9488eae30402b748f4773c203e422812421df70a",
     "candidate_image": "odysseus:candidate-c575b959",
     "candidate_image_id": "sha256:a9bbc304716064e571b760534165f3f3961dd9423bb124faf125522b029dc7c7",
     "latest_exact_candidate_50ae6e6b": {
@@ -367,8 +367,8 @@
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "57db4024483d46d3dad3244175c5640a3302f293",
     "evidence_commit_sha": "57db4024483d46d3dad3244175c5640a3302f293",
-    "latest_candidate_browser_replay": "PASS: exact de06aeb5 candidate browser_realistic_acceptance on disposable port 7006; newer 57db4024 source has not yet been rebuilt",
-    "latest_candidate_holdout": "Exact de06aeb5 candidate held-out live Qwen run: 16/16 trajectories, 0 errors/internal leaks/duplicate finals/abrupt EOF, 9 tool calls, 0 tool-index lookups; compact summary artifacts/productization/de06aeb5-live-holdout-summary.json; raw report retained at /tmp/de06aeb5-live-holdout.json"
+    "latest_candidate_browser_replay": "PASS: exact 9488eae3 candidate browser_realistic_acceptance on disposable port 7006; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
+    "latest_candidate_holdout": "Exact 9488eae3 candidate held-out live Qwen run: 9/9 trajectories, 0 errors/internal leaks/duplicate finals/abrupt EOF, 5 tool calls, 0 tool-index lookups; compact summary artifacts/productization/9488eae3-live-holdout-summary.json; raw report retained at /tmp/9488eae3-live-holdout.json"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
