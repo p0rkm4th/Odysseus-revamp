@@ -230,7 +230,7 @@
       ]
     },
     "src/aci.py": {
-      "loc": 5750,
+      "loc": 5747,
       "functions": [
         {
           "name": "canonical_tool_result_projection",
@@ -240,7 +240,7 @@
         {
           "name": "project_action_selection",
           "line": 4988,
-          "loc": 253
+          "loc": 250
         },
         {
           "name": "canonical_recipe_read_answer",
@@ -294,7 +294,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 5287,
+          "line": 5284,
           "loc": 93
         },
         {
@@ -334,7 +334,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 5540,
+          "line": 5537,
           "loc": 63
         },
         {
@@ -349,7 +349,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 5479,
+          "line": 5476,
           "loc": 59
         },
         {
@@ -359,7 +359,7 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 5687,
+          "line": 5684,
           "loc": 56
         },
         {
@@ -379,7 +379,7 @@
         },
         {
           "name": "parse_decision_json",
-          "line": 5397,
+          "line": 5394,
           "loc": 50
         },
         {
@@ -399,7 +399,7 @@
         },
         {
           "name": "project_result_observation",
-          "line": 5605,
+          "line": 5602,
           "loc": 48
         },
         {
@@ -434,7 +434,7 @@
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 5243,
+          "line": 5240,
           "loc": 42
         },
         {
@@ -549,7 +549,7 @@
         },
         {
           "name": "selected_action_for_decision",
-          "line": 5449,
+          "line": 5446,
           "loc": 28
         },
         {
@@ -639,7 +639,7 @@
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 5655,
+          "line": 5652,
           "loc": 20
         },
         {
@@ -764,7 +764,7 @@
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 5382,
+          "line": 5379,
           "loc": 13
         },
         {
@@ -824,7 +824,7 @@
         },
         {
           "name": "model_burden",
-          "line": 5745,
+          "line": 5742,
           "loc": 6
         },
         {
@@ -892,7 +892,7 @@
         {
           "name": "project_action_selection",
           "line": 4988,
-          "loc": 253
+          "loc": 250
         },
         {
           "name": "canonical_recipe_read_answer",
@@ -946,7 +946,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 5287,
+          "line": 5284,
           "loc": 93
         },
         {
@@ -987,11 +987,11 @@
       ]
     },
     "src/intent_contracts.py": {
-      "loc": 3433,
+      "loc": 3435,
       "functions": [
         {
           "name": "compile_intent",
-          "line": 2088,
+          "line": 2090,
           "loc": 778
         },
         {
@@ -1001,12 +1001,12 @@
         },
         {
           "name": "classify_compatibility_request",
-          "line": 3264,
+          "line": 3266,
           "loc": 170
         },
         {
           "name": "resolve_structured_reference",
-          "line": 1887,
+          "line": 1889,
           "loc": 130
         },
         {
@@ -1021,7 +1021,7 @@
         },
         {
           "name": "validate_bound_result",
-          "line": 3160,
+          "line": 3162,
           "loc": 102
         },
         {
@@ -1031,7 +1031,7 @@
         },
         {
           "name": "resolve_intent",
-          "line": 2925,
+          "line": 2927,
           "loc": 93
         },
         {
@@ -1041,7 +1041,7 @@
         },
         {
           "name": "_operation",
-          "line": 2019,
+          "line": 2021,
           "loc": 67
         },
         {
@@ -1056,12 +1056,12 @@
         },
         {
           "name": "resolve_continuation",
-          "line": 2868,
+          "line": 2870,
           "loc": 55
         },
         {
           "name": "validate_result",
-          "line": 3109,
+          "line": 3111,
           "loc": 49
         },
         {
@@ -1071,7 +1071,7 @@
         },
         {
           "name": "validate_contracts",
-          "line": 3020,
+          "line": 3022,
           "loc": 46
         },
         {
@@ -1081,7 +1081,7 @@
         },
         {
           "name": "canonical_read_action",
-          "line": 1837,
+          "line": 1839,
           "loc": 39
         },
         {
@@ -1131,7 +1131,7 @@
         },
         {
           "name": "generated_parity_matrix",
-          "line": 3068,
+          "line": 3070,
           "loc": 21
         },
         {
@@ -1156,7 +1156,7 @@
         },
         {
           "name": "result_status",
-          "line": 3091,
+          "line": 3093,
           "loc": 16
         },
         {
@@ -1185,13 +1185,13 @@
           "loc": 14
         },
         {
-          "name": "is_explicit_continuation",
-          "line": 1331,
-          "loc": 12
+          "name": "as_dict",
+          "line": 1581,
+          "loc": 13
         },
         {
-          "name": "as_dict",
-          "line": 1580,
+          "name": "is_explicit_continuation",
+          "line": 1331,
           "loc": 12
         },
         {
@@ -1226,7 +1226,7 @@
         },
         {
           "name": "as_dict",
-          "line": 1604,
+          "line": 1606,
           "loc": 8
         },
         {
@@ -1241,7 +1241,7 @@
         },
         {
           "name": "_depth",
-          "line": 1878,
+          "line": 1880,
           "loc": 7
         },
         {
@@ -1261,7 +1261,7 @@
         },
         {
           "name": "canonical_domain_projection",
-          "line": 1831,
+          "line": 1833,
           "loc": 4
         },
         {
@@ -1286,14 +1286,14 @@
         },
         {
           "name": "has",
-          "line": 3326,
+          "line": 3328,
           "loc": 2
         }
       ],
       "largest_functions": [
         {
           "name": "compile_intent",
-          "line": 2088,
+          "line": 2090,
           "loc": 778
         },
         {
@@ -1303,12 +1303,12 @@
         },
         {
           "name": "classify_compatibility_request",
-          "line": 3264,
+          "line": 3266,
           "loc": 170
         },
         {
           "name": "resolve_structured_reference",
-          "line": 1887,
+          "line": 1889,
           "loc": 130
         },
         {
@@ -1323,7 +1323,7 @@
         },
         {
           "name": "validate_bound_result",
-          "line": 3160,
+          "line": 3162,
           "loc": 102
         },
         {
@@ -1333,7 +1333,7 @@
         },
         {
           "name": "resolve_intent",
-          "line": 2925,
+          "line": 2927,
           "loc": 93
         },
         {
@@ -1343,7 +1343,7 @@
         },
         {
           "name": "_operation",
-          "line": 2019,
+          "line": 2021,
           "loc": 67
         },
         {
@@ -1358,12 +1358,12 @@
         },
         {
           "name": "resolve_continuation",
-          "line": 2868,
+          "line": 2870,
           "loc": 55
         },
         {
           "name": "validate_result",
-          "line": 3109,
+          "line": 3111,
           "loc": 49
         },
         {
@@ -1373,7 +1373,7 @@
         },
         {
           "name": "validate_contracts",
-          "line": 3020,
+          "line": 3022,
           "loc": 46
         },
         {
@@ -1383,7 +1383,7 @@
         },
         {
           "name": "canonical_read_action",
-          "line": 1837,
+          "line": 1839,
           "loc": 39
         },
         {
@@ -2276,7 +2276,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18834,
+  "semantic_control_plane_loc": 18833,
   "central_domain_conditionals": 118,
   "central_canonical_answer_functions": 23,
   "canonical_answer_dispatch_mentions": 27,
@@ -2418,6 +2418,6 @@
       }
     ]
   },
-  "source_sha": "2248b55c50520900a1c4c84fb595c85c49c5cff4",
+  "source_sha": "79957cebf696fbe9af22b67b8abd33240e867751",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
