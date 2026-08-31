@@ -5320,3 +5320,19 @@ qualitative/source-text readback, and reload durability, without requiring a
 review for normal culinary language. The exact candidate replay passed with 1
 turn, 1 mutation, 2 canonical readbacks, and zero false success, raw final
 Results, duplicate delivery, or abrupt EOF. No owner-dogfood state was touched.
+
+## Candidate isolation and live holdout revalidation — candidate `b91ff938` (2026-08-31)
+
+An attempted candidate-only acceptance-principal rotation exposed an
+environment setup defect: a manual Compose recreation omitted `APP_DATA_DIR`
+and briefly selected the repository default data mount. No chat, Action, or
+owner-state mutation occurred; inspection showed no files written in the
+repository data root during that interval. The candidate was stopped and
+recreated with `/tmp/hades-candidate-6b535818/data`, an isolated
+`172.31.0.0/16` network, and explicit acceptance enablement. Exact mounts,
+image ID, source marker, and zero restart count were verified before further
+testing. The candidate-only Qwen3:8B live holdout then passed 14/14
+trajectories with 10 tool calls, zero errors/internal leaks, duplicate final
+delivery, and abrupt EOF. A browser qualitative-Recipe replay passed again
+with 1 GUI mutation and 2 canonical readbacks. Persistent owner dogfood and
+production deployments were not changed.
