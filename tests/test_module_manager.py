@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 
-from src.aci import project_action_selection
+from src.aci import project_action_selection, project_route_tool_schemas
 from src.module_manager import ModuleManager, ModuleSpec, ModuleState
 from src.result_renderers import registry as renderer_registry
 
@@ -105,6 +105,55 @@ def test_disabled_recipe_is_not_loaded_by_unrelated_result_projection(monkeypatc
         [], enabled_module_ids=frozenset({"work"}),
     )
     assert not any(name.endswith(".recipe") for name in imported)
+
+
+def test_disabled_recipe_schema_never_reaches_api_model_context():
+    manager = ModuleManager(enabled_modules={"core", "memory", "legacy-capabilities"})
+    schemas = project_route_tool_schemas(
+        {
+            "mcp_schemas": [],
+            "relevant_tools": ["manage_recipes", "manage_memory"],
+            "is_api_model": True,
+            "ody_qwen_finetune_model": False,
+            "model": "qwen3:8b",
+        },
+        aci_model_fallback=False,
+        aci_enabled=False,
+        aci_mode="legacy",
+        force_answer=False,
+        needs_admin=False,
+        disabled_tools=set(manager.disabled_tool_names()),
+        admin_tools=set(),
+        admin_schema_names=set(),
+        function_tool_schemas=[
+            {"type": "function", "function": {"name": "manage_recipes"}},
+            {"type": "function", "function": {"name": "manage_memory"}},
+        ],
+        select_local_mcp_schemas=lambda *_args: [],
+        last_user="add a recipe",
+    )
+    assert [schema["function"]["name"] for schema in schemas] == ["manage_memory"]
+    assert manager.active_module_ids() == frozenset()
+
+
+def test_disabled_module_dependency_never_self_enables():
+    manager = ModuleManager(
+        {
+            "household": ModuleSpec("household", ("household.read",)),
+            "recipes": ModuleSpec(
+                "recipes", ("recipe.read",), dependencies=("household",),
+            ),
+        },
+        enabled_modules={"recipes"},
+    )
+    assert manager.state("recipes") is ModuleState.ENABLED
+    assert manager.enabled_capability_ids() == frozenset()
+    try:
+        manager.activate_for_capability("recipe.read")
+    except RuntimeError as exc:
+        assert str(exc) == "module dependency disabled: recipes"
+    else:
+        raise AssertionError("a disabled dependency must not be activated implicitly")
 
 
 def test_intent_contract_import_does_not_eagerly_load_feature_resolvers():
