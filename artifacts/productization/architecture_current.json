@@ -2578,7 +2578,7 @@
   "frontend": {
     "css_bytes": 1346302,
     "css_files": 2,
-    "js_bytes": 13873123,
+    "js_bytes": 13872252,
     "js_files": 190,
     "largest_assets": [
       {
@@ -2615,7 +2615,7 @@
       },
       {
         "path": "static/js/chat.js",
-        "bytes": 331743
+        "bytes": 332358
       },
       {
         "path": "static/js/settings.js",
@@ -2647,7 +2647,7 @@
       },
       {
         "path": "static/app.js",
-        "bytes": 204410
+        "bytes": 204408
       },
       {
         "path": "static/js/galleryEditor.js",
@@ -2663,6 +2663,6 @@
       }
     ]
   },
-  "source_sha": "49cb07dff204019786e1025d5f627288dbddc8cc",
+  "source_sha": "44b447af970206a959756df2c45f993c040308ee",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
