@@ -10,6 +10,22 @@ import json
 from typing import Any, Mapping, Sequence
 
 
+def project_work_result(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Bound Work Result collections for history and owner rendering."""
+    collections = {key: value for key, value in payload.items() if isinstance(value, list)}
+    items = {}
+    for key, values in collections.items():
+        items[key] = [
+            {"title": title[:200], **({"status": status[:64]} if status else {})}
+            for value in values[:20] if isinstance(value, Mapping)
+            for title in [str(value.get("title") or value.get("name") or "").strip()]
+            for status in [str(value.get("status") or "").strip()]
+            if title
+        ]
+    return {"status": payload.get("status"), "collections": {key: len(value) for key, value in collections.items()},
+            "items": items, "total": sum(len(value) for value in collections.values())}
+
+
 def canonical_work_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render only a verified Work mutation; model prose is not evidence."""
     event = next(
@@ -103,4 +119,3 @@ def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str 
         for key, value in sorted(collections.items()) if value
     )
     return f"I found {total} work record{'s' if total != 1 else ''} ({labels})."
-
