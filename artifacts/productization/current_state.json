@@ -708,6 +708,25 @@
     "raw_artifact": "/tmp/hades-live-fuzz-security-e482cbfe.json",
     "recorded_at": "2026-08-31T21:00:41Z"
   },
+  "latest_current_source_live_fuzz_all_seed73": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "bf16f31e976305f9b016f480d8f145b06019ca01",
+    "harness_source_sha": "bf16f31e976305f9b016f480d8f145b06019ca01",
+    "suite": "all",
+    "seed": 73,
+    "requested_sample": 30,
+    "scenario_count": 31,
+    "trajectory_pass": 31,
+    "model": "qwen3:8b",
+    "model_calls": 5,
+    "tool_index_lookups": 0,
+    "internal_leaks": 0,
+    "duplicate_finalization": 0,
+    "abrupt_eof": 0,
+    "status": "PASS",
+    "raw_artifact": "/tmp/hades-live-fuzz-all-seed73-e482cbfe.json",
+    "recorded_at": "2026-08-31T21:01:49Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
