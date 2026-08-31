@@ -379,6 +379,26 @@
     "production_change": false,
     "recorded_at": "2026-08-31T20:28:00Z"
   },
+  "latest_current_source_live_qwen_holdout_after_guard": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "9b6a3f0938c4adb4da2ffd2eff3e5d000d1f48cb",
+    "candidate_image": "odysseus:candidate-e482cbfe6b55",
+    "model": "qwen3:8b",
+    "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+    "suite": "held_out",
+    "seed": 20260831,
+    "cases": 18,
+    "trajectory_passes": 18,
+    "errors": 0,
+    "tool_index_lookups": 0,
+    "internal_leaks": 0,
+    "duplicate_finalization": 0,
+    "abrupt_eof": 0,
+    "total_tool_calls": 11,
+    "raw_artifact": "/tmp/hades-current-source-heldout-e482cbfe-after-guard.json",
+    "status": "PASS; supported capability-backed live holdout remains unaffected by evaluator guard",
+    "recorded_at": "2026-08-31T20:27:00Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
