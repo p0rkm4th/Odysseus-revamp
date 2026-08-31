@@ -2329,6 +2329,6 @@
       }
     ]
   },
-  "source_sha": "f7e0fe54a10ed0c4e79dea96a40a7d3111f4df7c",
+  "source_sha": "1017813932927c0954fec73ae7ae26cb1437d8af",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
