@@ -368,7 +368,7 @@
     "application_source_sha": "de06aeb50cf10265a18da4cc51c64e332296987e",
     "evidence_commit_sha": "de06aeb50cf10265a18da4cc51c64e332296987e",
     "latest_candidate_browser_replay": "PASS: exact de06aeb5 candidate browser_realistic_acceptance on disposable port 7006; authenticated login, theme inheritance, navigation, responsive layout, and shared-window checks",
-    "latest_candidate_holdout": "49cb07df exact candidate mixed 142-case holdout: 46 functional, 123 architectural, 142 security; diagnostic denominator includes unsupported/dependency/evaluator cases; compact summary artifacts/productization/49cb07df-heldout-summary.json; raw report retained at /tmp/49cb07df-heldout.json"
+    "latest_candidate_holdout": "Exact de06aeb5 candidate held-out live Qwen run: 16/16 trajectories, 0 errors/internal leaks/duplicate finals/abrupt EOF, 9 tool calls, 0 tool-index lookups; compact summary artifacts/productization/de06aeb5-live-holdout-summary.json; raw report retained at /tmp/de06aeb5-live-holdout.json"
   },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
