@@ -70,6 +70,9 @@ class ActionSpec:
     result_renderer: str | None = None
     input_schema: Mapping[str, Any] | None = None
     deterministic_selection: bool = False
+    # Optional declarative eligibility for action projection.  This metadata
+    # narrows a capability only; it never grants authority or bypasses policy.
+    selection_requirements: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -177,8 +180,8 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="recipe.manage",
         description="Persist owner-scoped recipes through Inventory Service with readback verification.",
         actions=_actions(
-            ActionSpec(action_id="add", effects=("write_private",), executor_key="manage_recipes", field_resolver="recipe", deterministic_selection=True),
-            ActionSpec(action_id="commit_import", effects=("write_private",), executor_key="manage_recipes", field_resolver="recipe", deterministic_selection=True),
+            ActionSpec(action_id="add", effects=("write_private",), executor_key="manage_recipes", field_resolver="recipe", deterministic_selection=True, selection_requirements={"exclude_when_filters": {"recipe_import": True}}),
+            ActionSpec(action_id="commit_import", effects=("write_private",), executor_key="manage_recipes", field_resolver="recipe", deterministic_selection=True, selection_requirements={"exclusive_when_filters": {"recipe_import": True}}),
         ),
     ),
     "setup.read": CapabilitySpec(
@@ -269,6 +272,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 target_scope=("private_network" if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else "owner_asset" if action in {"ssh_connect_test", "remote_host_inspect"} else None),
                 requires_direct_container_access=(action not in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration", "execute_diagnostic_install"}),
                 field_resolver=("network" if action in {"plan_network_discovery", "plan_network_service_enumeration"} else None),
+                selection_requirements=({"exclusive_when": {"desired_action": "plan_network_discovery", "frame": {"domain_concept": "NETWORK", "operation_class": "EXECUTE"}}} if action == "plan_network_discovery" else None),
                 target_resources=("network:private_scope",) if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else (),
                 locks=(("network:private_scope",) if action in {"execute_network_discovery", "execute_network_service_enumeration"} else (("host:package_manager",) if action == "execute_diagnostic_install" else ())),
                 rollback_capability="none",
