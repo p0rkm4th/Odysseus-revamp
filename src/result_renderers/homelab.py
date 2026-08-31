@@ -13,10 +13,11 @@ def project_homelab_result(payload: Mapping[str, Any]) -> Mapping[str, Any] | No
               "target": payload.get("target"), "observation_location": payload.get("observation_location"),
               "freshness": payload.get("freshness")}
     if str(payload.get("kind") or "").strip().lower() == "plan" and action in {"plan_network_discovery", "execute_network_discovery"}:
-        common.update({"action": "plan_network_discovery", "operation_digest": payload.get("operation_digest"),
+        return {"action": "plan_network_discovery", "status": payload.get("status") or "SUCCESS",
+                "kind": payload.get("kind"), "target": payload.get("target") or payload.get("cidr"),
+                "operation_digest": payload.get("operation_digest"),
                        "preflight": payload.get("preflight"), "scanner_available": payload.get("scanner_available"),
-                       "broker_scanner_available": payload.get("broker_scanner_available")})
-        return common
+                       "broker_scanner_available": payload.get("broker_scanner_available")}
     if action == "read_network_context":
         common.update({"interfaces": list(payload.get("interfaces", [])[:32]) if isinstance(payload.get("interfaces"), list) else [],
                        "default_routes": list(payload.get("default_routes", [])[:8]) if isinstance(payload.get("default_routes"), list) else []})

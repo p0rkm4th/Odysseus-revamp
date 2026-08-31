@@ -3158,64 +3158,8 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() not in {"manage_homelab", "manage_assets", "read_household", "read_work", "read_recipes", "manage_recipes", "manage_memory"} or not isinstance(result, Mapping):
-        return None
-    if str(tool_name or "").strip() == "manage_memory":
-        from src.result_renderers.memory import project_memory_result
-        return project_memory_result(result)
-    if str(tool_name or "").strip() == "read_household":
-        raw = result.get("data") if isinstance(result.get("data"), Mapping) else result.get("output")
-        if isinstance(raw, Mapping):
-            payload = raw
-        else:
-            try:
-                payload = json.loads(str(raw or ""))
-            except (TypeError, ValueError):
-                return None
-        if not isinstance(payload, Mapping):
-            return None
-        from src.result_renderers.household import project_household_result
-        return project_household_result(payload)
-    # Planning receipts are already structured Results.  In particular, the
-    # bounded network plan has no subprocess ``output`` field; dropping this
-    # top-level receipt would leave the owner-facing finalizer without the
-    # exact target it needs to render a safe answer.
-    if str(tool_name or "").strip() == "manage_homelab":
-        structured_action = str(result.get("action") or "").strip()
-        if structured_action == "plan_network_discovery":
-            return {
-                "action": structured_action,
-                "status": result.get("status") or "SUCCESS",
-                "kind": result.get("kind"),
-                "target": result.get("target") or result.get("cidr"),
-                "operation_digest": result.get("operation_digest"),
-                "preflight": result.get("preflight"),
-                "scanner_available": result.get("scanner_available"),
-                "broker_scanner_available": result.get("broker_scanner_available"),
-            }
-    raw = result.get("output")
-    if isinstance(raw, Mapping):
-        payload = raw
-    else:
-        try:
-            payload = json.loads(str(raw or ""))
-        except (TypeError, ValueError):
-            return None
-    if not isinstance(payload, Mapping):
-        return None
-    if str(tool_name or "").strip() in {"read_recipes", "manage_recipes"}:
-        from src.result_renderers.recipe import project_recipe_result
-        return project_recipe_result(str(tool_name).strip(), result)
-    if str(tool_name or "").strip() == "manage_assets":
-        from src.result_renderers.assets import project_asset_result
-        return project_asset_result(payload)
-    if str(tool_name or "").strip() == "read_work":
-        from src.result_renderers.work import project_work_result
-        return project_work_result(payload)
-    if str(tool_name or "").strip() == "manage_homelab":
-        from src.result_renderers.homelab import project_homelab_result
-        return project_homelab_result(payload)
-    return None
+    from src.result_renderers.registry import project_result
+    return project_result(tool_name, result)
 
 
 def canonical_read_failure_answer(
