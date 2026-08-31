@@ -6390,39 +6390,6 @@ async def stream_aci_runtime(
     # scalar; never let telemetry serialization truncate the SSE stream.
     yield f"data: {json.dumps({'type': 'metrics', 'data': metrics}, default=str)}\n\n"
 
-    # Teacher-escalation: inline takeover visible in the chat stream.
-    # The student just finished; if Tier 1 flags failure, the teacher
-    # gets a turn (with its own tool calls forwarded to the user) and
-    # a skill is saved ONLY if the teacher actually succeeds. Skipped
-    # when we ARE the teacher to avoid recursion.
-    if (
-        not _is_teacher_run
-        and not guide_only
-        and not _awaiting_user
-        # Canonical ACI owns AnswerSource/finalization for the whole turn.
-        # Teacher takeover recursively emits another answer-producing ACI
-        # stream, so it remains a legacy compatibility behavior only.
-        and not (_aci_enabled and _aci_mode == "aci")
-    ):
-        try:
-            from src.teacher_escalation import run_teacher_inline
-            async for evt in run_teacher_inline(
-                student_endpoint_url=endpoint_url,
-                student_messages=messages,
-                student_tool_events=tool_events,
-                student_reply=full_response,
-                owner=owner,
-                session_id=session_id,
-                workspace=workspace,
-                disabled_tools=disabled_tools,
-                tool_policy=tool_policy,
-                active_document=active_document,
-                active_email=active_email,
-            ):
-                yield evt
-        except Exception as _esc_err:
-            logger.warning(f"teacher escalation hook failed: {_esc_err}", exc_info=True)
-
     yield "data: [DONE]\n\n"
 
 
