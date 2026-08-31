@@ -2,6 +2,21 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe import owner replay and acceptance-session classification (2026-08-31)
+
+On the exact executable candidate `fc18ebed`, the mixed qualitative Recipe
+journey passed 3 turns with one mutation and two independent readbacks. Named
+URL import passed 1 turn with two readbacks, and copied-webpage paste passed 2
+turns with one mutation and two readbacks. Each completed scenario recorded
+zero false success, raw final Results, duplicate delivery, or abrupt EOF.
+
+Two intermediate URL attempts failed before any chat turn: one expired the
+15-minute disposable acceptance credential and one hit the browser session
+hydration/navigation race. They were classified `AUTH_SESSION_FAILURE` and
+`ENVIRONMENT_FAILURE`, respectively; renewing the isolated credential and
+restarting only the acceptance container restored the path. No production or
+owner-dogfood state was touched.
+
 ## Memory correction readback oracle closure (2026-08-31)
 
 The Memory correction owner journey originally asserted only a generic
