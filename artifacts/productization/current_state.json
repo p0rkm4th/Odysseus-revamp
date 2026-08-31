@@ -58,9 +58,9 @@
     "candidate_source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
     "owner_source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
     "owner_read_only": "PASS; exact OWNER-NETWORK-001 replay on promoted f61f6651; 1 stream/read journey, 0 mutations, 0 false success/duplicates/raw Results/abrupt EOF; source_match=true",
-    "isolated_synthetic": "PASS; exact f61f6651 disposable varied Tier 1 batch: 9 scenarios, 14 streams, 10 reads, 4 clarification/execute turns; zero false success/duplicates/raw Results/abrupt EOF",
+    "isolated_synthetic": "PASS; exact f61f6651 disposable Tier 1 batches: varied 9 scenarios/14 streams/10 reads, plus mutation 5 scenarios/15 streams/7 mutations/10 readbacks/8 reads; zero false success/duplicates/raw Results/abrupt EOF",
     "coverage": "current-source Network, Recipe, Memory, Household, Work, Reminder, Asset, lived-in, and visual acceptance slices",
-    "recorded_at": "2026-08-31T22:12:00Z"
+    "recorded_at": "2026-08-31T22:19:00Z"
   },
   "latest_exact_source_validation": {
     "source_sha": "f61f66516671a1d02fcd22ee872b5cb19c5d1e98",
