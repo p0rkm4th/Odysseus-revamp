@@ -13,16 +13,16 @@
     "behind": 0
   },
   "executable_candidate": {
-    "source_sha": "8ecd16a294a38b068387b90b19ab98e3a65564bf",
-    "application_source_sha": "b2f50909be5be85491f9e53ec62de01145cb2502",
-    "image": "odysseus:candidate-8ecd16a2",
-    "image_id": "sha256:2de085818e79b868cc58b3070f5025f1353291225ccbbdee8de661b2418243fd",
-    "image_digest": "odysseus@sha256:2de085818e79b868cc58b3070f5025f1353291225ccbbdee8de661b2418243fd",
-    "oci_revision": "8ecd16a294a38b068387b90b19ab98e3a65564bf",
-    "source_marker": "8ecd16a294a38b068387b90b19ab98e3a65564bf",
-    "browser_realistic_acceptance": "PASS; exact isolated candidate; authenticated browser acceptance",
-    "full_regression": "7131 passed, 9 skipped, 149 warnings in 303.83s on exact application source b2f50909 (recorded in commit history; verify full SHA before final release)",
-    "qwen_holdout": "PASS; 18/18 trajectory assertions, 18 answers, zero leaks/tool-index lookups/duplicates/abrupt EOF/transport errors; artifact /tmp/8ecd16a2-heldout.json",
+    "source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "application_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "image": "odysseus:candidate-896473de",
+    "image_id": "sha256:85d3a875f0f5bfd5e5dcd40f6f182dacd501693f9fe5c7f74e82fab3a8e12130",
+    "image_digest": "odysseus@sha256:85d3a875f0f5bfd5e5dcd40f6f182dacd501693f9fe5c7f74e82fab3a8e12130",
+    "oci_revision": "896473de81075178297eb510fa13b37810e514b6",
+    "source_marker": "896473de81075178297eb510fa13b37810e514b6",
+    "browser_realistic_acceptance": "PASS; exact isolated candidate; authenticated browser acceptance after isolated credential rotation",
+    "full_regression": "7131 passed, 9 skipped, 149 warnings in 309.85s on exact application source 896473de",
+    "qwen_holdout": "PASS; 18/18 trajectory assertions, 18 answers, zero leaks/tool-index lookups/duplicates/abrupt EOF/transport errors; one bounded fallback diagnostic; artifact /tmp/896473de-heldout.json",
     "health": "api/health healthy; running; 0 restarts; Docker healthcheck absent",
     "status": "CURRENT isolated candidate; owner data untouched"
   },
@@ -34,6 +34,12 @@
     "health": "running",
     "restarts": 0,
     "automated_mutation": false
+  },
+  "dogfood_tracking": {
+    "latest_green_candidate_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "owner_dogfood_source_sha": "2f05d500",
+    "commits_behind_candidate": "not promoted; owner runtime remains intentionally unchanged",
+    "status": "STALE relative to latest candidate; promotion requires explicit coherent-slice gate and persistent-state smoke"
   },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
