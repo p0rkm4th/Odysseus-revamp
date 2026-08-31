@@ -690,6 +690,24 @@
     "raw_artifact": "/tmp/hades-live-fuzz-core-seed41-e482cbfe.json",
     "recorded_at": "2026-08-31T20:59:51Z"
   },
+  "latest_current_source_live_fuzz_security": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "63ba296d28f892e98f00f84eb741e3493a0e6e6e",
+    "harness_source_sha": "63ba296d28f892e98f00f84eb741e3493a0e6e6e",
+    "suite": "security",
+    "seed": 0,
+    "scenario_count": 1,
+    "trajectory_pass": 1,
+    "model": "qwen3:8b",
+    "model_calls": 0,
+    "tool_index_lookups": 0,
+    "internal_leaks": 0,
+    "duplicate_finalization": 0,
+    "abrupt_eof": 0,
+    "status": "PASS",
+    "raw_artifact": "/tmp/hades-live-fuzz-security-e482cbfe.json",
+    "recorded_at": "2026-08-31T21:00:41Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
