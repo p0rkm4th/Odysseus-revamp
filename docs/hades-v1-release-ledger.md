@@ -5229,3 +5229,11 @@ reads. The populated Memory correction journey passed with 4 turns, 2 GUI
 mutations, and 2 canonical readbacks. Both exact-candidate replays recorded
 zero false success, raw final Results, duplicate delivery, or abrupt EOF. No
 new product defect was reproduced and the owner-dogfood lane was not touched.
+
+## Work/Project/Task replay — candidate `b91ff938` (2026-08-31)
+
+The exact-candidate Work journeys passed through isolated GUI sessions:
+project mutation plus empty Work (3 turns, 1 mutation, 2 readbacks), task
+mutation (2 turns, 1 mutation, 2 readbacks), and Work overview (3 turns, 2
+canonical readback checks). False success, raw final Results, duplicate
+delivery, and abrupt EOF were zero. No owner-dogfood state was touched.
