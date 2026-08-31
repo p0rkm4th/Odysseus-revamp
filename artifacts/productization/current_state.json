@@ -86,6 +86,14 @@
     "raw_artifact": "/tmp/hades-6b535818-heldout-20260831.json",
     "recorded_at": "2026-08-31T13:20:00-05:00"
   },
+  "latest_failure_path_validation": {
+    "candidate_source_sha": "896473de81075178297eb510fa13b37810e514b6",
+    "security_suite": "PASS; network_scan_scope; policy-bounded non-completion; 0 tool calls/leaks/duplicates",
+    "dependency_down": "PASS; candidate Chroma stopped; read completed truthfully with no false success or abrupt EOF",
+    "dependency_recovery": "PASS; Chroma restarted; /api/v2/heartbeat returned 200; Hades /api/health healthy",
+    "health_probe_note": "Chroma /api/v1/heartbeat is intentionally 410; /api/v2/heartbeat is authoritative",
+    "recorded_at": "2026-08-31T13:24:00-05:00"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
