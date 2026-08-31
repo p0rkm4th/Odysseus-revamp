@@ -75,7 +75,8 @@ def _memory_fields(query: str, _frame: Mapping[str, Any], action_id: str) -> Map
 
 
 def _query_fields(query: str, _frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:
-    return {"url" if action_id == "fetch" else "query": query.strip()} if query.strip() else None
+    value = query.strip() or ("what do you remember about me" if action_id == "summarize_owner_memory" else "")
+    return {"url" if action_id == "fetch" else "query": value} if value else None
 
 
 def _notes_fields(query: str, frame: Mapping[str, Any], action_id: str) -> Mapping[str, Any] | None:

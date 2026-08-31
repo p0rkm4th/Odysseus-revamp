@@ -3166,13 +3166,9 @@ def canonical_read_fast_path_payload(
     if binding == "manage_assets" and action == "get":
         return canonical_asset_read_payload(frame)
     payload = {"action": action}
-    if binding == "read_memory" and action in {
-        "summarize_owner_memory", "search_memory", "inspect_memory",
-    }:
-        # Keep narrow owner questions intact. A payload containing only the
-        # action silently falls back to the broad Memory summary and can
-        # surface an unrelated or previously deleted fact.
-        payload["query"] = str(query or "what do you remember about me")[:500]
+    from src.field_resolvers import resolve_action_fields
+    payload.update(resolve_action_fields(capability_id=None, action_id=action, binding=binding,
+                                         query=str(query or ""), frame=frame if isinstance(frame, Mapping) else {}))
     if binding == "read_recipes":
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
@@ -3208,9 +3204,7 @@ def canonical_read_fast_path_payload(
             payload["result_projection"] = "property"
         elif filters.get("asset_projection") == "filter":
             payload["result_projection"] = "filter"
-    if action == "summarize_owner_memory":
-        payload["query"] = query or "what do you remember about me"
-    elif binding == "developer_read":
+    if binding == "developer_read":
         frame = frame if isinstance(frame, Mapping) else {}
         query = str(query or "").strip()
         view = str((frame.get("filters") or {}).get("view") or "")
