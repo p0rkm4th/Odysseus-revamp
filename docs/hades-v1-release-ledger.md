@@ -5357,3 +5357,18 @@ feasibility, expiring ingredients, qualitative shopping requirements, exact
 and sloppy Household mutations, and mixed qualitative Recipe amounts. False
 success, raw final Results, duplicate delivery, and abrupt EOF were all zero.
 No owner-dogfood or production state was touched.
+
+## Cross-principal Asset fixture isolation and replay — candidate `b91ff938` (2026-08-31)
+
+An Asset fixture setup failure was classified as `ENVIRONMENT / FIXTURE_SETUP`:
+fixed fixture IDs from a prior disposable principal remained in the isolated
+Asset database, while cleanup filtered only by the newly rotated username.
+The browser harness now scopes cleanup to the exact `source='acceptance-fixture'`
+provenance marker in that explicitly disposable database, preserving all
+non-fixture records. Harness-focused tests passed 7/7. The corrected exact
+candidate replay passed 10 scenarios and 21 turns/streams, including Asset
+collection/reference/false-premise, Memory empty/populated/correction, and
+Work project/task/empty/overview journeys. It recorded 4 GUI mutations, 10
+canonical readbacks, and 17 grounded reads, with false success, raw final
+Results, duplicate delivery, and abrupt EOF all zero. No owner-dogfood or
+production state was touched.
