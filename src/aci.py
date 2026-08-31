@@ -3222,62 +3222,9 @@ def canonical_tool_result_projection(
             return None
     if not isinstance(payload, Mapping):
         return None
-    if str(tool_name or "").strip() == "read_recipes":
-        projection = {
-            "status": payload.get("status"),
-            "action": payload.get("action") or payload.get("operation"),
-            "canonical_store": payload.get("canonical_store"),
-            "verification": payload.get("verification"),
-        }
-        if isinstance(payload.get("candidates"), list):
-            projection["candidates"] = [
-                {
-                    "recipe_id": row.get("recipe_id"),
-                    "recipe_name": row.get("recipe_name"),
-                    "can_make": row.get("can_make"),
-                    "shortages": row.get("shortages", [])[:8] if isinstance(row.get("shortages"), list) else [],
-                }
-                for row in payload["candidates"][:20]
-                if isinstance(row, Mapping)
-            ]
-        if isinstance(payload.get("recipes"), list):
-            projection["recipes"] = [
-                {
-                    "id": row.get("id"),
-                    "name": row.get("name"),
-                    "servings": row.get("servings"),
-                }
-                for row in payload["recipes"][:50]
-                if isinstance(row, Mapping)
-            ]
-        if isinstance(payload.get("recipe"), Mapping):
-            recipe = payload["recipe"]
-            projection["recipe"] = {
-                "id": recipe.get("id"),
-                "name": recipe.get("name"),
-                "servings": recipe.get("servings"),
-            }
-        return projection
-    if str(tool_name or "").strip() == "manage_recipes":
-        # Recipe commits can contain a large ingredient/instruction payload.
-        # Preserve only the bounded evidence needed by the deterministic
-        # mutation renderer before the diagnostic/UI output envelope truncates
-        # the raw Result.  This is not a second recipe store.
-        recipe = payload.get("recipe")
-        if not isinstance(recipe, Mapping) or not recipe.get("id"):
-            return None
-        return {
-            "status": payload.get("status"),
-            "success": payload.get("success"),
-            "action": payload.get("action"),
-            "canonical_store": payload.get("canonical_store"),
-            "recipe": {
-                "id": recipe.get("id"),
-                "name": recipe.get("name"),
-                "source_url": recipe.get("source_url"),
-            },
-            "verification": payload.get("verification"),
-        }
+    if str(tool_name or "").strip() in {"read_recipes", "manage_recipes"}:
+        from src.result_renderers.recipe import project_recipe_result
+        return project_recipe_result(str(tool_name).strip(), result)
     if str(tool_name or "").strip() == "manage_assets":
         assets = payload.get("assets")
         if not isinstance(assets, list):
