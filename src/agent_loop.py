@@ -464,15 +464,9 @@ def _domain_tools_for_projection(domain: str, *, canonical: bool = False) -> set
 _HARD_TOOL_DOMAINS = HARD_TOOL_DOMAINS
 _DETERMINISTIC_TOOL_DOMAINS = DETERMINISTIC_TOOL_DOMAINS
 
-_intent_requires_action = intent_requires_action
-_usage_bucket = usage_bucket
-
 # Compatibility export used by prompt reconstruction callers.  This is a
 # pure message transformation, not a semantic or execution authority.
 _strip_agent_injected_messages = strip_agent_injected_messages
-_hard_action_hint = hard_action_hint
-_hard_action_fallback_command = hard_action_fallback_command
-_hard_action_followup_hint = hard_action_followup_hint
 _hard_turn_capability_directive = hard_turn_capability_directive
 
 
@@ -1632,7 +1626,7 @@ async def stream_aci_runtime(
             """Build truthful partial-history metadata for direct-path failure."""
             if not (direct_response.strip() or direct_reasoning.strip()):
                 return None
-            direct_usage = _usage_bucket(
+            direct_usage = usage_bucket(
                 round_num=1,
                 model=direct_actual_model,
                 endpoint_id=direct_actual_endpoint_id,
@@ -1808,7 +1802,7 @@ async def stream_aci_runtime(
             return
 
         duration = time.time() - direct_start
-        direct_usage = _usage_bucket(
+        direct_usage = usage_bucket(
             round_num=1,
             model=direct_actual_model,
             endpoint_id=direct_actual_endpoint_id,
@@ -3123,7 +3117,7 @@ async def stream_aci_runtime(
                 }
             ],
         )
-        _approved_fallback = _hard_action_fallback_command(_intent_domains)
+        _approved_fallback = hard_action_fallback_command(_intent_domains)
         _approved_substantive = network_substantive_fallback_command(
             _intent_domains, _retrieval_query
         )
@@ -3167,7 +3161,7 @@ async def stream_aci_runtime(
                     "content": (
                         "HARD-DOMAIN STARTER COMPLETE: The approved diagnostic starter succeeded, "
                         "but it does not complete the user's operational request."
-                        + _hard_action_followup_hint(_intent_domains)
+                        + hard_action_followup_hint(_intent_domains)
                     ),
                 })
             else:
@@ -3371,7 +3365,7 @@ async def stream_aci_runtime(
                     0,
                 )
                 usage_source = "estimated"
-            usage_buckets.append(_usage_bucket(
+            usage_buckets.append(usage_bucket(
                 round_num=round_num,
                 model=_round_actual_model,
                 endpoint_id=_round_actual_endpoint_id,
@@ -3719,7 +3713,7 @@ async def stream_aci_runtime(
                             round_response += _delta_text
                             data["delta"] = _delta_text
                             _buffer_this_delta = bool(
-                                (_strict_text_tools or _intent_requires_action(_intent_domains)
+                                (_strict_text_tools or intent_requires_action(_intent_domains)
                                  or "asset_inventory" in _intent_domains or (_aci_enabled and _aci_mode == "aci"))
                                 and not guide_only
                             )
@@ -4288,7 +4282,7 @@ async def stream_aci_runtime(
                     )
                     _raw_text = _raw or ""
                     _synth = strip_think_blocks(strip_tool_blocks(_raw_text)).strip()
-                    usage_buckets.append(_usage_bucket(
+                    usage_buckets.append(usage_bucket(
                         round_num=round_num,
                         model=model,
                         endpoint_id=_round_actual_endpoint_id,
@@ -4514,12 +4508,12 @@ async def stream_aci_runtime(
         # Hard operational turns require an actual tool action before a final answer.
         # Give strict textual routes one bounded repair when the model
         # answers in prose without invoking an available operational tool.
-        _hard_action_fallback = _hard_action_fallback_command(_intent_domains)
+        _hard_action_fallback = hard_action_fallback_command(_intent_domains)
         _hard_action_no_action = not _aci_canonical_tool_projection and (
             not guide_only
             and not _force_answer
             and _strict_text_tools
-            and _intent_requires_action(_intent_domains)
+            and intent_requires_action(_intent_domains)
             and _relevant_tools is not None
             and "bash" in _relevant_tools
             and not tool_blocks
@@ -4555,8 +4549,8 @@ async def stream_aci_runtime(
                     "appropriate available diagnostic or action tool NOW. Prefer bash for "
                     "non-interactive host, network, storage, container, remote, or security "
                     "operations when applicable. "
-            + _hard_action_hint(_intent_domains)
-            + (_hard_action_followup_hint(_intent_domains) if _hard_action_fallback_attempted else "")
+            + hard_action_hint(_intent_domains)
+            + (hard_action_followup_hint(_intent_domains) if _hard_action_fallback_attempted else "")
             + " Explain only after seeing the actual tool result."
                 ),
             })
@@ -5555,7 +5549,7 @@ async def stream_aci_runtime(
                             "content": (
                                 "HARD-DOMAIN STARTER COMPLETE: The diagnostic starter succeeded, "
                                 "but it does not complete the user's operational request."
-                                + _hard_action_followup_hint(_intent_domains)
+                                + hard_action_followup_hint(_intent_domains)
                             ),
                         })
                     else:
