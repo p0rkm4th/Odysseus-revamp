@@ -5245,3 +5245,13 @@ project mutation plus empty Work (3 turns, 1 mutation, 2 readbacks), task
 mutation (2 turns, 1 mutation, 2 readbacks), and Work overview (3 turns, 2
 canonical readback checks). False success, raw final Results, duplicate
 delivery, and abrupt EOF were zero. No owner-dogfood state was touched.
+
+## Mixed synthetic corpus isolation — candidate `b91ff938` (2026-08-31)
+
+The browser harness no longer rejects mixed synthetic fixture profiles or
+environment labels now that each scenario receives its own session and
+fixture reset. It still rejects mixing `actual_owner_read_only` with
+synthetic scenarios. A mixed qualitative Recipe replay passed with 2
+scenarios, 8 turns/streams, 2 GUI mutations, and 4 canonical readbacks;
+false success, raw final Results, duplicate delivery, and abrupt EOF were all
+zero. The owner-dogfood lane was not touched.

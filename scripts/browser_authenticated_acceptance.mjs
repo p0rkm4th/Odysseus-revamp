@@ -57,17 +57,14 @@ function loadJourneyScenarios() {
     : null;
   const scenarios = payload.scenarios.filter((scenario) => !requested || requested.has(scenario.id));
   if (!scenarios.length) throw new Error('owner journey selection is empty');
-  const fixtureProfiles = [...new Set(scenarios.map((scenario) => String(scenario.fixture_profile || '').trim()).filter(Boolean))];
-  if (fixtureProfiles.length !== 1) {
-    throw new Error(
-      `owner journey run must use exactly one isolated fixture_profile; selected: ${fixtureProfiles.join(', ') || 'none'}`
-    );
-  }
-  const environments = [...new Set(scenarios.map((scenario) => scenario.environment))];
-  if (environments.length !== 1) {
-    throw new Error(
-      `owner journey run must use exactly one environment; selected: ${environments.join(', ')}`
-    );
+  // Scenarios are isolated individually: each gets a fresh acceptance
+  // session and its own fixture reset/seed. Do not reject a useful mixed
+  // synthetic corpus merely because profiles or labels differ. Actual-owner
+  // read-only journeys remain a separate safety domain and may not share a
+  // run with synthetic scenarios.
+  const ownerScenarios = scenarios.filter((scenario) => scenario.environment === 'actual_owner_read_only');
+  if (ownerScenarios.length && ownerScenarios.length !== scenarios.length) {
+    throw new Error('owner journey run cannot mix actual_owner_read_only and synthetic scenarios');
   }
   const hasMutation = scenarios.some((scenario) => scenario.turns.some((turn) =>
     ['CREATE', 'UPDATE', 'DELETE', 'EXECUTE'].includes(String(turn.expected?.operation || '').toUpperCase())));
