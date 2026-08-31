@@ -1,10 +1,10 @@
 {
   "captured_at": "2026-08-31T00:31:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "db9c593e6884b611c181e428bfccab0b55c36712",
+  "branch_head": "e954a58bba76a401dea6e47f4350b47f99534858",
   "source_head": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
-  "remote_head": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
-  "evidence_commit_sha": "64ed518f50857cdc255e295144a5d92bb662d70f",
+  "remote_head": "e954a58bba76a401dea6e47f4350b47f99534858",
+  "evidence_commit_sha": "e954a58bba76a401dea6e47f4350b47f99534858",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -303,7 +303,7 @@
     "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 945b5fb1",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "2585d7c6cc1988c7eb816eff8940b185625e90ac",
-    "evidence_commit_sha": "64ed518f50857cdc255e295144a5d92bb662d70f",
+    "evidence_commit_sha": "e954a58bba76a401dea6e47f4350b47f99534858",
     "latest_candidate_browser_replay": "PASS: exact 945b5fb1 candidate browser_realistic_acceptance; initial acceptance-principal mismatch was isolated ENVIRONMENT_FAILURE and no owner data was touched"
   },
   "known_evidence_gaps": [
