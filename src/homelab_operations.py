@@ -683,7 +683,12 @@ class HomelabOperations:
         network = _private_network(request.get("cidr"))
         cidr = str(network)
         authorization = str(request.get("scope_authorization") or "").strip().upper()
-        if authorization not in {"USER_MANAGED", "EXPLICITLY_AUTHORIZED"}:
+        if action == "plan_network_discovery" and not authorization:
+            # A plan records the owner's requested candidate scope; it does
+            # not authorize probes.  Exact approval remains mandatory for
+            # execute_network_discovery.
+            authorization = "PENDING_APPROVAL"
+        if action != "plan_network_discovery" and authorization not in {"USER_MANAGED", "EXPLICITLY_AUTHORIZED"}:
             raise HomelabOperationError(
                 "active discovery requires USER_MANAGED or EXPLICITLY_AUTHORIZED scope; "
                 "private addressing alone is not authorization"

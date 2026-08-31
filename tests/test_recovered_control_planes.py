@@ -135,11 +135,11 @@ def test_network_context_fails_closed_when_broker_is_not_host(monkeypatch):
     assert result["observation_location"] == "APPLICATION_RUNTIME"
 
 
-def test_private_scope_without_ownership_authorization_is_rejected():
+def test_private_scope_without_ownership_authorization_cannot_execute():
     async def run():
         try:
             await HomelabOperations().execute(
-                {"action": "plan_network_discovery", "cidr": "10.20.0.0/24"},
+                {"action": "execute_network_discovery", "cidr": "10.20.0.0/24"},
                 owner="alice",
             )
         except HomelabOperationError as exc:
