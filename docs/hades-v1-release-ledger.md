@@ -5230,6 +5230,14 @@ mutations, and 2 canonical readbacks. Both exact-candidate replays recorded
 zero false success, raw final Results, duplicate delivery, or abrupt EOF. No
 new product defect was reproduced and the owner-dogfood lane was not touched.
 
+## Asset collection and false-premise replay — candidate `b91ff938` (2026-08-31)
+
+The exact-candidate Asset RAM collection/reference journey passed with 3 turns
+and 3 grounded reads. The incomplete/duplicate-like Asset false-premise filter
+journey passed with 1 grounded read. Both recorded zero false success, raw
+final Results, duplicate delivery, or abrupt EOF. No owner-dogfood state was
+changed.
+
 ## Work/Project/Task replay — candidate `b91ff938` (2026-08-31)
 
 The exact-candidate Work journeys passed through isolated GUI sessions:
