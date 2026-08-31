@@ -252,6 +252,26 @@
       "p95_latency_seconds": 5.1952,
       "browser_visual_acceptance": "PASS on http://127.0.0.1:7006",
       "status": "exact candidate; same 42-case holdout composition, unchanged functional result"
+    },
+    "live_qwen_held_out_20260831_candidate_945b5fb1": {
+      "artifact": "artifacts/productization/hades-v1-945b5fb1-authoritative-live-holdout.json",
+      "cases": 42,
+      "functional_passes": 41,
+      "architectural_passes": 42,
+      "security_passes": 42,
+      "functional_rate": 0.9762,
+      "architectural_rate": 1.0,
+      "security_rate": 1.0,
+      "reference_resolution_rate": 0.0,
+      "duplicate_rate": 0.0,
+      "top_failure_clusters": {
+        "COMPLETION_FAILURE": 1
+      },
+      "model_calls_per_task": 0.6429,
+      "median_latency_seconds": 0.6754,
+      "p95_latency_seconds": 3.222,
+      "browser_visual_acceptance": "PASS on http://127.0.0.1:7006",
+      "status": "exact application candidate; one known network-context completion failure; no false success"
     }
   },
   "release_status": "active; not frozen",
