@@ -87,6 +87,28 @@ async function openPage(viewport) {
   if (await page.locator('#sidebar #tool-security-btn:visible').count() > 1 || await page.locator('#sidebar #tool-research-btn:visible').count() > 1) {
     throw new Error('duplicate Security or Deep Research navigation entry');
   }
+  // Exercise every built-in theme in the real shell. Ordinary navigation
+  // icons must inherit their row/theme color; semantic active/error colors
+  // are allowed only when the row itself carries that state.
+  const themeCheck = await page.evaluate(async () => {
+    const { THEMES, applyColors } = await import('/static/js/theme.js');
+    const entries = [...document.querySelectorAll('#tools-section .list-item')]
+      .filter(entry => getComputedStyle(entry).display !== 'none' && entry.getClientRects().length);
+    const failures = [];
+    for (const [name, colors] of Object.entries(THEMES)) {
+      applyColors(colors);
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      for (const entry of entries) {
+        const icon = entry.querySelector('svg');
+        if (!icon) continue;
+        const iconColor = getComputedStyle(icon).color;
+        const rowColor = getComputedStyle(entry).color;
+        if (iconColor !== rowColor) failures.push(`${name}:${entry.id}:${iconColor}/${rowColor}`);
+      }
+    }
+    return {themes: Object.keys(THEMES).length, entries: entries.length, failures};
+  });
+  if (themeCheck.failures.length) throw new Error(`theme icon inheritance failed: ${themeCheck.failures.slice(0, 5).join(', ')}`);
   const pageMetrics = await page.evaluate(() => ({width: innerWidth, scrollWidth: document.documentElement.scrollWidth}));
   if (pageMetrics.scrollWidth > pageMetrics.width + 1) throw new Error('desktop navigation escapes viewport');
   return { context, page };
