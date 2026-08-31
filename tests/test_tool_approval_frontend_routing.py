@@ -6,16 +6,12 @@ def test_tool_approval_bypasses_polymorphic_send_button_actions():
     chat = (root / "static/js/chat.js").read_text(encoding="utf-8")
     stream = (root / "static/js/chatStream.js").read_text(encoding="utf-8")
 
-    # chat.js still defers the sealed approval through a synthetic button click.
-    assert "if (sendButton) sendButton.click();" in chat
-
-    # The capture listener must intercept only that synthetic click and route it
-    # through the chat form submit path, before app.js can reinterpret an empty
-    # composer as New chat or Record voice.
-    assert "if (event.isTrusted) return;" in stream
-    assert "event.stopImmediatePropagation();" in stream
-    assert "chatForm.requestSubmit()" in stream
-    assert "sendButton.dataset.mode = ''" not in stream
+    # A sealed approval must use the canonical submit handler directly.  Going
+    # through the polymorphic send button can reinterpret an empty composer as
+    # New chat, Stop, or Record voice and strand the approval.
+    assert "handleChatSubmit({ preventDefault() {} }).catch" in chat
+    assert "if (sendButton) sendButton.click();" not in chat
+    assert "odysseus:tool-approval" not in stream
 
 
 def test_ask_user_close_button_uses_one_css_glyph():
@@ -88,7 +84,7 @@ def test_every_changed_approval_module_is_cache_busted_together():
     """
 
     root = Path(__file__).resolve().parents[1]
-    version = "20260819approvalcontrol1"
+    version = "20260831approvaldirect1"
     index = (root / "static/index.html").read_text(encoding="utf-8")
     app = (root / "static/app.js").read_text(encoding="utf-8")
     chat = (root / "static/js/chat.js").read_text(encoding="utf-8")
