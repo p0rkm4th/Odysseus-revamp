@@ -66,6 +66,12 @@ def test_hard_filter_precedes_shortlist_and_keeps_policy_downstream():
     assert adaptive_shortlist(filtered, "high")[0]["action_id"] == "inspect"
 
 
+def test_action_card_budget_stays_small_for_bounded_local_model():
+    assert ACIProfile().max_action_cards == 3
+    actions = [{"action_id": str(index)} for index in range(8)]
+    assert len(adaptive_shortlist(actions, "medium", limit=3)) == 3
+
+
 def test_working_set_fingerprint_is_stable_and_changes_with_state():
     base = WorkingSet(objective={"id": "o1"}, current_state={"status": "ok"}).with_fingerprint()
     same = WorkingSet(objective={"id": "o1"}, current_state={"status": "ok"}).with_fingerprint()
