@@ -6092,6 +6092,39 @@ async def stream_aci_runtime(
                 _canonical_projection = canonical_tool_result_projection(block.tool_type, result)
                 if _canonical_projection is not None:
                     tool_event["result_projection"] = _canonical_projection
+            # Keep the ordered identities needed for the next ordinal/pronoun
+            # turn even when the human-facing projection intentionally omits
+            # the full collection.  The history resolver must not fall back
+            # to an older domain merely because a compact result card hid
+            # these rows.  This is continuity metadata only; it does not
+            # authorize an Action or expose opaque IDs to the owner.
+            _reference_payload = result.get("data") if isinstance(result.get("data"), Mapping) else result
+            if isinstance(_reference_payload, Mapping):
+                _reference_entities = []
+                for _items, _concept in (
+                    (_reference_payload.get("assets"), "TECHNICAL_ASSET"),
+                    (_reference_payload.get("recipes"), "RECIPE"),
+                    (_reference_payload.get("items"), "HOUSEHOLD_ITEM"),
+                ):
+                    if not isinstance(_items, list):
+                        continue
+                    for _item in _items[:500]:
+                        if not isinstance(_item, Mapping):
+                            continue
+                        _ref = str(
+                            _item.get("id")
+                            or _item.get("asset_id")
+                            or _item.get("recipe_id")
+                            or _item.get("item_id")
+                            or ""
+                        ).strip()
+                        if _ref and not any(item["ref"] == _ref for item in _reference_entities):
+                            _reference_entities.append({"ref": _ref[:500], "concept": _concept})
+                if _reference_entities:
+                    tool_event["reference_entities"] = _reference_entities
+                _last_reference = str(_reference_payload.get("last_reference") or "").strip()
+                if _last_reference:
+                    tool_event["last_reference"] = _last_reference[:500]
             if _pending_ask_user_event:
                 # Persist the structured question with the tool event.  On a
                 # reload, chatRenderer can restore the card; a later user
