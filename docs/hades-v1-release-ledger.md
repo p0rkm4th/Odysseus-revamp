@@ -4742,3 +4742,17 @@ the full regression on the preceding executable recipe candidate passed
 `7,098` tests with `9` skips and `149` warnings. PR #1 is DEFERRED because
 Bombadil 0.7 introduces a breaking action-template/runtime change and is not
 needed for the V1 product gate.
+
+## Owner dogfood harvest — theme and recipe import defects — 2026-08-30
+
+Owner screenshot testing found a `UI_SYSTEM / THEME_TOKENIZATION` defect:
+ordinary sidebar icons were split between fixed cyan and coral families. The
+shared navigation rule now uses inherited theme color/currentColor and legacy
+tool-row SVGs receive the same semantic icon contract; module-by-module color
+patches were not used.
+
+Owner recipe import testing found that explicit exclusions were validated as if
+they had not happened. RecipeDraft now applies bounded owner transformations
+before validation, supports durable notes, preserves source provenance, and
+the canonical detail projection renders the final recipe rather than a raw
+Result. Focused tests pass; exact newest-image browser replay remains pending.
