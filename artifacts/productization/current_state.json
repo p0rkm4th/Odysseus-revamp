@@ -1,10 +1,10 @@
 {
   "captured_at": "2026-08-31T02:10:00-05:00",
   "branch": "hades-v1-productization",
-  "branch_head": "79957ceb",
-  "source_head": "79957ceb",
-  "remote_head": "79957ceb",
-  "evidence_commit_sha": "79957ceb",
+  "branch_head": "c5d26d6a",
+  "source_head": "79957cebf696fbe9af22b67b8abd33240e867751",
+  "remote_head": "c5d26d6a",
+  "evidence_commit_sha": "c5d26d6a",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -344,7 +344,7 @@
     "full_regression": "7120 passed, 9 skipped, 149 warnings on exact application source 79957ceb",
     "metrics_artifact": "artifacts/productization/architecture_current.json",
     "application_source_sha": "79957cebf696fbe9af22b67b8abd33240e867751",
-    "evidence_commit_sha": "79957ceb",
+    "evidence_commit_sha": "c5d26d6a",
     "latest_candidate_browser_replay": "PASS: exact 79957ceb candidate browser_realistic_acceptance; no owner data was touched",
     "latest_candidate_holdout": "18/18 answers, 16/18 trajectory assertions; unchanged from 2248b55c; remaining assertions evaluator/environment"
   },
