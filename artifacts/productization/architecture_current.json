@@ -26,6 +26,7 @@
     "src/result_renderers/notes.py",
     "src/result_renderers/assets.py",
     "src/result_renderers/household.py",
+    "src/legacy_prompt_contract.py",
     "src/legacy_agent_loop.py"
   ],
   "modules": {
@@ -2674,6 +2675,11 @@
         }
       ]
     },
+    "src/legacy_prompt_contract.py": {
+      "loc": 207,
+      "functions": [],
+      "largest_functions": []
+    },
     "src/legacy_agent_loop.py": {
       "loc": 26,
       "functions": [
@@ -2692,7 +2698,7 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18925,
+  "semantic_control_plane_loc": 19132,
   "central_domain_conditionals": 118,
   "central_canonical_answer_functions": 4,
   "canonical_answer_dispatch_mentions": 8,
@@ -2860,6 +2866,6 @@
     "dependency_edges": 0,
     "dependency_cycles": []
   },
-  "source_sha": "b97700c772a35a41eed9c1e95d4ff6a0ccc06745",
+  "source_sha": "3b73edffc7c44daa26f3e2ef4f40fbcdb9355eb7",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
