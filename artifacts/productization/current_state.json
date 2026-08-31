@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-08-31T03:05:00-05:00",
+  "captured_at": "2026-08-31T03:20:00-05:00",
   "branch": "hades-v1-productization",
-  "source_head": "a56bb9a9cc8254c653eac7643d4e92a70f397cb5",
-  "remote_head": "a56bb9a9cc8254c653eac7643d4e92a70f397cb5",
+  "source_head": "e81bdb77c451d7a7a5da1e89b04d521c39baf9cc",
+  "remote_head": "e81bdb77c451d7a7a5da1e89b04d521c39baf9cc",
   "main_head": "364380ed3f46c1d14d3229e5b7530698cfa22e65",
   "worktree": "clean",
   "executable_candidate": {
@@ -62,6 +62,19 @@
   },
   "release_status": "active; not frozen",
   "architecture_baseline": "artifacts/productization/architecture_baseline_reset.json",
+  "architecture_current": {
+    "measured_at": "2026-08-31T03:20:00-05:00",
+    "artifact": "artifacts/productization/architecture_after_field_resolvers.json",
+    "semantic_control_plane_loc": 18891,
+    "agent_loop_py_loc": 6608,
+    "aci_py_loc": 5915,
+    "intent_contracts_py_loc": 3689,
+    "field_resolvers_py_loc": 118,
+    "central_domain_conditionals": 120,
+    "central_canonical_answer_functions": 22,
+    "canonical_answer_dispatch_mentions": 44,
+    "focused_migration_tests": "596 passed, 6 skipped, 1 warning"
+  },
   "known_evidence_gaps": [
     "mutation-adversarial browser matrix",
     "partial dependency failure/recovery browser coverage",

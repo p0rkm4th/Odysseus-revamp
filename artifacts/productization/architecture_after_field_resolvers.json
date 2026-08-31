@@ -1,0 +1,2256 @@
+{
+  "schema": "hades-architecture-metrics.v1",
+  "counted_module_set": [
+    "src/agent_loop.py",
+    "src/aci.py",
+    "src/intent_contracts.py",
+    "src/capability_registry.py",
+    "src/action_intents.py",
+    "src/tool_capabilities.py",
+    "src/capability_dependencies.py",
+    "src/field_resolvers.py",
+    "src/legacy_agent_loop.py"
+  ],
+  "modules": {
+    "src/agent_loop.py": {
+      "loc": 6608,
+      "functions": [
+        {
+          "name": "stream_aci_runtime",
+          "line": 1185,
+          "loc": 5420
+        },
+        {
+          "name": "_build_system_prompt",
+          "line": 558,
+          "loc": 568
+        },
+        {
+          "name": "_build_route_request_state",
+          "line": 2611,
+          "loc": 116
+        },
+        {
+          "name": "_candidate_request",
+          "line": 3252,
+          "loc": 86
+        },
+        {
+          "name": "_direct_terminal_event",
+          "line": 1648,
+          "loc": 53
+        },
+        {
+          "name": "_route_finetune_modes",
+          "line": 2318,
+          "loc": 45
+        },
+        {
+          "name": "_finalize_round_usage",
+          "line": 3367,
+          "loc": 34
+        },
+        {
+          "name": "_build_base_prompt",
+          "line": 1128,
+          "loc": 32
+        },
+        {
+          "name": "_route_relevant_tools",
+          "line": 2364,
+          "loc": 31
+        },
+        {
+          "name": "_round_stream",
+          "line": 3425,
+          "loc": 30
+        },
+        {
+          "name": "_assemble_prompt",
+          "line": 495,
+          "loc": 22
+        },
+        {
+          "name": "_direct_candidate_request",
+          "line": 1629,
+          "loc": 18
+        },
+        {
+          "name": "_tool_schemas_for_route",
+          "line": 2879,
+          "loc": 16
+        },
+        {
+          "name": "__getattr__",
+          "line": 272,
+          "loc": 13
+        },
+        {
+          "name": "_classify_agent_request",
+          "line": 534,
+          "loc": 13
+        },
+        {
+          "name": "_apply_candidate_compaction",
+          "line": 3339,
+          "loc": 11
+        },
+        {
+          "name": "_effectful_call_signature",
+          "line": 2897,
+          "loc": 8
+        },
+        {
+          "name": "_domain_tools_for_projection",
+          "line": 460,
+          "loc": 7
+        },
+        {
+          "name": "_domain_rules_for_tools",
+          "line": 200,
+          "loc": 6
+        },
+        {
+          "name": "_suppress_automatic_skills",
+          "line": 208,
+          "loc": 6
+        },
+        {
+          "name": "_record_aci_framework",
+          "line": 1334,
+          "loc": 3
+        },
+        {
+          "name": "_record_aci_model",
+          "line": 1338,
+          "loc": 3
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "stream_aci_runtime",
+          "line": 1185,
+          "loc": 5420
+        },
+        {
+          "name": "_build_system_prompt",
+          "line": 558,
+          "loc": 568
+        },
+        {
+          "name": "_build_route_request_state",
+          "line": 2611,
+          "loc": 116
+        },
+        {
+          "name": "_candidate_request",
+          "line": 3252,
+          "loc": 86
+        },
+        {
+          "name": "_direct_terminal_event",
+          "line": 1648,
+          "loc": 53
+        },
+        {
+          "name": "_route_finetune_modes",
+          "line": 2318,
+          "loc": 45
+        },
+        {
+          "name": "_finalize_round_usage",
+          "line": 3367,
+          "loc": 34
+        },
+        {
+          "name": "_build_base_prompt",
+          "line": 1128,
+          "loc": 32
+        },
+        {
+          "name": "_route_relevant_tools",
+          "line": 2364,
+          "loc": 31
+        },
+        {
+          "name": "_round_stream",
+          "line": 3425,
+          "loc": 30
+        },
+        {
+          "name": "_assemble_prompt",
+          "line": 495,
+          "loc": 22
+        },
+        {
+          "name": "_direct_candidate_request",
+          "line": 1629,
+          "loc": 18
+        },
+        {
+          "name": "_tool_schemas_for_route",
+          "line": 2879,
+          "loc": 16
+        },
+        {
+          "name": "__getattr__",
+          "line": 272,
+          "loc": 13
+        },
+        {
+          "name": "_classify_agent_request",
+          "line": 534,
+          "loc": 13
+        },
+        {
+          "name": "_apply_candidate_compaction",
+          "line": 3339,
+          "loc": 11
+        },
+        {
+          "name": "_effectful_call_signature",
+          "line": 2897,
+          "loc": 8
+        },
+        {
+          "name": "_domain_tools_for_projection",
+          "line": 460,
+          "loc": 7
+        },
+        {
+          "name": "_domain_rules_for_tools",
+          "line": 200,
+          "loc": 6
+        },
+        {
+          "name": "_suppress_automatic_skills",
+          "line": 208,
+          "loc": 6
+        }
+      ]
+    },
+    "src/aci.py": {
+      "loc": 5915,
+      "functions": [
+        {
+          "name": "project_action_selection",
+          "line": 5010,
+          "loc": 396
+        },
+        {
+          "name": "canonical_tool_result_projection",
+          "line": 3896,
+          "loc": 264
+        },
+        {
+          "name": "canonical_recipe_read_answer",
+          "line": 3436,
+          "loc": 182
+        },
+        {
+          "name": "canonical_network_read_answer",
+          "line": 3620,
+          "loc": 147
+        },
+        {
+          "name": "provisional_intent_projection",
+          "line": 2062,
+          "loc": 123
+        },
+        {
+          "name": "canonical_asset_read_answer",
+          "line": 3214,
+          "loc": 120
+        },
+        {
+          "name": "compile_composite_action",
+          "line": 4818,
+          "loc": 104
+        },
+        {
+          "name": "finalize_prompt_messages",
+          "line": 362,
+          "loc": 100
+        },
+        {
+          "name": "canonical_household_read_answer",
+          "line": 3336,
+          "loc": 98
+        },
+        {
+          "name": "minimal_recent_notes_tool_context_message",
+          "line": 1047,
+          "loc": 94
+        },
+        {
+          "name": "ground_action_completion",
+          "line": 2212,
+          "loc": 94
+        },
+        {
+          "name": "append_tool_results",
+          "line": 713,
+          "loc": 93
+        },
+        {
+          "name": "project_route_tool_schemas",
+          "line": 5452,
+          "loc": 93
+        },
+        {
+          "name": "compute_final_metrics",
+          "line": 1261,
+          "loc": 88
+        },
+        {
+          "name": "trim_route_request_messages",
+          "line": 464,
+          "loc": 76
+        },
+        {
+          "name": "reference_resolution_hint",
+          "line": 1818,
+          "loc": 75
+        },
+        {
+          "name": "project_aci_trace",
+          "line": 1627,
+          "loc": 73
+        },
+        {
+          "name": "canonical_read_fast_path_payload",
+          "line": 3140,
+          "loc": 72
+        },
+        {
+          "name": "canonical_work_read_answer",
+          "line": 4533,
+          "loc": 69
+        },
+        {
+          "name": "build_base_prompt",
+          "line": 293,
+          "loc": 67
+        },
+        {
+          "name": "minimal_aci_model_fallback_messages",
+          "line": 2517,
+          "loc": 65
+        },
+        {
+          "name": "project_post_result_transition",
+          "line": 5705,
+          "loc": 63
+        },
+        {
+          "name": "minimal_odysseus_doc_messages",
+          "line": 1143,
+          "loc": 62
+        },
+        {
+          "name": "minimal_aci_answer_messages",
+          "line": 2455,
+          "loc": 60
+        },
+        {
+          "name": "classify_post_result",
+          "line": 5644,
+          "loc": 59
+        },
+        {
+          "name": "skill_index_prompt",
+          "line": 201,
+          "loc": 56
+        },
+        {
+          "name": "run_legacy_completion_verifier",
+          "line": 5852,
+          "loc": 56
+        },
+        {
+          "name": "canonical_read_failure_answer",
+          "line": 4162,
+          "loc": 53
+        },
+        {
+          "name": "canonical_action_failure_answer",
+          "line": 4217,
+          "loc": 52
+        },
+        {
+          "name": "assemble_prompt",
+          "line": 148,
+          "loc": 51
+        },
+        {
+          "name": "parse_decision_json",
+          "line": 5562,
+          "loc": 50
+        },
+        {
+          "name": "email_list_summary_from_tool_output",
+          "line": 924,
+          "loc": 48
+        },
+        {
+          "name": "email_read_summary_from_tool_output",
+          "line": 974,
+          "loc": 48
+        },
+        {
+          "name": "project_model_decision",
+          "line": 2965,
+          "loc": 48
+        },
+        {
+          "name": "project_result_observation",
+          "line": 5770,
+          "loc": 48
+        },
+        {
+          "name": "project_final_answer",
+          "line": 4709,
+          "loc": 47
+        },
+        {
+          "name": "canonical_network_plan_answer",
+          "line": 3769,
+          "loc": 46
+        },
+        {
+          "name": "compile_turn_contract",
+          "line": 577,
+          "loc": 44
+        },
+        {
+          "name": "classify_no_action_reason",
+          "line": 1422,
+          "loc": 44
+        },
+        {
+          "name": "is_aci_general_fallback_candidate",
+          "line": 1483,
+          "loc": 44
+        },
+        {
+          "name": "canonical_service_read_answer",
+          "line": 3850,
+          "loc": 44
+        },
+        {
+          "name": "safe_contract_fallback_selection",
+          "line": 5408,
+          "loc": 42
+        },
+        {
+          "name": "canonical_memory_read_answer",
+          "line": 4342,
+          "loc": 39
+        },
+        {
+          "name": "canonical_result_answer",
+          "line": 4668,
+          "loc": 39
+        },
+        {
+          "name": "is_contextual_reference_followup",
+          "line": 1778,
+          "loc": 38
+        },
+        {
+          "name": "assistant_requested_followup",
+          "line": 1954,
+          "loc": 38
+        },
+        {
+          "name": "communications_calendar_summary_from_tool_output",
+          "line": 870,
+          "loc": 37
+        },
+        {
+          "name": "validate_capability_gap_resolution",
+          "line": 4954,
+          "loc": 37
+        },
+        {
+          "name": "canonical_recipe_mutation_answer",
+          "line": 4306,
+          "loc": 34
+        },
+        {
+          "name": "canonical_memory_mutation_answer",
+          "line": 4383,
+          "loc": 34
+        },
+        {
+          "name": "resolve_turn_intent",
+          "line": 542,
+          "loc": 33
+        },
+        {
+          "name": "canonical_inventory_mutation_answer",
+          "line": 4271,
+          "loc": 33
+        },
+        {
+          "name": "select_prompt_tools",
+          "line": 259,
+          "loc": 32
+        },
+        {
+          "name": "canonical_structured_empty_read_answer",
+          "line": 4604,
+          "loc": 32
+        },
+        {
+          "name": "project_capability_palette",
+          "line": 4758,
+          "loc": 32
+        },
+        {
+          "name": "calendar_list_summary_from_tool_output",
+          "line": 837,
+          "loc": 31
+        },
+        {
+          "name": "recent_context_for_retrieval",
+          "line": 1994,
+          "loc": 31
+        },
+        {
+          "name": "resolve_decision_outcome",
+          "line": 2932,
+          "loc": 31
+        },
+        {
+          "name": "canonical_homelab_read_answer",
+          "line": 3817,
+          "loc": 31
+        },
+        {
+          "name": "action_trace",
+          "line": 2321,
+          "loc": 30
+        },
+        {
+          "name": "resolve_invalid_decision",
+          "line": 2901,
+          "loc": 29
+        },
+        {
+          "name": "should_project_safe_auto_continuation",
+          "line": 1597,
+          "loc": 28
+        },
+        {
+          "name": "canonical_notes_mutation_answer",
+          "line": 4456,
+          "loc": 28
+        },
+        {
+          "name": "canonical_communications_read_answer",
+          "line": 4638,
+          "loc": 28
+        },
+        {
+          "name": "selected_action_for_decision",
+          "line": 5614,
+          "loc": 28
+        },
+        {
+          "name": "note_list_summary_from_tool_output",
+          "line": 808,
+          "loc": 27
+        },
+        {
+          "name": "resolve_turn_disposition",
+          "line": 2584,
+          "loc": 27
+        },
+        {
+          "name": "display_label",
+          "line": 3709,
+          "loc": 27
+        },
+        {
+          "name": "minimal_odysseus_general_messages",
+          "line": 1233,
+          "loc": 26
+        },
+        {
+          "name": "tiered",
+          "line": 2686,
+          "loc": 26
+        },
+        {
+          "name": "hard_turn_capability_directive",
+          "line": 686,
+          "loc": 25
+        },
+        {
+          "name": "canonical_work_mutation_answer",
+          "line": 4506,
+          "loc": 25
+        },
+        {
+          "name": "domain_rules_for_tools",
+          "line": 103,
+          "loc": 24
+        },
+        {
+          "name": "minimal_odysseus_notes_messages",
+          "line": 1207,
+          "loc": 24
+        },
+        {
+          "name": "usage_bucket",
+          "line": 1529,
+          "loc": 24
+        },
+        {
+          "name": "classify_action_escalation",
+          "line": 4792,
+          "loc": 24
+        },
+        {
+          "name": "hard_action_followup_hint",
+          "line": 661,
+          "loc": 23
+        },
+        {
+          "name": "build_active_plan_note",
+          "line": 1351,
+          "loc": 23
+        },
+        {
+          "name": "hard_filter_actions",
+          "line": 3091,
+          "loc": 23
+        },
+        {
+          "name": "stream_aci_turn",
+          "line": 32,
+          "loc": 22
+        },
+        {
+          "name": "_recent_user_context",
+          "line": 1920,
+          "loc": 22
+        },
+        {
+          "name": "ody_qwen_terminal_tool_summary",
+          "line": 1024,
+          "loc": 21
+        },
+        {
+          "name": "legacy_completion_verifier_allowed",
+          "line": 5820,
+          "loc": 20
+        },
+        {
+          "name": "from_runtime_profile",
+          "line": 3051,
+          "loc": 20
+        },
+        {
+          "name": "expects_canonical_action",
+          "line": 1401,
+          "loc": 19
+        },
+        {
+          "name": "workspace_coding_rules",
+          "line": 72,
+          "loc": 18
+        },
+        {
+          "name": "build_actions_snapshot",
+          "line": 1571,
+          "loc": 18
+        },
+        {
+          "name": "has_stored_canonical_evidence",
+          "line": 2360,
+          "loc": 18
+        },
+        {
+          "name": "matches_resolved_canonical_read",
+          "line": 2416,
+          "loc": 18
+        },
+        {
+          "name": "canonical_scheduled_task_mutation_answer",
+          "line": 4486,
+          "loc": 18
+        },
+        {
+          "name": "domain_tools_for_projection",
+          "line": 129,
+          "loc": 17
+        },
+        {
+          "name": "canonical_scheduled_task_read_answer",
+          "line": 4437,
+          "loc": 17
+        },
+        {
+          "name": "resolve_decision_recovery",
+          "line": 2883,
+          "loc": 16
+        },
+        {
+          "name": "canonical_asset_read_payload",
+          "line": 3122,
+          "loc": 16
+        },
+        {
+          "name": "canonical_notes_read_answer",
+          "line": 4419,
+          "loc": 16
+        },
+        {
+          "name": "has_canonical_memory_evidence",
+          "line": 2380,
+          "loc": 15
+        },
+        {
+          "name": "validate_capability_creation_request",
+          "line": 4993,
+          "loc": 15
+        },
+        {
+          "name": "_label",
+          "line": 3312,
+          "loc": 15
+        },
+        {
+          "name": "local_computer_rules",
+          "line": 56,
+          "loc": 14
+        },
+        {
+          "name": "usage_bucket_summary",
+          "line": 1555,
+          "loc": 14
+        },
+        {
+          "name": "last_user_message",
+          "line": 2027,
+          "loc": 14
+        },
+        {
+          "name": "semanticize_internal_action_names",
+          "line": 2439,
+          "loc": 14
+        },
+        {
+          "name": "validate",
+          "line": 2828,
+          "loc": 14
+        },
+        {
+          "name": "_format_email_summary_item",
+          "line": 909,
+          "loc": 13
+        },
+        {
+          "name": "is_canonical_read_contract",
+          "line": 1468,
+          "loc": 13
+        },
+        {
+          "name": "dependency_ready_for_action",
+          "line": 5547,
+          "loc": 13
+        },
+        {
+          "name": "prepend_agent_directive",
+          "line": 1376,
+          "loc": 12
+        },
+        {
+          "name": "insert_before_latest_user",
+          "line": 2048,
+          "loc": 12
+        },
+        {
+          "name": "resolved_tool_event_name",
+          "line": 2308,
+          "loc": 11
+        },
+        {
+          "name": "effective_context",
+          "line": 3073,
+          "loc": 11
+        },
+        {
+          "name": "deterministic_reference_acknowledgement",
+          "line": 1895,
+          "loc": 10
+        },
+        {
+          "name": "model_projection",
+          "line": 2806,
+          "loc": 10
+        },
+        {
+          "name": "effective_tool_section",
+          "line": 92,
+          "loc": 9
+        },
+        {
+          "name": "hard_action_fallback_command",
+          "line": 651,
+          "loc": 8
+        },
+        {
+          "name": "is_contextual_retry_continuation",
+          "line": 1944,
+          "loc": 8
+        },
+        {
+          "name": "prefetched_explicit_memory_result",
+          "line": 2397,
+          "loc": 8
+        },
+        {
+          "name": "successful_deterministic_read_result",
+          "line": 2407,
+          "loc": 7
+        },
+        {
+          "name": "model_burden",
+          "line": 5910,
+          "loc": 6
+        },
+        {
+          "name": "freshness_line",
+          "line": 3645,
+          "loc": 6
+        },
+        {
+          "name": "without_protection",
+          "line": 480,
+          "loc": 5
+        },
+        {
+          "name": "hard_action_hint",
+          "line": 636,
+          "loc": 4
+        },
+        {
+          "name": "detect_runaway_call",
+          "line": 1591,
+          "loc": 4
+        },
+        {
+          "name": "adaptive_shortlist",
+          "line": 3116,
+          "loc": 4
+        },
+        {
+          "name": "with_fingerprint",
+          "line": 2681,
+          "loc": 4
+        },
+        {
+          "name": "intent_requires_action",
+          "line": 1396,
+          "loc": 3
+        },
+        {
+          "name": "user_turn_count",
+          "line": 2043,
+          "loc": 3
+        },
+        {
+          "name": "looks_like_destructive_request",
+          "line": 2207,
+          "loc": 3
+        },
+        {
+          "name": "state_fingerprint",
+          "line": 3086,
+          "loc": 3
+        },
+        {
+          "name": "looks_like_success_claim",
+          "line": 2203,
+          "loc": 2
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "project_action_selection",
+          "line": 5010,
+          "loc": 396
+        },
+        {
+          "name": "canonical_tool_result_projection",
+          "line": 3896,
+          "loc": 264
+        },
+        {
+          "name": "canonical_recipe_read_answer",
+          "line": 3436,
+          "loc": 182
+        },
+        {
+          "name": "canonical_network_read_answer",
+          "line": 3620,
+          "loc": 147
+        },
+        {
+          "name": "provisional_intent_projection",
+          "line": 2062,
+          "loc": 123
+        },
+        {
+          "name": "canonical_asset_read_answer",
+          "line": 3214,
+          "loc": 120
+        },
+        {
+          "name": "compile_composite_action",
+          "line": 4818,
+          "loc": 104
+        },
+        {
+          "name": "finalize_prompt_messages",
+          "line": 362,
+          "loc": 100
+        },
+        {
+          "name": "canonical_household_read_answer",
+          "line": 3336,
+          "loc": 98
+        },
+        {
+          "name": "minimal_recent_notes_tool_context_message",
+          "line": 1047,
+          "loc": 94
+        },
+        {
+          "name": "ground_action_completion",
+          "line": 2212,
+          "loc": 94
+        },
+        {
+          "name": "append_tool_results",
+          "line": 713,
+          "loc": 93
+        },
+        {
+          "name": "project_route_tool_schemas",
+          "line": 5452,
+          "loc": 93
+        },
+        {
+          "name": "compute_final_metrics",
+          "line": 1261,
+          "loc": 88
+        },
+        {
+          "name": "trim_route_request_messages",
+          "line": 464,
+          "loc": 76
+        },
+        {
+          "name": "reference_resolution_hint",
+          "line": 1818,
+          "loc": 75
+        },
+        {
+          "name": "project_aci_trace",
+          "line": 1627,
+          "loc": 73
+        },
+        {
+          "name": "canonical_read_fast_path_payload",
+          "line": 3140,
+          "loc": 72
+        },
+        {
+          "name": "canonical_work_read_answer",
+          "line": 4533,
+          "loc": 69
+        },
+        {
+          "name": "build_base_prompt",
+          "line": 293,
+          "loc": 67
+        }
+      ]
+    },
+    "src/intent_contracts.py": {
+      "loc": 3689,
+      "functions": [
+        {
+          "name": "compile_intent",
+          "line": 2344,
+          "loc": 778
+        },
+        {
+          "name": "normalize_operational_intent_evidence",
+          "line": 1271,
+          "loc": 210
+        },
+        {
+          "name": "classify_compatibility_request",
+          "line": 3520,
+          "loc": 170
+        },
+        {
+          "name": "resolve_structured_reference",
+          "line": 2143,
+          "loc": 130
+        },
+        {
+          "name": "recipe_import_review_draft",
+          "line": 563,
+          "loc": 111
+        },
+        {
+          "name": "_recipe_ingredients",
+          "line": 243,
+          "loc": 109
+        },
+        {
+          "name": "validate_bound_result",
+          "line": 3416,
+          "loc": 102
+        },
+        {
+          "name": "recipe_import_draft",
+          "line": 423,
+          "loc": 95
+        },
+        {
+          "name": "resolve_intent",
+          "line": 3181,
+          "loc": 93
+        },
+        {
+          "name": "recipe_import_review_draft_from_payload",
+          "line": 676,
+          "loc": 68
+        },
+        {
+          "name": "_operation",
+          "line": 2275,
+          "loc": 67
+        },
+        {
+          "name": "from_payload",
+          "line": 65,
+          "loc": 66
+        },
+        {
+          "name": "apply_recipe_owner_transformations",
+          "line": 133,
+          "loc": 56
+        },
+        {
+          "name": "resolve_continuation",
+          "line": 3124,
+          "loc": 55
+        },
+        {
+          "name": "validate_result",
+          "line": 3365,
+          "loc": 49
+        },
+        {
+          "name": "explicitly_allows_diagnostic_install",
+          "line": 1674,
+          "loc": 46
+        },
+        {
+          "name": "validate_contracts",
+          "line": 3276,
+          "loc": 46
+        },
+        {
+          "name": "recipe_import_review",
+          "line": 520,
+          "loc": 41
+        },
+        {
+          "name": "note_mutation_payload",
+          "line": 800,
+          "loc": 40
+        },
+        {
+          "name": "canonical_read_action",
+          "line": 2093,
+          "loc": 39
+        },
+        {
+          "name": "recipe_create_draft",
+          "line": 383,
+          "loc": 38
+        },
+        {
+          "name": "inventory_add_item_payload",
+          "line": 920,
+          "loc": 37
+        },
+        {
+          "name": "memory_mutation_payload",
+          "line": 762,
+          "loc": 36
+        },
+        {
+          "name": "suppress_automatic_skills",
+          "line": 1090,
+          "loc": 33
+        },
+        {
+          "name": "work_task_create_payload",
+          "line": 886,
+          "loc": 32
+        },
+        {
+          "name": "inventory_consume_stock_payload",
+          "line": 959,
+          "loc": 30
+        },
+        {
+          "name": "is_bounded_owner_capability_turn",
+          "line": 1784,
+          "loc": 30
+        },
+        {
+          "name": "_recipe_name",
+          "line": 214,
+          "loc": 27
+        },
+        {
+          "name": "_video_recipe_sections",
+          "line": 354,
+          "loc": 27
+        },
+        {
+          "name": "normalize_asset_inventory_intent",
+          "line": 1484,
+          "loc": 25
+        },
+        {
+          "name": "explicit_private_discovery_cidr",
+          "line": 1601,
+          "loc": 24
+        },
+        {
+          "name": "inventory_move_item_payload",
+          "line": 991,
+          "loc": 23
+        },
+        {
+          "name": "normalize_homelab_intent",
+          "line": 1528,
+          "loc": 23
+        },
+        {
+          "name": "scheduled_task_create_payload",
+          "line": 842,
+          "loc": 22
+        },
+        {
+          "name": "_recipe_section",
+          "line": 191,
+          "loc": 21
+        },
+        {
+          "name": "generated_parity_matrix",
+          "line": 3324,
+          "loc": 21
+        },
+        {
+          "name": "work_project_create_payload",
+          "line": 866,
+          "loc": 18
+        },
+        {
+          "name": "looks_like_notes_calendar_followup",
+          "line": 1252,
+          "loc": 18
+        },
+        {
+          "name": "looks_like_notes_request",
+          "line": 1233,
+          "loc": 17
+        },
+        {
+          "name": "looks_like_explicit_skill_request",
+          "line": 1072,
+          "loc": 16
+        },
+        {
+          "name": "is_casual_low_signal",
+          "line": 1139,
+          "loc": 16
+        },
+        {
+          "name": "result_status",
+          "line": 3347,
+          "loc": 16
+        },
+        {
+          "name": "detect_admin_intent",
+          "line": 1055,
+          "loc": 15
+        },
+        {
+          "name": "looks_like_local_computer_request",
+          "line": 1175,
+          "loc": 15
+        },
+        {
+          "name": "asset_read_request",
+          "line": 1511,
+          "loc": 15
+        },
+        {
+          "name": "_is_continuation_phrase",
+          "line": 1735,
+          "loc": 15
+        },
+        {
+          "name": "as_payload",
+          "line": 49,
+          "loc": 14
+        },
+        {
+          "name": "is_explicit_continuation",
+          "line": 1587,
+          "loc": 12
+        },
+        {
+          "name": "as_dict",
+          "line": 1836,
+          "loc": 12
+        },
+        {
+          "name": "network_substantive_fallback_command",
+          "line": 1722,
+          "loc": 11
+        },
+        {
+          "name": "fuzzy",
+          "line": 1286,
+          "loc": 10
+        },
+        {
+          "name": "is_explicit_network_discovery_request",
+          "line": 1654,
+          "loc": 9
+        },
+        {
+          "name": "looks_like_workspace_coding_request",
+          "line": 1213,
+          "loc": 8
+        },
+        {
+          "name": "explicitly_references_missing_workspace",
+          "line": 1223,
+          "loc": 8
+        },
+        {
+          "name": "is_network_prerequisite_request",
+          "line": 1644,
+          "loc": 8
+        },
+        {
+          "name": "as_dict",
+          "line": 1860,
+          "loc": 8
+        },
+        {
+          "name": "network_discovery_request_cidr",
+          "line": 1627,
+          "loc": 7
+        },
+        {
+          "name": "is_network_service_enumeration_request",
+          "line": 1665,
+          "loc": 7
+        },
+        {
+          "name": "_depth",
+          "line": 2134,
+          "loc": 7
+        },
+        {
+          "name": "has_network_cidr_candidate",
+          "line": 1636,
+          "loc": 6
+        },
+        {
+          "name": "_number",
+          "line": 299,
+          "loc": 6
+        },
+        {
+          "name": "as_dict",
+          "line": 1770,
+          "loc": 5
+        },
+        {
+          "name": "recipe_source_url",
+          "line": 756,
+          "loc": 4
+        },
+        {
+          "name": "canonical_domain_projection",
+          "line": 2087,
+          "loc": 4
+        },
+        {
+          "name": "recipe_create_payload",
+          "line": 746,
+          "loc": 3
+        },
+        {
+          "name": "recipe_requested_name",
+          "line": 751,
+          "loc": 3
+        },
+        {
+          "name": "targets",
+          "line": 142,
+          "loc": 3
+        },
+        {
+          "name": "matches",
+          "line": 146,
+          "loc": 3
+        },
+        {
+          "name": "phrase",
+          "line": 1283,
+          "loc": 2
+        },
+        {
+          "name": "has",
+          "line": 3582,
+          "loc": 2
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "compile_intent",
+          "line": 2344,
+          "loc": 778
+        },
+        {
+          "name": "normalize_operational_intent_evidence",
+          "line": 1271,
+          "loc": 210
+        },
+        {
+          "name": "classify_compatibility_request",
+          "line": 3520,
+          "loc": 170
+        },
+        {
+          "name": "resolve_structured_reference",
+          "line": 2143,
+          "loc": 130
+        },
+        {
+          "name": "recipe_import_review_draft",
+          "line": 563,
+          "loc": 111
+        },
+        {
+          "name": "_recipe_ingredients",
+          "line": 243,
+          "loc": 109
+        },
+        {
+          "name": "validate_bound_result",
+          "line": 3416,
+          "loc": 102
+        },
+        {
+          "name": "recipe_import_draft",
+          "line": 423,
+          "loc": 95
+        },
+        {
+          "name": "resolve_intent",
+          "line": 3181,
+          "loc": 93
+        },
+        {
+          "name": "recipe_import_review_draft_from_payload",
+          "line": 676,
+          "loc": 68
+        },
+        {
+          "name": "_operation",
+          "line": 2275,
+          "loc": 67
+        },
+        {
+          "name": "from_payload",
+          "line": 65,
+          "loc": 66
+        },
+        {
+          "name": "apply_recipe_owner_transformations",
+          "line": 133,
+          "loc": 56
+        },
+        {
+          "name": "resolve_continuation",
+          "line": 3124,
+          "loc": 55
+        },
+        {
+          "name": "validate_result",
+          "line": 3365,
+          "loc": 49
+        },
+        {
+          "name": "explicitly_allows_diagnostic_install",
+          "line": 1674,
+          "loc": 46
+        },
+        {
+          "name": "validate_contracts",
+          "line": 3276,
+          "loc": 46
+        },
+        {
+          "name": "recipe_import_review",
+          "line": 520,
+          "loc": 41
+        },
+        {
+          "name": "note_mutation_payload",
+          "line": 800,
+          "loc": 40
+        },
+        {
+          "name": "canonical_read_action",
+          "line": 2093,
+          "loc": 39
+        }
+      ]
+    },
+    "src/capability_registry.py": {
+      "loc": 507,
+      "functions": [
+        {
+          "name": "action_from_content",
+          "line": 441,
+          "loc": 24
+        },
+        {
+          "name": "canonicalize_action_content",
+          "line": 467,
+          "loc": 20
+        },
+        {
+          "name": "action_for_tool",
+          "line": 489,
+          "loc": 10
+        },
+        {
+          "name": "capability_for_tool",
+          "line": 436,
+          "loc": 3
+        },
+        {
+          "name": "requires_exact_approval",
+          "line": 501,
+          "loc": 3
+        },
+        {
+          "name": "_actions",
+          "line": 75,
+          "loc": 2
+        },
+        {
+          "name": "capability_for_id",
+          "line": 432,
+          "loc": 2
+        },
+        {
+          "name": "registered_tool_names",
+          "line": 506,
+          "loc": 2
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "action_from_content",
+          "line": 441,
+          "loc": 24
+        },
+        {
+          "name": "canonicalize_action_content",
+          "line": 467,
+          "loc": 20
+        },
+        {
+          "name": "action_for_tool",
+          "line": 489,
+          "loc": 10
+        },
+        {
+          "name": "capability_for_tool",
+          "line": 436,
+          "loc": 3
+        },
+        {
+          "name": "requires_exact_approval",
+          "line": 501,
+          "loc": 3
+        },
+        {
+          "name": "_actions",
+          "line": 75,
+          "loc": 2
+        },
+        {
+          "name": "capability_for_id",
+          "line": 432,
+          "loc": 2
+        },
+        {
+          "name": "registered_tool_names",
+          "line": 506,
+          "loc": 2
+        }
+      ]
+    },
+    "src/action_intents.py": {
+      "loc": 167,
+      "functions": [
+        {
+          "name": "classify_tool_intent",
+          "line": 147,
+          "loc": 10
+        },
+        {
+          "name": "message_needs_tools",
+          "line": 159,
+          "loc": 9
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "classify_tool_intent",
+          "line": 147,
+          "loc": 10
+        },
+        {
+          "name": "message_needs_tools",
+          "line": 159,
+          "loc": 9
+        }
+      ]
+    },
+    "src/tool_capabilities.py": {
+      "loc": 879,
+      "functions": [
+        {
+          "name": "capabilities_for_action",
+          "line": 565,
+          "loc": 88
+        },
+        {
+          "name": "decision_for",
+          "line": 808,
+          "loc": 48
+        },
+        {
+          "name": "tool_result_should_arm_gate",
+          "line": 667,
+          "loc": 45
+        },
+        {
+          "name": "_action_from_content",
+          "line": 495,
+          "loc": 42
+        },
+        {
+          "name": "messages_contain_external_untrusted_context",
+          "line": 747,
+          "loc": 27
+        },
+        {
+          "name": "_is_recipe_review_preparation",
+          "line": 539,
+          "loc": 24
+        },
+        {
+          "name": "capabilities_for_tool",
+          "line": 381,
+          "loc": 15
+        },
+        {
+          "name": "observe_messages",
+          "line": 793,
+          "loc": 14
+        },
+        {
+          "name": "observe_tool_result",
+          "line": 857,
+          "loc": 11
+        },
+        {
+          "name": "_register",
+          "line": 60,
+          "loc": 10
+        },
+        {
+          "name": "tool_result_is_successful",
+          "line": 655,
+          "loc": 10
+        },
+        {
+          "name": "blocked_tool_result",
+          "line": 870,
+          "loc": 10
+        },
+        {
+          "name": "_capabilities",
+          "line": 50,
+          "loc": 5
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "capabilities_for_action",
+          "line": 565,
+          "loc": 88
+        },
+        {
+          "name": "decision_for",
+          "line": 808,
+          "loc": 48
+        },
+        {
+          "name": "tool_result_should_arm_gate",
+          "line": 667,
+          "loc": 45
+        },
+        {
+          "name": "_action_from_content",
+          "line": 495,
+          "loc": 42
+        },
+        {
+          "name": "messages_contain_external_untrusted_context",
+          "line": 747,
+          "loc": 27
+        },
+        {
+          "name": "_is_recipe_review_preparation",
+          "line": 539,
+          "loc": 24
+        },
+        {
+          "name": "capabilities_for_tool",
+          "line": 381,
+          "loc": 15
+        },
+        {
+          "name": "observe_messages",
+          "line": 793,
+          "loc": 14
+        },
+        {
+          "name": "observe_tool_result",
+          "line": 857,
+          "loc": 11
+        },
+        {
+          "name": "_register",
+          "line": 60,
+          "loc": 10
+        },
+        {
+          "name": "tool_result_is_successful",
+          "line": 655,
+          "loc": 10
+        },
+        {
+          "name": "blocked_tool_result",
+          "line": 870,
+          "loc": 10
+        },
+        {
+          "name": "_capabilities",
+          "line": 50,
+          "loc": 5
+        }
+      ]
+    },
+    "src/capability_dependencies.py": {
+      "loc": 982,
+      "functions": [
+        {
+          "name": "inspect_dependency",
+          "line": 747,
+          "loc": 65
+        },
+        {
+          "name": "plan_runtime",
+          "line": 432,
+          "loc": 44
+        },
+        {
+          "name": "inspect_action_dependencies",
+          "line": 683,
+          "loc": 37
+        },
+        {
+          "name": "remediation_handoff",
+          "line": 949,
+          "loc": 34
+        },
+        {
+          "name": "_build_install_plan",
+          "line": 835,
+          "loc": 33
+        },
+        {
+          "name": "plan_remote_packages",
+          "line": 305,
+          "loc": 29
+        },
+        {
+          "name": "resolve",
+          "line": 907,
+          "loc": 28
+        },
+        {
+          "name": "plan_user_package",
+          "line": 259,
+          "loc": 26
+        },
+        {
+          "name": "host_platform",
+          "line": 604,
+          "loc": 20
+        },
+        {
+          "name": "inspect_capability_dependencies",
+          "line": 814,
+          "loc": 19
+        },
+        {
+          "name": "runtime_for_command",
+          "line": 412,
+          "loc": 19
+        },
+        {
+          "name": "plan_host_packages",
+          "line": 286,
+          "loc": 18
+        },
+        {
+          "name": "_legacy_registry_projection",
+          "line": 576,
+          "loc": 17
+        },
+        {
+          "name": "verify",
+          "line": 888,
+          "loc": 17
+        },
+        {
+          "name": "resume_receipt",
+          "line": 335,
+          "loc": 17
+        },
+        {
+          "name": "plan_artifact",
+          "line": 388,
+          "loc": 17
+        },
+        {
+          "name": "ensure",
+          "line": 870,
+          "loc": 16
+        },
+        {
+          "name": "_aggregate_dependency_status",
+          "line": 666,
+          "loc": 15
+        },
+        {
+          "name": "ensure_action",
+          "line": 224,
+          "loc": 15
+        },
+        {
+          "name": "inspect_registry",
+          "line": 722,
+          "loc": 14
+        },
+        {
+          "name": "action_dependency_ids",
+          "line": 651,
+          "loc": 13
+        },
+        {
+          "name": "plan_runtime_for_command",
+          "line": 477,
+          "loc": 11
+        },
+        {
+          "name": "package_manager",
+          "line": 626,
+          "loc": 9
+        },
+        {
+          "name": "inspect_operation",
+          "line": 240,
+          "loc": 9
+        },
+        {
+          "name": "contracts",
+          "line": 353,
+          "loc": 8
+        },
+        {
+          "name": "_version_tuple",
+          "line": 738,
+          "loc": 7
+        },
+        {
+          "name": "dependency_declarations",
+          "line": 643,
+          "loc": 6
+        },
+        {
+          "name": "contracts",
+          "line": 375,
+          "loc": 6
+        },
+        {
+          "name": "package_manager_available",
+          "line": 637,
+          "loc": 4
+        },
+        {
+          "name": "_allowlisted_packages",
+          "line": 937,
+          "loc": 4
+        },
+        {
+          "name": "capability_health",
+          "line": 943,
+          "loc": 4
+        },
+        {
+          "name": "_platform_key",
+          "line": 407,
+          "loc": 4
+        },
+        {
+          "name": "supported_capabilities",
+          "line": 600,
+          "loc": 2
+        },
+        {
+          "name": "inspect",
+          "line": 215,
+          "loc": 2
+        },
+        {
+          "name": "inspect_one",
+          "line": 218,
+          "loc": 2
+        },
+        {
+          "name": "inspect_action",
+          "line": 221,
+          "loc": 2
+        },
+        {
+          "name": "resolve",
+          "line": 250,
+          "loc": 2
+        },
+        {
+          "name": "ensure",
+          "line": 253,
+          "loc": 2
+        },
+        {
+          "name": "verify",
+          "line": 256,
+          "loc": 2
+        },
+        {
+          "name": "artifact",
+          "line": 382,
+          "loc": 2
+        },
+        {
+          "name": "runtime",
+          "line": 385,
+          "loc": 2
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "inspect_dependency",
+          "line": 747,
+          "loc": 65
+        },
+        {
+          "name": "plan_runtime",
+          "line": 432,
+          "loc": 44
+        },
+        {
+          "name": "inspect_action_dependencies",
+          "line": 683,
+          "loc": 37
+        },
+        {
+          "name": "remediation_handoff",
+          "line": 949,
+          "loc": 34
+        },
+        {
+          "name": "_build_install_plan",
+          "line": 835,
+          "loc": 33
+        },
+        {
+          "name": "plan_remote_packages",
+          "line": 305,
+          "loc": 29
+        },
+        {
+          "name": "resolve",
+          "line": 907,
+          "loc": 28
+        },
+        {
+          "name": "plan_user_package",
+          "line": 259,
+          "loc": 26
+        },
+        {
+          "name": "host_platform",
+          "line": 604,
+          "loc": 20
+        },
+        {
+          "name": "inspect_capability_dependencies",
+          "line": 814,
+          "loc": 19
+        },
+        {
+          "name": "runtime_for_command",
+          "line": 412,
+          "loc": 19
+        },
+        {
+          "name": "plan_host_packages",
+          "line": 286,
+          "loc": 18
+        },
+        {
+          "name": "_legacy_registry_projection",
+          "line": 576,
+          "loc": 17
+        },
+        {
+          "name": "verify",
+          "line": 888,
+          "loc": 17
+        },
+        {
+          "name": "resume_receipt",
+          "line": 335,
+          "loc": 17
+        },
+        {
+          "name": "plan_artifact",
+          "line": 388,
+          "loc": 17
+        },
+        {
+          "name": "ensure",
+          "line": 870,
+          "loc": 16
+        },
+        {
+          "name": "_aggregate_dependency_status",
+          "line": 666,
+          "loc": 15
+        },
+        {
+          "name": "ensure_action",
+          "line": 224,
+          "loc": 15
+        },
+        {
+          "name": "inspect_registry",
+          "line": 722,
+          "loc": 14
+        }
+      ]
+    },
+    "src/field_resolvers.py": {
+      "loc": 118,
+      "functions": [
+        {
+          "name": "_capability_fields",
+          "line": 52,
+          "loc": 25
+        },
+        {
+          "name": "_recipe_fields",
+          "line": 16,
+          "loc": 18
+        },
+        {
+          "name": "deterministic_action_for_contract",
+          "line": 101,
+          "loc": 18
+        },
+        {
+          "name": "resolve_action_fields",
+          "line": 84,
+          "loc": 15
+        },
+        {
+          "name": "_inventory_fields",
+          "line": 42,
+          "loc": 8
+        },
+        {
+          "name": "_scheduled_task_fields",
+          "line": 10,
+          "loc": 4
+        },
+        {
+          "name": "_reference_id",
+          "line": 36,
+          "loc": 4
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "_capability_fields",
+          "line": 52,
+          "loc": 25
+        },
+        {
+          "name": "_recipe_fields",
+          "line": 16,
+          "loc": 18
+        },
+        {
+          "name": "deterministic_action_for_contract",
+          "line": 101,
+          "loc": 18
+        },
+        {
+          "name": "resolve_action_fields",
+          "line": 84,
+          "loc": 15
+        },
+        {
+          "name": "_inventory_fields",
+          "line": 42,
+          "loc": 8
+        },
+        {
+          "name": "_scheduled_task_fields",
+          "line": 10,
+          "loc": 4
+        },
+        {
+          "name": "_reference_id",
+          "line": 36,
+          "loc": 4
+        }
+      ]
+    },
+    "src/legacy_agent_loop.py": {
+      "loc": 26,
+      "functions": [
+        {
+          "name": "stream_agent_loop",
+          "line": 13,
+          "loc": 11
+        }
+      ],
+      "largest_functions": [
+        {
+          "name": "stream_agent_loop",
+          "line": 13,
+          "loc": 11
+        }
+      ]
+    }
+  },
+  "semantic_control_plane_loc": 18891,
+  "central_domain_conditionals": 120,
+  "central_canonical_answer_functions": 22,
+  "canonical_answer_dispatch_mentions": 44,
+  "compatibility_aliases": 4,
+  "capability_action_map_declarations": 9,
+  "production_legacy_semantic_imports": [
+    "src/agent_loop.py:281:from src.legacy_agent_loop import stream_agent_loop"
+  ],
+  "product_tests_private_legacy_classifier_imports": [
+    "tests/test_api_call_integration_routing.py:26:`_intent['domains']` that updates `_relevant_tools` from `_DOMAIN_TOOL_MAP`).\"\"\"",
+    "tests/test_bg_job_tools.py:159:from src.agent_loop import _classify_agent_request, _DOMAIN_TOOL_MAP",
+    "tests/test_bg_job_tools.py:172:from src.agent_loop import _classify_agent_request",
+    "tests/test_aci_model_fallback.py:8:from src.agent_loop import _classify_agent_request",
+    "tests/test_deterministic_read_paraphrases.py:9:from src.agent_loop import _classify_agent_request",
+    "tests/test_deterministic_read_paraphrases.py:590:from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence",
+    "tests/test_deterministic_read_paraphrases.py:628:from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence",
+    "tests/test_local_continuity_and_dependencies.py:82:from src.agent_loop import _assemble_prompt, _classify_agent_request, _normalize_homelab_intent",
+    "tests/test_memory_grounding.py:6:from src.agent_loop import _classify_agent_request",
+    "tests/test_memory_grounding_p0.py:3:from src.agent_loop import _classify_agent_request, _suppress_automatic_skills",
+    "tests/test_p0_chat_continuity.py:4:from src.agent_loop import _classify_agent_request",
+    "tests/test_tool_binding_projections.py:2:from src.agent_loop import TOOL_SECTIONS, _DOMAIN_TOOL_MAP",
+    "tests/test_workspace_confine.py:387:from src.agent_loop import _classify_agent_request"
+  ],
+  "src_to_routes_imports": [
+    "src/ai_interaction.py:746:from routes.prefs_routes import _load as _load_prefs",
+    "src/caldav_sync.py:278:from routes.calendar_routes import _ensure_positive_duration",
+    "src/caldav_sync.py:591:from routes.prefs_routes import _load_for_user",
+    "src/caldav_sync.py:609:from routes.prefs_routes import _save_for_user",
+    "src/chat_processor.py:508:from routes.prefs_routes import _load_for_user as _load_skill_prefs",
+    "src/foreground_model_routing.py:45:from routes import prefs_routes",
+    "src/interactive_gate.py:150:from routes import chat_routes as _chat_routes",
+    "src/service_health.py:315:from routes.email_helpers import _imap_connect",
+    "src/service_health.py:359:from routes.model_routes import _probe_endpoint as probe",
+    "src/service_health.py:431:from routes.email_helpers import _list_email_accounts",
+    "src/aci.py:219:from routes.prefs_routes import _load_for_user",
+    "src/agent_loop.py:970:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/agent_loop.py:2156:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/builtin_actions.py:1023:from routes.email_pollers import _run_auto_summarize_once",
+    "src/builtin_actions.py:1042:from routes.email_pollers import _run_auto_summarize_once",
+    "src/builtin_actions.py:1075:from routes.email_helpers import (",
+    "src/builtin_actions.py:1537:from routes.email_pollers import _run_auto_summarize_once",
+    "src/builtin_actions.py:1605:from routes.email_helpers import _email_cache_owner_clause, _imap_connect, SCHEDULED_DB",
+    "src/builtin_actions.py:1803:from routes.email_helpers import _imap_connect, _decode_header",
+    "src/builtin_actions.py:1932:from routes.skills_routes import _run_skill_test_once, _skill_test_task",
+    "src/builtin_actions.py:2058:from routes.skills_routes import (",
+    "src/builtin_actions.py:2231:from routes.note_routes import dispatch_reminder",
+    "src/builtin_actions.py:2290:from routes.email_helpers import _imap_connect, _decode_header",
+    "src/builtin_actions.py:2857:from routes.email_helpers import SCHEDULED_DB, _init_scheduled_db",
+    "src/builtin_actions.py:2994:from routes.note_routes import dispatch_reminder",
+    "src/builtin_actions.py:3325:from routes.prefs_routes import _load_for_user, _save_for_user",
+    "src/settings.py:310:from routes.prefs_routes import _load_for_user",
+    "src/task_scheduler.py:1819:from routes.email_routes import _resolve_send_config",
+    "src/task_scheduler.py:1820:from routes.email_helpers import _send_smtp_message",
+    "src/task_scheduler.py:2198:from routes.email_helpers import _get_email_config",
+    "src/task_scheduler.py:2302:from routes.prefs_routes import _load_for_user",
+    "src/tool_execution.py:2277:from routes.contacts_routes import _fetch_contacts",
+    "src/tools/calendar.py:23:from routes.calendar_routes import (",
+    "src/tools/contacts.py:33:from routes import contacts_routes as cc",
+    "src/tools/contacts.py:92:from routes import contacts_routes as cc",
+    "src/tools/notes.py:179:from routes.calendar_routes import parse_due_for_user as _pdt_user",
+    "src/tools/notes.py:277:from routes.calendar_routes import parse_due_for_user as _pdt_user",
+    "src/tools/system.py:113:from routes.prefs_routes import _load_for_user as _load_prefs",
+    "src/tools/cookbook.py:19:from routes._validators import validate_remote_host, validate_ssh_port",
+    "src/tools/cookbook.py:200:from routes.cookbook_helpers import load_stored_hf_token",
+    "src/tools/cookbook.py:478:from routes.cookbook_helpers import load_stored_hf_token"
+  ],
+  "frontend": {
+    "css_bytes": 1346302,
+    "css_files": 2,
+    "js_bytes": 13873123,
+    "js_files": 190,
+    "largest_assets": [
+      {
+        "path": "static/lib/mermaid.min.js",
+        "bytes": 3566058
+      },
+      {
+        "path": "static/style.css",
+        "bytes": 1322950
+      },
+      {
+        "path": "static/lib/xlsx.full.min.js",
+        "bytes": 951904
+      },
+      {
+        "path": "static/lib/html2pdf.bundle.min.js",
+        "bytes": 906037
+      },
+      {
+        "path": "static/lib/docx.umd.min.js",
+        "bytes": 742858
+      },
+      {
+        "path": "static/lib/mammoth.browser.min.js",
+        "bytes": 642194
+      },
+      {
+        "path": "static/js/document.js",
+        "bytes": 504270
+      },
+      {
+        "path": "static/js/emailLibrary.js",
+        "bytes": 410398
+      },
+      {
+        "path": "static/js/chat.js",
+        "bytes": 331743
+      },
+      {
+        "path": "static/js/settings.js",
+        "bytes": 309041
+      },
+      {
+        "path": "static/js/slashCommands.js",
+        "bytes": 279743
+      },
+      {
+        "path": "static/lib/katex/katex.min.js",
+        "bytes": 276701
+      },
+      {
+        "path": "static/js/cookbookServe.js",
+        "bytes": 249232
+      },
+      {
+        "path": "static/js/notes.js",
+        "bytes": 247555
+      },
+      {
+        "path": "static/js/cookbookRunning.js",
+        "bytes": 217476
+      },
+      {
+        "path": "static/js/cookbook.js",
+        "bytes": 205248
+      },
+      {
+        "path": "static/app.js",
+        "bytes": 204410
+      },
+      {
+        "path": "static/js/galleryEditor.js",
+        "bytes": 185248
+      },
+      {
+        "path": "static/js/documentLibrary.js",
+        "bytes": 184375
+      },
+      {
+        "path": "static/js/calendar.js",
+        "bytes": 176659
+      }
+    ]
+  },
+  "source_sha": "e81bdb77c451d7a7a5da1e89b04d521c39baf9cc",
+  "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
+}
