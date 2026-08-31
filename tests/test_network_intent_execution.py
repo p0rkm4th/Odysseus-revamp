@@ -3,9 +3,16 @@
 import asyncio
 import json
 
+import pytest
+
 import src.agent_loop as agent_loop
 from src.aci import ground_action_completion
-from src.intent_contracts import network_discovery_request_cidr, is_network_service_enumeration_request
+from src.intent_contracts import (
+    compile_intent,
+    is_network_service_enumeration_request,
+    network_discovery_request_cidr,
+    resolve_intent,
+)
 
 
 def _collect(generator):
@@ -42,6 +49,19 @@ def test_unscoped_network_deep_dive_is_framework_clarification_bound():
     frame = compile_intent("Do a deep dive on my local network.")
     assert frame.domain_concept == "NETWORK"
     assert "network_scope_requires_authorization" in frame.constraints
+
+
+@pytest.mark.parametrize("query", [
+    "deep dive my 192.168.10.0/24 network",
+    r"do a deep dive discovery of my 192.168.10.0\24 network, be exhaustive",
+    "scan my 192.168.10.0 / 24 lab",
+    "do a thorough inventory of my 192.168.10.0/24 lab",
+])
+def test_bounded_natural_network_discovery_compiles_to_scoped_plan(query):
+    frame = compile_intent(query)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "EXECUTE"
+    assert resolve_intent(frame).action_id == "plan_network_discovery"
 
 
 def test_unscoped_network_deep_dive_does_not_enter_bounded_selection(monkeypatch):

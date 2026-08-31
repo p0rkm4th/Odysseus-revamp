@@ -447,9 +447,28 @@ class HomelabOperations:
             try:
                 raw = await asyncio.to_thread(client_request, {"action": action}, socket_path=host_socket, timeout=15)
             except Exception as exc:
-                return {"status": "UNAVAILABLE", "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE", "action": action, "error": str(exc), "source": "host_network_broker", "observation_location": "HOST"}
+                # Keep OS/socket details in server logs only.  The owner needs
+                # a useful readiness state, not an implementation exception.
+                logger.warning("host network context unavailable: %s", exc)
+                return {
+                    "status": "UNAVAILABLE",
+                    "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE",
+                    "action": action,
+                    "message": "Current host network context is unavailable because the host network collector is not reachable. Network observations already recorded in Hades remain available.",
+                    "source": "host_network_broker",
+                    "observation_location": "HOST",
+                    "technical_error": type(exc).__name__,
+                }
             if not raw.get("ok") or raw.get("execution_location") != "HOST":
-                return {"status": "UNAVAILABLE", "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE", "action": action, "error": raw.get("error") or "trusted host network context unavailable", "source": "host_network_broker", "observation_location": raw.get("execution_location") or "UNKNOWN"}
+                return {
+                    "status": "UNAVAILABLE",
+                    "error_code": "HOST_NETWORK_CONTEXT_UNAVAILABLE",
+                    "action": action,
+                    "message": "Current host network context is unavailable because the trusted host collector did not return usable data. Network observations already recorded in Hades remain available.",
+                    "source": "host_network_broker",
+                    "observation_location": raw.get("execution_location") or "UNKNOWN",
+                    "technical_error": "BROKER_UNAVAILABLE",
+                }
             try:
                 addresses = json.loads(raw.get("addresses") or "[]")
                 routes = json.loads(raw.get("routes") or "[]")

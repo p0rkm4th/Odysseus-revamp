@@ -3623,8 +3623,10 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             payload = json.loads(str(event.get("output") or ""))
         except (TypeError, ValueError):
             return None
-    if not isinstance(payload, Mapping) or str(payload.get("status") or "").upper() in {
-        "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
+    if not isinstance(payload, Mapping):
+        return None
+    if str(payload.get("status") or "").upper() in {
+        "FAILED", "INVALID_RESULT", "ERROR",
     }:
         return None
 
@@ -3637,6 +3639,9 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
 
     action = str(payload.get("action") or "").strip()
     if action == "read_network_context":
+        if str(payload.get("status") or "").upper() == "UNAVAILABLE":
+            message = str(payload.get("message") or "").strip()
+            return message or "Current host network context is unavailable. Previously recorded network observations remain available."
         interfaces = payload.get("interfaces")
         routes = payload.get("default_routes")
         if not isinstance(interfaces, list) or not isinstance(routes, list):

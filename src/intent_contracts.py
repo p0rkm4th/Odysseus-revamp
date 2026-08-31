@@ -1605,10 +1605,16 @@ def explicit_private_discovery_cidr(text: str) -> str | None:
     ignores current interfaces, historical observations, and RFC1918 guesses;
     the broker and normal ActionSpec policy remain authoritative for execution.
     """
-    for candidate in re.findall(
-        r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\w)",
+    # Accept only unambiguous separators commonly produced by pasted or
+    # voice-transcribed owner text.  The backslash form is normalized to a
+    # slash before validation; ipaddress still decides whether the result is
+    # a valid bounded private network, so malformed prefixes never broaden
+    # scope or become an authorization surrogate.
+    for address, separator, prefix in re.findall(
+        r"(?<![\w.])((?:\d{1,3}\.){3}\d{1,3})\s*([/\\])\s*(\d{1,2})(?!\w)",
         str(text or ""),
     ):
+        candidate = f"{address}/{prefix}"
         try:
             network = ipaddress.ip_network(candidate, strict=False)
         except ValueError:
@@ -2308,6 +2314,17 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     # "run" in "keep going with the current Run".
     if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
+    # A bounded CIDR makes deep/thorough discovery an actionable Network
+    # request even when the owner uses "deep dive" or "inventory" rather
+    # than the narrower scan/discover verbs.  Scope validation and approval
+    # still happen downstream; this only prevents a valid target from being
+    # misclassified as generic Research.
+    if (
+        network_discovery_request_cidr(q)
+        and re.search(r"\b(?:deep\s+dive|thorough|exhaustive|inventory|discovery)\b", q)
+        and re.search(r"\b(?:network|lan|subnet|hosts?|devices?|machines?|lab)\b", q)
+    ):
+        return "EXECUTE"
     if re.search(r"\b(?:restart|recover|execute|run|scan|discover\w*|install|turn on|start|begin)\b", q) and not re.search(
         r"\brun\s+out\s+of\b", q,
     ): return "EXECUTE"
@@ -2386,11 +2403,15 @@ def compile_intent(
     # harmless observation.  Discovery is still staged and scope-authorized
     # by the Network ActionSpec; this only preserves its intent class.
     _network_discovery_language = bool(
-        re.search(r"\b(?:network|lan|subnet|wifi|wi-fi|connection|connected|hosts?|devices?)\b", q)
+        (
+            re.search(r"\b(?:network|lan|subnet|wifi|wi-fi|connection|connected|hosts?|devices?|lab)\b", q)
+            or network_discovery_request_cidr(q)
+        )
         and re.search(
             r"\b(?:scan\w*|discover\w*|enumerat\w*|probe\w*|map\w*|explore)\b|"
-            r"\bdeep\s+dive\b.*\b(?:discovery|dive|mission)\b|"
-            r"\bdiscovery\s+(?:dive|mission)\b",
+            r"\bdeep\s+dive\b|"
+            r"\bdiscovery\s+(?:dive|mission)\b|"
+            r"\b(?:thorough|exhaustive)\s+(?:network\s+)?inventory\b",
             q,
             re.IGNORECASE,
         )
