@@ -173,7 +173,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         capability_id="recipe.read",
         description="Owner-scoped recipe and pantry-coverage reads over Inventory Service.",
         actions=_actions(*(
-                ActionSpec(action_id=action, effects=("read_private",), executor_key="read_recipes", field_resolver=("recipe" if action == "prepare_import" else "recipe_read"))
+                ActionSpec(action_id=action, effects=("read_private",), executor_key="read_recipes", field_resolver=("recipe" if action == "prepare_import" else "recipe_read"), selection_requirements=({"requires_reference": True} if action == "shopping_requirements" else None))
             for action in ("list", "search", "get", "can_make", "pantry_candidates", "shopping_requirements", "scale", "expiring_candidates", "cooking_history", "prepare_import")
         )),
     ),
@@ -274,7 +274,11 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 requires_direct_container_access=(action not in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration", "execute_diagnostic_install"}),
                 field_resolver=("network" if action in {"plan_network_discovery", "plan_network_service_enumeration"} else None),
                 deterministic_selection=(action in {"plan_network_discovery", "plan_network_service_enumeration"}),
-                selection_requirements=({"exclusive_when": {"desired_action": "plan_network_discovery", "frame": {"domain_concept": "NETWORK", "operation_class": "EXECUTE"}}} if action == "plan_network_discovery" else None),
+                selection_requirements=(
+                    {"exclusive_when": {"desired_action": "plan_network_discovery", "frame": {"domain_concept": "NETWORK", "operation_class": "EXECUTE"}}}
+                    if action == "plan_network_discovery" else
+                    {"requires_target": True} if action == "plan_service_restart" else None
+                ),
                 target_resources=("network:private_scope",) if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else (),
                 locks=(("network:private_scope",) if action in {"execute_network_discovery", "execute_network_service_enumeration"} else (("host:package_manager",) if action == "execute_diagnostic_install" else ())),
                 rollback_capability="none",

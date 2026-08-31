@@ -2943,8 +2943,6 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     contract = DOMAIN_CONTRACTS.get(contract_key)
     if contract is None:
         return ResolvedContract(frame, None, None, None, None, False, "no_domain_contract")
-    if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:
-        return ResolvedContract(frame, contract, None, None, contract.binding, False, "target_required")
     action_key = frame.operation_class
     # URL-backed recipe creation is an import. Route it through the existing
     # validated import commit instead of an under-specified primitive add.
@@ -3008,14 +3006,14 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     binding = binding_for_tool(contract.binding or "") if contract.binding else None
     if binding is None or binding.capability_id != contract.capability_id:
         return ResolvedContract(frame, contract, action_id, action, contract.binding, False, "tool_binding_unavailable")
+    requirements = action.selection_requirements or {}
     reason = (
-        "recipe_reference_required"
-        if frame.domain_concept == "RECIPE"
-        and frame.operation_class == "READ"
-        and frame.filters.get("recipe_shopping") is True
-        and not frame.entity_reference
+        "target_required" if requirements.get("requires_target") and not frame.target
+        else "recipe_reference_required" if requirements.get("requires_reference") and not frame.entity_reference
         else None
     )
+    if reason:
+        return ResolvedContract(frame, contract, action_id, action, binding.transport_name, False, reason)
     return ResolvedContract(frame, contract, action_id, action, binding.transport_name, True, reason)
 
 
