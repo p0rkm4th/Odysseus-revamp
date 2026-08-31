@@ -496,6 +496,28 @@
     "abrupt_eof": 0,
     "recorded_at": "2026-08-31T20:39:36Z"
   },
+  "latest_current_source_lived_in_walkabout": {
+    "application_source_sha": "e482cbfe6b552e1f961e94c186e1c074d4faf3e1",
+    "evidence_source_sha": "a95c73162a2d2d49d3353d564ef81ff5f6b637e5",
+    "harness_source_sha": "a95c73162a2d2d49d3353d564ef81ff5f6b637e5",
+    "scenarios": [
+      "OWNER-TIER1-LIVED-IN-WALKABOUT-001"
+    ],
+    "environment": "realistic_messy_synthetic",
+    "fixture_profile": "lived-in-daily-driver",
+    "status": "PASS",
+    "turns": 20,
+    "streams": 20,
+    "read_journeys": 20,
+    "mutations": 0,
+    "mutation_readbacks": 0,
+    "readbacks": 0,
+    "false_success": 0,
+    "raw_final_results": 0,
+    "duplicate_delivery": 0,
+    "abrupt_eof": 0,
+    "recorded_at": "2026-08-31T20:43:10Z"
+  },
   "acceptance": {
     "stable_url": "http://127.0.0.1:7002",
     "fresh_install_url": "http://127.0.0.1:7013",
