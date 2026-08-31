@@ -3229,31 +3229,8 @@ def canonical_tool_result_projection(
         from src.result_renderers.assets import project_asset_result
         return project_asset_result(payload)
     if str(tool_name or "").strip() == "read_work":
-        collections = {
-            key: value for key, value in payload.items()
-            if isinstance(value, list)
-        }
-        items = {}
-        for key, values in collections.items():
-            projected_items = []
-            for value in values[:20]:
-                if not isinstance(value, Mapping):
-                    continue
-                title = str(value.get("title") or value.get("name") or "").strip()
-                if not title:
-                    continue
-                row = {"title": title[:200]}
-                status = str(value.get("status") or "").strip()
-                if status:
-                    row["status"] = status[:64]
-                projected_items.append(row)
-            items[key] = projected_items
-        return {
-            "status": payload.get("status"),
-            "collections": {key: len(value) for key, value in collections.items()},
-            "items": items,
-            "total": sum(len(value) for value in collections.values()),
-        }
+        from src.result_renderers.work import project_work_result
+        return project_work_result(payload)
     action = str(payload.get("action") or "").strip()
     common = {
         "action": action,
