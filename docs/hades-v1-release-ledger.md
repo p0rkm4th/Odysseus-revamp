@@ -2,6 +2,16 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## Recipe video import/review replay (2026-08-31)
+
+The exact executable candidate `fc18ebed` passed all four remaining video
+Recipe owner journeys: no evidence, editable review draft, insufficient
+evidence, and positive evidence. Each completed one owner-facing turn with
+two independent canonical readbacks. Across all four, false success, raw
+final Results, duplicate delivery, and abrupt EOF were zero. Provider/content
+limitations were projected as review or insufficient-evidence outcomes rather
+than fabricated recipe data. No owner-dogfood or production state was used.
+
 ## Recipe import owner replay and acceptance-session classification (2026-08-31)
 
 On the exact executable candidate `fc18ebed`, the mixed qualitative Recipe
