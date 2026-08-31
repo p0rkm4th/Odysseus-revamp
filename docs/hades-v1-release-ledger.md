@@ -2,6 +2,26 @@
 
 Status: active engineering release ledger; not a release declaration.
 
+## In-container Qwen generated/holdout checkpoint — exact candidate `fc18ebed` (2026-08-31)
+
+The existing synthetic ACI evaluator was rerun inside the exact candidate
+container after an invalid host-side Ollama endpoint attempt was classified as
+`ENVIRONMENT_FAILURE`. The valid in-container run used Qwen3:8B through
+`host.docker.internal` and Chroma through the Compose service, with synthetic
+non-persistent tools. It covered 74 generated, metamorphic, minimal-pair,
+negative-near-miss, live, and hidden-holdout cases. Results: 60/74 functional
+(81.08%), 69/74 architectural (93.24%), security 74/74 (100%), and zero
+duplicate delivery. Median latency was 0.215s and P95 4.619s; average model
+calls were 0.581 per task.
+
+The 14 functional misses were retained in the disposable report at
+`/tmp/hades-v1-holdout-container.json`. They cluster around generated
+unknown/unsupported capability frames, evaluator semantic-domain/action
+expectations, and deliberately blocked dependency/verification states. No
+production behavior was changed from this run: the generated report omits
+literal prompts and does not by itself prove a shared owner-language defect.
+The host-side 0/122 provider run is explicitly excluded from scoring.
+
 ## Reminder lifecycle replay — exact candidate `fc18ebed` (2026-08-31)
 
 Four daily-driver reminder scenarios passed through the isolated authenticated
