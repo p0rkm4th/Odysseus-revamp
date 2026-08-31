@@ -198,6 +198,14 @@ _is_casual_low_signal = is_casual_low_signal
 _detect_admin_intent = detect_admin_intent
 
 
+def _suppress_automatic_skills(text: str, intent: Dict[str, object]) -> bool:
+    return suppress_automatic_skills(
+        text,
+        intent,
+        explicit_memory_query=is_explicit_memory_query,
+    )
+
+
 def _domain_rules_for_tools(tool_names: set) -> list[str]:
     from src.legacy_domain_contract import DOMAIN_TOOL_MAP
     return domain_rules_for_tools(
