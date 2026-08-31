@@ -717,6 +717,20 @@ def test_canonical_memory_and_work_reads_have_terminal_answers():
     assert "No outstanding work" in work.content
 
 
+def test_canonical_result_answer_honors_declared_work_renderer():
+    from src.aci import canonical_result_answer
+
+    answer = canonical_result_answer([{
+        "tool": "read_work",
+        "result_renderer": "work_read",
+        "exit_code": 0,
+        "output": '{"status":"SUCCESS_EMPTY","goals":[],"projects":[],"tasks":[]}',
+    }])
+    assert answer is not None
+    assert answer.provenance == "work_read"
+    assert "No outstanding work" in answer.content
+
+
 def test_canonical_memory_read_hides_grounding_telemetry_from_owner_answer():
     from src.aci import canonical_result_answer
 
