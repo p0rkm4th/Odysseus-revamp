@@ -230,12 +230,12 @@
       ]
     },
     "src/aci.py": {
-      "loc": 5915,
+      "loc": 5912,
       "functions": [
         {
           "name": "project_action_selection",
-          "line": 5010,
-          "loc": 396
+          "line": 5006,
+          "loc": 397
         },
         {
           "name": "canonical_tool_result_projection",
@@ -264,7 +264,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 4818,
+          "line": 4814,
           "loc": 104
         },
         {
@@ -294,7 +294,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 5452,
+          "line": 5449,
           "loc": 93
         },
         {
@@ -339,7 +339,7 @@
         },
         {
           "name": "project_post_result_transition",
-          "line": 5705,
+          "line": 5702,
           "loc": 63
         },
         {
@@ -354,7 +354,7 @@
         },
         {
           "name": "classify_post_result",
-          "line": 5644,
+          "line": 5641,
           "loc": 59
         },
         {
@@ -364,7 +364,7 @@
         },
         {
           "name": "run_legacy_completion_verifier",
-          "line": 5852,
+          "line": 5849,
           "loc": 56
         },
         {
@@ -384,7 +384,7 @@
         },
         {
           "name": "parse_decision_json",
-          "line": 5562,
+          "line": 5559,
           "loc": 50
         },
         {
@@ -404,12 +404,12 @@
         },
         {
           "name": "project_result_observation",
-          "line": 5770,
+          "line": 5767,
           "loc": 48
         },
         {
           "name": "project_final_answer",
-          "line": 4709,
+          "line": 4705,
           "loc": 47
         },
         {
@@ -439,17 +439,12 @@
         },
         {
           "name": "safe_contract_fallback_selection",
-          "line": 5408,
+          "line": 5405,
           "loc": 42
         },
         {
           "name": "canonical_memory_read_answer",
           "line": 4342,
-          "loc": 39
-        },
-        {
-          "name": "canonical_result_answer",
-          "line": 4668,
           "loc": 39
         },
         {
@@ -469,7 +464,7 @@
         },
         {
           "name": "validate_capability_gap_resolution",
-          "line": 4954,
+          "line": 4950,
           "loc": 37
         },
         {
@@ -504,7 +499,7 @@
         },
         {
           "name": "project_capability_palette",
-          "line": 4758,
+          "line": 4754,
           "loc": 32
         },
         {
@@ -554,7 +549,7 @@
         },
         {
           "name": "selected_action_for_decision",
-          "line": 5614,
+          "line": 5611,
           "loc": 28
         },
         {
@@ -609,7 +604,7 @@
         },
         {
           "name": "classify_action_escalation",
-          "line": 4792,
+          "line": 4788,
           "loc": 24
         },
         {
@@ -644,7 +639,7 @@
         },
         {
           "name": "legacy_completion_verifier_allowed",
-          "line": 5820,
+          "line": 5817,
           "loc": 20
         },
         {
@@ -714,7 +709,7 @@
         },
         {
           "name": "validate_capability_creation_request",
-          "line": 4993,
+          "line": 4989,
           "loc": 15
         },
         {
@@ -759,7 +754,7 @@
         },
         {
           "name": "dependency_ready_for_action",
-          "line": 5547,
+          "line": 5544,
           "loc": 13
         },
         {
@@ -770,6 +765,11 @@
         {
           "name": "insert_before_latest_user",
           "line": 2048,
+          "loc": 12
+        },
+        {
+          "name": "canonical_result_answer",
+          "line": 4691,
           "loc": 12
         },
         {
@@ -819,7 +819,7 @@
         },
         {
           "name": "model_burden",
-          "line": 5910,
+          "line": 5907,
           "loc": 6
         },
         {
@@ -881,8 +881,8 @@
       "largest_functions": [
         {
           "name": "project_action_selection",
-          "line": 5010,
-          "loc": 396
+          "line": 5006,
+          "loc": 397
         },
         {
           "name": "canonical_tool_result_projection",
@@ -911,7 +911,7 @@
         },
         {
           "name": "compile_composite_action",
-          "line": 4818,
+          "line": 4814,
           "loc": 104
         },
         {
@@ -941,7 +941,7 @@
         },
         {
           "name": "project_route_tool_schemas",
-          "line": 5452,
+          "line": 5449,
           "loc": 93
         },
         {
@@ -2002,12 +2002,17 @@
       ]
     },
     "src/field_resolvers.py": {
-      "loc": 118,
+      "loc": 123,
       "functions": [
         {
           "name": "_capability_fields",
           "line": 52,
           "loc": 25
+        },
+        {
+          "name": "resolve_action_fields",
+          "line": 84,
+          "loc": 20
         },
         {
           "name": "_recipe_fields",
@@ -2016,13 +2021,8 @@
         },
         {
           "name": "deterministic_action_for_contract",
-          "line": 101,
+          "line": 106,
           "loc": 18
-        },
-        {
-          "name": "resolve_action_fields",
-          "line": 84,
-          "loc": 15
         },
         {
           "name": "_inventory_fields",
@@ -2047,19 +2047,19 @@
           "loc": 25
         },
         {
+          "name": "resolve_action_fields",
+          "line": 84,
+          "loc": 20
+        },
+        {
           "name": "_recipe_fields",
           "line": 16,
           "loc": 18
         },
         {
           "name": "deterministic_action_for_contract",
-          "line": 101,
+          "line": 106,
           "loc": 18
-        },
-        {
-          "name": "resolve_action_fields",
-          "line": 84,
-          "loc": 15
         },
         {
           "name": "_inventory_fields",
@@ -2096,10 +2096,10 @@
       ]
     }
   },
-  "semantic_control_plane_loc": 18891,
+  "semantic_control_plane_loc": 18893,
   "central_domain_conditionals": 120,
   "central_canonical_answer_functions": 22,
-  "canonical_answer_dispatch_mentions": 44,
+  "canonical_answer_dispatch_mentions": 25,
   "compatibility_aliases": 4,
   "capability_action_map_declarations": 9,
   "production_legacy_semantic_imports": [
@@ -2251,6 +2251,6 @@
       }
     ]
   },
-  "source_sha": "e81bdb77c451d7a7a5da1e89b04d521c39baf9cc",
+  "source_sha": "f483877cf46829c5bac813e8ab0c92efe2d65304",
   "notes": "Code movement does not reduce this metric; update COUNTED_MODULES when semantic ownership moves."
 }
