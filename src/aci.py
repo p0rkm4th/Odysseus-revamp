@@ -45,6 +45,7 @@ from src.result_renderers.scheduled import (
 from src.result_renderers.calendar import canonical_communications_read_answer
 from src.result_renderers.recipe import canonical_recipe_mutation_answer
 from src.result_renderers.generic import canonical_structured_empty_read_answer
+from src.result_renderers.assets import canonical_asset_read_answer
 from src.result_renderers.notes import (
     canonical_notes_mutation_answer,
     canonical_notes_read_answer,
@@ -3149,128 +3150,6 @@ def canonical_read_fast_path_payload(
     payload.update(resolve_action_fields(capability_id=None, action_id=action, binding=binding,
                                          query=str(query or ""), frame=frame if isinstance(frame, Mapping) else {}))
     return payload
-
-
-def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
-    """Render a bounded owner-facing answer from a canonical Asset Result.
-
-    This is deliberately narrower than general answer synthesis: only a
-    structured successful ``manage_assets`` result is eligible, and every
-    state-bearing value in the answer comes from that Result. Empty and
-    unavailable reads are stated as such rather than handed to the model to
-    fill in. Mutations and non-Asset tools are never summarized here.
-    """
-    event = next(
-        (
-            item for item in reversed(tuple(tool_events or ()))
-            if isinstance(item, Mapping)
-            and str(item.get("tool") or "").strip() == "manage_assets"
-        ),
-        None,
-    )
-    if event is None or event.get("exit_code") not in (None, 0):
-        return None
-    try:
-        projection_payload = event.get("result_projection")
-        payload = projection_payload if isinstance(projection_payload, Mapping) else json.loads(str(event.get("output") or ""))
-    except (TypeError, ValueError):
-        return None
-    if not isinstance(payload, Mapping):
-        return None
-    status = str(payload.get("status") or "").strip().upper()
-    if status in {"FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR"}:
-        return None
-
-    # ``inventory.manage:summary`` is a canonical read in its own right.  Its
-    # structured contract is count-oriented rather than collection-shaped, so
-    # do not send a successful summary back through unconstrained synthesis
-    # merely because it has no ``assets`` array.  Render only the fields owned
-    # by the asset-inventory summary contract.
-    if {"assets", "active", "observed", "observations", "relationships", "by_type"} <= payload.keys():
-        try:
-            total = int(payload["assets"])
-            active = int(payload["active"])
-            observed = int(payload["observed"])
-            observations = int(payload["observations"])
-            relationships = int(payload["relationships"])
-        except (TypeError, ValueError):
-            return None
-        by_type = payload.get("by_type")
-        if not isinstance(by_type, Mapping):
-            return None
-        if total == 0:
-            return "No canonical IT assets are recorded for this owner."
-        lines = [
-            f"Canonical IT asset inventory: {total} asset{'s' if total != 1 else ''} "
-            f"({active} active, {observed} observed).",
-            f"Recorded observations: {observations}; active relationships: {relationships}.",
-        ]
-        try:
-            type_counts = [
-                f"{str(kind)}={int(count)}"
-                for kind, count in sorted(by_type.items(), key=lambda item: str(item[0]))
-            ]
-        except (TypeError, ValueError):
-            return None
-        if type_counts:
-            lines.append("By type: " + ", ".join(type_counts) + ".")
-        return "\n".join(lines)
-    assets = payload.get("assets")
-    if not isinstance(assets, list):
-        return None
-    projection = str(payload.get("result_projection") or "").strip().lower()
-    if projection == "property":
-        prop = str(payload.get("asset_property") or "property").strip().lower()
-        label = {"ram": "RAM", "gpu": "GPU", "storage": "storage", "cpu": "CPU", "processor": "processor"}.get(prop, prop)
-        values = []
-        for asset in assets:
-            if not isinstance(asset, Mapping):
-                continue
-            attrs = asset.get("attributes") if isinstance(asset.get("attributes"), Mapping) else {}
-            value = asset.get(prop)
-            if value in (None, "", [], {}):
-                value = attrs.get(prop)
-            if value not in (None, "", [], {}):
-                values.append(f"{asset.get('name') or asset.get('id') or 'Unnamed asset'}: {value}")
-        if not values:
-            return f"No recorded {label} values were found for this owner's assets."
-        return f"Recorded {label} by asset:\n" + "\n".join(f"- {value}" for value in values[:50])
-    if projection == "filter":
-        query = str(payload.get("query") or "").strip()
-        if not assets:
-            return f"I don't have any recorded server with {query}." if query else "No matching canonical IT assets are recorded."
-        lines = [f"I found {len(assets)} canonical IT asset{'s' if len(assets) != 1 else ''} matching {query!r}:"]
-        lines.extend(_label(asset) for asset in assets[:50] if isinstance(asset, Mapping))
-        return "\n".join(lines)
-    if projection == "count":
-        query = str(payload.get("query") or "").strip()
-        qualifier = f" matching {query!r}" if query else ""
-        return f"I found {len(assets)} canonical IT asset{'s' if len(assets) != 1 else ''}{qualifier}."
-    if not assets:
-        return "No canonical IT assets are recorded for this owner."
-
-    def _label(asset: Mapping[str, Any]) -> str:
-        name = str(asset.get("name") or asset.get("id") or "Unnamed asset").strip()
-        attributes = asset.get("attributes")
-        attributes = attributes if isinstance(attributes, Mapping) else {}
-        details: list[str] = []
-        for key in (
-            "role", "hostname", "os", "platform", "manufacturer", "model",
-            "cpu", "ram", "gpu", "storage", "motherboard",
-        ):
-            value = asset.get(key)
-            if value in (None, "", [], {}):
-                value = attributes.get(key)
-            if value not in (None, "", [], {}):
-                details.append(f"{key}={value}")
-        return f"- {name}" + (f" ({', '.join(details)})" if details else "")
-
-    count = len(assets)
-    lines = [f"I found {count} canonical IT asset{'s' if count != 1 else ''}:"]
-    lines.extend(_label(asset) for asset in assets[:50] if isinstance(asset, Mapping))
-    if count > 50:
-        lines.append(f"- …and {count - 50} more")
-    return "\n".join(lines)
 
 
 def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
