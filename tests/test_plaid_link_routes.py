@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from core.database import Base
-from core.finance_models import FinanceConnection
+from core.finance_models import FinanceConnection, PlaidLinkSession
 from routes import finance_routes
 
 
@@ -15,6 +15,7 @@ class LinkPlaid:
     def __init__(self):
         self.exchange_calls = []
         self.sync_calls = []
+        self.fail_sync = False
 
     def link_token_create(self, client_user_id, *, access_token=None):
         self.client_user_id = client_user_id
@@ -33,6 +34,9 @@ class LinkPlaid:
         return {"item": {"institution_id": "ins-1"}}
 
     def transactions_sync(self, access_token, cursor):
+        if self.fail_sync:
+            from src.plaid_transport import PlaidError
+            raise PlaidError("PROVIDER_UNAVAILABLE")
         self.sync_calls.append(cursor)
         return {"added": [], "modified": [], "removed": [], "has_more": False, "next_cursor": "cursor-1"}
 
@@ -129,6 +133,21 @@ def test_reconnect_uses_update_mode_and_same_connection(monkeypatch):
         assert repaired.status_code == 200
         assert repaired.json()["item"]["connection_id"] == connection.id
         assert plaid.exchange_calls == ["public-sandbox-token"]
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_exchange_consumes_continuation_when_initial_sync_fails(monkeypatch):
+    client, db, plaid, engine = _client(monkeypatch)
+    try:
+        created = client.post("/api/finance/plaid/link-token", headers={"x-owner": "alice"}).json()
+        plaid.fail_sync = True
+        response = client.post("/api/finance/plaid/link-exchange", headers={"x-owner": "alice"}, json={
+            "link_token": created["link_token"], "authorization_state": created["authorization_state"], "public_token": "public-sandbox-token",
+        })
+        assert response.status_code == 503
+        assert db.query(PlaidLinkSession).filter_by(owner="alice").one().consumed_at is not None
     finally:
         db.close()
         engine.dispose()
