@@ -680,7 +680,21 @@ class FinanceService:
             totals[row.currency] = totals.get(row.currency, Decimal("0")) + Decimal(row.amount)
             bucket = by_category.setdefault(row.provider_category or "uncategorized", {})
             bucket[row.currency] = bucket.get(row.currency, Decimal("0")) + Decimal(row.amount)
-        result = {"start": start.isoformat(), "end": end.isoformat(), "posted_outflow_by_currency": {key: str(value) for key, value in totals.items()}, "posted_outflow_by_category": {category: {currency: str(value) for currency, value in values.items()} for category, values in by_category.items()}, "coverage": self.coverage(owner, start, end)}
+        pending_query = self.db.query(FinanceTransaction).filter(
+            FinanceTransaction.owner == owner, FinanceTransaction.provider_removed.is_(False),
+            FinanceTransaction.status == "pending", FinanceTransaction.transaction_date >= start,
+            FinanceTransaction.transaction_date <= end,
+            FinanceTransaction.direction == "outflow",
+        )
+        if merchant:
+            pending_query = pending_query.filter(FinanceTransaction.merchant.ilike(f"%{merchant[:100]}%"))
+        if category:
+            pending_query = pending_query.filter(FinanceTransaction.provider_category == category)
+        pending_totals: dict[str, Decimal] = {}
+        pending_rows = pending_query.all()
+        for row in pending_rows:
+            pending_totals[row.currency] = pending_totals.get(row.currency, Decimal("0")) + Decimal(row.amount)
+        result = {"start": start.isoformat(), "end": end.isoformat(), "posted_outflow_by_currency": {key: str(value) for key, value in totals.items()}, "posted_outflow_by_category": {category: {currency: str(value) for currency, value in values.items()} for category, values in by_category.items()}, "pending_outflow_by_currency": {key: str(value) for key, value in pending_totals.items()}, "pending_outflow_count": len(pending_rows), "coverage": self.coverage(owner, start, end)}
         if merchant:
             result["merchant"] = merchant[:100]
         if category:
