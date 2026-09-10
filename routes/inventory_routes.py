@@ -71,12 +71,12 @@ def setup_inventory_routes(
 
     @router.get("/inventory/items")
     async def list_items(
-        request: Request, domain: str | None = None,
+        request: Request, domain: str | None = None, list_name: str | None = None,
         include_archived: bool = False, limit: int = Query(100, ge=1, le=500),
         offset: int = Query(0, ge=0),
     ):
         return {"items": await call(
-            inventory.list_items, _owner(request), domain=domain,
+            inventory.list_items, _owner(request), domain=domain, list_name=list_name,
             include_archived=include_archived, limit=limit, offset=offset,
         )}
 
@@ -131,12 +131,24 @@ def setup_inventory_routes(
         allowed = {
             "name", "domain", "item_kind", "default_unit", "category", "description",
             "brand", "manufacturer", "model", "sku", "barcode", "reorder_point",
-            "location_id", "metadata", "image_refs",
+            "location_id", "metadata", "image_refs", "shopping_list", "storage_area",
         }
         return {"item": await call(
             inventory.create_item, _owner(request),
             **{key: value for key, value in payload.items() if key in allowed},
         )}
+
+    @router.patch("/inventory/items/{item_id}")
+    async def update_item(request: Request, item_id: str, payload: dict[str, Any] = Body(...)):
+        allowed = {"name", "category", "description", "default_unit", "reorder_point", "shopping_list", "storage_area"}
+        unknown = set(payload) - allowed
+        if unknown:
+            raise HTTPException(400, "unsupported item fields: " + ", ".join(sorted(unknown)))
+        return {"item": await call(inventory.update_item, _owner(request), item_id, **payload)}
+
+    @router.post("/inventory/items/{item_id}/archive")
+    async def archive_item(request: Request, item_id: str):
+        return {"item": await call(inventory.archive_item, _owner(request), item_id)}
 
     @router.post("/inventory/items/{item_id}/stock", status_code=201)
     async def add_stock(request: Request, item_id: str, payload: dict[str, Any] = Body(...)):

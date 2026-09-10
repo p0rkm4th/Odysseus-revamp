@@ -62,10 +62,23 @@ bounded household membership setup, explicit share/revoke, household shared
 expense reads, and a bounded model-facing read projection. Models do not make
 authorization decisions or receive unrestricted database access.
 
+Plaid Link is owner-facing in Integration Center. HADES creates a short-lived
+Link token for the authenticated owner, stores only its digest in
+`finance_plaid_link_sessions`, and exchanges the one-time browser public token
+server-side. The resulting permanent access token is encrypted in `PlaidItem`
+and never enters browser payloads or model context. Successful exchange enters
+the existing read-only sync seam; Link never grants financial mutation.
+
+Pantry and grocery records use the existing owner-scoped inventory service.
+Items can be edited, soft-archived, stocked, consumed, and explicitly marked
+for the grocery list from the UI or the bounded `manage_assets` inventory
+actions. Grocery membership is metadata/state only and does not alter stock
+until a separately verified stock operation occurs.
+
 ## Deferred
 
-This bounded campaign does not implement Plaid Link UI, paid real-time balance
-refresh, FX, categorization AI, forecasting, liabilities, recurring-bill
+This bounded campaign does not implement paid real-time balance refresh, FX,
+categorization AI, forecasting, liabilities, recurring-bill
 automation, automatic sharing, settle-up allocation/payment execution, or any
 unrelated Kitchen, Telegram, or Homelab expansion. A live sync requires a
 legitimate HADES Plaid authorization and is not faked when absent.

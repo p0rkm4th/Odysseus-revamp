@@ -17,8 +17,10 @@ from core.finance_models import (
     HouseholdMembership,
     SharedExpense,
     PlaidItem,
+    FinanceConnection,
 )
 from core.database import utcnow_naive
+from src.integration_lifecycle import capability_available
 
 
 class FinanceError(ValueError):
@@ -298,7 +300,7 @@ class FinanceService:
             FinanceTransaction.provider_removed.is_(False),
         ).order_by(FinanceTransaction.transaction_date.desc(), FinanceTransaction.created_at.desc()).all()]
 
-    def create_plaid_item(self, owner: str, item_id: str, access_token: str, institution_name: str | None = None) -> dict[str, Any]:
+    def create_plaid_item(self, owner: str, item_id: str, access_token: str, institution_name: str | None = None, connection_id: str | None = None) -> dict[str, Any]:
         owner = _required_text(owner, "owner")
         item_id = _required_text(item_id, "item_id")
         access_token = _required_text(access_token, "access_token")
@@ -306,10 +308,25 @@ class FinanceService:
             PlaidItem.owner == owner, PlaidItem.provider == "plaid", PlaidItem.item_id == item_id,
         ).one_or_none()
         if item is None:
-            item = PlaidItem(id=uuid4().hex, owner=owner, provider="plaid", item_id=item_id, access_token=access_token)
+            connection = self.db.query(FinanceConnection).filter_by(id=connection_id, owner=owner, provider="plaid").one_or_none() if connection_id else self.db.query(FinanceConnection).filter(
+                FinanceConnection.owner == owner, FinanceConnection.provider == "plaid",
+            ).order_by(FinanceConnection.created_at.desc()).first()
+            if connection is None:
+                connection = FinanceConnection(id=uuid4().hex, owner=owner, provider="plaid")
+                self.db.add(connection)
+                self.db.flush()
+            item = PlaidItem(id=uuid4().hex, connection_id=connection.id, owner=owner, provider="plaid", item_id=item_id, access_token=access_token)
             self.db.add(item)
         else:
             item.access_token = access_token
+        connection = self.db.query(FinanceConnection).filter(FinanceConnection.id == item.connection_id).one_or_none()
+        if connection is None:
+            connection = FinanceConnection(id=uuid4().hex, owner=owner, provider="plaid")
+            self.db.add(connection); self.db.flush(); item.connection_id = connection.id
+        connection.lifecycle_state = "CONNECTED"
+        connection.provider_health = "UNKNOWN"
+        connection.capability_available = False
+        connection.credential_ref = item.id
         item.institution_name = institution_name
         self.db.commit()
         return self._plaid_item_dict(item)
@@ -317,12 +334,38 @@ class FinanceService:
     def _plaid_item_dict(self, item: PlaidItem) -> dict[str, Any]:
         return {
             "id": item.id, "owner": item.owner, "provider": item.provider,
-            "item_id": item.item_id, "institution_name": item.institution_name,
+            "connection_id": item.connection_id, "item_id": item.item_id, "institution_name": item.institution_name,
             "sync_cursor_present": bool(item.sync_cursor), "sync_status": item.sync_status,
+            "lifecycle_state": self._connection_state(item),
+            "capability_available": bool(self._connection_for(item) and capability_available(self._connection_for(item))),
             "last_attempted_sync_at": item.last_attempted_sync_at.isoformat() if item.last_attempted_sync_at else None,
             "last_successful_sync_at": item.last_successful_sync_at.isoformat() if item.last_successful_sync_at else None,
             "provider_last_successful_update_at": item.provider_last_successful_update_at.isoformat() if item.provider_last_successful_update_at else None,
             "last_error_classification": item.last_error_classification,
+        }
+
+    def _connection_for(self, item: PlaidItem) -> FinanceConnection | None:
+        return self.db.query(FinanceConnection).filter(FinanceConnection.id == item.connection_id).one_or_none() if item.connection_id else None
+
+    def _connection_state(self, item: PlaidItem) -> str:
+        connection = self._connection_for(item)
+        if connection:
+            return connection.lifecycle_state
+        return "HEALTHY" if item.sync_status == "healthy" else "DEGRADED" if item.sync_status == "error" else "CONNECTED"
+
+    def connection_projection(self, owner: str) -> dict[str, Any]:
+        connection = self.db.query(FinanceConnection).filter(
+            FinanceConnection.owner == owner, FinanceConnection.provider == "plaid",
+        ).one_or_none()
+        if connection is None:
+            return {"provider": "plaid", "lifecycle_state": "NOT_CONFIGURED", "capability_available": False}
+        return {
+            "id": connection.id, "provider": connection.provider,
+            "lifecycle_state": connection.lifecycle_state,
+            "provider_health": connection.provider_health,
+            "capability_available": capability_available(connection),
+            "last_successful_sync_at": connection.last_successful_sync_at.isoformat() if connection.last_successful_sync_at else None,
+            "last_error_classification": connection.last_error_classification,
         }
 
     def list_plaid_items(self, owner: str) -> list[dict[str, Any]]:
@@ -345,6 +388,7 @@ class FinanceService:
             "posted_count": sum(row.status == "posted" for row in rows),
             "pending_count": sum(row.status == "pending" for row in rows),
             "requested_range_exceeds_coverage": requested_exceeds,
+            "connection": self.connection_projection(owner),
             "sync": self.list_plaid_items(owner),
         }
 

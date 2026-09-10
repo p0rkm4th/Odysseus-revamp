@@ -119,6 +119,8 @@ def _item_view(item: InventoryItem) -> dict[str, Any]:
         "barcode": item.barcode,
         "default_unit": item.default_unit,
         "reorder_point": item.reorder_point,
+        "shopping_list": bool(item.shopping_list),
+        "storage_area": item.storage_area,
         "location_id": item.location_id,
         "metadata": dict(item.metadata_json or {}),
         "image_refs": list(item.image_refs_json or []),
@@ -248,6 +250,8 @@ class InventoryService:
         sku: str | None = None,
         barcode: str | None = None,
         reorder_point: Any | None = None,
+        shopping_list: bool = False,
+        storage_area: str | None = None,
         location_id: str | None = None,
         metadata: dict[str, Any] | None = None,
         image_refs: Iterable[str] | None = None,
@@ -279,10 +283,50 @@ class InventoryService:
                 model=_optional_text(model, "model"), sku=_optional_text(sku, "sku"),
                 barcode=_optional_text(barcode, "barcode"), default_unit=canonical_unit,
                 reorder_point=reorder, location_id=location_id,
+                shopping_list=bool(shopping_list),
+                storage_area=self._storage_area(storage_area),
                 metadata_json=dict(metadata or {}),
                 image_refs_json=[str(ref) for ref in (image_refs or [])],
             )
             db.add(item)
+            db.flush()
+            return _item_view(item)
+
+    def update_item(
+        self, owner: str, item_id: str, *, name: Any = _UNSET,
+        category: Any = _UNSET, description: Any = _UNSET,
+        default_unit: Any = _UNSET, reorder_point: Any = _UNSET,
+        shopping_list: Any = _UNSET, storage_area: Any = _UNSET,
+    ) -> dict[str, Any]:
+        """Update human-facing pantry/grocery metadata, never stock implicitly."""
+        with self._transaction() as db:
+            item = self._item(db, owner, item_id)
+            if name is not _UNSET:
+                display_name = _required_text(name, "name", maximum=200)
+                item.name = display_name
+                item.normalized_name = normalize_item_name(display_name)
+            if category is not _UNSET:
+                item.category = _optional_text(category, "category")
+            if description is not _UNSET:
+                item.description = _optional_text(description, "description", maximum=10000)
+            if default_unit is not _UNSET:
+                try:
+                    item.default_unit = normalize_amount(1, default_unit).unit
+                except UnitError as exc:
+                    raise InventoryError(str(exc)) from exc
+            if reorder_point is not _UNSET:
+                item.reorder_point = None if reorder_point in (None, "") else _canonical_amount(reorder_point, item.default_unit, item.default_unit)
+            if shopping_list is not _UNSET:
+                item.shopping_list = bool(shopping_list)
+            if storage_area is not _UNSET:
+                item.storage_area = self._storage_area(storage_area)
+            db.flush()
+            return _item_view(item)
+
+    def archive_item(self, owner: str, item_id: str) -> dict[str, Any]:
+        with self._transaction() as db:
+            item = self._item(db, owner, item_id)
+            item.archived = True
             db.flush()
             return _item_view(item)
 
@@ -428,7 +472,7 @@ class InventoryService:
             return _asset_view(detail)
 
     def list_items(
-        self, owner: str, *, domain: str | None = None,
+        self, owner: str, *, domain: str | None = None, list_name: str | None = None,
         include_archived: bool = False, limit: int = 100, offset: int = 0,
     ) -> list[dict[str, Any]]:
         limit = max(1, min(int(limit), 500))
@@ -437,6 +481,14 @@ class InventoryService:
             query = db.query(InventoryItem).filter(InventoryItem.owner == owner)
             if domain is not None:
                 query = query.filter(InventoryItem.domain == str(domain).casefold())
+            if list_name:
+                normalized_list = str(list_name).strip().casefold()
+                if normalized_list == "grocery":
+                    query = query.filter(InventoryItem.shopping_list.is_(True))
+                elif normalized_list in {"pantry", "fridge", "freezer"}:
+                    query = query.filter(InventoryItem.storage_area == normalized_list)
+                else:
+                    raise InventoryError("list_name must be grocery, pantry, fridge, or freezer")
             if not include_archived:
                 query = query.filter(InventoryItem.archived.is_(False))
             items = query.order_by(InventoryItem.normalized_name, InventoryItem.id).offset(offset).limit(limit)
@@ -897,6 +949,7 @@ class RecipeService(InventoryService):
         if action == "list":
             return {"items": self.list_items(
                 owner, domain=args.get("domain"),
+                list_name=args.get("list_name"),
                 include_archived=bool(args.get("include_archived", False)),
             )}
         if action == "search":
@@ -920,9 +973,15 @@ class RecipeService(InventoryService):
                 category=args.get("category"), description=args.get("description"),
                 brand=args.get("brand"), manufacturer=args.get("manufacturer"),
                 model=args.get("model"), sku=args.get("sku"), barcode=args.get("barcode"),
-                location_id=args.get("location_id"),
+                location_id=args.get("location_id"), shopping_list=bool(args.get("shopping_list", False)), storage_area=args.get("storage_area"),
             )
             return {"item": item}
+        if action == "update_item":
+            item_id = _required_text(args.get("item_id"), "item_id")
+            allowed = {"name", "category", "description", "default_unit", "reorder_point", "shopping_list", "storage_area"}
+            return {"item": self.update_item(owner, item_id, **{key: args[key] for key in allowed if key in args})}
+        if action == "archive_item":
+            return {"item": self.archive_item(owner, _required_text(args.get("item_id"), "item_id"))}
         if action == "add_stock":
             kwargs: dict[str, Any] = {}
             if args.get("expiry_date"):
@@ -961,6 +1020,15 @@ class RecipeService(InventoryService):
         if action in {"update_item", "move_stock", "archive_item"}:
             raise InventoryError(f"{action} is not available in this service version")
         raise InventoryError("unsupported inventory action")
+
+    @staticmethod
+    def _storage_area(value: Any) -> str | None:
+        if value in (None, ""):
+            return None
+        normalized = str(value).strip().casefold()
+        if normalized not in {"pantry", "fridge", "freezer"}:
+            raise InventoryError("storage_area must be pantry, fridge, or freezer")
+        return normalized
 
     def manage_recipes(self, args: dict[str, Any], *, owner: str) -> dict[str, Any]:
         """Dispatch the narrow model-facing recipe action vocabulary."""

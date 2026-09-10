@@ -1440,7 +1440,7 @@ async def _execute_manage_assets_binding(block, owner=None):
         # to the existing transactional service rather than creating a second
         # binding or installer-like subsystem.
         if isinstance(payload, dict) and payload.get("action") in {
-            "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+            "add_item", "update_item", "archive_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
         }:
             from src.agent_tools.inventory_tools import ManageInventoryTool
             result = dict(await ManageInventoryTool().execute(
@@ -1448,7 +1448,7 @@ async def _execute_manage_assets_binding(block, owner=None):
             ))
             result.setdefault("success", result.get("exit_code", 1) == 0 and not result.get("error"))
             result["canonical_store"] = "inventory_service"
-            result["provenance"] = "USER_ASSERTED" if payload.get("action") in {"add_item", "add_stock", "update_asset"} else "CANONICAL_INVENTORY"
+            result["provenance"] = "USER_ASSERTED" if payload.get("action") in {"add_item", "update_item", "add_stock", "update_asset"} else "CANONICAL_INVENTORY"
             if result.get("success"):
                 # Verify the write through the same transactional service
                 # before final delivery. The readback is evidence metadata,

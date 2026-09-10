@@ -8,7 +8,7 @@ from core.database import Base
 from src.finance_service import FinanceService, FinanceError
 from src.plaid_sync import PlaidSyncService
 from src.plaid_transport import PlaidError
-from core.finance_models import PlaidItem
+from core.finance_models import PlaidItem, PlaidLinkSession
 
 
 @pytest.fixture()
@@ -144,3 +144,7 @@ def test_plaid_token_is_encrypted_and_never_in_owner_projection(db):
     projection = FinanceService(db).list_plaid_items("alice")[0]
     assert "access_token" not in projection
     assert "secret-token" not in str(projection)
+
+
+def test_plaid_link_session_table_is_part_of_finance_schema(db):
+    assert db.query(PlaidLinkSession).count() == 0
