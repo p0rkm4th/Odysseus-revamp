@@ -1099,6 +1099,24 @@ def setup_chat_routes(
                     compile_intent, is_bounded_owner_capability_turn,
                 )
                 _owner_frame = compile_intent(message)
+                # Short Finance corrections such as "this year, not month"
+                # have no Finance noun of their own. Reuse only the bounded
+                # recent owner-question projection to decide whether this
+                # turn needs the deterministic Finance capability; transcript
+                # text remains context, never authority or data truth.
+                if _owner_frame.domain_concept == "UNKNOWN":
+                    from src.agent_loop import _classify_agent_request
+                    _history = [
+                        {"role": item.role, "content": item.content}
+                        for item in (getattr(sess, "history", []) or [])
+                    ]
+                    _compat = _classify_agent_request(_history, message)
+                    _compat_frame = compile_intent(
+                        str(_compat.get("retrieval_query") or message),
+                        continuation=bool(_compat.get("continuation")),
+                    )
+                    if _compat_frame.domain_concept == "FINANCE":
+                        _owner_frame = _compat_frame
                 if is_bounded_owner_capability_turn(_owner_frame):
                     chat_mode = "agent"
                     auto_escalated = True

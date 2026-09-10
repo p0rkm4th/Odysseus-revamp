@@ -60,6 +60,27 @@ def _named_month_range(text: str) -> dict[str, str]:
     return {"start": start.isoformat(), "end": end.isoformat()}
 
 
+def _relative_finance_range(text: str) -> dict[str, str]:
+    """Project common bounded Finance periods instead of defaulting to month."""
+    query = str(text or "")
+    today = date.today()
+    if re.search(r"\b(?:this\s+year|year\s+to\s+date|ytd)\b", query, re.IGNORECASE):
+        return {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}
+    if re.search(r"\b(?:last|previous)\s+year\b", query, re.IGNORECASE):
+        year = today.year - 1
+        return {"start": date(year, 1, 1).isoformat(), "end": date(year, 12, 31).isoformat()}
+    if re.search(r"\b(?:this\s+month|month\s+to\s+date|mtd)\b", query, re.IGNORECASE):
+        return {"start": today.replace(day=1).isoformat(), "end": today.isoformat()}
+    if re.search(r"\b(?:last|previous)\s+month\b", query, re.IGNORECASE):
+        month = today.month - 1 or 12
+        year = today.year if today.month > 1 else today.year - 1
+        return {
+            "start": date(year, month, 1).isoformat(),
+            "end": date(year, month, calendar.monthrange(year, month)[1]).isoformat(),
+        }
+    return {}
+
+
 # Operational domain metadata used by prompt/capability projections.  These
 # flags describe cognition requirements only; policy and execution remain
 # owned by the canonical Action path.
@@ -1638,7 +1659,7 @@ def compile_intent(
         finance_view = deterministic_read_view(text, concept)
         if finance_view:
             reference_filters["view"] = finance_view
-        reference_filters.update(_named_month_range(text))
+        reference_filters.update(_named_month_range(text) or _relative_finance_range(text))
         # Preserve a bounded owner-supplied merchant selector for deterministic
         # Finance reads. The selector is data, not a new capability or query
         # language; FinanceService still applies the owner scope and limit.
@@ -2064,7 +2085,8 @@ def classify_compatibility_request(
             break
     finance_correction = bool(
         re.search(
-            r"\b(?:missing|missed|another|one|two|both|wrong|incorrect|about\s+\$?\d)\b",
+            r"\b(?:missing|missed|another|one|two|both|wrong|incorrect|about\s+\$?\d|"
+            r"(?:this|last|previous)\s+(?:month|year)|year\s+to\s+date|ytd)\b",
             text,
             re.IGNORECASE,
         )
