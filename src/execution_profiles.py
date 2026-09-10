@@ -146,12 +146,13 @@ def bubblewrap_argv(workspace: str, command: list[str]) -> list[str]:
         return command
     if not workspace or not os.path.isdir(workspace):
         raise RuntimeError("isolated workspace execution requires a valid workspace")
-    bwrap = shutil.which("bwrap")
-    if not bwrap:
-        raise RuntimeError("isolated workspace execution requires bubblewrap")
-    prlimit = shutil.which("prlimit")
-    if not prlimit:
-        raise RuntimeError("isolated workspace execution requires prlimit")
+    # Availability is enforced by ``profile_block_reason`` immediately before
+    # dispatch.  Keep argv construction pure so callers/tests can inspect the
+    # exact bounded command even on hosts that do not ship the optional
+    # isolation primitives.  If an unsafe caller bypasses that gate, exec
+    # still fails closed with the normal missing-binary error.
+    bwrap = shutil.which("bwrap") or "bwrap"
+    prlimit = shutil.which("prlimit") or "prlimit"
 
     if profile.subprocess_backend == "bubblewrap_network":
         argv = [
