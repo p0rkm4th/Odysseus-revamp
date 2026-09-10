@@ -6,6 +6,7 @@ import csv
 import hashlib
 import io
 import json
+import re
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -67,10 +68,39 @@ def _transaction_date(value: Any) -> date:
         return value.date()
     if isinstance(value, date):
         return value
-    try:
-        return date.fromisoformat(str(value))
-    except (TypeError, ValueError) as exc:
-        raise FinanceError("transaction_date must be an ISO date") from exc
+    text = str(value or "").strip()
+    for parser in (
+        date.fromisoformat,
+        lambda item: datetime.strptime(item, "%m/%d/%Y").date(),
+        lambda item: datetime.strptime(item, "%m/%d/%y").date(),
+        lambda item: datetime.strptime(item, "%Y/%m/%d").date(),
+    ):
+        try:
+            return parser(text)
+        except (TypeError, ValueError):
+            continue
+    raise FinanceError("transaction_date must be a recognizable date")
+
+
+def _csv_header(value: Any) -> str:
+    """Normalize common bank-export header spelling without guessing semantics."""
+    return re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().casefold()).strip("_")
+
+
+def _csv_value(row: dict[str, str], *names: str) -> str:
+    for name in names:
+        value = str(row.get(name) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _csv_money(value: Any) -> Decimal:
+    """Accept harmless formatting used by common bank exports."""
+    text = str(value or "").strip()
+    if text.startswith("(") and text.endswith(")"):
+        text = "-" + text[1:-1]
+    return _money(text.replace(",", "").replace("$", ""))
 
 
 def _optional_datetime(value: Any) -> datetime | None:
@@ -293,42 +323,69 @@ class FinanceService:
         default_currency = _currency(currency)
         if len(text.encode("utf-8")) > 2_000_000:
             raise FinanceError("Finance CSV is limited to 2 MB")
-        reader = csv.DictReader(io.StringIO(text))
-        headers = {str(value or "").strip().casefold() for value in (reader.fieldnames or [])}
-        if not {"date", "amount", "merchant"}.issubset(headers):
-            raise FinanceError("Finance CSV requires date, amount, and merchant columns")
+        # Bank exports vary in harmless presentation details. Normalize headers
+        # and accept a bounded set of unambiguous aliases, while still refusing
+        # rows whose date, identity, or money cannot be represented safely.
+        sample = text[:8192]
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+        except csv.Error:
+            dialect = csv.excel
+        reader = csv.DictReader(io.StringIO(text, newline=""), dialect=dialect)
+        if not reader.fieldnames:
+            raise FinanceError("Finance CSV must include a header row")
         rows: list[dict[str, Any]] = []
         for index, raw in enumerate(reader, 1):
-            normalized = {str(key or "").strip().casefold(): str(value or "").strip() for key, value in raw.items()}
+            normalized = {_csv_header(key): str(value or "").strip() for key, value in raw.items() if key is not None}
             if not any(normalized.values()):
                 continue
             try:
-                amount = _money(normalized.get("amount"))
-                transaction_date = _transaction_date(normalized.get("date"))
+                transaction_date = _transaction_date(_csv_value(
+                    normalized, "date", "transaction_date", "posted_date", "trans_date", "posting_date",
+                ))
+                amount_text = _csv_value(normalized, "amount", "transaction_amount", "value")
+                debit = _csv_value(normalized, "debit", "withdrawal", "withdrawals", "money_out")
+                credit = _csv_value(normalized, "credit", "deposit", "deposits", "money_in")
+                if amount_text:
+                    amount = _csv_money(amount_text)
+                elif debit or credit:
+                    # Canonical Finance uses positive outflows and negative
+                    # inflows, matching Plaid's normalized convention.
+                    amount = _csv_money(debit or "0") - _csv_money(credit or "0")
+                else:
+                    raise FinanceError("an amount or debit/credit columns are required")
             except (FinanceError, TypeError, ValueError) as exc:
                 raise FinanceError(f"Finance CSV row {index} is invalid: {exc}") from exc
-            merchant = normalized.get("merchant") or normalized.get("description")
+            merchant = _csv_value(
+                normalized, "merchant", "merchant_name", "name", "description",
+                "transaction_description", "payee", "memo",
+            )
             if not merchant:
-                raise FinanceError(f"Finance CSV row {index} requires merchant or description")
-            direction = (normalized.get("direction") or ("inflow" if amount < 0 else "outflow")).casefold()
+                raise FinanceError(f"Finance CSV row {index} requires a merchant, name, description, or payee")
+            direction = _csv_value(normalized, "direction", "flow") or ("inflow" if amount < 0 else "outflow")
+            direction = direction.casefold()
             if direction not in {"inflow", "outflow"}:
                 raise FinanceError(f"Finance CSV row {index} has invalid direction")
-            status = (normalized.get("status") or "posted").casefold()
+            status = (_csv_value(normalized, "status", "transaction_status", "posting_status") or "posted").casefold()
             if status not in {"pending", "posted"}:
                 raise FinanceError(f"Finance CSV row {index} has invalid status")
-            row_currency = _currency(normalized.get("currency") or default_currency)
+            row_currency = _currency(_csv_value(
+                normalized, "currency", "currency_code", "iso_currency_code", "currency_iso",
+            ) or default_currency)
+            description = _csv_value(normalized, "description", "transaction_description", "memo")
+            category = _csv_value(normalized, "category", "category_name", "type")
             identity = hashlib.sha256(json.dumps({
                 "row": index,
                 "date": transaction_date.isoformat(), "amount": str(abs(amount)),
-                "merchant": merchant, "description": normalized.get("description"),
+                "merchant": merchant, "description": description,
                 "currency": row_currency, "direction": direction, "status": status,
             }, sort_keys=True).encode()).hexdigest()[:32]
             rows.append({
                 "provider": "csv", "provider_transaction_id": f"{source_label}:{identity}",
                 "amount": abs(amount), "currency": row_currency,
                 "transaction_date": transaction_date.isoformat(), "merchant": merchant,
-                "description": normalized.get("description"), "direction": direction,
-                "status": status, "provider_category": normalized.get("category"),
+                "description": description, "direction": direction,
+                "status": status, "provider_category": category,
                 "provider_metadata": {"source": "local_csv", "source_label": source_label},
             })
         # A snapshot is one canonical import operation. Do not leave an

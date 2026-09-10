@@ -54,6 +54,7 @@ def _client(monkeypatch):
     plaid = LinkPlaid()
     monkeypatch.setattr(finance_routes, "require_user", lambda request: request.headers.get("x-owner", ""))
     app = FastAPI()
+    app.state.auth_manager = type("Auth", (), {"is_admin": lambda self, user: user == "alice"})()
     app.include_router(finance_routes.setup_finance_routes(session_factory=Session, plaid_transport_factory=lambda: plaid))
     return TestClient(app), db, plaid, engine
 
@@ -226,6 +227,30 @@ def test_authenticated_owner_can_import_local_csv_fallback(monkeypatch):
         assert client.get("/api/finance/transactions", headers={"x-owner": "alice"}).status_code == 200
         assert client.get("/api/finance/transactions", headers={"x-owner": "bob"}).json()["transactions"] == []
         assert "access_token" not in json.dumps(result)
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_admin_can_configure_plaid_without_secret_response(monkeypatch, tmp_path):
+    client, db, plaid, engine = _client(monkeypatch)
+    try:
+        import src.plaid_config as config
+        monkeypatch.setattr(config, "CONFIG_PATH", tmp_path / "plaid_config.json")
+        response = client.put(
+            "/api/finance/plaid/config",
+            headers={"x-owner": "alice"},
+            json={"client_id": "client-id", "secret": "secret-value", "environment": "sandbox", "client_name": "Hades Test"},
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result == {"configured": True, "environment": "sandbox", "client_name": "Hades Test", "source": "stored"}
+        assert "secret-value" not in response.text
+        raw = (tmp_path / "plaid_config.json").read_text()
+        assert raw.startswith("{") and "secret-value" not in raw and "enc:" in raw
+        assert client.get("/api/finance/plaid/config", headers={"x-owner": "alice"}).json()["configured"] is True
+        denied = client.put("/api/finance/plaid/config", headers={"x-owner": "bob"}, json={"client_id": "x", "secret": "y"})
+        assert denied.status_code == 403
     finally:
         db.close()
         engine.dispose()

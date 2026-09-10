@@ -17,6 +17,7 @@ from src.finance_service import FinanceError, FinanceService
 from src.plaid_sync import PlaidSyncService
 from src.plaid_transport import PlaidTransport, PlaidError
 from src.owner_identity import effective_storage_owner
+from src.plaid_config import public_status, save_configuration
 
 
 def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factory=PlaidTransport) -> APIRouter:
@@ -53,6 +54,31 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
 
     def link_hash(value: str) -> str:
         return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+    def is_admin(request: Request, user: str) -> bool:
+        auth_manager = getattr(request.app.state, "auth_manager", None)
+        return bool(auth_manager and auth_manager.is_admin(user))
+
+    @router.get("/plaid/config")
+    async def plaid_config_status(request: Request):
+        user = owner(request)
+        return {**public_status(), "can_configure": is_admin(request, user)}
+
+    @router.put("/plaid/config")
+    async def plaid_configure(request: Request, payload: dict[str, Any] = Body(...)):
+        user = owner(request)
+        if not is_admin(request, user):
+            raise HTTPException(403, "Only an administrator can configure Plaid application credentials")
+        try:
+            return await asyncio.to_thread(
+                save_configuration,
+                client_id=payload.get("client_id", ""),
+                secret=payload.get("secret", ""),
+                environment=payload.get("environment", "sandbox"),
+                client_name=payload.get("client_name", "HADES"),
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @router.post("/plaid/link-token")
     async def plaid_link_token(request: Request):

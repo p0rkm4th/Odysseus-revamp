@@ -143,6 +143,37 @@ def test_local_csv_fallback_is_canonical_idempotent_and_not_live_plaid(db):
     assert {source["source"] for source in coverage["data_sources"]} == {"local_csv"}
 
 
+def test_local_csv_accepts_common_bank_export_headers_and_debit_credit(db):
+    svc = FinanceService(db)
+    bank_export = (
+        "Transaction Date,Description,Debit,Credit,Currency\n"
+        "09/01/2026,7 Brew,$12.50,,USD\n"
+        '09/02/2026,Payroll,,"2,000.00",USD\n'
+    )
+    imported = svc.import_csv("alice", bank_export, source_label="checking.csv")
+    assert imported["imported_count"] == 2
+    rows = sorted(svc.list_transactions("alice"), key=lambda row: row["merchant"])
+    assert rows[0]["merchant"] == "7 Brew"
+    assert rows[0]["amount"] == "12.5000"
+    assert rows[0]["direction"] == "outflow"
+    assert rows[1]["merchant"] == "Payroll"
+    assert rows[1]["amount"] == "2000.0000"
+    assert rows[1]["direction"] == "inflow"
+
+
+def test_local_csv_accepts_bom_and_parenthesized_amount(db):
+    svc = FinanceService(db)
+    imported = svc.import_csv(
+        "alice",
+        "\ufeffPosted Date,Payee,Amount\n09/03/2026,Grocer,(45.20)\n",
+        source_label="export.csv",
+    )
+    assert imported["imported_count"] == 1
+    row = svc.list_transactions("alice")[0]
+    assert row["amount"] == "45.2000"
+    assert row["direction"] == "inflow"
+
+
 def test_local_csv_fallback_is_atomic_when_a_later_row_is_invalid(db):
     svc = FinanceService(db)
     invalid = "date,amount,merchant\n2026-09-01,12.50,Cafe\nnot-a-date,4.00,Grocer\n"
