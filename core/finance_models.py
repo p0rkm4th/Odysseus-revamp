@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     Column,
     Date,
@@ -16,7 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 
-from core.database import Base, TimestampMixin, utcnow_naive
+from core.database import Base, EncryptedText, TimestampMixin, utcnow_naive
 
 
 MONEY_TYPE = Numeric(18, 4)
@@ -91,11 +92,19 @@ class FinanceTransaction(TimestampMixin, Base):
     merchant = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     status = Column(String(16), nullable=False)
+    direction = Column(String(8), nullable=False, default="outflow")
+    pending_transaction_id = Column(String(255), nullable=True)
+    superseded_by_transaction_id = Column(String(255), nullable=True)
+    provider_removed = Column(Boolean, nullable=False, default=False)
+    provider_removed_at = Column(DateTime, nullable=True)
+    provider_category = Column(String(255), nullable=True)
+    category_metadata = Column(JSON, nullable=False, default=dict)
     provider_metadata = Column(JSON, nullable=False, default=dict)
     provider_created_at = Column(DateTime, nullable=True)
 
     __table_args__ = (
         CheckConstraint("status IN ('pending', 'posted')", name="ck_finance_transaction_status"),
+        CheckConstraint("direction IN ('inflow', 'outflow')", name="ck_finance_transaction_direction"),
         CheckConstraint("length(currency) = 3", name="ck_finance_transaction_currency"),
         UniqueConstraint(
             "account_id", "provider", "provider_transaction_id",
@@ -129,11 +138,39 @@ class SharedExpense(TimestampMixin, Base):
     note = Column(Text, nullable=True)
     shared_at = Column(DateTime, nullable=False, default=utcnow_naive)
     revoked_at = Column(DateTime, nullable=True)
+    needs_reconciliation = Column(Boolean, nullable=False, default=False)
 
     __table_args__ = (
         CheckConstraint("length(currency) = 3", name="ck_finance_shared_currency"),
         Index("ix_finance_shared_household_active", "household_id", "revoked_at"),
         Index("ix_finance_shared_payer", "payer_owner", "revoked_at"),
+    )
+
+
+class PlaidItem(TimestampMixin, Base):
+    """Owner-scoped Plaid connection state; access tokens are encrypted at rest."""
+
+    __tablename__ = "finance_plaid_items"
+
+    id = Column(String, primary_key=True)
+    owner = Column(String, nullable=False, index=True)
+    provider = Column(String(32), nullable=False, default="plaid")
+    item_id = Column(String(255), nullable=False)
+    access_token = Column(EncryptedText, nullable=False)
+    sync_cursor = Column(Text, nullable=True)
+    sync_status = Column(String(32), nullable=False, default="not_synced")
+    last_attempted_sync_at = Column(DateTime, nullable=True)
+    last_successful_sync_at = Column(DateTime, nullable=True)
+    provider_last_successful_update_at = Column(DateTime, nullable=True)
+    institution_name = Column(String(255), nullable=True)
+    last_error_classification = Column(String(128), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("owner", "provider", "item_id", name="uq_finance_plaid_owner_item"),
+        CheckConstraint(
+            "sync_status IN ('not_synced', 'syncing', 'healthy', 'error')",
+            name="ck_finance_plaid_sync_status",
+        ),
     )
 
 
@@ -143,4 +180,5 @@ FINANCE_TABLES = (
     FinanceAccount.__table__,
     FinanceTransaction.__table__,
     SharedExpense.__table__,
+    PlaidItem.__table__,
 )

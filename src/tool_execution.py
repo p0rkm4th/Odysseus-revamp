@@ -1812,6 +1812,25 @@ async def _execute_read_household_binding(block, owner=None):
     except Exception as exc:
         return "read_household", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
+
+async def _execute_read_finance_binding(block, owner=None):
+    """Expose only bounded deterministic Finance projections to Chat."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        action = str(payload.get("action") or "").strip().casefold()
+        if action not in {"coverage", "transactions", "spending", "cash_flow", "shared_expenses"}:
+            raise ValueError("unsupported read-only Finance action")
+        if not owner:
+            raise PermissionError("authenticated Finance owner is required")
+        from core.database import SessionLocal
+        from src.finance_service import FinanceService
+        with SessionLocal() as db:
+            result = FinanceService(db).read_finance(str(owner), action, payload)
+        result = _with_canonical_read_status(result)
+        return "read_finance", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+    except Exception as exc:
+        return "read_finance", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
 async def _execute_read_setup_binding(block, owner=None):
     """Adapt Setup Center's secret-free owner projection to a read binding."""
     try:
@@ -2039,6 +2058,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_memory": _execute_read_memory_binding,
     "read_work": _execute_read_work_binding,
     "read_household": _execute_read_household_binding,
+    "read_finance": _execute_read_finance_binding,
     "read_setup": _execute_read_setup_binding,
     "read_career": _execute_read_career_binding,
     "read_communications": _execute_read_communications_binding,

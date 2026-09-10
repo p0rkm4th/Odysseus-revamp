@@ -142,6 +142,11 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             for action in ("overview", "list_items", "search_items", "get_item")
         )),
     ),
+    "finance.read": CapabilitySpec(
+        capability_id="finance.read",
+        description="Owner-scoped deterministic, read-only Finance analysis.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("read_private",), executor_key="read_finance") for action in ("coverage", "transactions", "spending", "cash_flow", "shared_expenses"))),
+    ),
     "setup.read": CapabilitySpec(
         capability_id="setup.read",
         description="Owner-scoped read projections over Setup Center and integrations.",
@@ -328,6 +333,7 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_memory": "memory.read",
     "read_work": "work.read",
     "read_household": "household.read",
+    "read_finance": "finance.read",
     "read_setup": "setup.read",
     "read_career": "career.read",
     "read_communications": "communications.read",
@@ -347,6 +353,7 @@ DEFAULT_READ_ACTIONS: Mapping[str, str] = MappingProxyType({
     "read_memory": "summarize_owner_memory",
     "read_work": "overview",
     "read_household": "overview",
+    "read_finance": "coverage",
     "read_setup": "state",
     "read_career": "overview",
     "read_communications": "overview",

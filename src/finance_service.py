@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import uuid4
@@ -16,6 +16,7 @@ from core.finance_models import (
     Household,
     HouseholdMembership,
     SharedExpense,
+    PlaidItem,
 )
 from core.database import utcnow_naive
 
@@ -111,6 +112,7 @@ def _public_shared(
         "status": transaction.status if transaction is not None else None,
         "source_provider": transaction.provider if transaction is not None else None,
         "shared_at": expense.shared_at.isoformat() if expense.shared_at else None,
+        "needs_reconciliation": bool(expense.needs_reconciliation),
     }
     if include_source:
         result["source_transaction_id"] = expense.source_transaction_id
@@ -234,6 +236,9 @@ class FinanceService:
         description = payload.get("description")
         if not str(merchant or description or "").strip():
             raise FinanceError("merchant or description is required")
+        direction = _required_text(payload.get("direction") or "outflow", "direction", max_length=8).lower()
+        if direction not in {"inflow", "outflow"}:
+            raise FinanceError("direction must be inflow or outflow")
         transaction = self.db.query(FinanceTransaction).filter(
             FinanceTransaction.account_id == account.id,
             FinanceTransaction.provider == provider,
@@ -251,6 +256,13 @@ class FinanceService:
         transaction.merchant = merchant
         transaction.description = description
         transaction.status = status
+        transaction.direction = direction
+        transaction.pending_transaction_id = payload.get("pending_transaction_id")
+        transaction.superseded_by_transaction_id = payload.get("superseded_by_transaction_id")
+        transaction.provider_removed = bool(payload.get("provider_removed", False))
+        transaction.provider_removed_at = _optional_datetime(payload.get("provider_removed_at"))
+        transaction.provider_category = payload.get("provider_category")
+        transaction.category_metadata = dict(payload.get("category_metadata") or {})
         transaction.provider_metadata = dict(payload.get("provider_metadata") or {})
         transaction.provider_created_at = _optional_datetime(payload.get("provider_created_at"))
         self.db.commit()
@@ -271,6 +283,10 @@ class FinanceService:
             "merchant": transaction.merchant,
             "description": transaction.description,
             "status": transaction.status,
+            "direction": transaction.direction,
+            "pending_transaction_id": transaction.pending_transaction_id,
+            "provider_removed": bool(transaction.provider_removed),
+            "provider_category": transaction.provider_category,
         }
         if include_provider_metadata:
             result["provider_metadata"] = transaction.provider_metadata
@@ -279,7 +295,121 @@ class FinanceService:
     def list_transactions(self, owner: str) -> list[dict[str, Any]]:
         return [self._transaction_dict(row) for row in self.db.query(FinanceTransaction).filter(
             FinanceTransaction.owner == owner,
+            FinanceTransaction.provider_removed.is_(False),
         ).order_by(FinanceTransaction.transaction_date.desc(), FinanceTransaction.created_at.desc()).all()]
+
+    def create_plaid_item(self, owner: str, item_id: str, access_token: str, institution_name: str | None = None) -> dict[str, Any]:
+        owner = _required_text(owner, "owner")
+        item_id = _required_text(item_id, "item_id")
+        access_token = _required_text(access_token, "access_token")
+        item = self.db.query(PlaidItem).filter(
+            PlaidItem.owner == owner, PlaidItem.provider == "plaid", PlaidItem.item_id == item_id,
+        ).one_or_none()
+        if item is None:
+            item = PlaidItem(id=uuid4().hex, owner=owner, provider="plaid", item_id=item_id, access_token=access_token)
+            self.db.add(item)
+        else:
+            item.access_token = access_token
+        item.institution_name = institution_name
+        self.db.commit()
+        return self._plaid_item_dict(item)
+
+    def _plaid_item_dict(self, item: PlaidItem) -> dict[str, Any]:
+        return {
+            "id": item.id, "owner": item.owner, "provider": item.provider,
+            "item_id": item.item_id, "institution_name": item.institution_name,
+            "sync_cursor_present": bool(item.sync_cursor), "sync_status": item.sync_status,
+            "last_attempted_sync_at": item.last_attempted_sync_at.isoformat() if item.last_attempted_sync_at else None,
+            "last_successful_sync_at": item.last_successful_sync_at.isoformat() if item.last_successful_sync_at else None,
+            "provider_last_successful_update_at": item.provider_last_successful_update_at.isoformat() if item.provider_last_successful_update_at else None,
+            "last_error_classification": item.last_error_classification,
+        }
+
+    def list_plaid_items(self, owner: str) -> list[dict[str, Any]]:
+        return [self._plaid_item_dict(item) for item in self.db.query(PlaidItem).filter(
+            PlaidItem.owner == owner, PlaidItem.provider == "plaid",
+        ).order_by(PlaidItem.created_at.asc()).all()]
+
+    def coverage(self, owner: str, start: date | None = None, end: date | None = None) -> dict[str, Any]:
+        query = self.db.query(FinanceTransaction).filter(
+            FinanceTransaction.owner == owner, FinanceTransaction.provider_removed.is_(False),
+        )
+        rows = query.order_by(FinanceTransaction.transaction_date.asc()).all()
+        dates = [row.transaction_date for row in rows]
+        requested_exceeds = bool(start and dates and start < dates[0]) or bool(end and dates and end > dates[-1])
+        return {
+            "as_of": max((item.last_successful_sync_at for item in self.db.query(PlaidItem).filter(PlaidItem.owner == owner).all() if item.last_successful_sync_at), default=None),
+            "account_count": self.db.query(FinanceAccount).filter(FinanceAccount.owner == owner).count(),
+            "transaction_date_start": dates[0].isoformat() if dates else None,
+            "transaction_date_end": dates[-1].isoformat() if dates else None,
+            "posted_count": sum(row.status == "posted" for row in rows),
+            "pending_count": sum(row.status == "pending" for row in rows),
+            "requested_range_exceeds_coverage": requested_exceeds,
+            "sync": self.list_plaid_items(owner),
+        }
+
+    def query_transactions(self, owner: str, *, start: date | None = None, end: date | None = None,
+                           account_id: str | None = None, merchant: str | None = None,
+                           status: str | None = None, limit: int = 50) -> dict[str, Any]:
+        limit = max(1, min(int(limit), 200))
+        query = self.db.query(FinanceTransaction).filter(
+            FinanceTransaction.owner == owner, FinanceTransaction.provider_removed.is_(False),
+        )
+        if start: query = query.filter(FinanceTransaction.transaction_date >= start)
+        if end: query = query.filter(FinanceTransaction.transaction_date <= end)
+        if account_id: query = query.filter(FinanceTransaction.account_id == account_id)
+        if merchant: query = query.filter(FinanceTransaction.merchant.ilike(f"%{merchant[:100]}%"))
+        if status:
+            status = status.lower()
+            if status not in {"pending", "posted"}: raise FinanceError("status must be pending or posted")
+            query = query.filter(FinanceTransaction.status == status)
+        rows = query.order_by(FinanceTransaction.transaction_date.desc(), FinanceTransaction.created_at.desc()).limit(limit).all()
+        return {"transactions": [self._transaction_dict(row, include_provider_metadata=False) for row in rows], "limit": limit, "coverage": self.coverage(owner, start, end)}
+
+    def spending(self, owner: str, start: date, end: date, *, merchant: str | None = None, category: str | None = None) -> dict[str, Any]:
+        query = self.db.query(FinanceTransaction).filter(
+            FinanceTransaction.owner == owner, FinanceTransaction.provider_removed.is_(False),
+            FinanceTransaction.status == "posted", FinanceTransaction.transaction_date >= start,
+            FinanceTransaction.transaction_date <= end,
+        )
+        if merchant:
+            query = query.filter(FinanceTransaction.merchant.ilike(f"%{merchant[:100]}%"))
+        rows = query.all()
+        totals: dict[str, Decimal] = {}
+        by_category: dict[str, dict[str, Decimal]] = {}
+        for row in rows:
+            if row.direction != "outflow" or (category and row.provider_category != category): continue
+            totals[row.currency] = totals.get(row.currency, Decimal("0")) + Decimal(row.amount)
+            bucket = by_category.setdefault(row.provider_category or "uncategorized", {})
+            bucket[row.currency] = bucket.get(row.currency, Decimal("0")) + Decimal(row.amount)
+        return {"start": start.isoformat(), "end": end.isoformat(), "posted_outflow_by_currency": {key: str(value) for key, value in totals.items()}, "posted_outflow_by_category": {category: {currency: str(value) for currency, value in values.items()} for category, values in by_category.items()}, "coverage": self.coverage(owner, start, end)}
+
+    def cash_flow(self, owner: str, start: date, end: date) -> dict[str, Any]:
+        rows = self.db.query(FinanceTransaction).filter(
+            FinanceTransaction.owner == owner, FinanceTransaction.provider_removed.is_(False),
+            FinanceTransaction.status == "posted", FinanceTransaction.transaction_date >= start,
+            FinanceTransaction.transaction_date <= end,
+        ).all()
+        totals: dict[str, dict[str, Decimal]] = {}
+        for row in rows:
+            bucket = totals.setdefault(row.currency, {"inflow": Decimal("0"), "outflow": Decimal("0")})
+            bucket[row.direction] += Decimal(row.amount)
+        return {"start": start.isoformat(), "end": end.isoformat(), "by_currency": {
+            currency: {"posted_inflow": str(values["inflow"]), "posted_outflow": str(values["outflow"]), "net_raw_flow": str(values["inflow"] - values["outflow"])}
+            for currency, values in totals.items()
+        }, "coverage": self.coverage(owner, start, end)}
+
+    def read_finance(self, owner: str, action: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        params = dict(params or {})
+        today = date.today()
+        start = _transaction_date(params.get("start")) if params.get("start") else today.replace(day=1)
+        end = _transaction_date(params.get("end")) if params.get("end") else today
+        if action == "coverage": return self.coverage(owner, start, end)
+        if action == "transactions": return self.query_transactions(owner, start=start, end=end, merchant=params.get("merchant"), status=params.get("status"), limit=params.get("limit", 50))
+        if action == "spending": return self.spending(owner, start, end, merchant=params.get("merchant"), category=params.get("category"))
+        if action == "cash_flow": return self.cash_flow(owner, start, end)
+        if action == "shared_expenses": return {"shared_expenses": self.list_shared_expenses(owner, _required_text(params.get("household_id"), "household_id"))}
+        raise FinanceError("unsupported Finance read action")
 
     def share_transaction(
         self, owner: str, transaction_id: str, household_id: str,
@@ -345,6 +475,7 @@ class FinanceService:
                 self._transaction_dict(row, include_provider_metadata=False)
                 for row in self.db.query(FinanceTransaction).filter(
                     FinanceTransaction.owner == user_id,
+                    FinanceTransaction.provider_removed.is_(False),
                 ).order_by(
                     FinanceTransaction.transaction_date.desc(),
                     FinanceTransaction.created_at.desc(),

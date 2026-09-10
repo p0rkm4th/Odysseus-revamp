@@ -1,7 +1,8 @@
 # Finance foundation
 
-This slice provides synthetic/fixture-backed Finance truth. It does not
-connect Plaid or access live financial data.
+This slice provides owner-scoped canonical Finance truth and a read-only Plaid
+Transactions Sync adapter. Live authorization remains an environment/owner
+concern; all provider behavior is also proven with mocked responses.
 
 ## Ownership and privacy
 
@@ -21,8 +22,26 @@ and replay-safe. Reimporting a known identity reconciles the canonical row;
 malformed amount, currency, date, status, or merchant/description data is
 rejected. Money is stored as decimal-safe, currency-qualified numeric data.
 
-The future Plaid adapter belongs in front of this seam. It should normalize
-provider data here rather than change canonical Finance truth.
+`src/plaid_transport.py` uses Plaid `/accounts/get`, `/item/get`, and
+`/transactions/sync`. The access token is stored through the existing encrypted
+secret type and is never returned to routes or model context. Sync fetches a
+bounded complete page sequence, restarts from the original cursor on
+`TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION`, then reconciles accounts,
+added/modified/removed transactions, and the final cursor in one database
+transaction. A failed page therefore cannot produce a false successful cursor.
+
+Plaid's positive amounts are normalized to explicit `outflow` direction and
+negative amounts to `inflow`; the canonical amount is non-negative. Pending
+predecessors remain historical evidence when a posted transaction replaces
+them, while current reads exclude provider-removed rows. Replays are
+provider-identity upserts and are idempotent.
+
+Deterministic Finance reads are available through `finance.read`/
+`read_finance`: coverage, bounded transactions, posted spending, currency-
+separated cash flow, and explicit shared-expense projections. Pending rows are
+not included in posted spending, currencies are never silently combined, and
+coverage/as-of/sync health travels with the result. The model may explain
+these facts but does not calculate authoritative totals or choose an owner.
 
 ## Explicit household projection
 
@@ -45,7 +64,8 @@ authorization decisions or receive unrestricted database access.
 
 ## Deferred
 
-The next campaign is **Plaid Sync + Read-Only Budgeting Conversation**.
-Deferred work includes Plaid credentials/Link/sync, budgeting conversation,
-forecasting, settle-up allocation/payment execution, and any unrelated
-Kitchen, Telegram, or Homelab expansion.
+This bounded campaign does not implement Plaid Link UI, paid real-time balance
+refresh, FX, categorization AI, forecasting, liabilities, recurring-bill
+automation, automatic sharing, settle-up allocation/payment execution, or any
+unrelated Kitchen, Telegram, or Homelab expansion. A live sync requires a
+legitimate HADES Plaid authorization and is not faked when absent.
