@@ -45,7 +45,7 @@ _WORK_OWNER = re.compile(
     re.IGNORECASE,
 )
 _FINANCE_SUBJECT = re.compile(
-    r"\b(?:spend|spent|spending|expense|expenses|budget|budgeting|inflow|outflow|cash\s+flow|transaction|transactions|financial|finance|finances|money|bank|banking|income|incomes|paycheck|paychecks|deposit|deposits|salary|earnings)\b",
+    r"\b(?:spend|spent|spending|expense|expenses|budget|budgeting|inflow|outflow|cash\s+flow|transaction|transactions|financial|finance|finances|money|bank|banking|income|incomes|paycheck|paychecks|deposit|deposits|salary|earnings|paid|earned)\b",
     re.IGNORECASE,
 )
 _FINANCE_FILE_CONTEXT = re.compile(
@@ -59,7 +59,7 @@ _FINANCE_RANKED_TRANSACTIONS = re.compile(
     re.IGNORECASE,
 )
 _FINANCE_PAYCHECKS = re.compile(
-    r"\b(?:paychecks?|pay\s+checks?|salary|salaries|deposits?|income|earnings?)\b",
+    r"\b(?:paychecks?|pay\s+checks?|salary|salaries|deposits?|income|earnings?|paid|earned)\b",
     re.IGNORECASE,
 )
 _FINANCE_OVERVIEW = re.compile(
@@ -142,7 +142,7 @@ def _normalized(text: str) -> str:
     # slips from changing the semantic class.  This is intentionally a token
     # normalization layer, not a list of benchmark sentences.
     tokens = {
-        "abotu": "about", "abt": "about", "bout": "about",
+        "abotu": "about", "abt": "about", "bout": "about", "howmuch": "how much",
         "yuo": "you", "teh": "the", "wht": "what", "walkme": "walk me",
     }
     value = re.sub(r"\b[^\s]+\b", lambda match: tokens.get(match.group(0), match.group(0)), value)

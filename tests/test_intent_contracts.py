@@ -95,6 +95,16 @@ def test_paycheck_question_uses_bounded_posted_inflow_transactions():
     assert payload["status"] == "posted"
 
 
+def test_paid_question_with_transcription_spacing_uses_bounded_paycheck_read():
+    query = "Howmuch have i been paid over the past 5 months?"
+    frame = compile_intent(query)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "transactions"
+    assert frame.filters["category"] == "Paycheck"
+    assert frame.filters["direction"] == "inflow"
+    assert frame.filters["status"] == "posted"
+
+
 
 def test_finance_merchant_selector_reaches_deterministic_spending_payload():
     from src.aci import canonical_read_fast_path_payload
