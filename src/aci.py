@@ -2064,6 +2064,7 @@ def provisional_intent_projection(
         or finance_correction_followup
         or finance_answer_correction
     )
+    contextual_finance_read = finance_correction_followup or finance_answer_correction
     # A stale continuation marker must not demote a new, independently
     # classifiable owner request. This occurs after an interrupted turn where
     # the UI may leave a literal "Continue" message in the session. Compile
@@ -2088,11 +2089,15 @@ def provisional_intent_projection(
         contextual_frame = compile_intent(contextual_query)
         if contextual_frame.domain_concept in DOMAIN_CONTRACTS:
             frame = contextual_frame
+    if contextual_finance_read and frame.domain_concept == "FINANCE":
+        # This is a fresh bounded read using the prior Finance question as
+        # context, not a durable Work continuation.
+        continuation = False
     if frame.domain_concept not in DOMAIN_CONTRACTS:
         return None, False
     retrieval_query = (
         recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
-        if continuation else latest
+        if continuation or contextual_finance_read else latest
     )
     explanatory = bool(re.search(
         r"\b(?:explain|define|teach\s+me|how\s+does|why)\b",

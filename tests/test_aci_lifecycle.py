@@ -525,7 +525,7 @@ def test_finance_csv_correction_reuses_recent_finance_read_context():
         messages, "But there's two on the CSV",
     )
     assert owned is True
-    assert intent["continuation"] is True
+    assert intent["continuation"] is False
     assert "Publix" in intent["retrieval_query"]
 
 
@@ -536,7 +536,7 @@ def test_finance_answer_correction_reuses_recent_finance_read_context():
     ]
     intent, owned = provisional_intent_projection(messages, "You're missing one")
     assert owned is True
-    assert intent["continuation"] is True
+    assert intent["continuation"] is False
     assert "Publix" in intent["retrieval_query"]
 
 
@@ -548,7 +548,7 @@ def test_legacy_chat_finance_correction_reuses_recent_finance_read_context():
         {"role": "assistant", "content": "Posted spending at Publix: USD 25.7200."},
     ]
     intent = _classify_agent_request(messages, "You're missing one")
-    assert intent["continuation"] is True
+    assert intent["continuation"] is False
     assert "Publix" in intent["retrieval_query"]
 
 
