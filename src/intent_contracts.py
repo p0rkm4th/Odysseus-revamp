@@ -1675,6 +1675,12 @@ def compile_intent(
                 reference_filters["merchant"] = merchant[:100]
                 if finance_view in {None, "coverage"}:
                     reference_filters["view"] = "spending"
+        if re.search(r"\b(?:dining\s+out|eating\s+out)\b", q):
+            reference_filters["category"] = "dining_out"
+            reference_filters["view"] = "spending"
+        elif re.search(r"\brestaurants?\b", q):
+            reference_filters["category"] = "Restaurants"
+            reference_filters["view"] = "spending"
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
