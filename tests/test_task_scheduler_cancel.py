@@ -103,3 +103,26 @@ def test_stop_task_cleans_up_queued_handle_and_run(tmp_path, monkeypatch):
         assert run.finished_at >= run.started_at
     finally:
         db.close()
+
+
+def test_run_now_marks_execution_as_owner_initiated(monkeypatch):
+    from src.task_scheduler import TaskScheduler
+
+    async def drive():
+        scheduler = TaskScheduler.__new__(TaskScheduler)
+        scheduler._executing = set()
+        scheduler._executing_lock = asyncio.Lock()
+        calls = []
+
+        async def fake_execute(task_id, **kwargs):
+            calls.append((task_id, kwargs))
+
+        scheduler._execute_task = fake_execute
+        assert await scheduler.run_task_now("manual-task") is True
+        for _ in range(20):
+            if calls:
+                break
+            await asyncio.sleep(0)
+        assert calls == [("manual-task", {"owner_initiated": True})]
+
+    asyncio.run(drive())
