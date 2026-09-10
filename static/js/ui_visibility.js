@@ -38,7 +38,9 @@ export const UI_VIS_MAP = {
   'rag-toggle-btn':      '#overflow-rag-btn',
   'bash-toggle-btn':     '#bash-toggle-btn',
   'overflow-plus-btn':   '.overflow-wrapper',
-  'mode-toggle':         '.mode-toggle',
+  // Agent/Chat is an essential composer control, not optional chrome. Keep it
+  // visible on narrow screens even when a stale customization state says it
+  // was hidden.
   'preset-mini-btn':     '#overflow-preset-btn',
   'attach-btn':          '#overflow-attach-btn',
   'research-btn':        '#overflow-research-btn',

@@ -90,6 +90,10 @@ def test_defaults_everything_visible_except_default_off():
     assert m[RAG] is False  # rag-toggle-btn is default-off
 
 
+def test_agent_chat_mode_toggle_is_not_customizable_away():
+    assert "mode-toggle" not in _map()
+
+
 def test_email_off_hides_email_and_its_rail_only():
     m = _resolve({"email-section": False})
     assert m[EMAIL] is False

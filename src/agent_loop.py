@@ -480,7 +480,8 @@ def _successful_bounded_network_execution(tool_type: str, content: str, result: 
     """
     if tool_type != "manage_homelab" or not isinstance(result, dict):
         return False
-    if result.get("approval_required") or result.get("error") or result.get("success") is not True:
+    payload = result.get("data") if isinstance(result.get("data"), dict) else result
+    if payload.get("approval_required") or payload.get("error") or payload.get("success") is not True:
         return False
     try:
         action = str(json.loads(content or "{}").get("action") or "")
