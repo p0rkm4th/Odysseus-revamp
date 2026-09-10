@@ -3768,7 +3768,12 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         totals = payload.get("posted_outflow_by_currency") or {}
         rendered = ", ".join(f"{currency} {amount}" for currency, amount in totals.items()) or "none recorded"
         merchant = str(payload.get("merchant") or "").strip()
+        category = str(payload.get("category") or "").strip()
         subject = f"at {merchant} " if merchant else ""
+        if category == "dining_out":
+            subject += "for dining out "
+        elif category:
+            subject += f"for {category} "
         lines.append(f"Posted spending {subject}for {period}: {rendered}.")
         categories = payload.get("posted_outflow_by_category") or {}
         if categories:

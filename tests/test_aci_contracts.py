@@ -28,6 +28,19 @@ def test_finance_tool_result_cannot_collapse_to_done():
     assert answer != "Done."
 
 
+def test_finance_answer_preserves_year_range_and_category_scope():
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "output": '{"action":"spending","start":"2026-01-01","end":"2026-09-10","category":"dining_out","posted_outflow_by_currency":{"USD":"3953.1500"},"posted_outflow_by_category":{"Restaurants":{"USD":"1541.3900"}},"coverage":{"coverage_state":"LIMITED","data_sources":[{"source":"local_csv","live":false}],"as_of":"2026-09-10 19:00:00","coverage_limitations":["Plaid connection requires attention"]}}',
+    }])
+    assert answer is not None
+    assert "dining out" in answer
+    assert "2026-01-01 through 2026-09-10" in answer
+    assert "USD 3953.1500" in answer
+    assert "Plaid connection requires attention" in answer
+
+
 def _packet(cards=(ActionCard("A", "inspect", "Inspect", "Read state"),)):
     return AgentTaskPacket(
         task_type="BOUNDED_REASONING", objective={"summary": "diagnose"},
