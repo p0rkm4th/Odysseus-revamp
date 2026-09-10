@@ -43,6 +43,22 @@ def _display_finance_amount(value: Any, currency: Any = "") -> str:
         return str(value or "0")
 
 
+def _display_inventory_quantity(value: Any) -> str:
+    """Render canonical inventory quantities without storage-scale noise.
+
+    Inventory keeps six decimal places for deterministic unit conversion. That
+    precision is useful for arithmetic but is not owner-facing language.
+    Preserve meaningful fractional digits while removing trailing zeroes and
+    never alter the canonical value itself.
+    """
+    try:
+        quantity = Decimal(str(value))
+        rendered = format(quantity, "f").rstrip("0").rstrip(".")
+        return rendered or "0"
+    except (InvalidOperation, ValueError, TypeError):
+        return str(value or "0")
+
+
 def stream_aci_turn(*args: Any, **kwargs: Any):
     """Canonical production stream entrypoint during the strangler migration.
 
@@ -3486,7 +3502,7 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         if domain not in (None, ""):
             details.append(f"domain={domain}")
         if quantity not in (None, ""):
-            details.append(f"quantity={quantity}")
+            details.append(f"quantity={_display_inventory_quantity(quantity)}")
             if unit not in (None, ""):
                 details[-1] += f" {unit}"
         lines.append(f"- {name}" + (f" ({', '.join(details)})" if details else ""))
