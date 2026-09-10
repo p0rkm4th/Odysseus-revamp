@@ -83,7 +83,11 @@ class SetAdminRequest(BaseModel):
 class SetOpenRegistrationRequest(BaseModel):
     enabled: bool
 
-SESSION_COOKIE = "odysseus_session"
+# Keep the historical default for existing deployments, but allow co-hosted
+# Hades/Odysseus instances to use independent browser sessions. Cookies are
+# scoped by host/path rather than port, so distinct local instances need
+# distinct names when they share a hostname.
+SESSION_COOKIE = os.getenv("SESSION_COOKIE_NAME", "odysseus_session").strip() or "odysseus_session"
 
 
 def _secure_cookie(request: Request) -> bool:
