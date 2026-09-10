@@ -157,6 +157,8 @@ def test_network_context_read_separates_vpn_and_runtime_interfaces(monkeypatch):
         result = await HomelabOperations().execute({"action": "read_network_context"}, owner="alice")
         assert result["status"] == "SUCCESS_WITH_DATA"
         assert {item["kind"] for item in result["interfaces"]} == {"PHYSICAL_LAN", "VPN", "DOCKER_BRIDGE"}
+        assert any(scope["ownership"] == "PHYSICAL_LAN_CANDIDATE" for scope in result["candidate_scopes"])
+        assert not any(scope["ownership"] == "OWNER_LOCAL_NETWORK" for scope in result["candidate_scopes"])
         assert any(scope["ownership"] == "VPN/CORPORATE_OR_UNKNOWN" for scope in result["candidate_scopes"])
         assert any(scope["ownership"] == "RUNTIME_INTERNAL" for scope in result["candidate_scopes"])
         assert result["vpn_present"] is True

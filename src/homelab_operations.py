@@ -530,7 +530,9 @@ class HomelabOperations:
                             ownership = (
                                 "RUNTIME_INTERNAL" if runtime_internal
                                 else "VPN/CORPORATE_OR_UNKNOWN" if item["kind"] == "VPN"
-                                else "OWNER_LOCAL_NETWORK" if item["kind"] == "PHYSICAL_LAN"
+                                # A physical interface is only evidence of a
+                                # candidate LAN, not proof of owner management.
+                                else "PHYSICAL_LAN_CANDIDATE" if item["kind"] == "PHYSICAL_LAN"
                                 else "UNKNOWN"
                             )
                             scope = {"interface": item["name"], "cidr": cidr, "ownership": ownership, "context_kind": item["kind"]}
@@ -754,18 +756,17 @@ class HomelabOperations:
             scope_source = "current_host_context"
         cidr = str(network)
         # A plan selected from the owner's current physical LAN is still
-        # exact-approval gated. USER_MANAGED is the bounded semantic label
-        # carried into the sealed plan when the owner did not type a CIDR or
-        # separate authorization token.
+        # exact-approval gated. CURRENT_CONTEXT identifies a server-resolved
+        # candidate only; it is not owner authorization.
         if requested_cidr and not supplied_authorization:
             raise HomelabOperationError(
-                "active discovery requires USER_MANAGED or EXPLICITLY_AUTHORIZED scope; "
+                "active discovery requires CURRENT_CONTEXT or EXPLICITLY_AUTHORIZED scope; "
                 "private addressing alone is not authorization"
             )
-        authorization = supplied_authorization or "USER_MANAGED"
-        if authorization not in {"USER_MANAGED", "EXPLICITLY_AUTHORIZED"}:
+        authorization = supplied_authorization or "CURRENT_CONTEXT"
+        if authorization not in {"CURRENT_CONTEXT", "EXPLICITLY_AUTHORIZED"}:
             raise HomelabOperationError(
-                "active discovery requires USER_MANAGED or EXPLICITLY_AUTHORIZED scope; "
+                "active discovery requires CURRENT_CONTEXT or EXPLICITLY_AUTHORIZED scope; "
                 "private addressing alone is not authorization"
             )
         operation = {
