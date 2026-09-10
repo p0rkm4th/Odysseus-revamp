@@ -2093,7 +2093,13 @@ def classify_compatibility_request(
         continuation = continuation or bool(
             re.search(r"\b(scan|discover|network|subnet|range)\b", recent_text)
         )
-    retrieval_query = recent_query if continuation else text
+    if finance_correction:
+        # Reuse the prior Finance question as bounded read context, but do not
+        # compile it as a durable CONTINUE operation.
+        continuation = False
+        retrieval_query = recent_query
+    else:
+        retrieval_query = recent_query if continuation else text
     query = retrieval_query.lower()
     if explicit_memory_query(text):
         return {
