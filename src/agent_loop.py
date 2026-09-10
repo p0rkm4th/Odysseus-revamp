@@ -5931,6 +5931,23 @@ async def stream_aci_runtime(
                     _auq_delta = ("\n\n" if full_response.strip() else "") + _auq_q
                     full_response += _auq_delta
                     yield 'data: ' + json.dumps({"delta": _auq_delta}) + '\n\n'
+                # A model can stream a premature completion claim (for
+                # example, "Done.") in the same turn that the server creates
+                # an approval card.  Approval is a non-terminal pause: the
+                # requested action has not started and no result exists yet.
+                # Do not persist or leave that prose as the owner-visible
+                # answer.  Replace it with the server-owned question so a
+                # reload cannot turn a pending action into false completion.
+                if _auq_q:
+                    _approval_response = _auq_q
+                    if full_response.strip() != _approval_response:
+                        full_response = _approval_response
+                        yield (
+                            'data: ' + json.dumps({
+                                "type": "response_replace",
+                                "content": _approval_response,
+                            }) + '\n\n'
+                        )
                 _pending_ask_user_event = _auq
                 _awaiting_user = True
 
