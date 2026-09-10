@@ -5164,10 +5164,10 @@ async def stream_aci_runtime(
             )
             # Capability V1 exact-approval bridge. The decision is derived
             # from ActionSpec metadata, not from a tool-specific action list.
-            # Every registered ActionSpec marked EXACT must enter the same
-            # approval projection. The historical helper name is retained for
-            # compatibility, but approval is no longer limited to the
-            # privileged_action transport (network discovery is also exact).
+            # Bounded host-brokered network reads intentionally have
+            # ApprovalMode.NONE: their owner-bound plan receipt and broker
+            # scope are the authorization boundary.  Shell/YOLO and
+            # consequential host mutations remain exact.
             if requires_exact_approval(
                 block.tool_type,
                 block.content,

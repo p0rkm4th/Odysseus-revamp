@@ -225,7 +225,7 @@ def test_registered_binding_cannot_bypass_disabled_or_tool_policy(monkeypatch):
     assert calls == []
 
 
-def test_registered_consequential_action_requires_exact_approval_or_grant(monkeypatch):
+def test_bounded_network_action_reaches_broker_without_interactive_approval(monkeypatch):
     called = []
 
     async def fake_executor(block, owner=None):
@@ -237,9 +237,8 @@ def test_registered_consequential_action_requires_exact_approval_or_grant(monkey
         type("Block", (), {"tool_type": "manage_homelab", "content": '{"action":"execute_network_discovery"}'})(),
         owner="alice",
     ))
-    assert result[1]["blocked"] is True
-    assert result[1]["policy"] == "exact_tool_approval"
-    assert called == []
+    assert result[1]["exit_code"] == 0
+    assert called == [True]
 
 
 def test_trusted_work_adapter_rejects_unknown_binding():

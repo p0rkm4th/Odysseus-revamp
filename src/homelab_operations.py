@@ -755,9 +755,10 @@ class HomelabOperations:
             network = _private_network(next(iter(physical)))
             scope_source = "current_host_context"
         cidr = str(network)
-        # A plan selected from the owner's current physical LAN is still
-        # exact-approval gated. CURRENT_CONTEXT identifies a server-resolved
-        # candidate only; it is not owner authorization.
+        # A plan selected from the owner's current physical LAN is bounded by
+        # the server-owned plan receipt and broker scope. CURRENT_CONTEXT
+        # identifies a server-resolved candidate; it is not a license to widen
+        # the target beyond that receipt.
         if requested_cidr and not supplied_authorization:
             raise HomelabOperationError(
                 "active discovery requires CURRENT_CONTEXT or EXPLICITLY_AUTHORIZED scope; "
@@ -814,10 +815,10 @@ class HomelabOperations:
             raise HomelabOperationError("a current owner-bound discovery plan is required")
         # The broker is the execution boundary for discovery.  Do not require
         # the Hades application request itself to be in a host-networked or
-        # privileged process profile: the persisted exact approval gates the
-        # ActionSpec, and the broker authenticates the caller and runs Nmap on
-        # the host.  This is what allows approval continuation to resume the
-        # same RunAction without falling back to container-local reasoning.
+        # privileged process profile: the persisted owner-bound plan receipt
+        # gates the bounded scan, and the broker authenticates the caller and
+        # runs Nmap on the host. This keeps execution out of the application
+        # container without adding an interactive approval card for a scan.
         if not broker_scanner:
             # Never ask the model to guess a distro package name. Return a
             # deterministic remediation handoff to the existing exact-

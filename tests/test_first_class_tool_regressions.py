@@ -388,9 +388,12 @@ def test_tainted_run_still_allows_registered_owner_scoped_reads():
         ("manage_homelab", {"action": "read_network_context"}),
     ):
         assert security.decision_for(tool, payload).allowed is True
+    # Bounded host-brokered discovery is a read. External context does not
+    # create a second interactive approval card; the owner-bound plan receipt
+    # and broker still enforce scope and execution.
     assert security.decision_for(
         "manage_homelab", {"action": "execute_network_discovery", "cidr": "10.0.0.0/24"}
-    ).allowed is False
+    ).allowed is True
 
 
 @pytest.mark.asyncio
