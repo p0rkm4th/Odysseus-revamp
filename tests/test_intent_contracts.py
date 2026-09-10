@@ -65,6 +65,12 @@ def test_finance_walk_through_uses_bounded_spending_overview():
     assert "merchant" not in frame.filters
 
 
+def test_finance_insight_question_uses_bounded_spending_overview():
+    frame = compile_intent("What stands out in my finances this year?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+
+
 def test_finance_walkme_transcription_typo_stays_on_canonical_read_path():
     frame = compile_intent("Walkme through my past 4 months of finances")
     assert frame.domain_concept == "FINANCE"
