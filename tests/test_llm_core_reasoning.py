@@ -83,6 +83,23 @@ def test_reasoning_field_emits_thinking_chunk(monkeypatch):
     assert any((not d.get("thinking")) and d["delta"] == "Hello" for d in deltas), deltas
 
 
+def test_typed_reasoning_event_is_normalized_and_not_dropped(monkeypatch):
+    """Gateways sometimes emit a typed event instead of choices.delta."""
+    deltas = _run_stream(
+        "qwen3.6:35b",
+        [
+            'data: {"type":"reasoning_delta","delta":"inspect the request"}',
+            'data: {"choices":[{"delta":{"content":"Final answer"}}]}',
+            "data: [DONE]",
+        ],
+        monkeypatch,
+    )
+    assert deltas == [
+        {"delta": "inspect the request", "thinking": True},
+        {"delta": "Final answer"},
+    ]
+
+
 def test_reasoning_content_field_still_supported(monkeypatch):
     # Older builds emit `reasoning_content`; it must still surface as thinking.
     deltas = _run_stream(

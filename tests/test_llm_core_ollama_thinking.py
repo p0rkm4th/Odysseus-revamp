@@ -133,13 +133,14 @@ class TestIsOllamaOpenAICompatUrl:
 class TestThinkSuppression:
     """Assert think:false is present/absent in the outgoing HTTP payload."""
 
-    def test_think_false_for_ollama_v1_thinking_model(self, monkeypatch):
-        """think:false must be set for qwen3 on Ollama /v1."""
+    def test_ordinary_thinking_for_ollama_v1_thinking_model(self, monkeypatch):
+        """Ordinary Ollama /v1 chat honors the ordinary reasoning setting."""
+        monkeypatch.setattr(llm_core, "_ORDINARY_REASONING", "on")
         payload = _capture_payload(
             monkeypatch, "http://127.0.0.1:11434/v1/chat/completions", "qwen3:14b"
         )
-        assert payload.get("think") is False
-        assert payload.get("reasoning_effort") == "none"
+        assert payload.get("think") is True
+        assert payload.get("reasoning_effort") == "high"
 
     def test_no_think_for_ollama_v1_non_thinking_model(self, monkeypatch):
         """think must NOT be set for a plain (non-thinking) model on Ollama /v1."""
@@ -174,4 +175,26 @@ class TestThinkSuppression:
             response_format={"type": "object", "properties": {"decision": {"type": "string"}}},
         )
         assert payload["format"]["type"] == "object"
+        assert payload["think"] is False
+
+    def test_native_ollama_ordinary_conversation_enables_configured_thinking(self, monkeypatch):
+        monkeypatch.setattr(llm_core, "_ORDINARY_REASONING", "on")
+        payload = llm_core._build_ollama_payload(
+            "qwen3:8b",
+            [{"role": "user", "content": "Explain the result."}],
+            temperature=0.4,
+            max_tokens=1024,
+            reasoning_mode="ordinary",
+        )
+        assert payload["think"] is True
+
+    def test_native_ollama_structured_mode_overrides_ordinary_preference(self, monkeypatch):
+        monkeypatch.setattr(llm_core, "_ORDINARY_REASONING", "on")
+        payload = llm_core._build_ollama_payload(
+            "qwen3:8b",
+            [{"role": "user", "content": "Return the decision packet."}],
+            temperature=0.0,
+            max_tokens=512,
+            reasoning_mode="structured",
+        )
         assert payload["think"] is False
