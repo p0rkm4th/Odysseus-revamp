@@ -231,7 +231,7 @@ export async function openTelegram(){
 export async function openDeveloper(){
   const el=panel('developer-panel','Developer','<p>Loading Developer Mode…</p>');
   const [d, build] = await Promise.all([fetch('/api/developer/yolo/status').then(r=>r.json()), fetch('/api/version').then(r=>r.json()).catch(()=>({}))]);
-  const lease=d.lease; const activeProfile=d.profile === 'hardcore_yolo' ? 'Hardcore YOLO' : 'Workspace YOLO'; const content=`<p><b>${esc(activeProfile)}</b></p><p>Scope: <code>${esc(d.workspace)}</code><br>Root: NO · Docker: NO<br>${d.profile === 'hardcore_yolo' ? 'Network: shared host network · filesystem: ephemeral read-only source mount' : 'Network: unavailable · filesystem: workspace-scoped'}</p><p>${lease?`Active until ${esc(lease.expires_at)} · ${esc(activeProfile)} <button id="revoke-yolo">Revoke</button>`:'Inactive — requires explicit owner activation.'}</p>${lease?'': '<div class="hades-inline-actions"><button id="grant-yolo">Enable Workspace YOLO</button><button id="grant-hardcore-yolo">Enable Hardcore YOLO</button></div><p class="muted">Hardcore YOLO is still owner-granted, time-limited, non-root, and blocks Docker/root escape commands. It is intended for bounded network diagnostics.</p>'}`;
+  const lease=d.lease; const activeProfile=d.profile === 'hardcore_yolo' ? 'Hardcore YOLO' : 'Workspace YOLO'; const content=`<p><b>${esc(activeProfile)}</b></p><p>Scope: <code>${esc(d.workspace)}</code><br>Root: NO · Docker: NO<br>${d.profile === 'hardcore_yolo' ? 'Network: shared host network · filesystem: ephemeral read-only source mount' : 'Network: unavailable · filesystem: workspace-scoped'}</p><p>${lease?`Active until ${esc(lease.expires_at)} · ${esc(activeProfile)} <button id="revoke-yolo">Revoke</button>`:'Inactive — requires explicit owner activation.'}</p>${lease?`<section class="hades-detail-section"><h3>Run a bounded command</h3><p class="muted">Commands run under the active owner lease. Hardcore YOLO has network access, a read-only source view, and disposable writes only.</p><textarea id="yolo-command" rows="3" placeholder="e.g. ip route; getent hosts example.com"></textarea><div class="hades-inline-actions"><button id="yolo-run-command">Run in ${esc(activeProfile)}</button></div><pre id="yolo-command-output" class="hades-code-output" aria-live="polite"></pre></section>`:'<div class="hades-inline-actions"><button id="grant-yolo">Enable Workspace YOLO</button><button id="grant-hardcore-yolo">Enable Hardcore YOLO</button></div><p class="muted">Hardcore YOLO is still owner-granted, time-limited, non-root, and blocks Docker/root escape commands. It is intended for bounded network diagnostics.</p>'}`;
   const theme = window.themeModule?.getSaved?.() || {};
   const diagnostics = `<section class="hades-detail-section"><h3>Runtime diagnostics</h3><dl class="hades-diagnostic-list"><dt>Source commit</dt><dd>${esc(build.source_commit || 'unknown')}</dd><dt>Image</dt><dd>${esc(build.image_id || 'unknown')}</dd><dt>Frontend build</dt><dd>${esc(build.frontend_build_id || 'unknown')}</dd><dt>UI state schema</dt><dd>${esc(build.ui_state_schema_version || 'unknown')}</dd><dt>Active theme</dt><dd>${esc(theme.name || 'default')}</dd></dl></section>`;
   el.querySelector('.hades-window-body').innerHTML=`<div><h2>Developer Mode</h2>${diagnostics}${content}</div>`;
@@ -248,6 +248,19 @@ export async function openDeveloper(){
     if (message) message.textContent = error?.message || 'Developer request failed.';
   };
   if (lease) el.querySelector('#revoke-yolo').onclick=async()=>{try { await postDeveloper('/api/developer/yolo/revoke',{lease_id:lease.id}); openDeveloper(); } catch (error) { showDeveloperError(error); }};
+  if (lease) el.querySelector('#yolo-run-command').onclick=async()=>{
+    const command=el.querySelector('#yolo-command')?.value?.trim();
+    const output=el.querySelector('#yolo-command-output');
+    if (!command) { if (output) output.textContent='Enter a command first.'; return; }
+    const button=el.querySelector('#yolo-run-command');
+    button.disabled=true; if (output) output.textContent='Running…';
+    try {
+      const result=await postDeveloper('/api/developer/yolo/shell',{lease_id:lease.id,command});
+      const stdout=String(result.stdout||'').trim(); const stderr=String(result.stderr||'').trim();
+      if (output) output.textContent=`returncode=${result.returncode}\n${stdout}${stderr?`\n\n[stderr]\n${stderr}`:''}`.trim();
+    } catch (error) { if (output) output.textContent=error.message; }
+    finally { button.disabled=false; }
+  };
   else {
     el.querySelector('#grant-yolo').onclick=async()=>{try { await postDeveloper('/api/developer/yolo/grant',{duration_seconds:1800,network_policy:'normal'}); openDeveloper(); } catch (error) { showDeveloperError(error); }};
     el.querySelector('#grant-hardcore-yolo').onclick=async()=>{try { await postDeveloper('/api/developer/yolo/grant',{duration_seconds:1800,network_policy:'sandboxed_network'}); openDeveloper(); } catch (error) { showDeveloperError(error); }};
