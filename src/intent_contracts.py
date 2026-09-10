@@ -1695,7 +1695,7 @@ def compile_intent(
         )
         if merchant_match:
             merchant = re.sub(r"\s+", " ", merchant_match.group(1)).strip(" .,!?:;")
-            if merchant and merchant.casefold() not in {"that", "this", "it"}:
+            if merchant and merchant.casefold() not in {"the", "that", "this", "it"}:
                 reference_filters["merchant"] = merchant[:100]
                 if finance_view in {None, "coverage"}:
                     reference_filters["view"] = "spending"

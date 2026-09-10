@@ -62,6 +62,7 @@ def test_finance_walk_through_uses_bounded_spending_overview():
     assert frame.domain_concept == "FINANCE"
     assert frame.filters["view"] == "spending"
     assert frame.filters["start"].endswith("-06-10")
+    assert "merchant" not in frame.filters
 
 
 
