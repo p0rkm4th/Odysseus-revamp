@@ -64,6 +64,11 @@ _KINDS = frozenset({"asset", "consumable", "ingredient"})
 _QUANT = Decimal("0.000001")
 _ASSET_STATUSES = frozenset({"in_stock", "deployed", "repair", "retired", "disposed", "lost"})
 _MAC_ADDRESS = re.compile(r"^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$")
+_RECIPE_LIKE_GROCERY_NAME = re.compile(
+    r"\b(?:everything|all)\s+(?:that\s+is\s+)?needed\s+to\s+make\b|"
+    r"\b(?:ingredients?|items?)\s+(?:needed\s+)?for\b",
+    re.IGNORECASE,
+)
 _UNSET = object()
 
 
@@ -1011,7 +1016,17 @@ class RecipeService(InventoryService):
             # Human-facing additions resolve an existing canonical item first;
             # repeated chat turns must not create duplicate grocery/pantry
             # records. A real ambiguity remains a clarification, not a guess.
-            normalized = normalize_item_name(_required_text(args.get("name"), "name", maximum=200))
+            requested_name = _required_text(args.get("name"), "name", maximum=200)
+            # A recipe-shaped request must never be persisted as one literal
+            # grocery item.  This service has no trusted recipe decomposition
+            # for arbitrary dishes, so fail closed instead of claiming that a
+            # compound outcome was added or silently inventing ingredients.
+            if shopping_list and _RECIPE_LIKE_GROCERY_NAME.search(requested_name):
+                raise InventoryError(
+                    "this describes a recipe rather than one grocery item; "
+                    "no grocery change was made"
+                )
+            normalized = normalize_item_name(requested_name)
             with self._read() as db:
                 matches = db.query(InventoryItem).filter(
                     InventoryItem.owner == owner,
@@ -1030,7 +1045,7 @@ class RecipeService(InventoryService):
                 item = self.update_item(owner, matches[0].id, **updates) if updates else self.get_item(owner, matches[0].id)
                 return {"item": item, "replayed": True}
             item = self.create_item(
-                owner, name=args.get("name"), domain=domain,
+                owner, name=requested_name, domain=domain,
                 item_kind=item_kind,
                 default_unit=args.get("default_unit") or args.get("unit") or "each",
                 category=args.get("category"), description=args.get("description"),

@@ -96,6 +96,26 @@ def test_model_facing_grocery_add_defaults_to_canonical_kitchen_item():
     assert [item["name"] for item in service.list_items("alice", list_name="grocery")] == ["Rice"]
 
 
+def test_recipe_shaped_grocery_request_cannot_be_saved_as_literal_item():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+
+    try:
+        service.manage_inventory({
+            "action": "add_item",
+            "name": "everything needed to make chicken cordon bleu",
+            "list_name": "grocery",
+            "shopping_list": True,
+        }, owner="alice")
+    except Exception as exc:
+        assert "recipe" in str(exc)
+        assert "no grocery change" in str(exc)
+    else:
+        raise AssertionError("recipe-shaped request must not become a literal item")
+
+    assert service.list_items("alice", list_name="grocery") == []
+
+
 def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
