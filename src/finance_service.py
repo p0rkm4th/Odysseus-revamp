@@ -648,7 +648,8 @@ class FinanceService:
 
     def query_transactions(self, owner: str, *, start: date | None = None, end: date | None = None,
                            account_id: str | None = None, merchant: str | None = None,
-                           status: str | None = None, limit: int = 50) -> dict[str, Any]:
+                           status: str | None = None, direction: str | None = None,
+                           sort: str | None = None, limit: int = 50) -> dict[str, Any]:
         limit = max(1, min(int(limit), 200))
         query = self.db.query(FinanceTransaction).filter(
             FinanceTransaction.owner == owner, FinanceTransaction.provider_removed.is_(False),
@@ -661,7 +662,17 @@ class FinanceService:
             status = status.lower()
             if status not in {"pending", "posted"}: raise FinanceError("status must be pending or posted")
             query = query.filter(FinanceTransaction.status == status)
-        rows = query.order_by(FinanceTransaction.transaction_date.desc(), FinanceTransaction.created_at.desc()).limit(limit).all()
+        if direction:
+            direction = direction.lower()
+            if direction not in {"inflow", "outflow"}: raise FinanceError("direction must be inflow or outflow")
+            query = query.filter(FinanceTransaction.direction == direction)
+        if sort:
+            sort = sort.lower()
+            if sort != "amount_desc": raise FinanceError("unsupported transaction sort")
+            query = query.order_by(FinanceTransaction.amount.desc(), FinanceTransaction.transaction_date.desc(), FinanceTransaction.created_at.desc())
+        else:
+            query = query.order_by(FinanceTransaction.transaction_date.desc(), FinanceTransaction.created_at.desc())
+        rows = query.limit(limit).all()
         return {"transactions": [self._transaction_dict(row, include_provider_metadata=False) for row in rows], "limit": limit, "coverage": self.coverage(owner, start, end)}
 
     @staticmethod
@@ -739,7 +750,7 @@ class FinanceService:
         start = _transaction_date(params.get("start")) if params.get("start") else today.replace(day=1)
         end = _transaction_date(params.get("end")) if params.get("end") else today
         if action == "coverage": return self.coverage(owner, start, end)
-        if action == "transactions": return self.query_transactions(owner, start=start, end=end, merchant=params.get("merchant"), status=params.get("status"), limit=params.get("limit", 50))
+        if action == "transactions": return self.query_transactions(owner, start=start, end=end, merchant=params.get("merchant"), status=params.get("status"), direction=params.get("direction"), sort=params.get("sort"), limit=params.get("limit", 50))
         if action == "spending": return self.spending(owner, start, end, merchant=params.get("merchant"), category=params.get("category"))
         if action == "cash_flow": return self.cash_flow(owner, start, end)
         if action == "shared_expenses": return {"shared_expenses": self.list_shared_expenses(owner, _required_text(params.get("household_id"), "household_id"))}

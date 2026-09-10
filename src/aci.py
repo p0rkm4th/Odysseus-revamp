@@ -7,7 +7,7 @@ ActionSpec, policy, approval, and Result code remain authoritative.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from enum import StrEnum
 import hashlib
 import json
@@ -2070,6 +2070,20 @@ def provisional_intent_projection(
             recent_query, re.IGNORECASE,
         )
     )
+    finance_ranked_followup = bool(
+        re.search(
+            r"\b(?:most\s+expensive|largest|biggest|highest|top)\b.{0,48}\b"
+            r"(?:charge|charges|purchase|purchases|transaction|transactions|line\s+items?)\b",
+            latest,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|"
+            r"cash\s+flow|transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
     continuation = (
         is_explicit_continuation(latest)
         or assistant_requested_followup(messages)
@@ -2080,7 +2094,7 @@ def provisional_intent_projection(
         or finance_answer_correction
         or finance_period_correction
     )
-    contextual_finance_read = finance_correction_followup or finance_answer_correction or finance_period_correction
+    contextual_finance_read = finance_correction_followup or finance_answer_correction or finance_period_correction or finance_ranked_followup
     # A stale continuation marker must not demote a new, independently
     # classifiable owner request. This occurs after an interrupted turn where
     # the UI may leave a literal "Continue" message in the session. Compile
@@ -2105,16 +2119,28 @@ def provisional_intent_projection(
         contextual_frame = compile_intent(contextual_query)
         if contextual_frame.domain_concept in DOMAIN_CONTRACTS:
             frame = contextual_frame
+    if finance_ranked_followup and frame.domain_concept == "FINANCE":
+        # Preserve the prior bounded date/category scope while changing only
+        # the read projection to ranked posted outflows. The latest phrase
+        # selects the projection; it never broadens owner or currency scope.
+        prior = compile_intent(recent_query)
+        if prior.domain_concept == "FINANCE":
+            filters = dict(prior.filters)
+            filters.update({"view": "transactions", "sort": "amount_desc", "direction": "outflow", "limit": 10})
+            frame = replace(frame, filters=filters)
     if contextual_finance_read and frame.domain_concept == "FINANCE":
         # This is a fresh bounded read using the prior Finance question as
         # context, not a durable Work continuation.
         continuation = False
     if frame.domain_concept not in DOMAIN_CONTRACTS:
         return None, False
-    retrieval_query = (
-        recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
-        if continuation or contextual_finance_read else latest
-    )
+    if finance_ranked_followup:
+        retrieval_query = f"{recent_query}\n{latest}".strip()
+    else:
+        retrieval_query = (
+            recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+            if continuation or contextual_finance_read else latest
+        )
     explanatory = bool(re.search(
         r"\b(?:explain|define|teach\s+me|how\s+does|why)\b",
         latest,
@@ -3082,6 +3108,8 @@ def canonical_read_fast_path_payload(
     query: str = "",
 ) -> dict[str, Any]:
     """Build a complete payload for a framework-selected safe read."""
+    if frame is not None and not isinstance(frame, Mapping) and hasattr(frame, "as_dict"):
+        frame = frame.as_dict()
     if binding == "manage_assets" and action == "get":
         return canonical_asset_read_payload(frame)
     payload = {"action": action}
@@ -3098,6 +3126,11 @@ def canonical_read_fast_path_payload(
             value = str(filters.get(key) or "").strip()
             if value:
                 payload[key] = value[:10]
+        sort = str(filters.get("sort") or "").strip().casefold()
+        if sort == "amount_desc":
+            payload["sort"] = sort
+            payload["direction"] = "outflow"
+            payload["limit"] = min(max(int(filters.get("limit") or 10), 1), 20)
     if binding == "read_household" and action in {"overview", "list_items"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}

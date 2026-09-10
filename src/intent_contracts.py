@@ -1676,6 +1676,13 @@ def compile_intent(
         finance_view = deterministic_read_view(text, concept)
         if finance_view:
             reference_filters["view"] = finance_view
+        if re.search(
+            r"\b(?:most\s+expensive|largest|biggest|highest|top)\b.{0,48}\b"
+            r"(?:charge|charges|purchase|purchases|transaction|transactions|line\s+items?)\b",
+            q,
+            re.IGNORECASE,
+        ):
+            reference_filters.update({"view": "transactions", "sort": "amount_desc", "direction": "outflow", "limit": 10})
         reference_filters.update(_relative_finance_range(text) or _named_month_range(text))
         # Preserve a bounded owner-supplied merchant selector for deterministic
         # Finance reads. The selector is data, not a new capability or query
@@ -1688,7 +1695,7 @@ def compile_intent(
         )
         if merchant_match:
             merchant = re.sub(r"\s+", " ", merchant_match.group(1)).strip(" .,!?:;")
-            if merchant:
+            if merchant and merchant.casefold() not in {"that", "this", "it"}:
                 reference_filters["merchant"] = merchant[:100]
                 if finance_view in {None, "coverage"}:
                     reference_filters["view"] = "spending"
