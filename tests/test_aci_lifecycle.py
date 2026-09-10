@@ -492,6 +492,17 @@ def test_provisional_intent_projection_owns_supported_route_entry():
     assert intent["retrieval_query"] == "what network am i on"
 
 
+def test_finance_followup_reuses_bounded_recent_finance_context():
+    messages = [
+        {"role": "user", "content": "How much have I spent this month?"},
+        {"role": "assistant", "content": "Here is your spending summary."},
+    ]
+    intent, owned = provisional_intent_projection(messages, "What about last month?")
+    assert owned is True
+    assert intent["continuation"] is True
+    assert "spent this month" in intent["retrieval_query"]
+
+
 def test_aci_completion_uses_canonical_transition_not_legacy_verifier():
     assert legacy_completion_verifier_allowed(
         aci_mode="aci", effectful_used=True, claimed_done=True,

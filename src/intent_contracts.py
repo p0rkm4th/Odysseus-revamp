@@ -1718,6 +1718,25 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:
         return ResolvedContract(frame, contract, None, None, contract.binding, False, "target_required")
     action_key = frame.operation_class
+    # Read views are part of the canonical frame.  In particular, Finance
+    # spending/cash-flow/transaction reads must not collapse to the generic
+    # coverage action, or the renderer receives the wrong contract and the
+    # owner gets a truthful coverage answer instead of the requested result.
+    if frame.operation_class == "READ":
+        selected_action = canonical_read_action(
+            frame.domain_concept,
+            frame.filters,
+            entity_reference=frame.entity_reference,
+        )
+        if selected_action:
+            action_key = next(
+                (
+                    operation
+                    for operation, registered_action in contract.actions.items()
+                    if registered_action == selected_action
+                ),
+                action_key,
+            )
     if frame.domain_concept == "HOMELAB_HOST" and frame.filters.get("remote") and frame.operation_class == "READ":
         action_key = "REMOTE_READ"
     if frame.domain_concept == "TECHNICAL_ASSET" and frame.operation_class == "READ" and frame.entity_reference:
