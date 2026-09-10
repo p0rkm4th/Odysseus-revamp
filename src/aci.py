@@ -3098,6 +3098,12 @@ def canonical_read_fast_path_payload(
             value = str(filters.get(key) or "").strip()
             if value:
                 payload[key] = value[:10]
+    if binding == "read_household" and action in {"overview", "list_items"}:
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        list_name = str(filters.get("list_name") or "").strip().casefold()
+        if list_name in {"grocery", "pantry", "fridge", "freezer"}:
+            payload["list_name"] = list_name
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
@@ -3351,10 +3357,12 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         items = [item] if isinstance(item, Mapping) else None
     if items is None:
         return None
+    list_name = str(payload.get("list_name") or "").strip().casefold()
     if not items:
-        return "No kitchen or household inventory is recorded for this owner."
+        return f"Your {list_name} list is empty." if list_name else "No kitchen or household inventory is recorded for this owner."
 
-    lines = [f"I found {len(items)} kitchen/household item{'s' if len(items) != 1 else ''}:"]
+    label = f"{list_name} list" if list_name else "kitchen/household"
+    lines = [f"I found {len(items)} {label} item{'s' if len(items) != 1 else ''}:"]
     for item in items[:100]:
         if not isinstance(item, Mapping):
             continue

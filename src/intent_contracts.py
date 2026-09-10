@@ -1698,6 +1698,15 @@ def compile_intent(
         elif re.search(r"\brestaurants?\b", q):
             reference_filters["category"] = "Restaurants"
             reference_filters["view"] = "spending"
+    elif concept == "HOUSEHOLD_ITEM" and operation == "READ":
+        if re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q):
+            reference_filters["list_name"] = "grocery"
+        elif re.search(r"\bpantry\b", q):
+            reference_filters["list_name"] = "pantry"
+        elif re.search(r"\bfridge\b", q):
+            reference_filters["list_name"] = "fridge"
+        elif re.search(r"\bfreezer\b", q):
+            reference_filters["list_name"] = "freezer"
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
