@@ -1715,7 +1715,10 @@ def compile_intent(
         )
         if category_match:
             category = re.sub(r"\s+", " ", category_match.group(1)).strip(" .,!?:;")
-            if category.casefold() not in {"the", "that", "it"}:
+            # In phrases such as "spending for September", the preposition
+            # introduces a date range, not a provider category.  Never send a
+            # calendar month into FinanceService as a category filter.
+            if category.casefold() not in {"the", "that", "it", *set(_MONTH_NUMBERS)}:
                 reference_filters["category"] = category[:100]
                 reference_filters["view"] = "spending"
         if re.search(r"\b(?:dining\s+out|eating\s+out)\b", q):
