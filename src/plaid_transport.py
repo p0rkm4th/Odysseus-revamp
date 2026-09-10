@@ -18,14 +18,17 @@ class PlaidTransport:
     def __init__(self, *, client: httpx.Client | None = None, base_url: str | None = None,
                  client_id: str | None = None, secret: str | None = None):
         self.client = client or httpx.Client(timeout=20.0)
-        environment = os.getenv("PLAID_ENV", "sandbox").strip().lower()
+        from src.plaid_config import configured_credentials
+        stored_client_id, stored_secret, configured_environment, configured_client_name = configured_credentials()
+        environment = configured_environment
         self.base_url = (base_url or {
             "sandbox": "https://sandbox.plaid.com",
             "development": "https://development.plaid.com",
             "production": "https://production.plaid.com",
         }.get(environment, "https://sandbox.plaid.com")).rstrip("/")
-        self.client_id = client_id or os.getenv("PLAID_CLIENT_ID", "")
-        self.secret = secret or os.getenv("PLAID_SECRET", "")
+        self.client_id = client_id or stored_client_id
+        self.secret = secret or stored_secret
+        self.client_name = configured_client_name
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         if not self.client_id or not self.secret:
@@ -61,7 +64,7 @@ class PlaidTransport:
 
     def link_token_create(self, client_user_id: str, *, access_token: str | None = None) -> dict[str, Any]:
         """Create a Transactions Link token for one authenticated owner."""
-        client_name = os.getenv("PLAID_CLIENT_NAME", "HADES")[:100]
+        client_name = self.client_name
         payload = {
                 "client_name": client_name,
                 "user": {"client_user_id": client_user_id},
