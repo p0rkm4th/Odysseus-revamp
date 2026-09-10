@@ -65,7 +65,8 @@ _FINANCE_PAYCHECKS = re.compile(
 _FINANCE_OVERVIEW = re.compile(
     r"\b(?:go\s+over|walk\s+(?:me\s+)?through|review|look\s+at|check|tell\s+me\s+about|summari[sz]e|analy[sz]e|"
     r"insight(?:s)?|guidance|advice|advise|pattern(?:s)?|trend(?:s)?|what\s+stands\s+out|"
-    r"where\s+can\s+i\s+(?:cut|save)|what\s+should\s+i\s+(?:review|look\s+at))\b",
+    r"where\s+can\s+i\s+(?:cut|save)|what\s+should\s+i\s+(?:review|look\s+at)|"
+    r"(?:all|total)\s+(?:my|our)\s+(?:finances?|financial\s+activity|money|spending))\b",
     re.IGNORECASE,
 )
 _ASSET_SUBJECT = re.compile(
