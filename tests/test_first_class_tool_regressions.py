@@ -370,6 +370,22 @@ async def test_grocery_unqueue_delegates_to_canonical_inventory_service(monkeypa
     assert result["removed"] is True
 
 
+def test_recipe_placeholder_does_not_become_a_grocery_item():
+    from src.inventory_service import InventoryError, RecipeService
+
+    service = RecipeService()
+    with pytest.raises(InventoryError, match="individual grocery items"):
+        service.manage_inventory(
+            {
+                "action": "add_item",
+                "name": "ingredients",
+                "list_name": "grocery",
+                "shopping_list": True,
+            },
+            owner="scotty",
+        )
+
+
 def test_canonical_asset_reads_are_read_only_and_need_no_approval():
     from src.capability_registry import action_for_tool, requires_exact_approval
     action = action_for_tool("manage_assets", {"action": "list"})

@@ -69,6 +69,10 @@ _RECIPE_LIKE_GROCERY_NAME = re.compile(
     r"\b(?:ingredients?|items?)\s+(?:needed\s+)?for\b",
     re.IGNORECASE,
 )
+_NON_ITEM_GROCERY_NAME = re.compile(
+    r"^(?:the\s+|those\s+|these\s+)?(?:ingredients?|items?)$",
+    re.IGNORECASE,
+)
 _UNSET = object()
 
 
@@ -1024,6 +1028,11 @@ class RecipeService(InventoryService):
             if shopping_list and _RECIPE_LIKE_GROCERY_NAME.search(requested_name):
                 raise InventoryError(
                     "this describes a recipe rather than one grocery item; "
+                    "no grocery change was made"
+                )
+            if shopping_list and _NON_ITEM_GROCERY_NAME.fullmatch(requested_name.strip()):
+                raise InventoryError(
+                    "please provide the individual grocery items or a saved recipe; "
                     "no grocery change was made"
                 )
             normalized = normalize_item_name(requested_name)
