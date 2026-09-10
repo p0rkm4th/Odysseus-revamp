@@ -3255,6 +3255,18 @@ def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, A
         name = match.group(1).strip(" .,!?:;")
         if not 1 <= len(name) <= 200:
             return None
+        # Keep an explicit owner-authored set as separate canonical items.
+        # Recipe-shaped text (for example, "add ingredients for spaghetti")
+        # intentionally remains a single value and is rejected by the service
+        # rather than guessed into a recipe.
+        parts = [part.strip(" .,!?:;") for part in re.split(r",|\band\b", name, flags=re.IGNORECASE)]
+        parts = [part for part in parts if part]
+        if len(parts) > 1 and all(1 <= len(part) <= 200 for part in parts):
+            return {
+                "action": action, "items": parts, "domain": "kitchen",
+                "item_kind": "ingredient", "list_name": "grocery",
+                "shopping_list": True, "idempotency_key": f"inventory:{key}",
+            }
         return {
             "action": action, "name": name, "domain": "kitchen",
             "item_kind": "ingredient", "list_name": "grocery",
@@ -3329,7 +3341,11 @@ def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, A
 
 def _inventory_payload_complete(payload: Mapping[str, Any], action: str) -> bool:
     if action == "add_item":
-        return bool(str(payload.get("name") or "").strip())
+        items = payload.get("items")
+        return bool(
+            (isinstance(items, list) and items and all(str(item).strip() for item in items))
+            or str(payload.get("name") or "").strip()
+        )
     if action == "remove_from_grocery":
         return bool(str(payload.get("name") or "").strip())
     return (

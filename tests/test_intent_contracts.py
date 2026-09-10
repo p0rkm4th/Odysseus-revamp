@@ -425,6 +425,17 @@ def test_natural_grocery_and_pantry_stock_language_uses_inventory_actions(query,
     assert resolved.action_id == action
 
 
+def test_explicit_multi_item_grocery_request_is_grounded_as_individual_items():
+    from src.aci import canonical_inventory_mutation_payload
+
+    payload = canonical_inventory_mutation_payload(
+        "add_item", "add rice, milk, and eggs to my shopping list"
+    )
+    assert payload is not None
+    assert payload["items"] == ["rice", "milk", "eggs"]
+    assert "name" not in payload
+
+
 def test_singular_grocery_read_uses_the_canonical_household_path():
     frame = compile_intent("Show my grocery list.")
     resolved = resolve_intent(frame)
