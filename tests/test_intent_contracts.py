@@ -435,6 +435,11 @@ def test_explicit_multi_item_grocery_request_is_grounded_as_individual_items():
     assert payload["items"] == ["rice", "milk", "eggs"]
     assert "name" not in payload
 
+    named_item = canonical_inventory_mutation_payload(
+        "add_item", "add macaroni and cheese to my shopping list"
+    )
+    assert named_item["name"] == "macaroni and cheese"
+
 
 def test_singular_grocery_read_uses_the_canonical_household_path():
     frame = compile_intent("Show my grocery list.")
