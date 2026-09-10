@@ -3921,7 +3921,7 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
                 # imply an FX conversion.
                 if len(values) == 1:
                     try:
-                        return next(iter(values.values())) and Decimal(str(next(iter(values.values()))))
+                        return Decimal(str(next(iter(values.values()))))
                     except Exception:
                         return Decimal("0")
                 return Decimal("0")
