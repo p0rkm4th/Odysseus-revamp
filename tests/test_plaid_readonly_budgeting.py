@@ -115,11 +115,13 @@ def test_deterministic_queries_are_currency_safe_and_owner_scoped(db):
     account = svc.import_account("alice", {"provider": "fixture", "provider_account_id": "a", "currency": "USD"})
     for txid, amount, direction, currency, status in (("out", "10", "outflow", "USD", "posted"), ("in", "50", "inflow", "USD", "posted"), ("pending", "99", "outflow", "USD", "pending")):
         svc.import_transaction("alice", {"account_id": account["id"], "provider": "fixture", "provider_transaction_id": txid, "amount": amount, "direction": direction, "currency": currency, "transaction_date": "2026-09-01", "merchant": "Cafe", "status": status})
+    svc.import_transaction("alice", {"account_id": account["id"], "provider": "fixture", "provider_transaction_id": "eur-out", "amount": "5", "direction": "outflow", "currency": "EUR", "transaction_date": "2026-09-01", "merchant": "Cafe", "status": "posted"})
     spending = svc.spending("alice", date(2026, 9, 1), date(2026, 9, 30))
-    assert spending["posted_outflow_by_currency"] == {"USD": "10.0000"}
+    assert spending["posted_outflow_by_currency"] == {"USD": "10.0000", "EUR": "5.0000"}
     flow = svc.cash_flow("alice", date(2026, 9, 1), date(2026, 9, 30))
     assert flow["by_currency"]["USD"]["posted_inflow"] == "50.0000"
     assert flow["by_currency"]["USD"]["net_raw_flow"] == "40.0000"
+    assert flow["by_currency"]["EUR"]["posted_outflow"] == "5.0000"
     assert svc.list_transactions("bob") == []
     with pytest.raises(FinanceError):
         svc.read_finance("alice", "shared_expenses", {})
