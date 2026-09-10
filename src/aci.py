@@ -3170,6 +3170,10 @@ def canonical_read_fast_path_payload(
             value = str(filters.get(key) or "").strip()
             if value:
                 payload[key] = value[:10]
+        for key, allowed in (("status", {"posted", "pending"}), ("direction", {"inflow", "outflow"})):
+            value = str(filters.get(key) or "").strip().casefold()
+            if value in allowed:
+                payload[key] = value
         sort = str(filters.get("sort") or "").strip().casefold()
         if sort == "amount_desc":
             payload["sort"] = sort

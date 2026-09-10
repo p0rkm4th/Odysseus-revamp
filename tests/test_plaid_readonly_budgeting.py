@@ -224,6 +224,27 @@ def test_ranked_transactions_can_filter_category_without_exposing_full_ledger(db
     assert [row["merchant"] for row in result["transactions"]] == ["insurance"]
 
 
+def test_paycheck_read_returns_only_posted_paycheck_inflows(db):
+    svc = FinanceService(db)
+    account = svc.import_account("alice", {"provider": "fixture", "provider_account_id": "a", "currency": "USD"})
+    for txid, category, amount, direction, status in (
+        ("paycheck", "Paycheck", "2500", "inflow", "posted"),
+        ("rent", "Mortgage & Rent", "1500", "outflow", "posted"),
+        ("pending-pay", "Paycheck", "2500", "inflow", "pending"),
+    ):
+        svc.import_transaction("alice", {
+            "account_id": account["id"], "provider": "fixture", "provider_transaction_id": txid,
+            "amount": amount, "direction": direction, "currency": "USD",
+            "transaction_date": "2026-09-01", "merchant": txid,
+            "provider_category": category, "status": status,
+        })
+    result = svc.read_finance("alice", "transactions", {
+        "start": "2026-01-01", "end": "2026-12-31", "category": "Paycheck",
+        "direction": "inflow", "status": "posted", "limit": 20,
+    })
+    assert [row["merchant"] for row in result["transactions"]] == ["paycheck"]
+
+
 def test_local_csv_accepts_common_bank_export_headers_and_debit_credit(db):
     svc = FinanceService(db)
     bank_export = (
