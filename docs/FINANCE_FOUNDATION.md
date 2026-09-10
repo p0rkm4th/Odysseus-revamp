@@ -39,10 +39,13 @@ provider-identity upserts and are idempotent.
 ## Local CSV fallback
 
 When Plaid is unavailable, an authenticated owner can import a bounded local
-bank export from Integration Center. The export must contain `date`, `amount`,
-and `merchant` columns; optional `currency`, `direction`, `status`, `category`,
-and `description` columns are preserved in canonical Finance fields. Imports
-use the existing owner-scoped Finance account and transaction tables with
+bank export from Integration Center. Common bank header variants are accepted:
+date/transaction date/posted date, amount (or debit and credit), and
+merchant/name/description/payee. Optional currency, direction, status,
+category, and memo fields are preserved in canonical Finance fields. Dates in
+ISO, US slash, and year-first slash formats plus ordinary currency formatting
+are supported; rows that still lack an unambiguous date, identity, or amount
+are rejected. Imports use the existing owner-scoped Finance account and transaction tables with
 provider `csv`, are labeled `local_csv` and `live_provider: false`, and never
 claim live balances or Plaid connectivity. Repeating the same file is
 idempotent, duplicate rows remain distinct, and the entire snapshot commits
