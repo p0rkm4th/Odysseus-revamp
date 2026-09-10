@@ -791,9 +791,16 @@ class ToolRunSecurityContext:
             spec is not None
             and spec.known
             and spec.approval is ApprovalMode.NONE
+            # First-class owner-scoped operations are already bounded by
+            # their ActionSpec, canonical executor, and server-side owner
+            # policy. External context must not manufacture a second
+            # approval card for these operations. Keep execute_code,
+            # admin_change, external effects, and unknown capabilities out of
+            # this set; shell/YOLO and consequential host actions remain
+            # approval-gated.
             and set(spec.effects).issubset({
                 "read_private", "read_public", "read_workspace",
-                "brokered_network_read",
+                "write_private", "network_plan", "brokered_network_read",
             })
         ):
             return ToolGateDecision(True)
