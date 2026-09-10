@@ -72,6 +72,23 @@ def test_finance_walkme_transcription_typo_stays_on_canonical_read_path():
     assert frame.filters["start"].endswith("-05-10")
 
 
+def test_paycheck_question_uses_bounded_posted_inflow_transactions():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "Where's my paychecks?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "transactions"
+    assert frame.filters["category"] == "Paycheck"
+    assert frame.filters["direction"] == "inflow"
+    assert frame.filters["status"] == "posted"
+    payload = canonical_read_fast_path_payload(resolved.binding_name, resolved.action_id, frame.as_dict(), query=query)
+    assert payload["category"] == "Paycheck"
+    assert payload["direction"] == "inflow"
+    assert payload["status"] == "posted"
+
+
 
 def test_finance_merchant_selector_reaches_deterministic_spending_payload():
     from src.aci import canonical_read_fast_path_payload

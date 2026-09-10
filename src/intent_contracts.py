@@ -1676,6 +1676,8 @@ def compile_intent(
         finance_view = deterministic_read_view(text, concept)
         if finance_view:
             reference_filters["view"] = finance_view
+        if re.search(r"\b(?:paychecks?|pay\s+checks?|salary|salaries|deposits?|income|earnings?)\b", q, re.IGNORECASE):
+            reference_filters.update({"view": "transactions", "category": "Paycheck", "direction": "inflow", "status": "posted", "limit": 20})
         if re.search(
             r"\b(?:most\s+expensive|largest|biggest|highest|top)\b.{0,48}\b"
             r"(?:charge|charges|purchase|purchases|transaction|transactions|line\s+items?)\b",
