@@ -164,6 +164,52 @@ def test_pending_connection_reuses_same_connection_for_initial_authorization(mon
         engine.dispose()
 
 
+def test_unqualified_link_open_reuses_pending_connection_without_provider_item(monkeypatch):
+    client, db, plaid, engine = _client(monkeypatch)
+    try:
+        pending = FinanceConnection(
+            id="pending-connection", owner="alice", provider="plaid",
+            lifecycle_state="AUTHORIZATION_REQUIRED",
+        )
+        db.add(pending)
+        db.commit()
+
+        response = client.post("/api/finance/plaid/link-token", headers={"x-owner": "alice"})
+        assert response.status_code == 200
+        assert response.json()["connection_id"] == "pending-connection"
+        assert db.query(FinanceConnection).filter_by(owner="alice", provider="plaid").count() == 1
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_missing_plaid_credentials_do_not_leave_new_connection_row(monkeypatch):
+    from src.plaid_transport import PlaidError
+
+    client, db, _plaid, engine = _client(monkeypatch)
+
+    class MissingCredentials:
+        def link_token_create(self, *_args, **_kwargs):
+            raise PlaidError("PLAID_CREDENTIALS_MISSING", "Plaid credentials are not configured")
+
+    try:
+        from fastapi import FastAPI
+        app = FastAPI()
+        app.state.auth_manager = type("Auth", (), {"is_admin": lambda self, user: user == "alice"})()
+        app.include_router(finance_routes.setup_finance_routes(
+            session_factory=sessionmaker(bind=engine),
+            plaid_transport_factory=MissingCredentials,
+        ))
+        response = TestClient(app).post(
+            "/api/finance/plaid/link-token", headers={"x-owner": "alice"},
+        )
+        assert response.status_code == 503
+        assert db.query(FinanceConnection).filter_by(owner="alice", provider="plaid").count() == 0
+    finally:
+        db.close()
+        engine.dispose()
+
+
 def test_exchange_consumes_continuation_when_initial_sync_fails(monkeypatch):
     client, db, plaid, engine = _client(monkeypatch)
     try:

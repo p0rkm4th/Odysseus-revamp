@@ -93,14 +93,30 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                     raise FinanceError("Finance connection is unavailable")
                 access_token = None
                 mode = "create"
+                created_connection = False
                 if connection:
                     item = db.query(PlaidItem).filter_by(connection_id=connection.id, owner=user, provider="plaid").one_or_none()
                     if item is not None:
                         mode = "update"
                         access_token = item.access_token
                 if connection is None:
+                    # A failed first-time Link open must not create a new
+                    # abandoned connection on every click. Reuse only an
+                    # owner-scoped pending authorization with no provider
+                    # item; once a real item exists, an unqualified request
+                    # intentionally means “connect another account”.
+                    connection = db.query(FinanceConnection).outerjoin(
+                        PlaidItem, PlaidItem.connection_id == FinanceConnection.id,
+                    ).filter(
+                        FinanceConnection.owner == user,
+                        FinanceConnection.provider == "plaid",
+                        FinanceConnection.lifecycle_state == "AUTHORIZATION_REQUIRED",
+                        PlaidItem.id.is_(None),
+                    ).order_by(FinanceConnection.created_at.desc()).first()
+                if connection is None:
                     connection = FinanceConnection(id=secrets.token_hex(16), owner=user, provider="plaid", lifecycle_state="AUTHORIZATION_REQUIRED")
                     db.add(connection); db.flush()
+                    created_connection = True
                 state = secrets.token_urlsafe(32)
                 connection.lifecycle_state = "AUTHORIZATION_IN_PROGRESS"
                 connection.authorization_correlation_hash = link_hash(state)
@@ -113,12 +129,21 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                 with session_factory() as db:
                     failed = db.query(FinanceConnection).filter_by(id=connection_id, owner=user, provider="plaid").one_or_none()
                     if failed is not None:
-                        failed.lifecycle_state = "RECONNECT_REQUIRED" if mode == "update" else "AUTHORIZATION_REQUIRED"
-                        failed.provider_health = "DEGRADED"
-                        failed.capability_available = False
-                        failed.last_error_classification = exc.classification[:128]
-                        failed.authorization_correlation_hash = None
-                        failed.authorization_expires_at = None
+                        # No provider authorization has started when local
+                        # credentials are absent. Remove a row created for
+                        # this failed attempt so the owner does not accumulate
+                        # unusable connection records. Existing provider-backed
+                        # or explicitly targeted connections retain truthful
+                        # recovery state.
+                        if exc.classification == "PLAID_CREDENTIALS_MISSING" and created_connection and mode == "create":
+                            db.delete(failed)
+                        else:
+                            failed.lifecycle_state = "RECONNECT_REQUIRED" if mode == "update" else "AUTHORIZATION_REQUIRED"
+                            failed.provider_health = "DEGRADED"
+                            failed.capability_available = False
+                            failed.last_error_classification = exc.classification[:128]
+                            failed.authorization_correlation_hash = None
+                            failed.authorization_expires_at = None
                         db.commit()
                 raise
             link_token = str(body.get("link_token") or "").strip()
