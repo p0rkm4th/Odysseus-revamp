@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -9,7 +9,7 @@ from src.finance_service import FinanceService, FinanceError
 from src.plaid_sync import PlaidSyncService
 from src.plaid_transport import PlaidError
 from core.finance_models import PlaidItem, PlaidLinkSession
-from core.finance_models import FinanceConnection
+from core.finance_models import FinanceAccount, FinanceConnection
 
 
 @pytest.fixture()
@@ -242,3 +242,22 @@ def test_coverage_does_not_call_uningested_or_unhealthy_finance_ready(db):
     assert coverage["requested_range_exceeds_coverage"] is True
     assert "transaction ingestion has not completed successfully" in coverage["coverage_limitations"]
     assert "one or more Plaid connections are unhealthy or require attention" in coverage["coverage_limitations"]
+
+
+def test_coverage_surfaces_unexchanged_plaid_connection_alongside_csv_data(db):
+    db.add(FinanceConnection(
+        id="conn-awaiting-link", owner="alice", provider="plaid",
+        lifecycle_state="AUTHORIZATION_REQUIRED", provider_health="DEGRADED",
+        capability_available=False,
+    ))
+    account = FinanceAccount(
+        id="csv-account", owner="alice", provider="csv", provider_account_id="csv-1",
+        display_name="Imported account", currency="USD", last_synced_at=datetime.now(timezone.utc),
+    )
+    db.add(account)
+    db.commit()
+
+    coverage = FinanceService(db).coverage("alice", date(2026, 9, 1), date(2026, 9, 30))
+    assert coverage["data_sources"] == [{"source": "local_csv", "live": False}]
+    assert "one or more Plaid connections are unhealthy or require attention" in coverage["coverage_limitations"]
+    assert coverage["connection"]["connections"][0]["lifecycle_state"] == "AUTHORIZATION_REQUIRED"

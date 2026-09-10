@@ -559,7 +559,14 @@ class FinanceService:
         imported_accounts = self.db.query(FinanceAccount).filter(
             FinanceAccount.owner == owner, FinanceAccount.provider == "csv",
         ).all()
-        connections = [self._connection_for(item) for item in items]
+        # Inspect the canonical connection table independently of exchanged
+        # PlaidItems. An authorization-required connection can legitimately
+        # exist before token exchange, and its unhealthy state must still be
+        # visible in Finance coverage rather than disappearing because there
+        # is no provider item row yet.
+        connections = self.db.query(FinanceConnection).filter(
+            FinanceConnection.owner == owner, FinanceConnection.provider == "plaid",
+        ).all()
         unhealthy = [
             connection for connection in connections
             if connection is not None and connection.lifecycle_state not in {"HEALTHY", "CONNECTED"}
