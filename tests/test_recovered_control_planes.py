@@ -108,6 +108,38 @@ def test_network_plan_normalizes_host_form_cidr_without_widening_scope(tmp_path)
     asyncio.run(run())
 
 
+def test_network_execution_continuation_reuses_approved_target_without_context_reread(tmp_path, monkeypatch):
+    import src.privileged_broker as broker
+
+    def request(payload, timeout=5, **_kwargs):
+        if payload.get("action") == "status":
+            return {"ok": True, "network_scanner_available": True}
+        return {"ok": True, "returncode": 0, "output": "<nmaprun/>"}
+
+    monkeypatch.setattr(broker, "client_request", request)
+
+    async def run():
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            observation_recorder=lambda _payload: None,
+        )
+        plan = await ops.execute({
+            "action": "plan_network_discovery",
+            "cidr": "192.168.10.254/24",
+            "scope_authorization": "EXPLICITLY_AUTHORIZED",
+        }, owner="alice")
+        # The real approval continuation carries only the digest. It must use
+        # the exact target committed in the plan receipt, not re-read context.
+        result = await ops.execute({
+            "action": "execute_network_discovery",
+            "plan_digest": plan["operation_digest"],
+        }, owner="alice")
+        assert result["success"] is True
+        assert result["target"] == "192.168.10.0/24"
+
+    asyncio.run(run())
+
+
 def test_network_context_read_separates_vpn_and_runtime_interfaces(monkeypatch):
     import src.privileged_broker as broker
     monkeypatch.setattr(
