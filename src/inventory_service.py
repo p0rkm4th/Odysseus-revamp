@@ -955,6 +955,26 @@ class RecipeService(InventoryService):
     def manage_inventory(self, args: dict[str, Any], *, owner: str) -> dict[str, Any]:
         """Dispatch the narrow model-facing inventory action vocabulary."""
         action = str(args.get("action") or "")
+
+        def resolve_food_item() -> str:
+            item_id = str(args.get("item_id") or "").strip()
+            if item_id:
+                return item_id
+            name = _required_text(args.get("name"), "name", maximum=200)
+            normalized = normalize_item_name(name)
+            with self._read() as db:
+                rows = db.query(InventoryItem).filter(
+                    InventoryItem.owner == owner,
+                    InventoryItem.domain.in_(("kitchen", "household")),
+                    InventoryItem.archived.is_(False),
+                    InventoryItem.normalized_name == normalized,
+                ).order_by(InventoryItem.id).all()
+            if not rows:
+                raise InventoryNotFound("inventory item not found")
+            if len(rows) > 1:
+                raise InventoryConflict("more than one matching inventory item requires clarification")
+            return rows[0].id
+
         if action == "list":
             return {"items": self.list_items(
                 owner, domain=args.get("domain"),
@@ -988,6 +1008,27 @@ class RecipeService(InventoryService):
                     str(args.get("list_name") or "").casefold() == "grocery"
                     or not args.get("storage_area")
                 )
+            # Human-facing additions resolve an existing canonical item first;
+            # repeated chat turns must not create duplicate grocery/pantry
+            # records. A real ambiguity remains a clarification, not a guess.
+            normalized = normalize_item_name(_required_text(args.get("name"), "name", maximum=200))
+            with self._read() as db:
+                matches = db.query(InventoryItem).filter(
+                    InventoryItem.owner == owner,
+                    InventoryItem.domain == str(domain).casefold(),
+                    InventoryItem.normalized_name == normalized,
+                    InventoryItem.archived.is_(False),
+                ).order_by(InventoryItem.id).all()
+            if len(matches) > 1:
+                raise InventoryConflict("more than one matching inventory item requires clarification")
+            if matches:
+                updates: dict[str, Any] = {}
+                if shopping_list:
+                    updates["shopping_list"] = True
+                if args.get("storage_area"):
+                    updates["storage_area"] = args["storage_area"]
+                item = self.update_item(owner, matches[0].id, **updates) if updates else self.get_item(owner, matches[0].id)
+                return {"item": item, "replayed": True}
             item = self.create_item(
                 owner, name=args.get("name"), domain=domain,
                 item_kind=item_kind,
@@ -1005,7 +1046,22 @@ class RecipeService(InventoryService):
         if action == "archive_item":
             return {"item": self.archive_item(owner, _required_text(args.get("item_id"), "item_id"))}
         if action == "add_stock":
-            item_id = _required_text(args.get("item_id"), "item_id")
+            item_id = resolve_food_item()
+            if not args.get("item_id"):
+                # A grocery item may begin with the neutral `count` unit
+                # because the owner only named it on the shopping list. If
+                # it has no stock yet, the first compatible purchase supplies
+                # the canonical unit; never reinterpret existing stock.
+                current = self.get_item(owner, item_id)
+                if current.get("default_unit") == "count" and not any(
+                    str(lot.get("quantity") or "0") not in {"0", "0.0", "0.000000"}
+                    for lot in self.list_lots(owner, item_id)
+                ):
+                    try:
+                        canonical_unit = normalize_amount(1, args.get("unit")).unit
+                    except UnitError as exc:
+                        raise InventoryError(str(exc)) from exc
+                    self.update_item(owner, item_id, default_unit=canonical_unit)
             if args.get("storage_area"):
                 # A purchase can move an existing grocery item into canonical
                 # stock in one owner-scoped operation. The same transaction
@@ -1035,7 +1091,7 @@ class RecipeService(InventoryService):
             )}
         if action == "consume_stock":
             return self.consume_stock(
-                owner, _required_text(args.get("item_id"), "item_id"),
+                owner, resolve_food_item(),
                 quantity=args.get("quantity"), unit=args.get("unit"),
                 idempotency_key=args.get("idempotency_key"),
             )

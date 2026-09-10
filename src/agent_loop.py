@@ -96,6 +96,7 @@ from src.aci import (
     build_actions_snapshot,
     detect_runaway_call,
     canonical_asset_read_payload,
+    canonical_inventory_mutation_payload,
     canonical_tool_result_projection,
     project_final_answer,
     project_model_decision,
@@ -2318,7 +2319,7 @@ async def stream_aci_runtime(
             and not guide_only
             # Operational intent must retain its first-class capability tools;
             # the generic local-model no-tool route is for ordinary prose.
-            and not (_intent_domains & {"homelab", "network_ops", "developer"})
+            and not (_intent_domains & {"homelab", "network_ops", "developer", "household", "finance"})
         )
         return (
             is_ody,
@@ -4056,6 +4057,33 @@ async def stream_aci_runtime(
             tool_blocks = [ToolBlock(_read_binding, json.dumps(_read_payload))]
             converted_calls = []
             used_native = False
+        # Household mutations are canonical writes, not ordinary prose. If a
+        # weak model answers without a tool call, project only the already
+        # resolved inventory action with bounded owner-authored arguments.
+        # The normal policy, executor, and verified readback path still owns
+        # persistence and completion.
+        _mutation_action = str(_resolved_read.get("action_id") or "").strip()
+        if (
+            _asset_frame.get("domain_concept") == "HOUSEHOLD_ITEM"
+            and _asset_frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE"}
+            and _resolved_read.get("binding") == "manage_assets"
+            and _mutation_action in {"add_item", "add_stock", "consume_stock"}
+            and not tool_blocks
+            and not tool_events
+            and total_tool_calls == 0
+            and "manage_assets" in set(_relevant_tools or set())
+            and "manage_assets" not in disabled_tools
+        ):
+            _mutation_payload = canonical_inventory_mutation_payload(
+                _mutation_action, _retrieval_query or _last_user,
+            )
+            if _mutation_payload:
+                logger.info("[agent] deterministic canonical inventory mutation action=%s", _mutation_action)
+                if round_response and full_response.endswith(round_response):
+                    full_response = full_response[:-len(round_response)]
+                tool_blocks = [ToolBlock("manage_assets", json.dumps(_mutation_payload, sort_keys=True))]
+                converted_calls = []
+                used_native = False
         _compiled_asset_read = (
             _asset_frame.get("domain_concept") == "TECHNICAL_ASSET"
             and _asset_frame.get("operation_class") == "READ"

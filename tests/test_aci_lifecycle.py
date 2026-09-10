@@ -8,6 +8,7 @@ from src.aci import (
     CompositeStep,
     SelectionMode,
     canonical_read_fast_path_payload,
+    canonical_inventory_mutation_payload,
     canonical_asset_read_answer,
     canonical_household_read_answer,
     canonical_network_read_answer,
@@ -611,7 +612,32 @@ def test_inventory_action_projection_grounds_natural_grocery_name():
         "item_kind": "ingredient",
         "list_name": "grocery",
         "shopping_list": True,
+        "idempotency_key": selected["payload"]["idempotency_key"],
     }
+
+
+def test_inventory_mutation_grounding_accepts_the_grocery_list():
+    payload = canonical_inventory_mutation_payload("add_item", "Add doritos to the grocery list")
+    assert payload is not None
+    assert payload["name"] == "doritos"
+    assert payload["shopping_list"] is True
+
+
+def test_inventory_mutation_grounding_covers_stock_and_consumption_without_ids():
+    purchased = canonical_inventory_mutation_payload(
+        "add_stock", "I bought two 1-kilogram bags of rice; put them in the pantry."
+    )
+    assert purchased is not None
+    assert purchased["name"] == "rice"
+    assert purchased["quantity"] == 2.0
+    assert purchased["unit"] == "kilogram"
+    assert purchased["storage_area"] == "pantry"
+
+    consumed = canonical_inventory_mutation_payload("consume_stock", "Use 500 grams of rice.")
+    assert consumed is not None
+    assert consumed["name"] == "rice"
+    assert consumed["quantity"] == 500.0
+    assert consumed["unit"] == "grams"
 
 
 def test_action_projection_carries_canonical_dependency_plan():

@@ -3028,6 +3028,91 @@ def canonical_read_fast_path_payload(
     return payload
 
 
+def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, Any] | None:
+    """Ground simple owner inventory mutations without trusting model prose."""
+    action = str(action or "").strip()
+    text = re.sub(r"\s+", " ", str(query or "").strip())
+    if not text:
+        return None
+    key = hashlib.sha256(f"{action}:{text.casefold()}".encode("utf-8")).hexdigest()[:24]
+    if action == "add_item":
+        match = re.search(
+            r"\b(?:add|put)\s+(.+?)\s+(?:to|on)\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list\b",
+            text, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        name = match.group(1).strip(" .,!?:;")
+        if not 1 <= len(name) <= 200:
+            return None
+        return {
+            "action": action, "name": name, "domain": "kitchen",
+            "item_kind": "ingredient", "list_name": "grocery",
+            "shopping_list": True, "idempotency_key": f"inventory:{key}",
+        }
+
+    units = r"kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each"
+    words = {"one": 1, "a": 1, "an": 1, "two": 2, "three": 3,
+             "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+             "nine": 9, "ten": 10}
+    if action == "add_stock":
+        destination = re.search(r"\b(?:in|into|to)\s+the\s+(pantry|fridge|freezer)\b", text, re.IGNORECASE)
+        if not destination:
+            destination = re.search(r"\b(pantry|fridge|freezer)\b", text, re.IGNORECASE)
+        if not destination:
+            return None
+        before = text[:destination.start()].strip(" .,;:")
+        # A purchase often ends with a placement clause ("...; put them in
+        # the pantry"). Only the purchase noun phrase is an item selector.
+        before = re.split(r"\s*[;,]\s*(?:put|place|store)\b", before, maxsplit=1, flags=re.IGNORECASE)[0]
+        before = re.sub(r"^I\s+", "", before, flags=re.IGNORECASE)
+        match = re.search(
+            rf"(?:bought|buy|purchased|purchase|add|put|store|place)?\s*"
+            rf"(?:(\d+(?:\.\d+)?|{'|'.join(words)})\s+)?"
+            rf"(\d+(?:\.\d+)?)\s*[- ]?\s*({units})\s+(?:bags?\s+of\s+|bottles?\s+of\s+|of\s+)?(.+)$",
+            before, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        count, quantity, unit, name = match.groups()
+        count_value = words.get(count.casefold(), None) if count and not count[0].isdigit() else (float(count) if count else 1)
+        quantity_value = float(quantity) * count_value if count_value is not None else float(quantity)
+        name = name.strip(" .,!?:;")
+        if not name or quantity_value <= 0:
+            return None
+        return {
+            "action": action, "name": name, "domain": "kitchen",
+            "item_kind": "ingredient", "quantity": quantity_value,
+            "unit": unit.casefold(), "storage_area": destination.group(1).casefold(),
+            "idempotency_key": f"inventory:{key}",
+        }
+    if action == "consume_stock":
+        match = re.search(
+            rf"\b(?:use|used|consume|consumed|take|took)\s+(\d+(?:\.\d+)?)\s*({units})\s+(?:of\s+)?(.+)$",
+            text, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        quantity, unit, name = match.groups()
+        return {
+            "action": action, "name": name.strip(" .,!?:;"),
+            "quantity": float(quantity), "unit": unit.casefold(),
+            "idempotency_key": f"inventory:{key}",
+        }
+    return None
+
+
+def _inventory_payload_complete(payload: Mapping[str, Any], action: str) -> bool:
+    if action == "add_item":
+        return bool(str(payload.get("name") or "").strip())
+    return (
+        bool(str(payload.get("name") or "").strip())
+        and payload.get("quantity") is not None
+        and bool(str(payload.get("unit") or "").strip())
+        and bool(str(payload.get("idempotency_key") or "").strip())
+    )
+
+
 def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render a bounded owner-facing answer from a canonical Asset Result.
 
@@ -3986,22 +4071,12 @@ def project_action_selection(
         # natural grocery add, the item name is the span between "add" and
         # the grocery-list destination; do not make a small local model
         # invent the name or require it to emit a second private schema.
-        if item["binding"] == "manage_assets" and item["action_id"] == "add_item":
-            match = re.search(
-                r"\badd\s+(.+?)\s+to\s+(?:my\s+)?(?:grocery|shopping)\s+list\b",
-                query,
-                re.IGNORECASE,
-            )
-            if match:
-                name = re.sub(r"\s+", " ", match.group(1)).strip(" .,!?:;")
-                if 1 <= len(name) <= 200:
-                    payload.update({
-                        "name": name,
-                        "domain": "kitchen",
-                        "item_kind": "ingredient",
-                        "list_name": "grocery",
-                        "shopping_list": True,
-                    })
+        if item["binding"] == "manage_assets" and item["action_id"] in {
+            "add_item", "add_stock", "consume_stock",
+        }:
+            grounded = canonical_inventory_mutation_payload(item["action_id"], query)
+            if grounded:
+                payload.update(grounded)
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
         if item["binding"] == "web_search":
@@ -4157,13 +4232,22 @@ def safe_contract_fallback_selection(
         spec = action_for_tool(binding, {"action": action})
     except Exception:
         return None
-    if not (
+    inventory_mutation = binding == "manage_assets" and action in {
+        "add_item", "add_stock", "consume_stock",
+    }
+    safe_read = (
         spec
         and spec.known
         and spec.approval.value == "none"
         and not spec.writes
         and set(spec.effects).issubset({"read_private"})
-    ):
+    )
+    safe_inventory = (
+        inventory_mutation
+        and isinstance(selected.get("payload"), Mapping)
+        and _inventory_payload_complete(selected["payload"], action)
+    )
+    if not (spec and spec.known and (safe_read or safe_inventory)):
         return None
     return selected
 
