@@ -2040,6 +2040,21 @@ def provisional_intent_projection(
             re.IGNORECASE,
         )
     )
+    recent_finance_answer = ""
+    for message in reversed(messages or ()):
+        if str(message.get("role") or "") == "assistant":
+            recent_finance_answer = str(message.get("content") or "")
+            break
+    finance_answer_correction = bool(
+        re.search(r"\b(?:missing|missed|another|one|two|both|wrong|incorrect)\b", latest, re.IGNORECASE)
+        and re.search(r"\b(?:posted spending|pending spending|finance coverage|cash flow|transactions?)\b", recent_finance_answer, re.IGNORECASE)
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|cash\s+flow|"
+            r"transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
     continuation = (
         is_explicit_continuation(latest)
         or assistant_requested_followup(messages)
@@ -2047,6 +2062,7 @@ def provisional_intent_projection(
         or is_contextual_reference_followup(messages, latest)
         or finance_followup
         or finance_correction_followup
+        or finance_answer_correction
     )
     # A stale continuation marker must not demote a new, independently
     # classifiable owner request. This occurs after an interrupted turn where
