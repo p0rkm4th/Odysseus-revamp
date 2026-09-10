@@ -5,6 +5,7 @@ import os, re, subprocess
 from core.local_intelligence_models import DeveloperLease
 from src.work_engine import WorkEngine, ident, now
 from src.execution_profiles import bubblewrap_argv, use_execution_profile
+from core.platform_compat import kill_process_tree
 # Developer execution runs inside the Odysseus container.  The host checkout is
 # bind-mounted at this container path by Compose; using the host pathname here
 # makes leases valid in source tests but fail at runtime when the path is not
@@ -80,6 +81,24 @@ def _workspace_environment(workspace):
             env[key] = value
     return env
 
+def _run_bounded(argv, *, cwd, env, drop_user=False):
+    """Run a developer command in its own process group and reap descendants."""
+    kwargs = {"cwd": cwd, "capture_output": True, "text": True, "start_new_session": True}
+    if drop_user:
+        kwargs["preexec_fn"] = _drop_to_workspace_user
+    proc = subprocess.Popen(argv, env=env, **kwargs)
+    try:
+        stdout, stderr = proc.communicate(timeout=300)
+    except subprocess.TimeoutExpired:
+        kill_process_tree(proc.pid)
+        try:
+            stdout, stderr = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, stderr = proc.communicate()
+        return subprocess.CompletedProcess(argv, 124, stdout, stderr)
+    return subprocess.CompletedProcess(argv, proc.returncode, stdout, stderr)
+
 def execute(db, owner, lease_id, command):
     row=active(db,owner,lease_id)
     if not row: raise ValueError("workspace_yolo lease is expired, revoked, or unknown")
@@ -103,13 +122,9 @@ def execute(db, owner, lease_id, command):
             # Network access is intentionally explicit in the persisted lease,
             # and the route remains owner-authenticated and lease-bound.
             with use_execution_profile("hardcore_yolo"):
-                proc = subprocess.run(
-                    bubblewrap_argv(row.workspace, command_argv),
-                    cwd="/", capture_output=True, text=True, timeout=300,
-                    env={},
-                )
+                proc = _run_bounded(bubblewrap_argv(row.workspace, command_argv), cwd="/", env={})
         else:
-            proc=subprocess.run(command_argv,cwd=row.workspace,capture_output=True,text=True,timeout=300,env=_workspace_environment(row.workspace),preexec_fn=_drop_to_workspace_user)
+            proc = _run_bounded(command_argv, cwd=row.workspace, env=_workspace_environment(row.workspace), drop_user=True)
     except Exception:
         if action:
             WorkEngine(db).set_run_status(owner, row.run_id, "failed", {"error_summary": "workspace command failed before completion"})
