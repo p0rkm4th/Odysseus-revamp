@@ -2019,12 +2019,34 @@ def provisional_intent_projection(
             re.IGNORECASE,
         )
     )
+    # Corrections to a just-retrieved Finance result are often elliptical:
+    # "there are two on the CSV" or "that merchant is missing". Keep these
+    # in the bounded Finance continuation path when the recent user context
+    # already contains an unambiguous Finance read. This does not make a new
+    # scope or action authoritative; the contextual frame still supplies the
+    # existing read contract and owner scope.
+    finance_correction_followup = bool(
+        re.search(
+            r"\b(?:csv|bank(?:ing)?|transaction(?:s)?|merchant|statement|"
+            r"publix|spent|spending|expense(?:s)?)\b",
+            latest,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|"
+            r"cash\s+flow|transaction|transactions|financial|finance|finances|"
+            r"bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
     continuation = (
         is_explicit_continuation(latest)
         or assistant_requested_followup(messages)
         or is_contextual_retry_continuation(messages, latest)
         or is_contextual_reference_followup(messages, latest)
         or finance_followup
+        or finance_correction_followup
     )
     # A stale continuation marker must not demote a new, independently
     # classifiable owner request. This occurs after an interrupted turn where

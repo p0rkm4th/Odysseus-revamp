@@ -516,6 +516,19 @@ def test_new_finance_request_wins_over_stale_continuation_messages():
     assert intent["retrieval_query"] == "How much have I spent at Publix this month?"
 
 
+def test_finance_csv_correction_reuses_recent_finance_read_context():
+    messages = [
+        {"role": "user", "content": "How much have I spent at Publix this month?"},
+        {"role": "assistant", "content": "I found no matching transactions."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "But there's two on the CSV",
+    )
+    assert owned is True
+    assert intent["continuation"] is True
+    assert "Publix" in intent["retrieval_query"]
+
+
 def test_inventory_mutation_uses_grounded_fast_path_without_model_json():
     from src.aci import project_action_selection
 
