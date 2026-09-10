@@ -2052,6 +2052,38 @@ def classify_compatibility_request(
         or retry_continuation
         or contextual_reference
     )
+    # Ordinary chat mode still uses this compatibility projection when ACI is
+    # not enabled. Keep elliptical corrections attached to the prior bounded
+    # Finance read so the later canonical frame can invoke read_finance; never
+    # calculate from the transcript itself.
+    recent_query = recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+    recent_assistant = ""
+    for message in reversed(messages or ()):
+        if str(message.get("role") or "") == "assistant":
+            recent_assistant = str(message.get("content") or "")
+            break
+    finance_correction = bool(
+        re.search(
+            r"\b(?:missing|missed|another|one|two|both|wrong|incorrect|about\s+\$?\d)\b",
+            text,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|cash\s+flow|"
+            r"transaction|transactions|financial|finance|finances|bank|banking|csv|publix)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+        and (
+            not recent_assistant
+            or re.search(
+                r"\b(?:posted spending|pending spending|finance coverage|transaction)\b",
+                recent_assistant,
+                re.IGNORECASE,
+            )
+        )
+    )
+    continuation = continuation or finance_correction
     if re.fullmatch(r"192\.168\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?", text):
         recent_text = " ".join(
             str(message.get("content") or "")
@@ -2061,10 +2093,7 @@ def classify_compatibility_request(
         continuation = continuation or bool(
             re.search(r"\b(scan|discover|network|subnet|range)\b", recent_text)
         )
-    retrieval_query = (
-        recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
-        if continuation else text
-    )
+    retrieval_query = recent_query if continuation else text
     query = retrieval_query.lower()
     if explicit_memory_query(text):
         return {
