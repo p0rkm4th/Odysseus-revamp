@@ -1859,9 +1859,15 @@ async def _execute_read_household_binding(block, owner=None):
         from src.inventory_service import get_inventory_service
         service = get_inventory_service()
         if action == "overview":
-            result = service.household_overview(owner, expiry_days=int(payload.get("expiry_days") or 30))
+            list_name = str(payload.get("list_name") or "").strip().casefold()
+            if list_name in {"grocery", "pantry", "fridge", "freezer"}:
+                result = {"list_name": list_name, "items": service.list_items(owner, list_name=list_name)}
+            else:
+                result = service.household_overview(owner, expiry_days=int(payload.get("expiry_days") or 30))
         elif action == "list_items":
-            result = {"items": service.list_items(owner, domain=payload.get("domain"))}
+            result = {"list_name": payload.get("list_name"), "items": service.list_items(
+                owner, domain=payload.get("domain"), list_name=payload.get("list_name"),
+            )}
         elif action == "search_items":
             query = str(payload.get("query") or "").strip()
             if not query:

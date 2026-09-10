@@ -200,6 +200,25 @@ def test_canonical_household_read_answer_uses_only_inventory_result():
     }]) == "No kitchen or household inventory is recorded for this owner."
 
 
+def test_grocery_read_fast_path_preserves_list_scope_and_answer_label():
+    from src.aci import canonical_read_fast_path_payload
+    from src.intent_contracts import compile_intent, resolve_intent
+
+    frame = compile_intent("Show my grocery list")
+    resolved = resolve_intent(frame)
+    assert frame.filters["list_name"] == "grocery"
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query="Show my grocery list",
+    )
+    assert payload == {"action": "overview", "list_name": "grocery"}
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": '{"list_name":"grocery","items":[{"name":"Ketchup","domain":"kitchen","stock_quantity":"0","default_unit":"each"}]}',
+    }])
+    assert answer.startswith("I found 1 grocery list item")
+    assert "Ketchup" in answer
+
+
 def test_canonical_result_answer_selects_one_authoritative_source():
     answer = canonical_result_answer([{
         "tool": "manage_assets", "exit_code": 0,
