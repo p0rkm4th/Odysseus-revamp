@@ -17,7 +17,8 @@ def test_dead_settings_workspace_entry_is_not_rendered_and_inventory_has_crud_su
     registry = (ROOT / "static/js/workspaceRegistry.js").read_text(encoding="utf-8")
     inventory = (ROOT / "static/js/inventory.js").read_text(encoding="utf-8")
     assert "['settings', 'Settings'" not in registry
-    for marker in ("Pantry &amp; grocery", "Grocery list", "data-action=\"edit-item\"", "archive-item"):
+    assert "Pantry & grocery" in inventory
+    for marker in ("Grocery list", "data-action=\"edit-item\"", "archive-item"):
         assert marker in inventory
 
 

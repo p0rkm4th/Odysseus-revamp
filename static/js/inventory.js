@@ -1,3 +1,5 @@
+import { openWindow, close as closeWorkspaceWindow } from './workspaceWindowManager.js';
+
 let uiModule = null;
 if (typeof window !== 'undefined') {
   import('./ui.js').then(m => { uiModule = m.default || m; }).catch(() => {});
@@ -11,6 +13,7 @@ let domain = 'all';
 let query = '';
 let requestGeneration = 0;
 let editingDraft = null;
+let windowEl = null;
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -76,15 +79,11 @@ async function api(path, options = {}) {
 function shell() {
   const node = document.createElement('section');
   node.id = 'inventory-pane';
-  node.className = 'inventory-pane';
+  node.className = 'inventory-module';
   node.setAttribute('role', 'dialog');
   node.setAttribute('aria-modal', 'true');
   node.setAttribute('aria-labelledby', 'inventory-title');
   node.innerHTML = `
-    <header class="inventory-header">
-      <div><h2 id="inventory-title">Pantry &amp; grocery</h2><p>Track what you have, what you need, and household stock.</p></div>
-      <button class="inventory-icon-btn" data-close aria-label="Close inventory">×</button>
-    </header>
     <nav class="inventory-tabs" aria-label="Inventory views">
       <button data-tab="stock" class="active">Pantry</button>
       <button data-tab="fridge">Fridge</button>
@@ -376,7 +375,16 @@ function renderTab() {
 export function openPanel() {
   if (open) return;
   open = true;
-  document.body.appendChild(shell());
+  windowEl = openWindow({id:'inventory-window', view:'inventory', title:'Pantry & grocery', content:''});
+  windowEl.querySelector('.hades-window-body').appendChild(shell());
+  windowEl.querySelector('[data-win="close"]')?.addEventListener('click', () => {
+    open = false;
+    editingDraft = null;
+    requestGeneration++;
+    document.querySelectorAll('.inventory-dialog-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('inventory-view');
+    document.getElementById('tool-inventory-btn')?.classList.remove('active');
+  }, {once: true});
   document.body.classList.add('inventory-view');
   document.getElementById('tool-inventory-btn')?.classList.add('active');
   renderTab();
@@ -386,7 +394,8 @@ export function closePanel() {
   open = false;
   editingDraft = null;
   requestGeneration++;
-  document.getElementById('inventory-pane')?.remove();
+  closeWorkspaceWindow('inventory-window');
+  windowEl = null;
   document.querySelectorAll('.inventory-dialog-backdrop').forEach(el => el.remove());
   document.body.classList.remove('inventory-view');
   document.getElementById('tool-inventory-btn')?.classList.remove('active');
