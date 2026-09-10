@@ -177,7 +177,7 @@ class FinanceService:
             HouseholdMembership.user_id == user_id,
         ).order_by(HouseholdMembership.created_at.asc()).all()]
 
-    def import_account(self, owner: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def import_account(self, owner: str, payload: dict[str, Any], *, _commit: bool = True) -> dict[str, Any]:
         provider = _required_text(payload.get("provider"), "provider", max_length=64)
         provider_account_id = _required_text(payload.get("provider_account_id"), "provider_account_id")
         currency = payload.get("currency")
@@ -200,7 +200,10 @@ class FinanceService:
         account.source_created_at = _optional_datetime(payload.get("source_created_at"))
         account.last_synced_at = _optional_datetime(payload.get("last_synced_at"))
         account.provider_metadata = dict(payload.get("provider_metadata") or {})
-        self.db.commit()
+        if _commit:
+            self.db.commit()
+        else:
+            self.db.flush()
         return self._account_dict(account)
 
     def _account_dict(self, account: FinanceAccount) -> dict[str, Any]:
@@ -221,7 +224,7 @@ class FinanceService:
             FinanceAccount.owner == owner,
         ).order_by(FinanceAccount.created_at.asc()).all()]
 
-    def import_transaction(self, owner: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def import_transaction(self, owner: str, payload: dict[str, Any], *, _commit: bool = True) -> dict[str, Any]:
         account_id = _required_text(payload.get("account_id"), "account_id")
         account = self.db.query(FinanceAccount).filter(
             FinanceAccount.id == account_id, FinanceAccount.owner == owner,
@@ -271,7 +274,10 @@ class FinanceService:
         transaction.category_metadata = dict(payload.get("category_metadata") or {})
         transaction.provider_metadata = dict(payload.get("provider_metadata") or {})
         transaction.provider_created_at = _optional_datetime(payload.get("provider_created_at"))
-        self.db.commit()
+        if _commit:
+            self.db.commit()
+        else:
+            self.db.flush()
         return self._transaction_dict(transaction)
 
     def import_csv(self, owner: str, csv_text: str, *, account_name: str = "CSV Finance account", currency: str = "USD", source_label: str = "local_csv") -> dict[str, Any]:
@@ -282,6 +288,9 @@ class FinanceService:
         deterministic spending/cash-flow reads applicable.
         """
         text = str(csv_text or "")
+        source_label = _required_text(source_label or "local_csv", "source_label", max_length=128)
+        account_name = _required_text(account_name or "CSV Finance account", "account_name", max_length=200)
+        default_currency = _currency(currency)
         if len(text.encode("utf-8")) > 2_000_000:
             raise FinanceError("Finance CSV is limited to 2 MB")
         reader = csv.DictReader(io.StringIO(text))
@@ -307,7 +316,7 @@ class FinanceService:
             status = (normalized.get("status") or "posted").casefold()
             if status not in {"pending", "posted"}:
                 raise FinanceError(f"Finance CSV row {index} has invalid status")
-            row_currency = _currency(normalized.get("currency") or currency)
+            row_currency = _currency(normalized.get("currency") or default_currency)
             identity = hashlib.sha256(json.dumps({
                 "row": index,
                 "date": transaction_date.isoformat(), "amount": str(abs(amount)),
@@ -322,13 +331,21 @@ class FinanceService:
                 "status": status, "provider_category": normalized.get("category"),
                 "provider_metadata": {"source": "local_csv", "source_label": source_label},
             })
-        account = self.import_account(owner, {
-            "provider": "csv", "provider_account_id": hashlib.sha256(f"{owner}:{source_label}".encode()).hexdigest()[:32],
-            "display_name": account_name, "currency": _currency(currency),
-            "last_synced_at": utcnow_naive(),
-            "provider_metadata": {"source": "local_csv", "source_label": source_label},
-        })
-        imported = [self.import_transaction(owner, {**row, "account_id": account["id"]}) for row in rows]
+        # A snapshot is one canonical import operation. Do not leave an
+        # account or prefix of its rows behind if a later row or the final
+        # commit fails.
+        try:
+            account = self.import_account(owner, {
+                "provider": "csv", "provider_account_id": hashlib.sha256(f"{owner}:{source_label}".encode()).hexdigest()[:32],
+                "display_name": account_name, "currency": default_currency,
+                "last_synced_at": utcnow_naive(),
+                "provider_metadata": {"source": "local_csv", "source_label": source_label},
+            }, _commit=False)
+            imported = [self.import_transaction(owner, {**row, "account_id": account["id"]}, _commit=False) for row in rows]
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         return {"source": "local_csv", "source_label": source_label, "account": account, "imported_count": len(imported), "transactions": imported, "live_provider": False}
 
     def _transaction_dict(
