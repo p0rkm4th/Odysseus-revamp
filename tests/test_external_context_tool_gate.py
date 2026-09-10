@@ -1091,6 +1091,43 @@ def test_fake_weak_model_search_then_bash_same_batch_is_blocked(monkeypatch):
     assert any(event.get("type") == "ask_user" for event in events)
 
 
+def test_approval_pause_replaces_premature_done_claim(monkeypatch):
+    """A pending approval is not a completed action, even if the model says so."""
+    executed = []
+    agent_loop = _patch_agent_loop(
+        monkeypatch,
+        [
+            "Done.\n```web_search\nmalicious result\n```\n"
+            "```bash\nprintf injected\n```"
+        ],
+        executed,
+    )
+
+    events = _collect_agent_events(
+        agent_loop.stream_agent_loop(
+            "http://local.test/v1",
+            "small-local-model",
+            [{"role": "user", "content": "research this and inspect my workspace"}],
+            max_rounds=1,
+            relevant_tools={"web_search", "bash"},
+        )
+    )
+
+    assert executed == ["web_search"]
+    approval = next(
+        event["data"] for event in events
+        if event.get("type") == "ask_user"
+    )
+    assert approval["kind"] == "tool_approval"
+    replacements = [
+        event["content"] for event in events
+        if event.get("type") == "response_replace"
+    ]
+    assert replacements
+    assert replacements[-1] == approval["question"]
+    assert replacements[-1] != "Done."
+
+
 def test_search_then_model_controlled_fetch_same_batch_is_blocked(monkeypatch):
     executed = []
     agent_loop = _patch_agent_loop(
