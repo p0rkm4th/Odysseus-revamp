@@ -16,23 +16,35 @@ async function load(el) {
     const cards=(integrations.integrations||[]).map(item => `<article class="hades-record-card"><div><strong>${esc(item.title)}</strong><p>${esc(item.capabilities?.join(', ')||'No capabilities recorded')}</p><small>Last success: ${esc(item.last_success||'not recorded')} · secrets hidden</small></div><div>${statusBadge(item.connection,item.connection==='CONNECTED'?'success':item.connection==='DEGRADED'?'warning':'info')}</div></article>`).join('') || '<p class="muted">No canonical integrations are registered.</p>';
     const items = plaid.items || [];
     const lifecycle = connection.connection || {};
-    const plaidCards = items.map(item => `<article class="hades-record-card"><div><strong>${esc(item.institution_name || 'Plaid account')}</strong><p>Read-only Finance sync · ${esc(item.lifecycle_state || item.sync_status || 'unknown')}</p><small>Last success: ${esc(item.last_successful_sync_at || 'not yet')} · secrets hidden</small></div><div>${statusBadge(item.lifecycle_state || item.sync_status || 'NOT_CONFIGURED', item.lifecycle_state === 'HEALTHY' ? 'success' : ['DEGRADED','RECONNECT_REQUIRED'].includes(item.lifecycle_state) ? 'warning' : 'info')}<button type="button" class="integration-plaid-sync" data-item-id="${esc(item.item_id)}">Sync now</button></div></article>`).join('');
-    const reconnectId = lifecycle.lifecycle_state === 'RECONNECT_REQUIRED' ? lifecycle.id : '';
-    body.innerHTML=`${moduleHeader({icon:'integrations',title:'Integration Center',description:'Connection health and capability readiness. Secrets and account numbers never appear here.',primary:'Refresh',primaryId:'integration-center-refresh'})}<p class="muted">${esc((permissions.policy_source||'Canonical policy services remain authoritative.'))}</p><section class="setup-center-category"><h3>Connected integrations</h3><div class="hades-record-list">${cards}</div></section><section class="setup-center-category"><h3>Finance / Plaid</h3><p class="muted">${esc(lifecycle.lifecycle_state === 'RECONNECT_REQUIRED' ? 'Your Finance connection needs attention.' : lifecycle.lifecycle_state === 'HEALTHY' ? 'Finance is synchronized and read-only.' : 'Connect a bank through Plaid Link. HADES imports read-only transaction data; it cannot move money.')}</p><div class="hades-record-list">${plaidCards || '<p class="muted">No Plaid account connected.</p>'}</div><button type="button" class="integration-plaid-connect" id="integration-plaid-connect" data-reconnect-id="${esc(reconnectId)}">${reconnectId ? 'Reconnect Plaid' : items.length ? 'Connect another account' : 'Connect Plaid'}</button><p id="integration-plaid-status" class="muted" role="status"></p></section>`;
+    const plaidCards = items.map(item => {
+      const state = item.lifecycle_state || item.sync_status || 'UNKNOWN';
+      const reconnect = state === 'RECONNECT_REQUIRED'
+        ? `<button type="button" class="integration-plaid-reconnect" data-connection-id="${esc(item.connection_id)}">Reconnect</button>`
+        : '';
+      return `<article class="hades-record-card"><div><strong>${esc(item.institution_name || 'Plaid account')}</strong><p>Read-only Finance sync · ${esc(state)}</p><small>Last success: ${esc(item.last_successful_sync_at || 'not yet')} · secrets hidden</small>${item.last_error_classification ? `<small class="muted">Needs attention: ${esc(item.last_error_classification)}</small>` : ''}</div><div>${statusBadge(state, state === 'HEALTHY' ? 'success' : ['DEGRADED','RECONNECT_REQUIRED'].includes(state) ? 'warning' : 'info')}<button type="button" class="integration-plaid-sync" data-item-id="${esc(item.item_id)}">${state === 'DEGRADED' ? 'Retry sync' : 'Sync now'}</button>${reconnect}</div></article>`;
+    }).join('');
+    const healthy = lifecycle.lifecycle_state === 'HEALTHY';
+    const hasUnknownCoverage = items.some(item => !item.last_successful_sync_at);
+    const lifecycleMessage = lifecycle.lifecycle_state === 'RECONNECT_REQUIRED'
+      ? 'One or more Finance connections need attention; reconnect them from their individual cards.'
+      : healthy && !hasUnknownCoverage
+        ? 'Finance is synchronized and read-only. Individual connection health is shown below.'
+        : 'Finance coverage is not yet complete. Connect or synchronize each account before relying on a requested range.';
+    body.innerHTML=`${moduleHeader({icon:'integrations',title:'Integration Center',description:'Connection health and capability readiness. Secrets and account numbers never appear here.',primary:'Refresh',primaryId:'integration-center-refresh'})}<p class="muted">${esc((permissions.policy_source||'Canonical policy services remain authoritative.'))}</p><section class="setup-center-category"><h3>Connected integrations</h3><div class="hades-record-list">${cards}</div></section><section class="setup-center-category"><h3>Finance / Plaid</h3><p class="muted">${esc(lifecycleMessage)}</p><div class="hades-record-list">${plaidCards || '<p class="muted">No Plaid account connected.</p>'}</div><button type="button" class="integration-plaid-connect" id="integration-plaid-connect">${items.length ? 'Connect another account' : 'Connect Plaid'}</button><p id="integration-plaid-status" class="muted" role="status"></p></section>`;
     body.querySelector('#integration-center-refresh').onclick=()=>load(el);
     body.querySelectorAll('.integration-plaid-sync').forEach(button => button.onclick=async()=>{button.disabled=true;button.textContent='Syncing…';try{const response=await fetch(`/api/finance/plaid/items/${encodeURIComponent(button.dataset.itemId)}/sync`,{method:'POST',credentials:'same-origin'});const result=await response.json().catch(()=>({}));if(!response.ok)throw Error(result.detail||'Finance synchronization failed');await load(el);}catch(error){body.querySelector('#integration-plaid-status').textContent=error.message;button.disabled=false;button.textContent='Sync now';}});
+    body.querySelectorAll('.integration-plaid-reconnect').forEach(button => button.onclick=()=>connectPlaid(el, button.dataset.connectionId));
     body.querySelector('#integration-plaid-connect').onclick=()=>connectPlaid(el);
   } catch (error) { body.innerHTML=errorState(error.message,'integration-center-retry'); body.querySelector('#integration-center-retry')?.addEventListener('click',()=>load(el)); }
 }
 
-async function connectPlaid(el) {
+async function connectPlaid(el, connectionId = '') {
   const status = el.querySelector('#integration-plaid-status');
   if (!window.Plaid?.create) { status.textContent='Plaid Link is unavailable right now. Try again after the service is ready.'; return; }
   const button = el.querySelector('#integration-plaid-connect');
   button.disabled = true; status.textContent = 'Opening secure bank connection…';
   try {
-    const reconnectId = button.dataset.reconnectId;
-    const response = await fetch('/api/finance/plaid/link-token'+(reconnectId ? `?connection_id=${encodeURIComponent(reconnectId)}` : ''), {method:'POST', credentials:'same-origin'});
+    const response = await fetch('/api/finance/plaid/link-token'+(connectionId ? `?connection_id=${encodeURIComponent(connectionId)}` : ''), {method:'POST', credentials:'same-origin'});
     const data = await response.json();
     if (!response.ok) throw Error(data.detail || 'Could not start Plaid Link');
     const temporaryToken = data.link_token;
