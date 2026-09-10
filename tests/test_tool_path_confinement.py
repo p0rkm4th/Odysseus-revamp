@@ -161,8 +161,8 @@ def test_blocks_netrc():
         _resolve_tool_path("~/.netrc")
 
 
-def test_allows_project_data(tmp_path):
-    """Paths under project data/ must resolve cleanly."""
+def test_application_data_root_is_not_an_agent_root(tmp_path):
+    """The agent gets a dedicated child, never the application state root."""
     from src.tool_execution import _resolve_tool_path
     from src.constants import DATA_DIR
     target = os.path.join(DATA_DIR, "test-confinement-ok.txt")
@@ -170,10 +170,38 @@ def test_allows_project_data(tmp_path):
     with open(target, "w") as f:
         f.write("ok")
     try:
-        resolved = _resolve_tool_path(target)
-        assert resolved == os.path.realpath(target)
+        with pytest.raises(ValueError, match="outside the allowed roots"):
+            _resolve_tool_path(target)
     finally:
         os.unlink(target)
+
+
+def test_dedicated_agent_workspace_is_allowed(tmp_path):
+    from src.tool_execution import _AGENT_WORKDIR, _resolve_tool_path
+    target = os.path.join(_AGENT_WORKDIR, "agent-file.txt")
+    with open(target, "w") as f:
+        f.write("ok")
+    try:
+        assert _resolve_tool_path(target) == os.path.realpath(target)
+    finally:
+        os.unlink(target)
+
+
+def test_hardlink_alias_is_rejected(tmp_path):
+    from src.tool_execution import _AGENT_WORKDIR, _resolve_tool_path
+    source = tmp_path / "application-state.txt"
+    alias = os.path.join(_AGENT_WORKDIR, "alias.txt")
+    source.write_text("private")
+    try:
+        os.link(source, alias)
+    except (OSError, NotImplementedError):
+        pytest.skip("hard links unavailable")
+    try:
+        with pytest.raises(ValueError, match="multiply-linked"):
+            _resolve_tool_path(alias)
+    finally:
+        if os.path.exists(alias):
+            os.unlink(alias)
 
 
 def test_allows_tmp(tmp_path):
@@ -197,14 +225,21 @@ def test_extra_roots_opt_in(tmp_path):
     """When tool_path_extra_roots includes a directory, paths under it
     are allowed (but sensitive subpaths are still blocked)."""
     from src.tool_execution import _resolve_tool_path
+    from src.tool_execution import _AGENT_WORKDIR
     extra_dir = tmp_path / "extra_root"
     extra_dir.mkdir()
     target = extra_dir / "file.txt"
     target.write_text("ok")
 
-    with patch("src.settings.get_setting", return_value=[str(extra_dir)]):
-        resolved = _resolve_tool_path(str(target))
-        assert resolved == os.path.realpath(str(target))
+    # Extra roots are accepted only inside the dedicated agent workspace.
+    workspace_extra = os.path.join(_AGENT_WORKDIR, "extra-root-test")
+    os.makedirs(workspace_extra, exist_ok=True)
+    workspace_target = os.path.join(workspace_extra, "file.txt")
+    with open(workspace_target, "w") as handle:
+        handle.write("ok")
+    with patch("src.settings.get_setting", return_value=[workspace_extra]):
+        resolved = _resolve_tool_path(workspace_target)
+        assert resolved == os.path.realpath(workspace_target)
 
 
 def test_extra_root_still_blocks_sensitive(tmp_path):

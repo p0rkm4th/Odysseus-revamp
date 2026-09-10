@@ -49,12 +49,12 @@ class _NoToolSecurityContext:
 _MISSING_TOOL_SECURITY_CONTEXT = _MissingToolSecurityContext()
 NO_TOOL_SECURITY_CONTEXT = _NoToolSecurityContext()
 
-# Persistent working directory for agent subprocesses.
-# Resolves to <repo_root>/data, which is the bind-mounted volume in Docker
-# (/app/data) and the local data directory for manual installs.
-# Using this as cwd and HOME prevents the agent from silently creating files
-# in ephemeral container layers that are lost on the next rebuild.
-_AGENT_WORKDIR = DATA_DIR
+# Persistent working directory for agent subprocesses. This is deliberately a
+# dedicated child, not the application state root: model-controlled tools must
+# never get a filesystem root that also contains auth, sessions, databases,
+# integrations, or secrets.
+_AGENT_WORKDIR = os.path.realpath(os.path.join(DATA_DIR, "agent_workspace"))
+os.makedirs(_AGENT_WORKDIR, mode=0o700, exist_ok=True)
 
 
 
@@ -120,16 +120,32 @@ def _is_sensitive_path(resolved: str) -> bool:
     return filename in _SENSITIVE_FILE_PATTERNS_CF
 
 
+def _reject_hardlink_alias(raw_path: str, resolved: str) -> None:
+    """Reject regular files with multiple directory entries.
+
+    realpath closes symlink escapes, but cannot identify a hard link to an
+    application-owned inode. Refusing multiply-linked regular files keeps the
+    model-controlled boundary conservative without requiring a second app-wide
+    inode index.
+    """
+    try:
+        if os.path.isfile(resolved) and os.stat(resolved).st_nlink > 1:
+            raise ValueError(f"path '{raw_path}' is a multiply-linked file")
+    except OSError:
+        return
+
+
 def _tool_path_roots() -> list[str]:
     """Return the list of directory roots that read_file / write_file
     may touch. Default: project data/ + system temp dirs. Extra roots
     are loaded from the ``tool_path_extra_roots`` setting.
     """
     roots: list[str] = []
+    extra_roots: list[str] = []
 
-    # Project data directory — the agent's primary workspace.
-    from src.constants import DATA_DIR
-    roots.append(DATA_DIR)
+    # Only the dedicated agent workspace is a project root. The application
+    # DATA_DIR itself is intentionally never an agent-tool root.
+    roots.append(_AGENT_WORKDIR)
 
     # /tmp (and its macOS realpath /private/tmp).
     roots.append("/tmp")
@@ -150,18 +166,27 @@ def _tool_path_roots() -> list[str]:
         from src.settings import get_setting
         extra = get_setting("tool_path_extra_roots")
         if isinstance(extra, list):
-            roots.extend(str(r) for r in extra if r)
+            # Legacy extra roots remain useful only when they are descendants
+            # of the dedicated workspace. Do not let settings recreate a
+            # second path to application-owned state.
+            extra_roots.extend(str(r) for r in extra if r)
     except Exception:
         pass
 
     # Deduplicate; resolve symlinks so containment is unambiguous.
     seen: set[str] = set()
     out: list[str] = []
-    for r in roots:
+    for r in roots + extra_roots:
         try:
             real = os.path.realpath(r)
         except OSError:
             continue
+        if r in extra_roots:
+            try:
+                if os.path.commonpath([real, _AGENT_WORKDIR]) != _AGENT_WORKDIR:
+                    continue
+            except ValueError:
+                continue
         if real in seen:
             continue
         seen.add(real)
@@ -191,6 +216,10 @@ def _resolve_tool_path(raw_path: str) -> str:
         raise ValueError("path is required")
     expanded = os.path.expanduser(str(raw_path).strip())
     resolved = os.path.realpath(expanded)
+
+    # A hard link can make a file outside the workspace appear beneath it
+    # while realpath remains inside.
+    _reject_hardlink_alias(raw_path, resolved)
 
     if _is_sensitive_path(resolved):
         raise ValueError(
@@ -227,6 +256,7 @@ def _resolve_tool_path_in_workspace(workspace: str, raw_path: str) -> str:
     expanded = os.path.expanduser(str(raw_path).strip())
     candidate = expanded if os.path.isabs(expanded) else os.path.join(base, expanded)
     resolved = os.path.realpath(candidate)
+    _reject_hardlink_alias(raw_path, resolved)
     if _is_sensitive_path(resolved):
         raise ValueError(
             f"path '{raw_path}' is inside a sensitive directory "
