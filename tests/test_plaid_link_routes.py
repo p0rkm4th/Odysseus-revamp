@@ -148,7 +148,9 @@ def test_exchange_consumes_continuation_when_initial_sync_fails(monkeypatch):
             "link_token": created["link_token"], "authorization_state": created["authorization_state"], "public_token": "public-sandbox-token",
         })
         assert response.status_code == 503
-        assert db.query(PlaidLinkSession).filter_by(owner="alice").one().consumed_at is not None
+        session = db.query(PlaidLinkSession).filter_by(owner="alice").one()
+        assert session.consumed_at is not None
+        assert session.exchange_status == "COMPLETED"
     finally:
         db.close()
         engine.dispose()

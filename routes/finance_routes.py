@@ -187,12 +187,21 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                             raise FinanceError("public_token is required for a new Plaid connection")
                         try:
                             exchanged = transport.item_public_token_exchange(public_token)
-                        except Exception:
+                        except Exception as exc:
                             # The provider outcome is not safely knowable here.
                             # Preserve the claim so a callback replay cannot
                             # blindly dispatch the same public token again.
                             row.exchange_status = "UNCERTAIN"
                             row.consumed_at = now
+                            classification = str(getattr(exc, "classification", "EXCHANGE_UNCERTAIN"))[:128]
+                            connection.lifecycle_state = (
+                                "RECONNECT_REQUIRED"
+                                if classification in {"ITEM_LOGIN_REQUIRED", "ITEM_LOCKED", "INVALID_CREDENTIALS", "ACCESS_NOT_GRANTED"}
+                                else "DEGRADED"
+                            )
+                            connection.provider_health = "RECONNECT_REQUIRED" if connection.lifecycle_state == "RECONNECT_REQUIRED" else "DEGRADED"
+                            connection.capability_available = False
+                            connection.last_error_classification = classification
                             db.commit()
                             raise
                         access_token = str(exchanged.get("access_token") or "").strip()
@@ -200,9 +209,17 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                         if not access_token or not item_id:
                             row.exchange_status = "UNCERTAIN"
                             row.consumed_at = now
+                            connection.lifecycle_state = "DEGRADED"
+                            connection.provider_health = "DEGRADED"
+                            connection.capability_available = False
+                            connection.last_error_classification = "MALFORMED_PROVIDER_RESPONSE"
                             db.commit()
                             raise PlaidError("MALFORMED_PROVIDER_RESPONSE")
                         FinanceService(db).create_plaid_item(user, item_id, access_token, connection_id=connection.id)
+                        # The permanent credential is now committed. The
+                        # following sync is a separate verifiable phase.
+                        row.exchange_status = "COMPLETED"
+                        db.commit()
                     else:
                         item_id = item.item_id
                 # This is the existing bounded read-only reconciliation seam;
