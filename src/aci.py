@@ -3645,6 +3645,78 @@ def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str 
     return f"I found {total} work record{'s' if total != 1 else ''} ({labels})."
 
 
+def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render deterministic Finance reads instead of accepting a bare model completion."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "read_finance"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    try:
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, Mapping) or str(payload.get("status") or "").upper() in {
+        "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
+    }:
+        return None
+
+    coverage = payload.get("coverage") if isinstance(payload.get("coverage"), Mapping) else payload
+    limitations = coverage.get("coverage_limitations") if isinstance(coverage.get("coverage_limitations"), list) else []
+    source_names = []
+    for source in coverage.get("data_sources", []) if isinstance(coverage.get("data_sources"), list) else []:
+        if isinstance(source, Mapping):
+            label = "local CSV" if source.get("source") == "local_csv" else str(source.get("source") or "provider")
+            if label not in source_names:
+                source_names.append(label)
+    action = str(payload.get("action") or "").casefold()
+    lines: list[str] = []
+    if "posted_outflow_by_currency" in payload:
+        period = f"{payload.get('start', 'the requested period')} through {payload.get('end', 'today')}"
+        totals = payload.get("posted_outflow_by_currency") or {}
+        rendered = ", ".join(f"{currency} {amount}" for currency, amount in totals.items()) or "none recorded"
+        lines.append(f"Posted spending for {period}: {rendered}.")
+        categories = payload.get("posted_outflow_by_category") or {}
+        if categories:
+            parts = []
+            for category, values in list(categories.items())[:12]:
+                parts.append(f"{category}: " + ", ".join(f"{currency} {amount}" for currency, amount in values.items()))
+            lines.append("By category: " + "; ".join(parts) + ".")
+    elif isinstance(payload.get("by_currency"), Mapping):
+        period = f"{payload.get('start', 'the requested period')} through {payload.get('end', 'today')}"
+        parts = []
+        for currency, values in payload["by_currency"].items():
+            if isinstance(values, Mapping):
+                parts.append(f"{currency}: inflow {values.get('posted_inflow', '0')}, outflow {values.get('posted_outflow', '0')}, net {values.get('net_raw_flow', '0')}")
+        lines.append(f"Cash flow for {period}: " + "; ".join(parts) + ".")
+    elif isinstance(payload.get("transactions"), list):
+        transactions = payload["transactions"]
+        lines.append(f"I found {len(transactions)} matching Finance transaction{'s' if len(transactions) != 1 else ''} in the bounded result.")
+        for row in transactions[:20]:
+            if isinstance(row, Mapping):
+                lines.append(f"- {row.get('transaction_date', 'date unknown')}: {row.get('merchant') or row.get('description') or 'unnamed'} — {row.get('currency', '')} {row.get('amount', '')} ({row.get('status', 'posted')})")
+        if len(transactions) > 20:
+            lines.append(f"- …and {len(transactions) - 20} more in the bounded result.")
+    elif isinstance(payload.get("shared_expenses"), list):
+        lines.append(f"I found {len(payload['shared_expenses'])} explicitly shared household expense{'s' if len(payload['shared_expenses']) != 1 else ''}.")
+    elif action == "coverage" or "coverage_state" in payload:
+        state = str(coverage.get("coverage_state") or "UNKNOWN").lower()
+        lines.append(f"Finance coverage is {state}; {coverage.get('posted_count', 0)} posted and {coverage.get('pending_count', 0)} pending transactions are recorded.")
+        if coverage.get("transaction_date_start") and coverage.get("transaction_date_end"):
+            lines.append(f"Canonical transaction dates run from {coverage['transaction_date_start']} through {coverage['transaction_date_end']}.")
+    if not lines:
+        return None
+    if source_names:
+        lines.append("Source: " + ", ".join(source_names) + ".")
+    if coverage.get("as_of"):
+        lines.append(f"As of {coverage['as_of']}.")
+    if limitations:
+        lines.append("Coverage limitation: " + "; ".join(str(item) for item in limitations) + ".")
+    return "\n".join(lines)
+
+
 def canonical_structured_empty_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render a successful structured empty read without model synthesis.
 
@@ -3693,6 +3765,7 @@ def canonical_result_answer(
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
+        (canonical_finance_read_answer(tool_events), "canonical Finance Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
         (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
         (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
