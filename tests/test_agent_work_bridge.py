@@ -537,7 +537,7 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
             assert action.status == "proposed"
             assert action.sealed_input_digest
             assert run.continuation_state["pending_action_id"] == action_id
-            assert run.continuation_state["phase"] == "PROPOSED"
+            assert run.continuation_state["phase"] == "READY"
 
         approval_id = "approval-chat-2"
         bound = bridge.bind_approval("alice", action_id, approval_id)
