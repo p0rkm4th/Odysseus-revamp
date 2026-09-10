@@ -45,6 +45,32 @@ def test_agent_network_intent_creates_one_owner_session_run_and_reuses_it(monkey
         engine.dispose()
 
 
+def test_stale_complete_continuation_is_reconciled_before_new_owner_turn(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-stale-complete", "scan my network",
+            intent={"domains": ["network_ops"], "domain_concept": "NETWORK", "operation_class": "EXECUTE"},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.continuation_state = {**run.continuation_state, "phase": "COMPLETE"}
+            db.commit()
+
+        replacement = bridge.ensure_agent_run(
+            "alice", "chat-stale-complete", "scan my network again",
+            intent={"domains": ["network_ops"], "domain_concept": "NETWORK", "operation_class": "EXECUTE"},
+        )
+        assert replacement != run_id
+        with session_factory() as db:
+            stale = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            assert stale.status == "completed"
+            assert stale.lifecycle_state == "succeeded"
+    finally:
+        engine.dispose()
+
+
 def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
