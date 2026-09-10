@@ -189,6 +189,15 @@ def test_named_month_range_reaches_finance_fast_path_payload():
     assert payload["end"].endswith("-09-30")
 
 
+def test_month_after_spending_for_is_a_date_not_a_category():
+    frame = compile_intent("Show my posted spending for September")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert "category" not in frame.filters
+    assert frame.filters["start"].endswith("-09-01")
+    assert frame.filters["end"].endswith("-09-30")
+
+
 def test_relative_year_range_does_not_default_to_current_month():
     frame = compile_intent("How much did I spend dining out this year?")
     assert frame.domain_concept == "FINANCE"
