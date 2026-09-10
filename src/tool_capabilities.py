@@ -279,6 +279,12 @@ _register(
     result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
 )
 _register(
+    {"yolo_shell"},
+    ToolEffect.READ_PRIVATE,
+    ToolEffect.EXECUTE_CODE,
+    result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
+)
+_register(
     {"manage_osint"},
     ToolEffect.BROKERED_NETWORK_READ,
     ToolEffect.NETWORK_EGRESS,
