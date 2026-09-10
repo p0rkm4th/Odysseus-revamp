@@ -2128,6 +2128,8 @@ body.bg-pattern-sparkles {
       margin-right: 0.4rem;
       vertical-align: -0.15em;
       color: var(--brand-color, var(--red));
+      object-fit: contain;
+      filter: drop-shadow(0 0 8px color-mix(in srgb, var(--brand-color, var(--red)) 35%, transparent));
     }
     #welcome-screen .welcome-sub {
       font-size:0.85rem;
