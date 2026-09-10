@@ -2089,6 +2089,18 @@ def classify_compatibility_request(
         if str(message.get("role") or "") == "assistant":
             recent_assistant = str(message.get("content") or "")
             break
+    inventory_list_followup = bool(
+        re.search(
+            r"\b(?:what(?:'s|\s+is)|show|list|which)\b.*\b(?:list|items?|in\s+it|there)\b",
+            text,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:grocery|groceries|shopping\s+list|pantry|fridge|freezer|kitchen\s+inventory|household\s+stock)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
     finance_correction = bool(
         re.search(
             r"\b(?:missing|missed|another|one|two|both|wrong|incorrect|about\s+\$?\d|"
@@ -2126,6 +2138,15 @@ def classify_compatibility_request(
         # compile it as a durable CONTINUE operation.
         continuation = False
         retrieval_query = recent_query
+    elif inventory_list_followup:
+        # A short list follow-up is a fresh bounded Household read, not a
+        # durable CONTINUE operation. Derive only the list kind from recent
+        # owner context; the inventory service remains canonical.
+        list_name = "grocery" if re.search(
+            r"\b(?:grocery|groceries|shopping\s+list)\b", recent_query, re.IGNORECASE,
+        ) else "pantry" if re.search(r"\bpantry\b", recent_query, re.IGNORECASE) else "household"
+        continuation = False
+        retrieval_query = f"Show my {list_name} list."
     else:
         retrieval_query = recent_query if continuation else text
     query = retrieval_query.lower()
