@@ -4265,6 +4265,31 @@ def project_action_selection(
                 if desired_action == "summarize_owner_memory":
                     fast_path["query"] = query
             mode = SelectionMode.DIRECT_ACTION
+    # Bounded inventory mutations already have server-grounded arguments from
+    # the owner request. Do not make the model re-encode a private action
+    # decision for these three canonical operations: malformed or empty model
+    # JSON previously caused ordinary grocery additions to fall through to
+    # prose even though the requested item and destination were unambiguous.
+    if (
+        frame.get("domain_concept") == "HOUSEHOLD_ITEM"
+        and frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE"}
+        and desired_binding == "manage_assets"
+        and desired_action in {"add_item", "add_stock", "consume_stock"}
+        and desired_binding in candidate_bindings
+        and desired_binding not in disabled
+    ):
+        selected_payload = next(
+            (
+                dict(value.get("payload") or {})
+                for value in choices.values()
+                if value.get("binding") == desired_binding
+                and value.get("payload", {}).get("action") == desired_action
+            ),
+            None,
+        )
+        if selected_payload and _inventory_payload_complete(selected_payload, desired_action):
+            fast_path = selected_payload
+            mode = SelectionMode.DIRECT_ACTION
     if mode is SelectionMode.NEED_CONTEXT:
         return ActionProjection(None, {}, None, mode, reason, clarification_instruction, "Which service or systemd unit should I restart?", ("action_target_clarification",))
     safety_messages = {
