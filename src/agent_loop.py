@@ -496,6 +496,14 @@ def _successful_bounded_network_execution(tool_type: str, content: str, result: 
     }
 
 
+def _is_bounded_network_plan(tool_type: str, action_id: str) -> bool:
+    """Identify a network preflight that must continue to approval/execution."""
+    return tool_type == "manage_homelab" and action_id in {
+        "plan_network_discovery",
+        "plan_network_service_enumeration",
+    }
+
+
 def _structured_tool_result(result: Mapping[str, Any]) -> Mapping[str, Any]:
     """Unwrap the canonical payload emitted by both tool executors.
 
@@ -5465,6 +5473,9 @@ async def stream_aci_runtime(
                 and block.tool_type == _aci_selected_action.get("binding")
                 and _block_action_id == _aci_selected_action.get("action_id")
             )
+            _is_network_plan = _is_bounded_network_plan(
+                block.tool_type, _block_action_id,
+            )
             _was_aci_canonical_read = bool(
                 _aci_enabled
                 and _aci_mode == "aci"
@@ -5476,6 +5487,7 @@ async def stream_aci_runtime(
                     )
                     or _was_deterministic_fast_path
                 )
+                and not _is_network_plan
             )
             _post_result_transition = project_post_result_transition(
                 result,

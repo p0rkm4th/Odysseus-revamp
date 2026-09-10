@@ -104,6 +104,18 @@ def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_ac
     assert response.startswith("No action completed:")
 
 
+def test_network_preflight_is_not_terminal_before_approval_or_execution():
+    assert agent_loop._is_bounded_network_plan(
+        "manage_homelab", "plan_network_service_enumeration",
+    ) is True
+    assert agent_loop._is_bounded_network_plan(
+        "manage_homelab", "execute_network_service_enumeration",
+    ) is False
+    assert agent_loop._is_bounded_network_plan(
+        "manage_assets", "plan_network_service_enumeration",
+    ) is False
+
+
 def test_service_result_action_supports_grounded_active_execution_language():
     response = ground_action_completion(
         "The bounded service scan is running now.",
