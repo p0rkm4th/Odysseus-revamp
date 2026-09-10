@@ -4315,21 +4315,24 @@ import { loadPanel } from './panels.js';
             }
           }
         }
-        // Some deterministic first-class reads finish with no provider text:
-        // the server persists the canonical answer and emits the tool result,
-        // but a fast response_replace/DONE sequence can leave the live bubble
-        // showing only the tool card.  Converge the visible chat with the
-        // persisted session instead of making the owner reload manually.
-        if (!accumulated.trim() && holder.querySelector('.agent-thread-node')) {
-          setTimeout(() => {
-            if (sessionModule.getCurrentSessionId() === streamSessionId) {
-              sessionModule.selectSession(streamSessionId).catch((err) => {
-                console.warn('[chat] failed to reload persisted tool answer:', err);
-              });
-            }
-          }, 0);
-        }
       } // end if (!_isBgFinal)
+
+      // Some deterministic first-class reads finish with no provider text:
+      // the server persists the canonical answer and emits the tool result,
+      // but a fast response_replace/DONE sequence can leave the live bubble
+      // showing only the tool card.  Converge the visible chat with the
+      // persisted session instead of making the owner reload manually.  Keep
+      // the current-session check so a background stream cannot hijack a chat
+      // the owner has opened since starting the request.
+      if (!accumulated.trim()
+          && holder.querySelector('.agent-thread-node')
+          && sessionModule.getCurrentSessionId() === streamSessionId) {
+        setTimeout(() => {
+          sessionModule.selectSession(streamSessionId).catch((err) => {
+            console.warn('[chat] failed to reload persisted tool answer:', err);
+          });
+        }, 0);
+      }
 
     } catch (err) {
       // If a Stop or timeout was waiting for an identity header and the POST
