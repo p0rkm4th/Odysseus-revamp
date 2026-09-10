@@ -217,3 +217,9 @@ def test_qwen_prose_only_network_request_does_not_get_a_stale_scope_repair(monke
     # The grounding boundary remains intact: only the synthetic tool result,
     # not the model's ARP prose, authorizes an action-completed response.
     assert not any("No action completed" in str(event.get("delta")) for event in _events(chunks))
+def test_nested_broker_success_terminates_network_turn_without_replanning():
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        '{"action":"execute_network_discovery","plan_digest":"' + "a" * 64 + '"}',
+        {"success": True, "data": {"success": True, "action": "execute_network_discovery"}},
+    ) is True
