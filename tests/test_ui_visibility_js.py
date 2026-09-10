@@ -94,6 +94,13 @@ def test_agent_chat_mode_toggle_is_not_customizable_away():
     assert "mode-toggle" not in _map()
 
 
+def test_agent_chat_mode_toggle_is_present_in_owner_composer():
+    html = (ROOT / "static" / "index.html").read_text()
+    assert 'class="mode-toggle"' in html
+    assert 'id="mode-agent-btn"' in html
+    assert 'id="mode-chat-btn"' in html
+
+
 def test_email_off_hides_email_and_its_rail_only():
     m = _resolve({"email-section": False})
     assert m[EMAIL] is False
