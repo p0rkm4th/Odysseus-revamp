@@ -205,3 +205,27 @@ def test_exchange_reuses_committed_item_after_callback_interruption(monkeypatch)
     finally:
         db.close()
         engine.dispose()
+
+
+def test_authenticated_owner_can_import_local_csv_fallback(monkeypatch):
+    client, db, plaid, engine = _client(monkeypatch)
+    try:
+        response = client.post(
+            "/api/finance/csv/import",
+            headers={"x-owner": "alice"},
+            json={
+                "source_label": "checking-export.csv",
+                "csv": "date,amount,merchant\n2026-09-01,12.50,Cafe\n2026-09-02,-100.00,Payroll\n",
+            },
+        )
+        assert response.status_code == 201
+        result = response.json()["import"]
+        assert result["source"] == "local_csv"
+        assert result["live_provider"] is False
+        assert result["imported_count"] == 2
+        assert client.get("/api/finance/transactions", headers={"x-owner": "alice"}).status_code == 200
+        assert client.get("/api/finance/transactions", headers={"x-owner": "bob"}).json()["transactions"] == []
+        assert "access_token" not in json.dumps(result)
+    finally:
+        db.close()
+        engine.dispose()
