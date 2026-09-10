@@ -615,8 +615,17 @@ class InventoryService:
                 )
                 db.add(movement)
                 movements.append(movement)
+            remaining = db.query(InventoryLot).filter(
+                InventoryLot.owner == owner, InventoryLot.item_id == item.id,
+                InventoryLot.quantity > 0,
+            ).count()
+            if remaining == 0:
+                # Depletion is a canonical grocery signal. It does not add
+                # stock or alter ownership; it only queues the existing item
+                # for the owner's next shopping pass.
+                item.shopping_list = True
             db.flush()
-            return {"movements": [_movement_view(m) for m in movements], "quantity": requested, "replayed": False}
+            return {"movements": [_movement_view(m) for m in movements], "quantity": requested, "depleted": remaining == 0, "replayed": False}
 
     def adjust_lot(
         self, owner: str, lot_id: str, *, quantity_delta: Any, unit: str,
@@ -996,6 +1005,12 @@ class RecipeService(InventoryService):
         if action == "archive_item":
             return {"item": self.archive_item(owner, _required_text(args.get("item_id"), "item_id"))}
         if action == "add_stock":
+            item_id = _required_text(args.get("item_id"), "item_id")
+            if args.get("storage_area"):
+                # A purchase can move an existing grocery item into canonical
+                # stock in one owner-scoped operation. The same transaction
+                # service remains authoritative for both fields.
+                self.update_item(owner, item_id, storage_area=args.get("storage_area"), shopping_list=False)
             kwargs: dict[str, Any] = {}
             if args.get("expiry_date"):
                 try:
@@ -1003,7 +1018,7 @@ class RecipeService(InventoryService):
                 except ValueError as exc:
                     raise InventoryError("expiry_date must be an ISO date") from exc
             return self.add_stock(
-                owner, _required_text(args.get("item_id"), "item_id"),
+                owner, item_id,
                 quantity=args.get("quantity"), unit=args.get("unit"),
                 idempotency_key=args.get("idempotency_key"),
                 location_id=args.get("location_id"), **kwargs,

@@ -107,6 +107,28 @@ def test_grocery_pantry_and_fridge_are_canonical_list_views():
     assert service.list_items("bob", list_name="grocery") == []
 
 
+def test_inventory_lifecycle_depletion_queues_grocery_and_purchase_restores_stock():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    rice = service.create_item(
+        "alice", name="Rice", domain="kitchen", item_kind="ingredient",
+        default_unit="kg", storage_area="pantry",
+    )
+    service.add_stock("alice", rice["id"], quantity="1", unit="kg", idempotency_key="rice-add")
+    consumed = service.consume_stock("alice", rice["id"], quantity="1", unit="kg", idempotency_key="rice-use")
+    assert consumed["depleted"] is True
+    assert [item["name"] for item in service.list_items("alice", list_name="grocery")] == ["Rice"]
+    purchased = service.manage_inventory({
+        "action": "add_stock", "item_id": rice["id"], "quantity": "2", "unit": "kg",
+        "storage_area": "pantry", "idempotency_key": "rice-purchase",
+    }, owner="alice")
+    assert purchased["replayed"] is False
+    assert service.get_item("alice", rice["id"])["shopping_list"] is False
+    # Quantities are canonicalized to the item's base unit (grams), so the
+    # same value is stable across chat, UI refresh, and restart.
+    assert service.household_overview("alice")["items"][0]["stock_quantity"] == "2000.000000"
+
+
 def test_inventory_ui_has_pantry_and_grocery_crud_surfaces():
     from pathlib import Path
     source = (Path(__file__).resolve().parents[1] / "static/js/inventory.js").read_text()
