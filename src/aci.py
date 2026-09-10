@@ -3021,6 +3021,10 @@ def canonical_read_fast_path_payload(
         merchant = str(filters.get("merchant") or "").strip()
         if merchant:
             payload["merchant"] = merchant[:100]
+        for key in ("start", "end"):
+            value = str(filters.get(key) or "").strip()
+            if value:
+                payload[key] = value[:10]
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}

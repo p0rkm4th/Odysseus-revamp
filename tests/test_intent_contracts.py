@@ -87,6 +87,22 @@ def test_merchant_selector_stops_before_natural_month_phrase():
     assert frame.domain_concept == "FINANCE"
     assert frame.filters["view"] == "spending"
     assert frame.filters["merchant"] == "publix"
+    assert frame.filters["start"].endswith("-09-01")
+    assert frame.filters["end"].endswith("-09-30")
+
+
+def test_named_month_range_reaches_finance_fast_path_payload():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "How much did I spend at Publix in September?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
+    )
+    assert payload["merchant"] == "publix"
+    assert payload["start"].endswith("-09-01")
+    assert payload["end"].endswith("-09-30")
 
 
 def test_contextual_reference_followup_uses_recent_semantic_context_only():

@@ -9,6 +9,8 @@ chain before a tool can run.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from datetime import date
+import calendar
 import ipaddress
 import logging
 import re
@@ -19,6 +21,43 @@ from src.tool_bindings import binding_for_tool
 from src.deterministic_reads import deterministic_read_concept, deterministic_read_view
 
 logger = logging.getLogger(__name__)
+
+_MONTH_NUMBERS = {
+    name.casefold(): number
+    for number, name in enumerate(calendar.month_name)
+    if name
+}
+_MONTH_NUMBERS.update({
+    name.casefold(): number
+    for number, name in enumerate(calendar.month_abbr)
+    if name
+})
+
+
+def _named_month_range(text: str) -> dict[str, str]:
+    """Project one explicit natural-language month into a bounded date range."""
+    match = re.search(
+        r"\b(?:in|during|for)\s+(January|February|March|April|May|June|July|"
+        r"August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|"
+        r"Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:\s+(20\d{2}))?\b",
+        str(text or ""),
+        re.IGNORECASE,
+    )
+    if not match:
+        return {}
+    month_name = match.group(1).casefold()
+    if month_name == "sept":
+        month_name = "sep"
+    month = _MONTH_NUMBERS.get(month_name)
+    if month is None:
+        return {}
+    today = date.today()
+    year = int(match.group(2)) if match.group(2) else today.year
+    if not match.group(2) and month > today.month:
+        year -= 1
+    start = date(year, month, 1)
+    end = date(year, month, calendar.monthrange(year, month)[1])
+    return {"start": start.isoformat(), "end": end.isoformat()}
 
 
 # Operational domain metadata used by prompt/capability projections.  These
@@ -1599,6 +1638,7 @@ def compile_intent(
         finance_view = deterministic_read_view(text, concept)
         if finance_view:
             reference_filters["view"] = finance_view
+        reference_filters.update(_named_month_range(text))
         # Preserve a bounded owner-supplied merchant selector for deterministic
         # Finance reads. The selector is data, not a new capability or query
         # language; FinanceService still applies the owner scope and limit.
