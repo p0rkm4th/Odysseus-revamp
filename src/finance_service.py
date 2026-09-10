@@ -309,6 +309,7 @@ class FinanceService:
                 raise FinanceError(f"Finance CSV row {index} has invalid status")
             row_currency = _currency(normalized.get("currency") or currency)
             identity = hashlib.sha256(json.dumps({
+                "row": index,
                 "date": transaction_date.isoformat(), "amount": str(abs(amount)),
                 "merchant": merchant, "description": normalized.get("description"),
                 "currency": row_currency, "direction": direction, "status": status,
