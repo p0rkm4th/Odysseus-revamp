@@ -285,6 +285,33 @@ class HomelabReceiptStore:
                 return False
         return False
 
+    def get_valid_plan(self, *, owner: str, digest: str, now: datetime | None = None) -> dict[str, Any] | None:
+        """Return the exact still-live plan for a continuation.
+
+        Execution continuations carry only the opaque digest. Reusing the
+        persisted owner-bound plan keeps the approved target stable across a
+        restart or a changed host-context read.
+        """
+        if not self.path.is_file():
+            return None
+        current = now or _now()
+        with _receipt_lock:
+            lines = self.path.read_text(encoding="utf-8").splitlines()
+        for line in reversed(lines[-1000:]):
+            try:
+                receipt = json.loads(line)
+                created = datetime.fromisoformat(receipt["created_at"])
+            except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+                continue
+            if (
+                receipt.get("kind") == "plan"
+                and receipt.get("owner") == owner
+                and receipt.get("operation_digest") == digest
+                and current <= created + timedelta(minutes=10)
+            ):
+                return receipt
+        return None
+
 
 async def _default_runner(argv: list[str], timeout: float = 30) -> tuple[int, str]:
     process = await asyncio.create_subprocess_exec(
@@ -679,6 +706,20 @@ class HomelabOperations:
     ) -> dict[str, Any]:
         requested_cidr = str(request.get("cidr") or "").strip()
         scope_source = "owner_request"
+        supplied_authorization = str(request.get("scope_authorization") or "").strip().upper()
+        # An approved continuation has an exact server-issued target. Reuse
+        # it rather than resolving a fresh interface set, which can change
+        # after a restart and must never invalidate an otherwise valid owner
+        # approval or silently widen it.
+        if not requested_cidr and action == "execute_network_discovery":
+            plan_digest = str(request.get("plan_digest") or "").strip().lower()
+            planned = await asyncio.to_thread(
+                self.receipts.get_valid_plan, owner=owner, digest=plan_digest,
+            ) if plan_digest else None
+            if planned:
+                requested_cidr = str(planned.get("target") or planned.get("cidr") or "").strip()
+                supplied_authorization = str(planned.get("scope_authorization") or "").strip().upper()
+                scope_source = str(planned.get("scope_source") or "approved_plan")
         if requested_cidr:
             network = _private_network(requested_cidr)
         else:
@@ -716,7 +757,6 @@ class HomelabOperations:
         # exact-approval gated. USER_MANAGED is the bounded semantic label
         # carried into the sealed plan when the owner did not type a CIDR or
         # separate authorization token.
-        supplied_authorization = str(request.get("scope_authorization") or "").strip().upper()
         if requested_cidr and not supplied_authorization:
             raise HomelabOperationError(
                 "active discovery requires USER_MANAGED or EXPLICITLY_AUTHORIZED scope; "
