@@ -3015,6 +3015,12 @@ def canonical_read_fast_path_payload(
     if binding == "manage_assets" and action == "get":
         return canonical_asset_read_payload(frame)
     payload = {"action": action}
+    if binding == "read_finance" and action in {"spending", "transactions"}:
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        merchant = str(filters.get("merchant") or "").strip()
+        if merchant:
+            payload["merchant"] = merchant[:100]
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
@@ -3700,7 +3706,9 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         period = f"{payload.get('start', 'the requested period')} through {payload.get('end', 'today')}"
         totals = payload.get("posted_outflow_by_currency") or {}
         rendered = ", ".join(f"{currency} {amount}" for currency, amount in totals.items()) or "none recorded"
-        lines.append(f"Posted spending for {period}: {rendered}.")
+        merchant = str(payload.get("merchant") or "").strip()
+        subject = f"at {merchant} " if merchant else ""
+        lines.append(f"Posted spending {subject}for {period}: {rendered}.")
         categories = payload.get("posted_outflow_by_category") or {}
         if categories:
             parts = []
