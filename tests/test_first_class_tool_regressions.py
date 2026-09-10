@@ -394,6 +394,12 @@ def test_tainted_run_still_allows_registered_owner_scoped_reads():
     assert security.decision_for(
         "manage_homelab", {"action": "execute_network_discovery", "cidr": "10.0.0.0/24"}
     ).allowed is True
+    assert security.decision_for(
+        "manage_assets", {"action": "remove_from_grocery", "name": "basil-test"}
+    ).allowed is True
+    assert security.decision_for(
+        "yolo_shell", {"action": "execute", "command": "id"}
+    ).allowed is False
 
 
 @pytest.mark.asyncio
