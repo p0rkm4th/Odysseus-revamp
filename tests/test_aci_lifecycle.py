@@ -560,6 +560,20 @@ def test_finance_answer_correction_reuses_recent_finance_read_context():
     assert "Publix" in intent["retrieval_query"]
 
 
+def test_ranked_finance_followup_projects_bounded_largest_outflows():
+    messages = [
+        {"role": "user", "content": "How much did I spend this year?"},
+        {"role": "assistant", "content": "Posted spending for 2026: USD 500.00."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "What were the most expensive single line items from that?"
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+    assert "How much did I spend this year?" in intent["retrieval_query"]
+    assert "most expensive" in intent["retrieval_query"]
+
+
 def test_legacy_chat_finance_correction_reuses_recent_finance_read_context():
     from src.agent_loop import _classify_agent_request
 

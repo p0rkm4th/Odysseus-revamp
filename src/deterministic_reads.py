@@ -53,6 +53,11 @@ _FINANCE_FILE_CONTEXT = re.compile(
     r"\b(?:finance|financial|finances|bank|transaction|spend|expense)\b.{0,48}\b(?:csv|statement|export)\b)",
     re.IGNORECASE,
 )
+_FINANCE_RANKED_TRANSACTIONS = re.compile(
+    r"\b(?:most\s+expensive|largest|biggest|highest|top)\b.{0,48}\b"
+    r"(?:charge|charges|purchase|purchases|transaction|transactions|line\s+items?)\b",
+    re.IGNORECASE,
+)
 _FINANCE_OVERVIEW = re.compile(
     r"\b(?:go\s+over|review|look\s+at|check|tell\s+me\s+about|summari[sz]e|analy[sz]e)\b",
     re.IGNORECASE,
@@ -159,6 +164,10 @@ def deterministic_read_concept(text: str) -> str | None:
             )
         )
         and not (
+            _FINANCE_RANKED_TRANSACTIONS.search(query)
+            and re.search(r"\b(?:what|which|show|list|tell|give|provide|identify)\b", query)
+        )
+        and not (
             _NETWORK_SUBJECT.search(query)
             and re.search(r"\b(?:current(?:ly)?|now|figure\s+it\s+out|explore)\b", query)
         )
@@ -179,6 +188,8 @@ def deterministic_read_concept(text: str) -> str | None:
             or (_FINANCE_FILE_CONTEXT.search(query) and re.search(r"\b(?:uploaded|imported|attached|earlier|already)\b", query))
         )
     ):
+        return "FINANCE"
+    if _FINANCE_RANKED_TRANSACTIONS.search(query):
         return "FINANCE"
     if _MEMORY_STORE_QUERY.search(query) and not re.search(
         r"\b(?:file|files|document|documents|secret|secrets|password|passwords)\b",
@@ -300,6 +311,7 @@ def deterministic_read_view(text: str, concept: str | None) -> str | None:
     if concept == "WORK" and re.search(r"\b(?:attention|on\s+my\s+plate|needs?\s+attention)\b", query):
         return "attention"
     if concept == "FINANCE":
+        if _FINANCE_RANKED_TRANSACTIONS.search(query): return "transactions"
         if re.search(r"\b(?:transaction|transactions|recent)\b", query): return "transactions"
         if re.search(r"\b(?:inflow|outflow|cash\s+flow)\b", query): return "cash_flow"
         if re.search(r"\b(?:spend|spent|spending|expense|expenses|merchant|restaurant|budget)\b", query): return "spending"

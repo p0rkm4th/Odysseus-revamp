@@ -186,6 +186,24 @@ def test_local_csv_amount_column_uses_bank_signs_and_reimport_repairs_direction(
     assert spending["merchant"] == "Publix"
 
 
+def test_ranked_transactions_returns_largest_posted_outflows_deterministically(db):
+    svc = FinanceService(db)
+    csv_text = (
+        "Date,Description,Amount,Status\n"
+        "09/01/2026,Small shop,-12.50,Posted\n"
+        "09/02/2026,Larger shop,-125.00,Posted\n"
+        "09/03/2026,Pending shop,-999.00,Pending\n"
+        "09/04/2026,Payroll,2000.00,Posted\n"
+    )
+    svc.import_csv("alice", csv_text, source_label="ranked.csv")
+    result = svc.read_finance("alice", "transactions", {
+        "start": "2026-01-01", "end": "2026-12-31", "sort": "amount_desc",
+        "direction": "outflow", "status": "posted", "limit": 10,
+    })
+    assert [row["merchant"] for row in result["transactions"]] == ["Larger shop", "Small shop"]
+    assert all(row["status"] == "posted" and row["direction"] == "outflow" for row in result["transactions"])
+
+
 def test_local_csv_accepts_common_bank_export_headers_and_debit_credit(db):
     svc = FinanceService(db)
     bank_export = (

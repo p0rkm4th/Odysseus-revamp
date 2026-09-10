@@ -133,7 +133,8 @@ READ_FINANCE_SCHEMA = {
             "action": {"type": "string", "enum": ["coverage", "transactions", "spending", "cash_flow", "shared_expenses"]},
             "start": {"type": "string", "description": "ISO date, inclusive."}, "end": {"type": "string", "description": "ISO date, inclusive."},
             "merchant": {"type": "string", "maxLength": 100}, "category": {"type": "string", "maxLength": 100},
-            "status": {"type": "string", "enum": ["pending", "posted"]}, "limit": {"type": "integer", "minimum": 1, "maximum": 200},
+            "status": {"type": "string", "enum": ["pending", "posted"]}, "direction": {"type": "string", "enum": ["inflow", "outflow"]},
+            "sort": {"type": "string", "enum": ["amount_desc"]}, "limit": {"type": "integer", "minimum": 1, "maximum": 200},
             "household_id": {"type": "string"},
         }, "required": ["action"]},
     }
