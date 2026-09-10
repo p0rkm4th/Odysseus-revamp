@@ -350,6 +350,8 @@ def test_conceptual_component_question_does_not_become_asset_read():
 
 @pytest.mark.parametrize("query", [
     "Show me what's in the kitchen.",
+    "What's on the house grocery list?",
+    "Dude, check my grocery list and don't fail me now",
     "Add angel hair pasta to my kitchen inventory.",
 ])
 def test_household_owner_turn_enters_bounded_aci_capability_path(query):
