@@ -112,6 +112,22 @@ def _movement_key(operation_key: str, index: int) -> str:
     return f"{digest}:{index}"
 
 
+def _validate_grocery_name(name: str, shopping_list: bool) -> None:
+    """Reject recipe placeholders at every grocery write boundary."""
+    if not shopping_list:
+        return
+    if _RECIPE_LIKE_GROCERY_NAME.search(name):
+        raise InventoryError(
+            "this describes a recipe rather than one grocery item; "
+            "no grocery change was made"
+        )
+    if _NON_ITEM_GROCERY_NAME.fullmatch(name.strip()):
+        raise InventoryError(
+            "please provide the individual grocery items or a saved recipe; "
+            "no grocery change was made"
+        )
+
+
 def _item_view(item: InventoryItem) -> dict[str, Any]:
     return {
         "id": item.id,
@@ -273,6 +289,7 @@ class InventoryService:
             raise InventoryError("unsupported inventory domain")
         if item_kind not in _KINDS:
             raise InventoryError("unsupported inventory item kind")
+        _validate_grocery_name(display_name, bool(shopping_list))
         try:
             canonical_unit = normalize_amount(1, default_unit).unit
         except UnitError as exc:
@@ -310,10 +327,12 @@ class InventoryService:
         """Update human-facing pantry/grocery metadata, never stock implicitly."""
         with self._transaction() as db:
             item = self._item(db, owner, item_id)
+            next_name = item.name if name is _UNSET else _required_text(name, "name", maximum=200)
+            next_shopping_list = item.shopping_list if shopping_list is _UNSET else bool(shopping_list)
+            _validate_grocery_name(next_name, next_shopping_list)
             if name is not _UNSET:
-                display_name = _required_text(name, "name", maximum=200)
-                item.name = display_name
-                item.normalized_name = normalize_item_name(display_name)
+                item.name = next_name
+                item.normalized_name = normalize_item_name(next_name)
             if category is not _UNSET:
                 item.category = _optional_text(category, "category")
             if description is not _UNSET:
@@ -326,7 +345,7 @@ class InventoryService:
             if reorder_point is not _UNSET:
                 item.reorder_point = None if reorder_point in (None, "") else _canonical_amount(reorder_point, item.default_unit, item.default_unit)
             if shopping_list is not _UNSET:
-                item.shopping_list = bool(shopping_list)
+                item.shopping_list = next_shopping_list
             if storage_area is not _UNSET:
                 item.storage_area = self._storage_area(storage_area)
             db.flush()
@@ -1040,20 +1059,7 @@ class RecipeService(InventoryService):
             # repeated chat turns must not create duplicate grocery/pantry
             # records. A real ambiguity remains a clarification, not a guess.
             requested_name = _required_text(args.get("name"), "name", maximum=200)
-            # A recipe-shaped request must never be persisted as one literal
-            # grocery item.  This service has no trusted recipe decomposition
-            # for arbitrary dishes, so fail closed instead of claiming that a
-            # compound outcome was added or silently inventing ingredients.
-            if shopping_list and _RECIPE_LIKE_GROCERY_NAME.search(requested_name):
-                raise InventoryError(
-                    "this describes a recipe rather than one grocery item; "
-                    "no grocery change was made"
-                )
-            if shopping_list and _NON_ITEM_GROCERY_NAME.fullmatch(requested_name.strip()):
-                raise InventoryError(
-                    "please provide the individual grocery items or a saved recipe; "
-                    "no grocery change was made"
-                )
+            _validate_grocery_name(requested_name, bool(shopping_list))
             normalized = normalize_item_name(requested_name)
             with self._read() as db:
                 matches = db.query(InventoryItem).filter(
