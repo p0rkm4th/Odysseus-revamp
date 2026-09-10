@@ -1604,7 +1604,7 @@ def compile_intent(
         # language; FinanceService still applies the owner scope and limit.
         merchant_match = re.search(
             r"\b(?:at|from|merchant)\s+([A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}?)(?="
-            r"\s+(?:this|last|next|for|since|between|during|on)\b|[?.!,]|$)",
+            r"\s+(?:this|last|next|for|since|between|during|on|in)\b|[?.!,]|$)",
             q,
             re.IGNORECASE,
         )

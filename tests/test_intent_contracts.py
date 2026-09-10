@@ -82,6 +82,13 @@ def test_concise_merchant_spending_question_is_not_unfiltered():
     ) == {"action": "spending", "merchant": "publix"}
 
 
+def test_merchant_selector_stops_before_natural_month_phrase():
+    frame = compile_intent("How much did I spend at Publix in September?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["merchant"] == "publix"
+
+
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
     messages = [
         {"role": "user", "content": "scan the current network"},
