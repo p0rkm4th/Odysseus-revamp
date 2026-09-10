@@ -2449,42 +2449,32 @@ async def stream_aci_runtime(
             ):
                 _network_plan = {"action": "plan_network_discovery"}
                 # A plan is a durable continuation point. On an explicit
-                # follow-up such as "continue" or "go ahead", consume the
-                # latest server-issued digest instead of planning the same
-                # discovery again. The digest remains the owner-bound
-                # authorization/verification seal; prose cannot invent it.
-                if _intent.get("continuation") and re.match(
-                    r"^(?:continue|go ahead|yes|proceed|run it|do it)\b",
-                    str(_last_user or "").strip(),
-                    re.IGNORECASE,
-                ):
-                    _network_context = " ".join(
-                        str(message.get("content") or "")
-                        for message in messages[-12:]
-                        if message.get("role") in {"user", "assistant", "tool"}
+                # follow-up, resolve the next step from owner/session/run
+                # state. Transcript text is presentation context only and
+                # must never be used to recover an approval digest.
+                if _intent.get("continuation") and work_run_id:
+                    from src.agent_work_bridge import network_continuation_projection
+                    _network_continuation = await asyncio.to_thread(
+                        network_continuation_projection, owner, str(work_run_id),
                     )
-                    _plan_match = re.search(
-                        r"(?:operation_digest|plan_digest)\"?\s*[:=]\s*\"?([0-9a-f]{64})\b",
-                        _network_context,
-                        re.IGNORECASE,
-                    )
-                    if _plan_match:
-                        _network_plan = {
-                            "action": "execute_network_discovery",
-                            "plan_digest": _plan_match.group(1).lower(),
-                        }
+                    if isinstance(_network_continuation, dict):
+                        _network_plan = json.loads(
+                            str(_network_continuation.get("content") or "{}")
+                        )
                         logger.info(
-                            "[hades-aci] deterministic network continuation action=execute_network_discovery digest=%s",
-                            _plan_match.group(1)[:16],
+                            "[hades-aci] canonical network continuation action=%s digest=%s",
+                            _network_plan.get("action"),
+                            str(_network_plan.get("plan_digest") or "")[:16],
                         )
                 _aci_fast_path_block = ToolBlock(
                     "manage_homelab", json.dumps(_network_plan, sort_keys=True)
                 )
+                _network_action_id = str(_network_plan.get("action") or "plan_network_discovery")
                 _aci_selected_action = next(
                     (
                         trace for trace in _aci_action_candidates
                         if trace["binding"] == "manage_homelab"
-                        and trace["action_id"] == "plan_network_discovery"
+                        and trace["action_id"] == _network_action_id
                     ),
                     None,
                 )
