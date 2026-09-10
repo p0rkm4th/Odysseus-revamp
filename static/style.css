@@ -41537,8 +41537,11 @@ body.settings-sidebar-resize-active {
   --hades-radius-sm: 6px;
   --hades-radius-md: 10px;
   --hades-radius-lg: 14px;
-  --hades-surface-raised: color-mix(in srgb, var(--bg-secondary, #20242b) 88%, white 12%);
-  --hades-border-subtle: color-mix(in srgb, var(--border, #46505c) 62%, transparent);
+  /* Reuse the established Brain/Email inner panel surface.  Mixing an
+     undefined secondary background with white made these panels warm and
+     inconsistent with the active purple-blue theme. */
+  --hades-surface-raised: var(--surface-panel, var(--panel));
+  --hades-border-subtle: var(--border-subtle, color-mix(in srgb, var(--border, #46505c) 62%, transparent));
   --hades-text-muted: var(--text-secondary, #9aa6b2);
   --hades-success: #4fc38a;
   --hades-info: #67a9ff;
