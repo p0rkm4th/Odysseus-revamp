@@ -3075,6 +3075,9 @@ def canonical_read_fast_path_payload(
         merchant = str(filters.get("merchant") or "").strip()
         if merchant:
             payload["merchant"] = merchant[:100]
+        category = str(filters.get("category") or "").strip()
+        if category:
+            payload["category"] = category[:100]
         for key in ("start", "end"):
             value = str(filters.get(key) or "").strip()
             if value:

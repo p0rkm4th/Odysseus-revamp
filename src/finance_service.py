@@ -664,6 +664,19 @@ class FinanceService:
         rows = query.order_by(FinanceTransaction.transaction_date.desc(), FinanceTransaction.created_at.desc()).limit(limit).all()
         return {"transactions": [self._transaction_dict(row, include_provider_metadata=False) for row in rows], "limit": limit, "coverage": self.coverage(owner, start, end)}
 
+    @staticmethod
+    def _category_matches(value: str | None, selector: str | None) -> bool:
+        if not selector:
+            return True
+        normalized = str(value or "").casefold()
+        selector = selector.casefold()
+        groups = {
+            "dining_out": {"restaurants", "fast food", "food & dining", "alcohol & bars"},
+        }
+        if selector in groups:
+            return normalized in groups[selector]
+        return normalized == selector
+
     def spending(self, owner: str, start: date, end: date, *, merchant: str | None = None, category: str | None = None) -> dict[str, Any]:
         query = self.db.query(FinanceTransaction).filter(
             FinanceTransaction.owner == owner, FinanceTransaction.provider_removed.is_(False),
@@ -676,7 +689,7 @@ class FinanceService:
         totals: dict[str, Decimal] = {}
         by_category: dict[str, dict[str, Decimal]] = {}
         for row in rows:
-            if row.direction != "outflow" or (category and row.provider_category != category): continue
+            if row.direction != "outflow" or not self._category_matches(row.provider_category, category): continue
             totals[row.currency] = totals.get(row.currency, Decimal("0")) + Decimal(row.amount)
             bucket = by_category.setdefault(row.provider_category or "uncategorized", {})
             bucket[row.currency] = bucket.get(row.currency, Decimal("0")) + Decimal(row.amount)
@@ -688,8 +701,12 @@ class FinanceService:
         )
         if merchant:
             pending_query = pending_query.filter(FinanceTransaction.merchant.ilike(f"%{merchant[:100]}%"))
-        if category:
-            pending_query = pending_query.filter(FinanceTransaction.provider_category == category)
+        if category and category.casefold() not in {"dining_out"}:
+            pending_query = pending_query.filter(FinanceTransaction.provider_category.ilike(category[:100]))
+        elif category == "dining_out":
+            pending_query = pending_query.filter(FinanceTransaction.provider_category.in_(
+                ["Restaurants", "Fast Food", "Food & Dining", "Alcohol & Bars"]
+            ))
         pending_totals: dict[str, Decimal] = {}
         pending_rows = pending_query.all()
         for row in pending_rows:

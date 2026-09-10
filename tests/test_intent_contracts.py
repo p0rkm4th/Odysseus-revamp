@@ -132,6 +132,13 @@ def test_short_finance_period_correction_reaches_bounded_read():
     assert frame.filters["start"].endswith("-01-01")
 
 
+def test_dining_out_and_restaurant_filters_are_explicit():
+    dining = compile_intent("How much did I spend dining out this year?")
+    restaurants = compile_intent("What have I spent on restaurants lately?")
+    assert dining.filters["category"] == "dining_out"
+    assert restaurants.filters["category"] == "Restaurants"
+
+
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
     messages = [
         {"role": "user", "content": "scan the current network"},

@@ -128,6 +128,25 @@ def test_deterministic_queries_are_currency_safe_and_owner_scoped(db):
         svc.read_finance("alice", "shared_expenses", {})
 
 
+def test_dining_out_category_group_does_not_return_all_spending(db):
+    svc = FinanceService(db)
+    account = svc.import_account("alice", {"provider": "fixture", "provider_account_id": "a", "currency": "USD"})
+    for txid, category, amount in (
+        ("restaurant", "Restaurants", "25"),
+        ("fast-food", "Fast Food", "10"),
+        ("rent", "Mortgage & Rent", "1500"),
+    ):
+        svc.import_transaction("alice", {
+            "account_id": account["id"], "provider": "fixture", "provider_transaction_id": txid,
+            "amount": amount, "direction": "outflow", "currency": "USD",
+            "transaction_date": "2026-09-01", "merchant": txid,
+            "provider_category": category, "status": "posted",
+        })
+    result = svc.spending("alice", date(2026, 9, 1), date(2026, 9, 30), category="dining_out")
+    assert result["posted_outflow_by_currency"] == {"USD": "35.0000"}
+    assert set(result["posted_outflow_by_category"]) == {"Restaurants", "Fast Food"}
+
+
 def test_local_csv_fallback_is_canonical_idempotent_and_not_live_plaid(db):
     svc = FinanceService(db)
     csv_text = "date,amount,merchant,currency\n2026-09-01,12.50,Cafe,USD\n2026-09-01,12.50,Cafe,USD\n2026-09-02,-40.00,Payroll,USD\n"
