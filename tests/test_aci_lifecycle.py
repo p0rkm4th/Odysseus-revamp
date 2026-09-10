@@ -540,6 +540,18 @@ def test_finance_answer_correction_reuses_recent_finance_read_context():
     assert "Publix" in intent["retrieval_query"]
 
 
+def test_legacy_chat_finance_correction_reuses_recent_finance_read_context():
+    from src.agent_loop import _classify_agent_request
+
+    messages = [
+        {"role": "user", "content": "How much have I spent at Publix this month?"},
+        {"role": "assistant", "content": "Posted spending at Publix: USD 25.7200."},
+    ]
+    intent = _classify_agent_request(messages, "You're missing one")
+    assert intent["continuation"] is True
+    assert "Publix" in intent["retrieval_query"]
+
+
 def test_inventory_mutation_uses_grounded_fast_path_without_model_json():
     from src.aci import project_action_selection
 
