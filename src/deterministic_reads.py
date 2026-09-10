@@ -44,6 +44,10 @@ _WORK_OWNER = re.compile(
     r"\b(?:my|me|we|i(?:'m|\s+am)?|i\s+have|have\s+i|i(?:'ve)?\s+got)\b",
     re.IGNORECASE,
 )
+_FINANCE_SUBJECT = re.compile(
+    r"\b(?:spend|spent|spending|expense|expenses|budget|budgeting|inflow|outflow|cash\s+flow|transaction|transactions|financial|finance|money|bank)\b",
+    re.IGNORECASE,
+)
 _ASSET_SUBJECT = re.compile(
     r"\b(?:it\s+assets?|assets?|tech(?:nical)?|computers?|machines?|hardware|"
     r"computational\s+(?:assets?|hardware)|boxes?|gear|"
@@ -137,6 +141,7 @@ def deterministic_read_concept(text: str) -> str | None:
         not _READ_REQUEST.search(query)
         and not _INFRASTRUCTURE_STATUS.search(query)
         and not _HOST_INSPECTION.search(query)
+        and not (_FINANCE_SUBJECT.search(query) and re.search(r"\b(?:how|what|show|list|is|are|did|have|check)\b", query))
         and not (
             _NETWORK_SUBJECT.search(query)
             and re.search(r"\b(?:current(?:ly)?|now|figure\s+it\s+out|explore)\b", query)
@@ -150,6 +155,8 @@ def deterministic_read_concept(text: str) -> str | None:
         return None
     if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
         return None
+    if _FINANCE_SUBJECT.search(query) and re.search(r"\b(?:how\s+much|what|show|list|is|are|did|have|check)\b", query):
+        return "FINANCE"
     if _MEMORY_STORE_QUERY.search(query) and not re.search(
         r"\b(?:file|files|document|documents|secret|secrets|password|passwords)\b",
         query,
@@ -269,4 +276,9 @@ def deterministic_read_view(text: str, concept: str | None) -> str | None:
         return "context"
     if concept == "WORK" and re.search(r"\b(?:attention|on\s+my\s+plate|needs?\s+attention)\b", query):
         return "attention"
+    if concept == "FINANCE":
+        if re.search(r"\b(?:transaction|transactions|recent)\b", query): return "transactions"
+        if re.search(r"\b(?:inflow|outflow|cash\s+flow)\b", query): return "cash_flow"
+        if re.search(r"\b(?:spend|spent|spending|expense|expenses|merchant|restaurant|budget)\b", query): return "spending"
+        return "coverage"
     return None

@@ -2203,7 +2203,7 @@ def action_trace(
 
 
 _CANONICAL_READ_EVENT_NAMES = frozenset({
-    "read_memory", "read_work", "read_assets", "manage_assets",
+    "read_memory", "read_work", "read_finance", "read_assets", "manage_assets",
     "manage_homelab", "read_security", "read_osint", "read_setup",
     "read_integrations", "read_documents", "read_contacts",
 })
@@ -2297,6 +2297,7 @@ def semanticize_internal_action_names(text: str) -> str:
         "read_memory": "saved-memory read",
         "manage_assets": "technical asset operation",
         "read_work": "work overview read",
+        "read_finance": "finance read",
     }
     value = str(text or "")
     for internal, label in replacements.items():

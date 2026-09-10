@@ -306,6 +306,11 @@ _register(
     result_integrity=ResultIntegrity.SYSTEM,
 )
 _register(
+    {"read_finance"},
+    ToolEffect.READ_PRIVATE,
+    result_integrity=ResultIntegrity.SYSTEM,
+)
+_register(
     {"read_setup"},
     ToolEffect.READ_PRIVATE,
     result_integrity=ResultIntegrity.SYSTEM,

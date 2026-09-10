@@ -10,6 +10,8 @@ from fastapi import APIRouter, Body, HTTPException, Request
 from core.database import SessionLocal
 from src.auth_helpers import require_user
 from src.finance_service import FinanceError, FinanceService
+from src.plaid_sync import PlaidSyncService
+from src.plaid_transport import PlaidTransport, PlaidError
 from src.owner_identity import effective_storage_owner
 
 
@@ -47,6 +49,34 @@ def setup_finance_routes(*, session_factory=SessionLocal) -> APIRouter:
     @router.get("/transactions")
     async def transactions(request: Request):
         return {"transactions": await tx(request, lambda svc, user: svc.list_transactions(user))}
+
+    @router.get("/coverage")
+    async def coverage(request: Request):
+        return await tx(request, lambda svc, user: svc.coverage(user))
+
+    @router.get("/analysis/{action}")
+    async def analysis(request: Request, action: str):
+        params = dict(request.query_params)
+        return await tx(request, lambda svc, user: svc.read_finance(user, action, params))
+
+    @router.get("/plaid/items")
+    async def plaid_items(request: Request):
+        return {"items": await tx(request, lambda svc, user: svc.list_plaid_items(user))}
+
+    @router.post("/plaid/items", status_code=201)
+    async def plaid_item(request: Request, payload: dict[str, Any] = Body(...)):
+        return {"item": await tx(request, lambda svc, user: svc.create_plaid_item(user, str(payload.get("item_id") or ""), str(payload.get("access_token") or ""), payload.get("institution_name")))}
+
+    @router.post("/plaid/items/{item_id}/sync")
+    async def plaid_sync(request: Request, item_id: str):
+        user = owner(request)
+        def run():
+            with session_factory() as db:
+                return PlaidSyncService(db, PlaidTransport()).sync(user, item_id)
+        try:
+            return await asyncio.to_thread(run)
+        except (FinanceError, PlaidError) as exc:
+            raise HTTPException(503 if isinstance(exc, PlaidError) else 400, str(exc)) from exc
 
     @router.post("/accounts/import", status_code=201)
     async def import_account(request: Request, payload: dict[str, Any] = Body(...)):

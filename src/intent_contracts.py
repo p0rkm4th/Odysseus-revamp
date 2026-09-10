@@ -744,7 +744,7 @@ class IntentFrame:
 
 
 _BOUNDED_OWNER_CAPABILITY_CONCEPTS = frozenset({
-    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM",
+    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM", "FINANCE",
 })
 
 
@@ -901,6 +901,10 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "household_overview",
     ),
+    "FINANCE": DomainContract(
+        "FINANCE", "finance.read", {"READ": "coverage", "READ_SPENDING": "spending", "READ_TRANSACTIONS": "transactions", "READ_CASH_FLOW": "cash_flow"}, "read_finance",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "finance_read",
+    ),
     # Mutations use the same Inventory service as the human-facing inventory
     # adapter.  Keeping this as a separate contract avoids changing the
     # established read-only Household binding while making CREATE/UPDATE
@@ -982,6 +986,7 @@ CANONICAL_DOMAIN_PROJECTIONS: Mapping[str, str] = {
     "MISSION": "work",
     "WATCH": "work",
     "HOUSEHOLD_ITEM": "household",
+    "FINANCE": "finance",
     "INTEGRATION": "setup",
     "COMMUNICATIONS": "communications",
     "CONTACT": "contacts",
@@ -1024,6 +1029,8 @@ def canonical_read_action(
         operation = "READ_CONTEXT"
     elif domain_concept == "NETWORK" and view == "roles":
         operation = "READ_ROLES"
+    elif domain_concept == "FINANCE" and view in {"spending", "transactions", "cash_flow"}:
+        operation = {"spending": "READ_SPENDING", "transactions": "READ_TRANSACTIONS", "cash_flow": "READ_CASH_FLOW"}[view]
     return contract.actions.get(operation)
 
 
@@ -1580,6 +1587,10 @@ def compile_intent(
         reference_filters["view"] = "context"
     elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
         reference_filters["view"] = "roles"
+    elif concept == "FINANCE":
+        finance_view = deterministic_read_view(text, concept)
+        if finance_view:
+            reference_filters["view"] = finance_view
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
