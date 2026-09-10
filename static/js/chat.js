@@ -4326,6 +4326,7 @@ import { loadPanel } from './panels.js';
       // the owner has opened since starting the request.
       const _toolOnlyThread = (roundHolder && roundHolder.querySelector('.agent-thread-node'))
         || holder.querySelector('.agent-thread-node')
+        || document.querySelector('.msg-ai.streaming .agent-thread-node')
         || (lastToolThread && lastToolThread.isConnected ? lastToolThread : null);
       const _toolOnlyVisibleText = _streamDisplayText(
         roundText || accumulated,
@@ -4335,11 +4336,18 @@ import { loadPanel } from './panels.js';
       if ((!_toolOnlyVisibleText || _toolOnlyMarker)
           && _toolOnlyThread
           && sessionModule.getCurrentSessionId() === streamSessionId) {
-        setTimeout(() => {
-          sessionModule.selectSession(streamSessionId).catch((err) => {
+        // Persistence is committed just after the terminal stream event in
+        // some tool-only paths. Retry once after that commit window instead
+        // of leaving the owner on a successful tool card with no answer.
+        [250, 1000].forEach((delay) => setTimeout(() => {
+          if (sessionModule.getCurrentSessionId() !== streamSessionId) return;
+          sessionModule.selectSession(streamSessionId, {
+            keepSidebar: true,
+            showLoading: false,
+          }).catch((err) => {
             console.warn('[chat] failed to reload persisted tool answer:', err);
           });
-        }, 0);
+        }, delay));
       }
 
     } catch (err) {
