@@ -82,7 +82,11 @@ def _public(receipt: dict[str, Any]) -> dict[str, Any]:
 
 def _private_network(value: Any) -> ipaddress.IPv4Network:
     try:
-        network = ipaddress.ip_network(str(value or "").strip(), strict=True)
+        # Owners commonly name a subnet from one of its hosts (for example
+        # ``192.168.10.254/24``).  Normalize that bounded scope to its
+        # canonical network address before authorization/digesting; rejecting
+        # it as non-canonical makes the safe request look unavailable.
+        network = ipaddress.ip_network(str(value or "").strip(), strict=False)
     except ValueError as exc:
         raise HomelabOperationError("cidr must be a canonical private IPv4 network") from exc
     if not isinstance(network, ipaddress.IPv4Network) or not network.is_private:

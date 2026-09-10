@@ -93,6 +93,21 @@ def test_homelab_network_plan_is_private_and_nmap_candidates_are_review_only(tmp
     assert candidates[0]["hostname"] == "switch"
 
 
+def test_network_plan_normalizes_host_form_cidr_without_widening_scope(tmp_path):
+    async def run():
+        ops = HomelabOperations(receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"))
+        planned = await ops.execute({
+            "action": "plan_network_discovery",
+            "cidr": "192.168.10.254/24",
+            "scope_authorization": "EXPLICITLY_AUTHORIZED",
+        }, owner="alice")
+        assert planned["target"] == "192.168.10.0/24"
+        assert planned["scanner"] == "nmap_ping_scan"
+        assert planned["target"] != "192.168.10.254/24"
+
+    asyncio.run(run())
+
+
 def test_network_context_read_separates_vpn_and_runtime_interfaces(monkeypatch):
     import src.privileged_broker as broker
     monkeypatch.setattr(
