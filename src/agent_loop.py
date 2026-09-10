@@ -469,6 +469,28 @@ _HARD_TOOL_DOMAINS = HARD_TOOL_DOMAINS
 _DETERMINISTIC_TOOL_DOMAINS = DETERMINISTIC_TOOL_DOMAINS
 _SPECIALIZED_OPERATIONAL_DOMAINS = SPECIALIZED_OPERATIONAL_DOMAINS
 
+
+def _successful_bounded_network_execution(tool_type: str, content: str, result: dict) -> bool:
+    """Return whether a network execution has supplied its terminal result.
+
+    Network execution is intentionally terminal for the current model turn:
+    the broker result is already the authoritative observation.  Feeding it
+    back through the same deterministic selector can recreate the plan and
+    approval card, causing an apparent approval loop.
+    """
+    if tool_type != "manage_homelab" or not isinstance(result, dict):
+        return False
+    if result.get("approval_required") or result.get("error") or result.get("success") is not True:
+        return False
+    try:
+        action = str(json.loads(content or "{}").get("action") or "")
+    except (TypeError, ValueError):
+        return False
+    return action in {
+        "execute_network_discovery",
+        "execute_network_service_enumeration",
+    }
+
 _intent_requires_action = intent_requires_action
 _usage_bucket = usage_bucket
 
@@ -2806,6 +2828,10 @@ async def stream_aci_runtime(
     # of already-declared safe reads without allowing an agent turn to grow
     # without limit.
     _safe_auto_continuations = 0
+    # A successful bounded network execution is terminal for this turn.  Do
+    # not let the next model round re-enter the deterministic planner and ask
+    # for approval for the same sealed operation a second time.
+    _network_execution_completed = False
     _ody_notes_tool_completed = False
     _pinned_fallback_candidate = None
     _pinned_fallback_route = None
@@ -6100,6 +6126,18 @@ async def stream_aci_runtime(
             if block.tool_type in _VERIFIER_EFFECTFUL_TOOLS:
                 _effectful_used = True
 
+            # Network discovery/service execution already returns the
+            # authoritative bounded observation and is persisted through the
+            # Work bridge above.  Feeding that result back into another model
+            # round lets the round-one deterministic network selector rebuild
+            # the same plan, which produces a duplicate approval card.  Mark
+            # only a successful, non-approval execution terminal; failures
+            # and approval pauses still follow the normal recovery path.
+            if _successful_bounded_network_execution(
+                block.tool_type, block.content, result,
+            ):
+                _network_execution_completed = True
+
             formatted = (
                 _memory_projection_text
                 if _memory_projection_text is not None
@@ -6141,6 +6179,12 @@ async def stream_aci_runtime(
         # arrives as the next message and the agent resumes from there. The
         # question text is already in the streamed response, so it persists.
         if _awaiting_user:
+            break
+
+        if _network_execution_completed:
+            logger.info(
+                "[agent] completed bounded network execution without re-planning"
+            )
             break
 
         if _aci_terminal_canonical_read:

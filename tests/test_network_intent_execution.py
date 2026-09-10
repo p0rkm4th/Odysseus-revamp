@@ -116,6 +116,25 @@ def test_service_result_action_supports_grounded_active_execution_language():
     assert response == "The bounded service scan is running now."
 
 
+def test_successful_network_execution_is_terminal_for_the_current_turn():
+    """A completed scan must not be replanned into a second approval card."""
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        json.dumps({"action": "execute_network_discovery"}),
+        {"success": True, "observations_recorded": True},
+    ) is True
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        json.dumps({"action": "execute_network_discovery"}),
+        {"success": True, "approval_required": True},
+    ) is False
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        json.dumps({"action": "plan_network_discovery"}),
+        {"success": True},
+    ) is False
+
+
 def test_stored_canonical_evidence_supports_truthful_followup_without_new_action():
     response = ground_action_completion(
         "The containers currently recorded for Odysseus are healthy.",
