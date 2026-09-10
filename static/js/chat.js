@@ -4173,10 +4173,19 @@ import { loadPanel } from './panels.js';
         } else if (roundHolder !== holder) {
           // Check if there's thinking content worth showing
           const _thinkingOnly = markdownModule.extractThinkingBlocks(_streamDisplayText(roundText));
+          const _existingRoundBody = roundHolder.querySelector('.body');
+          const _existingRoundText = _existingRoundBody
+            ? _existingRoundBody.textContent.trim()
+            : '';
           if (_thinkingOnly.thinkingBlocks?.length && !_thinkingOnly.content) {
             // Show thinking in a collapsed section even if no visible reply text
-            const _body4c = roundHolder.querySelector('.body');
+            const _body4c = _existingRoundBody;
             if (_body4c) _body4c.innerHTML = markdownModule.processWithThinking(_streamDisplayText(roundText));
+          } else if (_existingRoundText) {
+            // A response_replace event may already have rendered the
+            // canonical deterministic answer while the terminal round's raw
+            // buffer remains empty. Preserve that visible answer.
+            roundHolder.style.display = '';
           } else {
             roundHolder.style.display = 'none';
             // Thread above expected a bubble below — remove has-bottom since bubble is hidden
