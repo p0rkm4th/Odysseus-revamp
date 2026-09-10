@@ -503,6 +503,41 @@ def test_finance_followup_reuses_bounded_recent_finance_context():
     assert "spent this month" in intent["retrieval_query"]
 
 
+def test_inventory_mutation_uses_grounded_fast_path_without_model_json():
+    from src.aci import project_action_selection
+
+    intent = {
+        "intent_frame": {
+            "domain_concept": "HOUSEHOLD_ITEM",
+            "operation_class": "CREATE",
+            "read_explicit": False,
+            "filters": {},
+        },
+        "resolved_contract": {
+            "binding": "manage_assets",
+            "action_id": "add_item",
+        },
+    }
+    projection = project_action_selection(
+        intent=intent,
+        relevant_tools={"manage_assets"},
+        disabled_tools=set(),
+        owner="scotty",
+        active_run=None,
+        query="Add doritos to my grocery list",
+    )
+    assert projection.mode.value == "DIRECT_ACTION"
+    assert projection.fast_path == {
+        "action": "add_item",
+        "name": "doritos",
+        "domain": "kitchen",
+        "item_kind": "ingredient",
+        "list_name": "grocery",
+        "shopping_list": True,
+        "idempotency_key": projection.fast_path["idempotency_key"],
+    }
+
+
 def test_aci_completion_uses_canonical_transition_not_legacy_verifier():
     assert legacy_completion_verifier_allowed(
         aci_mode="aci", effectful_used=True, claimed_done=True,
