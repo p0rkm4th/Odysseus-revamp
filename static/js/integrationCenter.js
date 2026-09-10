@@ -18,12 +18,18 @@ async function load(el) {
     const cards=(integrations.integrations||[]).map(item => `<article class="hades-record-card"><div><strong>${esc(item.title)}</strong><p>${esc(item.capabilities?.join(', ')||'No capabilities recorded')}</p><small>Last success: ${esc(item.last_success||'not recorded')} · secrets hidden</small></div><div>${statusBadge(item.connection,item.connection==='CONNECTED'?'success':item.connection==='DEGRADED'?'warning':'info')}</div></article>`).join('') || '<p class="muted">No canonical integrations are registered.</p>';
     const items = plaid.items || [];
     const lifecycle = connection.connection || {};
+    const connectionRows = Array.isArray(lifecycle.connections) ? lifecycle.connections : [];
+    const itemByConnection = new Map(items.filter(item => item.connection_id).map(item => [item.connection_id, item]));
     const plaidCards = items.map(item => {
       const state = item.lifecycle_state || item.sync_status || 'UNKNOWN';
       const reconnect = state === 'RECONNECT_REQUIRED'
         ? `<button type="button" class="integration-plaid-reconnect" data-connection-id="${esc(item.connection_id)}">Reconnect</button>`
         : '';
       return `<article class="hades-record-card"><div><strong>${esc(item.institution_name || 'Plaid account')}</strong><p>Read-only Finance sync · ${esc(state)}</p><small>Last success: ${esc(item.last_successful_sync_at || 'not yet')} · secrets hidden</small>${item.last_error_classification ? `<small class="muted">Needs attention: ${esc(item.last_error_classification)}</small>` : ''}</div><div>${statusBadge(state, state === 'HEALTHY' ? 'success' : ['DEGRADED','RECONNECT_REQUIRED'].includes(state) ? 'warning' : 'info')}<button type="button" class="integration-plaid-sync" data-item-id="${esc(item.item_id)}">${state === 'DEGRADED' ? 'Retry sync' : 'Sync now'}</button>${reconnect}</div></article>`;
+    }).join('') + connectionRows.filter(row => !itemByConnection.has(row.id)).map(row => {
+      const state = row.lifecycle_state || 'AUTHORIZATION_REQUIRED';
+      const action = state === 'AUTHORIZATION_IN_PROGRESS' ? 'Resume authorization' : 'Connect Plaid';
+      return `<article class="hades-record-card"><div><strong>Plaid connection</strong><p>Read-only Finance sync · ${esc(state)}</p><small>Authorization has not produced a provider item yet · secrets hidden</small>${row.last_error_classification ? `<small class="muted">Needs attention: ${esc(row.last_error_classification)}</small>` : ''}</div><div>${statusBadge(state, state === 'AUTHORIZATION_IN_PROGRESS' ? 'warning' : 'info')}<button type="button" class="integration-plaid-reconnect" data-connection-id="${esc(row.id)}">${action}</button></div></article>`;
     }).join('');
     const csvCards = (financeAccounts.accounts || []).filter(account => account.provider === 'csv').map(account => `<article class="hades-record-card"><div><strong>${esc(account.display_name || 'Local bank export')}</strong><p>Local CSV snapshot · ${esc(account.currency || 'currency not recorded')}</p><small>Imported: ${esc(account.last_synced_at || 'not recorded')} · not a live provider</small></div><div>${statusBadge('IMPORTED', 'success')}</div></article>`).join('');
     const healthy = lifecycle.lifecycle_state === 'HEALTHY';

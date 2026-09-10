@@ -140,6 +140,30 @@ def test_reconnect_uses_update_mode_and_same_connection(monkeypatch):
         engine.dispose()
 
 
+def test_pending_connection_reuses_same_connection_for_initial_authorization(monkeypatch):
+    client, db, plaid, engine = _client(monkeypatch)
+    try:
+        pending = FinanceConnection(
+            id="pending-connection", owner="alice", provider="plaid",
+            lifecycle_state="AUTHORIZATION_REQUIRED",
+        )
+        db.add(pending)
+        db.commit()
+        response = client.post(
+            "/api/finance/plaid/link-token?connection_id=pending-connection",
+            headers={"x-owner": "alice"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["connection_id"] == "pending-connection"
+        assert plaid.update_access_token is None
+        assert db.query(FinanceConnection).filter_by(owner="alice", provider="plaid").count() == 1
+        assert db.query(PlaidLinkSession).filter_by(connection_id="pending-connection").count() == 1
+    finally:
+        db.close()
+        engine.dispose()
+
+
 def test_exchange_consumes_continuation_when_initial_sync_fails(monkeypatch):
     client, db, plaid, engine = _client(monkeypatch)
     try:

@@ -92,12 +92,12 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                 if requested_connection and connection is None:
                     raise FinanceError("Finance connection is unavailable")
                 access_token = None
-                mode = "update" if connection else "create"
+                mode = "create"
                 if connection:
                     item = db.query(PlaidItem).filter_by(connection_id=connection.id, owner=user, provider="plaid").one_or_none()
-                    if item is None:
-                        raise FinanceError("Finance connection is not available for reconnect")
-                    access_token = item.access_token
+                    if item is not None:
+                        mode = "update"
+                        access_token = item.access_token
                 if connection is None:
                     connection = FinanceConnection(id=secrets.token_hex(16), owner=user, provider="plaid", lifecycle_state="AUTHORIZATION_REQUIRED")
                     db.add(connection); db.flush()
