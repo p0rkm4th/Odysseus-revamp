@@ -20,6 +20,15 @@ async function load(el) {
     const lifecycle = connection.connection || {};
     const connectionRows = Array.isArray(lifecycle.connections) ? lifecycle.connections : [];
     const itemByConnection = new Map(items.filter(item => item.connection_id).map(item => [item.connection_id, item]));
+    // Multiple failed/unconfigured setup attempts are historical state, not
+    // multiple banks. Keep one resumable card per authorization state while
+    // preserving every provider-backed connection and its independent health.
+    const unbackedConnections = connectionRows.filter(row => !itemByConnection.has(row.id));
+    const visibleUnbackedConnections = unbackedConnections.filter((row, index, rows) => {
+      if (!['AUTHORIZATION_REQUIRED', 'AUTHORIZATION_IN_PROGRESS'].includes(row.lifecycle_state)) return true;
+      return index === rows.findIndex(candidate => candidate.lifecycle_state === row.lifecycle_state);
+    });
+    const duplicateSetupCount = unbackedConnections.length - visibleUnbackedConnections.length;
     const plaidCards = items.map(item => {
       const state = item.lifecycle_state || item.sync_status || 'UNKNOWN';
       const reconnect = state === 'RECONNECT_REQUIRED'
@@ -32,11 +41,11 @@ async function load(el) {
         ? ''
         : `<button type="button" class="integration-plaid-sync" data-item-id="${esc(item.item_id)}">${state === 'DEGRADED' ? 'Retry sync' : 'Sync now'}</button>`;
       return `<article class="hades-record-card"><div><strong>${esc(item.institution_name || 'Plaid account')}</strong><p>Read-only Finance sync · ${esc(state)}</p><small>Last success: ${esc(item.last_successful_sync_at || 'not yet')} · secrets hidden</small>${item.last_error_classification ? `<small class="muted">Needs attention: ${esc(item.last_error_classification)}</small>` : ''}</div><div>${statusBadge(state, state === 'HEALTHY' ? 'success' : ['DEGRADED','RECONNECT_REQUIRED'].includes(state) ? 'warning' : 'info')}${sync}${reconnect}</div></article>`;
-    }).join('') + connectionRows.filter(row => !itemByConnection.has(row.id)).map(row => {
+    }).join('') + visibleUnbackedConnections.map(row => {
       const state = row.lifecycle_state || 'AUTHORIZATION_REQUIRED';
       const action = state === 'AUTHORIZATION_IN_PROGRESS' ? 'Resume authorization' : 'Connect Plaid';
       return `<article class="hades-record-card"><div><strong>Plaid connection</strong><p>Read-only Finance sync · ${esc(state)}</p><small>Authorization has not produced a provider item yet · secrets hidden</small>${row.last_error_classification ? `<small class="muted">Needs attention: ${esc(row.last_error_classification)}</small>` : ''}</div><div>${statusBadge(state, state === 'AUTHORIZATION_IN_PROGRESS' ? 'warning' : 'info')}<button type="button" class="integration-plaid-reconnect" data-connection-id="${esc(row.id)}">${action}</button></div></article>`;
-    }).join('');
+    }).join('') + (duplicateSetupCount ? `<p class="muted">${duplicateSetupCount} previous Plaid setup attempt${duplicateSetupCount === 1 ? '' : 's'} hidden; continue the latest setup above.</p>` : '');
     const csvCards = (financeAccounts.accounts || []).filter(account => account.provider === 'csv').map(account => `<article class="hades-record-card"><div><strong>${esc(account.display_name || 'Local bank export')}</strong><p>Local CSV snapshot · ${esc(account.currency || 'currency not recorded')}</p><small>Imported: ${esc(account.last_synced_at || 'not recorded')} · not a live provider</small></div><div>${statusBadge('IMPORTED', 'success')}</div></article>`).join('');
     const healthy = lifecycle.lifecycle_state === 'HEALTHY';
     const hasUnknownCoverage = items.some(item => !item.last_successful_sync_at);
