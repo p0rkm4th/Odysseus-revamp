@@ -2680,14 +2680,12 @@ body.bg-pattern-sparkles {
       margin-top: 4px;
     }
     /* Progressive shrinkage: as the chat input bar gets narrow, sacrifice
-       chrome before the typing area. First the Agent/Chat toggle drops out,
-       then the model picker — textarea + send button always stay. Container
-       queries so it responds to *bar width*, not viewport width (the bar
-       can be in a split pane). */
+       secondary chrome before the typing area. The Agent/Chat toggle remains
+       available at every width because it changes the meaning of the send
+       action; only the model picker is allowed to disappear. Container
+       queries respond to *bar width*, not viewport width (the bar can be in
+       a split pane). */
     .chat-input-bar { container-type: inline-size; container-name: chatbar; }
-    @container chatbar (max-width: 340px) {
-      .chat-input-right .mode-toggle { display: none !important; }
-    }
     @container chatbar (max-width: 260px) {
       #model-picker-wrap { display: none !important; }
     }
@@ -2726,6 +2724,10 @@ body.bg-pattern-sparkles {
       gap: 8px;
       align-items: center;
       flex-shrink: 0;
+    }
+    @container chatbar (max-width: 340px) {
+      .chat-input-right { gap: 4px; }
+      .chat-input-right .mode-toggle-btn { padding-left: 7px; padding-right: 7px; font-size: 10px; }
     }
     .input-icon-btn {
       background: none;
