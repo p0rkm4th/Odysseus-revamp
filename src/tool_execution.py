@@ -161,14 +161,15 @@ def _tool_path_roots() -> list[str]:
     if tmpdir:
         roots.append(tmpdir)
 
-    # Opt-in extra roots from settings.
+    # Opt-in extra roots from settings. These are explicit operator-approved
+    # roots (the upload bridge uses this for owner-authorized attachments), so
+    # retain them as independent canonical roots. They still pass the same
+    # sensitive-path and symlink/hard-link checks below; the dedicated agent
+    # workspace remains the default when no extra root is configured.
     try:
         from src.settings import get_setting
         extra = get_setting("tool_path_extra_roots")
         if isinstance(extra, list):
-            # Legacy extra roots remain useful only when they are descendants
-            # of the dedicated workspace. Do not let settings recreate a
-            # second path to application-owned state.
             extra_roots.extend(str(r) for r in extra if r)
     except Exception:
         pass
@@ -181,12 +182,6 @@ def _tool_path_roots() -> list[str]:
             real = os.path.realpath(r)
         except OSError:
             continue
-        if r in extra_roots:
-            try:
-                if os.path.commonpath([real, _AGENT_WORKDIR]) != _AGENT_WORKDIR:
-                    continue
-            except ValueError:
-                continue
         if real in seen:
             continue
         seen.add(real)
