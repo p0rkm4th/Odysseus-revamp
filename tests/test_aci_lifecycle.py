@@ -326,6 +326,34 @@ def test_large_network_result_is_projected_before_truncated_transport_output():
     assert answer == "I found 1 persisted network observation:\n- Thanatos"
 
 
+def test_completed_network_discovery_has_terminal_grounded_answer():
+    projection = canonical_tool_result_projection("manage_homelab", {
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA",
+            "action": "execute_network_discovery",
+            "target": "192.168.10.0/24",
+            "success": True,
+            "candidate_count": 3,
+            "observations_recorded": True,
+            "network_map_reconciled": True,
+            "requires_explicit_inventory_review": True,
+        }),
+        "exit_code": 0,
+    })
+    assert projection["candidate_count"] == 3
+    answer = canonical_network_read_answer([{
+        "tool": "manage_homelab",
+        "exit_code": 0,
+        "command": '{"action":"execute_network_discovery"}',
+        "output": "truncated transport text",
+        "result_projection": projection,
+    }])
+    assert answer == (
+        "Network discovery completed for 192.168.10.0/24: 3 responding hosts observed. "
+        "The observations were recorded for review; no device identity was inferred."
+    )
+
+
 def test_homelab_inspection_has_grounded_deterministic_answer():
     projection = canonical_tool_result_projection("manage_homelab", {
         "output": json.dumps({
