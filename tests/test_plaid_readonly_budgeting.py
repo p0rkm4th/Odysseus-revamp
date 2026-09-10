@@ -139,6 +139,7 @@ def test_local_csv_fallback_is_canonical_idempotent_and_not_live_plaid(db):
     assert len(svc.list_transactions("alice")) == 3
     coverage = svc.coverage("alice", date(2026, 9, 1), date(2026, 9, 2))
     assert coverage["coverage_state"] == "AVAILABLE"
+    assert coverage["as_of"] is not None
     assert {source["source"] for source in coverage["data_sources"]} == {"local_csv"}
 
 
