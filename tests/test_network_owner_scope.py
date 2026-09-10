@@ -188,6 +188,34 @@ def test_owner_can_create_named_asset_from_unidentified_observation(tmp_path, mo
     assert node["identifiers"] == []
 
 
+def test_reconciliation_can_store_validated_ssh_target_without_credentials(tmp_path, monkeypatch):
+    path = tmp_path / "assets.db"
+    monkeypatch.setattr(asset_inventory, "DB_PATH", path)
+    monkeypatch.setenv("ODY_ASSET_DB", str(path))
+    asset_inventory.record_net({"hosts": [{"ip": "192.168.10.11"}]}, owner="alice")
+    result = asset_inventory.reconcile_candidate(
+        "alice", "unidentified:192.168.10.11", "create", name="Lab host",
+        ssh_user="scotty", ssh_port="2222",
+    )
+    with asset_inventory.db() as connection:
+        row = connection.execute("SELECT attributes_json FROM assets WHERE id=?", (result["asset_id"],)).fetchone()
+    attributes = json.loads(row[0])
+    assert attributes == {"ssh_host": "192.168.10.11", "ssh_port": 2222, "ssh_user": "scotty"}
+    assert "password" not in attributes and "private_key" not in attributes and "token" not in attributes
+
+
+def test_reconciliation_rejects_invalid_ssh_target(tmp_path, monkeypatch):
+    path = tmp_path / "assets.db"
+    monkeypatch.setattr(asset_inventory, "DB_PATH", path)
+    monkeypatch.setenv("ODY_ASSET_DB", str(path))
+    asset_inventory.record_net({"hosts": [{"ip": "192.168.10.12"}]}, owner="alice")
+    with pytest.raises(ValueError, match="SSH username"):
+        asset_inventory.reconcile_candidate(
+            "alice", "unidentified:192.168.10.12", "create", name="Lab host",
+            ssh_user="scotty;bad",
+        )
+
+
 def test_owner_rejects_candidate_without_cross_owner_access(tmp_path, monkeypatch):
     path = tmp_path / "assets.db"
     monkeypatch.setattr(asset_inventory, "DB_PATH", path)
