@@ -142,6 +142,15 @@ def test_local_csv_fallback_is_canonical_idempotent_and_not_live_plaid(db):
     assert {source["source"] for source in coverage["data_sources"]} == {"local_csv"}
 
 
+def test_local_csv_fallback_is_atomic_when_a_later_row_is_invalid(db):
+    svc = FinanceService(db)
+    invalid = "date,amount,merchant\n2026-09-01,12.50,Cafe\nnot-a-date,4.00,Grocer\n"
+    with pytest.raises(FinanceError, match="row 2"):
+        svc.import_csv("alice", invalid, source_label="broken-export")
+    assert svc.list_accounts("alice") == []
+    assert svc.list_transactions("alice") == []
+
+
 def test_mutation_restart_is_bounded(db):
     _item(db)
     fake = FakePlaid([], mutate_once=False)
