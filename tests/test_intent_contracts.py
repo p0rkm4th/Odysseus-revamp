@@ -115,6 +115,13 @@ def test_relative_year_range_does_not_default_to_current_month():
     assert frame.filters["end"]
 
 
+def test_year_phrase_with_for_the_year_reaches_full_year_range():
+    frame = compile_intent("Show me all my finances for the year")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["start"].endswith("-01-01")
+    assert frame.filters["end"]
+
+
 def test_short_finance_period_correction_reaches_bounded_read():
     from src.agent_loop import _classify_agent_request
 

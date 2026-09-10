@@ -64,7 +64,7 @@ def _relative_finance_range(text: str) -> dict[str, str]:
     """Project common bounded Finance periods instead of defaulting to month."""
     query = str(text or "")
     today = date.today()
-    if re.search(r"\b(?:this\s+year|year\s+to\s+date|ytd)\b", query, re.IGNORECASE):
+    if re.search(r"\b(?:this\s+year|year\s+to\s+date|ytd|for\s+the\s+year)\b", query, re.IGNORECASE):
         return {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}
     if re.search(r"\b(?:last|previous)\s+year\b", query, re.IGNORECASE):
         year = today.year - 1
