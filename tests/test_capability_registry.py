@@ -58,7 +58,7 @@ def test_network_discovery_is_host_brokered_and_private_scope_bound():
     assert capability and capability.capability_id == "homelab.manage"
     action = capability.actions["execute_network_discovery"]
     assert action.executor_key == "manage_homelab"
-    assert action.approval is ApprovalMode.NONE
+    assert action.approval is ApprovalMode.EXACT
     assert action.effects == ("brokered_network_read",)
     assert action.execution_location == "host_broker"
     assert action.target_scope == "private_network"
@@ -74,7 +74,7 @@ def test_network_service_enumeration_is_a_distinct_bounded_host_broker_action():
     capability = capability_for_tool("manage_homelab")
     action = capability.actions["execute_network_service_enumeration"]
     assert action.executor_key == "manage_homelab"
-    assert action.approval is ApprovalMode.NONE
+    assert action.approval is ApprovalMode.EXACT
     assert action.effects == ("brokered_network_read",)
     assert action.execution_location == "host_broker"
     assert action.target_scope == "private_network"

@@ -5221,10 +5221,10 @@ async def stream_aci_runtime(
             )
             # Capability V1 exact-approval bridge. The decision is derived
             # from ActionSpec metadata, not from a tool-specific action list.
-            # Bounded host-brokered network reads intentionally have
-            # ApprovalMode.NONE: their owner-bound plan receipt and broker
-            # scope are the authorization boundary.  Shell/YOLO and
-            # consequential host mutations remain exact.
+            # Host-brokered network execution remains exact-approval gated;
+            # its sealed plan and broker scope constrain the approved action,
+            # but do not replace owner approval. Shell/YOLO and other
+            # consequential host mutations remain exact as well.
             if requires_exact_approval(
                 block.tool_type,
                 block.content,

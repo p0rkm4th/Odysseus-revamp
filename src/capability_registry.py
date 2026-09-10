@@ -197,16 +197,13 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                     if action in {"execute_network_discovery", "execute_network_service_enumeration"}
                     else ("read_private",) if not action.startswith("execute_") else ("admin_change",)
                 ),
-                # Host-brokered discovery is a bounded read of the explicitly
-                # resolved private network.  Its canonical plan receipt,
-                # owner binding, broker boundary, target limit, and persisted
-                # observations are the control surface; it must not create a
-                # second interactive approval card.  Consequential host
-                # mutations (restart/package installation) remain exact.
+                # The plan is read-only, but the broker execution is still an
+                # owner-authorized network operation.  Keep the exact approval
+                # boundary even though the operation itself is non-mutating;
+                # target scope and intent must be approved together.
                 approval=(
-                    ApprovalMode.NONE
-                    if action in {"execute_network_discovery", "execute_network_service_enumeration"}
-                    else ApprovalMode.EXACT if action.startswith("execute_") else ApprovalMode.NONE
+                    ApprovalMode.EXACT
+                    if action.startswith("execute_") else ApprovalMode.NONE
                 ),
                 executor_key="manage_homelab",
                 execution_location=("host_broker" if action in {"execute_network_discovery", "execute_network_service_enumeration", "execute_diagnostic_install"} else "remote_ssh" if action in {"ssh_connect_test", "remote_host_inspect"} else "application"),
