@@ -83,7 +83,15 @@ def _workspace_environment(workspace):
 
 def _run_bounded(argv, *, cwd, env, drop_user=False):
     """Run a developer command in its own process group and reap descendants."""
-    kwargs = {"cwd": cwd, "capture_output": True, "text": True, "start_new_session": True}
+    # ``capture_output`` belongs to subprocess.run; Popen requires explicit
+    # pipes. Keep both streams bounded by communicate/return slicing below.
+    kwargs = {
+        "cwd": cwd,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+        "start_new_session": True,
+    }
     if drop_user:
         kwargs["preexec_fn"] = _drop_to_workspace_user
     proc = subprocess.Popen(argv, env=env, **kwargs)
