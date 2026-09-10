@@ -140,6 +140,15 @@ def test_finance_category_selector_preserves_category_and_year_range():
     assert payload["start"].endswith("-01-01")
 
 
+def test_explicit_finance_calendar_year_is_not_reduced_to_current_month():
+    query = "What was my spending in 2026?"
+    frame = compile_intent(query)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["start"] == "2026-01-01"
+    assert frame.filters["end"] == "2026-12-31"
+
+
 def test_ranked_finance_read_is_bounded_to_posted_outflows():
     from src.aci import canonical_read_fast_path_payload
 

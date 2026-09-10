@@ -69,6 +69,10 @@ def _relative_finance_range(text: str) -> dict[str, str]:
         "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
         "eleven": 11, "twelve": 12,
     }
+    explicit_year = re.search(r"\b(?:in|during|for)\s+(20\d{2})\b", query, re.IGNORECASE)
+    if explicit_year:
+        year = int(explicit_year.group(1))
+        return {"start": date(year, 1, 1).isoformat(), "end": date(year, 12, 31).isoformat()}
     months_match = re.search(
         r"\b(?:past|last|previous)\s+(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
         query, re.IGNORECASE,
