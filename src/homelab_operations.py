@@ -880,7 +880,18 @@ class HomelabOperations:
     async def _network_service_enumeration(
         self, request: dict[str, Any], *, owner: str, action: str,
     ) -> dict[str, Any]:
-        targets = _private_targets(request.get("targets"))
+        raw_targets = request.get("targets")
+        # A continuation may carry only the server-issued plan digest.  Load
+        # the sealed target set from that receipt instead of asking the model
+        # to repeat (or invent) discovered IPs.
+        if action == "execute_network_service_enumeration" and not raw_targets:
+            plan_digest = str(request.get("plan_digest") or "").strip().lower()
+            planned = await asyncio.to_thread(
+                self.receipts.get_valid_plan, owner=owner, digest=plan_digest,
+            ) if plan_digest else None
+            if planned:
+                raw_targets = planned.get("targets")
+        targets = _private_targets(raw_targets)
         operation = {
             "action": "execute_network_service_enumeration",
             "target_kind": "discovered_private_ipv4_hosts",

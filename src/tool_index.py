@@ -42,6 +42,9 @@ ALWAYS_AVAILABLE = frozenset({
     "ask_user",
     # Write back to the active plan (tick steps done / revise) during execution.
     "update_plan",
+    # Owner-granted developer execution is always safe to advertise because
+    # the server-side tool fails closed unless this owner has an active lease.
+    "yolo_shell",
 })
 
 # Tools that the Personal Assistant always has access to during scheduled
@@ -67,6 +70,7 @@ COLLECTION_NAME = "odysseus_tool_index"
 # Each tool gets a searchable description that helps retrieval.
 # These are richer than the system prompt one-liners — they're for embedding.
 BUILTIN_TOOL_DESCRIPTIONS: Dict[str, str] = {
+    "yolo_shell": "Run a bounded shell command as the model under the authenticated owner's active Workspace YOLO or Hardcore YOLO lease. The owner must grant YOLO first; the lease is selected server-side and the command is sandboxed according to the selected profile.",
     "bash": "Run shell commands on the server. Install packages, git operations, builds, system info, process management. Prefer a dedicated tool whenever one fits the job (file read/write/edit, search, listing); use bash only for what no dedicated tool covers. Do not use for web lookup/search; use web_search or web_fetch when web tools are available.",
     "python": "Execute Python code for computation, data processing, math, scripting, and parsing. Not for writing code for the user. Prefer a dedicated tool for reading, writing, or searching files; use python only for what no dedicated tool covers. Do not use for web lookup/search; use web_search or web_fetch when web tools are available.",
     "web_search": "Quick single web lookup for a fact, current event, latest/current information, or doc mid-task. Use this instead of bash/curl/python/requests for web searches. NOT for 'research X' / 'do research on X' requests — those are deep-research jobs (use trigger_research). web_search = one query; trigger_research = a full researched report in the sidebar.",

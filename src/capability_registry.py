@@ -338,6 +338,10 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_career": "career.read",
     "read_communications": "communications.read",
     "developer_read": "developer.read",
+    # Model-facing adapter for the existing owner-granted developer lease.
+    # It intentionally shares the same capability contract; this is not a
+    # second authority or a browser-controlled shell.
+    "yolo_shell": "developer.workspace_shell",
     "web_search": "web.evidence",
     "web_fetch": "web.evidence",
 })

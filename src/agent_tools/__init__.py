@@ -25,6 +25,7 @@ from .filesystem_tools import ReadFileTool, WriteFileTool, EditFileTool, ApplyPa
 from .coding_tools import TodoWriteTool
 from .document_tools import CreateDocumentTool, UpdateDocumentTool, EditDocumentTool, SuggestDocumentTool, ManageDocumentTool
 from .interaction_tools import AskUserTool, UpdatePlanTool
+from .developer_tools import YoloShellTool
 from .model_interaction_tools import ChatWithModelTool, AskTeacherTool, ListModelsTool
 from .bg_job_tools import ManageBgJobsTool
 from .session_tools import CreateSessionTool, ListSessionsTool, SendToSessionTool, ManageSessionTool
@@ -55,6 +56,7 @@ TOOL_HANDLERS = {
     "get_workspace": GetWorkspaceTool().execute,
     "ask_user": AskUserTool().execute,
     "update_plan": UpdatePlanTool().execute,
+    "yolo_shell": YoloShellTool().execute,
     "chat_with_model": ChatWithModelTool().execute,
     "ask_teacher": AskTeacherTool().execute,
     "list_models": ListModelsTool().execute,
@@ -90,6 +92,7 @@ TOOL_TAGS = {"bash", "python", "web_search", "web_fetch", "read_file", "write_fi
              "suggest_document",
              "manage_endpoints", "manage_mcp", "manage_webhooks",
              "manage_tokens", "manage_documents", "manage_settings",
+             "yolo_shell",
              "manage_notes", "manage_calendar",
              "resolve_contact", "manage_contact",
              "read_communications",
