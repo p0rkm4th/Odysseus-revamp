@@ -4331,7 +4331,8 @@ import { loadPanel } from './panels.js';
         roundText || accumulated,
         { final: _docFenceOpened },
       ).trim();
-      if (!_toolOnlyVisibleText
+      const _toolOnlyMarker = /^(?:done|complete|completed|finished|okay|ok)[.!]?$/i.test(_toolOnlyVisibleText);
+      if ((!_toolOnlyVisibleText || _toolOnlyMarker)
           && _toolOnlyThread
           && sessionModule.getCurrentSessionId() === streamSessionId) {
         setTimeout(() => {
