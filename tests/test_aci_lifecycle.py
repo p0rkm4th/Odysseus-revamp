@@ -848,6 +848,9 @@ def test_inventory_mutation_grounding_can_unqueue_a_grocery_item():
 
 def test_action_projection_carries_canonical_dependency_plan():
     intent = _intent("discover hosts on 192.168.10.0/24")
+    # Ordinary discovery is intentionally projected as a server-owned plan;
+    # exercise the dependency contract explicitly on the execute ActionSpec.
+    intent["resolved_contract"]["action_id"] = "execute_network_discovery"
     projection = project_action_selection(
         intent=intent,
         relevant_tools=["manage_homelab"],
