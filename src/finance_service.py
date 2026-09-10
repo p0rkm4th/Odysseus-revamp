@@ -707,11 +707,15 @@ class FinanceService:
         rows = query.all()
         totals: dict[str, Decimal] = {}
         by_category: dict[str, dict[str, Decimal]] = {}
+        by_merchant: dict[str, dict[str, Decimal]] = {}
         for row in rows:
             if row.direction != "outflow" or not self._category_matches(row.provider_category, category): continue
             totals[row.currency] = totals.get(row.currency, Decimal("0")) + Decimal(row.amount)
             bucket = by_category.setdefault(row.provider_category or "uncategorized", {})
             bucket[row.currency] = bucket.get(row.currency, Decimal("0")) + Decimal(row.amount)
+            merchant_name = (row.merchant or row.description or "Unlabeled").strip()[:120]
+            merchant_bucket = by_merchant.setdefault(merchant_name, {})
+            merchant_bucket[row.currency] = merchant_bucket.get(row.currency, Decimal("0")) + Decimal(row.amount)
         pending_query = self.db.query(FinanceTransaction).filter(
             FinanceTransaction.owner == owner, FinanceTransaction.provider_removed.is_(False),
             FinanceTransaction.status == "pending", FinanceTransaction.transaction_date >= start,
@@ -730,7 +734,7 @@ class FinanceService:
         pending_rows = pending_query.all()
         for row in pending_rows:
             pending_totals[row.currency] = pending_totals.get(row.currency, Decimal("0")) + Decimal(row.amount)
-        result = {"start": start.isoformat(), "end": end.isoformat(), "posted_outflow_by_currency": {key: str(value) for key, value in totals.items()}, "posted_outflow_by_category": {category: {currency: str(value) for currency, value in values.items()} for category, values in by_category.items()}, "pending_outflow_by_currency": {key: str(value) for key, value in pending_totals.items()}, "pending_outflow_count": len(pending_rows), "coverage": self.coverage(owner, start, end)}
+        result = {"start": start.isoformat(), "end": end.isoformat(), "posted_outflow_by_currency": {key: str(value) for key, value in totals.items()}, "posted_outflow_by_category": {category: {currency: str(value) for currency, value in values.items()} for category, values in by_category.items()}, "posted_outflow_by_merchant": {merchant: {currency: str(value) for currency, value in values.items()} for merchant, values in sorted(by_merchant.items())}, "pending_outflow_by_currency": {key: str(value) for key, value in pending_totals.items()}, "pending_outflow_count": len(pending_rows), "coverage": self.coverage(owner, start, end)}
         if merchant:
             result["merchant"] = merchant[:100]
         if category:

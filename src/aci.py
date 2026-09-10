@@ -3914,10 +3914,52 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         lines.append(f"Posted spending {subject}for {period}: {rendered}.")
         categories = payload.get("posted_outflow_by_category") or {}
         if categories:
+            def _category_sort(item: tuple[str, Any]) -> Decimal:
+                values = item[1] if isinstance(item[1], Mapping) else {}
+                # Sorting is only meaningful within a currency. Keep the
+                # stable provider order when currencies are mixed so we never
+                # imply an FX conversion.
+                if len(values) == 1:
+                    try:
+                        return next(iter(values.values())) and Decimal(str(next(iter(values.values()))))
+                    except Exception:
+                        return Decimal("0")
+                return Decimal("0")
+            category_items = list(categories.items())
+            if len({currency for values in categories.values() if isinstance(values, Mapping) for currency in values}) <= 1:
+                category_items.sort(key=_category_sort, reverse=True)
             parts = []
-            for category, values in list(categories.items())[:12]:
+            for category, values in category_items[:12]:
                 parts.append(f"{category}: " + ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in values.items()))
             lines.append("By category: " + "; ".join(parts) + ".")
+            if len(category_items) > 1:
+                top_category, top_values = category_items[0]
+                top_text = ", ".join(
+                    f"{currency} {_display_finance_amount(amount, currency)}"
+                    for currency, amount in top_values.items()
+                )
+                lines.append(
+                    f"What stands out: {top_category} is the largest recorded spending category in this range ({top_text})."
+                )
+        merchants = payload.get("posted_outflow_by_merchant")
+        if isinstance(merchants, Mapping) and merchants:
+            merchant_items = list(merchants.items())
+            currencies = {currency for values in merchants.values() if isinstance(values, Mapping) for currency in values}
+            if len(currencies) == 1:
+                def _merchant_sort(item: tuple[str, Any]) -> Decimal:
+                    values = item[1] if isinstance(item[1], Mapping) else {}
+                    try:
+                        return Decimal(str(next(iter(values.values()))))
+                    except Exception:
+                        return Decimal("0")
+                merchant_items.sort(key=_merchant_sort, reverse=True)
+                lines.append(
+                    "Largest merchant totals: " + "; ".join(
+                        f"{merchant} {currency} {_display_finance_amount(amount, currency)}"
+                        for merchant, values in merchant_items[:5]
+                        for currency, amount in (values.items() if isinstance(values, Mapping) else ())
+                    ) + "."
+                )
         pending = payload.get("pending_outflow_by_currency") or {}
         if pending:
             pending_rendered = ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in pending.items())
@@ -3958,6 +4000,11 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         lines.append(f"As of {coverage['as_of']}.")
     if limitations:
         lines.append("Coverage limitation: " + "; ".join(str(item) for item in limitations) + ".")
+    if "posted_outflow_by_currency" in payload and not payload.get("merchant") and not payload.get("category"):
+        lines.append(
+            "Guidance: use the largest category or merchant above as a review starting point; "
+            "these are descriptive records, not a forecast or a recommendation to spend or move money."
+        )
     return "\n".join(lines)
 
 
