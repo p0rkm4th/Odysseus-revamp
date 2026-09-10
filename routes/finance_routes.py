@@ -303,6 +303,17 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
     async def import_transaction(request: Request, payload: dict[str, Any] = Body(...)):
         return {"transaction": await tx(request, lambda svc, user: svc.import_transaction(user, payload))}
 
+    @router.post("/csv/import", status_code=201)
+    async def import_csv(request: Request, payload: dict[str, Any] = Body(...)):
+        """Import a bounded local CSV snapshot when Plaid is unavailable."""
+        csv_text = str(payload.get("csv") or payload.get("csv_text") or "")
+        return {"import": await tx(request, lambda svc, user: svc.import_csv(
+            user, csv_text,
+            account_name=str(payload.get("account_name") or "CSV Finance account"),
+            currency=str(payload.get("currency") or "USD"),
+            source_label=str(payload.get("source_label") or "local_csv"),
+        ))}
+
     @router.get("/households/memberships")
     async def memberships(request: Request):
         return {"memberships": await tx(request, lambda svc, user: svc.list_memberships(user))}

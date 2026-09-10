@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import csv
+import hashlib
+import io
+import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -270,6 +274,62 @@ class FinanceService:
         self.db.commit()
         return self._transaction_dict(transaction)
 
+    def import_csv(self, owner: str, csv_text: str, *, account_name: str = "CSV Finance account", currency: str = "USD", source_label: str = "local_csv") -> dict[str, Any]:
+        """Import a bounded local CSV snapshot into canonical Finance truth.
+
+        This is a fallback source, not a live-provider assertion. Stable row
+        identities make repeated imports idempotent and keep all existing
+        deterministic spending/cash-flow reads applicable.
+        """
+        text = str(csv_text or "")
+        if len(text.encode("utf-8")) > 2_000_000:
+            raise FinanceError("Finance CSV is limited to 2 MB")
+        reader = csv.DictReader(io.StringIO(text))
+        headers = {str(value or "").strip().casefold() for value in (reader.fieldnames or [])}
+        if not {"date", "amount", "merchant"}.issubset(headers):
+            raise FinanceError("Finance CSV requires date, amount, and merchant columns")
+        rows: list[dict[str, Any]] = []
+        for index, raw in enumerate(reader, 1):
+            normalized = {str(key or "").strip().casefold(): str(value or "").strip() for key, value in raw.items()}
+            if not any(normalized.values()):
+                continue
+            try:
+                amount = _money(normalized.get("amount"))
+                transaction_date = _transaction_date(normalized.get("date"))
+            except (FinanceError, TypeError, ValueError) as exc:
+                raise FinanceError(f"Finance CSV row {index} is invalid: {exc}") from exc
+            merchant = normalized.get("merchant") or normalized.get("description")
+            if not merchant:
+                raise FinanceError(f"Finance CSV row {index} requires merchant or description")
+            direction = (normalized.get("direction") or ("inflow" if amount < 0 else "outflow")).casefold()
+            if direction not in {"inflow", "outflow"}:
+                raise FinanceError(f"Finance CSV row {index} has invalid direction")
+            status = (normalized.get("status") or "posted").casefold()
+            if status not in {"pending", "posted"}:
+                raise FinanceError(f"Finance CSV row {index} has invalid status")
+            row_currency = _currency(normalized.get("currency") or currency)
+            identity = hashlib.sha256(json.dumps({
+                "date": transaction_date.isoformat(), "amount": str(abs(amount)),
+                "merchant": merchant, "description": normalized.get("description"),
+                "currency": row_currency, "direction": direction, "status": status,
+            }, sort_keys=True).encode()).hexdigest()[:32]
+            rows.append({
+                "provider": "csv", "provider_transaction_id": f"{source_label}:{identity}",
+                "amount": abs(amount), "currency": row_currency,
+                "transaction_date": transaction_date.isoformat(), "merchant": merchant,
+                "description": normalized.get("description"), "direction": direction,
+                "status": status, "provider_category": normalized.get("category"),
+                "provider_metadata": {"source": "local_csv", "source_label": source_label},
+            })
+        account = self.import_account(owner, {
+            "provider": "csv", "provider_account_id": hashlib.sha256(f"{owner}:{source_label}".encode()).hexdigest()[:32],
+            "display_name": account_name, "currency": _currency(currency),
+            "last_synced_at": utcnow_naive(),
+            "provider_metadata": {"source": "local_csv", "source_label": source_label},
+        })
+        imported = [self.import_transaction(owner, {**row, "account_id": account["id"]}) for row in rows]
+        return {"source": "local_csv", "source_label": source_label, "account": account, "imported_count": len(imported), "transactions": imported, "live_provider": False}
+
     def _transaction_dict(
         self, transaction: FinanceTransaction, *, include_provider_metadata: bool = True,
     ) -> dict[str, Any]:
@@ -408,28 +468,32 @@ class FinanceService:
         rows = query.order_by(FinanceTransaction.transaction_date.asc()).all()
         dates = [row.transaction_date for row in rows]
         items = self.db.query(PlaidItem).filter(PlaidItem.owner == owner, PlaidItem.provider == "plaid").all()
+        imported_accounts = self.db.query(FinanceAccount).filter(
+            FinanceAccount.owner == owner, FinanceAccount.provider == "csv",
+        ).all()
         connections = [self._connection_for(item) for item in items]
         unhealthy = [
             connection for connection in connections
             if connection is not None and connection.lifecycle_state not in {"HEALTHY", "CONNECTED"}
         ]
         successful_items = [item for item in items if item.last_successful_sync_at is not None]
+        imported_sources = [account for account in imported_accounts if account.last_synced_at is not None]
         requested_exceeds = (
             not dates
             or bool(start and start < dates[0])
             or bool(end and end > dates[-1])
         )
         limitations: list[str] = []
-        if not items:
+        if not items and not imported_accounts:
             limitations.append("no Plaid connection has been configured")
-        if not successful_items:
+        if not successful_items and not imported_sources:
             limitations.append("transaction ingestion has not completed successfully")
         if unhealthy:
             limitations.append("one or more Plaid connections are unhealthy or require attention")
         if requested_exceeds:
             limitations.append("the requested date range extends beyond canonical transaction coverage")
         if limitations:
-            coverage_state = "UNKNOWN" if not dates or not successful_items else "LIMITED"
+            coverage_state = "UNKNOWN" if not dates or not (successful_items or imported_sources) else "LIMITED"
         else:
             coverage_state = "AVAILABLE"
         return {
@@ -442,7 +506,11 @@ class FinanceService:
             "requested_range_exceeds_coverage": requested_exceeds,
             "coverage_state": coverage_state,
             "coverage_limitations": limitations,
-            "ingestion_complete": bool(successful_items) and not unhealthy,
+            "ingestion_complete": bool(successful_items or imported_sources) and not unhealthy,
+            "data_sources": [
+                *({"source": "plaid", "live": True} for _ in successful_items),
+                *({"source": "local_csv", "live": False} for _ in imported_sources),
+            ],
             "connection": self.connection_projection(owner),
             "sync": self.list_plaid_items(owner),
         }
