@@ -591,10 +591,30 @@ class FinanceService:
         connections = self.db.query(FinanceConnection).filter(
             FinanceConnection.owner == owner, FinanceConnection.provider == "plaid",
         ).all()
-        unhealthy = [
+        # An abandoned Link attempt is not an unhealthy provider connection.
+        # In particular, a CSV-backed owner must not receive a false
+        # "Finance is incomplete" warning merely because an earlier Plaid
+        # setup attempt left an AUTHORIZATION_REQUIRED row behind.  Only a
+        # provider-backed connection that can affect an existing Finance
+        # source contributes provider health to this coverage result.
+        provider_backed_connections = [
             connection for connection in connections
-            if connection is not None and connection.lifecycle_state not in {"HEALTHY", "CONNECTED"}
+            if connection.lifecycle_state in {
+                "CONNECTED", "SYNCING", "HEALTHY", "DEGRADED", "RECONNECT_REQUIRED",
+            } or connection.credential_ref
         ]
+        unhealthy = [
+            connection for connection in provider_backed_connections
+            if connection.lifecycle_state in {"DEGRADED", "RECONNECT_REQUIRED"}
+        ]
+        syncing = [
+            connection for connection in provider_backed_connections
+            if connection.lifecycle_state == "SYNCING"
+        ]
+        authorization_required = any(
+            connection.lifecycle_state in {"AUTHORIZATION_REQUIRED", "AUTHORIZATION_IN_PROGRESS"}
+            for connection in connections
+        )
         successful_items = [item for item in items if item.last_successful_sync_at is not None]
         imported_sources = [account for account in imported_accounts if account.last_synced_at is not None]
         requested_exceeds = (
@@ -604,11 +624,16 @@ class FinanceService:
         )
         limitations: list[str] = []
         if not items and not imported_accounts:
-            limitations.append("no Plaid connection has been configured")
+            limitations.append(
+                "Plaid authorization is required"
+                if authorization_required else "no Plaid connection has been configured"
+            )
         if not successful_items and not imported_sources:
             limitations.append("transaction ingestion has not completed successfully")
         if unhealthy:
             limitations.append("one or more Plaid connections are unhealthy or require attention")
+        if syncing:
+            limitations.append("one or more Plaid connections are still synchronizing")
         if requested_exceeds:
             limitations.append("the requested date range extends beyond canonical transaction coverage")
         if limitations:
@@ -637,7 +662,7 @@ class FinanceService:
             "requested_range_exceeds_coverage": requested_exceeds,
             "coverage_state": coverage_state,
             "coverage_limitations": limitations,
-            "ingestion_complete": bool(successful_items or imported_sources) and not unhealthy,
+            "ingestion_complete": bool(successful_items or imported_sources) and not unhealthy and not syncing,
             "data_sources": [
                 *({"source": "plaid", "live": True} for _ in successful_items),
                 *({"source": "local_csv", "live": False} for _ in imported_sources),
