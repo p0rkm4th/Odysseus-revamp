@@ -503,6 +503,19 @@ def test_finance_followup_reuses_bounded_recent_finance_context():
     assert "spent this month" in intent["retrieval_query"]
 
 
+def test_new_finance_request_wins_over_stale_continuation_messages():
+    messages = [
+        {"role": "user", "content": "Continue"},
+        {"role": "assistant", "content": "Continue when ready."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "How much have I spent at Publix this month?",
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "How much have I spent at Publix this month?"
+
+
 def test_inventory_mutation_uses_grounded_fast_path_without_model_json():
     from src.aci import project_action_selection
 

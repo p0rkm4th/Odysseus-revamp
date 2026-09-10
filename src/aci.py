@@ -2026,7 +2026,18 @@ def provisional_intent_projection(
         or is_contextual_reference_followup(messages, latest)
         or finance_followup
     )
-    frame = compile_intent(latest, continuation=continuation)
+    # A stale continuation marker must not demote a new, independently
+    # classifiable owner request. This occurs after an interrupted turn where
+    # the UI may leave a literal "Continue" message in the session. Compile
+    # the latest request directly first; only inherit continuation semantics
+    # when the new text is genuinely underspecified.
+    direct_frame = compile_intent(latest, continuation=False)
+    direct_request_owned = direct_frame.domain_concept in DOMAIN_CONTRACTS
+    if direct_request_owned:
+        frame = direct_frame
+        continuation = False
+    else:
+        frame = compile_intent(latest, continuation=continuation)
     # A short follow-up such as "what about last month?" is not independently
     # classifiable, but it remains a Finance turn when the bounded recent
     # conversation contains an unambiguous Finance read.  Feed the canonical
