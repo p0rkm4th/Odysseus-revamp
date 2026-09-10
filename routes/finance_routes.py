@@ -63,6 +63,8 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
             transport = plaid_transport_factory()
             with session_factory() as db:
                 connection = db.query(FinanceConnection).filter_by(id=requested_connection, owner=user, provider="plaid").one_or_none() if requested_connection else None
+                if requested_connection and connection is None:
+                    raise FinanceError("Finance connection is unavailable")
                 access_token = None
                 mode = "update" if connection else "create"
                 if connection:
@@ -217,6 +219,11 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
     @router.get("/plaid/items")
     async def plaid_items(request: Request):
         return {"items": await tx(request, lambda svc, user: svc.list_plaid_items(user))}
+
+    @router.get("/plaid/connection")
+    async def plaid_connection(request: Request):
+        """Return the authenticated owner's canonical Plaid lifecycle projection."""
+        return {"connection": await tx(request, lambda svc, user: svc.connection_projection(user))}
 
     @router.post("/plaid/items", status_code=201)
     async def plaid_item(request: Request, payload: dict[str, Any] = Body(...)):

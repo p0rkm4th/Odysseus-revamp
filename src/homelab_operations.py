@@ -502,7 +502,8 @@ class HomelabOperations:
                             runtime_internal = item["kind"] in {"APPLICATION_RUNTIME", "DOCKER_BRIDGE", "SANDBOX_INTERNAL"}
                             ownership = (
                                 "RUNTIME_INTERNAL" if runtime_internal
-                                else "VPN/CORPORATE_OR_UNKNOWN" if vpn
+                                else "VPN/CORPORATE_OR_UNKNOWN" if item["kind"] == "VPN"
+                                else "OWNER_LOCAL_NETWORK" if item["kind"] == "PHYSICAL_LAN"
                                 else "UNKNOWN"
                             )
                             scope = {"interface": item["name"], "cidr": cidr, "ownership": ownership, "context_kind": item["kind"]}
@@ -676,11 +677,52 @@ class HomelabOperations:
     async def _network_discovery(
         self, request: dict[str, Any], *, owner: str, action: str,
     ) -> dict[str, Any]:
-        if not str(request.get("cidr") or "").strip():
-            raise HomelabOperationError("current network context or an explicitly authorized CIDR is required; historical scope is not reused")
-        network = _private_network(request.get("cidr"))
+        requested_cidr = str(request.get("cidr") or "").strip()
+        scope_source = "owner_request"
+        if requested_cidr:
+            network = _private_network(requested_cidr)
+        else:
+            # Natural language such as "scan my network" may use the
+            # current trusted host context.  This is bounded semantic
+            # resolution, not authorization: the resulting scope still goes
+            # through the exact approval and broker gates below.
+            context = await self.execute({"action": "read_network_context"}, owner=owner)
+            if str(context.get("status") or "").upper() not in {"SUCCESS_WITH_DATA", "SUCCESS"}:
+                raise HomelabOperationError(
+                    "I couldn't read the current host network context, so I can't safely choose a scan scope"
+                )
+            candidates = context.get("user_network_scopes")
+            candidates = candidates if isinstance(candidates, list) else []
+            physical = {
+                str(item.get("cidr") or "").strip()
+                for item in candidates
+                if isinstance(item, dict)
+                and str(item.get("context_kind") or "").upper() == "PHYSICAL_LAN"
+                and str(item.get("ownership") or "").upper() != "VPN/CORPORATE_OR_UNKNOWN"
+            }
+            physical.discard("")
+            if len(physical) != 1:
+                if not physical:
+                    raise HomelabOperationError(
+                        "I couldn't identify one current private physical network to scan"
+                    )
+                raise HomelabOperationError(
+                    "I found multiple current private networks; tell me which one to scan"
+                )
+            network = _private_network(next(iter(physical)))
+            scope_source = "current_host_context"
         cidr = str(network)
-        authorization = str(request.get("scope_authorization") or "").strip().upper()
+        # A plan selected from the owner's current physical LAN is still
+        # exact-approval gated. USER_MANAGED is the bounded semantic label
+        # carried into the sealed plan when the owner did not type a CIDR or
+        # separate authorization token.
+        supplied_authorization = str(request.get("scope_authorization") or "").strip().upper()
+        if requested_cidr and not supplied_authorization:
+            raise HomelabOperationError(
+                "active discovery requires USER_MANAGED or EXPLICITLY_AUTHORIZED scope; "
+                "private addressing alone is not authorization"
+            )
+        authorization = supplied_authorization or "USER_MANAGED"
         if authorization not in {"USER_MANAGED", "EXPLICITLY_AUTHORIZED"}:
             raise HomelabOperationError(
                 "active discovery requires USER_MANAGED or EXPLICITLY_AUTHORIZED scope; "
@@ -688,7 +730,7 @@ class HomelabOperations:
             )
         operation = {
             "action": "execute_network_discovery", "target_kind": "private_ipv4_network",
-            "target": cidr, "scanner": "nmap_ping_scan",
+            "target": cidr, "scanner": "nmap_ping_scan", "scope_source": scope_source,
             "scope_authorization": authorization,
         }
         digest = _digest(operation)
@@ -719,6 +761,7 @@ class HomelabOperations:
                 "capability_health": health,
                 "required_packages": health.get("packages", []),
                 "preflight": f"Probe only {cidr} for live hosts; open ports and services are not enumerated.",
+                "scope_source": scope_source,
                 "recovery": "Discovery is read-only; discard any unwanted draft candidates.",
             }
             await asyncio.to_thread(self.receipts.append, receipt)

@@ -20,7 +20,7 @@ async function load(el) {
     const reconnectId = lifecycle.lifecycle_state === 'RECONNECT_REQUIRED' ? lifecycle.id : '';
     body.innerHTML=`${moduleHeader({icon:'integrations',title:'Integration Center',description:'Connection health and capability readiness. Secrets and account numbers never appear here.',primary:'Refresh',primaryId:'integration-center-refresh'})}<p class="muted">${esc((permissions.policy_source||'Canonical policy services remain authoritative.'))}</p><section class="setup-center-category"><h3>Connected integrations</h3><div class="hades-record-list">${cards}</div></section><section class="setup-center-category"><h3>Finance / Plaid</h3><p class="muted">${esc(lifecycle.lifecycle_state === 'RECONNECT_REQUIRED' ? 'Your Finance connection needs attention.' : lifecycle.lifecycle_state === 'HEALTHY' ? 'Finance is synchronized and read-only.' : 'Connect a bank through Plaid Link. HADES imports read-only transaction data; it cannot move money.')}</p><div class="hades-record-list">${plaidCards || '<p class="muted">No Plaid account connected.</p>'}</div><button type="button" class="integration-plaid-connect" id="integration-plaid-connect" data-reconnect-id="${esc(reconnectId)}">${reconnectId ? 'Reconnect Plaid' : items.length ? 'Connect another account' : 'Connect Plaid'}</button><p id="integration-plaid-status" class="muted" role="status"></p></section>`;
     body.querySelector('#integration-center-refresh').onclick=()=>load(el);
-    body.querySelectorAll('.integration-plaid-sync').forEach(button => button.onclick=async()=>{button.disabled=true;button.textContent='Syncing…';try{await fetch(`/api/finance/plaid/items/${encodeURIComponent(button.dataset.itemId)}/sync`,{method:'POST',credentials:'same-origin'});await load(el);}catch(error){body.querySelector('#integration-plaid-status').textContent=error.message;button.disabled=false;button.textContent='Sync now';}});
+    body.querySelectorAll('.integration-plaid-sync').forEach(button => button.onclick=async()=>{button.disabled=true;button.textContent='Syncing…';try{const response=await fetch(`/api/finance/plaid/items/${encodeURIComponent(button.dataset.itemId)}/sync`,{method:'POST',credentials:'same-origin'});const result=await response.json().catch(()=>({}));if(!response.ok)throw Error(result.detail||'Finance synchronization failed');await load(el);}catch(error){body.querySelector('#integration-plaid-status').textContent=error.message;button.disabled=false;button.textContent='Sync now';}});
     body.querySelector('#integration-plaid-connect').onclick=()=>connectPlaid(el);
   } catch (error) { body.innerHTML=errorState(error.message,'integration-center-retry'); body.querySelector('#integration-center-retry')?.addEventListener('click',()=>load(el)); }
 }
@@ -36,13 +36,22 @@ async function connectPlaid(el) {
     const data = await response.json();
     if (!response.ok) throw Error(data.detail || 'Could not start Plaid Link');
     const temporaryToken = data.link_token;
-    const handler = window.Plaid.create({token: temporaryToken, onSuccess: async publicToken => {
-      status.textContent = 'Finishing secure connection and syncing transactions…';
-      const exchange = await fetch('/api/finance/plaid/link-exchange', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({public_token:publicToken, link_token:temporaryToken, authorization_state:data.authorization_state})});
-      const result = await exchange.json();
-      if (!exchange.ok) throw Error(result.detail || 'Could not finish the connection');
-      await load(el);
-    }, onExit: error => { if (error?.error_code) status.textContent = 'Connection cancelled. No financial changes were made.'; button.disabled=false; }});
+    let handler;
+    const cleanup = () => { try { handler?.destroy?.(); } catch (_) {} handler = null; };
+    handler = window.Plaid.create({token: temporaryToken, onSuccess: async publicToken => {
+      try {
+        status.textContent = 'Finishing secure connection and syncing transactions…';
+        const exchange = await fetch('/api/finance/plaid/link-exchange', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({public_token:publicToken, link_token:temporaryToken, authorization_state:data.authorization_state})});
+        const result = await exchange.json().catch(()=>({}));
+        if (!exchange.ok) throw Error(result.detail || 'Could not finish the connection');
+        cleanup();
+        await load(el);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+        cleanup();
+      }
+    }, onExit: error => { status.textContent = error?.error_code ? 'Connection cancelled. No financial changes were made.' : 'Plaid connection closed.'; button.disabled=false; cleanup(); }});
     handler.open();
   } catch (error) { status.textContent = error.message; button.disabled = false; }
 }

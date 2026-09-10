@@ -31,6 +31,14 @@ def test_workspace_yolo_is_explicit_profile_and_denies_escape():
     assert _DENY.search("docker ps")
     assert _DENY.search("sudo id")
 
+
+def test_hardcore_yolo_is_a_separate_network_policy():
+    profile = resolve_execution_profile("hardcore_yolo")
+    assert profile.subprocess_backend == "bubblewrap_network"
+    assert profile.allowed_tools == frozenset({
+        "bash", "python", "get_workspace", "glob", "grep", "ls", "read_file",
+    })
+
 def test_network_projection_rule_is_not_ip_identity():
     from src.network_projection import map_projection
     assert "IP addresses remain observations" in map_projection().get("identity_rule", "")

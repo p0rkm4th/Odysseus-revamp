@@ -303,6 +303,29 @@ async def test_kitchen_mutation_binding_delegates_to_existing_inventory_service(
     assert result["provenance"] == "USER_ASSERTED"
 
 
+@pytest.mark.asyncio
+async def test_grocery_read_binding_delegates_to_canonical_inventory_service(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeInventoryTool:
+        async def execute(self, content, ctx):
+            payload = json.loads(content)
+            assert payload == {"action": "list", "domain": "kitchen", "list_name": "grocery"}
+            assert ctx["owner"] == "alice"
+            return {"items": [{"id": "rice-1", "name": "Rice", "shopping_list": True}], "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageInventoryTool", FakeInventoryTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "list", "domain": "kitchen", "list_name": "grocery",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+    assert result["items"][0]["name"] == "Rice"
+
+
 def test_canonical_asset_reads_are_read_only_and_need_no_approval():
     from src.capability_registry import action_for_tool, requires_exact_approval
     action = action_for_tool("manage_assets", {"action": "list"})

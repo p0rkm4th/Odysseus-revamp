@@ -145,13 +145,15 @@ async function loadStock() {
 }
 
 async function loadGrocery() {
+  const generation = ++requestGeneration;
   const content = document.getElementById('inventory-content');
   if (!content) return;
   content.innerHTML = `<div class="inventory-toolbar"><div><h3>Grocery list</h3><p>Items you marked to buy. Bought items add stock; removing an item keeps its pantry history.</p></div><button class="inventory-primary" data-action="new-grocery">+ Add to list</button></div><div id="inventory-grocery-list">${loading()}</div>`;
   try {
-    const result = await api('/api/inventory/items?domain=kitchen');
+    const result = await api('/api/inventory/items?list_name=grocery');
     const candidates = result.items || [];
     const details = await Promise.all(candidates.map(item => api(`/api/inventory/items/${encodeURIComponent(item.id)}`)));
+    if (generation !== requestGeneration) return;
     const rows = candidates.map((item, index) => ({item, total: stockTotal(details[index]?.lots || [])})).filter(row => row.item.shopping_list);
     const list = document.getElementById('inventory-grocery-list');
     list.innerHTML = rows.length ? rows.map(({item, total}) => `<article class="inventory-card" data-item-id="${escapeHtml(item.id)}"><div class="inventory-card-main"><span class="inventory-domain">Grocery</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category || 'Pantry item')} · ${escapeHtml(total)} ${escapeHtml(item.default_unit)} on hand</p></div><div class="inventory-card-actions"><button data-action="grocery-bought">Bought</button><button data-action="edit-item">Edit</button><button data-action="remove-grocery">Remove</button></div></article>`).join('') : '<div class="inventory-state">Your grocery list is empty. Add items here or ask AEGIS to add one.</div>';
@@ -159,12 +161,14 @@ async function loadGrocery() {
 }
 
 async function loadStorageArea(area) {
+  const generation = ++requestGeneration;
   const content = document.getElementById('inventory-content');
   if (!content) return;
   content.innerHTML = `<div class="inventory-toolbar"><div><h3>${area[0].toUpperCase()+area.slice(1)}</h3><p>Owner-scoped household stock, separate from the grocery queue.</p></div><button class="inventory-primary" data-action="new-item">+ Add item</button></div><div id="inventory-storage-list">${loading()}</div>`;
   try {
     const {items = []} = await api(`/api/inventory/items?list_name=${encodeURIComponent(area)}`);
-    document.getElementById('inventory-storage-list').innerHTML = items.length ? items.map(item => `<article class="inventory-card" data-item-id="${escapeHtml(item.id)}"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(item.storage_area || area)}</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category || 'Household item')}</p></div><div class="inventory-card-actions"><button data-action="edit-item">Edit</button><button data-action="archive-item">Archive</button></div></article>`).join('') : `<div class="inventory-state">Your ${area} list is empty.</div>`;
+    if (generation !== requestGeneration) return;
+    document.getElementById('inventory-storage-list').innerHTML = items.length ? items.map(item => `<article class="inventory-card" data-item-id="${escapeHtml(item.id)}"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(item.storage_area || area)}</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category || 'Household item')} · ${escapeHtml(item.default_unit || 'each')}</p></div><div class="inventory-card-actions"><button data-action="stock-add">Add stock</button><button data-action="stock-consume" ${Number(item.stock_quantity || 0) <= 0 ? 'disabled' : ''}>Use</button><button data-action="edit-item">Edit</button><button data-action="move-to-grocery">Add to grocery</button><button data-action="archive-item">Archive</button></div></article>`).join('') : `<div class="inventory-state">Your ${area} list is empty.</div>`;
   } catch (error) { showInlineError(error); }
 }
 
@@ -295,6 +299,7 @@ async function onClick(event) {
     return modalForm('Edit pantry item', `${field('Name','name',`required maxlength="200" value="${escapeHtml(item.name)}"`)}${field('Category','category',`maxlength="80" value="${escapeHtml(item.category || '')}"`)}<label>Storage<select name="storage_area"><option value="">Unassigned</option>${['pantry','fridge','freezer'].map(area=>`<option value="${area}" ${item.storage_area === area ? 'selected' : ''}>${area[0].toUpperCase()+area.slice(1)}</option>`).join('')}</select></label><label>Unit<select name="unit">${UNITS.map(u=>`<option ${item.default_unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></label><label><input type="checkbox" name="shopping_list" ${item.shopping_list ? 'checked' : ''}> Keep on grocery list</label>`, 'Save', 'edit-item', card.dataset.itemId);
   }
   if (action === 'remove-grocery') { await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`, {method:'PATCH', body:JSON.stringify({shopping_list:false})}); return loadGrocery(); }
+  if (action === 'move-to-grocery') { await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`, {method:'PATCH', body:JSON.stringify({shopping_list:true})}); uiModule.showToast?.('Added to grocery list'); return loadStorageArea(tab); }
   if (action === 'archive-item') { if (!window.confirm('Archive this item? Its history stays available.')) return; await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}/archive`, {method:'POST'}); return tab === 'grocery' ? loadGrocery() : loadStock(); }
   if (action === 'grocery-bought') return modalForm('Mark as bought', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>`, 'Add stock', 'stock', card.dataset.itemId);
   if (action === 'asset-details') {

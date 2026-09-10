@@ -4050,7 +4050,7 @@ def project_action_selection(
     safety_messages = {
         "strong_identity_required": "I can't merge or identify assets by IP address alone; I need a strong identity such as a system UUID, serial, or MAC.",
         "public_scope_requires_authorization": "I can't scan a public or external range without an explicitly authorized target scope.",
-        "network_scope_requires_authorization": "I can't start an active network deep dive without an explicitly authorized target scope, such as a bounded CIDR. I can report the current host network context without scanning.",
+        "network_scope_requires_authorization": "I need one current, private network scope before I can scan. I can inspect the current host context to resolve that safely.",
         "action_revalidation_required": "I can't approve or replay a changed or completed Action; it must be freshly revalidated through the normal approval path.",
     }
     for constraint, message in safety_messages.items():
