@@ -55,6 +55,20 @@ def test_finance_file_and_overview_language_enters_canonical_read_path(query):
     assert resolve_intent(frame).available is True
 
 
+def test_finance_merchant_selector_reaches_deterministic_spending_payload():
+    from src.aci import canonical_read_fast_path_payload
+
+    frame = compile_intent("How much did I spend this month at Publix?")
+    resolved = resolve_intent(frame)
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["merchant"] == "publix"
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(),
+        query="How much did I spend this month at Publix?",
+    )
+    assert payload == {"action": "spending", "merchant": "publix"}
+
+
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
     messages = [
         {"role": "user", "content": "scan the current network"},

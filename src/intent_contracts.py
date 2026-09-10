@@ -1586,6 +1586,19 @@ def compile_intent(
         finance_view = deterministic_read_view(text, concept)
         if finance_view:
             reference_filters["view"] = finance_view
+        # Preserve a bounded owner-supplied merchant selector for deterministic
+        # Finance reads. The selector is data, not a new capability or query
+        # language; FinanceService still applies the owner scope and limit.
+        merchant_match = re.search(
+            r"\b(?:at|from|merchant)\s+([A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}?)(?="
+            r"\s+(?:this|last|next|for|since|between|during|on)\b|[?.!,]|$)",
+            q,
+            re.IGNORECASE,
+        )
+        if merchant_match:
+            merchant = re.sub(r"\s+", " ", merchant_match.group(1)).strip(" .,!?:;")
+            if merchant:
+                reference_filters["merchant"] = merchant[:100]
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
