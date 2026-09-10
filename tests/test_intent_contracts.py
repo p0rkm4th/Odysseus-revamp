@@ -27,6 +27,34 @@ def test_contract_registry_is_complete_for_registered_contracts():
     assert validate_contracts() == []
 
 
+@pytest.mark.parametrize(("query", "view", "action"), [
+    ("How much have I spent this month?", "spending", "spending"),
+    ("How much money for this month specifically did I spend?", "spending", "spending"),
+    ("What have I spent on restaurants lately?", "spending", "spending"),
+    ("What's my inflow and outflow since the first?", "cash_flow", "cash_flow"),
+    ("Show me my recent transactions.", "transactions", "transactions"),
+    ("Is my financial data up to date?", "coverage", "coverage"),
+])
+def test_finance_read_view_is_preserved_by_canonical_resolution(query, view, action):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters.get("view") == view
+    assert resolved.available is True
+    assert resolved.action_id == action
+
+
+@pytest.mark.parametrize("query", [
+    "Go over my finances for me.",
+    "Check the CSV for my finances.",
+    "It's in my financial CSV that was uploaded earlier.",
+])
+def test_finance_file_and_overview_language_enters_canonical_read_path(query):
+    frame = compile_intent(query)
+    assert frame.domain_concept == "FINANCE"
+    assert resolve_intent(frame).available is True
+
+
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
     messages = [
         {"role": "user", "content": "scan the current network"},

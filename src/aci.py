@@ -2009,13 +2009,36 @@ def provisional_intent_projection(
     from src.intent_contracts import DOMAIN_CONTRACTS, compile_intent, is_explicit_continuation
 
     latest = str(text or "")
+    recent_query = recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+    finance_followup = bool(
+        re.search(r"\b(?:last|previous|this|that|next)\s+(?:month|week|year)\b", latest, re.IGNORECASE)
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|cash\s+flow|"
+            r"transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
     continuation = (
         is_explicit_continuation(latest)
         or assistant_requested_followup(messages)
         or is_contextual_retry_continuation(messages, latest)
         or is_contextual_reference_followup(messages, latest)
+        or finance_followup
     )
     frame = compile_intent(latest, continuation=continuation)
+    # A short follow-up such as "what about last month?" is not independently
+    # classifiable, but it remains a Finance turn when the bounded recent
+    # conversation contains an unambiguous Finance read.  Feed the canonical
+    # compiler the bounded context; never use transcript text as authority for
+    # effects or scope.
+    if frame.domain_concept not in DOMAIN_CONTRACTS and continuation:
+        contextual_query = recent_query
+        # The bounded prior user turn is the domain anchor; compiling it as a
+        # continuation would intentionally turn its own words into CONTINUE.
+        contextual_frame = compile_intent(contextual_query)
+        if contextual_frame.domain_concept in DOMAIN_CONTRACTS:
+            frame = contextual_frame
     if frame.domain_concept not in DOMAIN_CONTRACTS:
         return None, False
     retrieval_query = (
