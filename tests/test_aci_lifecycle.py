@@ -215,8 +215,9 @@ def test_grocery_read_fast_path_preserves_list_scope_and_answer_label():
         "tool": "read_household", "exit_code": 0,
         "output": '{"list_name":"grocery","items":[{"name":"Ketchup","domain":"kitchen","stock_quantity":"0","default_unit":"each"}]}',
     }])
-    assert answer.startswith("I found 1 grocery list item")
+    assert answer.startswith("I found 1 item to buy")
     assert "Ketchup" in answer
+    assert "quantity=" not in answer
 
 
 def test_canonical_result_answer_selects_one_authoritative_source():

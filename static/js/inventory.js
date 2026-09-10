@@ -85,9 +85,9 @@ function shell() {
   node.setAttribute('aria-labelledby', 'inventory-title');
   node.innerHTML = `
     <nav class="inventory-tabs" aria-label="Inventory views">
-      <button data-tab="stock" class="active">Pantry</button>
+      <button data-tab="stock" class="active">Pantry · On hand</button>
       <button data-tab="fridge">Fridge</button>
-      <button data-tab="grocery">Grocery list</button>
+      <button data-tab="grocery" aria-label="Grocery list · items to buy">Grocery · To buy</button>
       <button data-tab="recipes">Recipes</button>
       <button data-tab="intake">Add from text or media</button>
     </nav>
@@ -148,7 +148,7 @@ async function loadGrocery() {
   const generation = ++requestGeneration;
   const content = document.getElementById('inventory-content');
   if (!content) return;
-  content.innerHTML = `<div class="inventory-toolbar"><div><h3>Grocery list</h3><p>Items you marked to buy. Bought items add stock; removing an item keeps its pantry history.</p></div><button class="inventory-primary" data-action="new-grocery">+ Add to list</button></div><div id="inventory-grocery-list">${loading()}</div>`;
+  content.innerHTML = `<div class="inventory-toolbar"><div><h3>Grocery · To buy</h3><p>Items you do not currently have and plan to buy. Marking one bought adds owned stock and removes it from this queue.</p></div><button class="inventory-primary" data-action="new-grocery">+ Add to buy list</button></div><div id="inventory-grocery-list">${loading()}</div>`;
   try {
     const result = await api('/api/inventory/items?list_name=grocery');
     const candidates = result.items || [];
@@ -156,7 +156,7 @@ async function loadGrocery() {
     if (generation !== requestGeneration) return;
     const rows = candidates.map((item, index) => ({item, total: stockTotal(details[index]?.lots || [])})).filter(row => row.item.shopping_list);
     const list = document.getElementById('inventory-grocery-list');
-    list.innerHTML = rows.length ? rows.map(({item, total}) => `<article class="inventory-card" data-item-id="${escapeHtml(item.id)}"><div class="inventory-card-main"><span class="inventory-domain">Grocery</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category || 'Pantry item')} · ${escapeHtml(total)} ${escapeHtml(item.default_unit)} on hand</p></div><div class="inventory-card-actions"><button data-action="grocery-bought">Bought</button><button data-action="edit-item">Edit</button><button data-action="remove-grocery">Remove</button></div></article>`).join('') : '<div class="inventory-state">Your grocery list is empty. Add items here or ask AEGIS to add one.</div>';
+    list.innerHTML = rows.length ? rows.map(({item}) => `<article class="inventory-card" data-item-id="${escapeHtml(item.id)}"><div class="inventory-card-main"><span class="inventory-domain">To buy</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category || 'Missing from owned stock')} · not counted as pantry stock</p></div><div class="inventory-card-actions"><button data-action="grocery-bought">Bought</button><button data-action="edit-item">Edit</button><button data-action="remove-grocery">Remove</button></div></article>`).join('') : '<div class="inventory-state">Your grocery queue is empty. Add items you need to buy.</div>';
   } catch (error) { showInlineError(error); }
 }
 
@@ -164,7 +164,7 @@ async function loadStorageArea(area) {
   const generation = ++requestGeneration;
   const content = document.getElementById('inventory-content');
   if (!content) return;
-  content.innerHTML = `<div class="inventory-toolbar"><div><h3>${area[0].toUpperCase()+area.slice(1)}</h3><p>Owner-scoped household stock, separate from the grocery queue.</p></div><button class="inventory-primary" data-action="new-item">+ Add item</button></div><div id="inventory-storage-list">${loading()}</div>`;
+  content.innerHTML = `<div class="inventory-toolbar"><div><h3>${area[0].toUpperCase()+area.slice(1)} · On hand</h3><p>Owned stock you already have. The grocery queue is separate and contains items to buy.</p></div><button class="inventory-primary" data-action="new-item">+ Add item</button></div><div id="inventory-storage-list">${loading()}</div>`;
   try {
     const {items = []} = await api(`/api/inventory/items?list_name=${encodeURIComponent(area)}`);
     if (generation !== requestGeneration) return;
@@ -292,11 +292,11 @@ async function onClick(event) {
   const action = button.dataset.action;
   if (action === 'retry') return renderTab();
   if (action === 'dismiss-dialog') return button.closest('.inventory-dialog-backdrop')?.remove();
-  if (action === 'new-item' || action === 'new-grocery') return modalForm(action === 'new-grocery' ? 'Add to grocery list' : 'Add pantry item', `${field('Name','name','required maxlength="200"')}<label>Area<select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT</option></select></label><label>Storage<select name="storage_area"><option value="">Unassigned</option><option value="pantry">Pantry</option><option value="fridge">Fridge</option><option value="freezer">Freezer</option></select></label><label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${field('Category','category','maxlength="80"')}<label><input type="checkbox" name="shopping_list" ${action === 'new-grocery' ? 'checked' : ''}> Keep on grocery list</label>`, action === 'new-grocery' ? 'Add' : 'Add item', action === 'new-grocery' ? 'grocery' : 'item');
+  if (action === 'new-item' || action === 'new-grocery') return modalForm(action === 'new-grocery' ? 'Add item to grocery · To buy' : 'Add pantry item · On hand', `${action === 'new-grocery' ? '<p class="inventory-muted">This queues an item to buy; it does not add owned stock.</p>' : ''}${field('Name','name','required maxlength="200"')}<label>Area<select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT</option></select></label>${action === 'new-grocery' ? '' : '<label>Storage<select name="storage_area"><option value="">Unassigned</option><option value="pantry">Pantry</option><option value="fridge">Fridge</option><option value="freezer">Freezer</option></select></label>'}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${field('Category','category','maxlength="80"')}${action === 'new-grocery' ? '<input type="hidden" name="shopping_list" value="on">' : '<label><input type="checkbox" name="shopping_list"> Also queue to buy (does not add stock)</label>'}`, action === 'new-grocery' ? 'Add to buy list' : 'Add item', action === 'new-grocery' ? 'grocery' : 'item');
   const card = button.closest('[data-item-id]');
   if (action === 'edit-item') {
     const {item} = await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`);
-    return modalForm('Edit pantry item', `${field('Name','name',`required maxlength="200" value="${escapeHtml(item.name)}"`)}${field('Category','category',`maxlength="80" value="${escapeHtml(item.category || '')}"`)}<label>Storage<select name="storage_area"><option value="">Unassigned</option>${['pantry','fridge','freezer'].map(area=>`<option value="${area}" ${item.storage_area === area ? 'selected' : ''}>${area[0].toUpperCase()+area.slice(1)}</option>`).join('')}</select></label><label>Unit<select name="unit">${UNITS.map(u=>`<option ${item.default_unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></label><label><input type="checkbox" name="shopping_list" ${item.shopping_list ? 'checked' : ''}> Keep on grocery list</label>`, 'Save', 'edit-item', card.dataset.itemId);
+    return modalForm('Edit inventory item', `${field('Name','name',`required maxlength="200" value="${escapeHtml(item.name)}"`)}${field('Category','category',`maxlength="80" value="${escapeHtml(item.category || '')}"`)}<label>Storage<select name="storage_area"><option value="">Unassigned</option>${['pantry','fridge','freezer'].map(area=>`<option value="${area}" ${item.storage_area === area ? 'selected' : ''}>${area[0].toUpperCase()+area.slice(1)}</option>`).join('')}</select></label><label>Unit<select name="unit">${UNITS.map(u=>`<option ${item.default_unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></label><label><input type="checkbox" name="shopping_list" ${item.shopping_list ? 'checked' : ''}> Queue to buy (does not change owned stock)</label>`, 'Save', 'edit-item', card.dataset.itemId);
   }
   if (action === 'remove-grocery') { await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`, {method:'PATCH', body:JSON.stringify({shopping_list:false})}); return loadGrocery(); }
   if (action === 'move-to-grocery') { await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`, {method:'PATCH', body:JSON.stringify({shopping_list:true})}); uiModule.showToast?.('Added to grocery list'); return loadStorageArea(tab); }

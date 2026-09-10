@@ -415,6 +415,9 @@ _DOMAIN_RULES["finance"] = (
 _DOMAIN_RULES["household"] = (
     "## Canonical Household Inventory rules\n"
     "- Explicit questions about household items, pantry, stock, recipes, or shopping use the owner-scoped Inventory service read contract.\n"
+    "- Keep the owner-facing concepts distinct: the Grocery list is the queue of items missing/needed to buy; Pantry, Fridge, and Freezer are owned stock already on hand. A grocery item is not proof that stock exists.\n"
+    "- Adding an item to Grocery must not add stock. Marking a purchase/add_stock moves it into owned storage and removes it from the buy queue only after the canonical mutation succeeds.\n"
+    "- Never answer a Grocery question from Pantry/Fridge/Freezer results or describe a queued grocery item as on hand.\n"
     "- Technical asset identity belongs to CMDB/IT Assets; do not answer household questions from CMDB or filesystem data.\n"
     "- Distinguish empty household inventory from unavailable or failed retrieval."
 )

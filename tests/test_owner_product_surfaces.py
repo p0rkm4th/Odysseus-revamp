@@ -24,6 +24,9 @@ def test_dead_settings_workspace_entry_is_not_rendered_and_inventory_has_crud_su
     assert "Pantry & grocery" in inventory
     for marker in ("Grocery list", "data-action=\"edit-item\"", "archive-item"):
         assert marker in inventory
+    assert "Grocery · To buy" in inventory
+    assert "Pantry · On hand" in inventory
+    assert "not counted as pantry stock" in inventory
 
 
 def test_security_navigation_uses_one_semantic_icon():

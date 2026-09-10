@@ -3361,15 +3361,28 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     if not items:
         return f"Your {list_name} list is empty." if list_name else "No kitchen or household inventory is recorded for this owner."
 
-    label = f"{list_name} list" if list_name else "kitchen/household"
-    lines = [f"I found {len(items)} {label} item{'s' if len(items) != 1 else ''}:"]
+    labels = {
+        "grocery": ("item to buy", "items to buy"),
+        "pantry": ("pantry item on hand", "pantry items on hand"),
+        "fridge": ("fridge item on hand", "fridge items on hand"),
+        "freezer": ("freezer item on hand", "freezer items on hand"),
+    }
+    singular, plural = labels.get(
+        list_name,
+        (f"{list_name} item" if list_name else "kitchen/household item",
+         f"{list_name} items" if list_name else "kitchen/household items"),
+    )
+    lines = [f"I found {len(items)} {singular if len(items) == 1 else plural}:"]
     for item in items[:100]:
         if not isinstance(item, Mapping):
             continue
         name = str(item.get("name") or item.get("id") or "Unnamed item").strip()
         details: list[str] = []
         domain = item.get("domain")
-        quantity = item.get("stock_quantity", item.get("quantity"))
+        # A grocery queue is a missing/to-buy projection. Do not leak a
+        # possibly stale lot total into the answer and accidentally imply the
+        # item is already owned. Storage lists are explicitly on-hand stock.
+        quantity = None if list_name == "grocery" else item.get("stock_quantity", item.get("quantity"))
         unit = item.get("default_unit", item.get("unit"))
         if domain not in (None, ""):
             details.append(f"domain={domain}")
