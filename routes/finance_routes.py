@@ -79,7 +79,20 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                 connection.authorization_expires_at = utcnow_naive() + timedelta(minutes=30)
                 db.commit()
                 connection_id = connection.id
-            body = transport.link_token_create(link_owner_id(user), access_token=access_token)
+            try:
+                body = transport.link_token_create(link_owner_id(user), access_token=access_token)
+            except PlaidError as exc:
+                with session_factory() as db:
+                    failed = db.query(FinanceConnection).filter_by(id=connection_id, owner=user, provider="plaid").one_or_none()
+                    if failed is not None:
+                        failed.lifecycle_state = "RECONNECT_REQUIRED" if mode == "update" else "AUTHORIZATION_REQUIRED"
+                        failed.provider_health = "DEGRADED"
+                        failed.capability_available = False
+                        failed.last_error_classification = exc.classification[:128]
+                        failed.authorization_correlation_hash = None
+                        failed.authorization_expires_at = None
+                        db.commit()
+                raise
             link_token = str(body.get("link_token") or "").strip()
             if not link_token:
                 raise PlaidError("MALFORMED_PROVIDER_RESPONSE")
@@ -155,7 +168,18 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                     FinanceService(db).create_plaid_item(user, item_id, access_token, connection_id=connection.id)
                 # This is the existing bounded read-only reconciliation seam;
                 # Link completion never grants a financial mutation.
-                sync_result = PlaidSyncService(db, transport).sync(user, item_id)
+                try:
+                    sync_result = PlaidSyncService(db, transport).sync(user, item_id)
+                except Exception:
+                    # Exchange is a one-use provider operation. Even when the
+                    # first sync fails, consume the Link continuation and let
+                    # the canonical connection health/reconnect state describe
+                    # the next safe action; never replay a public token blindly.
+                    row.consumed_at = now
+                    connection.authorization_correlation_hash = None
+                    connection.authorization_expires_at = None
+                    db.commit()
+                    raise
                 row.consumed_at = now
                 connection.authorization_correlation_hash = None
                 connection.authorization_expires_at = None
