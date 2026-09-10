@@ -829,6 +829,45 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
         return completed
 
 
+def network_continuation_projection(owner: str, run_id: str) -> dict[str, Any] | None:
+    """Return the next network step from canonical Work state only.
+
+    A chat transcript is presentation evidence, not an authorization record.
+    Network continuation therefore reads the completed, owner-scoped plan
+    Result attached to this Run and refuses to reconstruct a digest from
+    assistant/user text.  Existing execution Actions are terminal for this
+    projection; retries must be planned explicitly by the normal operation.
+    """
+    with SessionLocal() as db:
+        run = db.query(WorkRun).filter_by(id=str(run_id), owner=str(owner)).one_or_none()
+        if run is None or run.status in {"completed", "failed", "cancelled"}:
+            return None
+        actions = db.query(WorkAction).filter_by(run_id=run.id).order_by(WorkAction.sequence.asc()).all()
+        for action_name, execution_name in (
+            ("plan_network_discovery", "execute_network_discovery"),
+            ("plan_network_service_enumeration", "execute_network_service_enumeration"),
+        ):
+            plan = next((row for row in reversed(actions) if row.action_id == action_name and row.status == "completed"), None)
+            if plan is None:
+                continue
+            if any(row.action_id == execution_name for row in actions):
+                continue
+            result = db.query(WorkResult).filter_by(
+                owner=str(owner), run_id=run.id, action_id=plan.id,
+            ).order_by(WorkResult.created_at.desc()).first()
+            data = result.domain_reference if result and isinstance(result.domain_reference, dict) else {}
+            digest = str(data.get("operation_digest") or "").strip().lower()
+            if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+                continue
+            return {
+                "tool": "manage_homelab",
+                "action": execution_name,
+                "content": json.dumps({"action": execution_name, "plan_digest": digest}, sort_keys=True),
+                "plan_digest": digest,
+            }
+    return None
+
+
 def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
     """Run the deterministic verifier for a completed bound action.
 

@@ -3934,84 +3934,25 @@ async def stream_aci_runtime(
             and bool(_intent.get("continuation"))
             and "network_ops" in set(_intent_domains or set())
         ):
-            _conversation_for_discovery = " ".join(
-                str(message.get("content") or "")
-                for message in messages[-12:]
-                if message.get("role") in {"user", "assistant"}
-            )
-            _planned_discovery_digest = re.search(
-                r"(?:operation_digest|plan_digest)\"?\s*[:=]\s*\"?([0-9a-f]{64})",
-                _conversation_for_discovery,
-                re.IGNORECASE,
-            )
-            _discovery_result_present = bool(
-                _planned_discovery_digest
-                and re.search(
-                    r'(?:\"kind\"\s*:\s*\"discovery\".*?\"success\"\s*:\s*true|'
-                    r'\"candidate_count\"\s*:\s*\d+.*?\"nmap_ping_scan\")',
-                    _conversation_for_discovery,
-                    re.IGNORECASE | re.DOTALL,
+            # The pending plan/digest comes only from the owner/session/run
+            # Work projection. Transcript text is deliberately ignored here.
+            if re.match(r"^(?:continue|go ahead|yes|proceed|run it|do it)\b", str(_last_user or "").strip(), re.IGNORECASE) and work_run_id:
+                from src.agent_work_bridge import network_continuation_projection
+                _network_continuation = await asyncio.to_thread(
+                    network_continuation_projection, owner, str(work_run_id),
                 )
-                and _planned_discovery_digest.group(1).lower()
-                in _conversation_for_discovery.lower()
-            )
-            _service_action_in_conversation = bool(re.search(
-                r"plan_network_service_enumeration",
-                _conversation_for_discovery,
-                re.IGNORECASE,
-            ))
-            _service_plan_digest = re.search(
-                r"(?:operation_digest|plan_digest)\"?\s*[:=]\s*\"?([0-9a-f]{64})",
-                _conversation_for_discovery,
-                re.IGNORECASE,
-            ) if _service_action_in_conversation else None
-            _service_result_present = bool(re.search(
-                r"(?:service_enumeration|service_observations).*?(?:success\"?\s*[:=]\s*true|observation_count|nmap_service_version_observation)",
-                _conversation_for_discovery,
-                re.IGNORECASE | re.DOTALL,
-            ))
-            if _service_plan_digest and not _service_result_present:
-                logger.info(
-                    "[agent] deterministic service-enumeration continuation repair digest=%s",
-                    _service_plan_digest.group(1)[:16],
-                )
-                tool_blocks = [ToolBlock(
-                    "manage_homelab",
-                    json.dumps({
-                        "action": "execute_network_service_enumeration",
-                        "plan_digest": _service_plan_digest.group(1),
-                    }),
-                )]
-                converted_calls = []
-                used_native = False
-            elif _network_service_request and _discovery_result_present:
-                # The service plan is deterministic and read-only. The bridge
-                # inherits the completed discovery Result's exact targets.
-                tool_blocks = [ToolBlock(
-                    "manage_homelab",
-                    json.dumps({"action": "plan_network_service_enumeration"}),
-                )]
-                converted_calls = []
-                used_native = False
-            if not tool_blocks and _planned_discovery_digest and re.search(
-                r"\b(?:network discovery|plan_network_discovery|private subnet|bounded discovery)\b",
-                _conversation_for_discovery,
-                re.IGNORECASE,
-            ) and _network_request_cidr and not _discovery_result_present:
-                logger.info(
-                    "[agent] deterministic approved discovery continuation repair digest=%s",
-                    _planned_discovery_digest.group(1)[:16],
-                )
-                tool_blocks = [ToolBlock(
-                    "manage_homelab",
-                    json.dumps({
-                        "action": "execute_network_discovery",
-                        "cidr": _network_request_cidr,
-                        "plan_digest": _planned_discovery_digest.group(1),
-                    }),
-                )]
-                converted_calls = []
-                used_native = False
+                if isinstance(_network_continuation, dict):
+                    logger.info(
+                        "[agent] canonical network continuation action=%s digest=%s",
+                        _network_continuation.get("action"),
+                        str(_network_continuation.get("plan_digest") or "")[:16],
+                    )
+                    tool_blocks = [ToolBlock(
+                        str(_network_continuation["tool"]),
+                        str(_network_continuation["content"]),
+                    )]
+                    converted_calls = []
+                    used_native = False
         _asset_frame = _intent.get("intent_frame") if isinstance(_intent.get("intent_frame"), dict) else {}
         _resolved_read = _intent.get("resolved_contract") if isinstance(_intent.get("resolved_contract"), dict) else {}
         _continuation_step = _intent.get("continuation_next_step") if isinstance(_intent.get("continuation_next_step"), dict) else {}

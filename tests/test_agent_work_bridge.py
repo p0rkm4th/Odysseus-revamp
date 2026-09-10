@@ -643,6 +643,33 @@ def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_proje
         engine.dispose()
 
 
+def test_network_continuation_uses_canonical_plan_result_not_transcript(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-network-continuation", "scan local network",
+            intent={"domains": ["network_ops"]},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.plan = [
+                {"sequence": 1, "capability_id": "homelab.manage", "action_id": "plan_network_discovery"},
+                {"sequence": 2, "capability_id": "homelab.manage", "action_id": "execute_network_discovery"},
+            ]
+            db.commit()
+        plan_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab", {"action": "plan_network_discovery"},
+        )
+        bridge.record_result("alice", plan_id, {"data": {"operation_digest": "a" * 64}})
+        continuation = bridge.network_continuation_projection("alice", run_id)
+        assert continuation["action"] == "execute_network_discovery"
+        assert json.loads(continuation["content"])["plan_digest"] == "a" * 64
+        assert bridge.network_continuation_projection("bob", run_id) is None
+    finally:
+        engine.dispose()
+
+
 def test_continuation_run_projection_is_owner_scoped_and_read_only(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
