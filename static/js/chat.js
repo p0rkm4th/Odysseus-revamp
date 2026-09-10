@@ -4324,8 +4324,15 @@ import { loadPanel } from './panels.js';
       // persisted session instead of making the owner reload manually.  Keep
       // the current-session check so a background stream cannot hijack a chat
       // the owner has opened since starting the request.
-      if (!accumulated.trim()
-          && holder.querySelector('.agent-thread-node')
+      const _toolOnlyThread = (roundHolder && roundHolder.querySelector('.agent-thread-node'))
+        || holder.querySelector('.agent-thread-node')
+        || (lastToolThread && lastToolThread.isConnected ? lastToolThread : null);
+      const _toolOnlyVisibleText = _streamDisplayText(
+        roundText || accumulated,
+        { final: _docFenceOpened },
+      ).trim();
+      if (!_toolOnlyVisibleText
+          && _toolOnlyThread
           && sessionModule.getCurrentSessionId() === streamSessionId) {
         setTimeout(() => {
           sessionModule.selectSession(streamSessionId).catch((err) => {
