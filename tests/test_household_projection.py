@@ -96,6 +96,30 @@ def test_model_facing_grocery_add_defaults_to_canonical_kitchen_item():
     assert [item["name"] for item in service.list_items("alice", list_name="grocery")] == ["Rice"]
 
 
+def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    service.manage_inventory({"action": "add_item", "name": "Rice"}, owner="alice")
+    purchased = service.manage_inventory({
+        "action": "add_stock", "name": "rice", "quantity": 2,
+        "unit": "kg", "storage_area": "pantry", "idempotency_key": "buy-rice",
+    }, owner="alice")
+    replay = service.manage_inventory({
+        "action": "add_stock", "name": "rice", "quantity": 2,
+        "unit": "kg", "storage_area": "pantry", "idempotency_key": "buy-rice",
+    }, owner="alice")
+    assert purchased["replayed"] is False
+    assert replay["replayed"] is True
+    consumed = service.manage_inventory({
+        "action": "consume_stock", "name": "rice", "quantity": 500,
+        "unit": "g", "idempotency_key": "use-rice",
+    }, owner="alice")
+    assert consumed["replayed"] is False
+    item = service.search_items("alice", "rice")[0]
+    assert item["storage_area"] == "pantry"
+    assert item["shopping_list"] is False
+
+
 def test_grocery_pantry_and_fridge_are_canonical_list_views():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

@@ -360,7 +360,8 @@ YOLO_SHELL_SCHEMA = {
 _YOLO_SHELL_CONTRACT = '''### `yolo_shell`
 Run a bounded diagnostic/development command as the model using the owner's
 active, expiring YOLO lease. The server selects the lease and enforces the
-selected workspace/network sandbox; the model cannot grant or widen it.'''
+selected workspace/network sandbox; the model cannot grant or widen it.
+`<invoke name="yolo_shell"><parameter name="command">bounded diagnostic command</parameter></invoke>`.'''
 
 _WEB_SEARCH_CONTRACT = '''### `web_search`
 Canonical public-evidence search capability. Use for current or external

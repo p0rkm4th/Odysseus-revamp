@@ -31,6 +31,10 @@ def test_tags_contracts_domains_and_executors_are_projected():
         if name in {"web_search", "web_fetch"}:
             action_id = {"web_search": "search", "web_fetch": "fetch"}[name]
             assert capability.actions[action_id].executor_key == binding.executor_key
+        elif name == "yolo_shell":
+            # The capability action names the execution profile; the binding
+            # names the model-facing transport adapter.
+            assert capability.actions["execute"].executor_key == "workspace_yolo"
         else:
             assert all(action.executor_key == binding.executor_key
                        for action in capability.actions.values())
@@ -55,14 +59,15 @@ def test_native_action_enums_cover_every_registered_action():
         else:
             # Single-purpose bindings expose their ActionSpec through the
             # binding identity rather than a multiplexed action enum.
-            assert name in {"web_search", "web_fetch"}
-            action_id = {"web_search": "search", "web_fetch": "fetch"}[name]
-            assert capability.actions[action_id].executor_key == name
+            assert name in {"web_search", "web_fetch", "yolo_shell"}
+            action_id = {"web_search": "search", "web_fetch": "fetch", "yolo_shell": "execute"}[name]
+            expected_executor = "workspace_yolo" if name == "yolo_shell" else name
+            assert capability.actions[action_id].executor_key == expected_executor
 
 
 def test_projection_has_no_duplicate_conflicting_bindings():
-    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_finance", "read_setup", "read_career", "read_communications", "developer_read", "web_search", "web_fetch"}
-    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 14
+    assert set(TOOL_BINDINGS) == {"manage_assets", "privileged_action", "manage_homelab", "manage_osint", "manage_security_assessment", "read_memory", "read_work", "read_household", "read_finance", "read_setup", "read_career", "read_communications", "developer_read", "yolo_shell", "web_search", "web_fetch"}
+    assert len({binding.capability_id for binding in TOOL_BINDINGS.values()}) == 15
     for name, binding in TOOL_BINDINGS.items():
         assert binding.native_schema["function"]["name"] == name
         assert binding.textual_contract.strip()
