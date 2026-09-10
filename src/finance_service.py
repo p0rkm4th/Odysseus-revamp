@@ -442,13 +442,26 @@ class FinanceService:
             "last_successful_sync_at": row.last_successful_sync_at.isoformat() if row.last_successful_sync_at else None,
             "last_error_classification": row.last_error_classification,
         } for row in connections]
+        # The aggregate is a readiness summary, not merely the newest row.
+        # One unhealthy owned connection must prevent the owner-facing
+        # projection from advertising Finance as ready.
+        severity = {
+            "NOT_CONFIGURED": 0, "AUTHORIZATION_REQUIRED": 1,
+            "AUTHORIZATION_IN_PROGRESS": 2, "CONNECTED": 3,
+            "SYNCING": 4, "HEALTHY": 5, "DEGRADED": 6,
+            "RECONNECT_REQUIRED": 7,
+        }
+        representative = max(provider_backed or connections, key=lambda row: severity.get(row.lifecycle_state, 99))
         projection = {
-            "id": connection.id, "provider": connection.provider,
-            "lifecycle_state": connection.lifecycle_state,
-            "provider_health": connection.provider_health,
-            "capability_available": capability_available(connection),
-            "last_successful_sync_at": connection.last_successful_sync_at.isoformat() if connection.last_successful_sync_at else None,
-            "last_error_classification": connection.last_error_classification,
+            "id": representative.id, "provider": representative.provider,
+            "lifecycle_state": representative.lifecycle_state,
+            "provider_health": representative.provider_health,
+            "capability_available": bool(provider_backed) and all(
+                row.lifecycle_state in {"CONNECTED", "HEALTHY"} and capability_available(row)
+                for row in provider_backed
+            ),
+            "last_successful_sync_at": representative.last_successful_sync_at.isoformat() if representative.last_successful_sync_at else None,
+            "last_error_classification": representative.last_error_classification,
             "connections": connection_rows,
         }
         projection["connection_count"] = len(connections)
