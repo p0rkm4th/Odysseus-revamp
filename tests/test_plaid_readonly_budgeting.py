@@ -80,6 +80,17 @@ def test_sync_paginates_atomically_and_replays_without_duplicates(db):
     assert len(svc.list_transactions("alice")) == 2
 
 
+def test_provider_freshness_never_uses_consent_expiration():
+    assert PlaidSyncService._provider_update({
+        "item": {"consent_expiration_time": "2030-01-01T00:00:00Z"},
+    }) is None
+    value = PlaidSyncService._provider_update({
+        "item": {"consent_expiration_time": "2030-01-01T00:00:00Z"},
+        "last_updated_at": "2026-09-10T18:30:00Z",
+    })
+    assert value.isoformat() == "2026-09-10T18:30:00"
+
+
 def test_failed_later_page_preserves_previous_cursor_and_canonical_rows(db):
     _item(db)
     first = FakePlaid([{ "added": [_added()], "modified": [], "removed": [], "has_more": False, "next_cursor": "safe"}])

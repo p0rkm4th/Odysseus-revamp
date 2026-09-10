@@ -158,7 +158,9 @@ class PlaidSyncService:
 
     @staticmethod
     def _provider_update(body: dict[str, Any]) -> datetime | None:
-        value = body.get("item", {}).get("consent_expiration_time") or body.get("last_updated_at")
+        # Consent expiration is an authorization deadline, not evidence that
+        # Plaid's transaction data was updated. Never expose it as freshness.
+        value = body.get("last_updated_at")
         if not value: return None
         try: return datetime.fromisoformat(str(value).replace("Z", "+00:00")).replace(tzinfo=None)
         except ValueError: return None
