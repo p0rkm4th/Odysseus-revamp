@@ -25,7 +25,13 @@ async function load(el) {
       const reconnect = state === 'RECONNECT_REQUIRED'
         ? `<button type="button" class="integration-plaid-reconnect" data-connection-id="${esc(item.connection_id)}">Reconnect</button>`
         : '';
-      return `<article class="hades-record-card"><div><strong>${esc(item.institution_name || 'Plaid account')}</strong><p>Read-only Finance sync · ${esc(state)}</p><small>Last success: ${esc(item.last_successful_sync_at || 'not yet')} · secrets hidden</small>${item.last_error_classification ? `<small class="muted">Needs attention: ${esc(item.last_error_classification)}</small>` : ''}</div><div>${statusBadge(state, state === 'HEALTHY' ? 'success' : ['DEGRADED','RECONNECT_REQUIRED'].includes(state) ? 'warning' : 'info')}<button type="button" class="integration-plaid-sync" data-item-id="${esc(item.item_id)}">${state === 'DEGRADED' ? 'Retry sync' : 'Sync now'}</button>${reconnect}</div></article>`;
+      // Reconnect is a provider-authorization operation, not a sync retry.
+      // Never present both controls for an unhealthy authorization, which
+      // would invite an invalid-token retry and blur the recovery contract.
+      const sync = state === 'RECONNECT_REQUIRED'
+        ? ''
+        : `<button type="button" class="integration-plaid-sync" data-item-id="${esc(item.item_id)}">${state === 'DEGRADED' ? 'Retry sync' : 'Sync now'}</button>`;
+      return `<article class="hades-record-card"><div><strong>${esc(item.institution_name || 'Plaid account')}</strong><p>Read-only Finance sync · ${esc(state)}</p><small>Last success: ${esc(item.last_successful_sync_at || 'not yet')} · secrets hidden</small>${item.last_error_classification ? `<small class="muted">Needs attention: ${esc(item.last_error_classification)}</small>` : ''}</div><div>${statusBadge(state, state === 'HEALTHY' ? 'success' : ['DEGRADED','RECONNECT_REQUIRED'].includes(state) ? 'warning' : 'info')}${sync}${reconnect}</div></article>`;
     }).join('') + connectionRows.filter(row => !itemByConnection.has(row.id)).map(row => {
       const state = row.lifecycle_state || 'AUTHORIZATION_REQUIRED';
       const action = state === 'AUTHORIZATION_IN_PROGRESS' ? 'Resume authorization' : 'Connect Plaid';
