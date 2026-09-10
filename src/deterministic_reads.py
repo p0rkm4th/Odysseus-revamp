@@ -59,7 +59,7 @@ _FINANCE_RANKED_TRANSACTIONS = re.compile(
     re.IGNORECASE,
 )
 _FINANCE_OVERVIEW = re.compile(
-    r"\b(?:go\s+over|review|look\s+at|check|tell\s+me\s+about|summari[sz]e|analy[sz]e)\b",
+    r"\b(?:go\s+over|walk\s+(?:me\s+)?through|review|look\s+at|check|tell\s+me\s+about|summari[sz]e|analy[sz]e)\b",
     re.IGNORECASE,
 )
 _ASSET_SUBJECT = re.compile(
@@ -314,6 +314,7 @@ def deterministic_read_view(text: str, concept: str | None) -> str | None:
         if _FINANCE_RANKED_TRANSACTIONS.search(query): return "transactions"
         if re.search(r"\b(?:transaction|transactions|recent)\b", query): return "transactions"
         if re.search(r"\b(?:inflow|outflow|cash\s+flow)\b", query): return "cash_flow"
+        if _FINANCE_OVERVIEW.search(query): return "spending"
         if re.search(r"\b(?:spend|spent|spending|expense|expenses|merchant|restaurant|budget)\b", query): return "spending"
         return "coverage"
     return None
