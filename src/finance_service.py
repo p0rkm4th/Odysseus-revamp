@@ -362,8 +362,26 @@ class FinanceService:
             )
             if not merchant:
                 raise FinanceError(f"Finance CSV row {index} requires a merchant, name, description, or payee")
-            direction = _csv_value(normalized, "direction", "flow") or ("inflow" if amount < 0 else "outflow")
-            direction = direction.casefold()
+            explicit_direction = _csv_value(normalized, "direction", "flow")
+            if explicit_direction:
+                direction = {
+                    "debit": "outflow",
+                    "withdrawal": "outflow",
+                    "expense": "outflow",
+                    "credit": "inflow",
+                    "deposit": "inflow",
+                    "income": "inflow",
+                }.get(explicit_direction.casefold(), explicit_direction.casefold())
+            elif debit or credit:
+                # Separate debit/credit columns were normalized above to a
+                # positive outflow / negative inflow amount.
+                direction = "outflow" if amount > 0 else "inflow"
+            else:
+                # Ordinary bank exports conventionally use negative amounts
+                # for money spent and positive amounts for money received.
+                # Normalize that CSV convention into HADES's positive amount
+                # plus explicit direction representation.
+                direction = "outflow" if amount < 0 else "inflow"
             if direction not in {"inflow", "outflow"}:
                 raise FinanceError(f"Finance CSV row {index} has invalid direction")
             status = (_csv_value(normalized, "status", "transaction_status", "posting_status") or "posted").casefold()
@@ -374,11 +392,17 @@ class FinanceService:
             ) or default_currency)
             description = _csv_value(normalized, "description", "transaction_description", "memo")
             category = _csv_value(normalized, "category", "category_name", "type")
+            # Preserve the pre-normalization sign-derived identity for rows
+            # imported by older HADES versions. Re-uploading a corrected CSV
+            # updates those rows instead of creating duplicates.
+            identity_direction = direction
+            if not explicit_direction and not (debit or credit):
+                identity_direction = "inflow" if amount < 0 else "outflow"
             identity = hashlib.sha256(json.dumps({
                 "row": index,
                 "date": transaction_date.isoformat(), "amount": str(abs(amount)),
                 "merchant": merchant, "description": description,
-                "currency": row_currency, "direction": direction, "status": status,
+                "currency": row_currency, "direction": identity_direction, "status": status,
             }, sort_keys=True).encode()).hexdigest()[:32]
             rows.append({
                 "provider": "csv", "provider_transaction_id": f"{source_label}:{identity}",

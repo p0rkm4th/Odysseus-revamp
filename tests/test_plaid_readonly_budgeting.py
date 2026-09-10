@@ -143,6 +143,27 @@ def test_local_csv_fallback_is_canonical_idempotent_and_not_live_plaid(db):
     assert {source["source"] for source in coverage["data_sources"]} == {"local_csv"}
 
 
+def test_local_csv_amount_column_uses_bank_signs_and_reimport_repairs_direction(db):
+    svc = FinanceService(db)
+    csv_text = (
+        "Date,Description,Category,Amount,Status\n"
+        "2026-09-09,Publix,Groceries,-25.72,Posted\n"
+        "2026-09-09,Payroll,Income,2500.00,Posted\n"
+        "2026-09-09,Publix Pending,Category Pending,-37.33,Pending\n"
+    )
+    svc.import_csv("alice", csv_text, source_label="owner-bank.csv")
+    svc.import_csv("alice", csv_text, source_label="owner-bank.csv")
+
+    rows = svc.query_transactions(
+        "alice", start=date(2026, 9, 1), end=date(2026, 9, 30), merchant="Publix", limit=10,
+    )["transactions"]
+    assert len(rows) == 2
+    assert {row["direction"] for row in rows} == {"outflow"}
+    assert {row["status"] for row in rows} == {"posted", "pending"}
+    spending = svc.spending("alice", date(2026, 9, 1), date(2026, 9, 30), merchant="Publix")
+    assert spending["posted_outflow_by_currency"] == {"USD": "25.7200"}
+
+
 def test_local_csv_accepts_common_bank_export_headers_and_debit_credit(db):
     svc = FinanceService(db)
     bank_export = (
@@ -171,7 +192,7 @@ def test_local_csv_accepts_bom_and_parenthesized_amount(db):
     assert imported["imported_count"] == 1
     row = svc.list_transactions("alice")[0]
     assert row["amount"] == "45.2000"
-    assert row["direction"] == "inflow"
+    assert row["direction"] == "outflow"
 
 
 def test_local_csv_fallback_is_atomic_when_a_later_row_is_invalid(db):
