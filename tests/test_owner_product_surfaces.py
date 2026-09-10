@@ -11,6 +11,8 @@ def test_plaid_link_is_an_owner_surface_without_access_token_in_browser_code():
     assert "/api/finance/plaid/link-token" in js
     assert "/api/finance/plaid/link-exchange" in js
     assert "access_token" not in js
+    assert "connectionRows" in js
+    assert "Authorization has not produced a provider item yet" in js
 
 
 def test_dead_settings_workspace_entry_is_not_rendered_and_inventory_has_crud_surface():
