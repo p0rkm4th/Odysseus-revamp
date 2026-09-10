@@ -2,8 +2,9 @@ from __future__ import annotations
 import argparse, concurrent.futures, datetime as dt, errno, fcntl, ipaddress, json, os
 from pathlib import Path
 import shutil, socket, sqlite3, struct, subprocess, uuid
+from src.constants import DATA_DIR
 
-DB_PATH = Path(os.environ.get("ODY_ASSET_DB", "/app/data/assets/assets.db"))
+DB_PATH = Path(os.environ.get("ODY_ASSET_DB", Path(DATA_DIR) / "assets" / "assets.db"))
 COMMON_PORTS = (22, 53, 80, 443, 445, 3389, 8000, 8080, 8443)
 
 def now(): return dt.datetime.now(dt.timezone.utc).isoformat()

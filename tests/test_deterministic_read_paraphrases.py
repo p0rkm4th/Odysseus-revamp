@@ -115,7 +115,7 @@ def test_owner_discovery_language_creates_bounded_network_objective(query):
     assert frame.operation_class == "EXECUTE"
     assert frame.target is None
     assert resolve_intent(frame).action_id == "plan_network_discovery"
-    assert "network_scope_requires_authorization" in frame.constraints
+    assert "network_scope_requires_authorization" not in frame.constraints
 
 
 def test_current_network_figure_it_out_is_context_read_not_discovery():
@@ -287,12 +287,15 @@ def test_work_status_paraphrases_are_canonical_reads(query):
     "Investigate my network.",
     "Look into the current LAN.",
 ])
-def test_unscoped_network_deep_dive_requires_explicit_authorized_scope(query):
+def test_unscoped_network_deep_dive_resolves_through_current_context(query):
     frame = compile_intent(query)
     assert frame.domain_concept == "NETWORK"
     assert frame.operation_class == "RESEARCH"
-    assert "network_scope_requires_authorization" in frame.constraints
+    assert "network_scope_requires_authorization" not in frame.constraints
+    # The research wording remains a bounded semantic request; the concrete
+    # discovery action is selected only for actionable scan language.
     assert resolve_intent(frame).available is False
+    assert resolve_intent(frame).reason == "operation_not_registered"
 
 
 def test_explicit_bounded_network_scope_keeps_normal_plan_contract():

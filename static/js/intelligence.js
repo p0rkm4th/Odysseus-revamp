@@ -112,14 +112,28 @@ export async function openNetwork(){
     const d=await fetch('/api/network/map',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(new Error('Network map unavailable')));
     const nodes=d.nodes||[], edges=d.edges||[], canonical=nodes.filter(x=>x.canonical===true), pending=nodes.filter(x=>x.resolution_state==='pending_candidate'), unidentified=nodes.filter(x=>x.resolution_state==='unidentified');
     const metric=(label,value)=>`<div class="hades-summary-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
+    const nodeText = node => [node.name,node.hostname,node.id,node.type,node.status,node.resolution_state,
+      ...(node.identifiers||[]).flatMap(identifier => [identifier.kind, identifier.value]),
+      node.attributes?.ip].filter(Boolean).join(' ').toLowerCase();
+    const renderNodes = (filter='') => {
+      const term=String(filter||'').trim().toLowerCase();
+      const visible=term ? nodes.filter(node => nodeText(node).includes(term)) : nodes;
+      const list=visible.map(x=>`<button class="list-item hades-cmdb-link" data-id="${esc(x.id)}"><span>${esc(x.name||x.hostname||x.id)}</span><small>${esc(x.resolution_state||'unidentified')} · ${esc(x.status||'observed')} · confidence ${esc(x.confidence??'—')}</small></button>`).join('');
+      return list || `<p class="hades-empty-state">${term ? `No authorized network nodes match “${esc(filter)}”.` : 'No CMDB nodes observed yet.'}</p>`;
+    };
     el.querySelector('.hades-window-body').innerHTML=`<div class="hades-dossier">
       <header class="hades-module-header"><div><h2>Network</h2><p>Devices, observations, topology, and bounded discovery</p></div><span class="hades-status-badge">${esc(d.source||'CMDB')}</span></header>
       <div class="hades-summary-metrics">${metric('Nodes',nodes.length)}${metric('Canonical',canonical.length)}${metric('Pending candidates',pending.length)}${metric('Unidentified',unidentified.length)}${metric('Relationships',edges.length)}</div>
       <section class="hades-detail-section"><h3>Identity and provenance</h3><p class="muted">${esc(d.identity_rule||'IP addresses remain observations; no IP-only merge.')}</p></section>
-      <section class="hades-detail-section"><h3>Devices</h3><div>${nodes.map(x=>`<button class="list-item hades-cmdb-link" data-id="${esc(x.id)}"><span>${esc(x.name||x.hostname||x.id)}</span><small>${esc(x.resolution_state||'unidentified')} · ${esc(x.status||'observed')} · confidence ${esc(x.confidence??'—')}</small></button>`).join('')||'<p class="hades-empty-state">No CMDB nodes observed yet.</p>'}</div></section>
+      <section class="hades-detail-section"><div class="hades-list-toolbar"><label class="sr-only" for="network-node-search">Search authorized network nodes</label><input id="network-node-search" type="search" autocomplete="off" placeholder="Search devices, hostnames, or IPs" aria-label="Search authorized network nodes"><span class="muted">${nodes.length} authorized node${nodes.length===1?'':'s'}</span></div><h3>Devices</h3><div id="network-node-results">${renderNodes()}</div></section>
       <section class="hades-detail-section"><h3>Relationships</h3>${edges.length?`<p>${esc(edges.length)} active evidence-backed relationship${edges.length===1?'':'s'} projected from CMDB.</p>`:'<p class="hades-empty-state">No active relationships are projected.</p>'}</section>
     </div>`;
     bindEntityLinks(el, '.hades-cmdb-link', id => { const node=nodes.find(x => x.id === id); if (node) openCmdbAsset(node); });
+    el.querySelector('#network-node-search')?.addEventListener('input', event => {
+      const results=el.querySelector('#network-node-results');
+      if (results) results.innerHTML=renderNodes(event.target.value);
+      bindEntityLinks(el, '.hades-cmdb-link', id => { const node=nodes.find(x => x.id === id); if (node) openCmdbAsset(node); });
+    });
   } catch (error) {
     el.querySelector('.hades-window-body').innerHTML=`<div class="hades-error-state">${esc(error.message)} <button class="list-item" data-retry-network>Retry</button></div>`;
     el.querySelector('[data-retry-network]')?.addEventListener('click', () => openNetwork());
@@ -214,12 +228,27 @@ export async function openTelegram(){
 export async function openDeveloper(){
   const el=panel('developer-panel','Developer','<p>Loading Developer Mode…</p>');
   const [d, build] = await Promise.all([fetch('/api/developer/yolo/status').then(r=>r.json()), fetch('/api/version').then(r=>r.json()).catch(()=>({}))]);
-  const lease=d.lease; const content=`<p><b>Workspace YOLO</b></p><p>Scope: <code>${esc(d.workspace)}</code><br>Root: NO · Docker: NO<br>Authority: arbitrary workspace Bash</p><p>${lease?`Active until ${esc(lease.expires_at)} <button id="revoke-yolo">Revoke</button>`:'Inactive — requires explicit owner activation.'}</p>${lease?'': '<button id="grant-yolo">Enable for 30 minutes</button>'}`;
+  const lease=d.lease; const activeProfile=d.profile === 'hardcore_yolo' ? 'Hardcore YOLO' : 'Workspace YOLO'; const content=`<p><b>${esc(activeProfile)}</b></p><p>Scope: <code>${esc(d.workspace)}</code><br>Root: NO · Docker: NO<br>${d.profile === 'hardcore_yolo' ? 'Network: shared host network · filesystem: ephemeral read-only source mount' : 'Network: unavailable · filesystem: workspace-scoped'}</p><p>${lease?`Active until ${esc(lease.expires_at)} · ${esc(activeProfile)} <button id="revoke-yolo">Revoke</button>`:'Inactive — requires explicit owner activation.'}</p>${lease?'': '<div class="hades-inline-actions"><button id="grant-yolo">Enable Workspace YOLO</button><button id="grant-hardcore-yolo">Enable Hardcore YOLO</button></div><p class="muted">Hardcore YOLO is still owner-granted, time-limited, non-root, and blocks Docker/root escape commands. It is intended for bounded network diagnostics.</p>'}`;
   const theme = window.themeModule?.getSaved?.() || {};
   const diagnostics = `<section class="hades-detail-section"><h3>Runtime diagnostics</h3><dl class="hades-diagnostic-list"><dt>Source commit</dt><dd>${esc(build.source_commit || 'unknown')}</dd><dt>Image</dt><dd>${esc(build.image_id || 'unknown')}</dd><dt>Frontend build</dt><dd>${esc(build.frontend_build_id || 'unknown')}</dd><dt>UI state schema</dt><dd>${esc(build.ui_state_schema_version || 'unknown')}</dd><dt>Active theme</dt><dd>${esc(theme.name || 'default')}</dd></dl></section>`;
   el.querySelector('.hades-window-body').innerHTML=`<div><h2>Developer Mode</h2>${diagnostics}${content}</div>`;
-  if (lease) el.querySelector('#revoke-yolo').onclick=async()=>{await fetch('/api/developer/yolo/revoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({lease_id:lease.id})});openDeveloper();};
-  else el.querySelector('#grant-yolo').onclick=async()=>{await fetch('/api/developer/yolo/grant',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({duration_seconds:1800})});openDeveloper();};
+  el.querySelector('.hades-window-body > div')?.insertAdjacentHTML('beforeend', '<p class="hades-error-state" data-developer-message role="status"></p>');
+  const postDeveloper = async (path, body) => {
+    const response = await fetch(path, {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
+    let payload = {};
+    try { payload = await response.json(); } catch (_) {}
+    if (!response.ok) throw new Error(payload.detail || `Developer request failed (${response.status})`);
+    return payload;
+  };
+  const showDeveloperError = (error) => {
+    const message = el.querySelector('[data-developer-message]');
+    if (message) message.textContent = error?.message || 'Developer request failed.';
+  };
+  if (lease) el.querySelector('#revoke-yolo').onclick=async()=>{try { await postDeveloper('/api/developer/yolo/revoke',{lease_id:lease.id}); openDeveloper(); } catch (error) { showDeveloperError(error); }};
+  else {
+    el.querySelector('#grant-yolo').onclick=async()=>{try { await postDeveloper('/api/developer/yolo/grant',{duration_seconds:1800,network_policy:'normal'}); openDeveloper(); } catch (error) { showDeveloperError(error); }};
+    el.querySelector('#grant-hardcore-yolo').onclick=async()=>{try { await postDeveloper('/api/developer/yolo/grant',{duration_seconds:1800,network_policy:'sandboxed_network'}); openDeveloper(); } catch (error) { showDeveloperError(error); }};
+  }
   return el;
 }
 registerView('household-panel', () => openHousehold());

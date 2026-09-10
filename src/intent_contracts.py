@@ -1514,21 +1514,11 @@ def compile_intent(
         r"\b(?:changed|modified|completed|finished|old|stale)\b", q,
     ):
         safety_constraints.append("action_revalidation_required")
-    # Active network observation is never authorized by a vague reference to
-    # "my/local network" or by historical/current host context.  An explicit
-    # bounded CIDR remains on the normal plan/approval/policy path; an
-    # unscoped research/deep-dive request is a framework-owned clarification
-    # instead of an empty bounded decision problem.
-    if (
-        concept == "NETWORK"
-        and operation in {"EXECUTE", "RESEARCH"}
-        and not re.search(
-            r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
-            r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
-            q,
-        )
-    ):
-        safety_constraints.append("network_scope_requires_authorization")
+    # A missing CIDR is not by itself a reason to strand an owner.  The
+    # Homelab operation may resolve exactly one current physical-LAN scope
+    # from the trusted host context, then present that bounded scope for the
+    # normal exact-approval gate.  Ambiguous, VPN, public, or unavailable
+    # context still fails closed at the operation boundary.
     if (
         concept == "UNKNOWN"
         and operation in {"EXECUTE", "RESEARCH"}
@@ -1543,17 +1533,6 @@ def compile_intent(
         )
     ):
         concept = "NETWORK"
-    if (
-        concept == "NETWORK"
-        and operation in {"EXECUTE", "RESEARCH"}
-        and not re.search(
-            r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
-            r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
-            q,
-        )
-        and "network_scope_requires_authorization" not in safety_constraints
-    ):
-        safety_constraints.append("network_scope_requires_authorization")
     reference_filters = {}
     if remote_requested:
         reference_filters["remote"] = True

@@ -706,10 +706,19 @@ async def execute_tool_block(
 
     approval_claimed = False
     if exact_approval is not None:
+        # An exact approval is an owner-authenticated control-plane grant. It
+        # must be usable for actions that were never tainted by external
+        # content (for example the bounded network-scan plan), while the
+        # sealed owner/session/action binding below still prevents replay or
+        # scope widening.  External-context taint remains relevant to the
+        # ordinary pre-approval policy decision, but is not a prerequisite for
+        # consuming an already displayed exact approval.
         if (
             not isinstance(security_context, ToolRunSecurityContext)
-            or not security_context.external_untrusted_context_seen
-            or not exact_approval.pending.external_untrusted_context_seen
+            or not (
+                security_context.external_untrusted_context_seen
+                or security_context.approval_gate_bypassed
+            )
         ):
             return (
                 f"{getattr(block, 'tool_type', None)}: BLOCKED",
@@ -1435,13 +1444,27 @@ async def _execute_manage_assets_binding(block, owner=None):
         if not owner:
             raise PermissionError("authenticated IT asset owner is required")
         payload = _ody_v34_json.loads(block.content or "{}")
+        # ``manage_assets`` is the established transport name for both the
+        # hardware CMDB and the owner-scoped kitchen inventory capability.
+        # Reads must follow the same canonical inventory path as writes when
+        # the request carries an inventory discriminator; otherwise a grocery
+        # list was incorrectly sent to the IT asset CLI and appeared empty.
+        _inventory_action = isinstance(payload, dict) and payload.get("action") in {
+            "list", "search", "get", "add_item", "update_item", "archive_item",
+            "add_stock", "consume_stock", "adjust_stock", "update_asset",
+        }
+        _inventory_marker = isinstance(payload, dict) and (
+            payload.get("domain") in {"kitchen", "household"}
+            or payload.get("list_name") in {"grocery", "pantry", "fridge", "freezer"}
+            or payload.get("shopping_list") is not None
+            or payload.get("storage_area") in {"pantry", "fridge", "freezer"}
+            or payload.get("item_kind") in {"ingredient", "consumable"}
+        )
         # Kitchen/household inventory actions share the canonical inventory
         # capability and transport with IT assets. Delegate their persistence
         # to the existing transactional service rather than creating a second
         # binding or installer-like subsystem.
-        if isinstance(payload, dict) and payload.get("action") in {
-            "add_item", "update_item", "archive_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
-        }:
+        if _inventory_action and _inventory_marker:
             from src.agent_tools.inventory_tools import ManageInventoryTool
             result = dict(await ManageInventoryTool().execute(
                 _ody_v34_json.dumps(payload, sort_keys=True), {"owner": owner},

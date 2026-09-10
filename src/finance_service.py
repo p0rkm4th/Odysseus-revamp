@@ -354,12 +354,21 @@ class FinanceService:
         return "HEALTHY" if item.sync_status == "healthy" else "DEGRADED" if item.sync_status == "error" else "CONNECTED"
 
     def connection_projection(self, owner: str) -> dict[str, Any]:
-        connection = self.db.query(FinanceConnection).filter(
+        connections = self.db.query(FinanceConnection).filter(
             FinanceConnection.owner == owner, FinanceConnection.provider == "plaid",
-        ).one_or_none()
+        ).order_by(FinanceConnection.created_at.desc()).all()
+        # A cancelled/expired Link attempt is historical state, not a second
+        # owner-facing connection. Prefer a real provider-backed connection;
+        # otherwise expose the newest pending attempt without assuming it is
+        # healthy. This keeps multiple abandoned attempts from breaking the
+        # Integration Center projection.
+        provider_backed = [item for item in connections if item.lifecycle_state in {
+            "CONNECTED", "SYNCING", "HEALTHY", "DEGRADED", "RECONNECT_REQUIRED",
+        }]
+        connection = (provider_backed[0] if provider_backed else (connections[0] if connections else None))
         if connection is None:
             return {"provider": "plaid", "lifecycle_state": "NOT_CONFIGURED", "capability_available": False}
-        return {
+        projection = {
             "id": connection.id, "provider": connection.provider,
             "lifecycle_state": connection.lifecycle_state,
             "provider_health": connection.provider_health,
@@ -367,6 +376,11 @@ class FinanceService:
             "last_successful_sync_at": connection.last_successful_sync_at.isoformat() if connection.last_successful_sync_at else None,
             "last_error_classification": connection.last_error_classification,
         }
+        projection["connection_count"] = len(connections)
+        projection["abandoned_authorization_count"] = sum(
+            item.lifecycle_state == "AUTHORIZATION_IN_PROGRESS" for item in connections[1:]
+        )
+        return projection
 
     def list_plaid_items(self, owner: str) -> list[dict[str, Any]]:
         return [self._plaid_item_dict(item) for item in self.db.query(PlaidItem).filter(

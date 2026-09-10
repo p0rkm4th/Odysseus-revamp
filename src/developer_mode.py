@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import os, re, subprocess
 from core.local_intelligence_models import DeveloperLease
 from src.work_engine import WorkEngine, ident, now
+from src.execution_profiles import bubblewrap_argv, use_execution_profile
 # Developer execution runs inside the Odysseus container.  The host checkout is
 # bind-mounted at this container path by Compose; using the host pathname here
 # makes leases valid in source tests but fail at runtime when the path is not
@@ -18,9 +19,12 @@ def _clean_workspace(value):
     if not os.path.isdir(path): raise ValueError("workspace does not exist")
     return path
 def _serialize(row): return {c.name:(getattr(row,c.name).isoformat() if isinstance(getattr(row,c.name),datetime) else getattr(row,c.name)) for c in row.__table__.columns}
-def grant(db, owner, *, workspace=WORKSPACE, duration_seconds=1800, run_id=None, session_id=None):
+def grant(db, owner, *, workspace=WORKSPACE, duration_seconds=1800, run_id=None, session_id=None, network_policy="normal"):
     workspace = _clean_workspace(workspace); seconds=min(max(int(duration_seconds),60),8*3600)
-    row=DeveloperLease(id=ident("lease"),owner=owner,workspace=workspace,expires_at=now()+timedelta(seconds=seconds),run_id=run_id,session_id=session_id)
+    network_policy = str(network_policy or "normal").strip().lower()
+    if network_policy not in {"normal", "sandboxed_network"}:
+        raise ValueError("network_policy must be normal or sandboxed_network")
+    row=DeveloperLease(id=ident("lease"),owner=owner,workspace=workspace,expires_at=now()+timedelta(seconds=seconds),run_id=run_id,session_id=session_id,network_policy=network_policy)
     db.add(row); db.commit(); db.refresh(row); return _serialize(row)
 def active(db, owner, lease_id):
     row=db.query(DeveloperLease).filter_by(id=lease_id,owner=owner).one_or_none()
@@ -55,11 +59,23 @@ def execute(db, owner, lease_id, command):
             "status": "approved",
         })
     try:
-        proc=subprocess.run(["/bin/bash","-lc",command],cwd=row.workspace,capture_output=True,text=True,timeout=300,env={**os.environ,"PWD":row.workspace,"HOME":row.workspace},preexec_fn=_drop_to_workspace_user)
+        command_argv = ["/bin/bash", "-lc", command]
+        if row.network_policy == "sandboxed_network":
+            # The source workspace is read-only; all writes are ephemeral.
+            # Network access is intentionally explicit in the persisted lease,
+            # and the route remains owner-authenticated and lease-bound.
+            with use_execution_profile("hardcore_yolo"):
+                proc = subprocess.run(
+                    bubblewrap_argv(row.workspace, command_argv),
+                    cwd="/", capture_output=True, text=True, timeout=300,
+                    env={},
+                )
+        else:
+            proc=subprocess.run(command_argv,cwd=row.workspace,capture_output=True,text=True,timeout=300,env={**os.environ,"PWD":row.workspace,"HOME":row.workspace},preexec_fn=_drop_to_workspace_user)
     except Exception:
         if action:
             WorkEngine(db).set_run_status(owner, row.run_id, "failed", {"error_summary": "workspace command failed before completion"})
         raise
     if action:
         WorkEngine(db).complete_action(owner, action["id"], {"result_reference": f"yolo://{row.id}/{action['id']}"})
-    return {"lease_id":lease_id,"action_id":action["id"] if action else None,"workspace":row.workspace,"returncode":proc.returncode,"stdout":proc.stdout[-20000:],"stderr":proc.stderr[-10000:],"audited":True,"uid":WORKSPACE_UID,"root":False}
+    return {"lease_id":lease_id,"action_id":action["id"] if action else None,"workspace":row.workspace,"network_policy":row.network_policy,"returncode":proc.returncode,"stdout":proc.stdout[-20000:],"stderr":proc.stderr[-10000:],"audited":True,"uid":65534 if row.network_policy == "sandboxed_network" else WORKSPACE_UID,"root":False}

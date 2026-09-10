@@ -185,6 +185,53 @@ async def test_dispatcher_claims_approval_immediately_before_execution(monkeypat
 
 
 @pytest.mark.asyncio
+async def test_exact_approval_can_resume_untainted_bounded_network_action(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    store = ToolApprovalStore()
+    content = '{"action":"execute_network_discovery","plan_digest":"digest-1"}'
+    pending = _pending(
+        store,
+        tool_name="manage_homelab",
+        content=content,
+        external_untrusted_context_seen=False,
+        capabilities=capabilities_for_action("manage_homelab", content),
+    )
+    grant = store.consume(
+        pending.approval_id,
+        decision="approve_task",
+        owner="alice",
+        session_id="session-1",
+    )
+
+    async def fake_homelab_binding(block, owner=None):
+        return "manage_homelab", {
+            "success": True,
+            "observations": [{"address": "192.168.10.1"}],
+            "exit_code": 0,
+        }
+
+    monkeypatch.setitem(
+        tool_execution._CAPABILITY_V1_EXECUTORS,
+        "manage_homelab",
+        fake_homelab_binding,
+    )
+    _desc, result = await tool_execution.execute_tool_block(
+        ToolBlock("manage_homelab", content),
+        session_id="session-1",
+        owner="alice",
+        security_context=ToolRunSecurityContext(
+            external_untrusted_context_seen=False,
+            approval_gate_bypassed=True,
+        ),
+        exact_approval=grant,
+    )
+
+    assert result["success"] is True
+    assert result["observations"][0]["address"] == "192.168.10.1"
+
+
+@pytest.mark.asyncio
 async def test_dispatcher_uses_sealed_document_target(monkeypatch):
     import src.tool_execution as tool_execution
 

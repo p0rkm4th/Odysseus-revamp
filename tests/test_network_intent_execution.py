@@ -36,15 +36,15 @@ def test_network_discovery_request_without_cidr_does_not_reuse_historical_scope(
     assert network_discovery_request_cidr(query) is None
 
 
-def test_unscoped_network_deep_dive_is_framework_clarification_bound():
+def test_unscoped_network_deep_dive_is_not_rejected_before_context_resolution():
     from src.intent_contracts import compile_intent
 
     frame = compile_intent("Do a deep dive on my local network.")
     assert frame.domain_concept == "NETWORK"
-    assert "network_scope_requires_authorization" in frame.constraints
+    assert "network_scope_requires_authorization" not in frame.constraints
 
 
-def test_unscoped_network_deep_dive_does_not_enter_bounded_selection(monkeypatch):
+def test_unscoped_network_deep_dive_can_reach_bounded_selection(monkeypatch):
     calls = []
     provider_calls = []
 
@@ -77,14 +77,13 @@ def test_unscoped_network_deep_dive_does_not_enter_bounded_selection(monkeypatch
     events = _events(chunks)
 
     assert calls == []
-    assert provider_calls == []
-    assert any(
+    assert provider_calls
+    assert not any(
         "explicitly authorized target scope" in str(event.get("delta") or "")
         for event in events
     )
     metrics = next(event["data"] for event in reversed(events) if event.get("type") == "metrics")
-    assert metrics["aci_turn_disposition"] == "CLARIFY"
-    assert metrics["model_burden"].get("bounded_action_decision", 0) == 0
+    assert metrics["aci_turn_disposition"] != "CLARIFY"
 
 
 def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_active_scan():

@@ -2404,6 +2404,71 @@ async def stream_aci_runtime(
                 _aci_fast_path_block = ToolBlock(
                     _fast_binding, json.dumps(projection.fast_path, sort_keys=True)
                 )
+            # Network discovery has a safe, deterministic first step even when
+            # the owner leaves the target implicit: ask the canonical Homelab
+            # operation to resolve the current authorized private scope. Do not
+            # make a local model choose or describe this ActionCard. The
+            # operation still performs scope validation and the normal exact
+            # approval gate remains downstream.
+            if (
+                _aci_mode == "aci"
+                and not _aci_answer_only
+                and _aci_canonical_tool_projection
+                and _canonical_binding == "manage_homelab"
+                and "network_ops" in set(_intent_domains or set())
+                and (
+                    is_explicit_network_discovery_request(_last_user)
+                    or _network_discovery_reply
+                    or _network_discovery_followup
+                )
+                and not network_discovery_request_cidr(_last_user)
+                and projection.mode is not SelectionMode.NEED_CONTEXT
+            ):
+                _network_plan = {"action": "plan_network_discovery"}
+                # A plan is a durable continuation point. On an explicit
+                # follow-up such as "continue" or "go ahead", consume the
+                # latest server-issued digest instead of planning the same
+                # discovery again. The digest remains the owner-bound
+                # authorization/verification seal; prose cannot invent it.
+                if _intent.get("continuation") and re.match(
+                    r"^(?:continue|go ahead|yes|proceed|run it|do it)\b",
+                    str(_last_user or "").strip(),
+                    re.IGNORECASE,
+                ):
+                    _network_context = " ".join(
+                        str(message.get("content") or "")
+                        for message in messages[-12:]
+                        if message.get("role") in {"user", "assistant", "tool"}
+                    )
+                    _plan_match = re.search(
+                        r"(?:operation_digest|plan_digest)\"?\s*[:=]\s*\"?([0-9a-f]{64})\b",
+                        _network_context,
+                        re.IGNORECASE,
+                    )
+                    if _plan_match:
+                        _network_plan = {
+                            "action": "execute_network_discovery",
+                            "plan_digest": _plan_match.group(1).lower(),
+                        }
+                        logger.info(
+                            "[hades-aci] deterministic network continuation action=execute_network_discovery digest=%s",
+                            _plan_match.group(1)[:16],
+                        )
+                _aci_fast_path_block = ToolBlock(
+                    "manage_homelab", json.dumps(_network_plan, sort_keys=True)
+                )
+                _aci_selected_action = next(
+                    (
+                        trace for trace in _aci_action_candidates
+                        if trace["binding"] == "manage_homelab"
+                        and trace["action_id"] == "plan_network_discovery"
+                    ),
+                    None,
+                )
+                _record_aci_framework("deterministic_network_plan_selection")
+                logger.info(
+                    "[hades-aci] deterministic network plan fast path scope=current_context"
+                )
             for _event in projection.framework_events:
                 if _event:
                     _record_aci_framework(_event)
@@ -3664,7 +3729,33 @@ async def stream_aci_runtime(
                 repair_count=_aci_repair_count,
                 max_repairs=getattr(_aci_profile, "max_decision_repairs", 1),
             )
-            if _aci_decision is None:
+            # A canonical contract fallback is already a server-owned action
+            # selection. Preserve it for the normal approval/execution path;
+            # do not immediately discard it as model prose fallback.
+            if _aci_decision is None and _invalid_resolution.mode == "CONTRACT_FALLBACK":
+                _fallback_selected = _invalid_resolution.action
+                if _fallback_selected:
+                    tool_blocks = [
+                        ToolBlock(
+                            _fallback_selected["binding"],
+                            json.dumps(_fallback_selected["payload"], sort_keys=True),
+                        )
+                    ]
+                    used_native = False
+                    converted_calls = []
+                    round_response = ""
+                    _aci_contract_fallback_used = True
+                    _aci_selected_action = action_trace(
+                        "CONTRACT_FALLBACK", _fallback_selected
+                    )
+                    _record_aci_framework("deterministic_contract_fallback")
+                    logger.warning(
+                        "[hades-aci] preserved framework contract fallback binding=%s action=%s invalid_model_decision=%s",
+                        _fallback_selected["binding"],
+                        _fallback_selected["payload"].get("action"),
+                        _aci_error,
+                    )
+            if _aci_decision is None and _invalid_resolution.mode != "CONTRACT_FALLBACK":
                 # If deterministic contract resolution already identified a
                 # unique harmless planning/read Action, the malformed model
                 # response is not needed to choose it. This is a framework
@@ -3738,7 +3829,7 @@ async def stream_aci_runtime(
                 )
                 round_response = ""
                 continue
-            else:
+            elif _aci_decision is not None:
                 selected = _decision_outcome.action
                 if _decision_outcome.invalid_action:
                     round_response = "I could not validate the selected operation."
@@ -5169,6 +5260,51 @@ async def stream_aci_runtime(
                             f'data: {json.dumps({"type": "tool_progress", "tool": block.tool_type, "round": round_num, **evt})}\n\n'
                         )
 
+            # Queue the server-issued network digest before semantic result
+            # projection can classify a read-only preflight as answer-only.
+            # The queued block still traverses the normal policy, ownership,
+            # ActionSpec, and exact-approval path below.
+            if block.tool_type == "manage_homelab" and isinstance(result, dict):
+                try:
+                    _early_payload = json.loads(block.content or "{}")
+                except (TypeError, ValueError):
+                    _early_payload = {}
+                _early_result = (
+                    result.get("data")
+                    if isinstance(result.get("data"), dict)
+                    else result
+                )
+                _early_digest = str(
+                    _early_result.get("operation_digest")
+                    or _early_result.get("plan_digest")
+                    or ""
+                ).strip().lower()
+                if (
+                    _early_payload.get("action") == "plan_network_discovery"
+                    and (
+                        _early_result.get("action") == "execute_network_discovery"
+                        or _early_result.get("kind") == "plan"
+                    )
+                    and re.fullmatch(r"[0-9a-f]{64}", _early_digest)
+                    and not _early_result.get("error")
+                    and not any(
+                        isinstance(getattr(_queued, "content", None), str)
+                        and '"action": "execute_network_discovery"' in _queued.content
+                        for _queued in tool_blocks[i + 1:]
+                    )
+                ):
+                    tool_blocks.append(ToolBlock(
+                        "manage_homelab",
+                        json.dumps({
+                            "action": "execute_network_discovery",
+                            "plan_digest": _early_digest,
+                        }, sort_keys=True),
+                    ))
+                    logger.info(
+                        "[hades-aci] queued exact network approval continuation digest=%s",
+                        _early_digest[:16],
+                    )
+
             # ACI owns the semantic post-Result transition. This loop only
             # applies its transient flags, persists the Result, and delivers
             # the resulting answer/continuation.
@@ -5346,6 +5482,116 @@ async def stream_aci_runtime(
                     logger.warning("[work-bridge] failed to persist bound action result", exc_info=True)
 
             run_security.observe_tool_result(block.tool_type, result, block.content)
+            # Planning a network discovery is a read-only preflight, but it
+            # must immediately hand its server-issued digest to the exact
+            # approval gate. Do this in the same turn so the owner gets one
+            # clear approval card instead of a "plan completed" dead end or a
+            # model-dependent follow-up round.
+            if block.tool_type == "manage_homelab" and isinstance(result, dict):
+                try:
+                    _planned_payload = json.loads(block.content or "{}")
+                except (TypeError, ValueError):
+                    _planned_payload = {}
+                _planned_result = (
+                    result.get("data")
+                    if isinstance(result.get("data"), dict)
+                    else result
+                )
+                _planned_digest = str(
+                    _planned_result.get("operation_digest")
+                    or _planned_result.get("plan_digest")
+                    or ""
+                ).strip().lower()
+                if (
+                    _planned_payload.get("action") == "plan_network_discovery"
+                    and (
+                        _planned_result.get("action") == "execute_network_discovery"
+                        or _planned_result.get("kind") == "plan"
+                    )
+                    and re.fullmatch(r"[0-9a-f]{64}", _planned_digest)
+                    and not _planned_result.get("error")
+                    and not any(
+                        isinstance(getattr(_queued, "content", None), str)
+                        and '"action": "execute_network_discovery"' in _queued.content
+                        for _queued in tool_blocks[i + 1:]
+                    )
+                ):
+                    tool_blocks.append(ToolBlock(
+                        "manage_homelab",
+                        json.dumps({
+                            "action": "execute_network_discovery",
+                            "plan_digest": _planned_digest,
+                        }, sort_keys=True),
+                    ))
+                    logger.info(
+                        "[hades-aci] network plan produced exact approval continuation digest=%s",
+                        _planned_digest[:16],
+                    )
+                # A port/service request is a second bounded operation. Feed
+                # it only the exact private hosts returned by the completed
+                # discovery result; never let the model invent or widen the
+                # target list.
+                if (
+                    _planned_payload.get("action") == "execute_network_discovery"
+                    and _planned_result.get("success") is True
+                    and _network_service_request
+                ):
+                    _service_targets = []
+                    for item in (_planned_result.get("asset_draft_candidates") or []):
+                        if not isinstance(item, dict):
+                            continue
+                        candidate_targets = item.get("ip_addresses") or []
+                        if isinstance(candidate_targets, str):
+                            candidate_targets = [candidate_targets]
+                        candidate_targets = candidate_targets or [item.get("ip"), item.get("address")]
+                        for target in candidate_targets:
+                            target = str(target or "").strip()
+                            if target and target not in _service_targets:
+                                _service_targets.append(target)
+                            if len(_service_targets) >= 256:
+                                break
+                        if len(_service_targets) >= 256:
+                            break
+                    if _service_targets:
+                        tool_blocks.append(ToolBlock(
+                            "manage_homelab",
+                            json.dumps({
+                                "action": "plan_network_service_enumeration",
+                            "targets": _service_targets[:256],
+                            }, sort_keys=True),
+                        ))
+                        logger.info(
+                            "[hades-aci] discovery produced bounded service plan targets=%s",
+                            len(_service_targets),
+                        )
+            if (
+                block.tool_type == "manage_homelab"
+                and isinstance(result, dict)
+                and result.get("action") == "execute_network_service_enumeration"
+                and (
+                    (result.get("data") if isinstance(result.get("data"), dict) else result)
+                    .get("operation_digest")
+                )
+                and (
+                    (result.get("data") if isinstance(result.get("data"), dict) else result)
+                    .get("kind") == "plan"
+                )
+            ):
+                _service_result = result.get("data") if isinstance(result.get("data"), dict) else result
+                _service_digest = str(_service_result["operation_digest"]).strip().lower()
+                if re.fullmatch(r"[0-9a-f]{64}", _service_digest):
+                    tool_blocks.append(ToolBlock(
+                        "manage_homelab",
+                        json.dumps({
+                            "action": "execute_network_service_enumeration",
+                            "plan_digest": _service_digest,
+                            "targets": _service_result.get("targets") or [],
+                        }, sort_keys=True),
+                    ))
+                    logger.info(
+                        "[hades-aci] service plan produced exact approval continuation digest=%s",
+                        _service_digest[:16],
+                    )
             if block.tool_type == "bash" and isinstance(result, dict):
                 _bash_exit = result.get("exit_code")
                 _is_deterministic_starter = bool(
