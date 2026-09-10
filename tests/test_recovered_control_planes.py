@@ -353,6 +353,37 @@ def test_network_service_enumeration_persists_through_existing_cmdb_writer(tmp_p
     asyncio.run(run())
 
 
+def test_network_service_continuation_reuses_sealed_plan_targets(tmp_path, monkeypatch):
+    import src.privileged_broker as broker
+    calls = []
+
+    def request(payload, timeout=5, **_kwargs):
+        calls.append(payload)
+        if payload.get("action") == "run_network_service_enumeration":
+            return {"ok": True, "returncode": 0, "output": "<nmaprun></nmaprun>"}
+        return {"ok": True, "network_scanner_available": True}
+
+    monkeypatch.setattr(broker, "client_request", request)
+
+    async def run():
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            observation_recorder=lambda payload: None,
+        )
+        plan = await ops.execute(
+            {"action": "plan_network_service_enumeration", "targets": ["192.168.10.4"]},
+            owner="alice",
+        )
+        result = await ops.execute(
+            {"action": "execute_network_service_enumeration", "plan_digest": plan["operation_digest"]},
+            owner="alice",
+        )
+        assert result["success"] is True
+        assert calls[-1]["targets"] == ["192.168.10.4"]
+
+    asyncio.run(run())
+
+
 def test_discovery_plan_is_single_use_and_unrelated_homelab_actions_fail(tmp_path, monkeypatch):
     import src.privileged_broker as broker
 

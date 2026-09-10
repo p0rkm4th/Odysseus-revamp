@@ -27,12 +27,27 @@ _REQUIRED_NATIVE_TOOL_ARGS = {
     "write_file": ("path",),
     "edit_file": ("path",),
     "apply_patch": ("patch_text", "patchText", "patch"),
+    "yolo_shell": ("command",),
 }
 
 # ---------------------------------------------------------------------------
 # OpenAI-compatible function tool schemas
 # ---------------------------------------------------------------------------
 FUNCTION_TOOL_SCHEMAS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "yolo_shell",
+            "description": "Run a bounded shell command as the model under the authenticated owner's active YOLO lease. Use only for diagnostics or development work that needs the explicitly granted Workspace YOLO or Hardcore YOLO environment. The owner grants the lease; the model supplies the command. Without an active lease this fails closed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "The bounded shell command to run under the active owner-granted YOLO lease."}
+                },
+                "required": ["command"]
+            }
+        }
+    },
     {
         "type": "function",
         "function": {
