@@ -4315,6 +4315,20 @@ import { loadPanel } from './panels.js';
             }
           }
         }
+        // Some deterministic first-class reads finish with no provider text:
+        // the server persists the canonical answer and emits the tool result,
+        // but a fast response_replace/DONE sequence can leave the live bubble
+        // showing only the tool card.  Converge the visible chat with the
+        // persisted session instead of making the owner reload manually.
+        if (!accumulated.trim() && holder.querySelector('.agent-thread-node')) {
+          setTimeout(() => {
+            if (sessionModule.getCurrentSessionId() === streamSessionId) {
+              sessionModule.selectSession(streamSessionId).catch((err) => {
+                console.warn('[chat] failed to reload persisted tool answer:', err);
+              });
+            }
+          }, 0);
+        }
       } // end if (!_isBgFinal)
 
     } catch (err) {
