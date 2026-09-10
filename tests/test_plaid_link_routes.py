@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from core.database import Base
 from core.finance_models import FinanceConnection, PlaidLinkSession
 from routes import finance_routes
+from src.finance_service import FinanceService
 
 
 class LinkPlaid:
@@ -148,6 +149,57 @@ def test_exchange_consumes_continuation_when_initial_sync_fails(monkeypatch):
         })
         assert response.status_code == 503
         assert db.query(PlaidLinkSession).filter_by(owner="alice").one().consumed_at is not None
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_exchange_claim_blocks_replay_before_provider_dispatch(monkeypatch):
+    client, db, plaid, engine = _client(monkeypatch)
+    try:
+        created = client.post("/api/finance/plaid/link-token", headers={"x-owner": "alice"}).json()
+        row = db.query(PlaidLinkSession).filter_by(owner="alice").one()
+        row.exchange_status = "IN_PROGRESS"
+        db.commit()
+        response = client.post(
+            "/api/finance/plaid/link-exchange",
+            headers={"x-owner": "alice"},
+            json={
+                "link_token": created["link_token"],
+                "authorization_state": created["authorization_state"],
+                "public_token": "public-sandbox-token",
+            },
+        )
+        assert response.status_code == 400
+        assert plaid.exchange_calls == []
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_exchange_reuses_committed_item_after_callback_interruption(monkeypatch):
+    client, db, plaid, engine = _client(monkeypatch)
+    try:
+        created = client.post("/api/finance/plaid/link-token", headers={"x-owner": "alice"}).json()
+        # Model a process interruption after the provider credential was
+        # committed but before the continuation was consumed.
+        connection = db.query(FinanceConnection).filter_by(owner="alice", provider="plaid").one()
+        FinanceService(db).create_plaid_item("alice", "item-live-1", "access-secret", connection_id=connection.id)
+        row = db.query(PlaidLinkSession).filter_by(owner="alice").one()
+        row.exchange_status = "IN_PROGRESS"
+        db.commit()
+        recovered = client.post(
+            "/api/finance/plaid/link-exchange",
+            headers={"x-owner": "alice"},
+            json={
+                "link_token": created["link_token"],
+                "authorization_state": created["authorization_state"],
+                "public_token": "public-sandbox-token",
+            },
+        )
+        assert recovered.status_code == 200
+        assert plaid.exchange_calls == []
+        assert recovered.json()["item"]["item_id"] == "item-live-1"
     finally:
         db.close()
         engine.dispose()

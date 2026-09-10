@@ -218,6 +218,8 @@ class PlaidLinkSession(TimestampMixin, Base):
     authorization_state_hash = Column(String(64), nullable=False, unique=True)
     mode = Column(String(16), nullable=False, default="create")
     continuation = Column(JSON, nullable=True)
+    exchange_status = Column(String(16), nullable=False, default="UNSTARTED")
+    exchange_claimed_at = Column(DateTime, nullable=True)
     expires_at = Column(DateTime, nullable=False)
     consumed_at = Column(DateTime, nullable=True)
 

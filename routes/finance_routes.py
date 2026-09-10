@@ -160,14 +160,51 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                         raise FinanceError("Plaid reconnect target is unavailable")
                     item_id = item.item_id
                 else:
-                    if not public_token:
-                        raise FinanceError("public_token is required for a new Plaid connection")
-                    exchanged = transport.item_public_token_exchange(public_token)
-                    access_token = str(exchanged.get("access_token") or "").strip()
-                    item_id = str(exchanged.get("item_id") or "").strip()
-                    if not access_token or not item_id:
-                        raise PlaidError("MALFORMED_PROVIDER_RESPONSE")
-                    FinanceService(db).create_plaid_item(user, item_id, access_token, connection_id=connection.id)
+                    # If a worker died after committing the credential but
+                    # before consuming the continuation, the credential is a
+                    # safe recovery point. Never exchange the public token a
+                    # second time; resume from the committed item instead.
+                    recovering_committed_item = item is not None and row.exchange_status in {"IN_PROGRESS", "UNCERTAIN"}
+                    if not recovering_committed_item:
+                        if row.exchange_status != "UNSTARTED":
+                            raise FinanceError(
+                                "Plaid authorization is already being completed or needs attention"
+                            )
+                        claimed = db.query(PlaidLinkSession).filter(
+                            PlaidLinkSession.id == row.id,
+                            PlaidLinkSession.exchange_status == "UNSTARTED",
+                        ).update(
+                            {"exchange_status": "IN_PROGRESS", "exchange_claimed_at": now},
+                            synchronize_session=False,
+                        )
+                        if claimed != 1:
+                            raise FinanceError(
+                                "Plaid authorization is already being completed or needs attention"
+                            )
+                        db.commit()
+                        db.refresh(row)
+                        if not public_token:
+                            raise FinanceError("public_token is required for a new Plaid connection")
+                        try:
+                            exchanged = transport.item_public_token_exchange(public_token)
+                        except Exception:
+                            # The provider outcome is not safely knowable here.
+                            # Preserve the claim so a callback replay cannot
+                            # blindly dispatch the same public token again.
+                            row.exchange_status = "UNCERTAIN"
+                            row.consumed_at = now
+                            db.commit()
+                            raise
+                        access_token = str(exchanged.get("access_token") or "").strip()
+                        item_id = str(exchanged.get("item_id") or "").strip()
+                        if not access_token or not item_id:
+                            row.exchange_status = "UNCERTAIN"
+                            row.consumed_at = now
+                            db.commit()
+                            raise PlaidError("MALFORMED_PROVIDER_RESPONSE")
+                        FinanceService(db).create_plaid_item(user, item_id, access_token, connection_id=connection.id)
+                    else:
+                        item_id = item.item_id
                 # This is the existing bounded read-only reconciliation seam;
                 # Link completion never grants a financial mutation.
                 try:
@@ -183,6 +220,7 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
                     db.commit()
                     raise
                 row.consumed_at = now
+                row.exchange_status = "COMPLETED"
                 connection.authorization_correlation_hash = None
                 connection.authorization_expires_at = None
                 db.commit()
