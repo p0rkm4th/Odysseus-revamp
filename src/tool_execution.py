@@ -1460,6 +1460,18 @@ async def _execute_manage_assets_binding(block, owner=None):
             or payload.get("storage_area") in {"pantry", "fridge", "freezer"}
             or payload.get("item_kind") in {"ingredient", "consumable"}
         )
+        # The model-facing inventory contract permits the canonical action
+        # name to carry the domain when it is unambiguous.  In particular,
+        # ``add_item``/stock movement actions cannot be hardware-CMDB actions;
+        # accept those payloads without requiring the model to echo optional
+        # presentation metadata such as ``list_name``.
+        _inventory_marker = _inventory_marker or (
+            isinstance(payload, dict)
+            and payload.get("action") in {
+                "add_item", "update_item", "archive_item", "add_stock",
+                "consume_stock", "adjust_stock",
+            }
+        )
         # Kitchen/household inventory actions share the canonical inventory
         # capability and transport with IT assets. Delegate their persistence
         # to the existing transactional service rather than creating a second

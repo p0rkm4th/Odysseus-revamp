@@ -1172,6 +1172,18 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
     if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
+    # Household inventory uses natural stock language that does not contain
+    # the generic CRUD verbs. Keep this semantic projection bounded to an
+    # inventory noun so ordinary prose such as "I bought a book" stays a
+    # normal conversation turn.
+    if re.search(r"\b(?:pantry|fridge|freezer|grocery|groceries|shopping\s+list|kitchen\s+inventory|household\s+stock)\b", q) or (
+        re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q)
+        and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
+    ):
+        if re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q):
+            return "EXECUTE"
+        if re.search(r"\b(?:put|place|store|stock|bought|buy|purchased|purchase)\b", q):
+            return "UPDATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
     if re.search(r"\b(?:restart|recover|execute|run|scan|discover\w*|install|turn on|start|begin)\b", q): return "EXECUTE"
@@ -1297,7 +1309,11 @@ def compile_intent(
         concept = "SECURITY_FINDING"
     elif re.search(r"\b(?:osint|open source intelligence|investigations?|cases?)\b", q):
         concept = "OSINT_CASE"
-    elif re.search(r"\b(?:household|pantry|stock|shopping|recipe|recipes|groceries|kitchen)\b", q):
+    elif re.search(r"\b(?:household|pantry|stock|grocery|groceries|shopping|recipe|recipes|kitchen)\b", q) or (
+        operation == "EXECUTE"
+        and re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q)
+        and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
+    ):
         concept = "HOUSEHOLD_ITEM"
     elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
         concept = "WORK"
