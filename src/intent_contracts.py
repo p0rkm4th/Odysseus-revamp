@@ -64,6 +64,23 @@ def _relative_finance_range(text: str) -> dict[str, str]:
     """Project common bounded Finance periods instead of defaulting to month."""
     query = str(text or "")
     today = date.today()
+    number_words = {
+        "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+        "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+        "eleven": 11, "twelve": 12,
+    }
+    months_match = re.search(
+        r"\b(?:past|last|previous)\s+(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
+        query, re.IGNORECASE,
+    )
+    if months_match:
+        count_text = months_match.group(1).casefold()
+        count = int(count_text) if count_text.isdigit() else number_words[count_text]
+        month_index = today.year * 12 + (today.month - 1) - count
+        start_year, start_month_zero = divmod(month_index, 12)
+        start_month = start_month_zero + 1
+        day = min(today.day, calendar.monthrange(start_year, start_month)[1])
+        return {"start": date(start_year, start_month, day).isoformat(), "end": today.isoformat()}
     if re.search(r"\b(?:this\s+year|year\s+to\s+date|ytd|for\s+the\s+year)\b", query, re.IGNORECASE):
         return {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}
     if re.search(r"\b(?:last|previous)\s+year\b", query, re.IGNORECASE):
@@ -1659,7 +1676,7 @@ def compile_intent(
         finance_view = deterministic_read_view(text, concept)
         if finance_view:
             reference_filters["view"] = finance_view
-        reference_filters.update(_named_month_range(text) or _relative_finance_range(text))
+        reference_filters.update(_relative_finance_range(text) or _named_month_range(text))
         # Preserve a bounded owner-supplied merchant selector for deterministic
         # Finance reads. The selector is data, not a new capability or query
         # language; FinanceService still applies the owner scope and limit.
@@ -2104,7 +2121,8 @@ def classify_compatibility_request(
     finance_correction = bool(
         re.search(
             r"\b(?:missing|missed|another|one|two|both|wrong|incorrect|about\s+\$?\d|"
-            r"(?:this|last|previous)\s+(?:month|year)|year\s+to\s+date|ytd)\b",
+            r"(?:this|last|previous)\s+(?:month|year)|year\s+to\s+date|ytd|"
+            r"(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?)\b",
             text,
             re.IGNORECASE,
         )

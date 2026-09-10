@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 
 from src.intent_contracts import (
@@ -120,6 +122,30 @@ def test_year_phrase_with_for_the_year_reaches_full_year_range():
     assert frame.domain_concept == "FINANCE"
     assert frame.filters["start"].endswith("-01-01")
     assert frame.filters["end"]
+
+
+def test_relative_multi_month_range_does_not_default_to_current_month():
+    frame = compile_intent("How much did I spend dining out in the past 6 months?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["category"] == "dining_out"
+    assert frame.filters["start"] != date.today().replace(day=1).isoformat()
+    assert frame.filters["end"] == date.today().isoformat()
+
+
+def test_month_count_correction_reuses_finance_context():
+    from src.agent_loop import _classify_agent_request
+
+    messages = [
+        {"role": "user", "content": "How much have I spent dining out in the past 6 months?"},
+        {"role": "assistant", "content": "Posted spending for September."},
+    ]
+    projection = _classify_agent_request(messages, "Six months, not September")
+    assert projection is not None
+    frame = compile_intent(projection["retrieval_query"], continuation=projection["continuation"])
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["start"] != date.today().replace(day=1).isoformat()
+    assert frame.filters["category"] == "dining_out"
 
 
 def test_short_finance_period_correction_reaches_bounded_read():

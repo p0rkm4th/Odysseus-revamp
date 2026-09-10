@@ -2011,7 +2011,11 @@ def provisional_intent_projection(
     latest = str(text or "")
     recent_query = recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
     finance_followup = bool(
-        re.search(r"\b(?:last|previous|this|that|next)\s+(?:month|week|year)\b", latest, re.IGNORECASE)
+        re.search(
+            r"\b(?:last|previous|this|that|next)\s+(?:month|week|year)\b|"
+            r"\b(?:past|last|previous)\s+(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
+            latest, re.IGNORECASE,
+        )
         and re.search(
             r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|cash\s+flow|"
             r"transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
@@ -2055,6 +2059,17 @@ def provisional_intent_projection(
             re.IGNORECASE,
         )
     )
+    finance_period_correction = bool(
+        re.search(
+            r"\b(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
+            latest, re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|"
+            r"cash\s+flow|transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query, re.IGNORECASE,
+        )
+    )
     continuation = (
         is_explicit_continuation(latest)
         or assistant_requested_followup(messages)
@@ -2063,8 +2078,9 @@ def provisional_intent_projection(
         or finance_followup
         or finance_correction_followup
         or finance_answer_correction
+        or finance_period_correction
     )
-    contextual_finance_read = finance_correction_followup or finance_answer_correction
+    contextual_finance_read = finance_correction_followup or finance_answer_correction or finance_period_correction
     # A stale continuation marker must not demote a new, independently
     # classifiable owner request. This occurs after an interrupted turn where
     # the UI may leave a literal "Continue" message in the session. Compile
