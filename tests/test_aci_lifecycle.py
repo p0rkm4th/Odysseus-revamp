@@ -560,6 +560,17 @@ def test_finance_answer_correction_reuses_recent_finance_read_context():
     assert "Publix" in intent["retrieval_query"]
 
 
+def test_finance_access_pushback_reuses_canonical_csv_read_context():
+    messages = [
+        {"role": "user", "content": "Walk me through my finances from the last 3 months"},
+        {"role": "assistant", "content": "I don't have access to your financial data. Please paste a CSV."},
+    ]
+    intent, owned = provisional_intent_projection(messages, "You should see the CSV already")
+    assert owned is True
+    assert intent["continuation"] is False
+    assert "Walk me through my finances" in intent["retrieval_query"]
+
+
 def test_ranked_finance_followup_projects_bounded_largest_outflows():
     messages = [
         {"role": "user", "content": "How much did I spend this year?"},

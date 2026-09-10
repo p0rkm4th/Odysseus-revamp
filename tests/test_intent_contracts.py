@@ -57,6 +57,14 @@ def test_finance_file_and_overview_language_enters_canonical_read_path(query):
     assert resolve_intent(frame).available is True
 
 
+def test_finance_walk_through_uses_bounded_spending_overview():
+    frame = compile_intent("Walk me through my finances from the last 3 months")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["start"].endswith("-06-10")
+
+
+
 def test_finance_merchant_selector_reaches_deterministic_spending_payload():
     from src.aci import canonical_read_fast_path_payload
 

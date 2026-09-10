@@ -2073,6 +2073,27 @@ def provisional_intent_projection(
             re.IGNORECASE,
         )
     )
+    finance_access_correction = bool(
+        re.search(
+            r"\b(?:you\s+do\s+too|you\s+have\s+(?:it|that)|already\s+(?:have|uploaded|shared)\b|"
+            r"should\s+see\s+(?:the\s+)?(?:csv|statement)|"
+            r"(?:it|the\s+data)\s+is\s+(?:in|on)\s+(?:the\s+)?(?:csv|statement))\b",
+            latest,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:financial|finance|finances|bank|banking|csv|statement|transaction|transactions|"
+            r"spend|spent|spending|expense|expenses)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:don't|do\s+not|cannot|can't|no\s+access|not\s+access|"
+            r"share|paste|upload|provide|external\s+services?)\b",
+            recent_finance_answer,
+            re.IGNORECASE,
+        )
+    )
     finance_period_correction = bool(
         re.search(
             r"\b(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
@@ -2107,8 +2128,9 @@ def provisional_intent_projection(
         or finance_correction_followup
         or finance_answer_correction
         or finance_period_correction
+        or finance_access_correction
     )
-    contextual_finance_read = finance_correction_followup or finance_answer_correction or finance_period_correction or finance_ranked_followup
+    contextual_finance_read = finance_correction_followup or finance_answer_correction or finance_period_correction or finance_access_correction or finance_ranked_followup
     # A stale continuation marker must not demote a new, independently
     # classifiable owner request. This occurs after an interrupted turn where
     # the UI may leave a literal "Continue" message in the session. Compile
