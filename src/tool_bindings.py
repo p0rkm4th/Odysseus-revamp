@@ -314,7 +314,7 @@ Canonical read-only Household Inventory projection. Use `overview`, `list_items`
 items. Technical asset identity remains owned by CMDB/IT Assets.
 `<invoke name="read_household"><parameter name="action">overview</parameter></invoke>`.'''
 _FINANCE_READ_CONTRACT = '''### `read_finance`
-Canonical owner-scoped read-only Finance analysis. Actions are `coverage`, `transactions`, `spending`, `cash_flow`, and `shared_expenses`. Totals come from deterministic HADES calculations; never request raw ledgers or secrets.
+Canonical owner-scoped read-only Finance analysis over Plaid and local CSV snapshots. Actions are `coverage`, `transactions`, `spending`, `cash_flow`, and `shared_expenses`. Totals come from deterministic HADES calculations; never request raw ledgers or secrets. A missing or unhealthy Plaid connection does not invalidate an existing local CSV source; use the returned coverage and source fields and state limitations.
 `<invoke name="read_finance"><parameter name="action">coverage</parameter></invoke>`.'''
 
 _SETUP_READ_CONTRACT = '''### `read_setup`

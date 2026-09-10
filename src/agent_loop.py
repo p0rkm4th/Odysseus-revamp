@@ -403,6 +403,15 @@ _DOMAIN_RULES["work"] = (
     "- Distinguish empty canonical Work results from unavailable or failed retrieval."
 )
 
+_DOMAIN_RULES["finance"] = (
+    "## Canonical Finance rules\n"
+    "- Explicit questions about spending, transactions, cash flow, coverage, or shared expenses use the owner-scoped read_finance contract.\n"
+    "- Local CSV imports are canonical, owner-scoped read-only Finance data and must be queried through read_finance like Plaid data.\n"
+    "- Plaid being unconfigured, stale, or unhealthy does not make an existing local CSV snapshot unavailable; report its source and coverage honestly.\n"
+    "- Never calculate authoritative totals from conversation text or a raw ledger dump. Preserve currency, posted/pending status, date coverage, and freshness limitations from the deterministic result.\n"
+    "- Distinguish no canonical transactions from unavailable/failed retrieval and from incomplete coverage."
+)
+
 _DOMAIN_RULES["household"] = (
     "## Canonical Household Inventory rules\n"
     "- Explicit questions about household items, pantry, stock, recipes, or shopping use the owner-scoped Inventory service read contract.\n"
