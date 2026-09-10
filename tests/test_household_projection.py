@@ -135,6 +135,22 @@ def test_all_grocery_write_boundaries_reject_recipe_placeholders():
         service.update_item("alice", item["id"], shopping_list=True)
 
 
+def test_multi_item_grocery_mutation_creates_individual_canonical_items():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    result = service.manage_inventory({
+        "action": "add_item",
+        "items": ["rice", "milk", "eggs"],
+        "shopping_list": True,
+        "domain": "kitchen",
+        "item_kind": "ingredient",
+    }, owner="alice")
+    assert result["count"] == 3
+    assert [item["name"] for item in result["items"]] == ["rice", "milk", "eggs"]
+    rows = service.list_items("alice", list_name="grocery")
+    assert {row["name"] for row in rows} == {"eggs", "milk", "rice"}
+
+
 def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

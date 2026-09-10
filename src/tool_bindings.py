@@ -34,7 +34,7 @@ MANAGE_ASSETS_SCHEMA = {
             "confidence": {"type": "number"}, "attributes": {"type": "object"}, "query": {"type": "string"}, "limit": {"type": "integer"},
             "kind": {"type": "string"}, "data": {"type": "object"}, "text": {"type": "string"}, "parent": {"type": "string"}, "child": {"type": "string"},
             "relation": {"type": "string"}, "source_asset": {"type": "string"}, "target_asset": {"type": "string"}, "reason": {"type": "string"},
-            "item_id": {"type": "string"}, "domain": {"type": "string", "enum": ["kitchen", "household", "it"]}, "item_kind": {"type": "string", "enum": ["ingredient", "consumable", "asset"]}, "default_unit": {"type": "string"}, "shopping_list": {"type": "boolean"}, "storage_area": {"type": "string", "enum": ["pantry", "fridge", "freezer"]}, "list_name": {"type": "string", "enum": ["grocery", "pantry", "fridge", "freezer"]}, "reorder_point": {"type": "number"},
+            "item_id": {"type": "string"}, "items": {"type": "array", "items": {"type": "string"}, "maxItems": 32}, "domain": {"type": "string", "enum": ["kitchen", "household", "it"]}, "item_kind": {"type": "string", "enum": ["ingredient", "consumable", "asset"]}, "default_unit": {"type": "string"}, "shopping_list": {"type": "boolean"}, "storage_area": {"type": "string", "enum": ["pantry", "fridge", "freezer"]}, "list_name": {"type": "string", "enum": ["grocery", "pantry", "fridge", "freezer"]}, "reorder_point": {"type": "number"},
             "quantity": {"type": "number"}, "unit": {"type": "string"}, "idempotency_key": {"type": "string"},
         }, "required": ["action"]},
     }

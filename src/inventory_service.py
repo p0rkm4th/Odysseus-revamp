@@ -1058,6 +1058,28 @@ class RecipeService(InventoryService):
             # Human-facing additions resolve an existing canonical item first;
             # repeated chat turns must not create duplicate grocery/pantry
             # records. A real ambiguity remains a clarification, not a guess.
+            requested_items = args.get("items")
+            if requested_items is not None:
+                if not isinstance(requested_items, list) or not requested_items or len(requested_items) > 32:
+                    raise InventoryError("items must be a non-empty list of at most 32 grocery items")
+                names = [_required_text(value, "item name", maximum=200) for value in requested_items]
+                if len(set(normalize_item_name(value) for value in names)) != len(names):
+                    raise InventoryConflict("the grocery request contains duplicate items")
+                # Validate the entire set before changing canonical state so a
+                # recipe placeholder or malformed member cannot leave a
+                # partially applied shopping request.
+                for value in names:
+                    _validate_grocery_name(value, bool(shopping_list))
+                results = []
+                replayed = True
+                for value in names:
+                    single = dict(args)
+                    single.pop("items", None)
+                    single["name"] = value
+                    outcome = self.manage_inventory(single, owner=owner)
+                    results.append(outcome.get("item"))
+                    replayed = replayed and bool(outcome.get("replayed"))
+                return {"items": results, "count": len(results), "replayed": replayed}
             requested_name = _required_text(args.get("name"), "name", maximum=200)
             _validate_grocery_name(requested_name, bool(shopping_list))
             normalized = normalize_item_name(requested_name)
