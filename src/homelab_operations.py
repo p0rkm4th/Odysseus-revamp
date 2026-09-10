@@ -883,6 +883,25 @@ class HomelabOperations:
         self, request: dict[str, Any], *, owner: str, action: str,
     ) -> dict[str, Any]:
         raw_targets = request.get("targets")
+        if action == "plan_network_service_enumeration" and not raw_targets:
+            # A natural request such as "check the responding devices for
+            # open ports" refers to the latest owner-scoped discovery, not a
+            # new model-supplied target list. Reuse only fresh private
+            # observations from the canonical CMDB; stale/unknown evidence
+            # must trigger a new discovery instead of a silent scan.
+            from src.network_projection import map_projection
+            projection = await asyncio.to_thread(map_projection, owner=owner)
+            discovered: list[str] = []
+            for node in projection.get("nodes", []) if isinstance(projection, dict) else []:
+                if not isinstance(node, dict) or str(node.get("freshness") or "").upper() != "FRESH":
+                    continue
+                attrs = node.get("attributes") if isinstance(node.get("attributes"), dict) else {}
+                candidate = attrs.get("ip") or attrs.get("observed_ip")
+                if candidate and str(candidate) not in discovered:
+                    discovered.append(str(candidate))
+                if len(discovered) >= 256:
+                    break
+            raw_targets = discovered
         # A continuation may carry only the server-issued plan digest.  Load
         # the sealed target set from that receipt instead of asking the model
         # to repeat (or invent) discovered IPs.
@@ -893,6 +912,10 @@ class HomelabOperations:
             ) if plan_digest else None
             if planned:
                 raw_targets = planned.get("targets")
+        if not raw_targets:
+            raise HomelabOperationError(
+                "no fresh authorized discovery hosts are available; run a network discovery first"
+            )
         targets = _private_targets(raw_targets)
         operation = {
             "action": "execute_network_service_enumeration",

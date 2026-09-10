@@ -3574,6 +3574,36 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         else:
             message += " The observations were returned, but durable recording was not confirmed."
         return message
+    if action == "execute_network_service_enumeration":
+        if payload.get("success") is not True:
+            return None
+        observations = payload.get("service_observations")
+        if not isinstance(observations, list):
+            observations = []
+        lines = [
+            f"Service scan completed for {len(observations)} responding host"
+            f"{'s' if len(observations) != 1 else ''}."
+        ]
+        for observation in observations[:50]:
+            if not isinstance(observation, Mapping):
+                continue
+            host = str(observation.get("ip") or "unknown host")
+            services = observation.get("services") if isinstance(observation.get("services"), list) else []
+            if not services:
+                lines.append(f"- {host}: no open services observed in the bounded scan.")
+                continue
+            rendered = []
+            for service in services[:32]:
+                if not isinstance(service, Mapping):
+                    continue
+                label = f"{service.get('port')}/{service.get('protocol') or 'tcp'}"
+                name = str(service.get("service") or "unknown").strip()
+                version = " ".join(str(service.get(key) or "").strip() for key in ("product", "version")).strip()
+                rendered.append(f"{label} {name}{f' ({version})' if version else ''}")
+            lines.append(f"- {host}: {', '.join(rendered) if rendered else 'no open services observed'}.")
+        if payload.get("observations_recorded") is True:
+            lines.append("The observations were recorded for review; service names and versions are observed evidence, not confirmed device identity.")
+        return "\n".join(lines)
     return None
 
 
@@ -3679,6 +3709,16 @@ def canonical_tool_result_projection(
             "requires_explicit_inventory_review": bool(
                 payload.get("requires_explicit_inventory_review")
             ),
+        })
+        return common
+    if action == "execute_network_service_enumeration":
+        observations = payload.get("service_observations")
+        common.update({
+            "success": payload.get("success") is True,
+            "observation_count": payload.get("observation_count"),
+            "observations_recorded": payload.get("observations_recorded") is True,
+            "service_observations": list(observations[:50]) if isinstance(observations, list) else [],
+            "network_map_reconciled": payload.get("network_map_reconciled") is True,
         })
         return common
     if action == "inspect_host":

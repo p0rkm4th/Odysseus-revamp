@@ -495,6 +495,33 @@ def _successful_bounded_network_execution(tool_type: str, content: str, result: 
         "execute_network_service_enumeration",
     }
 
+
+def _structured_tool_result(result: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Unwrap the canonical payload emitted by both tool executors.
+
+    The direct executor returns a small envelope whose JSON payload lives in
+    ``output``; the Work/ACI bridge may instead provide that payload under
+    ``data``.  Continuation decisions must inspect the same structured result
+    in either case.  Falling back to the envelope preserves existing error
+    handling when a tool did not return JSON.
+    """
+    if not isinstance(result, Mapping):
+        return {}
+    data = result.get("data")
+    if isinstance(data, Mapping):
+        return data
+    raw = result.get("output")
+    if isinstance(raw, Mapping):
+        return raw
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError):
+            parsed = None
+        if isinstance(parsed, Mapping):
+            return parsed
+    return result
+
 _intent_requires_action = intent_requires_action
 _usage_bucket = usage_bucket
 
@@ -2507,6 +2534,36 @@ async def stream_aci_runtime(
                 _record_aci_framework("deterministic_network_plan_selection")
                 logger.info(
                     "[hades-aci] deterministic network plan fast path scope=current_context"
+                )
+            # Port/service language is an active bounded operation, not a
+            # historical observation read. Start from the latest fresh,
+            # owner-scoped discovery inside HomelabOperations; it will reject
+            # stale or missing observations rather than letting the model
+            # invent targets.
+            if (
+                _aci_mode == "aci"
+                and not _aci_answer_only
+                and _aci_canonical_tool_projection
+                and _canonical_binding == "manage_homelab"
+                and "network_ops" in set(_intent_domains or set())
+                and is_network_service_enumeration_request(_last_user)
+                and projection.mode is not SelectionMode.NEED_CONTEXT
+            ):
+                _aci_fast_path_block = ToolBlock(
+                    "manage_homelab",
+                    json.dumps({"action": "plan_network_service_enumeration"}, sort_keys=True),
+                )
+                _aci_selected_action = next(
+                    (
+                        trace for trace in _aci_action_candidates
+                        if trace["binding"] == "manage_homelab"
+                        and trace["action_id"] == "plan_network_service_enumeration"
+                    ),
+                    None,
+                )
+                _record_aci_framework("deterministic_network_service_plan_selection")
+                logger.info(
+                    "[hades-aci] deterministic network service plan fast path from fresh discovery"
                 )
             for _event in projection.framework_events:
                 if _event:
@@ -5354,11 +5411,7 @@ async def stream_aci_runtime(
                     _early_payload = json.loads(block.content or "{}")
                 except (TypeError, ValueError):
                     _early_payload = {}
-                _early_result = (
-                    result.get("data")
-                    if isinstance(result.get("data"), dict)
-                    else result
-                )
+                _early_result = _structured_tool_result(result)
                 _early_digest = str(
                     _early_result.get("operation_digest")
                     or _early_result.get("plan_digest")
@@ -5454,15 +5507,20 @@ async def stream_aci_runtime(
             # scan result. Port/service requests intentionally continue into
             # their separately bounded enumeration step.
             _network_result_payload = (
-                result.get("data")
-                if isinstance(result.get("data"), dict)
-                else result
-            ) if isinstance(result, dict) else {}
+                _structured_tool_result(result)
+                if isinstance(result, dict) else {}
+            )
             if (
                 block.tool_type == "manage_homelab"
                 and _block_action_id == "execute_network_discovery"
                 and _network_result_payload.get("success") is True
                 and not _network_service_request
+            ):
+                _aci_terminal_canonical_read = True
+            if (
+                block.tool_type == "manage_homelab"
+                and _block_action_id == "execute_network_service_enumeration"
+                and _network_result_payload.get("success") is True
             ):
                 _aci_terminal_canonical_read = True
             if _post_result_transition.answer_only:
@@ -5595,11 +5653,7 @@ async def stream_aci_runtime(
                     _planned_payload = json.loads(block.content or "{}")
                 except (TypeError, ValueError):
                     _planned_payload = {}
-                _planned_result = (
-                    result.get("data")
-                    if isinstance(result.get("data"), dict)
-                    else result
-                )
+                _planned_result = _structured_tool_result(result)
                 _planned_digest = str(
                     _planned_result.get("operation_digest")
                     or _planned_result.get("plan_digest")
@@ -5667,20 +5721,16 @@ async def stream_aci_runtime(
                             "[hades-aci] discovery produced bounded service plan targets=%s",
                             len(_service_targets),
                         )
+            if block.tool_type == "manage_homelab" and isinstance(result, dict):
+                _service_result = _structured_tool_result(result)
+            else:
+                _service_result = {}
             if (
                 block.tool_type == "manage_homelab"
-                and isinstance(result, dict)
-                and result.get("action") == "execute_network_service_enumeration"
-                and (
-                    (result.get("data") if isinstance(result.get("data"), dict) else result)
-                    .get("operation_digest")
-                )
-                and (
-                    (result.get("data") if isinstance(result.get("data"), dict) else result)
-                    .get("kind") == "plan"
-                )
+                and _service_result.get("action") == "execute_network_service_enumeration"
+                and _service_result.get("operation_digest")
+                and _service_result.get("kind") == "plan"
             ):
-                _service_result = result.get("data") if isinstance(result.get("data"), dict) else result
                 _service_digest = str(_service_result["operation_digest"]).strip().lower()
                 if re.fullmatch(r"[0-9a-f]{64}", _service_digest):
                     tool_blocks.append(ToolBlock(

@@ -922,7 +922,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "security_evidence_list",
     ),
     "NETWORK": DomainContract(
-        "NETWORK", "homelab.manage", {"READ": "read_network_observations", "READ_CONTEXT": "read_network_context", "READ_UNIDENTIFIED": "list_unidentified_hosts", "READ_ROLES": "infer_role_hypotheses", "EXECUTE": "plan_network_discovery"}, "manage_homelab",
+        "NETWORK", "homelab.manage", {"READ": "read_network_observations", "READ_CONTEXT": "read_network_context", "READ_UNIDENTIFIED": "list_unidentified_hosts", "READ_ROLES": "infer_role_hypotheses", "EXECUTE": "plan_network_discovery", "EXECUTE_SERVICES": "plan_network_service_enumeration"}, "manage_homelab",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "network_capability_or_discovery",
     ),
@@ -1462,6 +1462,12 @@ def compile_intent(
         # bound below; current host context is not silently promoted to scope.
         operation = "EXECUTE"
         read_explicit = False
+    if concept == "NETWORK" and is_network_service_enumeration_request(q):
+        # Port/service inspection is an active, bounded homelab operation,
+        # not a historical network-read question. Keep it on the same
+        # canonical approval/execution path as discovery.
+        operation = "EXECUTE"
+        read_explicit = False
     # Keep advice, definitions, and generic explanations off specialized
     # canonical read contracts. These are safe general-model questions even
     # when they contain a golden-domain noun.
@@ -1640,6 +1646,8 @@ def compile_intent(
     ):
         concept = "NETWORK"
     reference_filters = {}
+    if concept == "NETWORK" and is_network_service_enumeration_request(q):
+        reference_filters["view"] = "service_enumeration"
     if remote_requested:
         reference_filters["remote"] = True
     if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
@@ -1905,6 +1913,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_CONTEXT"
     elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "roles":
         action_key = "READ_ROLES"
+    elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "service_enumeration":
+        action_key = "EXECUTE_SERVICES"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "file":
         action_key = "READ_FILE"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "map":
