@@ -44,6 +44,13 @@ authorization-correlation-and-continuation
 """
 FINANCE_V4_CHECKSUM = migration_checksum(FINANCE_V4_DEFINITION)
 
+FINANCE_V5_VERSION = "20260910_005_plaid_exchange_claim"
+FINANCE_V5_DEFINITION = """finance-plaid-exchange-claim-v1
+durable-pre-dispatch-exchange-claim
+uncertain-provider-exchange-is-not-blindly-replayed
+"""
+FINANCE_V5_CHECKSUM = migration_checksum(FINANCE_V5_DEFINITION)
+
 
 def apply_finance_v1(connection: Connection) -> None:
     for table in FINANCE_TABLES:
@@ -84,6 +91,31 @@ def apply_finance_v4(connection: Connection) -> None:
 
 register_schema_migration(SchemaMigration(
     version=FINANCE_V4_VERSION, checksum=FINANCE_V4_CHECKSUM, apply=apply_finance_v4,
+))
+
+
+def apply_finance_v5(connection: Connection) -> None:
+    """Persist the narrow claim state needed around Plaid token exchange.
+
+    The claim is intentionally separate from the provider call: a process
+    restart can distinguish an exchange that never started from one whose
+    provider outcome became uncertain, without blindly replaying it.
+    """
+    inspector = inspect(connection)
+    columns = {column["name"] for column in inspector.get_columns("finance_plaid_link_sessions")}
+    additions = (
+        ("exchange_status", "VARCHAR(16) NOT NULL DEFAULT 'UNSTARTED'"),
+        ("exchange_claimed_at", "DATETIME"),
+    )
+    for name, definition in additions:
+        if name not in columns:
+            connection.exec_driver_sql(
+                f"ALTER TABLE finance_plaid_link_sessions ADD COLUMN {name} {definition}"
+            )
+
+
+register_schema_migration(SchemaMigration(
+    version=FINANCE_V5_VERSION, checksum=FINANCE_V5_CHECKSUM, apply=apply_finance_v5,
 ))
 
 
