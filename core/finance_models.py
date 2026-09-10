@@ -23,6 +23,31 @@ from core.database import Base, EncryptedText, TimestampMixin, utcnow_naive
 MONEY_TYPE = Numeric(18, 4)
 
 
+class FinanceConnection(TimestampMixin, Base):
+    """Owner-scoped provider lifecycle; never stores provider secrets."""
+
+    __tablename__ = "finance_connections"
+
+    id = Column(String, primary_key=True)
+    owner = Column(String, nullable=False, index=True)
+    provider = Column(String(32), nullable=False)
+    lifecycle_state = Column(String(32), nullable=False, default="NOT_CONFIGURED")
+    provider_health = Column(String(32), nullable=False, default="UNKNOWN")
+    authorization_correlation_hash = Column(String(64), nullable=True, unique=True)
+    authorization_expires_at = Column(DateTime, nullable=True)
+    credential_ref = Column(String(255), nullable=True)
+    last_successful_sync_at = Column(DateTime, nullable=True)
+    capability_available = Column(Boolean, nullable=False, default=False)
+    last_error_classification = Column(String(128), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "lifecycle_state IN ('NOT_CONFIGURED', 'AUTHORIZATION_REQUIRED', 'AUTHORIZATION_IN_PROGRESS', 'CONNECTED', 'SYNCING', 'HEALTHY', 'DEGRADED', 'RECONNECT_REQUIRED')",
+            name="ck_finance_connection_lifecycle",
+        ),
+    )
+
+
 class Household(TimestampMixin, Base):
     __tablename__ = "finance_households"
 
@@ -153,6 +178,7 @@ class PlaidItem(TimestampMixin, Base):
     __tablename__ = "finance_plaid_items"
 
     id = Column(String, primary_key=True)
+    connection_id = Column(String, ForeignKey("finance_connections.id", ondelete="SET NULL"), nullable=True, unique=True, index=True)
     owner = Column(String, nullable=False, index=True)
     provider = Column(String(32), nullable=False, default="plaid")
     item_id = Column(String(255), nullable=False)
@@ -174,11 +200,35 @@ class PlaidItem(TimestampMixin, Base):
     )
 
 
+class PlaidLinkSession(TimestampMixin, Base):
+    """Short-lived owner binding for a Plaid Link token.
+
+    The opaque Link token itself is never persisted.  The digest lets the
+    exchange endpoint prove that the authenticated owner who completes Link
+    is the owner who created the session, without putting a provider token in
+    canonical state.
+    """
+
+    __tablename__ = "finance_plaid_link_sessions"
+
+    id = Column(String, primary_key=True)
+    owner = Column(String, nullable=False, index=True)
+    connection_id = Column(String, ForeignKey("finance_connections.id", ondelete="CASCADE"), nullable=False, index=True)
+    link_token_hash = Column(String(64), nullable=False, unique=True)
+    authorization_state_hash = Column(String(64), nullable=False, unique=True)
+    mode = Column(String(16), nullable=False, default="create")
+    continuation = Column(JSON, nullable=True)
+    expires_at = Column(DateTime, nullable=False)
+    consumed_at = Column(DateTime, nullable=True)
+
+
 FINANCE_TABLES = (
+    FinanceConnection.__table__,
     Household.__table__,
     HouseholdMembership.__table__,
     FinanceAccount.__table__,
     FinanceTransaction.__table__,
     SharedExpense.__table__,
     PlaidItem.__table__,
+    PlaidLinkSession.__table__,
 )

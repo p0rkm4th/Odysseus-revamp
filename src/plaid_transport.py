@@ -58,3 +58,22 @@ class PlaidTransport:
         if cursor:
             payload["cursor"] = cursor
         return self._post("/transactions/sync", payload)
+
+    def link_token_create(self, client_user_id: str, *, access_token: str | None = None) -> dict[str, Any]:
+        """Create a Transactions Link token for one authenticated owner."""
+        client_name = os.getenv("PLAID_CLIENT_NAME", "HADES")[:100]
+        payload = {
+                "client_name": client_name,
+                "user": {"client_user_id": client_user_id},
+                "language": "en",
+                "country_codes": ["US"],
+            }
+        if access_token:
+            payload["access_token"] = access_token
+        else:
+            payload["products"] = ["transactions"]
+        return self._post("/link/token/create", payload)
+
+    def item_public_token_exchange(self, public_token: str) -> dict[str, Any]:
+        """Exchange the one-time Link public token server-side."""
+        return self._post("/item/public_token/exchange", {"public_token": public_token})

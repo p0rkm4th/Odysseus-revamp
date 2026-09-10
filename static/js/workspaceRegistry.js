@@ -41,7 +41,7 @@ export const WORKSPACE_DEFINITIONS = Object.freeze([
   },
   {
     id: 'system', label: 'System', icon: 'settings', defaultModule: 'controlCenter',
-    modules: ['setupCenter', 'integrations', 'permissions', 'controlCenter', 'developer', 'appearance', 'settings'],
+    modules: ['setupCenter', 'integrations', 'permissions', 'controlCenter', 'developer', 'appearance'],
   },
 ]);
 
@@ -95,7 +95,6 @@ export const MODULE_DEFINITIONS = Object.freeze([
   ['developer', 'Developer', 'developer', 'tool-developer-btn'],
   ['controlCenter', 'Control Center', 'controlCenter', 'tool-control-center-btn'],
   ['appearance', 'Appearance', 'settings', null],
-  ['settings', 'Settings', 'settings', 'rail-settings'],
 ]);
 
 export const MODULE_BY_ID = Object.freeze(Object.fromEntries(

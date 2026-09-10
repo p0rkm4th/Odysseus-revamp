@@ -82,11 +82,13 @@ function shell() {
   node.setAttribute('aria-labelledby', 'inventory-title');
   node.innerHTML = `
     <header class="inventory-header">
-      <div><h2 id="inventory-title">Home inventory</h2><p>IT assets, pantry, and household stock</p></div>
+      <div><h2 id="inventory-title">Pantry &amp; grocery</h2><p>Track what you have, what you need, and household stock.</p></div>
       <button class="inventory-icon-btn" data-close aria-label="Close inventory">×</button>
     </header>
     <nav class="inventory-tabs" aria-label="Inventory views">
-      <button data-tab="stock" class="active">Stock</button>
+      <button data-tab="stock" class="active">Pantry</button>
+      <button data-tab="fridge">Fridge</button>
+      <button data-tab="grocery">Grocery list</button>
       <button data-tab="recipes">Recipes</button>
       <button data-tab="intake">Add from text or media</button>
     </nav>
@@ -106,7 +108,7 @@ function renderStockScaffold() {
     <div class="inventory-toolbar">
       <input id="inventory-search" type="search" maxlength="200" value="${escapeHtml(query)}" placeholder="Search stock" aria-label="Search stock">
       <div class="inventory-domain-filter">${DOMAINS.map(d => `<button data-domain="${d}" class="${domain === d ? 'active' : ''}">${d === 'all' ? 'All' : d}</button>`).join('')}</div>
-      <button class="inventory-primary" data-action="new-item">+ Item</button>
+      <button class="inventory-primary" data-action="new-item">+ Pantry item</button>
     </div>
     <div id="inventory-stock-list">${loading()}</div>`;
 }
@@ -137,9 +139,33 @@ async function loadStock() {
           <h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(asset?.serial_number || item.category || item.item_kind || '')}${components.length ? ` · ${components.length} component${components.length === 1 ? '' : 's'}` : ''}</p></div>
         <strong class="inventory-quantity">${escapeHtml(total)} <small>${escapeHtml(item.default_unit)}</small></strong>
         <div class="inventory-card-actions">
-          ${item.domain === 'it' && item.item_kind === 'asset' ? '<button data-action="asset-details">Asset</button>' : ''}<button data-action="stock-add">Add</button><button data-action="stock-consume" ${total <= 0 ? 'disabled' : ''}>Use</button>
+          ${item.domain === 'it' && item.item_kind === 'asset' ? '<button data-action="asset-details">Asset</button>' : ''}<button data-action="edit-item">Edit</button><button data-action="stock-add">Add</button><button data-action="stock-consume" ${total <= 0 ? 'disabled' : ''}>Use</button><button data-action="archive-item">Archive</button>
         </div></article>`;
     }).join('') : '<div class="inventory-state">No matching stock. Add an item or create a reviewed intake draft.</div>';
+  } catch (error) { showInlineError(error); }
+}
+
+async function loadGrocery() {
+  const content = document.getElementById('inventory-content');
+  if (!content) return;
+  content.innerHTML = `<div class="inventory-toolbar"><div><h3>Grocery list</h3><p>Items you marked to buy. Bought items add stock; removing an item keeps its pantry history.</p></div><button class="inventory-primary" data-action="new-grocery">+ Add to list</button></div><div id="inventory-grocery-list">${loading()}</div>`;
+  try {
+    const result = await api('/api/inventory/items?domain=kitchen');
+    const candidates = result.items || [];
+    const details = await Promise.all(candidates.map(item => api(`/api/inventory/items/${encodeURIComponent(item.id)}`)));
+    const rows = candidates.map((item, index) => ({item, total: stockTotal(details[index]?.lots || [])})).filter(row => row.item.shopping_list);
+    const list = document.getElementById('inventory-grocery-list');
+    list.innerHTML = rows.length ? rows.map(({item, total}) => `<article class="inventory-card" data-item-id="${escapeHtml(item.id)}"><div class="inventory-card-main"><span class="inventory-domain">Grocery</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category || 'Pantry item')} · ${escapeHtml(total)} ${escapeHtml(item.default_unit)} on hand</p></div><div class="inventory-card-actions"><button data-action="grocery-bought">Bought</button><button data-action="edit-item">Edit</button><button data-action="remove-grocery">Remove</button></div></article>`).join('') : '<div class="inventory-state">Your grocery list is empty. Add items here or ask AEGIS to add one.</div>';
+  } catch (error) { showInlineError(error); }
+}
+
+async function loadStorageArea(area) {
+  const content = document.getElementById('inventory-content');
+  if (!content) return;
+  content.innerHTML = `<div class="inventory-toolbar"><div><h3>${area[0].toUpperCase()+area.slice(1)}</h3><p>Owner-scoped household stock, separate from the grocery queue.</p></div><button class="inventory-primary" data-action="new-item">+ Add item</button></div><div id="inventory-storage-list">${loading()}</div>`;
+  try {
+    const {items = []} = await api(`/api/inventory/items?list_name=${encodeURIComponent(area)}`);
+    document.getElementById('inventory-storage-list').innerHTML = items.length ? items.map(item => `<article class="inventory-card" data-item-id="${escapeHtml(item.id)}"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(item.storage_area || area)}</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category || 'Household item')}</p></div><div class="inventory-card-actions"><button data-action="edit-item">Edit</button><button data-action="archive-item">Archive</button></div></article>`).join('') : `<div class="inventory-state">Your ${area} list is empty.</div>`;
   } catch (error) { showInlineError(error); }
 }
 
@@ -237,9 +263,11 @@ async function onSubmit(event) {
       return;
     }
     const kind = form.dataset.kind;
-    if (kind === 'item') await api('/api/inventory/items', {method:'POST', body:JSON.stringify({name:data.name, domain:data.domain, item_kind:data.domain === 'it' ? 'asset' : data.domain === 'kitchen' ? 'ingredient' : 'consumable', default_unit:data.unit, category:data.category})});
+    if (kind === 'item' || kind === 'grocery') await api('/api/inventory/items', {method:'POST', body:JSON.stringify({name:data.name, domain:data.domain || 'kitchen', item_kind:data.domain === 'it' ? 'asset' : 'ingredient', default_unit:data.unit || 'each', category:data.category, shopping_list:kind === 'grocery' || data.shopping_list === 'on', storage_area:data.storage_area || null})});
+    if (kind === 'edit-item') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}`, {method:'PATCH', body:JSON.stringify({name:data.name, category:data.category, default_unit:data.unit, shopping_list:data.shopping_list === 'on', storage_area:data.storage_area || null})});
     if (kind === 'asset') await api(`/api/inventory/assets/${encodeURIComponent(form.dataset.id)}`, {method:'PUT', body:JSON.stringify(assetPayload(data))});
     if (kind === 'stock') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/stock`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, idempotency_key:makeIdempotencyKey('stock')})});
+    if (kind === 'stock' && tab === 'grocery') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}`, {method:'PATCH', body:JSON.stringify({shopping_list:false})});
     if (kind === 'consume') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/consume`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, reason:data.reason, idempotency_key:makeIdempotencyKey('consume')})});
     if (kind === 'recipe') {
       const ingredients = data.ingredients.split('\n').filter(Boolean).map(line => { const match = line.trim().match(/^(.+?)\s*\|\s*([0-9.]+)\s*\|\s*(\w+)$/); if (!match) throw new Error('Use one ingredient per line: item ID | quantity | unit'); return {item_id:match[1].trim(), quantity:match[2], unit:match[3]}; });
@@ -247,7 +275,7 @@ async function onSubmit(event) {
     }
     form.closest('.inventory-dialog-backdrop')?.remove();
     uiModule.showToast?.('Inventory updated');
-    kind === 'recipe' ? await loadRecipes() : await loadStock();
+    kind === 'recipe' ? await loadRecipes() : tab === 'grocery' ? await loadGrocery() : tab === 'fridge' ? await loadStorageArea('fridge') : await loadStock();
   } catch (error) { uiModule.showError?.(error.message); }
   finally { if (submit) submit.disabled = false; }
 }
@@ -261,8 +289,15 @@ async function onClick(event) {
   const action = button.dataset.action;
   if (action === 'retry') return renderTab();
   if (action === 'dismiss-dialog') return button.closest('.inventory-dialog-backdrop')?.remove();
-  if (action === 'new-item') return modalForm('Add item', `${field('Name','name','required maxlength="200"')}<label>Area<select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT</option></select></label><label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${field('Category','category','maxlength="80"')}`, 'Add item', 'item');
+  if (action === 'new-item' || action === 'new-grocery') return modalForm(action === 'new-grocery' ? 'Add to grocery list' : 'Add pantry item', `${field('Name','name','required maxlength="200"')}<label>Area<select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT</option></select></label><label>Storage<select name="storage_area"><option value="">Unassigned</option><option value="pantry">Pantry</option><option value="fridge">Fridge</option><option value="freezer">Freezer</option></select></label><label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${field('Category','category','maxlength="80"')}<label><input type="checkbox" name="shopping_list" ${action === 'new-grocery' ? 'checked' : ''}> Keep on grocery list</label>`, action === 'new-grocery' ? 'Add' : 'Add item', action === 'new-grocery' ? 'grocery' : 'item');
   const card = button.closest('[data-item-id]');
+  if (action === 'edit-item') {
+    const {item} = await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`);
+    return modalForm('Edit pantry item', `${field('Name','name',`required maxlength="200" value="${escapeHtml(item.name)}"`)}${field('Category','category',`maxlength="80" value="${escapeHtml(item.category || '')}"`)}<label>Storage<select name="storage_area"><option value="">Unassigned</option>${['pantry','fridge','freezer'].map(area=>`<option value="${area}" ${item.storage_area === area ? 'selected' : ''}>${area[0].toUpperCase()+area.slice(1)}</option>`).join('')}</select></label><label>Unit<select name="unit">${UNITS.map(u=>`<option ${item.default_unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></label><label><input type="checkbox" name="shopping_list" ${item.shopping_list ? 'checked' : ''}> Keep on grocery list</label>`, 'Save', 'edit-item', card.dataset.itemId);
+  }
+  if (action === 'remove-grocery') { await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`, {method:'PATCH', body:JSON.stringify({shopping_list:false})}); return loadGrocery(); }
+  if (action === 'archive-item') { if (!window.confirm('Archive this item? Its history stays available.')) return; await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}/archive`, {method:'POST'}); return tab === 'grocery' ? loadGrocery() : loadStock(); }
+  if (action === 'grocery-bought') return modalForm('Mark as bought', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>`, 'Add stock', 'stock', card.dataset.itemId);
   if (action === 'asset-details') {
     try {
       const {asset = {}} = await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`);
@@ -332,6 +367,8 @@ function showInlineError(error) {
 function renderTab() {
   document.querySelectorAll('.inventory-tabs [data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (tab === 'stock') { editingDraft = null; loadStock(); }
+  else if (tab === 'fridge') { editingDraft = null; loadStorageArea('fridge'); }
+  else if (tab === 'grocery') { editingDraft = null; loadGrocery(); }
   else if (tab === 'recipes') { editingDraft = null; loadRecipes(); }
   else document.getElementById('inventory-content').innerHTML = intakeForm();
 }

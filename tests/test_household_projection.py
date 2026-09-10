@@ -67,3 +67,38 @@ def test_household_workspace_uses_canonical_overview_and_common_states():
     assert "canonical_store" in source
     assert "hades-module-header" in source
     assert "hades-empty-state" in source
+
+
+def test_pantry_grocery_crud_is_owner_scoped_and_does_not_fake_stock_changes():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    item = service.create_item("alice", name="Milk", domain="kitchen", item_kind="ingredient", shopping_list=True)
+    assert item["shopping_list"] is True
+    changed = service.update_item("alice", item["id"], shopping_list=False, category="Dairy")
+    assert changed["shopping_list"] is False
+    assert changed["category"] == "Dairy"
+    assert service.get_item("alice", item["id"])["shopping_list"] is False
+    try:
+        service.update_item("bob", item["id"], shopping_list=True)
+    except Exception as exc:
+        assert "not found" in str(exc)
+    else:
+        raise AssertionError("cross-owner inventory update must fail")
+
+
+def test_grocery_pantry_and_fridge_are_canonical_list_views():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    service.create_item("alice", name="Milk", domain="kitchen", item_kind="ingredient", storage_area="fridge", shopping_list=True)
+    service.create_item("alice", name="Rice", domain="kitchen", item_kind="ingredient", storage_area="pantry")
+    assert [row["name"] for row in service.list_items("alice", list_name="grocery")] == ["Milk"]
+    assert [row["name"] for row in service.list_items("alice", list_name="fridge")] == ["Milk"]
+    assert [row["name"] for row in service.list_items("alice", list_name="pantry")] == ["Rice"]
+    assert service.list_items("bob", list_name="grocery") == []
+
+
+def test_inventory_ui_has_pantry_and_grocery_crud_surfaces():
+    from pathlib import Path
+    source = (Path(__file__).resolve().parents[1] / "static/js/inventory.js").read_text()
+    for marker in ("Grocery list", "new-grocery", "shopping_list", "PATCH", "archive"):
+        assert marker in source

@@ -71,6 +71,8 @@ class InventoryItem(TimestampMixin, Base):
     barcode = Column(String, nullable=True)
     default_unit = Column(String, nullable=False, default="each")
     reorder_point = Column(QUANTITY_TYPE, nullable=True)
+    shopping_list = Column(Boolean, nullable=False, default=False)
+    storage_area = Column(String(16), nullable=True)
     location_id = Column(
         String,
         ForeignKey("inventory_locations.id", ondelete="SET NULL"),

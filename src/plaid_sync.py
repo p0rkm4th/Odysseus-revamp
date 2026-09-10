@@ -11,9 +11,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from core.database import utcnow_naive
-from core.finance_models import FinanceAccount, FinanceTransaction, PlaidItem, SharedExpense
+from core.finance_models import FinanceAccount, FinanceConnection, FinanceTransaction, PlaidItem, SharedExpense
 from src.finance_service import FinanceError, _currency, _money, _transaction_date
 from src.plaid_transport import PlaidError, PlaidTransport
+from src.integration_lifecycle import set_connection_state
 
 
 class PlaidSyncService:
@@ -61,9 +62,12 @@ class PlaidSyncService:
 
     def sync(self, owner: str, item_id: str, *, max_pages: int = 50, max_updates: int = 5000, max_restarts: int = 2) -> dict[str, Any]:
         item = self._item(owner, item_id)
+        connection = self.db.query(FinanceConnection).filter_by(id=item.connection_id).one_or_none() if item.connection_id else None
         original_cursor = item.sync_cursor
         item.last_attempted_sync_at = utcnow_naive()
         item.sync_status = "syncing"
+        if connection:
+            set_connection_state(connection, "SYNCING", provider_health="CHECKING", capability_available=False)
         self.db.commit()
         restarts = 0
         try:
@@ -119,12 +123,20 @@ class PlaidSyncService:
             item.sync_cursor = final_cursor; item.sync_status = "healthy"; item.last_successful_sync_at = now
             item.provider_last_successful_update_at = self._provider_update(item_body)
             item.last_error_classification = None
+            connection = self.db.query(FinanceConnection).filter_by(id=item.connection_id).one_or_none() if item.connection_id else None
+            if connection:
+                set_connection_state(connection, "HEALTHY", provider_health="HEALTHY", capability_available=True, synced_at=now)
             self.db.commit()
             return {"item_id": item.item_id, "pages": len(pages), "added": sum(len(p.get("added") or []) for p in pages), "modified": sum(len(p.get("modified") or []) for p in pages), "removed": sum(len(p.get("removed") or []) for p in pages), "restarts": restarts, "cursor_present": bool(final_cursor)}
         except Exception as exc:
             self.db.rollback()
             item = self._item(owner, item_id)
-            item.sync_status = "error"; item.last_error_classification = getattr(exc, "classification", type(exc).__name__)[:128]
+            classification = getattr(exc, "classification", type(exc).__name__)[:128]
+            item.sync_status = "error"; item.last_error_classification = classification
+            connection = self.db.query(FinanceConnection).filter_by(id=item.connection_id).one_or_none() if item.connection_id else None
+            if connection:
+                reconnect = classification in {"ITEM_LOGIN_REQUIRED", "ITEM_LOCKED", "INVALID_CREDENTIALS", "ACCESS_NOT_GRANTED"}
+                set_connection_state(connection, "RECONNECT_REQUIRED" if reconnect else "DEGRADED", provider_health="RECONNECT_REQUIRED" if reconnect else "DEGRADED", capability_available=False, error=classification)
             self.db.commit()
             raise
 
