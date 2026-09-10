@@ -12,8 +12,13 @@ import struct
 import subprocess
 import time
 
+from src.constants import DATA_DIR
+
 SOCKET_PATH = "/run/odysseus-privd.sock"
-HOST_NETWORK_SOCKET_PATH = "/run/odysseus-host-broker/network.sock"
+# Keep the host-network socket beside the application's durable data by
+# default. Deployments may still override this with
+# ODYSSEUS_HOST_NETWORK_BROKER_SOCKET (or pass --socket to the broker).
+HOST_NETWORK_SOCKET_PATH = str(Path(DATA_DIR) / "host-broker" / "network.sock")
 AUDIT_PATH = Path(os.getenv("ODYSSEUS_BROKER_AUDIT_PATH", "/app/data/logs/privileged_broker.log"))
 MAX_REQUEST = 16384
 MAX_RESPONSE = 65536
@@ -49,9 +54,15 @@ def peercred(conn):
 
 
 def peer_is_allowed(pid, uid, gid, allowed_pid, allowed_uid, allowed_gid):
-    """Return whether a connecting peer matches the broker's sealed identity."""
+    """Return whether a peer matches the broker's sealed identity.
+
+    ``allowed_pid=0`` is the explicit service configuration for a same-user
+    read-only broker when the application is not running in Compose.  It
+    disables only PID pinning; UID/GID and the broker's action allowlist still
+    apply.  A non-zero PID remains an exact process pin.
+    """
     return (
-        pid == allowed_pid
+        (allowed_pid == 0 or pid == allowed_pid)
         and uid == allowed_uid
         and gid == allowed_gid
     )
@@ -325,11 +336,15 @@ def serve(
         with conn:
             pid, uid, gid = peercred(conn)
 
-            expected_pid = (
+            resolved_compose_pid = (
                 compose_service_pid(compose_project, compose_service)
-                if compose_project and compose_service else allowed_pid
+                if compose_project and compose_service else None
             )
-            if expected_pid is None or not peer_is_allowed(
+            # A missing Compose service must not brick the explicitly
+            # configured same-user read-only fallback.  If the service is
+            # present, retain the stronger exact-PID binding.
+            expected_pid = resolved_compose_pid if resolved_compose_pid is not None else allowed_pid
+            if not peer_is_allowed(
                 pid,
                 uid,
                 gid,
