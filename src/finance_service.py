@@ -367,7 +367,20 @@ class FinanceService:
         }]
         connection = (provider_backed[0] if provider_backed else (connections[0] if connections else None))
         if connection is None:
-            return {"provider": "plaid", "lifecycle_state": "NOT_CONFIGURED", "capability_available": False}
+            return {
+                "provider": "plaid", "lifecycle_state": "NOT_CONFIGURED",
+                "capability_available": False, "connections": [],
+                "connection_count": 0, "abandoned_authorization_count": 0,
+            }
+        connection_rows = [{
+            "id": row.id,
+            "provider": row.provider,
+            "lifecycle_state": row.lifecycle_state,
+            "provider_health": row.provider_health,
+            "capability_available": capability_available(row),
+            "last_successful_sync_at": row.last_successful_sync_at.isoformat() if row.last_successful_sync_at else None,
+            "last_error_classification": row.last_error_classification,
+        } for row in connections]
         projection = {
             "id": connection.id, "provider": connection.provider,
             "lifecycle_state": connection.lifecycle_state,
@@ -375,10 +388,11 @@ class FinanceService:
             "capability_available": capability_available(connection),
             "last_successful_sync_at": connection.last_successful_sync_at.isoformat() if connection.last_successful_sync_at else None,
             "last_error_classification": connection.last_error_classification,
+            "connections": connection_rows,
         }
         projection["connection_count"] = len(connections)
         projection["abandoned_authorization_count"] = sum(
-            item.lifecycle_state == "AUTHORIZATION_IN_PROGRESS" for item in connections[1:]
+            item.lifecycle_state == "AUTHORIZATION_IN_PROGRESS" for item in connections
         )
         return projection
 
@@ -393,7 +407,31 @@ class FinanceService:
         )
         rows = query.order_by(FinanceTransaction.transaction_date.asc()).all()
         dates = [row.transaction_date for row in rows]
-        requested_exceeds = bool(start and dates and start < dates[0]) or bool(end and dates and end > dates[-1])
+        items = self.db.query(PlaidItem).filter(PlaidItem.owner == owner, PlaidItem.provider == "plaid").all()
+        connections = [self._connection_for(item) for item in items]
+        unhealthy = [
+            connection for connection in connections
+            if connection is not None and connection.lifecycle_state not in {"HEALTHY", "CONNECTED"}
+        ]
+        successful_items = [item for item in items if item.last_successful_sync_at is not None]
+        requested_exceeds = (
+            not dates
+            or bool(start and start < dates[0])
+            or bool(end and end > dates[-1])
+        )
+        limitations: list[str] = []
+        if not items:
+            limitations.append("no Plaid connection has been configured")
+        if not successful_items:
+            limitations.append("transaction ingestion has not completed successfully")
+        if unhealthy:
+            limitations.append("one or more Plaid connections are unhealthy or require attention")
+        if requested_exceeds:
+            limitations.append("the requested date range extends beyond canonical transaction coverage")
+        if limitations:
+            coverage_state = "UNKNOWN" if not dates or not successful_items else "LIMITED"
+        else:
+            coverage_state = "AVAILABLE"
         return {
             "as_of": max((item.last_successful_sync_at for item in self.db.query(PlaidItem).filter(PlaidItem.owner == owner).all() if item.last_successful_sync_at), default=None),
             "account_count": self.db.query(FinanceAccount).filter(FinanceAccount.owner == owner).count(),
@@ -402,6 +440,9 @@ class FinanceService:
             "posted_count": sum(row.status == "posted" for row in rows),
             "pending_count": sum(row.status == "pending" for row in rows),
             "requested_range_exceeds_coverage": requested_exceeds,
+            "coverage_state": coverage_state,
+            "coverage_limitations": limitations,
+            "ingestion_complete": bool(successful_items) and not unhealthy,
             "connection": self.connection_projection(owner),
             "sync": self.list_plaid_items(owner),
         }

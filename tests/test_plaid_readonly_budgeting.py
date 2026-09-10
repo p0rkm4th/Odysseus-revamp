@@ -9,6 +9,7 @@ from src.finance_service import FinanceService, FinanceError
 from src.plaid_sync import PlaidSyncService
 from src.plaid_transport import PlaidError
 from core.finance_models import PlaidItem, PlaidLinkSession
+from core.finance_models import FinanceConnection
 
 
 @pytest.fixture()
@@ -148,3 +149,39 @@ def test_plaid_token_is_encrypted_and_never_in_owner_projection(db):
 
 def test_plaid_link_session_table_is_part_of_finance_schema(db):
     assert db.query(PlaidLinkSession).count() == 0
+
+
+def test_connection_projection_keeps_each_unhealthy_connection_reconnectable(db):
+    first = FinanceConnection(id="conn-healthy", owner="alice", provider="plaid", lifecycle_state="HEALTHY", provider_health="HEALTHY", capability_available=True)
+    second = FinanceConnection(id="conn-reconnect", owner="alice", provider="plaid", lifecycle_state="RECONNECT_REQUIRED", provider_health="RECONNECT_REQUIRED", capability_available=False, last_error_classification="ITEM_LOGIN_REQUIRED")
+    db.add_all([first, second]); db.commit()
+    FinanceService(db).create_plaid_item("alice", "item-healthy", "secret-1", "Bank A", connection_id=first.id)
+    FinanceService(db).create_plaid_item("alice", "item-reconnect", "secret-2", "Bank B", connection_id=second.id)
+    second.lifecycle_state = "RECONNECT_REQUIRED"
+    second.provider_health = "RECONNECT_REQUIRED"
+    second.capability_available = False
+    second.last_error_classification = "ITEM_LOGIN_REQUIRED"
+    db.commit()
+
+    projection = FinanceService(db).connection_projection("alice")
+    assert {row["id"] for row in projection["connections"]} == {first.id, second.id}
+    reconnect = next(row for row in projection["connections"] if row["id"] == second.id)
+    assert reconnect["lifecycle_state"] == "RECONNECT_REQUIRED"
+    assert reconnect["last_error_classification"] == "ITEM_LOGIN_REQUIRED"
+
+
+def test_coverage_does_not_call_uningested_or_unhealthy_finance_ready(db):
+    connection = FinanceConnection(id="conn-reconnect", owner="alice", provider="plaid", lifecycle_state="RECONNECT_REQUIRED", provider_health="RECONNECT_REQUIRED", capability_available=False)
+    db.add(connection); db.commit()
+    FinanceService(db).create_plaid_item("alice", "item-reconnect", "secret-2", "Bank B", connection_id=connection.id)
+    connection.lifecycle_state = "RECONNECT_REQUIRED"
+    connection.provider_health = "RECONNECT_REQUIRED"
+    connection.capability_available = False
+    db.commit()
+
+    coverage = FinanceService(db).coverage("alice", date(2026, 9, 1), date(2026, 9, 30))
+    assert coverage["coverage_state"] == "UNKNOWN"
+    assert coverage["ingestion_complete"] is False
+    assert coverage["requested_range_exceeds_coverage"] is True
+    assert "transaction ingestion has not completed successfully" in coverage["coverage_limitations"]
+    assert "one or more Plaid connections are unhealthy or require attention" in coverage["coverage_limitations"]
