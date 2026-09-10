@@ -96,6 +96,12 @@ def test_broker_peer_boundary_requires_pid_uid_and_gid():
     assert not peer_is_allowed(1, 1000, 1001, 1, 1000, 1000)
 
 
+def test_read_only_broker_pid_zero_is_same_user_fallback_not_pid_zero():
+    assert peer_is_allowed(43210, 1000, 1000, 0, 1000, 1000)
+    assert not peer_is_allowed(43210, 1001, 1000, 0, 1000, 1000)
+    assert not peer_is_allowed(43210, 1000, 1001, 0, 1000, 1000)
+
+
 def test_privileged_actions_are_action_aware_and_policy_still_wins():
     status = capabilities_for_action(
         "privileged_action", {"action": "status"}
