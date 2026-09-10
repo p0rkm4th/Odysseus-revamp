@@ -19,3 +19,10 @@ def test_dead_settings_workspace_entry_is_not_rendered_and_inventory_has_crud_su
     assert "['settings', 'Settings'" not in registry
     for marker in ("Pantry &amp; grocery", "Grocery list", "data-action=\"edit-item\"", "archive-item"):
         assert marker in inventory
+
+
+def test_security_navigation_uses_one_semantic_icon():
+    html = (ROOT / "static/index.html").read_text(encoding="utf-8")
+    security_row = html.split('id="tool-security-btn"', 1)[1].split('</div>', 1)[0]
+    assert security_row.count('<svg') == 1
+    assert 'class="hades-nav-icon"' in security_row
