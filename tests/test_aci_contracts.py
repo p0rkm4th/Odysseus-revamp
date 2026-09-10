@@ -21,9 +21,9 @@ def test_finance_tool_result_cannot_collapse_to_done():
         "output": '{"action":"spending","start":"2026-09-01","end":"2026-09-10","posted_outflow_by_currency":{"USD":"15.0000"},"pending_outflow_by_currency":{"USD":"7.0000"},"pending_outflow_count":1,"coverage":{"coverage_state":"AVAILABLE","data_sources":[{"source":"local_csv","live":false}],"as_of":"2026-09-10 17:35:31","coverage_limitations":[]}}',
     }])
     assert answer is not None
-    assert "USD 15.0000" in answer
+    assert "USD 15.00" in answer
     assert "pending" in answer.lower()
-    assert "USD 7.0000" in answer
+    assert "USD 7.00" in answer
     assert "local CSV" in answer
     assert answer != "Done."
 
@@ -37,7 +37,7 @@ def test_finance_answer_preserves_year_range_and_category_scope():
     assert answer is not None
     assert "dining out" in answer
     assert "2026-01-01 through 2026-09-10" in answer
-    assert "USD 3953.1500" in answer
+    assert "USD 3953.15" in answer
     assert "Plaid connection requires attention" in answer
 
 

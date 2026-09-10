@@ -154,6 +154,47 @@ def test_allow_for_chat_session_applies_to_later_turns_in_only_that_chat():
     assert other_turn.decision_for("bash").allowed is False
 
 
+def test_chat_scope_allows_only_the_approved_registered_action():
+    pending = ToolApprovalStore().create(
+        owner="Alice",
+        session_id="session-1",
+        origin_run_id="run-1",
+        tool_name="manage_homelab",
+        content='{"action":"execute_network_discovery","plan_digest":"x"}',
+        workspace=None,
+        external_untrusted_context_seen=True,
+        capabilities=capabilities_for_action(
+            "manage_homelab",
+            '{"action":"execute_network_discovery","plan_digest":"x"}',
+        ),
+    )
+    pending_payload = pending.public_payload()
+    pending_payload["resolved"] = "approve"
+    history = [
+        ChatMessage(
+            "assistant",
+            "approval requested",
+            {"tool_events": [{"ask_user": pending_payload}]},
+        ),
+        ChatMessage("user", "continue"),
+    ]
+    session = Session(
+        id="session-1",
+        name="Chat",
+        endpoint_url="http://example.invalid",
+        model="test",
+        history=history,
+    )
+    context = ToolRunSecurityContext(external_untrusted_context_seen=True)
+    context.observe_messages(session.get_context_messages())
+    assert context.chat_session_allows(
+        "manage_homelab",
+        {"action": "execute_network_discovery", "plan_digest": "new"},
+    ) is True
+    assert context.chat_session_allows(
+        "manage_homelab",
+        {"action": "execute_service_restart", "service": "other"},
+    ) is False
 def test_deny_executes_nothing_and_grants_no_task_or_chat_scope():
     store = ToolApprovalStore()
     pending = _pending(store)

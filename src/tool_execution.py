@@ -2212,7 +2212,19 @@ async def execute_tool_block(block, *args, **kwargs):
         exact_approval = kwargs.get("exact_approval")
         if action is None or not action.known:
             return (f"{block.tool_type}: BLOCKED", {"error": "Unknown registered ActionSpec.", "exit_code": 1, "blocked": True, "policy": "actionspec"})
-        if action.approval.value == "exact" and exact_approval is None and not grant_id:
+        chat_session_action_allowed = (
+            isinstance(kwargs.get("security_context"), ToolRunSecurityContext)
+            and kwargs["security_context"].chat_session_allows(
+                block.tool_type,
+                block.content,
+            )
+        )
+        if (
+            action.approval.value == "exact"
+            and exact_approval is None
+            and not grant_id
+            and not chat_session_action_allowed
+        ):
             return (f"{block.tool_type}: BLOCKED", {"error": "This exact ActionSpec requires exact approval.", "exit_code": 1, "blocked": True, "policy": "exact_tool_approval"})
         if grant_id:
             owner = kwargs.get("owner")

@@ -544,8 +544,9 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
         assert bound["status"] == "awaiting_approval"
         resumed = bridge.resume_approval("alice", action_id, approval_id)
         assert resumed["status"] == "approved"
-        completed = bridge.record_result(
-            "alice", action_id,
+        completed = bridge.persist_approved_result(
+            "alice", run_id, approval_id, "manage_homelab",
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
             {"data": {
                 "hosts": [{"ip": "192.168.10.1", "inference": {"label": "router", "confidence": 0.8}}],
                 "observations_recorded": True,
@@ -666,6 +667,12 @@ def test_network_continuation_uses_canonical_plan_result_not_transcript(monkeypa
         assert continuation["action"] == "execute_network_discovery"
         assert json.loads(continuation["content"])["plan_digest"] == "a" * 64
         assert bridge.network_continuation_projection("bob", run_id) is None
+        execute_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab", {"action": "execute_network_discovery"},
+        )
+        with session_factory() as db:
+            execute = db.query(WorkAction).filter_by(id=execute_id).one()
+            assert execute.normalized_input["plan_digest"] == "a" * 64
     finally:
         engine.dispose()
 
