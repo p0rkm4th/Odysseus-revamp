@@ -40,10 +40,13 @@ function openCmdbAsset(node) {
         ? window.prompt('Name this asset') : window.prompt('Optional asset name', node.name || '')
     );
     if ((decision === 'create' || (decision === 'confirm' && unidentified)) && !name?.trim()) return;
+    const sshUser = decision === 'reject' ? undefined : window.prompt('Optional SSH username (uses Hades\' existing SSH key; leave blank to configure later)', '');
+    if (sshUser === null) return;
+    const sshPort = sshUser?.trim() ? window.prompt('SSH port', '22') : undefined;
     const response = await fetch('/api/network/assets/reconcile', {
       method: 'POST', credentials: 'same-origin',
       headers: {'content-type': 'application/json'},
-      body: JSON.stringify({candidate: node.id, decision, name: name?.trim() || undefined, type: node.type || 'network_device'}),
+      body: JSON.stringify({candidate: node.id, decision, name: name?.trim() || undefined, type: node.type || 'network_device', ssh_user: sshUser?.trim() || undefined, ssh_port: sshPort?.trim() || undefined}),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Asset reconciliation failed');

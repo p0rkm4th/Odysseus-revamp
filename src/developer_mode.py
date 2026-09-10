@@ -9,12 +9,19 @@ from src.execution_profiles import bubblewrap_argv, use_execution_profile
 # bind-mounted at this container path by Compose; using the host pathname here
 # makes leases valid in source tests but fail at runtime when the path is not
 # present in the container namespace.
-WORKSPACE = "/app"
+# Containers mount the checkout at /app.  The local systemd owner runtime uses
+# the host checkout directly, so it supplies HADES_WORKSPACE explicitly.  Keep
+# /app as the portable/container default and accept it as a legacy alias only
+# when the configured host workspace is different.
+WORKSPACE = os.path.realpath(os.getenv("HADES_WORKSPACE") or "/app")
 WORKSPACE_UID = int(os.getenv("HADES_WORKSPACE_UID", "1000"))
 WORKSPACE_GID = int(os.getenv("HADES_WORKSPACE_GID", "1000"))
 _DENY = re.compile(r"(?:^|[;&|\s])(sudo|su|doas|docker|podman|nsenter|chroot|mount)(?:$|[\s;&|])|/var/run/docker.sock|--privileged", re.I)
 def _clean_workspace(value):
-    path = os.path.realpath(str(value or WORKSPACE))
+    requested = str(value or WORKSPACE)
+    if requested == "/app" and WORKSPACE != "/app":
+        requested = WORKSPACE
+    path = os.path.realpath(requested)
     if path != WORKSPACE: raise ValueError("workspace_yolo is limited to the canonical workspace")
     if not os.path.isdir(path): raise ValueError("workspace does not exist")
     return path

@@ -316,6 +316,9 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
                 payload.get("decision"),
                 name=payload.get("name"),
                 asset_type=payload.get("type", "network_device"),
+                ssh_host=payload.get("ssh_host"),
+                ssh_user=payload.get("ssh_user"),
+                ssh_port=payload.get("ssh_port"),
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
