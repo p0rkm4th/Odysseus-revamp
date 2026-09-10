@@ -2452,7 +2452,7 @@ async def stream_aci_runtime(
                 # follow-up, resolve the next step from owner/session/run
                 # state. Transcript text is presentation context only and
                 # must never be used to recover an approval digest.
-                if _intent.get("continuation") and work_run_id:
+                if work_run_id:
                     from src.agent_work_bridge import network_continuation_projection
                     _network_continuation = await asyncio.to_thread(
                         network_continuation_projection, owner, str(work_run_id),
