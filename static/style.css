@@ -41642,3 +41642,122 @@ body.settings-sidebar-resize-active {
 .inventory-module { display:flex; flex-direction:column; min-width:0; min-height:0; height:100%; overflow:hidden; }
 .inventory-module .inventory-tabs { padding-left:2px; padding-right:2px; overflow-x:auto; }
 .inventory-module .inventory-content { padding-left:2px; padding-right:2px; }
+
+/* Shared module-body grammar. Brain and Email establish the product rhythm:
+   one calm body, compact tabs/toolbars, quiet dividers, and raised cards only
+   where they carry a distinct piece of information. Newer workspace modules
+   should inherit that rhythm instead of inventing a page-shaped mini-app. */
+.hades-workspace-window .hades-window-body {
+  background:var(--bg);
+  color:var(--fg);
+  font-size:14px;
+  line-height:1.45;
+}
+.hades-workspace-window .hades-window-body h2,
+.hades-workspace-window .hades-window-body h3,
+.hades-workspace-window .hades-window-body h4 { color:var(--fg); }
+.hades-workspace-window .hades-window-body h2 { font-size:1.15rem; letter-spacing:-.02em; }
+.hades-workspace-window .hades-window-body h3 { font-size:.88rem; letter-spacing:.01em; }
+.hades-workspace-window .hades-window-body p { line-height:1.5; }
+.hades-workspace-window .hades-window-body > .hades-dossier,
+.hades-workspace-window .hades-window-body > .hades-status-panel,
+.hades-workspace-window .hades-window-body > .inventory-module,
+.hades-workspace-window .hades-window-body > .work-header + * { min-width:0; }
+
+/* Legacy module headers now read like the default modal header/body pairing. */
+.hades-workspace-window .work-header,
+.hades-workspace-window .security-header,
+.hades-workspace-window .hades-module-header {
+  align-items:flex-start;
+  margin:0 0 14px;
+  padding:0 0 12px;
+  border-bottom:1px solid var(--hades-border-subtle, var(--border));
+}
+.hades-workspace-window .work-header h2,
+.hades-workspace-window .security-header h2,
+.hades-workspace-window .hades-module-header h2 { margin:0; font-size:1.15rem; }
+.hades-workspace-window .work-header p,
+.hades-workspace-window .security-header p,
+.hades-workspace-window .hades-module-header p { margin:3px 0 0; color:var(--hades-text-muted, var(--muted)); font-size:.84rem; }
+.hades-workspace-window .work-header button,
+.hades-workspace-window .security-header button,
+.hades-workspace-window .security-actions button,
+.hades-workspace-window .work-actions button {
+  border:1px solid var(--hades-border-subtle, var(--border));
+  border-radius:var(--hades-radius-sm, 6px);
+  padding:7px 10px;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  cursor:pointer;
+}
+.hades-workspace-window .work-header button:hover,
+.hades-workspace-window .security-header button:hover,
+.hades-workspace-window .security-actions button:hover,
+.hades-workspace-window .work-actions button:hover { background:color-mix(in srgb, var(--accent-primary, #6aa7ff) 14%, transparent); }
+.hades-workspace-window .security-actions,
+.hades-workspace-window .work-actions { justify-content:flex-start; margin:0 0 14px; }
+
+/* Cards, lists, and detail sections share the same quiet raised surface. */
+.hades-workspace-window .work-grid,
+.hades-workspace-window .security-detail-grid { gap:10px; }
+.hades-workspace-window .work-grid > section,
+.hades-workspace-window .hades-detail-section,
+.hades-workspace-window .security-card,
+.hades-workspace-window .work-card,
+.hades-workspace-window .security-row {
+  background:var(--hades-surface-raised, var(--panel));
+  border:1px solid var(--hades-border-subtle, var(--border));
+  border-radius:var(--hades-radius-md, 10px);
+}
+.hades-workspace-window .work-grid > section,
+.hades-workspace-window .hades-detail-section { padding:13px; }
+.hades-workspace-window .hades-status-panel { display:grid; gap:10px; }
+.hades-workspace-window .hades-status-panel > section { padding:13px; background:var(--hades-surface-raised, var(--panel)); border:1px solid var(--hades-border-subtle, var(--border)); border-radius:var(--hades-radius-md, 10px); }
+.hades-workspace-window .hades-status-panel > section > h3 { margin:0 0 8px; }
+.hades-workspace-window .work-grid > section > h3,
+.hades-workspace-window .hades-detail-section > h3 { margin-top:0; margin-bottom:8px; }
+.hades-workspace-window .work-card,
+.hades-workspace-window .security-card { margin:0; padding:12px; }
+.hades-workspace-window .work-card { display:grid; gap:4px; text-align:left; color:inherit; font:inherit; }
+.hades-workspace-window .work-card span,
+.hades-workspace-window .work-card small,
+.hades-workspace-window .security-card small,
+.hades-workspace-window .security-state { color:var(--hades-text-muted, var(--muted)); }
+.hades-workspace-window .security-list,
+.hades-workspace-window .security-detail-grid { display:grid; gap:10px; }
+.hades-workspace-window .security-card > div { align-items:flex-start; }
+.hades-workspace-window .security-card button { align-self:flex-start; margin-top:8px; }
+.hades-workspace-window .security-row { border-radius:var(--hades-radius-sm, 6px); padding:10px; }
+.hades-workspace-window pre { max-width:100%; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--hades-text-muted, var(--muted)); }
+
+/* Pantry/Grocery tabs and toolbars use the same interaction density as Brain. */
+.hades-workspace-window .inventory-tabs {
+  gap:3px;
+  margin-bottom:14px;
+  border-bottom:1px solid var(--hades-border-subtle, var(--border));
+}
+.hades-workspace-window .inventory-tabs button {
+  color:var(--hades-text-muted, var(--muted));
+  font:inherit;
+}
+.hades-workspace-window .inventory-tabs button:hover,
+.hades-workspace-window .inventory-tabs button.active {
+  background:color-mix(in srgb, var(--accent-primary, #6aa7ff) 15%, transparent);
+  color:inherit;
+}
+.hades-workspace-window .inventory-toolbar { margin-bottom:12px; }
+.hades-workspace-window .inventory-toolbar h3 { margin:0; }
+.hades-workspace-window .inventory-toolbar p { margin:3px 0 0; color:var(--hades-text-muted, var(--muted)); font-size:.84rem; }
+.hades-workspace-window .inventory-card { margin:0 0 8px; padding:12px; border-color:var(--hades-border-subtle, var(--border)); border-radius:var(--hades-radius-md, 10px); box-shadow:none; }
+.hades-workspace-window .inventory-card-actions button,
+.hades-workspace-window .inventory-primary,
+.hades-workspace-window .inventory-danger { border-radius:var(--hades-radius-sm, 6px); font:inherit; }
+
+@media (max-width:700px) {
+  .hades-workspace-window .work-header,
+  .hades-workspace-window .security-header,
+  .hades-workspace-window .hades-module-header { flex-direction:column; }
+  .hades-workspace-window .work-header > *,
+  .hades-workspace-window .security-header > * { width:100%; }
+}
