@@ -272,7 +272,11 @@ def setup_intelligence_routes(*, session_factory=SessionLocal):
     async def yolo_status(request: Request,lease_id: str|None=None):
         value=owner(request)
         with session_factory() as db:
-            row=developer_mode.active(db,value,lease_id) if lease_id else None
+            # The UI refreshes status after granting a lease and does not need
+            # to expose a lease identifier in the browser URL. Discover only
+            # the newest active lease for this authenticated owner; an
+            # explicit lease_id remains strictly owner-scoped through active().
+            row=developer_mode.active(db,value,lease_id) if lease_id else developer_mode.latest_active(db,value)
             return {"active":bool(row),"profile":("hardcore_yolo" if row and row.network_policy == "sandboxed_network" else "workspace_yolo"),"workspace":developer_mode.WORKSPACE,"root":False,"docker":False,"lease":developer_mode._serialize(row) if row else None}
     @router.post("/api/developer/yolo/grant")
     async def yolo_grant(request: Request,payload:dict=Body(...)):

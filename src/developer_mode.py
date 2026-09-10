@@ -36,6 +36,16 @@ def grant(db, owner, *, workspace=WORKSPACE, duration_seconds=1800, run_id=None,
 def active(db, owner, lease_id):
     row=db.query(DeveloperLease).filter_by(id=lease_id,owner=owner).one_or_none()
     return row if row and not row.revoked_at and row.expires_at > now() else None
+def latest_active(db, owner):
+    """Return the newest active lease belonging to this authenticated owner."""
+    return (db.query(DeveloperLease)
+            .filter(
+                DeveloperLease.owner == owner,
+                DeveloperLease.revoked_at.is_(None),
+                DeveloperLease.expires_at > now(),
+            )
+            .order_by(DeveloperLease.granted_at.desc())
+            .first())
 def revoke(db, owner, lease_id):
     row=active(db,owner,lease_id)
     if not row:return False
