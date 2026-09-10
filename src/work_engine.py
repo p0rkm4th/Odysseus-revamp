@@ -211,7 +211,13 @@ class WorkEngine:
         reference = str(approval_reference or "").strip()
         if not reference: raise WorkError("approval reference is required")
         if digest and row.sealed_input_digest and str(digest) != row.sealed_input_digest: raise WorkError("approval digest does not match the persisted action")
-        if row.status == "completed": raise WorkError("completed action cannot await approval")
+        # Browser approval callbacks can race with the resumed stream (or be
+        # delivered twice after a reconnect).  Once the exact action has
+        # completed, binding the same callback is a harmless replay, not a
+        # new authorization request.  Preserve the canonical completed state
+        # and let resume_approved_action return its existing result.
+        if row.status == "completed":
+            return serialize(row) | {"replayed": True}
         row.approval_reference = reference[:300]; row.status = "awaiting_approval"; row.revision += 1
         run = self.db.query(WorkRun).filter_by(id=row.run_id, owner=owner).one()
         run.status = "awaiting_approval"; run.current_step = f"approval required: {row.action_id}"; run.revision += 1
