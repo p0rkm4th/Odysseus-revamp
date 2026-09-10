@@ -552,6 +552,18 @@ def test_legacy_chat_finance_correction_reuses_recent_finance_read_context():
     assert "Publix" in intent["retrieval_query"]
 
 
+def test_legacy_chat_inventory_list_followup_reaches_household_read_context():
+    from src.agent_loop import _classify_agent_request
+
+    messages = [
+        {"role": "user", "content": "Add ketchup to the grocery list"},
+        {"role": "assistant", "content": "Recorded ketchup; the canonical inventory readback is verified."},
+    ]
+    intent = _classify_agent_request(messages, "What's in the list")
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "Show my grocery list."
+
+
 def test_inventory_mutation_uses_grounded_fast_path_without_model_json():
     from src.aci import project_action_selection
 
