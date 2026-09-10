@@ -3259,7 +3259,9 @@ def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, A
         # Recipe-shaped text (for example, "add ingredients for spaghetti")
         # intentionally remains a single value and is rejected by the service
         # rather than guessed into a recipe.
-        parts = [part.strip(" .,!?:;") for part in re.split(r",|\band\b", name, flags=re.IGNORECASE)]
+        parts = [part.strip(" .,!?:;") for part in name.split(",")]
+        if len(parts) > 1 and re.match(r"^and\s+", parts[-1], re.IGNORECASE):
+            parts[-1] = re.sub(r"^and\s+", "", parts[-1], flags=re.IGNORECASE).strip(" .,!?:;")
         parts = [part for part in parts if part]
         if len(parts) > 1 and all(1 <= len(part) <= 200 for part in parts):
             return {
