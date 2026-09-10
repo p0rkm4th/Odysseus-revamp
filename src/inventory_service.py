@@ -1060,6 +1060,12 @@ class RecipeService(InventoryService):
             return {"item": self.update_item(owner, item_id, **{key: args[key] for key in allowed if key in args})}
         if action == "archive_item":
             return {"item": self.archive_item(owner, _required_text(args.get("item_id"), "item_id"))}
+        if action == "remove_from_grocery":
+            item_id = resolve_food_item()
+            item = self.get_item(owner, item_id)
+            if not item.get("shopping_list"):
+                return {"item": item, "removed": False, "replayed": True}
+            return {"item": self.update_item(owner, item_id, shopping_list=False), "removed": True}
         if action == "add_stock":
             item_id = resolve_food_item()
             if not args.get("item_id"):

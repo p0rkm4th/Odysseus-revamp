@@ -781,6 +781,15 @@ def test_inventory_mutation_grounding_covers_stock_and_consumption_without_ids()
     assert consumed["unit"] == "grams"
 
 
+def test_inventory_mutation_grounding_can_unqueue_a_grocery_item():
+    payload = canonical_inventory_mutation_payload(
+        "remove_from_grocery", "Remove rice from my grocery list.",
+    )
+    assert payload is not None
+    assert payload["name"] == "rice"
+    assert payload["action"] == "remove_from_grocery"
+
+
 def test_action_projection_carries_canonical_dependency_plan():
     intent = _intent("discover hosts on 192.168.10.0/24")
     projection = project_action_selection(

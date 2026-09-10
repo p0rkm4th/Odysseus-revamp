@@ -4149,9 +4149,9 @@ async def stream_aci_runtime(
         _mutation_action = str(_resolved_read.get("action_id") or "").strip()
         if (
             _asset_frame.get("domain_concept") == "HOUSEHOLD_ITEM"
-            and _asset_frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE"}
+            and _asset_frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE", "DELETE"}
             and _resolved_read.get("binding") == "manage_assets"
-            and _mutation_action in {"add_item", "add_stock", "consume_stock"}
+            and _mutation_action in {"add_item", "add_stock", "consume_stock", "remove_from_grocery"}
             and not tool_blocks
             and not tool_events
             and total_tool_calls == 0

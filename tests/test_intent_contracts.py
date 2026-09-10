@@ -189,6 +189,15 @@ def test_dining_out_and_restaurant_filters_are_explicit():
     assert restaurants.filters["category"] == "Restaurants"
 
 
+def test_grocery_removal_resolves_to_owner_scoped_unqueue_action():
+    frame = compile_intent("Remove rice from my grocery list.")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "DELETE"
+    assert resolved.available is True
+    assert resolved.action_id == "remove_from_grocery"
+
+
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
     messages = [
         {"role": "user", "content": "scan the current network"},

@@ -16,7 +16,7 @@ from typing import Any, Mapping
 logger = logging.getLogger(__name__)
 
 INVENTORY_ACTIONS = frozenset({
-    "list", "search", "get", "add_item", "update_item", "archive_item", "add_stock", "consume_stock",
+    "list", "search", "get", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock",
     "adjust_stock", "get_components", "update_asset", "create_intake_draft",
 })
 RECIPE_ACTIONS = frozenset({
