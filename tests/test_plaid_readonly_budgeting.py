@@ -182,6 +182,8 @@ def test_connection_projection_keeps_each_unhealthy_connection_reconnectable(db)
     reconnect = next(row for row in projection["connections"] if row["id"] == second.id)
     assert reconnect["lifecycle_state"] == "RECONNECT_REQUIRED"
     assert reconnect["last_error_classification"] == "ITEM_LOGIN_REQUIRED"
+    assert projection["lifecycle_state"] == "RECONNECT_REQUIRED"
+    assert projection["capability_available"] is False
 
 
 def test_coverage_does_not_call_uningested_or_unhealthy_finance_ready(db):
