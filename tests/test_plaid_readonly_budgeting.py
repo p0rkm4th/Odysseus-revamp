@@ -130,13 +130,13 @@ def test_deterministic_queries_are_currency_safe_and_owner_scoped(db):
 
 def test_local_csv_fallback_is_canonical_idempotent_and_not_live_plaid(db):
     svc = FinanceService(db)
-    csv_text = "date,amount,merchant,currency\n2026-09-01,12.50,Cafe,USD\n2026-09-02,-40.00,Payroll,USD\n"
+    csv_text = "date,amount,merchant,currency\n2026-09-01,12.50,Cafe,USD\n2026-09-01,12.50,Cafe,USD\n2026-09-02,-40.00,Payroll,USD\n"
     first = svc.import_csv("alice", csv_text, source_label="bank-export")
     second = svc.import_csv("alice", csv_text, source_label="bank-export")
     assert first["source"] == second["source"] == "local_csv"
     assert first["live_provider"] is False
-    assert second["imported_count"] == 2
-    assert len(svc.list_transactions("alice")) == 2
+    assert second["imported_count"] == 3
+    assert len(svc.list_transactions("alice")) == 3
     coverage = svc.coverage("alice", date(2026, 9, 1), date(2026, 9, 2))
     assert coverage["coverage_state"] == "AVAILABLE"
     assert {source["source"] for source in coverage["data_sources"]} == {"local_csv"}
