@@ -607,6 +607,34 @@ def prepare_action(
                     break
             if targets:
                 payload["targets"] = targets
+        # A continuation may carry only the canonical execute action. Before
+        # an exact approval is sealed, bind it to the server-issued discovery
+        # plan already persisted in this Run. Never resolve a new interface
+        # or infer authority from transcript text at this boundary.
+        if spec.action_id == "execute_network_discovery" and not payload.get("plan_digest"):
+            planned_result = (
+                db.query(WorkResult)
+                .join(WorkAction, WorkAction.id == WorkResult.action_id)
+                .filter(
+                    WorkResult.owner == owner,
+                    WorkResult.run_id == run.id,
+                    WorkAction.action_id == "plan_network_discovery",
+                )
+                .order_by(WorkResult.created_at.desc())
+                .first()
+            )
+            planned_data = (
+                planned_result.domain_reference
+                if planned_result and isinstance(planned_result.domain_reference, dict)
+                else {}
+            )
+            planned_digest = str(
+                planned_data.get("operation_digest")
+                or planned_data.get("plan_digest")
+                or ""
+            ).strip().lower()
+            if planned_digest:
+                payload["plan_digest"] = planned_digest
         planned_resources = payload.pop("_hades_target_resources", None)
         target_resources = list(spec.target_resources)
         if isinstance(planned_resources, list):
@@ -685,6 +713,47 @@ def bind_approval(owner: str, action_id: str, approval_reference: str) -> dict[s
 def resume_approval(owner: str, action_id: str, approval_reference: str) -> dict[str, Any] | None:
     with SessionLocal() as db:
         return WorkEngine(db).resume_approved_action(owner, action_id, approval_reference)
+
+
+def persist_approved_result(
+    owner: str,
+    origin_run_id: str,
+    approval_reference: str,
+    tool_name: str,
+    content: Any,
+    result: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Attach a chat approval's executed result to its durable Action.
+
+    The approval route consumes the in-memory card and resumes the agent
+    stream directly, so it does not pass through the normal per-round action
+    persistence hook. Keep that path canonical by recovering the already
+    sealed Action, resuming it, and using the same result/verification code as
+    ordinary tool rounds.
+    """
+    action_id = prepare_action(
+        owner,
+        origin_run_id,
+        tool_name,
+        content,
+        approval_reference=approval_reference,
+    )
+    if not action_id:
+        return None
+    with SessionLocal() as db:
+        action = (
+            db.query(WorkAction)
+            .join(WorkRun)
+            .filter(
+                WorkAction.id == str(action_id),
+                WorkRun.owner == str(owner),
+            )
+            .one_or_none()
+        )
+        status = str(action.status or "") if action is not None else ""
+    if status == "awaiting_approval":
+        resume_approval(owner, action_id, approval_reference)
+    return record_result(owner, action_id, result)
 
 
 def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[str, Any] | None:

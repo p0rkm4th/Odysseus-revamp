@@ -3012,6 +3012,43 @@ async def stream_aci_runtime(
                 + "\n\n"
             )
 
+        # The approval-resume path executes the sealed action before the
+        # ordinary tool-round persistence hook runs. Reattach that result to
+        # the same durable WorkAction here, otherwise the UI can show a tool
+        # result while verification still sees only the earlier plan (or no
+        # result at all). The approval reference and origin Run are
+        # server-owned; this does not trust transcript text or create a new
+        # action.
+        try:
+            from src.agent_work_bridge import (
+                persist_approved_result as _persist_approved_result,
+                verify_bound_action as _verify_approved_action,
+            )
+            _approved_persisted = await asyncio.to_thread(
+                _persist_approved_result,
+                owner,
+                approved.origin_run_id,
+                approved.approval_id,
+                approved.tool_name,
+                approved.content,
+                approved_result,
+            )
+            if (
+                isinstance(_approved_persisted, dict)
+                and _approved_persisted.get("run_lifecycle_state") == "verifying"
+            ):
+                await asyncio.to_thread(
+                    _verify_approved_action,
+                    owner,
+                    _approved_persisted.get("action_id") or "",
+                )
+        except Exception:
+            # Durable evidence must never turn a valid owner-visible tool
+            # response into a transport failure. The result remains visible,
+            # but the warning makes a missing verification projection
+            # diagnosable instead of silently claiming completion.
+            logger.warning("[work-bridge] failed to persist approved action result", exc_info=True)
+
         approved_output = str(
             approved_result.get("output")
             or approved_result.get("stdout")
@@ -3194,6 +3231,24 @@ async def stream_aci_runtime(
             else:
                 _hard_action_bash_completed = True
                 logger.info("[agent] approved bash satisfied hard action before round 1")
+        # Approval-resume runs before the ordinary tool-round projection. A
+        # successful host discovery is already the requested deliverable; set
+        # the same terminal guard here so the model cannot plan the scan again
+        # and show a second approval card. Port/service requests intentionally
+        # continue into their separate bounded operation.
+        _approved_network_payload = (
+            approved_result.get("data")
+            if isinstance(approved_result, dict)
+            and isinstance(approved_result.get("data"), dict)
+            else approved_result if isinstance(approved_result, dict) else {}
+        )
+        if (
+            approved.tool_name == "manage_homelab"
+            and str(_approved_network_payload.get("action") or "") == "execute_network_discovery"
+            and _approved_network_payload.get("success") is True
+            and not is_network_service_enumeration_request(_last_user)
+        ):
+            _aci_terminal_canonical_read = True
         _approved_result_injected = True
 
     for round_num in range(1, max_rounds + 1):

@@ -13,6 +13,7 @@ import hashlib
 import json
 import logging
 import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from src.capability_registry import CAPABILITY_REGISTRY, action_for_tool, capability_for_tool
@@ -27,6 +28,19 @@ from src.tool_capabilities import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _display_finance_amount(value: Any, currency: Any = "") -> str:
+    """Render owner-facing money without exposing storage scale noise."""
+    code = str(currency or "").strip().upper()
+    places = 0 if code in {"JPY", "KRW", "CLP", "VND"} else 3 if code in {"BHD", "JOD", "KWD", "OMR", "TND"} else 2
+    try:
+        amount = Decimal(str(value or "0")).quantize(
+            Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP,
+        )
+        return format(amount, "f")
+    except (InvalidOperation, ValueError, TypeError):
+        return str(value or "0")
 
 
 def stream_aci_turn(*args: Any, **kwargs: Any):
@@ -3836,7 +3850,7 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     if "posted_outflow_by_currency" in payload:
         period = f"{payload.get('start', 'the requested period')} through {payload.get('end', 'today')}"
         totals = payload.get("posted_outflow_by_currency") or {}
-        rendered = ", ".join(f"{currency} {amount}" for currency, amount in totals.items()) or "none recorded"
+        rendered = ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in totals.items()) or "none recorded"
         merchant = str(payload.get("merchant") or "").strip()
         category = str(payload.get("category") or "").strip()
         subject = f"at {merchant} " if merchant else ""
@@ -3849,11 +3863,11 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         if categories:
             parts = []
             for category, values in list(categories.items())[:12]:
-                parts.append(f"{category}: " + ", ".join(f"{currency} {amount}" for currency, amount in values.items()))
+                parts.append(f"{category}: " + ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in values.items()))
             lines.append("By category: " + "; ".join(parts) + ".")
         pending = payload.get("pending_outflow_by_currency") or {}
         if pending:
-            pending_rendered = ", ".join(f"{currency} {amount}" for currency, amount in pending.items())
+            pending_rendered = ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in pending.items())
             pending_count = payload.get("pending_outflow_count") or 0
             lines.append(f"Pending spending {subject}not included in the posted total: {pending_rendered} ({pending_count} transaction{'s' if pending_count != 1 else ''}).")
     elif isinstance(payload.get("by_currency"), Mapping):
@@ -3861,14 +3875,19 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         parts = []
         for currency, values in payload["by_currency"].items():
             if isinstance(values, Mapping):
-                parts.append(f"{currency}: inflow {values.get('posted_inflow', '0')}, outflow {values.get('posted_outflow', '0')}, net {values.get('net_raw_flow', '0')}")
+                parts.append(
+                    f"{currency}: inflow {_display_finance_amount(values.get('posted_inflow', '0'), currency)}, "
+                    f"outflow {_display_finance_amount(values.get('posted_outflow', '0'), currency)}, "
+                    f"net {_display_finance_amount(values.get('net_raw_flow', '0'), currency)}"
+                )
         lines.append(f"Cash flow for {period}: " + "; ".join(parts) + ".")
     elif isinstance(payload.get("transactions"), list):
         transactions = payload["transactions"]
         lines.append(f"I found {len(transactions)} matching Finance transaction{'s' if len(transactions) != 1 else ''} in the bounded result.")
         for row in transactions[:20]:
             if isinstance(row, Mapping):
-                lines.append(f"- {row.get('transaction_date', 'date unknown')}: {row.get('merchant') or row.get('description') or 'unnamed'} — {row.get('currency', '')} {row.get('amount', '')} ({row.get('status', 'posted')})")
+                currency = row.get('currency', '')
+                lines.append(f"- {row.get('transaction_date', 'date unknown')}: {row.get('merchant') or row.get('description') or 'unnamed'} — {currency} {_display_finance_amount(row.get('amount', ''), currency)} ({row.get('status', 'posted')})")
         if len(transactions) > 20:
             lines.append(f"- …and {len(transactions) - 20} more in the bounded result.")
     elif isinstance(payload.get("shared_expenses"), list):
