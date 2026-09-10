@@ -204,6 +204,26 @@ def test_ranked_transactions_returns_largest_posted_outflows_deterministically(d
     assert all(row["status"] == "posted" and row["direction"] == "outflow" for row in result["transactions"])
 
 
+def test_ranked_transactions_can_filter_category_without_exposing_full_ledger(db):
+    svc = FinanceService(db)
+    account = svc.import_account("alice", {"provider": "fixture", "provider_account_id": "a", "currency": "USD"})
+    for txid, category, amount in (
+        ("insurance", "Insurance", "130"),
+        ("groceries", "Groceries", "300"),
+    ):
+        svc.import_transaction("alice", {
+            "account_id": account["id"], "provider": "fixture", "provider_transaction_id": txid,
+            "amount": amount, "direction": "outflow", "currency": "USD",
+            "transaction_date": "2026-09-01", "merchant": txid,
+            "provider_category": category, "status": "posted",
+        })
+    result = svc.read_finance("alice", "transactions", {
+        "start": "2026-01-01", "end": "2026-12-31", "category": "Insurance",
+        "sort": "amount_desc", "direction": "outflow", "status": "posted", "limit": 10,
+    })
+    assert [row["merchant"] for row in result["transactions"]] == ["insurance"]
+
+
 def test_local_csv_accepts_common_bank_export_headers_and_debit_credit(db):
     svc = FinanceService(db)
     bank_export = (

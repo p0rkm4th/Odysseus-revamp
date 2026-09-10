@@ -574,6 +574,24 @@ def test_ranked_finance_followup_projects_bounded_largest_outflows():
     assert "most expensive" in intent["retrieval_query"]
 
 
+def test_independent_ranked_finance_question_does_not_inherit_stale_category():
+    messages = [
+        {"role": "user", "content": "How much did I spend on insurance this year?"},
+        {"role": "assistant", "content": "Posted spending for insurance: none recorded."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "What was my most expensive purchase this year?"
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+
+    from src.intent_contracts import compile_intent
+
+    frame = compile_intent("What was my most expensive purchase this year?")
+    assert frame.filters.get("category") is None
+    assert frame.filters["sort"] == "amount_desc"
+
+
 def test_legacy_chat_finance_correction_reuses_recent_finance_read_context():
     from src.agent_loop import _classify_agent_request
 
