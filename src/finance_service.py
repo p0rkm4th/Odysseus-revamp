@@ -680,7 +680,12 @@ class FinanceService:
             totals[row.currency] = totals.get(row.currency, Decimal("0")) + Decimal(row.amount)
             bucket = by_category.setdefault(row.provider_category or "uncategorized", {})
             bucket[row.currency] = bucket.get(row.currency, Decimal("0")) + Decimal(row.amount)
-        return {"start": start.isoformat(), "end": end.isoformat(), "posted_outflow_by_currency": {key: str(value) for key, value in totals.items()}, "posted_outflow_by_category": {category: {currency: str(value) for currency, value in values.items()} for category, values in by_category.items()}, "coverage": self.coverage(owner, start, end)}
+        result = {"start": start.isoformat(), "end": end.isoformat(), "posted_outflow_by_currency": {key: str(value) for key, value in totals.items()}, "posted_outflow_by_category": {category: {currency: str(value) for currency, value in values.items()} for category, values in by_category.items()}, "coverage": self.coverage(owner, start, end)}
+        if merchant:
+            result["merchant"] = merchant[:100]
+        if category:
+            result["category"] = category[:100]
+        return result
 
     def cash_flow(self, owner: str, start: date, end: date) -> dict[str, Any]:
         rows = self.db.query(FinanceTransaction).filter(

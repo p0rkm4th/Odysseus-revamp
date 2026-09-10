@@ -69,6 +69,19 @@ def test_finance_merchant_selector_reaches_deterministic_spending_payload():
     assert payload == {"action": "spending", "merchant": "publix"}
 
 
+def test_concise_merchant_spending_question_is_not_unfiltered():
+    from src.aci import canonical_read_fast_path_payload
+
+    frame = compile_intent("How much at Publix?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters == {"view": "spending", "merchant": "publix"}
+    assert canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(),
+        query="How much at Publix?",
+    ) == {"action": "spending", "merchant": "publix"}
+
+
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
     messages = [
         {"role": "user", "content": "scan the current network"},

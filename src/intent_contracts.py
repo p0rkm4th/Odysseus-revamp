@@ -1323,6 +1323,19 @@ def compile_intent(
         concept = "WORK"
     elif re.search(r"\b(?:communications?|email accounts?|calendars?|calendar events?)\b", q):
         concept = "COMMUNICATIONS"
+    # A concise merchant follow-up such as "How much at Publix?" is a
+    # natural continuation of a spending question.  Preserve it as the
+    # bounded Finance spending read instead of letting the model choose an
+    # unfiltered date-range total.  The selector remains limited to the
+    # merchant phrase extracted below; it does not create a general query
+    # language or broaden Finance scope.
+    elif re.search(
+        r"\bhow\s+much\s+(?:did\s+i\s+spend\s+)?(?:at|from)\s+"
+        r"[A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}[?.!,]?\s*$",
+        q,
+        re.IGNORECASE,
+    ):
+        concept = "FINANCE"
     elif re.search(r"\b(?:contacts?|address\s*book)\b", q):
         concept = "CONTACT"
     elif re.search(r"\b(?:setup|configured|integrations?|connected)\b", q):
@@ -1599,6 +1612,8 @@ def compile_intent(
             merchant = re.sub(r"\s+", " ", merchant_match.group(1)).strip(" .,!?:;")
             if merchant:
                 reference_filters["merchant"] = merchant[:100]
+                if finance_view in {None, "coverage"}:
+                    reference_filters["view"] = "spending"
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
