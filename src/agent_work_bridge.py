@@ -132,6 +132,30 @@ def ensure_agent_run(
             .order_by(WorkRun.updated_at.desc())
             .first()
         )
+        if active is not None and (active.continuation_state or {}).get("phase") == "COMPLETE":
+            # A compatibility/streaming path can persist the terminal
+            # continuation pointer before its denormalized Run status. Do not
+            # reuse that stale row for a later owner turn; only reconcile it
+            # when no action is still proposed, awaiting approval, approved,
+            # or executing. A genuinely resumable action remains authoritative.
+            unfinished = db.query(WorkAction).filter(
+                WorkAction.run_id == active.id,
+                WorkAction.status.in_(("proposed", "awaiting_approval", "approved", "executing")),
+            ).count()
+            if not unfinished:
+                active.status = "completed"
+                active.lifecycle_state = "succeeded"
+                active.ended_at = now()
+                active.current_step = "completed: durable continuation reconciled"
+                active.revision += 1
+                WorkEngine(db).event(
+                    owner,
+                    "run.reconciled_terminal",
+                    run_id=active.id,
+                    payload={"reason": "continuation phase COMPLETE"},
+                )
+                db.commit()
+                active = None
         if active is not None and (
             continuation or active.domain in domains.intersection(_WORK_DOMAINS)
         ):
