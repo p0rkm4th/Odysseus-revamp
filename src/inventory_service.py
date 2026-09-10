@@ -483,15 +483,16 @@ class InventoryService:
     def list_items(
         self, owner: str, *, domain: str | None = None, list_name: str | None = None,
         include_archived: bool = False, limit: int = 100, offset: int = 0,
+        include_stock: bool = False,
     ) -> list[dict[str, Any]]:
         limit = max(1, min(int(limit), 500))
         offset = max(0, int(offset))
         with self._read() as db:
             query = db.query(InventoryItem).filter(InventoryItem.owner == owner)
+            normalized_list = str(list_name).strip().casefold() if list_name else ""
             if domain is not None:
                 query = query.filter(InventoryItem.domain == str(domain).casefold())
             if list_name:
-                normalized_list = str(list_name).strip().casefold()
                 if normalized_list == "grocery":
                     query = query.filter(InventoryItem.shopping_list.is_(True))
                 elif normalized_list in {"pantry", "fridge", "freezer"}:
@@ -500,8 +501,24 @@ class InventoryService:
                     raise InventoryError("list_name must be grocery, pantry, fridge, or freezer")
             if not include_archived:
                 query = query.filter(InventoryItem.archived.is_(False))
-            items = query.order_by(InventoryItem.normalized_name, InventoryItem.id).offset(offset).limit(limit)
-            return [_item_view(item) for item in items]
+            items = list(query.order_by(InventoryItem.normalized_name, InventoryItem.id).offset(offset).limit(limit))
+            views = [_item_view(item) for item in items]
+            # Storage-list reads must expose the same canonical lot balance
+            # used by consume_stock and household_overview.  Grocery is a
+            # missing/to-buy projection and intentionally has no stock total.
+            if (include_stock or normalized_list in {"pantry", "fridge", "freezer"}) and items:
+                item_ids = [item.id for item in items]
+                lots = db.query(InventoryLot).filter(
+                    InventoryLot.owner == owner,
+                    InventoryLot.item_id.in_(item_ids),
+                    InventoryLot.quantity > 0,
+                ).all()
+                totals: dict[str, Decimal] = {}
+                for lot in lots:
+                    totals[lot.item_id] = totals.get(lot.item_id, Decimal("0")) + Decimal(str(lot.quantity))
+                for item, view in zip(items, views):
+                    view["stock_quantity"] = str(totals.get(item.id, Decimal("0")))
+            return views
 
     def search_items(
         self, owner: str, query: str, *, domain: str | None = None, limit: int = 50,
@@ -985,10 +1002,12 @@ class RecipeService(InventoryService):
             return rows[0].id
 
         if action == "list":
+            requested_list = str(args.get("list_name") or "").strip().casefold()
             return {"items": self.list_items(
                 owner, domain=args.get("domain"),
                 list_name=args.get("list_name"),
                 include_archived=bool(args.get("include_archived", False)),
+                include_stock=requested_list in {"pantry", "fridge", "freezer"},
             )}
         if action == "search":
             return {"items": self.search_items(

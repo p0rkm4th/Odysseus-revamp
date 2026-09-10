@@ -138,6 +138,8 @@ def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
     item = service.search_items("alice", "rice")[0]
     assert item["storage_area"] == "pantry"
     assert item["shopping_list"] is False
+    pantry = service.list_items("alice", list_name="pantry")
+    assert pantry[0]["stock_quantity"] == "1500.000000"
 
 
 def test_remove_from_grocery_unqueues_item_without_deleting_owned_stock():
@@ -194,6 +196,7 @@ def test_inventory_lifecycle_depletion_queues_grocery_and_purchase_restores_stoc
     # Quantities are canonicalized to the item's base unit (grams), so the
     # same value is stable across chat, UI refresh, and restart.
     assert service.household_overview("alice")["items"][0]["stock_quantity"] == "2000.000000"
+    assert service.list_items("alice", list_name="pantry")[0]["stock_quantity"] == "2000.000000"
 
 
 def test_inventory_ui_has_pantry_and_grocery_crud_surfaces():
