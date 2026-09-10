@@ -591,6 +591,29 @@ def test_canonical_projection_does_not_depend_on_route_tool_preparation():
     assert set(item["binding"] for item in projection.choice_map.values()) == {"manage_homelab"}
 
 
+def test_inventory_action_projection_grounds_natural_grocery_name():
+    projection = project_action_selection(
+        intent=_intent("Add rice to my grocery list."),
+        relevant_tools=["manage_assets"],
+        disabled_tools=set(),
+        owner="owner",
+        active_run=None,
+        query="Add rice to my grocery list.",
+    )
+    selected = next(
+        value for value in projection.choice_map.values()
+        if value["payload"].get("action") == "add_item"
+    )
+    assert selected["payload"] == {
+        "action": "add_item",
+        "name": "rice",
+        "domain": "kitchen",
+        "item_kind": "ingredient",
+        "list_name": "grocery",
+        "shopping_list": True,
+    }
+
+
 def test_action_projection_carries_canonical_dependency_plan():
     intent = _intent("discover hosts on 192.168.10.0/24")
     projection = project_action_selection(

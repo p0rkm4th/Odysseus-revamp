@@ -966,14 +966,27 @@ class RecipeService(InventoryService):
             item_id = _required_text(args.get("item_id"), "item_id")
             return {"components": self.list_asset_components(owner, item_id)}
         if action == "add_item":
+            # Natural grocery requests often provide only the item name. The
+            # inventory-specific action already establishes the bounded
+            # household domain at the binding boundary, so supply the safe
+            # kitchen defaults here instead of forcing the owner/model to
+            # speak internal domain and item-kind vocabulary.
+            domain = args.get("domain") or "kitchen"
+            item_kind = args.get("item_kind") or "ingredient"
+            shopping_list = args.get("shopping_list")
+            if shopping_list is None:
+                shopping_list = (
+                    str(args.get("list_name") or "").casefold() == "grocery"
+                    or not args.get("storage_area")
+                )
             item = self.create_item(
-                owner, name=args.get("name"), domain=args.get("domain"),
-                item_kind=args.get("item_kind"),
+                owner, name=args.get("name"), domain=domain,
+                item_kind=item_kind,
                 default_unit=args.get("default_unit") or args.get("unit") or "each",
                 category=args.get("category"), description=args.get("description"),
                 brand=args.get("brand"), manufacturer=args.get("manufacturer"),
                 model=args.get("model"), sku=args.get("sku"), barcode=args.get("barcode"),
-                location_id=args.get("location_id"), shopping_list=bool(args.get("shopping_list", False)), storage_area=args.get("storage_area"),
+                location_id=args.get("location_id"), shopping_list=bool(shopping_list), storage_area=args.get("storage_area"),
             )
             return {"item": item}
         if action == "update_item":

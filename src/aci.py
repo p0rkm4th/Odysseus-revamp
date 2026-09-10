@@ -3981,6 +3981,27 @@ def project_action_selection(
     for index, item in enumerate(selected):
         choice = chr(ord("A") + index)
         payload: dict[str, Any] = {"action": item["action_id"]}
+        # The bounded ACI packet carries the canonical action choice, while
+        # owner-authored arguments still need deterministic grounding. For a
+        # natural grocery add, the item name is the span between "add" and
+        # the grocery-list destination; do not make a small local model
+        # invent the name or require it to emit a second private schema.
+        if item["binding"] == "manage_assets" and item["action_id"] == "add_item":
+            match = re.search(
+                r"\badd\s+(.+?)\s+to\s+(?:my\s+)?(?:grocery|shopping)\s+list\b",
+                query,
+                re.IGNORECASE,
+            )
+            if match:
+                name = re.sub(r"\s+", " ", match.group(1)).strip(" .,!?:;")
+                if 1 <= len(name) <= 200:
+                    payload.update({
+                        "name": name,
+                        "domain": "kitchen",
+                        "item_kind": "ingredient",
+                        "list_name": "grocery",
+                        "shopping_list": True,
+                    })
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
         if item["binding"] == "web_search":

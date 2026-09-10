@@ -304,6 +304,27 @@ async def test_kitchen_mutation_binding_delegates_to_existing_inventory_service(
 
 
 @pytest.mark.asyncio
+async def test_inventory_specific_action_without_optional_domain_marker_stays_on_inventory_path(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeInventoryTool:
+        async def execute(self, content, ctx):
+            assert json.loads(content)["action"] == "add_item"
+            assert ctx["owner"] == "alice"
+            return {"item": {"id": "rice-1"}, "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageInventoryTool", FakeInventoryTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "add_item", "name": "rice",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+
+
+@pytest.mark.asyncio
 async def test_grocery_read_binding_delegates_to_canonical_inventory_service(monkeypatch):
     import src.agent_tools.inventory_tools as inventory_tools
     import src.tool_execution as tool_execution

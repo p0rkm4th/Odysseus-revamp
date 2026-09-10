@@ -142,6 +142,32 @@ def test_inventory_state_is_a_canonical_asset_read_but_household_inventory_is_no
     assert household.domain_concept == "HOUSEHOLD_ITEM"
 
 
+@pytest.mark.parametrize(("query", "operation", "action"), [
+    ("Add rice to my grocery list.", "CREATE", "add_item"),
+    ("I bought two 1-kilogram bags of rice; put them in the pantry.", "UPDATE", "add_stock"),
+    ("Use 500 grams of rice.", "EXECUTE", "consume_stock"),
+])
+def test_natural_grocery_and_pantry_stock_language_uses_inventory_actions(query, operation, action):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == operation
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "inventory.manage"
+    assert resolved.binding_name == "manage_assets"
+    assert resolved.action_id == action
+
+
+def test_singular_grocery_read_uses_the_canonical_household_path():
+    frame = compile_intent("Show my grocery list.")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "READ"
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "household.read"
+    assert resolved.binding_name == "read_household"
+
+
 @pytest.mark.parametrize("query", [
     "look up summary in my technical asset state",
     "show my technical asset list information",

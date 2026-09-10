@@ -86,6 +86,16 @@ def test_pantry_grocery_crud_is_owner_scoped_and_does_not_fake_stock_changes():
         raise AssertionError("cross-owner inventory update must fail")
 
 
+def test_model_facing_grocery_add_defaults_to_canonical_kitchen_item():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    result = service.manage_inventory({"action": "add_item", "name": "Rice"}, owner="alice")
+    assert result["item"]["domain"] == "kitchen"
+    assert result["item"]["item_kind"] == "ingredient"
+    assert result["item"]["shopping_list"] is True
+    assert [item["name"] for item in service.list_items("alice", list_name="grocery")] == ["Rice"]
+
+
 def test_grocery_pantry_and_fridge_are_canonical_list_views():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
