@@ -119,6 +119,7 @@ def test_deterministic_queries_are_currency_safe_and_owner_scoped(db):
     svc.import_transaction("alice", {"account_id": account["id"], "provider": "fixture", "provider_transaction_id": "eur-out", "amount": "5", "direction": "outflow", "currency": "EUR", "transaction_date": "2026-09-01", "merchant": "Cafe", "status": "posted"})
     spending = svc.spending("alice", date(2026, 9, 1), date(2026, 9, 30))
     assert spending["posted_outflow_by_currency"] == {"USD": "10.0000", "EUR": "5.0000"}
+    assert spending["posted_outflow_by_merchant"]["Cafe"] == {"USD": "10.0000", "EUR": "5.0000"}
     flow = svc.cash_flow("alice", date(2026, 9, 1), date(2026, 9, 30))
     assert flow["by_currency"]["USD"]["posted_inflow"] == "50.0000"
     assert flow["by_currency"]["USD"]["net_raw_flow"] == "40.0000"

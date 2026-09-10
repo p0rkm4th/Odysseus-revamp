@@ -41,6 +41,18 @@ def test_finance_answer_preserves_year_range_and_category_scope():
     assert "Plaid connection requires attention" in answer
 
 
+def test_finance_overview_surfaces_bounded_insight_and_guidance():
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "output": '{"action":"spending","start":"2026-01-01","end":"2026-09-10","posted_outflow_by_currency":{"USD":"100.0000"},"posted_outflow_by_category":{"Housing":{"USD":"70.0000"},"Dining":{"USD":"30.0000"}},"posted_outflow_by_merchant":{"Rent":{"USD":"70.0000"},"Cafe":{"USD":"30.0000"}},"coverage":{"coverage_state":"AVAILABLE","data_sources":[{"source":"local_csv","live":false}],"as_of":"2026-09-10 19:00:00","coverage_limitations":[]}}',
+    }])
+    assert answer is not None
+    assert "What stands out: Housing" in answer
+    assert "Largest merchant totals: Rent USD 70.00" in answer
+    assert "Guidance:" in answer
+
+
 def _packet(cards=(ActionCard("A", "inspect", "Inspect", "Read state"),)):
     return AgentTaskPacket(
         task_type="BOUNDED_REASONING", objective={"summary": "diagnose"},
