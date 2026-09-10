@@ -1675,6 +1675,19 @@ async def stream_aci_runtime(
                     except json.JSONDecodeError:
                         yield chunk
                         continue
+                    # Keep provider-specific reasoning event wrappers from
+                    # being mistaken for answer text if a fallback adapter
+                    # forwards one without transport normalization.
+                    if str(data.get("type") or "").lower() in {
+                        "reasoning", "thinking", "reasoning_delta", "thinking_delta",
+                    }:
+                        _reasoning_delta = (
+                            data.get("delta") or data.get("text")
+                            or data.get("reasoning") or data.get("reasoning_content")
+                            or data.get("thinking") or ""
+                        )
+                        if isinstance(_reasoning_delta, str) and _reasoning_delta:
+                            data = {"delta": _reasoning_delta, "thinking": True}
                     if data.get("type") == "usage":
                         usage = data.get("data", {}) or {}
                         direct_actual_model = usage.get("model") or direct_actual_model
@@ -3286,6 +3299,11 @@ async def stream_aci_runtime(
                             },
                             "required": ["decision"],
                         },
+                        # Strict ACI decisions are machine packets. Keep
+                        # provider reasoning separate from ordinary
+                        # conversation so a thinking channel cannot consume
+                        # the JSON answer budget or leave content empty.
+                        "reasoning_mode": "structured",
                         "max_tokens": min(max_tokens or 512, 512),
                     } if _aci_enabled and _aci_mode == "aci" and not _aci_answer_only and not _aci_model_fallback else {}),
                     "temperature": (
@@ -3508,6 +3526,20 @@ async def stream_aci_runtime(
             if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
                 try:
                     data = json.loads(chunk[6:])
+                    # Normalize provider event wrappers before checking type or
+                    # delta. Some gateways emit reasoning as a typed event;
+                    # without this it enters the answer buffer and appears
+                    # dropped when structured/tool rounds suppress that buffer.
+                    if str(data.get("type") or "").lower() in {
+                        "reasoning", "thinking", "reasoning_delta", "thinking_delta",
+                    }:
+                        _reasoning_delta = (
+                            data.get("delta") or data.get("text")
+                            or data.get("reasoning") or data.get("reasoning_content")
+                            or data.get("thinking") or ""
+                        )
+                        if isinstance(_reasoning_delta, str) and _reasoning_delta:
+                            data = {"delta": _reasoning_delta, "thinking": True}
                     # IMPORTANT: check type-based events BEFORE "delta" key,
                     # because tool_call_delta also has an "arg_delta" field.
                     if data.get("type") == "tool_call_delta":

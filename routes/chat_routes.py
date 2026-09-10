@@ -2056,6 +2056,16 @@ def setup_chat_routes(
                         if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
                             try:
                                 data = json.loads(chunk[6:])
+                                if str(data.get("type") or "").lower() in {
+                                    "reasoning", "thinking", "reasoning_delta", "thinking_delta",
+                                }:
+                                    _reasoning_delta = (
+                                        data.get("delta") or data.get("text")
+                                        or data.get("reasoning") or data.get("reasoning_content")
+                                        or data.get("thinking") or ""
+                                    )
+                                    if isinstance(_reasoning_delta, str) and _reasoning_delta:
+                                        data = {"delta": _reasoning_delta, "thinking": True}
                                 if "delta" in data:
                                     if _commit_chat_compaction(_actual_candidate_index):
                                         _compacted_length = _chat_request_state["context_lengths"].get(
