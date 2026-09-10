@@ -200,6 +200,14 @@ def test_canonical_household_read_answer_uses_only_inventory_result():
     }]) == "No kitchen or household inventory is recorded for this owner."
 
 
+def test_canonical_household_read_answer_hides_inventory_storage_precision():
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": '{"list_name":"pantry","items":[{"name":"Rice","domain":"kitchen","stock_quantity":"1500.000000","default_unit":"g"}]}',
+    }])
+    assert answer == "I found 1 pantry item on hand:\n- Rice (domain=kitchen, quantity=1500 g)"
+
+
 def test_grocery_read_fast_path_preserves_list_scope_and_answer_label():
     from src.aci import canonical_read_fast_path_payload
     from src.intent_contracts import compile_intent, resolve_intent
