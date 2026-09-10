@@ -362,5 +362,19 @@ def test_coverage_surfaces_unexchanged_plaid_connection_alongside_csv_data(db):
 
     coverage = FinanceService(db).coverage("alice", date(2026, 9, 1), date(2026, 9, 30))
     assert coverage["data_sources"] == [{"source": "local_csv", "live": False}]
-    assert "one or more Plaid connections are unhealthy or require attention" in coverage["coverage_limitations"]
+    assert "one or more Plaid connections are unhealthy or require attention" not in coverage["coverage_limitations"]
+    assert coverage["ingestion_complete"] is True
     assert coverage["connection"]["connections"][0]["lifecycle_state"] == "AUTHORIZATION_REQUIRED"
+
+
+def test_coverage_reports_pending_plaid_authorization_without_csv_as_auth_gate(db):
+    db.add(FinanceConnection(
+        id="conn-awaiting-link", owner="alice", provider="plaid",
+        lifecycle_state="AUTHORIZATION_REQUIRED", provider_health="DEGRADED",
+        capability_available=False,
+    ))
+    db.commit()
+
+    coverage = FinanceService(db).coverage("alice", date(2026, 9, 1), date(2026, 9, 30))
+    assert "Plaid authorization is required" in coverage["coverage_limitations"]
+    assert "one or more Plaid connections are unhealthy or require attention" not in coverage["coverage_limitations"]
