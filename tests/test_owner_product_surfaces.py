@@ -13,6 +13,8 @@ def test_plaid_link_is_an_owner_surface_without_access_token_in_browser_code():
     assert "access_token" not in js
     assert "connectionRows" in js
     assert "Authorization has not produced a provider item yet" in js
+    assert "visibleUnbackedConnections" in js
+    assert "previous Plaid setup attempt" in js
     assert "state === 'RECONNECT_REQUIRED'" in js
     assert "Reconnect is a provider-authorization operation" in js
 
