@@ -66,7 +66,10 @@ def test_finance_merchant_selector_reaches_deterministic_spending_payload():
         resolved.binding_name, resolved.action_id, frame.as_dict(),
         query="How much did I spend this month at Publix?",
     )
-    assert payload == {"action": "spending", "merchant": "publix"}
+    assert payload["action"] == "spending"
+    assert payload["merchant"] == "publix"
+    assert payload["start"].endswith("-09-01")
+    assert payload["end"]
 
 
 def test_concise_merchant_spending_question_is_not_unfiltered():
@@ -103,6 +106,30 @@ def test_named_month_range_reaches_finance_fast_path_payload():
     assert payload["merchant"] == "publix"
     assert payload["start"].endswith("-09-01")
     assert payload["end"].endswith("-09-30")
+
+
+def test_relative_year_range_does_not_default_to_current_month():
+    frame = compile_intent("How much did I spend dining out this year?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["start"].endswith("-01-01")
+    assert frame.filters["end"]
+
+
+def test_short_finance_period_correction_reaches_bounded_read():
+    from src.agent_loop import _classify_agent_request
+
+    messages = [
+        {"role": "user", "content": "How much did I spend dining out this year?"},
+        {"role": "assistant", "content": "Posted spending for September."},
+    ]
+    projection = _classify_agent_request(messages, "This year, not month")
+    frame = compile_intent(
+        projection["retrieval_query"],
+        continuation=projection["continuation"],
+    )
+    assert projection["continuation"] is False
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["start"].endswith("-01-01")
 
 
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
