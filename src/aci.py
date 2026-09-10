@@ -3752,6 +3752,11 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             for category, values in list(categories.items())[:12]:
                 parts.append(f"{category}: " + ", ".join(f"{currency} {amount}" for currency, amount in values.items()))
             lines.append("By category: " + "; ".join(parts) + ".")
+        pending = payload.get("pending_outflow_by_currency") or {}
+        if pending:
+            pending_rendered = ", ".join(f"{currency} {amount}" for currency, amount in pending.items())
+            pending_count = payload.get("pending_outflow_count") or 0
+            lines.append(f"Pending spending{subject}not included in the posted total: {pending_rendered} ({pending_count} transaction{'s' if pending_count != 1 else ''}).")
     elif isinstance(payload.get("by_currency"), Mapping):
         period = f"{payload.get('start', 'the requested period')} through {payload.get('end', 'today')}"
         parts = []

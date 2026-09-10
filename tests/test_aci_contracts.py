@@ -18,10 +18,12 @@ def test_finance_tool_result_cannot_collapse_to_done():
     answer = canonical_finance_read_answer([{
         "tool": "read_finance",
         "exit_code": 0,
-        "output": '{"action":"spending","start":"2026-09-01","end":"2026-09-10","posted_outflow_by_currency":{"USD":"15.0000"},"coverage":{"coverage_state":"AVAILABLE","data_sources":[{"source":"local_csv","live":false}],"as_of":"2026-09-10 17:35:31","coverage_limitations":[]}}',
+        "output": '{"action":"spending","start":"2026-09-01","end":"2026-09-10","posted_outflow_by_currency":{"USD":"15.0000"},"pending_outflow_by_currency":{"USD":"7.0000"},"pending_outflow_count":1,"coverage":{"coverage_state":"AVAILABLE","data_sources":[{"source":"local_csv","live":false}],"as_of":"2026-09-10 17:35:31","coverage_limitations":[]}}',
     }])
     assert answer is not None
     assert "USD 15.0000" in answer
+    assert "pending" in answer.lower()
+    assert "USD 7.0000" in answer
     assert "local CSV" in answer
     assert answer != "Done."
 

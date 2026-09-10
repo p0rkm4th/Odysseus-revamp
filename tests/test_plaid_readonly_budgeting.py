@@ -162,6 +162,8 @@ def test_local_csv_amount_column_uses_bank_signs_and_reimport_repairs_direction(
     assert {row["status"] for row in rows} == {"posted", "pending"}
     spending = svc.spending("alice", date(2026, 9, 1), date(2026, 9, 30), merchant="Publix")
     assert spending["posted_outflow_by_currency"] == {"USD": "25.7200"}
+    assert spending["pending_outflow_by_currency"] == {"USD": "37.3300"}
+    assert spending["pending_outflow_count"] == 1
     assert spending["merchant"] == "Publix"
 
 
