@@ -310,6 +310,15 @@ def test_network_action_predicates_are_semantic_and_non_authorizing():
     assert not is_network_service_enumeration_request("show the network discovery status")
 
 
+def test_port_scan_language_resolves_to_bounded_service_enumeration():
+    frame = compile_intent("Check my network for open ports on the responding devices")
+    resolved = resolve_intent(frame)
+    assert frame.operation_class == "EXECUTE"
+    assert frame.filters["view"] == "service_enumeration"
+    assert resolved.action_id == "plan_network_service_enumeration"
+    assert resolved.binding_name == "manage_homelab"
+
+
 @pytest.mark.parametrize("text, expected", [
     ("install nmap", True),
     ("you may install nmap if needed", True),

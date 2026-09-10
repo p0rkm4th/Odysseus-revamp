@@ -375,6 +375,33 @@ def test_completed_network_discovery_has_terminal_grounded_answer():
     )
 
 
+def test_completed_service_scan_has_terminal_grounded_answer():
+    projection = canonical_tool_result_projection("manage_homelab", {
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA",
+            "action": "execute_network_service_enumeration",
+            "success": True,
+            "observation_count": 1,
+            "observations_recorded": True,
+            "network_map_reconciled": True,
+            "service_observations": [{
+                "ip": "192.168.10.4",
+                "services": [{"port": 443, "protocol": "tcp", "service": "https", "product": "nginx", "version": "1.2"}],
+            }],
+        }),
+        "exit_code": 0,
+    })
+    answer = canonical_network_read_answer([{
+        "tool": "manage_homelab", "exit_code": 0,
+        "result_projection": projection,
+    }])
+    assert answer == (
+        "Service scan completed for 1 responding host.\n"
+        "- 192.168.10.4: 443/tcp https (nginx 1.2).\n"
+        "The observations were recorded for review; service names and versions are observed evidence, not confirmed device identity."
+    )
+
+
 def test_homelab_inspection_has_grounded_deterministic_answer():
     projection = canonical_tool_result_projection("manage_homelab", {
         "output": json.dumps({
