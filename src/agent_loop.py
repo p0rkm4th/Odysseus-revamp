@@ -5362,6 +5362,24 @@ async def stream_aci_runtime(
             _aci_approval_state = _result_observation["approval_state"]
             _aci_policy_state = _result_observation["policy_state"]
             _aci_executors = _result_observation["executors"]
+            # A completed host discovery is itself the terminal deliverable
+            # for a plain scan request. Without this guard, the successful
+            # observation was sent back to the model, which could emit a new
+            # plan and show a second approval card instead of reporting the
+            # scan result. Port/service requests intentionally continue into
+            # their separately bounded enumeration step.
+            _network_result_payload = (
+                result.get("data")
+                if isinstance(result.get("data"), dict)
+                else result
+            ) if isinstance(result, dict) else {}
+            if (
+                block.tool_type == "manage_homelab"
+                and _block_action_id == "execute_network_discovery"
+                and _network_result_payload.get("success") is True
+                and not _network_service_request
+            ):
+                _aci_terminal_canonical_read = True
             if _post_result_transition.answer_only:
                 _aci_answer_only = True
                 _aci_packet = None

@@ -3246,6 +3246,23 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
         if len(nodes) > 50:
             lines.append(f"- …and {len(nodes) - 50} more")
         return "\n".join(lines)
+    if action == "execute_network_discovery":
+        if payload.get("success") is not True:
+            return None
+        target = str(payload.get("target") or "the authorized private network").strip()
+        count = payload.get("candidate_count")
+        try:
+            count_text = str(max(0, int(count)))
+        except (TypeError, ValueError):
+            count_text = "the observed"
+        suffix = "host" if count_text == "1" else "hosts"
+        persisted = payload.get("observations_recorded") is True
+        message = f"Network discovery completed for {target}: {count_text} responding {suffix} observed."
+        if persisted:
+            message += " The observations were recorded for review; no device identity was inferred."
+        else:
+            message += " The observations were returned, but durable recording was not confirmed."
+        return message
     return None
 
 
@@ -3340,6 +3357,17 @@ def canonical_tool_result_projection(
             "edges": list(raw_edges[:50]) if isinstance(raw_edges, list) else [],
             "node_count": payload.get("node_count"),
             "edge_count": payload.get("edge_count"),
+        })
+        return common
+    if action == "execute_network_discovery":
+        common.update({
+            "success": payload.get("success") is True,
+            "candidate_count": payload.get("candidate_count"),
+            "observations_recorded": payload.get("observations_recorded") is True,
+            "network_map_reconciled": payload.get("network_map_reconciled") is True,
+            "requires_explicit_inventory_review": bool(
+                payload.get("requires_explicit_inventory_review")
+            ),
         })
         return common
     if action == "inspect_host":
