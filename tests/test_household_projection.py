@@ -1,8 +1,10 @@
 from datetime import date, timedelta
 
+import pytest
+
 from core import database as cdb
 from core import inventory_models  # noqa: F401 - register inventory tables
-from src.inventory_service import get_inventory_service
+from src.inventory_service import InventoryError, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
 
 
@@ -114,6 +116,23 @@ def test_recipe_shaped_grocery_request_cannot_be_saved_as_literal_item():
         raise AssertionError("recipe-shaped request must not become a literal item")
 
     assert service.list_items("alice", list_name="grocery") == []
+
+
+def test_all_grocery_write_boundaries_reject_recipe_placeholders():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    with pytest.raises(InventoryError, match="recipe rather than one grocery item"):
+        service.create_item(
+            "alice", name="everything needed to make spaghetti", domain="kitchen",
+            item_kind="ingredient", shopping_list=True,
+        )
+
+    item = service.create_item(
+        "alice", name="those ingredients", domain="kitchen",
+        item_kind="ingredient", shopping_list=False,
+    )
+    with pytest.raises(InventoryError, match="individual grocery items"):
+        service.update_item("alice", item["id"], shopping_list=True)
 
 
 def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
