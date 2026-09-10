@@ -45,6 +45,20 @@ _receipt_lock = threading.Lock()
 logger = logging.getLogger(__name__)
 
 
+def _host_broker_request(payload: dict[str, Any], *, timeout: float) -> dict[str, Any]:
+    """Send LAN reads to the host-network broker, never the app broker.
+
+    The application runtime may have a broker for local diagnostics, but it is
+    not in the host network namespace.  Discovery must use the explicitly
+    deployed host boundary so a successful status probe cannot be followed by
+    a scan sent to the wrong socket.
+    """
+    from src.privileged_broker import HOST_NETWORK_SOCKET_PATH, client_request
+
+    socket_path = os.getenv("ODYSSEUS_HOST_NETWORK_BROKER_SOCKET", HOST_NETWORK_SOCKET_PATH)
+    return client_request(payload, socket_path=socket_path, timeout=timeout)
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -430,8 +444,7 @@ class HomelabOperations:
             health = dependency_manager.inspect_operation("network_discovery")
             broker_scanner = False
             try:
-                from src.privileged_broker import client_request
-                broker_scanner = bool((await asyncio.to_thread(client_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
+                broker_scanner = bool((await asyncio.to_thread(_host_broker_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
             except Exception:
                 pass
             return {
@@ -682,8 +695,7 @@ class HomelabOperations:
         broker_scanner = False
         if not scanner:
             try:
-                from src.privileged_broker import client_request
-                broker_scanner = bool((await asyncio.to_thread(client_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
+                broker_scanner = bool((await asyncio.to_thread(_host_broker_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
             except Exception:
                 pass
         health = dependency_manager.inspect_operation(
@@ -741,9 +753,8 @@ class HomelabOperations:
                 "operation_digest": digest, "handoff": handoff,
                 "untrusted_content": False,
             }
-        from src.privileged_broker import client_request
         broker_result = await asyncio.to_thread(
-            client_request, {"action": "run_network_discovery", "cidr": cidr}, timeout=70,
+            _host_broker_request, {"action": "run_network_discovery", "cidr": cidr}, timeout=70,
         )
         code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
         output = str(broker_result.get("output") or broker_result.get("error") or "")
@@ -802,9 +813,8 @@ class HomelabOperations:
         supplied = str(request.get("plan_digest") or "")
         if supplied != digest or not await asyncio.to_thread(self.receipts.valid_plan, owner=owner, digest=supplied):
             raise HomelabOperationError("a current owner-bound service enumeration plan is required")
-        from src.privileged_broker import client_request
         broker_result = await asyncio.to_thread(
-            client_request, {"action": "run_network_service_enumeration", "targets": targets}, timeout=90,
+            _host_broker_request, {"action": "run_network_service_enumeration", "targets": targets}, timeout=90,
         )
         code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
         output = str(broker_result.get("output") or broker_result.get("error") or "")
