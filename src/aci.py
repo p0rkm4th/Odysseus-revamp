@@ -3245,6 +3245,21 @@ def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, A
             "unit": unit.casefold(), "storage_area": destination.group(1).casefold(),
             "idempotency_key": f"inventory:{key}",
         }
+
+    if action == "remove_from_grocery":
+        match = re.search(
+            r"\b(?:remove|take)\s+(.+?)\s+from\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list\b",
+            text, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        name = match.group(1).strip(" .,!?:;")
+        if not 1 <= len(name) <= 200:
+            return None
+        return {
+            "action": action, "name": name, "domain": "kitchen",
+            "idempotency_key": f"inventory:{key}",
+        }
     if action == "consume_stock":
         match = re.search(
             rf"\b(?:use|used|consume|consumed|take|took)\s+(\d+(?:\.\d+)?)\s*({units})\s+(?:of\s+)?(.+)$",
@@ -3263,6 +3278,8 @@ def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, A
 
 def _inventory_payload_complete(payload: Mapping[str, Any], action: str) -> bool:
     if action == "add_item":
+        return bool(str(payload.get("name") or "").strip())
+    if action == "remove_from_grocery":
         return bool(str(payload.get("name") or "").strip())
     return (
         bool(str(payload.get("name") or "").strip())
@@ -3746,7 +3763,7 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     except (TypeError, ValueError):
         return None
     if not isinstance(request, Mapping) or request.get("action") not in {
-        "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+        "add_item", "add_stock", "consume_stock", "remove_from_grocery", "adjust_stock", "update_asset",
     } or not isinstance(payload, Mapping):
         return None
     if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
@@ -3761,6 +3778,7 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
         "add_item": "Recorded",
         "add_stock": "Added stock for",
         "consume_stock": "Consumed stock for",
+        "remove_from_grocery": "Removed from the grocery list",
         "adjust_stock": "Adjusted stock for",
         "update_asset": "Updated",
     }[action]
@@ -4336,7 +4354,7 @@ def project_action_selection(
         # the grocery-list destination; do not make a small local model
         # invent the name or require it to emit a second private schema.
         if item["binding"] == "manage_assets" and item["action_id"] in {
-            "add_item", "add_stock", "consume_stock",
+            "add_item", "add_stock", "consume_stock", "remove_from_grocery",
         }:
             grounded = canonical_inventory_mutation_payload(item["action_id"], query)
             if grounded:
@@ -4440,9 +4458,9 @@ def project_action_selection(
     # prose even though the requested item and destination were unambiguous.
     if (
         frame.get("domain_concept") == "HOUSEHOLD_ITEM"
-        and frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE"}
+        and frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE", "DELETE"}
         and desired_binding == "manage_assets"
-        and desired_action in {"add_item", "add_stock", "consume_stock"}
+        and desired_action in {"add_item", "add_stock", "consume_stock", "remove_from_grocery"}
         and desired_binding in candidate_bindings
         and desired_binding not in disabled
     ):

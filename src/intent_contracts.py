@@ -988,7 +988,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     # explicit canonical Actions instead of model-selected prose.
     "INVENTORY_MUTATION": DomainContract(
         "INVENTORY_MUTATION", "inventory.manage",
-        {"CREATE": "add_item", "UPDATE": "add_stock", "EXECUTE": "consume_stock"},
+        {"CREATE": "add_item", "UPDATE": "add_stock", "EXECUTE": "consume_stock", "DELETE": "remove_from_grocery"},
         "manage_assets",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "inventory_mutation",
@@ -1859,7 +1859,7 @@ def resolve_continuation(frame: IntentFrame, active_run: Mapping[str, Any] | Non
 
 def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     contract_key = frame.domain_concept
-    if frame.domain_concept == "HOUSEHOLD_ITEM" and frame.operation_class in {"CREATE", "UPDATE", "EXECUTE"}:
+    if frame.domain_concept == "HOUSEHOLD_ITEM" and frame.operation_class in {"CREATE", "UPDATE", "EXECUTE", "DELETE"}:
         contract_key = "INVENTORY_MUTATION"
     contract = DOMAIN_CONTRACTS.get(contract_key)
     if contract is None:

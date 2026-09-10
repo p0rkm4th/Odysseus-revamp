@@ -27,7 +27,7 @@ MANAGE_ASSETS_SCHEMA = {
         "name": "manage_assets",
         "description": "Manage the persistent hardware/asset inventory, component relationships, and observation history. Prefer strong identity evidence such as system UUID, serial, or MAC. Never merge assets solely by IP address.",
         "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "update_item", "archive_item", "add_stock", "consume_stock", "adjust_stock", "update_asset"]},
+        "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset"]},
             "asset": {"type": "string"}, "name": {"type": "string"}, "type": {"type": "string"}, "status": {"type": "string"},
             "manufacturer": {"type": "string"}, "model": {"type": "string"}, "serial": {"type": "string"}, "system_uuid": {"type": "string"},
             "hostname": {"type": "string"}, "mac": {"type": "string"}, "location": {"type": "string"}, "notes": {"type": "string"}, "source": {"type": "string"},
@@ -227,12 +227,12 @@ path.
 
 Actions: `summary`, `list`, `search`, `get`, `add`, `update`, `record_observation`,
 `link_component`, `unlink_component`, `retire`, `merge`, `add_item`, `add_stock`,
-`update_item`, `archive_item`, `consume_stock`, `adjust_stock`, and `update_asset`. Use the documented
+`update_item`, `archive_item`, `remove_from_grocery`, `consume_stock`, `adjust_stock`, and `update_asset`. Use the documented
 JSON/function schema for action-specific parameters.
 
 For household food requests, use the same owner-scoped inventory actions:
 `list` with `list_name` `grocery`, `pantry`, or `fridge`; `add_item` with
-`shopping_list` or `storage_area`; and `update_item`/`archive_item` for changes.
+`shopping_list` or `storage_area`; `remove_from_grocery` to unqueue an item without deleting stock; and `update_item`/`archive_item` for other changes.
 These records are canonical inventory, not conversational memory. Never claim a
 change succeeded unless the structured tool result confirms it.
 

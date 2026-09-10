@@ -140,6 +140,29 @@ def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
     assert item["shopping_list"] is False
 
 
+def test_remove_from_grocery_unqueues_item_without_deleting_owned_stock():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    item = service.create_item(
+        "alice", name="Rice", domain="kitchen", item_kind="ingredient",
+        shopping_list=True, storage_area="pantry", default_unit="kg",
+    )
+    service.add_stock("alice", item["id"], quantity="1", unit="kg", idempotency_key="rice-stock")
+
+    removed = service.manage_inventory({
+        "action": "remove_from_grocery", "name": "rice",
+    }, owner="alice")
+    assert removed["removed"] is True
+    assert service.list_items("alice", list_name="grocery") == []
+    assert service.list_items("alice", list_name="pantry")[0]["name"] == "Rice"
+
+    replay = service.manage_inventory({
+        "action": "remove_from_grocery", "name": "rice",
+    }, owner="alice")
+    assert replay["removed"] is False
+    assert str(service.list_lots("alice", item["id"])[0]["quantity"]) == "1000.000000"
+
+
 def test_grocery_pantry_and_fridge_are_canonical_list_views():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
