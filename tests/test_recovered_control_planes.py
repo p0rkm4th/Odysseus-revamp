@@ -202,6 +202,26 @@ def test_privileged_broker_network_discovery_is_bounded(monkeypatch):
         assert rejected["ok"] is False
 
 
+def test_read_only_host_broker_allows_bounded_scans_but_rejects_mutation(monkeypatch):
+    import src.privileged_broker as broker
+
+    monkeypatch.setattr(broker.shutil, "which", lambda name: "/usr/bin/nmap" if name == "nmap" else None)
+    monkeypatch.setattr(
+        broker, "run_root",
+        lambda argv, timeout=300: {"returncode": 0, "output": "<nmaprun/>"},
+    )
+    scan = broker.handle(
+        {"action": "run_network_discovery", "cidr": "192.168.10.0/24"},
+        1, 1000, execution_location="HOST", read_only=True,
+    )
+    assert scan["ok"] is True
+    install = broker.handle(
+        {"action": "install_packages", "packages": ["nmap"]},
+        1, 1000, execution_location="HOST", read_only=True,
+    )
+    assert install == {"ok": False, "error": "host network broker is read-only"}
+
+
 def test_privileged_broker_service_enumeration_is_bounded_and_version_only(monkeypatch):
     import src.privileged_broker as broker
     captured = []
@@ -250,7 +270,7 @@ def test_network_service_enumeration_persists_through_existing_cmdb_writer(tmp_p
     import src.privileged_broker as broker
     recorded = []
 
-    def request(payload, timeout=5):
+    def request(payload, timeout=5, **_kwargs):
         if payload.get("action") == "run_network_service_enumeration":
             return {
                 "ok": True, "returncode": 0,
@@ -289,7 +309,7 @@ def test_network_service_enumeration_persists_through_existing_cmdb_writer(tmp_p
 def test_discovery_plan_is_single_use_and_unrelated_homelab_actions_fail(tmp_path, monkeypatch):
     import src.privileged_broker as broker
 
-    def request(payload, timeout=5):
+    def request(payload, timeout=5, **_kwargs):
         if payload.get("action") == "status":
             return {"ok": True, "network_scanner_available": True}
         return {"ok": True, "returncode": 0, "output": "<nmaprun/>"}
@@ -324,8 +344,11 @@ def test_network_discovery_persists_candidates_through_canonical_cmdb_writer(tmp
     import src.privileged_broker as broker
 
     recorded = []
+    socket_paths = []
+    monkeypatch.setenv("ODYSSEUS_HOST_NETWORK_BROKER_SOCKET", "/tmp/test-host-network.sock")
 
-    def request(payload, timeout=5):
+    def request(payload, timeout=5, **_kwargs):
+        socket_paths.append(_kwargs.get("socket_path"))
         if payload.get("action") == "status":
             return {"ok": True, "network_scanner_available": True}
         return {
@@ -356,6 +379,11 @@ def test_network_discovery_persists_candidates_through_canonical_cmdb_writer(tmp
         assert result["network_map_reconciled"] is True
         assert recorded[0]["hosts"][0]["ip"] == "192.168.10.4"
         assert recorded[0]["hosts"][0]["mac"] == "aa:bb:cc:dd:ee:ff"
+        assert socket_paths == [
+            "/tmp/test-host-network.sock",
+            "/tmp/test-host-network.sock",
+            "/tmp/test-host-network.sock",
+        ]
 
     asyncio.run(run())
 
@@ -363,7 +391,7 @@ def test_network_discovery_persists_candidates_through_canonical_cmdb_writer(tmp
 def test_network_discovery_does_not_claim_success_when_cmdb_persistence_fails(tmp_path, monkeypatch):
     import src.privileged_broker as broker
 
-    def request(payload, timeout=5):
+    def request(payload, timeout=5, **_kwargs):
         if payload.get("action") == "status":
             return {"ok": True, "network_scanner_available": True}
         return {"ok": True, "returncode": 0, "output": "<nmaprun/>"}

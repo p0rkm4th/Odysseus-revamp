@@ -25,6 +25,10 @@ ALLOWED_PACKAGES = frozenset({
     "gcc", "git", "tmux", "make",
 })
 ALLOWED_EXECUTABLES = frozenset({"ip", "ss", "nmap", "dig", "host", "nslookup", "traceroute"})
+READ_ONLY_ACTIONS = frozenset({
+    "status", "read_network_context", "run_network_discovery",
+    "run_network_service_enumeration", "verify_executables",
+})
 PKG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9+._:-]{0,79}$")
 
 
@@ -192,7 +196,9 @@ def handle(req, allowed_pid, allowed_uid, *, execution_location="APPLICATION_RUN
             "network_namespace_id": _network_namespace_id(),
         }
 
-    if read_only:
+    # A read-only host broker may perform bounded network observation.  It must
+    # still reject package installation or any future mutating action.
+    if read_only and action not in READ_ONLY_ACTIONS:
         return {"ok": False, "error": "host network broker is read-only"}
 
     if action == "run_network_discovery":
