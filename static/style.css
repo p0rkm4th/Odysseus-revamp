@@ -41516,17 +41516,16 @@ body.settings-sidebar-resize-active {
 .work-card span { font-size:11px; opacity:.75; text-transform:uppercase; } .work-card small { opacity:.7; }
 .control-run-card { height:auto; min-height:56px; width:100%; padding:10px 12px; text-align:left; align-content:start; }
 .control-run-card strong, .control-run-card small { min-width:0; overflow-wrap:anywhere; word-break:break-word; }
-.hades-workspace-window { position:fixed; display:flex; flex-direction:column; min-width:280px; min-height:180px; resize:both; overflow:hidden; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:12px; box-shadow:0 18px 60px #0009; }
-.hades-window-titlebar { display:flex; align-items:center; gap:4px; min-height:36px; padding:6px 8px 6px 12px; background:color-mix(in srgb,var(--panel) 86%,var(--accent,var(--red))); cursor:grab; user-select:none; }
-.hades-window-titlebar > strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.hades-window-titlebar:active { cursor:grabbing; } .hades-window-spacer { flex:1; }
-.hades-window-titlebar button { width:26px; height:26px; border:0; border-radius:6px; background:transparent; color:inherit; cursor:pointer; font-size:16px; }
-.hades-window-titlebar button:hover { background:color-mix(in srgb,var(--fg) 14%,transparent); }
-.hades-window-body { display:flex; flex:1 1 auto; flex-direction:column; min-width:0; min-height:0; overflow:auto; padding:18px; }
+.hades-workspace-window { position:fixed; display:flex; flex-direction:column; min-width:280px; min-height:180px; resize:both; overflow:hidden; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,.45); }
+.hades-window-titlebar { display:flex; align-items:center; gap:4px; min-height:36px; padding:6px 8px 6px 12px; background:inherit; cursor:grab; user-select:none; }
+.hades-window-titlebar h4 { margin:0; margin-right:auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:1rem; font-weight:600; letter-spacing:-.03em; color:var(--red); }
+.hades-window-titlebar:active { cursor:grabbing; }
+.hades-window-titlebar button { flex-shrink:0; }
+.hades-window-body { display:flex; flex:1 1 auto; flex-direction:column; min-width:0; min-height:0; overflow:auto; padding:10px; }
 .hades-window-body > * { flex:0 0 auto; width:100%; min-width:0; max-width:100%; box-sizing:border-box; }
 #hades-window-dock { position:fixed; left:50%; bottom:12px; transform:translateX(-50%); z-index:10000; display:flex; gap:6px; padding:6px; border:1px solid var(--border); border-radius:10px; background:color-mix(in srgb,var(--panel) 92%,transparent); box-shadow:0 8px 30px #0007; }
 #hades-window-dock button { border:1px solid var(--border); border-radius:7px; padding:7px 11px; background:var(--bg); color:var(--fg); cursor:pointer; }
-@media(max-width:768px){.hades-workspace-window{inset:0!important;width:100vw!important;height:100dvh!important;min-width:0;min-height:0;border:0;border-radius:0}.hades-window-titlebar{min-height:44px}.hades-window-titlebar button[data-win^="snap-"]{display:none}.hades-window-body{padding:14px}#hades-window-dock{bottom:max(8px,env(safe-area-inset-bottom));max-width:calc(100vw - 16px);overflow:auto;transform:translateX(-50%)}}
+@media(max-width:768px){.hades-workspace-window{inset:0!important;width:100vw!important;height:100dvh!important;min-width:0;min-height:0;border:0;border-radius:0}.hades-window-titlebar{min-height:44px}.hades-window-body{padding:14px}#hades-window-dock{bottom:max(8px,env(safe-area-inset-bottom));max-width:calc(100vw - 16px);overflow:auto;transform:translateX(-50%)}}
 /* Hades shared product grammar — modules should use these tokens/classes
    instead of inventing one-off spacing, status, or intake treatments. */
 :root {
@@ -41637,3 +41636,9 @@ body.settings-sidebar-resize-active {
 .osint-known-information summary { cursor:pointer; color:var(--hades-text-muted); margin-bottom:var(--hades-space-2); }
 .osint-known-information p { max-width:72ch; margin:.65em 0; }
 @media (max-width: 700px) { .osint-case-meta { margin-left:0; align-items:flex-start; text-align:left; } }
+
+/* Inventory now uses the shared workspace window chrome. Keep the domain
+   content responsible only for its tabs and records, not a second shell. */
+.inventory-module { display:flex; flex-direction:column; min-width:0; min-height:0; height:100%; overflow:hidden; }
+.inventory-module .inventory-tabs { padding-left:2px; padding-right:2px; overflow-x:auto; }
+.inventory-module .inventory-content { padding-left:2px; padding-right:2px; }
