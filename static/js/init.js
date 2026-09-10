@@ -79,12 +79,18 @@ document.addEventListener('DOMContentLoaded', markComposerUserEdited, { once: tr
       hideOn('#tool-research-btn, #research-toggle-btn', privs.can_use_research);
       // Memory & skills (rail/tool button only — UI/API entry).
       hideOn('#tool-memory-btn', privs.can_manage_memory);
-      // Agent mode toggle — force chat mode by hiding the Agent toggle button.
+      // Agent mode is a capability gate. Keep the whole control coherent:
+      // hiding only the Agent half left a stale/empty mobile toggle behind.
+      const modeToggle = document.getElementById('mode-toggle');
       if (privs.can_use_agent === false) {
-        const _agent = document.getElementById('mode-agent-btn');
         const _chat = document.getElementById('mode-chat-btn');
-        if (_agent) _agent.style.display = 'none';
+        if (modeToggle) modeToggle.style.setProperty('display', 'none');
         if (_chat) { _chat.classList.add('active'); _chat.click?.(); }
+      } else if (modeToggle) {
+        // Clear stale inline state left by an earlier restricted account or
+        // a restored mobile DOM. CSS remains the source of layout truth.
+        modeToggle.hidden = false;
+        modeToggle.style.removeProperty('display');
       }
     } catch (_) { /* DOM not ready or unexpected shape — UI gates are non-fatal */ }
   } catch (_) { /* anonymous / loopback mode — nothing to do */ }

@@ -1479,10 +1479,17 @@ function initializeEventListeners() {
       if (d.privileges) {
         window._userPrivileges = d.privileges;
         const p = d.privileges;
-        // Hide agent mode toggle
-        if (!p.can_use_agent) {
-          const modeToggle = document.getElementById('mode-toggle');
-          if (modeToggle) modeToggle.closest('.chat-input-toggle')?.style.setProperty('display', 'none');
+        // Agent mode is one owner-facing control. Hide/show the complete
+        // toggle, never just one button or a guessed wrapper class. This
+        // also clears stale inline state when a browser switches accounts.
+        const modeToggle = document.getElementById('mode-toggle');
+        if (modeToggle) {
+          if (p.can_use_agent === false) {
+            modeToggle.style.setProperty('display', 'none');
+          } else {
+            modeToggle.hidden = false;
+            modeToggle.style.removeProperty('display');
+          }
         }
         // Hide bash toggle
         if (!p.can_use_bash) {

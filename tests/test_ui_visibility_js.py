@@ -96,9 +96,23 @@ def test_agent_chat_mode_toggle_is_not_customizable_away():
 
 def test_agent_chat_mode_toggle_is_present_in_owner_composer():
     html = (ROOT / "static" / "index.html").read_text()
-    assert 'class="mode-toggle"' in html
+    assert 'class="mode-toggle" id="mode-toggle"' in html
+    assert 'data-owner-control="agent-chat-mode"' in html
     assert 'id="mode-agent-btn"' in html
     assert 'id="mode-chat-btn"' in html
+
+
+def test_agent_chat_privilege_gate_targets_the_whole_control():
+    init = (ROOT / "static" / "js" / "init.js").read_text()
+    app = (ROOT / "static" / "app.js").read_text()
+    assert "document.getElementById('mode-toggle')" in init
+    assert "document.getElementById('mode-toggle')" in app
+    assert "modeToggle.style.setProperty('display', 'none')" in init
+    assert "modeToggle.style.setProperty('display', 'none')" in app
+    # The old implementation hid only the Agent button or guessed a wrapper;
+    # that can leave an empty/missing control after an account/mobile switch.
+    assert "_agent.style.display = 'none'" not in init
+    assert "modeToggle.closest('.chat-input-toggle')" not in app
 
 
 def test_email_off_hides_email_and_its_rail_only():
