@@ -1476,7 +1476,7 @@ async def _execute_manage_assets_binding(block, owner=None):
         # list was incorrectly sent to the IT asset CLI and appeared empty.
         _inventory_action = isinstance(payload, dict) and payload.get("action") in {
             "list", "search", "get", "add_item", "update_item", "archive_item",
-            "add_stock", "consume_stock", "adjust_stock", "update_asset",
+            "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset",
         }
         _inventory_marker = isinstance(payload, dict) and (
             payload.get("domain") in {"kitchen", "household"}
@@ -1494,7 +1494,7 @@ async def _execute_manage_assets_binding(block, owner=None):
             isinstance(payload, dict)
             and payload.get("action") in {
                 "add_item", "update_item", "archive_item", "add_stock",
-                "consume_stock", "adjust_stock",
+                "remove_from_grocery", "consume_stock", "adjust_stock",
             }
         )
         # Kitchen/household inventory actions share the canonical inventory
