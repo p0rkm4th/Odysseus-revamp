@@ -648,7 +648,7 @@ class FinanceService:
 
     def query_transactions(self, owner: str, *, start: date | None = None, end: date | None = None,
                            account_id: str | None = None, merchant: str | None = None,
-                           status: str | None = None, direction: str | None = None,
+                           category: str | None = None, status: str | None = None, direction: str | None = None,
                            sort: str | None = None, limit: int = 50) -> dict[str, Any]:
         limit = max(1, min(int(limit), 200))
         query = self.db.query(FinanceTransaction).filter(
@@ -658,6 +658,14 @@ class FinanceService:
         if end: query = query.filter(FinanceTransaction.transaction_date <= end)
         if account_id: query = query.filter(FinanceTransaction.account_id == account_id)
         if merchant: query = query.filter(FinanceTransaction.merchant.ilike(f"%{merchant[:100]}%"))
+        if category:
+            category_key = category.casefold()
+            if category_key == "dining_out":
+                query = query.filter(FinanceTransaction.provider_category.in_(
+                    ["Restaurants", "Fast Food", "Food & Dining", "Alcohol & Bars"]
+                ))
+            else:
+                query = query.filter(FinanceTransaction.provider_category.ilike(category[:100]))
         if status:
             status = status.lower()
             if status not in {"pending", "posted"}: raise FinanceError("status must be pending or posted")
@@ -750,7 +758,7 @@ class FinanceService:
         start = _transaction_date(params.get("start")) if params.get("start") else today.replace(day=1)
         end = _transaction_date(params.get("end")) if params.get("end") else today
         if action == "coverage": return self.coverage(owner, start, end)
-        if action == "transactions": return self.query_transactions(owner, start=start, end=end, merchant=params.get("merchant"), status=params.get("status"), direction=params.get("direction"), sort=params.get("sort"), limit=params.get("limit", 50))
+        if action == "transactions": return self.query_transactions(owner, start=start, end=end, merchant=params.get("merchant"), category=params.get("category"), status=params.get("status"), direction=params.get("direction"), sort=params.get("sort"), limit=params.get("limit", 50))
         if action == "spending": return self.spending(owner, start, end, merchant=params.get("merchant"), category=params.get("category"))
         if action == "cash_flow": return self.cash_flow(owner, start, end)
         if action == "shared_expenses": return {"shared_expenses": self.list_shared_expenses(owner, _required_text(params.get("household_id"), "household_id"))}

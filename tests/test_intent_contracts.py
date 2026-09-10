@@ -91,6 +91,19 @@ def test_finance_category_selector_preserves_category_and_year_range():
     assert payload["start"].endswith("-01-01")
 
 
+def test_ranked_finance_read_is_bounded_to_posted_outflows():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "What was my most expensive purchase this year?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_read_fast_path_payload(resolved.binding_name, resolved.action_id, frame.as_dict(), query=query)
+    assert payload["action"] == "transactions"
+    assert payload["status"] == "posted"
+    assert payload["direction"] == "outflow"
+    assert "category" not in payload
+
+
 def test_concise_merchant_spending_question_is_not_unfiltered():
     from src.aci import canonical_read_fast_path_payload
 

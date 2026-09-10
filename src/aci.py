@@ -2134,14 +2134,22 @@ def provisional_intent_projection(
         if contextual_frame.domain_concept in DOMAIN_CONTRACTS:
             frame = contextual_frame
     if finance_ranked_followup and frame.domain_concept == "FINANCE":
-        # Preserve the prior bounded date/category scope while changing only
-        # the read projection to ranked posted outflows. The latest phrase
-        # selects the projection; it never broadens owner or currency scope.
-        prior = compile_intent(recent_query)
-        if prior.domain_concept == "FINANCE":
-            filters = dict(prior.filters)
-            filters.update({"view": "transactions", "sort": "amount_desc", "direction": "outflow", "limit": 10})
-            frame = replace(frame, filters=filters)
+        # An independent ranked question owns its own bounded scope.  Only
+        # explicit references such as "from that" may inherit the prior
+        # Finance read; otherwise a stale category (for example insurance)
+        # must not leak into "my most expensive purchase this year".
+        filters = dict(frame.filters)
+        ranked_context_reference = bool(re.search(
+            r"\b(?:from|of|within|using)\s+(?:that|those|these|the\s+above)\b",
+            latest,
+            re.IGNORECASE,
+        ))
+        if ranked_context_reference:
+            prior = compile_intent(recent_query)
+            if prior.domain_concept == "FINANCE":
+                filters = dict(prior.filters)
+        filters.update({"view": "transactions", "sort": "amount_desc", "direction": "outflow", "limit": 10})
+        frame = replace(frame, filters=filters)
     if contextual_finance_read and frame.domain_concept == "FINANCE":
         # This is a fresh bounded read using the prior Finance question as
         # context, not a durable Work continuation.
@@ -3144,6 +3152,7 @@ def canonical_read_fast_path_payload(
         if sort == "amount_desc":
             payload["sort"] = sort
             payload["direction"] = "outflow"
+            payload["status"] = "posted"
             payload["limit"] = min(max(int(filters.get("limit") or 10), 1), 20)
     if binding == "read_household" and action in {"overview", "list_items"}:
         frame = frame if isinstance(frame, Mapping) else {}
