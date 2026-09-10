@@ -1699,6 +1699,23 @@ def compile_intent(
                 reference_filters["merchant"] = merchant[:100]
                 if finance_view in {None, "coverage"}:
                     reference_filters["view"] = "spending"
+        # Preserve ordinary category language for deterministic Finance reads.
+        # This is intentionally bounded to the phrase after "spending on" /
+        # "spent on" (or "expenses for"), and stops at a date qualifier;
+        # FinanceService remains authoritative for matching canonical provider
+        # categories. Without this projection, a request such as "insurance
+        # this year" silently became an unfiltered year total.
+        category_match = re.search(
+            r"\b(?:spend(?:ing|t)?|expense|expenses|cost)\s+(?:on|for)\s+"
+            r"([a-z][a-z &'\-/]{1,79}?)(?=\s+(?:this|last|next|for|since|between|during|in|on)\b|[?.!,]|$)",
+            q,
+            re.IGNORECASE,
+        )
+        if category_match:
+            category = re.sub(r"\s+", " ", category_match.group(1)).strip(" .,!?:;")
+            if category.casefold() not in {"the", "that", "it"}:
+                reference_filters["category"] = category[:100]
+                reference_filters["view"] = "spending"
         if re.search(r"\b(?:dining\s+out|eating\s+out)\b", q):
             reference_filters["category"] = "dining_out"
             reference_filters["view"] = "spending"

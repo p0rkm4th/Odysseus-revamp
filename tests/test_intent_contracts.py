@@ -74,6 +74,23 @@ def test_finance_merchant_selector_reaches_deterministic_spending_payload():
     assert payload["end"]
 
 
+def test_finance_category_selector_preserves_category_and_year_range():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "How much did I spend on insurance this year?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["category"] == "insurance"
+    assert frame.filters["start"].endswith("-01-01")
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
+    )
+    assert payload["category"] == "insurance"
+    assert payload["start"].endswith("-01-01")
+
+
 def test_concise_merchant_spending_question_is_not_unfiltered():
     from src.aci import canonical_read_fast_path_payload
 
