@@ -59,6 +59,27 @@ def _drop_to_workspace_user():
     os.setgroups([WORKSPACE_GID])
     os.setgid(WORKSPACE_GID)
     os.setuid(WORKSPACE_UID)
+
+def _workspace_environment(workspace):
+    """Build the minimal environment allowed for model-owned workspace shell.
+
+    The application environment can contain provider credentials and other
+    process secrets.  A normal YOLO lease still needs a predictable PATH and
+    workspace identity, but it must not inherit arbitrary service variables.
+    Hardcore YOLO already starts with an empty environment inside bubblewrap.
+    """
+    env = {
+        "PATH": os.getenv("PATH") or "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "HOME": workspace,
+        "PWD": workspace,
+        "TERM": os.getenv("TERM") or "xterm-256color",
+    }
+    for key in ("LANG", "LC_ALL", "LC_CTYPE"):
+        value = os.getenv(key)
+        if value:
+            env[key] = value
+    return env
+
 def execute(db, owner, lease_id, command):
     row=active(db,owner,lease_id)
     if not row: raise ValueError("workspace_yolo lease is expired, revoked, or unknown")
@@ -88,7 +109,7 @@ def execute(db, owner, lease_id, command):
                     env={},
                 )
         else:
-            proc=subprocess.run(command_argv,cwd=row.workspace,capture_output=True,text=True,timeout=300,env={**os.environ,"PWD":row.workspace,"HOME":row.workspace},preexec_fn=_drop_to_workspace_user)
+            proc=subprocess.run(command_argv,cwd=row.workspace,capture_output=True,text=True,timeout=300,env=_workspace_environment(row.workspace),preexec_fn=_drop_to_workspace_user)
     except Exception:
         if action:
             WorkEngine(db).set_run_status(owner, row.run_id, "failed", {"error_summary": "workspace command failed before completion"})
