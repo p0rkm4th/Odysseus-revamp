@@ -527,8 +527,20 @@ class FinanceService:
             coverage_state = "UNKNOWN" if not dates or not (successful_items or imported_sources) else "LIMITED"
         else:
             coverage_state = "AVAILABLE"
+        successful_sync_times = [
+            item.last_successful_sync_at
+            for item in self.db.query(PlaidItem).filter(PlaidItem.owner == owner).all()
+            if item.last_successful_sync_at
+        ] + [
+            account.last_synced_at
+            for account in imported_sources
+            if account.last_synced_at
+        ]
         return {
-            "as_of": max((item.last_successful_sync_at for item in self.db.query(PlaidItem).filter(PlaidItem.owner == owner).all() if item.last_successful_sync_at), default=None),
+            # `as_of` is the newest canonical ingestion timestamp regardless
+            # of whether the owner used Plaid or a local CSV snapshot. It is
+            # not a claim that CSV data is live-provider data.
+            "as_of": max(successful_sync_times, default=None),
             "account_count": self.db.query(FinanceAccount).filter(FinanceAccount.owner == owner).count(),
             "transaction_date_start": dates[0].isoformat() if dates else None,
             "transaction_date_end": dates[-1].isoformat() if dates else None,
