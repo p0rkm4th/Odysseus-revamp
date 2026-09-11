@@ -86,6 +86,15 @@ def test_recipe_composition_drops_sentence_article_before_saved_recipe_lookup():
     assert recipe_composition_name(request) == "Shared pasta test"
 
 
+def test_kitchen_delete_uses_bounded_archive_for_named_items():
+    query = "delete the basil-test, dogfood test, and ketchup from the kitchen"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_inventory_mutation_payload(resolved.action_id, query)
+    assert resolved.action_id == "archive_item"
+    assert payload["items"] == ["basil-test", "dogfood test", "ketchup"]
+
+
 def test_recipe_missing_question_uses_bounded_saved_recipe_lookup():
     question = "What am I missing for spaghetti?"
     assert is_recipe_missing_request(question)

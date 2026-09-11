@@ -3358,6 +3358,28 @@ def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, A
             "shopping_list": True, "idempotency_key": f"inventory:{key}",
         }
 
+    if action == "archive_item":
+        match = re.search(
+            r"\b(?:delete|remove|retire|forget)\s+(.+?)\s+from\s+"
+            r"(?:(?:my|the)\s+)?(?:kitchen|pantry|fridge|freezer|inventory|stock)\b",
+            text, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        raw_names = match.group(1).strip(" .,!?:;")
+        if re.fullmatch(r"(?:everything|all|all\s+items)", raw_names, re.IGNORECASE):
+            return None
+        names = [part.strip(" .,!?:;") for part in raw_names.split(",")]
+        if len(names) > 1 and re.match(r"^and\s+", names[-1], re.IGNORECASE):
+            names[-1] = re.sub(r"^and\s+", "", names[-1], flags=re.IGNORECASE).strip(" .,!?:;")
+        names = [re.sub(r"^(?:the|an|a)\s+", "", part, flags=re.IGNORECASE) for part in names if part]
+        if not names or len(names) > 32 or not all(1 <= len(part) <= 200 for part in names):
+            return None
+        return {
+            "action": action, "items": names, "domain": "kitchen",
+            "storage_area": "kitchen", "idempotency_key": f"inventory:{key}",
+        }
+
     units = r"kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each"
     words = {"one": 1, "a": 1, "an": 1, "two": 2, "three": 3,
              "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
@@ -3433,6 +3455,12 @@ def _inventory_payload_complete(payload: Mapping[str, Any], action: str) -> bool
         )
     if action == "remove_from_grocery":
         return bool(str(payload.get("name") or "").strip())
+    if action == "archive_item":
+        items = payload.get("items")
+        return bool(
+            (isinstance(items, list) and items and all(str(item).strip() for item in items))
+            or str(payload.get("name") or "").strip()
+        )
     return (
         bool(str(payload.get("name") or "").strip())
         and payload.get("quantity") is not None

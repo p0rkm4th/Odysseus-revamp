@@ -262,6 +262,20 @@ def test_multi_item_grocery_mutation_discards_model_recipe_phrase():
     }
 
 
+def test_named_kitchen_archive_removes_items_from_active_inventory_without_model_fallback():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    for name in ("basil-test", "dogfood test", "ketchup"):
+        service.create_item("alice", name=name, domain="kitchen", item_kind="ingredient")
+    result = service.manage_inventory({
+        "action": "archive_item",
+        "items": ["basil-test", "dogfood test", "ketchup"],
+    }, owner="alice")
+    assert result["count"] == 3
+    assert service.list_items("alice", domain="kitchen") == []
+    assert len(service.list_items("alice", domain="kitchen", include_archived=True)) == 3
+
+
 def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

@@ -992,7 +992,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
     # explicit canonical Actions instead of model-selected prose.
     "INVENTORY_MUTATION": DomainContract(
         "INVENTORY_MUTATION", "inventory.manage",
-        {"CREATE": "add_item", "UPDATE": "add_stock", "EXECUTE": "consume_stock", "DELETE": "remove_from_grocery"},
+        {"CREATE": "add_item", "UPDATE": "add_stock", "EXECUTE": "consume_stock", "DELETE": "remove_from_grocery", "ARCHIVE": "archive_item"},
         "manage_assets",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "inventory_mutation",
@@ -1739,6 +1739,15 @@ def compile_intent(
         elif re.search(r"\brestaurants?\b", q):
             reference_filters["category"] = "Restaurants"
             reference_filters["view"] = "spending"
+    elif concept == "HOUSEHOLD_ITEM" and operation == "DELETE":
+        if re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q):
+            reference_filters["list_name"] = "grocery"
+        else:
+            storage = re.search(r"\b(?:pantry|fridge|freezer)\b", q)
+            if storage:
+                reference_filters["storage_area"] = storage.group(0).casefold()
+            elif re.search(r"\b(?:kitchen|inventory|stock)\b", q):
+                reference_filters["storage_area"] = "kitchen"
     elif concept == "HOUSEHOLD_ITEM" and operation == "READ":
         if re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q):
             reference_filters["list_name"] = "grocery"
@@ -1884,6 +1893,12 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:
         return ResolvedContract(frame, contract, None, None, contract.binding, False, "target_required")
     action_key = frame.operation_class
+    if (
+        frame.domain_concept == "HOUSEHOLD_ITEM"
+        and frame.operation_class == "DELETE"
+        and frame.filters.get("list_name") != "grocery"
+    ):
+        action_key = "ARCHIVE"
     # Read views are part of the canonical frame.  In particular, Finance
     # spending/cash-flow/transaction reads must not collapse to the generic
     # coverage action, or the renderer receives the wrong contract and the
