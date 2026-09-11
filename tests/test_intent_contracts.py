@@ -1,3 +1,4 @@
+import calendar
 from datetime import date
 
 import pytest
@@ -68,7 +69,12 @@ def test_finance_walk_through_uses_bounded_spending_overview():
     frame = compile_intent("Walk me through my finances from the last 3 months")
     assert frame.domain_concept == "FINANCE"
     assert frame.filters["view"] == "spending"
-    assert frame.filters["start"].endswith("-06-10")
+    today = date.today()
+    month_index = today.year * 12 + today.month - 1 - 3
+    year, month_zero = divmod(month_index, 12)
+    expected_day = min(today.day, calendar.monthrange(year, month_zero + 1)[1])
+    assert frame.filters["start"] == date(year, month_zero + 1, expected_day).isoformat()
+    assert frame.filters["end"] == today.isoformat()
     assert "merchant" not in frame.filters
 
 
@@ -82,7 +88,12 @@ def test_finance_walkme_transcription_typo_stays_on_canonical_read_path():
     frame = compile_intent("Walkme through my past 4 months of finances")
     assert frame.domain_concept == "FINANCE"
     assert frame.filters["view"] == "spending"
-    assert frame.filters["start"].endswith("-05-10")
+    today = date.today()
+    month_index = today.year * 12 + today.month - 1 - 4
+    year, month_zero = divmod(month_index, 12)
+    expected_day = min(today.day, calendar.monthrange(year, month_zero + 1)[1])
+    assert frame.filters["start"] == date(year, month_zero + 1, expected_day).isoformat()
+    assert frame.filters["end"] == today.isoformat()
 
 
 def test_paycheck_question_uses_bounded_posted_inflow_transactions():
