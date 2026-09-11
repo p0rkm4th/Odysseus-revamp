@@ -19,6 +19,18 @@ import uuid
 from typing import Any, AsyncGenerator, List, Dict, Mapping, Optional, Set
 from urllib.parse import urlparse
 
+
+def _stream_json(payload: Any) -> str:
+    """Serialize bounded SSE payloads without dropping a completed answer.
+
+    Canonical read projections may contain provider/database timestamps (and
+    other scalar values such as Decimal) that are safe to expose in the
+    already-authorized result but are not natively JSON serializable.  A
+    metrics serialization failure must never turn a successful tool result
+    into an empty or interrupted owner response.
+    """
+    return json.dumps(payload, default=str)
+
 from src.llm_core import (
     dedupe_model_candidates,
     stream_llm_with_fallback,
@@ -1682,7 +1694,7 @@ async def stream_aci_runtime(
             "tool_calls": 0,
             "missing_workspace": True,
         }
-        yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
+        yield f"data: {_stream_json({'type': 'metrics', 'data': metrics})}\n\n"
         yield "data: [DONE]\n\n"
         return
     logger.info(
@@ -1971,7 +1983,7 @@ async def stream_aci_runtime(
         }
         if isinstance(direct_actual_endpoint_cost_tracked, bool):
             metrics["endpoint_cost_tracked"] = direct_actual_endpoint_cost_tracked
-        yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
+        yield f"data: {_stream_json({'type': 'metrics', 'data': metrics})}\n\n"
         yield "data: [DONE]\n\n"
         return
 
@@ -7101,7 +7113,7 @@ async def stream_aci_runtime(
         metrics["aci_answer_synthesis_count"] = int(
             _aci_model_burden.get("answer_synthesis", 0)
         )
-    yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
+    yield f"data: {_stream_json({'type': 'metrics', 'data': metrics})}\n\n"
 
     # Teacher-escalation: inline takeover visible in the chat stream.
     # The student just finished; if Tier 1 flags failure, the teacher
