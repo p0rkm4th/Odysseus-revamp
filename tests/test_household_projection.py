@@ -159,6 +159,28 @@ def test_recipe_shortages_can_be_reviewed_and_queued_without_changing_stock():
     assert str(service.list_lots("alice", rice["id"])[0]["quantity"]) == "500.000000"
 
 
+def test_imported_recipe_reaches_canonical_stock_comparison_and_grocery_queue():
+    from src.recipe_import import parse_recipe_text
+
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    pasta = service.create_item(
+        "alice", name="spaghetti", domain="kitchen", item_kind="ingredient",
+        default_unit="g",
+    )
+    service.add_stock("alice", pasta["id"], quantity=200, unit="g", idempotency_key="import-stock")
+    candidate = parse_recipe_text(
+        "Weeknight spaghetti\n\nIngredients:\n400 g spaghetti\n1 can tomato sauce\n\nDirections:\nBoil."
+    )
+    recipe = service.create_recipe("alice", **candidate)
+    missing = service.missing_ingredients("alice", recipe["id"])
+    assert [row["name"] for row in missing["shortages"]] == ["spaghetti", "tomato sauce"]
+    queued = service.queue_missing_ingredients("alice", recipe["id"])
+    assert {row["name"] for row in service.list_items("alice", list_name="grocery")} == {"spaghetti", "tomato sauce"}
+    assert queued["stock_changed"] is False
+    assert str(service.list_lots("alice", pasta["id"])[0]["quantity"]) == "200.000000"
+
+
 def test_multi_item_grocery_mutation_creates_individual_canonical_items():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
