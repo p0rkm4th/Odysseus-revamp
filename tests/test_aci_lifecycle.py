@@ -139,6 +139,17 @@ def test_canonical_recipe_missing_answer_is_read_only_and_grounded():
     )
 
 
+def test_canonical_recipe_missing_answer_preserves_ambiguity_guidance():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_missing_by_name"}',
+        "output": '{"error":"I found multiple saved recipes for that dish. Choose one before I compare ingredients or change Grocery.","error_code":"recipe_ambiguous"}',
+        "exit_code": 1,
+    }
+    assert canonical_recipe_missing_answer([event]) == (
+        "I found multiple saved recipes for that dish. Choose one before I compare ingredients."
+    )
+
+
 def test_canonical_recipe_cook_answer_requires_structured_success():
     event = {
         "tool": "manage_assets", "command": '{"action":"recipe_cook"}',
@@ -168,6 +179,17 @@ def test_canonical_recipe_queue_answer_explains_missing_saved_recipe():
         "exit_code": 1,
     }
     assert "Import or paste the recipe first" in canonical_recipe_queue_answer([event])
+
+
+def test_canonical_recipe_queue_answer_preserves_ambiguity_guidance():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_queue_missing_by_name"}',
+        "output": '{"error":"I found multiple saved recipes for that dish. Choose one before I compare ingredients or change Grocery.","error_code":"recipe_ambiguous"}',
+        "exit_code": 1,
+    }
+    assert canonical_recipe_queue_answer([event]) == (
+        "I found multiple saved recipes for that dish. Choose one before I queue ingredients."
+    )
 
 
 def test_canonical_recipe_suggest_answer_uses_structured_availability_result():
