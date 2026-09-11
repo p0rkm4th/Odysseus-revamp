@@ -4981,6 +4981,7 @@ def project_post_result_transition(
         state is PostResultState.BLOCKED
         and isinstance(selected_action, Mapping)
         and not bool(isinstance(result, Mapping) and result.get("approval_required"))
+        and not bool(isinstance(result, Mapping) and result.get("retryable"))
     ):
         return PostResultTransition(
             state,
