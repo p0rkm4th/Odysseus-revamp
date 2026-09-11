@@ -3255,6 +3255,16 @@ def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, A
         name = match.group(1).strip(" .,!?:;")
         if not 1 <= len(name) <= 200:
             return None
+        # A recipe-composition request is not a single grocery item. Leave it
+        # for the recipe-capable model path instead of projecting the owner's
+        # request phrase (for example, "the ingredients I am missing") into
+        # canonical inventory.
+        if re.match(
+            r"^(?:(?:the|those|these|my|some|all)\s+)?(?:ingredients?|items?)\b",
+            name,
+            re.IGNORECASE,
+        ):
+            return None
         # Keep an explicit owner-authored set as separate canonical items.
         # Recipe-shaped text (for example, "add ingredients for spaghetti")
         # intentionally remains a single value and is rejected by the service
