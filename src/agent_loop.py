@@ -4723,6 +4723,21 @@ async def stream_aci_runtime(
                     "[agent] bounded recipe proposal fallback ingredients=%s",
                     len(_recipe_candidate["ingredients"]),
                 )
+            else:
+                # Never let a text-only model's simulated tool narrative reach
+                # the owner as if it were an observation. A named dish can
+                # have materially different recipes, so ask for the smallest
+                # missing input instead of guessing or mutating inventory.
+                if round_response and full_response.endswith(round_response):
+                    full_response = full_response[:-len(round_response)]
+                round_response = (
+                    "I can add the missing ingredients, but I need a specific "
+                    "recipe or ingredient list for that dish first. Import or "
+                    "paste the recipe, and I’ll compare it with your pantry "
+                    "and add only what’s missing to Grocery."
+                )
+                full_response += round_response
+                _force_answer = True
 
         # A strict-text local model can ignore the repair instruction again.
         # For an explicitly scoped network request, finish capability
