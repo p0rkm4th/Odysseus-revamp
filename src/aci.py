@@ -3951,6 +3951,15 @@ def canonical_recipe_queue_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     } or not isinstance(payload, Mapping):
         return None
     if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        detail = str(payload.get("error") or payload.get("message") or "").strip()
+        if "no saved recipe matched" in detail.casefold():
+            return (
+                "I don’t have a saved recipe for that dish yet. Import or paste "
+                "the recipe first, and I’ll compare it with your stock and queue "
+                "only what’s missing."
+            )
+        if "more than one saved recipe" in detail.casefold():
+            return "I found multiple saved recipes for that dish. Choose one before I queue ingredients."
         return "I couldn't compare that recipe with your stock, so nothing was added to Grocery."
     queued = payload.get("queued")
     if isinstance(queued, Mapping):

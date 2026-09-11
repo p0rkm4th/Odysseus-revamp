@@ -74,6 +74,15 @@ def test_canonical_recipe_queue_answer_lists_verified_grocery_items():
     )
 
 
+def test_canonical_recipe_queue_answer_explains_missing_saved_recipe():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_queue_missing_by_name"}',
+        "output": '{"error":"No saved recipe matched that dish. Import or paste a recipe first."}',
+        "exit_code": 1,
+    }
+    assert "Import or paste the recipe first" in canonical_recipe_queue_answer([event])
+
+
 def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():
     for query in (
         "yo what computers do i got",
