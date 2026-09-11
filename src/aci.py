@@ -4159,10 +4159,11 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     recipes = payload.get("recipes")
     if not isinstance(recipes, list):
         return None
+    budget_requested = bool(payload.get("budget_constraint") or request.get("budget_constraint"))
     budget_note = (
         " I can compare what you have, but I do not have a verified ingredient-price "
         "or budget projection, so this is not a cost ranking."
-        if payload.get("budget_constraint")
+        if budget_requested
         else ""
     )
     if not recipes:

@@ -169,7 +169,7 @@ def test_empty_budget_recipe_result_still_discloses_cost_limit():
     event = {
         "tool": "manage_assets",
         "command": '{"action":"recipe_suggest","budget_constraint":true}',
-        "output": '{"available_only":true,"budget_constraint":true,"recipes":[]}',
+        "output": '{"available_only":true,"recipes":[]}',
         "exit_code": 0,
     }
     answer = canonical_recipe_suggest_answer([event])
