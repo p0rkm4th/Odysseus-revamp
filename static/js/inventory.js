@@ -96,6 +96,7 @@ function shell() {
   node.addEventListener('click', onClick);
   node.addEventListener('submit', onSubmit);
   node.addEventListener('input', onInput);
+  node.addEventListener('change', onChange);
   return node;
 }
 
@@ -195,10 +196,11 @@ async function loadRecipes() {
 
 function intakeForm() {
   return `<form id="inventory-intake-form" class="inventory-form">
-    <div class="inventory-callout"><strong>Review required.</strong> Text, voice transcripts, and photo descriptions are untrusted. Nothing changes until the structured draft is ready and you explicitly confirm it.</div>
-    <label>Source <select name="source_type"><option value="natural_language">Natural language</option><option value="voice">Voice transcript</option><option value="photo">Photo</option><option value="telegram">Telegram</option></select></label>
+    <div class="inventory-callout"><strong>Review required.</strong> Text, voice transcripts, and receipt photos are untrusted. Nothing changes until the structured draft is ready and you explicitly confirm it.</div>
+    <label>Source <select name="source_type"><option value="natural_language">Natural language</option><option value="voice">Voice transcript</option><option value="photo">Receipt or pantry photo</option><option value="telegram">Telegram</option></select></label>
     <label class="inventory-wide">What did you add or use?<textarea name="source_text" maxlength="4000" placeholder="For example: Added 2 kg of rice to the pantry"></textarea></label>
-    <label class="inventory-wide">Server upload IDs <input name="attachment_ids" autocomplete="off" placeholder="Optional opaque upload ID"></label>
+    <label class="inventory-wide" data-photo-input hidden>Photo <input name="photo" type="file" accept="image/*" capture="environment"><small class="inventory-muted">Upload a receipt or pantry photo. Hades will prepare a draft for review; it will not add stock automatically.</small></label>
+    <label class="inventory-wide">Existing server upload ID <input name="attachment_ids" autocomplete="off" placeholder="Optional advanced attachment ID"></label>
     <fieldset class="inventory-candidate"><legend>Reviewed operation</legend>
       <label>Action <select name="action"><option value="add">Add</option><option value="remove">Remove</option></select></label>
       <label>Area <select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT hardware</option></select></label>
@@ -259,6 +261,26 @@ async function onSubmit(event) {
     let importedRecipeId = null;
     if (form.id === 'inventory-intake-form') {
       const candidate = {action:data.action, domain:data.domain, name:data.name, quantity:data.quantity, unit:data.unit, category:data.category, brand:data.brand, manufacturer:data.manufacturer, model:data.model, serial_number:data.serial_number, part_number:data.part_number, condition:data.condition};
+      if (data.source_type === 'photo') {
+        const photo = form.querySelector('input[name="photo"]')?.files?.[0];
+        if (!photo && !String(data.attachment_ids || '').trim()) throw new Error('Choose a receipt or pantry photo first.');
+        let attachmentIds = opaqueAttachmentIds(data.attachment_ids);
+        if (photo) {
+          const upload = new FormData();
+          upload.append('files', photo);
+          const uploaded = await api('/api/upload', {method:'POST', body:upload});
+          const id = uploaded.files?.[0]?.id;
+          if (!id) throw new Error('The photo upload did not return an attachment.');
+          attachmentIds = [id];
+        }
+        const extracted = await api('/api/inventory/intake/extract', {method:'POST', body:JSON.stringify({
+          source_type: 'photo', source_text: data.source_text || null,
+          attachment_ids: attachmentIds, idempotency_key: makeIdempotencyKey('intake-photo'),
+        })});
+        editingDraft = null;
+        renderDraft(extracted);
+        return;
+      }
       if (editingDraft) {
         renderDraft(await api(`/api/inventory/intake/drafts/${encodeURIComponent(editingDraft.draft_id)}`, {method:'PUT', body:JSON.stringify({expected_revision:editingDraft.revision, source_text:data.source_text, candidates:[candidate]})}));
       } else {
@@ -303,6 +325,15 @@ async function onSubmit(event) {
     else await loadStock();
   } catch (error) { uiModule.showError?.(error.message); }
   finally { if (submit) submit.disabled = false; }
+}
+
+function updateIntakeSourceVisibility(form) {
+  const photoInput = form?.querySelector('[data-photo-input]');
+  if (!photoInput) return;
+  const isPhoto = form.elements.source_type?.value === 'photo';
+  photoInput.hidden = !isPhoto;
+  const file = form.elements.photo;
+  if (!isPhoto && file) file.value = '';
 }
 
 async function onClick(event) {
@@ -368,6 +399,12 @@ function onInput(event) {
   searchTimer = setTimeout(loadStock, 250);
 }
 
+function onChange(event) {
+  if (event.target.matches('#inventory-intake-form select[name="source_type"]')) {
+    updateIntakeSourceVisibility(event.target.form);
+  }
+}
+
 async function showRecipe(id) {
   try {
     const [{recipe}, plan] = await Promise.all([api(`/api/recipes/${encodeURIComponent(id)}`), api(`/api/recipes/${encodeURIComponent(id)}/can-make`)]);
@@ -427,7 +464,10 @@ function renderTab() {
   else if (tab === 'fridge') { editingDraft = null; loadStorageArea('fridge'); }
   else if (tab === 'grocery') { editingDraft = null; loadGrocery(); }
   else if (tab === 'recipes') { editingDraft = null; loadRecipes(); }
-  else document.getElementById('inventory-content').innerHTML = intakeForm();
+  else {
+    document.getElementById('inventory-content').innerHTML = intakeForm();
+    updateIntakeSourceVisibility(document.getElementById('inventory-intake-form'));
+  }
 }
 
 export function openPanel() {
