@@ -442,6 +442,45 @@ def test_canonical_read_is_a_terminal_durable_run_result(monkeypatch):
         engine.dispose()
 
 
+def test_verified_inventory_write_persists_payload_and_closes_run(monkeypatch):
+    """Inventory writes must not remain planning after canonical readback."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-inventory-write", "Put rice in the pantry",
+            intent={
+                "domains": ["household"],
+                "domain_concept": "HOUSEHOLD_ITEM",
+                "operation_class": "UPDATE",
+            },
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_assets", {
+                "action": "add_stock", "domain": "kitchen", "name": "rice",
+                "quantity": 1, "unit": "kg", "storage_area": "pantry",
+            },
+        )
+        completed = bridge.record_result(
+            "alice", action_id,
+            {
+                "success": True,
+                "item": {"id": "item-rice", "name": "rice"},
+                "verification": {"status": "VERIFIED", "readback": {"item": {"id": "item-rice"}}},
+            },
+        )
+        assert completed["write_completion"]["lifecycle_state"] == "succeeded"
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            stored = db.query(WorkResult).filter_by(run_id=run_id, owner="alice").one()
+            assert run.status == "completed"
+            assert run.lifecycle_state == "succeeded"
+            assert stored.domain_reference["verification"]["status"] == "VERIFIED"
+            assert stored.domain_reference["item"]["id"] == "item-rice"
+    finally:
+        engine.dispose()
+
+
 def test_canonical_read_unavailable_is_not_recorded_as_success(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
@@ -605,8 +644,8 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
             }},
         )
         assert completed["status"] == "completed"
-        assert completed["run_lifecycle_state"] == "verifying"
-        verification = bridge.verify_bound_action("alice", action_id)
+        assert completed["run_lifecycle_state"] == "succeeded"
+        verification = completed["verification"]
         assert verification["verified"] is True
         assert verification["run_lifecycle_state"] == "succeeded"
         with session_factory() as db:

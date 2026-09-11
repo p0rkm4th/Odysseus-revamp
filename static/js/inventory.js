@@ -224,7 +224,7 @@ async function loadSharing() {
 }
 
 function renderRecipesScaffold() {
-  return `<div class="inventory-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><div><button data-action="import-recipe">Import</button><button class="inventory-primary" data-action="new-recipe">+ Recipe</button></div></div><div id="inventory-recipe-list">${loading()}</div>`;
+  return `<section class="recipe-hero"><div><span class="recipe-eyebrow">COOKBOOK</span><h3>Recipes</h3><p>See what you can make, what is missing, and queue only the ingredients you need.</p></div><div class="recipe-hero-actions"><button data-action="import-recipe">Import recipe</button><button class="inventory-primary" data-action="new-recipe">+ New recipe</button></div></section><div class="recipe-guidance"><span class="recipe-guidance-mark">✦</span><span><strong>Recipes use your canonical stock.</strong> Grocery is only a to-buy queue; cooking changes owned stock after you confirm.</span></div><div id="inventory-recipe-summary" class="recipe-summary" aria-live="polite"></div><div id="inventory-recipe-list">${loading()}</div>`;
 }
 
 async function loadRecipes() {
@@ -234,12 +234,31 @@ async function loadRecipes() {
   try {
     const {recipes = []} = await api('/api/recipes');
     const plans = await Promise.all(recipes.map(recipe => api(`/api/recipes/${encodeURIComponent(recipe.id)}/can-make`)));
+    const readyCount = plans.filter(plan => plan.can_make).length;
+    const missingCount = plans.reduce((total, plan) => total + (plan.shortages || []).length, 0);
+    const summary = document.getElementById('inventory-recipe-summary');
+    if (summary) summary.innerHTML = `<span><strong>${recipes.length}</strong> saved</span><span><strong>${readyCount}</strong> ready now</span><span><strong>${missingCount}</strong> missing checks</span>`;
     const list = document.getElementById('inventory-recipe-list');
-    list.innerHTML = recipes.length ? recipes.map((recipe, i) => { const ingredientCount = (recipe.ingredients || []).length; return `<article class="inventory-card inventory-recipe" data-recipe-id="${escapeHtml(recipe.id)}">
-      <div class="inventory-card-main"><h3>${escapeHtml(recipe.name)}</h3><p>${escapeHtml(recipe.servings)} servings · ${ingredientCount} ingredient${ingredientCount === 1 ? '' : 's'}</p></div>
-      <span class="inventory-ready ${plans[i].can_make ? 'yes' : 'no'}">${plans[i].can_make ? 'Ready to make' : `${plans[i].shortages.length} shortage${plans[i].shortages.length === 1 ? '' : 's'}`}</span>
-      <button data-action="recipe-details">Details</button>${plans[i].can_make ? '<button class="inventory-primary" data-action="cook">Cook</button>' : ''}
-    </article>`; }).join('') : '<div class="inventory-state">No recipes yet.</div>';
+    list.innerHTML = recipes.length ? recipes.map((recipe, i) => {
+      const plan = plans[i] || {};
+      const ingredients = recipe.ingredients || [];
+      const shortageNames = new Set((plan.shortages || []).map(shortage => String(shortage.name || '').toLowerCase()));
+      const preview = ingredients.slice(0, 5).map(ingredient => {
+        const name = String(ingredient.name || '').trim();
+        const missing = shortageNames.has(name.toLowerCase());
+        return `<li class="${missing ? 'is-missing' : 'is-ready'}"><span class="recipe-dot">${missing ? '!' : '✓'}</span>${escapeHtml(name)}</li>`;
+      }).join('');
+      const more = ingredients.length > 5 ? `<span class="recipe-more">+${ingredients.length - 5} more</span>` : '';
+      const shortages = (plan.shortages || []).slice(0, 3).map(shortage => escapeHtml(shortage.name)).join(', ');
+      const status = plan.can_make ? 'Ready to make' : `${(plan.shortages || []).length} missing`;
+      return `<article class="inventory-card inventory-recipe-card" data-recipe-id="${escapeHtml(recipe.id)}">
+        <header class="recipe-card-header"><div><span class="recipe-eyebrow">RECIPE</span><h3>${escapeHtml(recipe.name)}</h3></div><span class="inventory-ready ${plan.can_make ? 'yes' : 'no'}">${status}</span></header>
+        <p class="recipe-card-meta">${escapeHtml(recipe.servings)} servings <span>·</span> ${ingredients.length} ingredient${ingredients.length === 1 ? '' : 's'}</p>
+        <ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}
+        ${plan.can_make ? '<p class="recipe-card-note ready-note">Everything is on hand.</p>' : `<p class="recipe-card-note missing-note">Missing: ${shortages || 'review the ingredient check'}</p>`}
+        <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? '<button class="inventory-primary" data-action="cook">Cook now</button>' : '<button class="inventory-primary" data-action="queue-missing">Add missing to Grocery</button>'}</div>
+      </article>`;
+    }).join('') : '<div class="inventory-state recipe-empty-state"><strong>Your cookbook is empty.</strong><p>Save a recipe or import one, then Hades will compare it with Pantry stock.</p><button class="inventory-primary" data-action="new-recipe">Create your first recipe</button></div>';
   } catch (error) { showInlineError(error); }
 }
 
@@ -451,7 +470,9 @@ async function onClick(event) {
     try {
       const result = await api(`/api/recipes/${encodeURIComponent(button.dataset.recipeId)}/queue-missing`, {method:'POST', body:JSON.stringify({})});
       uiModule.showToast?.(`${result.count || 0} required item${result.count === 1 ? '' : 's'} added to grocery list`);
-      button.textContent = 'Added to grocery list';
+      button.textContent = 'Queued in Grocery';
+      button.classList.remove('inventory-primary');
+      button.disabled = true;
     } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
     return;
   }

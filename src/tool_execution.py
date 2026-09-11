@@ -1549,7 +1549,47 @@ async def _execute_manage_assets_binding(block, owner=None):
             result.setdefault("success", result.get("exit_code", 1) == 0 and not result.get("error"))
             result["canonical_store"] = "inventory_service"
             result["provenance"] = "CANONICAL_RECIPE"
-            return "manage_assets", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), **result}
+            if result.get("success") and recipe_payload.get("action") in {
+                "queue_missing", "queue_missing_by_name",
+            }:
+                # Queueing missing ingredients is a write: prove the
+                # canonical Grocery projection before the result can close
+                # the owner's durable run.  The model never supplies this
+                # readback; it is obtained from the trusted service.
+                try:
+                    from src.inventory_service import get_inventory_service
+                    service = get_inventory_service()
+                    queued = result.get("queued")
+                    if isinstance(queued, dict):
+                        queued = queued.get("queued")
+                    queued = queued if isinstance(queued, list) else []
+                    readback = []
+                    for row in queued:
+                        item = row.get("item") if isinstance(row, dict) else None
+                        item_id = item.get("id") if isinstance(item, dict) else None
+                        if not item_id:
+                            raise ValueError("recipe queue readback reference missing")
+                        current = service.get_item(owner, str(item_id))
+                        if current.get("shopping_list") is not True:
+                            raise ValueError("recipe queue readback did not confirm Grocery state")
+                        readback.append({
+                            "item": current,
+                            "lots": service.list_lots(owner, str(item_id)),
+                        })
+                    result["verification"] = {
+                        "status": "VERIFIED",
+                        "readback": {"grocery_items": readback},
+                    }
+                except Exception:
+                    result["verification"] = {
+                        "status": "INCOMPLETE",
+                        "reason": "recipe grocery readback unavailable",
+                    }
+            return "manage_assets", {
+                "output": _ody_v34_json.dumps(result, default=str, sort_keys=True),
+                "data": result,
+                **result,
+            }
         if _inventory_action and _inventory_marker:
             from src.agent_tools.inventory_tools import ManageInventoryTool
             result = dict(await ManageInventoryTool().execute(
@@ -1619,7 +1659,11 @@ async def _execute_manage_assets_binding(block, owner=None):
                     # The write Result remains durable, but no unsupported
                     # current-state claim may be made without readback.
                     result["verification"] = {"status": "INCOMPLETE", "reason": "inventory readback unavailable"}
-            return "manage_assets", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), **result}
+            return "manage_assets", {
+                "output": _ody_v34_json.dumps(result, default=str, sort_keys=True),
+                "data": result,
+                **result,
+            }
         argv = _ody_v34_asset_argv(payload, owner=owner)
 
         def _run():
