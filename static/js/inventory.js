@@ -334,6 +334,12 @@ function updateIntakeSourceVisibility(form) {
   photoInput.hidden = !isPhoto;
   const file = form.elements.photo;
   if (!isPhoto && file) file.value = '';
+  // Photo extraction supplies the candidate fields after analysis. Manual
+  // intake still requires them before the draft can be created.
+  ['name', 'quantity'].forEach(name => {
+    const field = form.elements[name];
+    if (field) field.required = !isPhoto;
+  });
 }
 
 async function onClick(event) {
