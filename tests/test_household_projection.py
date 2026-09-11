@@ -4,7 +4,7 @@ import pytest
 
 from core import database as cdb
 from core import inventory_models  # noqa: F401 - register inventory tables
-from src.inventory_service import InventoryError, get_inventory_service
+from src.inventory_service import InventoryConflict, InventoryError, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
 
 
@@ -366,6 +366,34 @@ def test_remove_from_grocery_unqueues_item_without_deleting_owned_stock():
     }, owner="alice")
     assert replay["removed"] is False
     assert str(service.list_lots("alice", item["id"])[0]["quantity"]) == "1000.000000"
+
+
+def test_owner_facing_grocery_reference_resolves_conservative_plural_variant():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    item = service.create_item(
+        "alice", name="onion", domain="kitchen", item_kind="ingredient",
+        shopping_list=True,
+    )
+
+    removed = service.manage_inventory({
+        "action": "remove_from_grocery", "name": "onions",
+    }, owner="alice")
+
+    assert removed["removed"] is True
+    assert service.get_item("alice", item["id"])["shopping_list"] is False
+
+
+def test_conservative_plural_resolution_still_fails_closed_on_ambiguous_items():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    service.create_item("alice", name="onion", domain="kitchen", item_kind="ingredient", shopping_list=True)
+    service.create_item("alice", name="onions", domain="kitchen", item_kind="ingredient", shopping_list=True)
+
+    with pytest.raises(InventoryConflict, match="more than one matching"):
+        service.manage_inventory({
+            "action": "remove_from_grocery", "name": "onions",
+        }, owner="alice")
 
 
 def test_clear_grocery_unqueues_the_canonical_set_without_deleting_stock():
