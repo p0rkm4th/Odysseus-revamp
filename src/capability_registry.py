@@ -106,7 +106,10 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             *(
                 ActionSpec(
                     action_id=action,
-                    effects=("read_private",) if action in {"summary", "list", "search", "get"} else ("write_private",),
+                    effects=("read_private",) if action in {
+                        "summary", "list", "search", "get", "recipe_list", "recipe_get",
+                        "recipe_missing", "recipe_can_make",
+                    } else ("write_private",),
                     executor_key="manage_assets",
                 )
                 for action in (
