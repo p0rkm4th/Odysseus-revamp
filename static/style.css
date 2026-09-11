@@ -41790,6 +41790,42 @@ body.settings-sidebar-resize-active {
   border-radius:var(--hades-radius-sm, 8px);
   background:color-mix(in srgb, var(--panel) 72%, transparent);
 }
+
+/* Recipe view: a calm cookbook surface with the same Hades window language,
+   while keeping the canonical stock decision visible at a glance. */
+.hades-workspace-window .recipe-hero { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; padding:4px 0 14px; }
+.hades-workspace-window .recipe-hero h3 { margin:3px 0 4px; font-size:1.25rem; letter-spacing:-.02em; }
+.hades-workspace-window .recipe-hero p { margin:0; max-width:540px; color:var(--hades-text-muted, var(--muted)); font-size:.86rem; line-height:1.45; }
+.recipe-eyebrow { display:block; color:var(--hades-text-muted, var(--muted)); font-size:.64rem; font-weight:700; letter-spacing:.14em; }
+.recipe-hero-actions, .recipe-card-actions { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+.recipe-guidance { display:flex; gap:9px; align-items:flex-start; margin:0 0 14px; padding:10px 12px; border:1px solid color-mix(in srgb, var(--accent, #9b83c7) 30%, var(--hades-border-subtle, var(--border))); border-radius:var(--hades-radius-md, 10px); background:color-mix(in srgb, var(--accent, #9b83c7) 7%, transparent); color:var(--hades-text-muted, var(--muted)); font-size:.78rem; line-height:1.4; }
+.recipe-guidance strong { color:var(--hades-text, var(--fg)); }
+.recipe-guidance-mark { color:var(--accent, var(--fg)); font-size:1rem; line-height:1.1; }
+.recipe-summary { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+.recipe-summary span { padding:6px 9px; border:1px solid var(--hades-border-subtle, var(--border)); border-radius:999px; color:var(--hades-text-muted, var(--muted)); font-size:.72rem; }
+.recipe-summary strong { color:var(--hades-text, var(--fg)); }
+.hades-workspace-window .inventory-recipe-card { display:block; padding:15px; }
+.recipe-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.recipe-card-header h3 { margin:4px 0 0; font-size:1rem; }
+.recipe-card-meta { margin:7px 0 10px; color:var(--hades-text-muted, var(--muted)); font-size:.76rem; }
+.recipe-card-meta span { opacity:.55; padding:0 4px; }
+.recipe-preview { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:5px 12px; list-style:none; margin:0; padding:0; color:var(--hades-text-muted, var(--muted)); font-size:.78rem; }
+.recipe-preview li { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.recipe-dot { display:inline-grid; place-items:center; width:17px; height:17px; margin-right:6px; border-radius:50%; background:color-mix(in srgb, #55bd7a 18%, transparent); color:#6bd28c; font-size:.66rem; }
+.recipe-preview .is-missing .recipe-dot { background:color-mix(in srgb, var(--red, #d66) 18%, transparent); color:var(--red, #e37a7a); }
+.recipe-more { display:block; margin-top:6px; color:var(--hades-text-muted, var(--muted)); font-size:.72rem; }
+.recipe-card-note { margin:11px 0 12px; font-size:.77rem; }
+.ready-note { color:#6bd28c; }
+.missing-note { color:var(--hades-text-muted, var(--muted)); }
+.recipe-card-actions { justify-content:flex-start; }
+.recipe-empty-state { padding:48px 18px; }
+.recipe-empty-state strong { display:block; margin-bottom:6px; color:var(--hades-text, var(--fg)); font-size:1rem; }
+.recipe-empty-state p { margin:0 auto 15px; max-width:360px; line-height:1.45; }
+@media (max-width:700px) {
+  .hades-workspace-window .recipe-hero { flex-direction:column; }
+  .recipe-hero-actions { justify-content:flex-start; width:100%; }
+  .recipe-preview { grid-template-columns:1fr; }
+}
 .inventory-sharing-member-summary > strong { display:block; font-size:.78rem; letter-spacing:.02em; }
 .inventory-sharing-members { display:flex; flex-wrap:wrap; gap:6px; list-style:none; padding:0; margin:8px 0 0; }
 .inventory-sharing-members li { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border:1px solid var(--hades-border-subtle, var(--border)); border-radius:999px; font-size:.76rem; }

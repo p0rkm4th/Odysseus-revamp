@@ -322,6 +322,7 @@ async def test_kitchen_mutation_binding_delegates_to_existing_inventory_service(
     assert result["success"] is True
     assert result["canonical_store"] == "inventory_service"
     assert result["provenance"] == "USER_ASSERTED"
+    assert result["data"]["item"]["id"] == "pasta-1"
 
 
 @pytest.mark.asyncio
@@ -413,6 +414,42 @@ async def test_recipe_actions_are_exposed_through_the_canonical_inventory_bindin
     assert result["success"] is True
     assert result["canonical_store"] == "inventory_service"
     assert result["provenance"] == "CANONICAL_RECIPE"
+    assert result["data"]["recipe_id"] == "recipe-1"
+
+
+@pytest.mark.asyncio
+async def test_recipe_queue_binding_verifies_canonical_grocery_readback(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.inventory_service as inventory_service
+    import src.tool_execution as tool_execution
+
+    class FakeRecipeTool:
+        async def execute(self, content, ctx):
+            return {
+                "recipe_id": "recipe-1",
+                "queued": [{"item": {"id": "item-tomato"}, "missing": 1, "unit": "jar"}],
+                "count": 1,
+                "exit_code": 0,
+            }
+
+    class FakeInventoryService:
+        def get_item(self, owner, item_id):
+            assert owner == "alice"
+            assert item_id == "item-tomato"
+            return {"id": item_id, "name": "tomato sauce", "shopping_list": True}
+
+        def list_lots(self, owner, item_id):
+            return []
+
+    monkeypatch.setattr(inventory_tools, "ManageRecipesTool", FakeRecipeTool)
+    monkeypatch.setattr(inventory_service, "get_inventory_service", lambda: FakeInventoryService())
+    block = type("Block", (), {"content": json.dumps({
+        "action": "recipe_queue_missing", "recipe_id": "recipe-1",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["data"]["verification"]["status"] == "VERIFIED"
+    assert result["data"]["verification"]["readback"]["grocery_items"][0]["item"]["shopping_list"] is True
 
 
 @pytest.mark.asyncio

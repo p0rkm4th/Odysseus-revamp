@@ -894,7 +894,19 @@ def persist_approved_result(
         status = str(action.status or "") if action is not None else ""
     if status == "awaiting_approval":
         resume_approval(owner, action_id, approval_reference)
-    return record_result(owner, action_id, result)
+    completed = record_result(owner, action_id, result)
+    # Approval callbacks resume the stream outside the ordinary tool-round
+    # hook.  Run the same server-owned verifier here so an approved network
+    # action cannot return a successful observation while its durable Run is
+    # left in VERIFYING until a later, unrelated chat turn.
+    if completed and completed.get("run_lifecycle_state") == "verifying":
+        verification = verify_bound_action(owner, action_id)
+        if verification is not None:
+            completed["verification"] = verification
+            completed["run_lifecycle_state"] = verification.get(
+                "run_lifecycle_state", completed["run_lifecycle_state"],
+            )
+    return completed
 
 
 def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[str, Any] | None:
@@ -945,6 +957,16 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 work.fail_read_deliverable(owner, action.run_id, reason=action.error)
             return {"action_id": action.id, "status": "failed"}
         safe_data = result.get("data")
+        if safe_data is None and action.tool_binding_name == "manage_assets":
+            # The established manage_assets transport historically returned
+            # its structured inventory/recipe payload at the top level. Keep
+            # the bridge tolerant of that transport shape while the binding
+            # emits the canonical ``data`` envelope; never persist rendered
+            # output or error text as durable result truth.
+            safe_data = {
+                key: value for key, value in result.items()
+                if key not in {"output", "error"}
+            }
         try:
             encoded = json.dumps(safe_data, ensure_ascii=False, default=str)
             safe_data = json.loads(encoded[:100000]) if len(encoded) <= 100000 else {"truncated": True}
@@ -1035,6 +1057,18 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
         elif single_read:
             completed["read_completion"] = work.complete_read_deliverable(
                 owner, action.run_id, action.id, result=safe_data,
+            )
+        elif (
+            action.effect_class in {"write_private", "write_shared"}
+            and isinstance(safe_data, dict)
+            and isinstance(safe_data.get("verification"), dict)
+            and str(safe_data["verification"].get("status") or "").upper() == "VERIFIED"
+        ):
+            completed["write_completion"] = work.complete_verified_write(
+                owner, action.run_id, action.id, result=safe_data,
+            )
+            completed["run_lifecycle_state"] = completed["write_completion"].get(
+                "lifecycle_state", refreshed_run.lifecycle_state,
             )
         return completed
 

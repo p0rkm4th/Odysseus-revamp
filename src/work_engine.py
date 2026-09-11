@@ -568,6 +568,66 @@ class WorkEngine:
         self.db.commit(); self.db.refresh(row)
         return serialize(row)
 
+    def complete_verified_write(self, owner, run_id, action_id, *, result=None):
+        """Terminally complete a bounded write with canonical readback proof.
+
+        Tool bindings may perform a private mutation and immediately read the
+        affected canonical state back.  That evidence is stronger than a
+        worker/model report, but it is not a broker-style ``execute_*`` action
+        that needs the generic post-effect verifier.  Keep this transition in
+        WorkEngine so those first-class writes do not remain stuck in their
+        initial planning state after the binding has already proved them.
+        """
+        row = self._one(WorkRun, owner, run_id, "run")
+        action = self.db.query(WorkAction).filter_by(
+            id=str(action_id), run_id=row.id,
+        ).one_or_none()
+        if action is None or action.status != "completed":
+            raise WorkError("completed write action is required")
+        if action.effect_class not in {"write_private", "write_shared"}:
+            raise WorkError("only private or shared writes may complete this way")
+        verification = result.get("verification") if isinstance(result, dict) else None
+        if not isinstance(verification, dict) or str(verification.get("status") or "").upper() != "VERIFIED":
+            raise WorkError("canonical write readback verification is required")
+        unfinished = self.db.query(WorkAction).filter(
+            WorkAction.run_id == row.id,
+            WorkAction.status.in_(
+                ("proposed", "awaiting_approval", "approved", "executing"),
+            ),
+            WorkAction.id != action.id,
+        ).count()
+        if unfinished:
+            return serialize(row) | {
+                "run_lifecycle_state": row.lifecycle_state,
+                "remaining_actions": unfinished,
+            }
+        row.status = "completed"
+        row.lifecycle_state = "succeeded"
+        row.current_step = "canonical write readback verified"
+        row.result_summary = {
+            "outcome": "canonical_write_verified",
+            "action_id": action.id,
+            "verification": {"status": "VERIFIED", "kind": "canonical_readback"},
+        }
+        row.verification = {
+            "success": True,
+            "kind": "canonical_write_readback",
+            "action_id": action.id,
+        }
+        row.continuation_state = {
+            **(row.continuation_state or {}),
+            "pending_action_id": None,
+            "phase": "COMPLETE",
+        }
+        row.ended_at = now()
+        row.revision += 1
+        self.event(owner, "run.completed", run_id=row.id, payload={
+            "reason": "canonical write readback verified",
+        })
+        self.db.commit()
+        self.db.refresh(row)
+        return serialize(row)
+
     def fail_read_deliverable(self, owner, run_id, *, reason):
         """Preserve a canonical read failure as a terminal blocked Run."""
         row = self._one(WorkRun, owner, run_id, "run")
