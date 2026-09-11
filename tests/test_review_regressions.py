@@ -993,6 +993,33 @@ async def test_write_file_inline_json_args(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_web_search_uses_native_handler_not_retired_mcp_alias(monkeypatch):
+    """A healthy SearXNG backend must not depend on a removed MCP server."""
+    import src.tool_execution as tool_execution
+    from src.tool_execution import execute_tool_block
+
+    monkeypatch.setattr(tool_execution, "get_mcp_manager", lambda: None)
+
+    async def fake_direct(tool, content, **_kwargs):
+        assert tool == "web_search"
+        assert json.loads(content)["query"] == "OpenAI"
+        return {"output": "native search result", "exit_code": 0}
+
+    monkeypatch.setattr(tool_execution, "_direct_fallback", fake_direct)
+    desc, result = await _execute_without_run_context(
+        execute_tool_block,
+        SimpleNamespace(
+            tool_type="web_search",
+            content=json.dumps({"query": "OpenAI"}),
+        ),
+        owner="admin-user",
+    )
+
+    assert desc.startswith("web_search:")
+    assert result == {"output": "native search result", "exit_code": 0}
+
+
+@pytest.mark.asyncio
 async def test_plan_mode_blocks_mutating_email_aliases_without_mcp_inventory(monkeypatch):
     """Plan-mode safety for bare email aliases must hold from the STATIC
     partition alone — no MCP read-only inventory involved: mutators (the

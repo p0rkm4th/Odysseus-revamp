@@ -1441,6 +1441,7 @@ async def stream_aci_runtime(
     # execute a duplicate Action or ask the model to choose one.
     _aci_answer_only = False
     _aci_clarification_only = False
+    _aci_unscoped_network_refusal = False
     _aci_clarification_text = ""
     _aci_completion_contract_satisfied = False
     _aci_repair_count = 0
@@ -2625,6 +2626,23 @@ async def stream_aci_runtime(
                 for choice, selected in sorted(_aci_choice_map.items())
                 if (trace := action_trace(choice, selected)) is not None
             ]
+            # An implicit network scan has no owner-authorized target.  Do not
+            # expose the plan ActionCard and rely on a small model to infer
+            # that boundary: without a CIDR or a persisted continuation, this
+            # turn is a refusal/clarification response with no tool authority.
+            # Explicit CIDRs and server-owned approval continuations retain
+            # the normal bounded plan and exact-approval path.
+            _aci_unscoped_network_refusal = bool(
+                _aci_mode == "aci"
+                and _intent_frame.domain_concept == "NETWORK"
+                and _intent_frame.operation_class == "EXECUTE"
+                and not network_discovery_request_cidr(_last_user)
+                and not _intent.get("continuation")
+            )
+            if _aci_unscoped_network_refusal:
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = False
+                _record_aci_framework("unscoped_network_refusal")
             if projection.fast_path and _aci_mode == "aci" and not _aci_answer_only:
                 _fast_binding = str(
                     (_intent.get("resolved_contract") or {}).get("binding") or ""
@@ -2812,7 +2830,17 @@ async def stream_aci_runtime(
                 _aci_packet = None
             if _aci_answer_only:
                 _aci_packet = None
-            if _aci_answer_only:
+            if _aci_unscoped_network_refusal:
+                aci_instruction = (
+                    "HADES ACI SAFE REFUSAL MODE. The owner requested a network "
+                    "discovery scan without an explicit private CIDR or an "
+                    "existing server-owned continuation. Do not call tools and "
+                    "do not return a machine decision. Explain briefly that "
+                    "you need one current private network scope, such as a "
+                    "CIDR, before a bounded scan can be planned. Do not claim "
+                    "that any scan ran."
+                )
+            elif _aci_answer_only:
                 aci_instruction = (
                     "HADES ACI ANSWER MODE. The protected canonical owner-scoped "
                     "Memory Result for this turn is already complete. Do not call "
@@ -5380,6 +5408,31 @@ async def stream_aci_runtime(
             _off_note = (f" ({', '.join(_off)} is currently disabled — say so if "
                          f"you needed it.)" if _off else "")
             _force_answer = True
+            # A bounded network preflight must either hand its server-issued
+            # digest to the exact approval continuation or stop.  Keeping the
+            # ACI packet alive here lets a weak model re-select the same plan
+            # after a fixture/adapter result that contains no digest, turning
+            # a safe no-progress state into a decision-budget loop.  Drop the
+            # packet and enter answer-only mode for this turn; this does not
+            # grant authority or claim that a scan completed.
+            _repeated_network_plan = False
+            for _repeated_block in tool_blocks:
+                try:
+                    _repeated_action = json.loads(
+                        _repeated_block.content or "{}"
+                    ).get("action")
+                except (TypeError, json.JSONDecodeError):
+                    _repeated_action = None
+                if _is_bounded_network_plan(
+                    _repeated_block.tool_type, str(_repeated_action or "")
+                ):
+                    _repeated_network_plan = True
+                    break
+            if _aci_enabled and _aci_mode == "aci" and _repeated_network_plan:
+                _aci_packet = None
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = False
+                _record_aci_framework("network_plan_repeat_guard")
             messages.append({
                 "role": "system",
                 "content": (
