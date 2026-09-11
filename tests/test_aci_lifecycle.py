@@ -66,7 +66,7 @@ def test_recipe_composition_routes_to_recipe_capable_tools():
 def test_canonical_recipe_queue_answer_lists_verified_grocery_items():
     event = {
         "tool": "manage_assets", "command": '{"action":"recipe_queue_missing_by_name"}',
-        "output": '{"queued":[{"item":{"name":"spaghetti"}},{"item":{"name":"tomato sauce"}}]}',
+        "output": '{"queued":{"queued":[{"item":{"name":"spaghetti"}},{"item":{"name":"tomato sauce"}}]}}',
         "exit_code": 0,
     }
     assert canonical_recipe_queue_answer([event]) == (
