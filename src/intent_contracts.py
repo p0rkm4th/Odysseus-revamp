@@ -1313,9 +1313,15 @@ def compile_intent(
     # explicit attempt bit in the IntentFrame projection for evaluator metrics.
     reference_resolution["attempted"] = reference_resolution.get("status") != "NOT_REFERENCE"
     operation = _operation(text, continuation=continuation)
-    semantic_read_concept = (
-        deterministic_read_concept(text) if operation == "READ" else None
-    )
+    # Lexical CRUD words can be modifiers inside a question ("anything
+    # new?", "what should I add?") rather than the requested operation. Let
+    # an unambiguous canonical read reclaim precedence over that lexical
+    # token; explicit discovery/service execution remains handled by the
+    # bounded network predicates below.
+    read_candidate = deterministic_read_concept(text)
+    semantic_read_concept = read_candidate if operation in {"READ", "CREATE", "UPDATE"} else None
+    if semantic_read_concept and operation in {"CREATE", "UPDATE"}:
+        operation = "READ"
     # READ is the safe fallback operation for semantically incomplete text,
     # but canonical read projection must not treat every imperative containing
     # a domain noun as a request to inspect state. Keep this as bounded intent
