@@ -1477,6 +1477,8 @@ async def _execute_manage_assets_binding(block, owner=None):
         _inventory_action = isinstance(payload, dict) and payload.get("action") in {
             "list", "search", "get", "add_item", "update_item", "archive_item",
             "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+            "recipe_list", "recipe_get", "recipe_add", "recipe_missing",
+            "recipe_queue_missing", "recipe_can_make", "recipe_cook",
         }
         _inventory_marker = isinstance(payload, dict) and (
             payload.get("domain") in {"kitchen", "household"}
@@ -1501,6 +1503,23 @@ async def _execute_manage_assets_binding(block, owner=None):
         # capability and transport with IT assets. Delegate their persistence
         # to the existing transactional service rather than creating a second
         # binding or installer-like subsystem.
+        _recipe_action = isinstance(payload, dict) and payload.get("action") in {
+            "recipe_list", "recipe_get", "recipe_add", "recipe_missing",
+            "recipe_queue_missing", "recipe_can_make", "recipe_cook",
+        }
+        if _recipe_action:
+            recipe_payload = dict(payload)
+            recipe_payload["action"] = recipe_payload["action"].removeprefix("recipe_")
+            if recipe_payload.get("recipe_name") and not recipe_payload.get("name"):
+                recipe_payload["name"] = recipe_payload.pop("recipe_name")
+            from src.agent_tools.inventory_tools import ManageRecipesTool
+            result = dict(await ManageRecipesTool().execute(
+                _ody_v34_json.dumps(recipe_payload, sort_keys=True), {"owner": owner},
+            ))
+            result.setdefault("success", result.get("exit_code", 1) == 0 and not result.get("error"))
+            result["canonical_store"] = "inventory_service"
+            result["provenance"] = "CANONICAL_RECIPE"
+            return "manage_assets", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), **result}
         if _inventory_action and _inventory_marker:
             from src.agent_tools.inventory_tools import ManageInventoryTool
             result = dict(await ManageInventoryTool().execute(
