@@ -98,13 +98,13 @@ function shell() {
   node.setAttribute('aria-labelledby', 'inventory-title');
   node.innerHTML = `
     <nav class="inventory-tabs" aria-label="Inventory views">
-      <button data-tab="stock" class="active">Pantry · On hand</button>
+      <button data-tab="stock" class="active" aria-label="Pantry, on hand">Pantry</button>
       <button data-tab="fridge">Fridge</button>
       <button data-tab="freezer">Freezer</button>
-      <button data-tab="grocery" aria-label="Grocery list · items to buy">Grocery · To buy</button>
+      <button data-tab="grocery" aria-label="Grocery list, items to buy">Grocery</button>
       <button data-tab="recipes">Recipes</button>
-      <button data-tab="sharing">Household sharing</button>
-      <button data-tab="intake">Add from text or media</button>
+      <button data-tab="sharing" aria-label="Household sharing">Sharing</button>
+      <button data-tab="intake" aria-label="Add from text or media">Add</button>
     </nav>
     <main id="inventory-content" class="inventory-content"></main>`;
   node.addEventListener('click', onClick);
@@ -228,7 +228,7 @@ async function loadSharing() {
 }
 
 function renderRecipesScaffold() {
-  return `<section class="recipe-hero"><div><span class="recipe-eyebrow">COOKBOOK</span><h3>What can we cook?</h3><p>Recipes check your on-hand stock. Missing ingredients can be queued for the next shop.</p></div><div class="recipe-hero-actions"><button data-action="import-recipe">Import recipe</button><button class="inventory-primary" data-action="new-recipe">+ New recipe</button></div></section><div class="recipe-guidance"><span class="recipe-guidance-mark" aria-hidden="true">✦</span><span><strong>Pantry is what you have.</strong> <b>Grocery is what you need to buy.</b> Cooking deducts owned stock only after you confirm.</span></div><div class="recipe-library-tools"><label class="recipe-search"><span class="sr-only">Search recipes</span><input id="recipe-search" type="search" maxlength="200" value="${escapeHtml(recipeQuery)}" placeholder="Search recipes or ingredients" aria-label="Search recipes or ingredients"></label><div class="recipe-filters" role="group" aria-label="Recipe filters">${[['all','All recipes'],['ready','Ready now'],['missing','Needs shopping']].map(([value, label]) => `<button type="button" data-recipe-filter="${value}" class="${recipeFilter === value ? 'active' : ''}">${label}</button>`).join('')}</div></div><div id="inventory-recipe-summary" class="recipe-summary" aria-live="polite"></div><div id="inventory-recipe-list" class="recipe-card-grid">${loading()}</div>`;
+  return `<section class="recipe-hero"><div><span class="recipe-eyebrow">COOKBOOK</span><h3>Your cookbook</h3><p>Plan from what is on hand. Missing ingredients can be queued for the next shop.</p></div><div class="recipe-hero-actions"><button data-action="import-recipe">Import recipe</button><button class="inventory-primary" data-action="new-recipe">+ New recipe</button></div></section><div class="recipe-guidance"><span class="recipe-guidance-mark" aria-hidden="true">✦</span><span><strong>Pantry is what you have.</strong> <b>Grocery is what you need to buy.</b> Cooking deducts owned stock only after you confirm.</span></div><div class="recipe-library-tools"><label class="recipe-search"><span class="sr-only">Search recipes</span><input id="recipe-search" type="search" maxlength="200" value="${escapeHtml(recipeQuery)}" placeholder="Search recipes or ingredients" aria-label="Search recipes or ingredients"></label><div class="recipe-filters" role="group" aria-label="Recipe filters">${[['all','All recipes'],['ready','Ready now'],['missing','Needs shopping']].map(([value, label]) => `<button type="button" data-recipe-filter="${value}" class="${recipeFilter === value ? 'active' : ''}">${label}</button>`).join('')}</div></div><div id="inventory-recipe-summary" class="recipe-summary" aria-live="polite"></div><div id="inventory-recipe-list" class="recipe-card-grid">${loading()}</div>`;
 }
 
 function renderRecipeCatalog() {
@@ -237,7 +237,7 @@ function renderRecipeCatalog() {
   if (!summary || !list) return;
   const readyCount = recipeCatalog.filter(entry => entry.plan.can_make).length;
   const missingCount = recipeCatalog.reduce((total, entry) => total + (entry.plan.shortages || []).length, 0);
-  summary.innerHTML = `<div class="recipe-stat"><strong>${recipeCatalog.length}</strong><span>Saved recipes</span></div><div class="recipe-stat recipe-stat-ready"><strong>${readyCount}</strong><span>Ready to cook</span></div><div class="recipe-stat recipe-stat-missing"><strong>${missingCount}</strong><span>Ingredients to buy</span></div>`;
+  summary.innerHTML = `<div class="recipe-stat"><strong>${recipeCatalog.length}</strong><span>Saved</span></div><div class="recipe-stat recipe-stat-ready"><strong>${readyCount}</strong><span>Ready now</span></div><div class="recipe-stat recipe-stat-missing"><strong>${missingCount}</strong><span>To buy</span></div>`;
   const needle = recipeQuery.trim().toLowerCase();
   const filtered = recipeCatalog.filter(({recipe, plan}) => {
     if (recipeFilter === 'ready' && !plan.can_make) return false;
