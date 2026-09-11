@@ -2601,6 +2601,15 @@ async def stream_aci_runtime(
             # host set before the separate service-enumeration plan is made;
             # the model never invents targets and the approval boundary is
             # unchanged.
+            _network_service_reference = (
+                _active_run_context.get("reference_context")
+                if isinstance(_active_run_context, dict)
+                else None
+            )
+            _network_service_reference_available = bool(
+                isinstance(_network_service_reference, dict)
+                and _network_service_reference.get("network_discovery_targets")
+            )
             _network_service_followup = bool(
                 is_network_service_enumeration_request(_last_user)
                 and re.search(
@@ -2609,6 +2618,7 @@ async def stream_aci_runtime(
                     str(_last_user or ""),
                     re.IGNORECASE,
                 )
+                and _network_service_reference_available
             )
             if (
                 _aci_mode == "aci"

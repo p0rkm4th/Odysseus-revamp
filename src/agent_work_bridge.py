@@ -456,6 +456,84 @@ def recent_session_reference_context(owner: str, session_id: str, *, limit: int 
     return None
 
 
+def recent_session_network_discovery_context(
+    owner: str,
+    session_id: str,
+    *,
+    max_age_seconds: int = 900,
+) -> dict[str, Any] | None:
+    """Return the sealed host set from a recent discovery in this chat.
+
+    A service follow-up such as "check port 22 on the responding hosts" is
+    allowed to inherit only the exact candidates returned by a successful
+    discovery for the same authenticated owner and chat session.  This is a
+    continuation reference, not a second authority store: the result was
+    already produced by the canonical discovery Action and its target scope
+    remains bounded by the later service ActionSpec/broker policy.
+
+    The short age bound prevents an old chat result from silently becoming a
+    current network scan.  When it expires, the caller must stage a fresh
+    discovery instead.
+    """
+    owner = str(owner or "").strip()
+    session_id = str(session_id or "").strip()
+    if not owner or not session_id:
+        return None
+    with SessionLocal() as db:
+        rows = (
+            db.query(WorkResult, WorkAction, WorkRun)
+            .join(WorkAction, WorkAction.id == WorkResult.action_id)
+            .join(WorkRun, WorkRun.id == WorkResult.run_id)
+            .filter(
+                WorkResult.owner == owner,
+                WorkRun.owner == owner,
+                WorkRun.session_id == session_id,
+                WorkAction.action_id == "execute_network_discovery",
+            )
+            .order_by(WorkResult.created_at.desc(), WorkResult.id.desc())
+            .limit(20)
+            .all()
+        )
+        for result, action, run in rows:
+            data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
+            if data.get("success") is not True:
+                continue
+            created_at = result.created_at
+            if created_at is not None:
+                observed = created_at
+                if getattr(observed, "tzinfo", None) is None:
+                    observed = observed.replace(tzinfo=now().tzinfo)
+                age = (now() - observed).total_seconds()
+                if age < 0 or age > max(0, int(max_age_seconds)):
+                    continue
+            targets: list[str] = []
+            for item in data.get("asset_draft_candidates") or []:
+                if not isinstance(item, dict):
+                    continue
+                addresses = item.get("ip_addresses") or []
+                if isinstance(addresses, str):
+                    addresses = [addresses]
+                for address in addresses:
+                    target = str(address or "").strip()
+                    if target and target not in targets:
+                        targets.append(target)
+                    if len(targets) >= 256:
+                        break
+                if len(targets) >= 256:
+                    break
+            if not targets:
+                continue
+            return {
+                "network_discovery_targets": targets,
+                "network_discovery_run_id": str(run.id),
+                "network_discovery_result_id": str(result.id),
+                "network_discovery_observed_at": created_at.isoformat() if created_at else None,
+                "network_discovery_scope": (action.normalized_input or {}).get("cidr")
+                if isinstance(action.normalized_input, dict) else None,
+            }
+    return None
+
+
 def reference_context_for_turn(
     owner: str | None,
     session_id: str | None,
@@ -599,6 +677,16 @@ def prepare_action(
                 )
                 return None
         if spec.action_id in {"plan_network_service_enumeration", "execute_network_service_enumeration"} and not payload.get("targets"):
+            carried_context = run.continuation_state.get("reference_context") if isinstance(run.continuation_state, dict) else None
+            carried_targets = (
+                carried_context.get("network_discovery_targets")
+                if isinstance(carried_context, dict) else None
+            )
+            if isinstance(carried_targets, list):
+                payload["targets"] = [
+                    str(target).strip() for target in carried_targets[:256]
+                    if str(target).strip()
+                ]
             discovery = (
                 db.query(WorkResult)
                 .join(WorkAction, WorkAction.id == WorkResult.action_id)
@@ -629,7 +717,7 @@ def prepare_action(
                         break
                 if len(targets) >= 256:
                     break
-            if targets:
+            if targets and not payload.get("targets"):
                 payload["targets"] = targets
         # A continuation may carry only the canonical execute action. Before
         # an exact approval is sealed, bind it to the server-issued discovery

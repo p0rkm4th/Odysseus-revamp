@@ -188,8 +188,14 @@ def ensure_chat_agent_work_run(
             compile_intent,
             resolve_intent,
             resolve_structured_reference,
+            is_network_service_enumeration_request,
         )
-        from src.agent_work_bridge import ensure_agent_run, prepare_action, recent_session_reference_context
+        from src.agent_work_bridge import (
+            ensure_agent_run,
+            prepare_action,
+            recent_session_network_discovery_context,
+            recent_session_reference_context,
+        )
         query = str(message or "")
         # Work-run creation is an ACI projection, not a second pre-router. The
         # provisional frame only answers whether this concept has a canonical
@@ -203,6 +209,30 @@ def ensure_chat_agent_work_run(
         reference_context = None
         if resolve_structured_reference(query, {}).get("status") != "NOT_REFERENCE":
             reference_context = recent_session_reference_context(str(owner), str(session_id))
+        # "the responding/discovered hosts" is a structured continuation of
+        # the immediately preceding discovery, even though it is not a
+        # pronoun/ordinal reference understood by the generic entity resolver.
+        # Carry only the server-owned sealed candidate set from this owner and
+        # chat session.  An expired/missing result deliberately stays absent;
+        # the agent loop will stage a fresh bounded discovery instead of using
+        # stale observations or transcript text as authority.
+        if (
+            is_network_service_enumeration_request(query)
+            and re.search(
+                r"\b(?:responding|discovered|identified|these|those)\s+"
+                r"(?:hosts?|devices?|machines?)\b",
+                query,
+                re.IGNORECASE,
+            )
+        ):
+            network_context = recent_session_network_discovery_context(
+                str(owner), str(session_id),
+            )
+            if network_context:
+                reference_context = {
+                    **(reference_context or {}),
+                    **network_context,
+                }
         frame = compile_intent(query, reference_context=reference_context)
         continuation = frame.operation_class == "CONTINUE"
         domains = set(canonical_domain_projection(frame))
