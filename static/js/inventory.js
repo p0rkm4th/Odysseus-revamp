@@ -337,7 +337,8 @@ function renderDraft(draft) {
 function modalForm(title, body, submitLabel, kind, id = '') {
   const modal = document.createElement('div');
   modal.className = 'inventory-dialog-backdrop';
-  modal.innerHTML = `<form class="inventory-dialog" data-kind="${kind}" data-id="${escapeHtml(id)}"><h3>${escapeHtml(title)}</h3>${body}<div class="inventory-dialog-actions"><button type="button" data-action="dismiss-dialog">Cancel</button><button class="inventory-primary" type="submit">${escapeHtml(submitLabel)}</button></div></form>`;
+  const cancel = kind === 'view' ? '' : '<button type="button" data-action="dismiss-dialog">Cancel</button>';
+  modal.innerHTML = `<form class="inventory-dialog" data-kind="${kind}" data-id="${escapeHtml(id)}"><h3>${escapeHtml(title)}</h3>${body}<div class="inventory-dialog-actions">${cancel}<button class="inventory-primary" type="submit">${escapeHtml(submitLabel)}</button></div></form>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', onClick);
   modal.addEventListener('submit', onSubmit);
@@ -582,16 +583,20 @@ async function showRecipe(id) {
   try {
     const [{recipe}, plan] = await Promise.all([api(`/api/recipes/${encodeURIComponent(id)}`), api(`/api/recipes/${encodeURIComponent(id)}/can-make`)]);
     const shortageNames = new Set((plan.shortages || []).map(s => String(s.name || '').trim().toLowerCase()));
+    const availableCount = (recipe.ingredients || []).filter(ingredient => !shortageNames.has(String(ingredient.name || '').trim().toLowerCase())).length;
     const ingredients = (recipe.ingredients || []).map(ingredient => {
       const name = String(ingredient.name || '').trim();
       const missing = shortageNames.has(name.toLowerCase());
       const amount = `${displayQuantity(ingredient.quantity)} ${escapeHtml(ingredient.unit)}`;
-      return `<li class="recipe-ingredient ${missing ? 'missing' : 'available'}"><span>${missing ? 'Missing' : 'On hand'}</span> ${escapeHtml(name)} · ${amount}</li>`;
+      return `<li class="recipe-ingredient ${missing ? 'missing' : 'available'}"><span class="recipe-detail-state">${missing ? 'Missing' : 'On hand'}</span><span class="recipe-detail-name">${escapeHtml(name)}</span><strong>${amount}</strong></li>`;
     }).join('');
     const shortages = (plan.shortages || []).map(s => `<li>${escapeHtml(s.name)}: need ${displayQuantity(s.missing)} ${escapeHtml(s.unit)} more${s.optional ? ' (optional)' : ''}</li>`).join('');
     const queue = plan.can_make ? '' : `<button type="button" class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(id)}">Add required missing items to grocery list</button>`;
-    const shortageBlock = plan.can_make ? '' : `<h4>Missing stock</h4><ul>${shortages}</ul>`;
-    modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p><h4>Ingredient check</h4><ul class="recipe-ingredient-list">${ingredients || '<li>No ingredients saved.</li>'}</ul>${shortageBlock}${queue}`, 'Close', 'view', id);
+    const shortageBlock = plan.can_make ? '' : `<section class="recipe-detail-shortage"><div><h4>Shopping list</h4><p>${(plan.shortages || []).length} ingredient${(plan.shortages || []).length === 1 ? '' : 's'} still needed. Queue them without changing pantry stock.</p></div><ul>${shortages}</ul>${queue}</section>`;
+    const status = plan.can_make ? '<span class="inventory-ready yes"><i aria-hidden="true"></i>Ready to cook</span>' : `<span class="inventory-ready no"><i aria-hidden="true"></i>${(plan.shortages || []).length} missing</span>`;
+    const intro = `<div class="recipe-detail-intro"><div><span class="recipe-eyebrow">${escapeHtml(recipe.servings)} servings · ${(recipe.ingredients || []).length} ingredients</span>${status}</div><p>${escapeHtml(recipe.instructions || 'No instructions saved yet.')}</p></div>`;
+    const checkLabel = plan.can_make ? 'Everything is on hand.' : `${availableCount} of ${(recipe.ingredients || []).length} ingredients on hand.`;
+    modalForm(recipe.name, `${intro}<section class="recipe-detail-check"><div class="recipe-detail-section-heading"><h4>Ingredient check</h4><span>${checkLabel}</span></div><ul class="recipe-ingredient-list">${ingredients || '<li>No ingredients saved.</li>'}</ul></section>${shortageBlock}`, 'Close', 'view', id);
     const form = document.querySelector('.inventory-dialog[data-kind="view"]');
     const closeButton = form?.querySelector('[type=submit]');
     if (closeButton) {
