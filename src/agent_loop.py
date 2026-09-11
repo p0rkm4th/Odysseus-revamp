@@ -2503,6 +2503,7 @@ async def stream_aci_runtime(
                 profile=_aci_profile,
                 network_cidr=network_discovery_request_cidr(_last_user),
                 read_payload_builder=canonical_read_fast_path_payload,
+                operation_scope=str(work_run_id or "").strip() or None,
             )
 
             _aci_packet = projection.packet
@@ -4405,7 +4406,9 @@ async def stream_aci_runtime(
             and "manage_assets" not in disabled_tools
         ):
             _mutation_payload = canonical_inventory_mutation_payload(
-                _mutation_action, _retrieval_query or _last_user,
+                _mutation_action,
+                _retrieval_query or _last_user,
+                operation_scope=str(work_run_id or "").strip() or None,
             )
             if _mutation_payload:
                 logger.info("[agent] deterministic canonical inventory mutation action=%s", _mutation_action)

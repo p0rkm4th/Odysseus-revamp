@@ -212,11 +212,16 @@ def ensure_chat_agent_work_run(
             "communications",
         }) and not continuation:
             return None
-        if not continuation and not frame.read_explicit and not re.search(
-            r"\b(?:scan|discover|discovery|map|enumerate|identify|install|restart|"
-            r"execute|inspect|check|diagnose|list|show|find|begin|start)\b",
-            query,
-            re.IGNORECASE,
+        if (
+            not continuation
+            and not frame.read_explicit
+            and frame.domain_concept != "HOUSEHOLD_ITEM"
+            and not re.search(
+                r"\b(?:scan|discover|discovery|map|enumerate|identify|install|restart|"
+                r"execute|inspect|check|diagnose|list|show|find|begin|start)\b",
+                query,
+                re.IGNORECASE,
+            )
         ):
             return None
         run_id = ensure_agent_run(
