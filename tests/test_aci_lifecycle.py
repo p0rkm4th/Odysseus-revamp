@@ -165,6 +165,18 @@ def test_canonical_recipe_suggest_answer_qualifies_unavailable_budget_ranking():
     assert "not a cost ranking" in answer
 
 
+def test_empty_budget_recipe_result_still_discloses_cost_limit():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","budget_constraint":true}',
+        "output": '{"available_only":true,"budget_constraint":true,"recipes":[]}',
+        "exit_code": 0,
+    }
+    answer = canonical_recipe_suggest_answer([event])
+    assert "couldn't find a saved recipe" in answer
+    assert "not a cost ranking" in answer
+
+
 def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():
     for query in (
         "yo what computers do i got",
