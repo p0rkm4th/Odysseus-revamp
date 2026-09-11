@@ -1556,12 +1556,19 @@ async def _execute_manage_assets_binding(block, owner=None):
                         }
                     elif isinstance(result.get("items"), list) and result["items"]:
                         readback = []
+                        action = str(payload.get("action") or "")
+                        expected_shopping = payload.get("shopping_list")
                         for item in result["items"]:
                             if not isinstance(item, dict) or not item.get("id"):
                                 raise ValueError("inventory item readback reference missing")
                             current = service.get_item(owner, str(item["id"]))
-                            if not current.get("archived"):
+                            if action == "archive_item" and not current.get("archived"):
                                 raise ValueError("inventory archive readback did not confirm archived state")
+                            if action == "add_item":
+                                if current.get("archived"):
+                                    raise ValueError("inventory add readback returned an archived item")
+                                if isinstance(expected_shopping, bool) and current.get("shopping_list") is not expected_shopping:
+                                    raise ValueError("inventory add readback returned the wrong list state")
                             readback.append({
                                 "item": current,
                                 "lots": service.list_lots(owner, str(item["id"])),

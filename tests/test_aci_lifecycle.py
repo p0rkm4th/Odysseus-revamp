@@ -554,6 +554,21 @@ def test_canonical_inventory_archive_answer_requires_all_item_readback():
     )
 
 
+def test_canonical_inventory_multi_add_answer_lists_verified_items():
+    event = {
+        "tool": "manage_assets", "exit_code": 0,
+        "command": '{"action":"add_item","items":["rice","milk"]}',
+        "output": json.dumps({
+            "success": True,
+            "items": [{"id": "i-1", "name": "rice"}, {"id": "i-2", "name": "milk"}],
+            "verification": {"status": "VERIFIED", "readback": {"items": []}},
+        }),
+    }
+    assert canonical_inventory_mutation_answer([event]) == (
+        "Recorded grocery items rice, milk; the canonical inventory readback is verified."
+    )
+
+
 def test_canonical_memory_and_work_reads_have_terminal_answers():
     from src.aci import canonical_result_answer
 
