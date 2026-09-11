@@ -4616,6 +4616,14 @@ async def stream_aci_runtime(
                 )
                 )
             )
+            or (
+                _aci_recipe_composition_route
+                and re.search(
+                    r"\b(?:make|cook|prepare|recipe|ingredient|grocery|shopping|missing)\b",
+                    _ody_v38_user_text,
+                    re.IGNORECASE,
+                )
+            )
         )
         _ody_v38_first_class_no_action = (
             not guide_only
