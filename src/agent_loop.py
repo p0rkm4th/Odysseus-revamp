@@ -5529,6 +5529,7 @@ async def stream_aci_runtime(
                 and result.get("error_code") == "grocery_item_placeholder"
             ):
                 _was_aci_canonical_read = False
+                _was_deterministic_fast_path = False
                 _inventory_composition_repair_pending = True
             _post_result_transition = project_post_result_transition(
                 result,
