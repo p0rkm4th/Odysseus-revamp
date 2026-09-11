@@ -76,7 +76,7 @@ async def _execute(content: str, ctx: Mapping[str, Any], *, method: str, actions
         # private inventory/recipe names supplied by the owner.
         logger.warning("%s service call failed (%s)", method, type(exc).__name__)
         if method == "manage_recipes":
-            from src.inventory_service import InventoryNotFound
+            from src.inventory_service import InventoryError, InventoryNotFound
             if isinstance(exc, InventoryNotFound):
                 return {
                     "error": (
@@ -84,6 +84,16 @@ async def _execute(content: str, ctx: Mapping[str, Any], *, method: str, actions
                         "I will compare it with current stock before changing Grocery."
                     ),
                     "error_code": "recipe_not_found",
+                    "retryable": True,
+                    "exit_code": 1,
+                }
+            if isinstance(exc, InventoryError) and "more than one saved recipe" in str(exc).casefold():
+                return {
+                    "error": (
+                        "I found multiple saved recipes for that dish. Choose one before I "
+                        "compare ingredients or change Grocery."
+                    ),
+                    "error_code": "recipe_ambiguous",
                     "retryable": True,
                     "exit_code": 1,
                 }

@@ -488,6 +488,24 @@ async def test_missing_recipe_error_preserves_actionable_owner_guidance(monkeypa
     assert "Import or paste the recipe first" in result["error"]
 
 
+@pytest.mark.asyncio
+async def test_ambiguous_recipe_error_preserves_owner_choice_guidance(monkeypatch):
+    from src.agent_tools import inventory_tools
+    from src.inventory_service import InventoryError
+
+    class AmbiguousRecipeService:
+        def manage_recipes(self, _args, *, owner):
+            raise InventoryError("More than one saved recipe matched that dish; choose one.")
+
+    monkeypatch.setattr(inventory_tools, "_load_inventory_service", lambda: AmbiguousRecipeService())
+    result = await inventory_tools.ManageRecipesTool().execute(
+        '{"action":"missing_by_name","query":"spaghetti"}', {"owner": "alice"},
+    )
+    assert result["exit_code"] == 1
+    assert result["error_code"] == "recipe_ambiguous"
+    assert "multiple saved recipes" in result["error"]
+
+
 def test_clarification_stream_has_one_accumulation_path():
     source = Path("src/agent_loop.py").read_text()
     marker = "if _aci_clarification_only:\n                # The outer round accumulator"
