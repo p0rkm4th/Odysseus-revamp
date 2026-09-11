@@ -1291,6 +1291,17 @@ class RecipeService(InventoryService):
                 )
                 db.add(movement)
                 movement_ids.append(movement.id)
+            for item_id in {deduction.item_id for deduction in plan.deductions}:
+                item = db.query(InventoryItem).filter_by(id=item_id).one_or_none()
+                if item is None:
+                    raise InventoryNotFound("inventory item not found")
+                remaining = db.query(InventoryLot).filter(
+                    InventoryLot.owner == item.owner,
+                    InventoryLot.item_id == item.id,
+                    InventoryLot.quantity > 0,
+                ).count()
+                if remaining == 0:
+                    item.shopping_list = True
             cook.movement_ids_json = movement_ids
             cook.status = "completed"
             db.flush()
@@ -1630,8 +1641,23 @@ class RecipeService(InventoryService):
                 image_refs=args.get("image_refs"),
             )}
         if action == "cook":
+            recipe_id = args.get("recipe_id")
+            if not recipe_id:
+                query = normalize_item_name(_required_text(
+                    args.get("query") or args.get("recipe_name"), "recipe query",
+                )).strip(" .,!?:;")
+                recipes = [recipe for recipe in self.list_recipes(owner)
+                           if query == normalize_item_name(recipe["name"])
+                           or query in normalize_item_name(recipe["name"])]
+                if not recipes:
+                    raise InventoryNotFound(
+                        "No saved recipe matched that dish. Import or paste the recipe first."
+                    )
+                if len(recipes) > 1:
+                    raise InventoryError("More than one saved recipe matched that dish; choose one.")
+                recipe_id = recipes[0]["id"]
             return {"cook": self.cook(
-                owner, _required_text(args.get("recipe_id"), "recipe_id"),
+                owner, _required_text(recipe_id, "recipe_id"),
                 servings=args.get("servings"),
                 idempotency_key=args.get("idempotency_key"),
             )}

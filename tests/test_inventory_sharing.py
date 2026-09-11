@@ -165,6 +165,22 @@ def test_member_can_cook_shared_recipe_and_consumes_owner_stock_once():
     assert str(service.list_lots("alice", rice["id"])[0]["quantity"]) == "250.000000"
 
 
+def test_recipe_cook_depletion_queues_owner_grocery_item():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    rice = service.create_item(
+        "alice", name="Recipe rice", domain="kitchen", item_kind="ingredient",
+        default_unit="g", storage_area="pantry",
+    )
+    service.add_stock("alice", rice["id"], quantity=250, unit="g", idempotency_key="recipe-rice-stock")
+    recipe = service.create_recipe(
+        "alice", name="Recipe rice bowl", servings=1,
+        ingredients=[{"item_id": rice["id"], "quantity": 250, "unit": "g"}],
+    )
+    service.cook("alice", recipe["id"], idempotency_key="recipe-rice-cook")
+    assert [row["name"] for row in service.list_items("alice", list_name="grocery")] == ["Recipe rice"]
+
+
 def test_owner_can_revoke_member_and_shared_inventory_stays_private_after_reload():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

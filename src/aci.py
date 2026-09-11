@@ -1558,7 +1558,7 @@ def recipe_composition_name(text: str) -> str | None:
     """Extract only the named dish span for saved-recipe lookup."""
     match = re.search(
         r"\b(?:make|cook|prepare)\s+(?!(?:a|the)?\s*(?:grocery|shopping)\s+list\b)"
-        r"(.+?)(?=\s+(?:and\s+)?(?:add|put|queue|buy|need|missing|shopping|grocery)\b"
+        r"(.+?)(?=\s+(?:and\s+)?(?:add|put|queue|buy|need|missing|shopping|grocery|with|using|from)\b"
         r"|\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal))\b|[.!?,]|$)",
         str(text or ""), re.IGNORECASE,
     )
@@ -1575,8 +1575,20 @@ def recipe_composition_name(text: str) -> str | None:
     # Articles belong to the surrounding sentence, not to the saved recipe
     # name.  Keeping them here makes a natural request such as "make the
     # lasagna" miss an otherwise exact canonical recipe lookup.
-    value = re.sub(r"^(?:a|an|the)\s+", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"^(?:a|an|the|our|my)\s+", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"\s+recipe$", "", value, flags=re.IGNORECASE)
     return value[:200] or None
+
+
+def is_recipe_cook_request(text: str) -> bool:
+    """Recognize an explicit request to cook one saved recipe from stock."""
+    value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
+    return bool(value and re.search(r"\b(?:cook|prepare)\b", value) and recipe_composition_name(text))
+
+
+def recipe_cook_name(text: str) -> str | None:
+    """Extract a bounded saved-recipe name from an explicit cook request."""
+    return recipe_composition_name(text)
 
 
 def is_recipe_missing_request(text: str) -> bool:
@@ -4483,6 +4495,33 @@ def canonical_recipe_missing_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     return "You're missing: " + ", ".join(names) + ". You can ask me to add those to Grocery." if names else None
 
 
+def canonical_recipe_cook_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render the structured result of cooking a saved recipe."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") != "recipe_cook":
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        detail = str(payload.get("error") or payload.get("message") or "").strip()
+        if "no saved recipe matched" in detail.casefold():
+            return "I don't have a saved recipe for that dish yet. Import or paste it first; no stock was changed."
+        if "more than one saved recipe" in detail.casefold():
+            return "I found multiple saved recipes for that dish. Choose one before I cook it."
+        return "I couldn't cook that recipe. No stock change is confirmed."
+    cooked = payload.get("cook")
+    if not isinstance(cooked, Mapping) or not cooked.get("id"):
+        return None
+    return "Cooked the saved recipe and verified the canonical stock deduction."
+
+
 def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the already-projected owner Memory Result exactly once."""
     event = next(
@@ -4738,6 +4777,7 @@ def canonical_result_answer(
         (canonical_recipe_list_answer(tool_events), "canonical saved recipe Result"),
         (canonical_recipe_missing_answer(tool_events), "canonical recipe stock Result"),
         (canonical_recipe_queue_answer(tool_events), "canonical recipe grocery Result"),
+        (canonical_recipe_cook_answer(tool_events), "canonical recipe cook Result"),
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
