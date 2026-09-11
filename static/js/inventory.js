@@ -197,15 +197,16 @@ async function loadSharing() {
     }
     list.innerHTML = households.map(household => {
       const resources = [
-        ['kitchen_inventory', 'Pantry and fridge', 'Members can see shared kitchen stock.'],
-        ['recipes', 'Recipes', 'Members can see saved recipes.'],
+        ['kitchen_inventory', 'Pantry and fridge', 'Members can see shared kitchen stock.', true],
+        ['recipes', 'Recipes', 'Members can see saved recipes.', false],
       ];
-      const controls = resources.map(([resource, label, description]) => {
+      const controls = resources.map(([resource, label, description, supportsMutation]) => {
         const policy = household.resources?.[resource] || {};
         const enabled = Boolean(policy.enabled);
+        const editable = Boolean(policy.allow_member_mutation);
         const control = household.can_manage
-          ? `<button class="inventory-primary" data-action="toggle-sharing" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="${enabled ? 'true' : 'false'}">${enabled ? `Stop sharing ${label.toLowerCase()}` : `Share ${label.toLowerCase()} read-only`}</button>`
-          : `<span class="inventory-ready ${enabled ? 'yes' : 'no'}">${enabled ? 'Shared read-only' : 'Private'}</span>`;
+          ? `<button class="inventory-primary" data-action="toggle-sharing" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="${enabled ? 'true' : 'false'}">${enabled ? `Stop sharing ${label.toLowerCase()}` : `Share ${label.toLowerCase()} read-only`}</button>${supportsMutation && enabled ? ` <button data-action="toggle-sharing-mutation" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="true" data-mutation="${editable ? 'true' : 'false'}">${editable ? 'Make read-only' : 'Allow member edits'}</button>` : ''}`
+          : `<span class="inventory-ready ${enabled ? 'yes' : 'no'}">${enabled ? (editable ? 'Shared with edits' : 'Shared read-only') : 'Private'}</span>`;
         return `<div class="inventory-sharing-row"><div><strong>${label}</strong><p>${enabled ? description : 'Visible only to each owner.'}</p></div><div>${control}</div></div>`;
       }).join('');
       return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3>${controls}</div></article>`;
@@ -398,6 +399,18 @@ async function onClick(event) {
         method: 'PUT', body: JSON.stringify({resource: button.dataset.resource, enabled}),
       });
       uiModule.showToast?.(enabled ? 'Household sharing enabled' : 'Household sharing disabled');
+      await loadSharing();
+    } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
+    return;
+  }
+  if (action === 'toggle-sharing-mutation') {
+    button.disabled = true;
+    try {
+      const enabled = button.dataset.mutation !== 'true';
+      await api(`/api/inventory/sharing/${encodeURIComponent(button.dataset.householdId)}`, {
+        method: 'PUT', body: JSON.stringify({resource: button.dataset.resource, enabled: true, allow_member_mutation: enabled}),
+      });
+      uiModule.showToast?.(enabled ? 'Member edits enabled' : 'Member edits disabled');
       await loadSharing();
     } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
     return;

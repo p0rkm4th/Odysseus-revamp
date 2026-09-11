@@ -305,6 +305,42 @@ class InventoryService:
             return item
         raise InventoryNotFound("inventory item not found")
 
+    @classmethod
+    def _member_mutation_allowed(cls, db: Session, actor: str, resource_owner: str) -> bool:
+        if actor == resource_owner:
+            return True
+        policies = db.query(InventorySharePolicy).join(
+            HouseholdMembership,
+            HouseholdMembership.household_id == InventorySharePolicy.household_id,
+        ).filter(
+            HouseholdMembership.user_id == actor,
+            InventorySharePolicy.resource == "kitchen_inventory",
+            InventorySharePolicy.enabled.is_(True),
+            InventorySharePolicy.allow_member_mutation.is_(True),
+        ).all()
+        household_ids = {policy.household_id for policy in policies}
+        if not household_ids:
+            return False
+        return db.query(HouseholdMembership.id).filter(
+            HouseholdMembership.household_id.in_(household_ids),
+            HouseholdMembership.user_id == resource_owner,
+        ).first() is not None
+
+    @classmethod
+    def _mutable_item_for_actor(cls, db: Session, actor: str, item_id: str) -> InventoryItem:
+        item = cls._item_for_actor(db, actor, item_id)
+        if not cls._member_mutation_allowed(db, actor, item.owner):
+            raise InventoryNotFound("inventory item not found")
+        return item
+
+    @classmethod
+    def _mutable_lot_for_actor(cls, db: Session, actor: str, lot_id: str) -> InventoryLot:
+        lot = db.query(InventoryLot).filter_by(id=lot_id).one_or_none()
+        if lot is None:
+            raise InventoryNotFound("inventory lot not found")
+        cls._mutable_item_for_actor(db, actor, lot.item_id)
+        return lot
+
     def list_sharing(self, actor: str) -> list[dict[str, Any]]:
         """Return household memberships and explicit inventory policies."""
         with self._read() as db:
@@ -340,10 +376,8 @@ class InventoryService:
         resource = str(resource or "").strip().casefold()
         if resource not in {"kitchen_inventory", "recipes"}:
             raise InventoryError("unsupported household sharing resource")
-        if allow_member_mutation:
-            raise InventoryError(
-                "member inventory mutation is not enabled yet; sharing remains read-only"
-            )
+        if allow_member_mutation and resource != "kitchen_inventory":
+            raise InventoryError("member mutation is only available for kitchen inventory")
         with self._transaction() as db:
             household = db.get(Household, household_id)
             membership = db.query(HouseholdMembership).filter_by(
@@ -351,6 +385,8 @@ class InventoryService:
             ).one_or_none()
             if household is None or household.owner != actor or membership is None:
                 raise InventoryNotFound("household sharing configuration not found")
+            if allow_member_mutation and not enabled:
+                raise InventoryError("member mutation requires shared inventory to be enabled")
             policy = db.query(InventorySharePolicy).filter_by(
                 household_id=household_id, resource=resource,
             ).one_or_none()
@@ -360,10 +396,11 @@ class InventoryService:
                 )
                 db.add(policy)
             policy.enabled = bool(enabled)
-            policy.allow_member_mutation = False
+            policy.allow_member_mutation = bool(allow_member_mutation)
             db.flush()
             return {"household_id": household_id, "resource": resource,
-                    "enabled": bool(policy.enabled), "allow_member_mutation": False}
+                    "enabled": bool(policy.enabled),
+                    "allow_member_mutation": bool(policy.allow_member_mutation)}
 
     def create_item(
         self,
@@ -432,7 +469,7 @@ class InventoryService:
     ) -> dict[str, Any]:
         """Update human-facing pantry/grocery metadata, never stock implicitly."""
         with self._transaction() as db:
-            item = self._item(db, owner, item_id)
+            item = self._mutable_item_for_actor(db, owner, item_id)
             next_name = item.name if name is _UNSET else _required_text(name, "name", maximum=200)
             next_shopping_list = item.shopping_list if shopping_list is _UNSET else bool(shopping_list)
             _validate_grocery_name(next_name, next_shopping_list)
@@ -459,7 +496,7 @@ class InventoryService:
 
     def archive_item(self, owner: str, item_id: str) -> dict[str, Any]:
         with self._transaction() as db:
-            item = self._item(db, owner, item_id)
+            item = self._mutable_item_for_actor(db, owner, item_id)
             item.archived = True
             db.flush()
             return _item_view(item)
@@ -674,15 +711,18 @@ class InventoryService:
     ) -> dict[str, Any]:
         key = _required_text(idempotency_key, "idempotency_key", maximum=255)
         with self._transaction() as db:
-            prior = db.query(InventoryMovement).filter_by(owner=owner, idempotency_key=key).one_or_none()
+            item = self._mutable_item_for_actor(db, owner, item_id)
+            resource_owner = item.owner
+            prior = db.query(InventoryMovement).filter_by(
+                owner=resource_owner, idempotency_key=key,
+            ).one_or_none()
             if prior is not None:
                 expected = _canonical_amount(quantity, unit, prior.unit)
                 if prior.reason != "add" or prior.item_id != item_id or prior.quantity_delta != expected:
                     raise InventoryConflict("idempotency key was already used for another operation")
-                lot = self._lot(db, owner, prior.lot_id)
+                lot = self._lot(db, resource_owner, prior.lot_id)
                 return {"lot": _lot_view(lot), "movement": _movement_view(prior), "replayed": True}
-            item = self._item(db, owner, item_id)
-            self._location(db, owner, location_id)
+            self._location(db, resource_owner, location_id)
             amount = _canonical_amount(quantity, unit, item.default_unit)
             cost = None
             if unit_cost is not None:
@@ -693,7 +733,7 @@ class InventoryService:
                 if cost < 0:
                     raise InventoryError("unit_cost must not be negative")
             lot = InventoryLot(
-                id=str(uuid4()), owner=owner, item_id=item.id,
+                id=str(uuid4()), owner=resource_owner, item_id=item.id,
                 location_id=location_id or item.location_id, quantity=amount,
                 unit=item.default_unit, expiry_date=expiry_date, opened_at=opened_at,
                 purchase_date=purchase_date, unit_cost=cost,
@@ -701,10 +741,10 @@ class InventoryService:
                 lot_code=_optional_text(lot_code, "lot_code"),
             )
             movement = InventoryMovement(
-                id=str(uuid4()), owner=owner, item_id=item.id, lot_id=lot.id,
+                id=str(uuid4()), owner=resource_owner, item_id=item.id, lot_id=lot.id,
                 quantity_delta=amount, unit=item.default_unit, reason="add",
                 source_kind="stock_add", source_id=key, idempotency_key=key,
-                actor=actor, session_id=session_id,
+                actor=actor or owner, session_id=session_id,
             )
             db.add_all([lot, movement])
             db.flush()
@@ -719,8 +759,10 @@ class InventoryService:
         if reason not in {"consume", "dispose"}:
             raise InventoryError("consume reason must be consume or dispose")
         with self._transaction() as db:
+            item = self._mutable_item_for_actor(db, owner, item_id)
+            resource_owner = item.owner
             prior = db.query(InventoryMovement).filter_by(
-                owner=owner, source_kind="stock_consume", source_id=key
+                owner=resource_owner, source_kind="stock_consume", source_id=key
             ).order_by(InventoryMovement.idempotency_key).all()
             if prior:
                 requested = _canonical_amount(quantity, unit, prior[0].unit)
@@ -728,10 +770,9 @@ class InventoryService:
                 if any(m.item_id != item_id or m.reason != reason for m in prior) or consumed != requested:
                     raise InventoryConflict("idempotency key was already used for another operation")
                 return {"movements": [_movement_view(m) for m in prior], "quantity": consumed, "replayed": True}
-            item = self._item(db, owner, item_id)
             requested = _canonical_amount(quantity, unit, item.default_unit)
             lots = db.query(InventoryLot).filter(
-                InventoryLot.owner == owner, InventoryLot.item_id == item.id,
+                InventoryLot.owner == resource_owner, InventoryLot.item_id == item.id,
                 InventoryLot.quantity > 0,
             ).with_for_update().all()
             stock_lots = [StockLot(
@@ -748,7 +789,7 @@ class InventoryService:
             for index, deduction in enumerate(plan.deductions):
                 lot = by_id[deduction.lot_id]
                 changed = db.query(InventoryLot).filter(
-                    InventoryLot.id == lot.id, InventoryLot.owner == owner,
+                    InventoryLot.id == lot.id, InventoryLot.owner == resource_owner,
                     InventoryLot.item_id == item.id,
                     InventoryLot.quantity >= deduction.quantity,
                 ).update(
@@ -760,16 +801,16 @@ class InventoryService:
                     # plan. Raising rolls back all earlier legs as well.
                     raise InsufficientStock(plan)
                 movement = InventoryMovement(
-                    id=str(uuid4()), owner=owner, item_id=item.id, lot_id=lot.id,
+                    id=str(uuid4()), owner=resource_owner, item_id=item.id, lot_id=lot.id,
                     quantity_delta=-deduction.quantity, unit=item.default_unit,
                     reason=reason, source_kind="stock_consume", source_id=key,
-                    idempotency_key=_movement_key(key, index), actor=actor,
+                    idempotency_key=_movement_key(key, index), actor=actor or owner,
                     session_id=session_id,
                 )
                 db.add(movement)
                 movements.append(movement)
             remaining = db.query(InventoryLot).filter(
-                InventoryLot.owner == owner, InventoryLot.item_id == item.id,
+                InventoryLot.owner == resource_owner, InventoryLot.item_id == item.id,
                 InventoryLot.quantity > 0,
             ).count()
             if remaining == 0:
@@ -786,13 +827,16 @@ class InventoryService:
     ) -> dict[str, Any]:
         key = _required_text(idempotency_key, "idempotency_key", maximum=255)
         with self._transaction() as db:
-            prior = db.query(InventoryMovement).filter_by(owner=owner, idempotency_key=key).one_or_none()
+            lot = self._mutable_lot_for_actor(db, owner, lot_id)
+            resource_owner = lot.owner
+            prior = db.query(InventoryMovement).filter_by(
+                owner=resource_owner, idempotency_key=key,
+            ).one_or_none()
             if prior is not None:
                 delta = normalize_amount(quantity_delta, unit, positive=False).quantity
                 if prior.reason != "adjust" or prior.lot_id != lot_id or prior.quantity_delta != delta:
                     raise InventoryConflict("idempotency key was already used for another operation")
-                return {"lot": _lot_view(self._lot(db, owner, lot_id)), "movement": _movement_view(prior), "replayed": True}
-            lot = self._lot(db, owner, lot_id)
+                return {"lot": _lot_view(self._lot(db, resource_owner, lot_id)), "movement": _movement_view(prior), "replayed": True}
             try:
                 delta = normalize_amount(quantity_delta, unit, positive=False)
                 expected = normalize_amount(1, lot.unit)
@@ -803,7 +847,7 @@ class InventoryService:
             if delta.quantity == 0:
                 raise InventoryError("quantity_delta must not be zero")
             filters = [
-                InventoryLot.id == lot.id, InventoryLot.owner == owner,
+                InventoryLot.id == lot.id, InventoryLot.owner == resource_owner,
                 InventoryLot.quantity + delta.quantity >= 0,
             ]
             changed = db.query(InventoryLot).filter(*filters).update(
@@ -814,10 +858,10 @@ class InventoryService:
                 raise InsufficientStock(RecipeStockPlan((), ()))
             db.expire(lot, ["quantity"])
             movement = InventoryMovement(
-                id=str(uuid4()), owner=owner, item_id=lot.item_id, lot_id=lot.id,
+                id=str(uuid4()), owner=resource_owner, item_id=lot.item_id, lot_id=lot.id,
                 quantity_delta=delta.quantity, unit=lot.unit, reason="adjust",
                 source_kind="stock_adjust", source_id=key, idempotency_key=key,
-                note=_optional_text(note, "note", maximum=10000),
+                note=_optional_text(note, "note", maximum=10000), actor=owner,
             )
             db.add(movement)
             db.flush()

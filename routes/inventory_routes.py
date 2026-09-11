@@ -102,11 +102,12 @@ def setup_inventory_routes(
         resource = payload.get("resource")
         if not isinstance(resource, str) or not isinstance(payload.get("enabled"), bool):
             raise HTTPException(400, "resource and enabled are required")
-        if payload.get("allow_member_mutation", False) is not False:
-            raise HTTPException(400, "member mutation is not enabled for shared inventory")
+        if not isinstance(payload.get("allow_member_mutation", False), bool):
+            raise HTTPException(400, "allow_member_mutation must be boolean")
         return await call(
             inventory.configure_sharing, _owner(request), household_id,
-            resource=resource, enabled=payload["enabled"], allow_member_mutation=False,
+            resource=resource, enabled=payload["enabled"],
+            allow_member_mutation=payload.get("allow_member_mutation", False),
         )
 
     @router.get("/inventory/history")
