@@ -41,6 +41,13 @@ def test_recipe_import_route_returns_saved_recipe_and_deterministic_shortages(mo
     assert result["source"]["kind"] == "text"
 
 
+def test_recipe_import_route_precedes_dynamic_recipe_lookup():
+    router = inventory_routes.setup_inventory_routes(_Uploads(), service=_Service())
+    paths = [route.path for route in router.routes]
+
+    assert paths.index("/api/recipes/import") < paths.index("/api/recipes/{recipe_id}")
+
+
 def test_recipe_import_route_uses_existing_web_fetch_boundary(monkeypatch):
     def fake_fetch(url):
         assert "recipe.example" in url
