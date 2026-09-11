@@ -210,6 +210,26 @@ def test_recipe_shortages_can_be_reviewed_and_queued_without_changing_stock():
     assert str(service.list_lots("alice", rice["id"])[0]["quantity"]) == "500.000000"
 
 
+def test_recipe_cook_can_resolve_one_saved_recipe_by_name_and_replay():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    rice = service.create_item("alice", name="Rice", domain="kitchen", item_kind="ingredient", default_unit="g")
+    service.add_stock("alice", rice["id"], quantity=500, unit="g", idempotency_key="cook-name-stock")
+    service.create_recipe(
+        "alice", name="Rice Bowl", servings="1",
+        ingredients=[{"item_id": rice["id"], "quantity": 250, "unit": "g"}],
+    )
+    cooked = service.manage_recipes({
+        "action": "cook", "query": "rice bowl", "idempotency_key": "cook-name",
+    }, owner="alice")
+    replay = service.manage_recipes({
+        "action": "cook", "query": "rice bowl", "idempotency_key": "cook-name",
+    }, owner="alice")
+    assert cooked["cook"]["replayed"] is False
+    assert replay["cook"]["replayed"] is True
+    assert str(service.list_lots("alice", rice["id"])[0]["quantity"]) == "250.000000"
+
+
 def test_recipe_suggestions_use_canonical_stock_without_mutating_it():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

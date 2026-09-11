@@ -89,6 +89,8 @@ from src.aci import (
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
     recipe_composition_name,
+    is_recipe_cook_request,
+    recipe_cook_name,
     is_recipe_missing_request,
     recipe_missing_name,
     usage_bucket,
@@ -1963,10 +1965,16 @@ async def stream_aci_runtime(
         and _aci_mode == "aci"
         and is_recipe_missing_request(_last_user)
     )
+    _aci_recipe_cook_route = bool(
+        _aci_enabled
+        and _aci_mode == "aci"
+        and is_recipe_cook_request(_last_user)
+    )
     _recipe_composition_query = (
         recipe_composition_name(_last_user)
         if _aci_recipe_composition_route else None
     )
+    _recipe_cook_query = recipe_cook_name(_last_user) if _aci_recipe_cook_route else None
     # Once ACI has resolved a supported semantic contract, its binding is the
     # only model-facing capability for this turn.  The old route used to add
     # ALWAYS_AVAILABLE, domain maps, skills, and (sometimes) the generic tool
@@ -1985,6 +1993,7 @@ async def stream_aci_runtime(
         and _canonical_binding
         and not _aci_recipe_composition_route
         and not _aci_recipe_missing_route
+        and not _aci_recipe_cook_route
         and isinstance(_intent.get("intent_frame"), dict)
         and str(_intent["intent_frame"].get("domain_concept") or "") not in {"", "UNKNOWN"}
     )
@@ -2747,8 +2756,29 @@ async def stream_aci_runtime(
                 "query": _recipe_missing_query,
             }, sort_keys=True),
         )
+    if (
+        _aci_recipe_cook_route
+        and _recipe_cook_query
+        and not guide_only
+        and "manage_assets" not in disabled_tools
+    ):
+        # Cooking is an explicit bounded inventory mutation. Resolve the saved
+        # recipe by name server-side and bind replay safety to this durable
+        # owner turn rather than to the natural-language sentence alone.
+        _cook_scope = str(work_run_id or "").strip() or hashlib.sha256(
+            f"{owner}:{_last_user}".encode("utf-8")
+        ).hexdigest()[:24]
+        _aci_fast_path_block = ToolBlock(
+            "manage_assets",
+            json.dumps({
+                "action": "recipe_cook",
+                "domain": "kitchen",
+                "recipe_query": _recipe_cook_query,
+                "idempotency_key": f"recipe-cook:{_cook_scope}",
+            }, sort_keys=True),
+        )
     if _aci_fast_path_block is not None and (
-        _aci_recipe_composition_route or _aci_recipe_missing_route
+        _aci_recipe_composition_route or _aci_recipe_missing_route or _aci_recipe_cook_route
     ):
         # A deterministic recipe route supersedes a generic NO_APPLICABLE_ACTION
         # fallback from the provisional intent classifier. The canonical recipe

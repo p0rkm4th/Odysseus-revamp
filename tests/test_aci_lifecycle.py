@@ -17,6 +17,7 @@ from src.aci import (
     canonical_tool_result_projection,
     canonical_inventory_mutation_answer,
     canonical_recipe_missing_answer,
+    canonical_recipe_cook_answer,
     canonical_recipe_queue_answer,
     canonical_recipe_list_answer,
     canonical_recipe_suggest_answer,
@@ -24,6 +25,8 @@ from src.aci import (
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
     recipe_composition_name,
+    is_recipe_cook_request,
+    recipe_cook_name,
     is_recipe_missing_request,
     recipe_missing_name,
     project_final_answer,
@@ -101,6 +104,12 @@ def test_recipe_composition_drops_sentence_article_before_saved_recipe_lookup():
     assert recipe_composition_name(request) == "Shared pasta test"
 
 
+def test_explicit_cook_request_routes_to_saved_recipe_without_model_prose():
+    request = "Cook our Shared pasta test recipe with what we have."
+    assert is_recipe_cook_request(request)
+    assert recipe_cook_name(request) == "Shared pasta test"
+
+
 def test_kitchen_delete_uses_bounded_archive_for_named_items():
     query = "delete the basil-test, dogfood test, and ketchup from the kitchen"
     frame = compile_intent(query)
@@ -127,6 +136,17 @@ def test_canonical_recipe_missing_answer_is_read_only_and_grounded():
     }
     assert canonical_recipe_missing_answer([event]) == (
         "You're missing: spaghetti (200 g). You can ask me to add those to Grocery."
+    )
+
+
+def test_canonical_recipe_cook_answer_requires_structured_success():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_cook"}',
+        "output": '{"cook":{"id":"cook-1","movement_ids":["movement-1"]}}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_cook_answer([event]) == (
+        "Cooked the saved recipe and verified the canonical stock deduction."
     )
 
 
