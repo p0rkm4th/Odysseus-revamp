@@ -938,6 +938,56 @@ class RecipeService(InventoryService):
             recipe = self._recipe(db, owner, recipe_id)
             return self._stock_plan(db, owner, recipe, servings if servings is not None else recipe.servings)
 
+    def missing_ingredients(self, owner: str, recipe_id: str, *, servings: Any | None = None) -> dict[str, Any]:
+        """Return deterministic recipe shortages without changing stock."""
+        plan = self.can_make(owner, recipe_id, servings=servings)
+        return {
+            "recipe_id": recipe_id,
+            "can_make": plan.can_make,
+            "shortages": [{
+                "name": row.name, "missing": row.missing,
+                "unit": row.unit, "optional": row.optional,
+            } for row in plan.shortages],
+        }
+
+    def queue_missing_ingredients(
+        self, owner: str, recipe_id: str, *, servings: Any | None = None,
+    ) -> dict[str, Any]:
+        """Queue required shortages without changing owned stock."""
+        with self._transaction() as db:
+            recipe = self._recipe(db, owner, recipe_id)
+            plan = self._stock_plan(db, owner, recipe, servings if servings is not None else recipe.servings)
+            queued: list[dict[str, Any]] = []
+            for shortage in plan.shortages:
+                if shortage.optional:
+                    continue
+                normalized = normalize_item_name(shortage.name)
+                item = db.query(InventoryItem).filter(
+                    InventoryItem.owner == owner,
+                    InventoryItem.domain == "kitchen",
+                    InventoryItem.normalized_name == normalized,
+                    InventoryItem.archived.is_(False),
+                ).order_by(InventoryItem.id).first()
+                if item is None:
+                    item = InventoryItem(
+                        id=str(uuid4()), owner=owner, domain="kitchen",
+                        item_kind="ingredient", name=shortage.name,
+                        normalized_name=normalized, default_unit=shortage.unit,
+                        shopping_list=True, metadata_json={}, image_refs_json=[],
+                    )
+                    db.add(item)
+                    db.flush()
+                    replayed = False
+                else:
+                    replayed = bool(item.shopping_list)
+                    item.shopping_list = True
+                queued.append({
+                    "item": _item_view(item), "missing": shortage.missing,
+                    "unit": shortage.unit, "replayed": replayed,
+                })
+            return {"recipe_id": recipe.id, "queued": queued,
+                    "count": len(queued), "stock_changed": False}
+
     def cook(
         self, owner: str, recipe_id: str, *, servings: Any | None = None,
         idempotency_key: str,
@@ -1222,11 +1272,23 @@ class RecipeService(InventoryService):
                     "unit": row.unit, "optional": row.optional,
                 } for row in plan.shortages],
             }
+        if action == "missing":
+            return self.missing_ingredients(
+                owner, _required_text(args.get("recipe_id"), "recipe_id"),
+                servings=args.get("servings"),
+            )
+        if action == "queue_missing":
+            return self.queue_missing_ingredients(
+                owner, _required_text(args.get("recipe_id"), "recipe_id"),
+                servings=args.get("servings"),
+            )
         if action == "add":
             return {"recipe": self.create_recipe(
                 owner, name=args.get("name"), servings=args.get("servings") or "1",
                 ingredients=args.get("ingredients") or [],
                 instructions=args.get("instructions") or "",
+                source_url=args.get("source_url"), tags=args.get("tags"),
+                image_refs=args.get("image_refs"),
             )}
         if action == "cook":
             return {"cook": self.cook(

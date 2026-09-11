@@ -292,6 +292,15 @@ async function onClick(event) {
   const action = button.dataset.action;
   if (action === 'retry') return renderTab();
   if (action === 'dismiss-dialog') return button.closest('.inventory-dialog-backdrop')?.remove();
+  if (action === 'queue-missing') {
+    button.disabled = true;
+    try {
+      const result = await api(`/api/recipes/${encodeURIComponent(button.dataset.recipeId)}/queue-missing`, {method:'POST', body:JSON.stringify({})});
+      uiModule.showToast?.(`${result.count || 0} required item${result.count === 1 ? '' : 's'} added to grocery list`);
+      button.textContent = 'Added to grocery list';
+    } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
+    return;
+  }
   if (action === 'new-item' || action === 'new-grocery') return modalForm(action === 'new-grocery' ? 'Add item to grocery · To buy' : 'Add pantry item · On hand', `${action === 'new-grocery' ? '<p class="inventory-muted">This queues an item to buy; it does not add owned stock.</p>' : ''}${field('Name','name','required maxlength="200"')}<label>Area<select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT</option></select></label>${action === 'new-grocery' ? '' : '<label>Storage<select name="storage_area"><option value="">Unassigned</option><option value="pantry">Pantry</option><option value="fridge">Fridge</option><option value="freezer">Freezer</option></select></label>'}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${field('Category','category','maxlength="80"')}${action === 'new-grocery' ? '<input type="hidden" name="shopping_list" value="on">' : '<label><input type="checkbox" name="shopping_list"> Also queue to buy (does not add stock)</label>'}`, action === 'new-grocery' ? 'Add to buy list' : 'Add item', action === 'new-grocery' ? 'grocery' : 'item');
   const card = button.closest('[data-item-id]');
   if (action === 'edit-item') {
@@ -331,8 +340,9 @@ function onInput(event) {
 async function showRecipe(id) {
   try {
     const [{recipe}, plan] = await Promise.all([api(`/api/recipes/${encodeURIComponent(id)}`), api(`/api/recipes/${encodeURIComponent(id)}/can-make`)]);
-    const shortages = (plan.shortages || []).map(s => `<li>${escapeHtml(s.name)}: need ${escapeHtml(s.missing)} ${escapeHtml(s.unit)} more</li>`).join('');
-    modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p><h4>${plan.can_make ? 'You have everything' : 'Missing stock'}</h4><ul>${shortages}</ul>`, 'Close', 'view');
+    const shortages = (plan.shortages || []).map(s => `<li>${escapeHtml(s.name)}: need ${escapeHtml(s.missing)} ${escapeHtml(s.unit)} more${s.optional ? ' (optional)' : ''}</li>`).join('');
+    const queue = plan.can_make ? '' : `<button type="button" class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(id)}">Add required missing items to grocery list</button>`;
+    modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p><h4>${plan.can_make ? 'You have everything' : 'Missing stock'}</h4><ul>${shortages}</ul>${queue}`, 'Close', 'view', id);
     const form = document.querySelector('.inventory-dialog[data-kind="view"]');
     form.querySelector('[type=submit]').type = 'button'; form.querySelector('[type=submit]').dataset.action = 'dismiss-dialog';
   } catch (error) { uiModule.showError?.(error.message); }

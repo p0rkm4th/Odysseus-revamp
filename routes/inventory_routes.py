@@ -220,6 +220,17 @@ def setup_inventory_routes(
             servings=payload.get("servings"), idempotency_key=payload.get("idempotency_key"),
         )}
 
+    @router.get("/recipes/{recipe_id}/missing")
+    async def missing_ingredients(request: Request, recipe_id: str, servings: str | None = None):
+        return await call(inventory.missing_ingredients, _owner(request), recipe_id, servings=servings)
+
+    @router.post("/recipes/{recipe_id}/queue-missing")
+    async def queue_missing_ingredients(request: Request, recipe_id: str, payload: dict[str, Any] = Body(default={} )):
+        return await call(
+            inventory.queue_missing_ingredients, _owner(request), recipe_id,
+            servings=payload.get("servings"),
+        )
+
     def resolve_attachments(owner: str, attachment_ids: Any) -> list[dict[str, Any]]:
         if not isinstance(attachment_ids, list) or len(attachment_ids) > 20:
             raise HTTPException(400, "attachment_ids must be a list of at most 20 upload IDs")
