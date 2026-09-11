@@ -363,9 +363,17 @@ function onInput(event) {
 async function showRecipe(id) {
   try {
     const [{recipe}, plan] = await Promise.all([api(`/api/recipes/${encodeURIComponent(id)}`), api(`/api/recipes/${encodeURIComponent(id)}/can-make`)]);
+    const shortageNames = new Set((plan.shortages || []).map(s => String(s.name || '').trim().toLowerCase()));
+    const ingredients = (recipe.ingredients || []).map(ingredient => {
+      const name = String(ingredient.name || '').trim();
+      const missing = shortageNames.has(name.toLowerCase());
+      const amount = `${escapeHtml(ingredient.quantity)} ${escapeHtml(ingredient.unit)}`;
+      return `<li class="recipe-ingredient ${missing ? 'missing' : 'available'}"><span>${missing ? 'Missing' : 'On hand'}</span> ${escapeHtml(name)} · ${amount}</li>`;
+    }).join('');
     const shortages = (plan.shortages || []).map(s => `<li>${escapeHtml(s.name)}: need ${escapeHtml(s.missing)} ${escapeHtml(s.unit)} more${s.optional ? ' (optional)' : ''}</li>`).join('');
     const queue = plan.can_make ? '' : `<button type="button" class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(id)}">Add required missing items to grocery list</button>`;
-    modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p><h4>${plan.can_make ? 'You have everything' : 'Missing stock'}</h4><ul>${shortages}</ul>${queue}`, 'Close', 'view', id);
+    const shortageBlock = plan.can_make ? '' : `<h4>Missing stock</h4><ul>${shortages}</ul>`;
+    modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p><h4>Ingredient check</h4><ul class="recipe-ingredient-list">${ingredients || '<li>No ingredients saved.</li>'}</ul>${shortageBlock}${queue}`, 'Close', 'view', id);
     const form = document.querySelector('.inventory-dialog[data-kind="view"]');
     form.querySelector('[type=submit]').type = 'button'; form.querySelector('[type=submit]').dataset.action = 'dismiss-dialog';
   } catch (error) { uiModule.showError?.(error.message); }

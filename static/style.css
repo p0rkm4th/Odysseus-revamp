@@ -41777,3 +41777,8 @@ body.settings-sidebar-resize-active {
 
 /* Inventory dialogs must sit above workspace windows for reliable hit-testing. */
 .inventory-dialog-backdrop { z-index: 6000; }
+.recipe-ingredient-list { list-style:none; padding:0; margin:8px 0 14px; }
+.recipe-ingredient { display:flex; gap:8px; align-items:baseline; padding:6px 8px; border-radius:6px; }
+.recipe-ingredient span { min-width:58px; font-size:.76rem; text-transform:uppercase; letter-spacing:.04em; color:var(--hades-text-muted, var(--muted)); }
+.recipe-ingredient.available { background:color-mix(in srgb, var(--accent, #7d7) 8%, transparent); }
+.recipe-ingredient.missing { background:color-mix(in srgb, var(--red, #d66) 10%, transparent); }
