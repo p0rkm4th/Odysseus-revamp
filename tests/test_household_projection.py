@@ -157,7 +157,7 @@ def test_recipe_queue_missing_by_name_compares_stock_and_queues_only_shortages()
         ],
     )
     result = service.manage_recipes(
-        {"action": "queue_missing_by_name", "query": "rice bowl"}, owner="alice",
+        {"action": "queue_missing_by_name", "query": "rice bowl;"}, owner="alice",
     )
     assert [row["name"] for row in result["missing"]["shortages"]] == ["eggs"]
     assert [row["name"] for row in service.list_items("alice", list_name="grocery")] == ["eggs"]

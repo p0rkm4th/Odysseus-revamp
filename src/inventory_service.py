@@ -1573,7 +1573,7 @@ class RecipeService(InventoryService):
         if action in {"missing_by_name", "queue_missing_by_name"}:
             query = normalize_item_name(_required_text(
                 args.get("query") or args.get("recipe_name"), "recipe query",
-            ))
+            )).strip(" .,!?:;")
             recipes = [recipe for recipe in self.list_recipes(owner)
                        if query == normalize_item_name(recipe["name"])
                        or query in normalize_item_name(recipe["name"])]
