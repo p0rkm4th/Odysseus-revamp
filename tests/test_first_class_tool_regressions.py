@@ -370,6 +370,30 @@ async def test_grocery_unqueue_delegates_to_canonical_inventory_service(monkeypa
     assert result["removed"] is True
 
 
+@pytest.mark.asyncio
+async def test_recipe_actions_are_exposed_through_the_canonical_inventory_binding(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeRecipeTool:
+        async def execute(self, content, ctx):
+            payload = json.loads(content)
+            assert payload["action"] == "queue_missing"
+            assert payload["recipe_id"] == "recipe-1"
+            assert ctx["owner"] == "alice"
+            return {"recipe_id": "recipe-1", "queued": [], "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageRecipesTool", FakeRecipeTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "recipe_queue_missing", "recipe_id": "recipe-1",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+    assert result["provenance"] == "CANONICAL_RECIPE"
+
+
 def test_recipe_placeholder_does_not_become_a_grocery_item():
     from src.inventory_service import InventoryError, RecipeService
 
