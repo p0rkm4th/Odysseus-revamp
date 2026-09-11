@@ -205,7 +205,7 @@ async function loadSharing() {
         ? `<ul class="inventory-sharing-members">${members.map(member => `<li><strong>${escapeHtml(member.user_id || 'Household member')}</strong><span>${escapeHtml(member.role || 'member')}</span>${household.can_manage && member.role !== 'owner' ? ` <button class="inventory-link-button" data-action="remove-member" data-household-id="${escapeHtml(household.household_id)}" data-user-id="${escapeHtml(member.user_id)}">Remove</button>` : ''}</li>`).join('')}</ul>`
         : '<p class="inventory-sharing-empty-members">No members are configured yet.</p>';
       const resources = [
-        ['kitchen_inventory', 'Pantry, fridge, and freezer', 'Members can see shared kitchen stock.', true],
+        ['kitchen_inventory', 'Kitchen stock and Grocery', 'Members can see shared pantry, fridge, freezer, and to-buy items.', true],
         ['recipes', 'Recipes', 'Members can see saved recipes.', false],
       ];
       const controls = resources.map(([resource, label, description, supportsMutation]) => {
