@@ -41742,6 +41742,7 @@ body.settings-sidebar-resize-active {
 .hades-workspace-window pre { max-width:100%; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--hades-text-muted, var(--muted)); }
 
 /* Pantry/Grocery tabs and toolbars use the same interaction density as Brain. */
+.hades-workspace-window .inventory-tabs { flex-wrap:wrap; overflow:visible; }
 .hades-workspace-window .inventory-tabs {
   gap:3px;
   margin-bottom:14px;
