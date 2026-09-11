@@ -28,6 +28,7 @@ _UNITS = {
     "tsp", "teaspoon", "teaspoons", "tbsp", "tablespoon", "tablespoons", "cup", "cups",
     "count", "each", "item", "items", "pc", "pcs", "piece", "pieces",
 }
+_UNICODE_FRACTIONS = {"¼": "0.25", "½": "0.5", "¾": "0.75", "⅓": "0.333333", "⅔": "0.666667", "⅛": "0.125", "⅜": "0.375", "⅝": "0.625", "⅞": "0.875"}
 
 
 def recipe_text_from_web_result(result: dict[str, Any]) -> str:
@@ -68,7 +69,17 @@ def _fraction(value: str) -> str:
 
 
 def _ingredient(line: str) -> dict[str, Any] | None:
-    match = _LINE.match(" ".join(line.split()))
+    normalized_line = " ".join(line.split())
+    # Expand a leading standalone or mixed Unicode fraction without touching
+    # ordinary ingredient names later in the line.
+    mixed = re.match(r"^((?:[-*•]\s*)?)(\d+)([¼½¾⅓⅔⅛⅜⅝⅞])(?=\s)", normalized_line)
+    if mixed:
+        normalized_line = f"{mixed.group(1)}{float(mixed.group(2)) + float(_UNICODE_FRACTIONS[mixed.group(3)])} {normalized_line[mixed.end():]}"
+    else:
+        standalone = re.match(r"^((?:[-*•]\s*)?)([¼½¾⅓⅔⅛⅜⅝⅞])(?=\s)", normalized_line)
+        if standalone:
+            normalized_line = f"{standalone.group(1)}{_UNICODE_FRACTIONS[standalone.group(2)]} {normalized_line[standalone.end():]}"
+    match = _LINE.match(normalized_line)
     if not match:
         return None
     quantity, possible_unit, name = match.groups()
