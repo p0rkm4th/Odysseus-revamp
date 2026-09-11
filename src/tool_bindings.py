@@ -27,7 +27,7 @@ MANAGE_ASSETS_SCHEMA = {
         "name": "manage_assets",
         "description": "Manage the persistent hardware/asset inventory, component relationships, and observation history. Prefer strong identity evidence such as system UUID, serial, or MAC. Never merge assets solely by IP address.",
         "parameters": {"type": "object", "properties": {
-        "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset", "recipe_list", "recipe_get", "recipe_add", "recipe_missing", "recipe_queue_missing", "recipe_can_make", "recipe_cook"]},
+        "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset", "recipe_list", "recipe_search", "recipe_get", "recipe_add", "recipe_missing", "recipe_queue_missing", "recipe_can_make", "recipe_cook"]},
             "asset": {"type": "string"}, "name": {"type": "string"}, "type": {"type": "string"}, "status": {"type": "string"},
             "manufacturer": {"type": "string"}, "model": {"type": "string"}, "serial": {"type": "string"}, "system_uuid": {"type": "string"},
             "hostname": {"type": "string"}, "mac": {"type": "string"}, "location": {"type": "string"}, "notes": {"type": "string"}, "source": {"type": "string"},
@@ -36,7 +36,7 @@ MANAGE_ASSETS_SCHEMA = {
             "relation": {"type": "string"}, "source_asset": {"type": "string"}, "target_asset": {"type": "string"}, "reason": {"type": "string"},
             "item_id": {"type": "string"}, "items": {"type": "array", "items": {"type": "string"}, "maxItems": 32}, "domain": {"type": "string", "enum": ["kitchen", "household", "it"]}, "item_kind": {"type": "string", "enum": ["ingredient", "consumable", "asset"]}, "default_unit": {"type": "string"}, "shopping_list": {"type": "boolean"}, "storage_area": {"type": "string", "enum": ["pantry", "fridge", "freezer"]}, "list_name": {"type": "string", "enum": ["grocery", "pantry", "fridge", "freezer"]}, "reorder_point": {"type": "number"},
             "quantity": {"type": "number"}, "unit": {"type": "string"}, "idempotency_key": {"type": "string"},
-            "recipe_id": {"type": "string"}, "recipe_name": {"type": "string"}, "servings": {"type": "number"},
+            "recipe_id": {"type": "string"}, "recipe_name": {"type": "string"}, "recipe_query": {"type": "string"}, "servings": {"type": "number"},
             "ingredients": {"type": "array", "maxItems": 64, "items": {"type": "object", "properties": {"name": {"type": "string"}, "quantity": {"type": "number"}, "unit": {"type": "string"}, "optional": {"type": "boolean"}, "preparation": {"type": "string"}}, "required": ["name", "quantity", "unit"]}},
             "instructions": {"type": "string", "maxLength": 20000}, "source_url": {"type": "string", "maxLength": 4000},
         }, "required": ["action"]},
@@ -240,7 +240,7 @@ These records are canonical inventory, not conversational memory. Never claim a
 change succeeded unless the structured tool result confirms it.
 
 Recipes use the same canonical capability. Use `recipe_add` with a bounded
-ingredient array when the owner provides a recipe, `recipe_get` or `recipe_list`
+ingredient array when the owner provides a recipe, `recipe_get`, `recipe_search`, or `recipe_list`
 to retrieve one, `recipe_missing` to compare required ingredients against
 current stock, and `recipe_queue_missing` to add only required missing
 ingredients to the grocery list. Recipe planning never changes stock, and a
