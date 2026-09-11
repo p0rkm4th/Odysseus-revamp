@@ -33,6 +33,11 @@ def test_pasted_recipe_import_requires_an_ingredients_section():
         parse_recipe_text("A paragraph about dinner with no structured list")
 
 
+def test_pasted_recipe_without_heading_accepts_only_explicit_quantity_lines():
+    result = parse_recipe_text("Quick pasta\n- 400 g spaghetti\n- 1 can sauce\nBoil for 10 minutes")
+    assert [row["name"] for row in result["ingredients"]] == ["spaghetti", "sauce"]
+
+
 def test_recipe_import_is_bounded():
     with pytest.raises(ValueError, match="24000"):
         parse_recipe_text("x" * 24_001)
