@@ -114,6 +114,10 @@ def test_explicit_cook_request_routes_to_saved_recipe_without_model_prose():
     assert recipe_cook_name(request) == "Shared pasta test"
 
 
+def test_recipe_discovery_question_cannot_become_a_cook_mutation():
+    assert not is_recipe_cook_request("What can I cook tonight without spending much?")
+
+
 def test_kitchen_delete_uses_bounded_archive_for_named_items():
     query = "delete the basil-test, dogfood test, and ketchup from the kitchen"
     frame = compile_intent(query)
