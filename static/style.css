@@ -41874,6 +41874,8 @@ body.settings-sidebar-resize-active {
 .recipe-card-next strong { display:block; margin:4px 0 5px; color:var(--hades-text, var(--fg)); font-size:.78rem; line-height:1.35; }
 .recipe-card-next p { margin:0; color:var(--hades-text-muted, var(--muted)); font-size:.7rem; line-height:1.4; }
 .recipe-card-actions { justify-content:flex-start; margin-top:14px; }
+.recipe-card-actions-top { margin:0 0 12px; padding-bottom:12px; border-bottom:1px solid var(--hades-border-subtle, var(--border)); }
+.recipe-card-actions-top button { min-height:34px; }
 .recipe-empty-state { padding:48px 18px; }
 .recipe-empty-state strong { display:block; margin-bottom:6px; color:var(--hades-text, var(--fg)); font-size:1rem; }
 .recipe-empty-state p { margin:0 auto 15px; max-width:360px; line-height:1.45; }
