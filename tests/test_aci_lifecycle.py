@@ -828,6 +828,12 @@ def test_inventory_mutation_grounding_accepts_the_grocery_list():
     assert payload["shopping_list"] is True
 
 
+def test_inventory_mutation_grounding_leaves_recipe_composition_to_recipe_path():
+    assert canonical_inventory_mutation_payload(
+        "add_item", "Add the ingredients I am missing to my shopping list",
+    ) is None
+
+
 def test_inventory_mutation_grounding_covers_stock_and_consumption_without_ids():
     purchased = canonical_inventory_mutation_payload(
         "add_stock", "I bought two 1-kilogram bags of rice; put them in the pantry."
