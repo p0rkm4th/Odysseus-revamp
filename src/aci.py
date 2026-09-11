@@ -3553,6 +3553,9 @@ def canonical_read_fast_path_payload(
             payload["budget_constraint"] = True
         if filters.get("max_shortages") is not None:
             payload["max_shortages"] = min(max(int(filters.get("max_shortages") or 0), 0), 32)
+        ingredient_query = str(filters.get("ingredient_query") or "").strip()
+        if ingredient_query:
+            payload["ingredient_query"] = ingredient_query[:100]
         payload["limit"] = min(max(int(filters.get("limit") or 20), 1), 50)
     if action == "summarize_owner_memory":
         payload["query"] = query or "what do you remember about me"
@@ -4551,6 +4554,7 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     if not isinstance(recipes, list):
         return None
     budget_requested = bool(payload.get("budget_constraint") or request.get("budget_constraint"))
+    ingredient_query = str(payload.get("ingredient_query") or request.get("ingredient_query") or "").strip()
     budget_note = (
         " I can compare what you have, but I do not have a verified ingredient-price "
         "or budget projection, so this is not a cost ranking."
@@ -4560,6 +4564,8 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     if not recipes:
         if payload.get("available_only"):
             return "I couldn't find a saved recipe you can make from current stock." + budget_note
+        if ingredient_query:
+            return f"I couldn't find a saved recipe using {ingredient_query}."
         return "I couldn't find saved recipes within that shortage limit." + budget_note
     labels = []
     for recipe in recipes:
@@ -4575,7 +4581,10 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
             labels.append(f"{name} (missing {count} item{'s' if count != 1 else ''})")
     if not labels:
         return None
-    prefix = "You can make" if payload.get("available_only") else "Closest saved recipes"
+    if ingredient_query:
+        prefix = f"Recipes using {ingredient_query}"
+    else:
+        prefix = "You can make" if payload.get("available_only") else "Closest saved recipes"
     answer = prefix + ": " + ", ".join(labels) + "."
     return answer + budget_note
 

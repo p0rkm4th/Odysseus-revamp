@@ -72,6 +72,20 @@ def test_recipe_availability_payload_is_bounded_and_read_only():
     assert payload == {"action": "recipe_suggest", "max_shortages": 2, "limit": 20}
 
 
+def test_recipe_ingredient_question_uses_bounded_canonical_filter():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "What recipes use the chicken before it goes bad?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters == {"view": "ingredient", "ingredient_query": "chicken"}
+    assert resolved.action_id == "recipe_suggest"
+    assert canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
+    ) == {"action": "recipe_suggest", "ingredient_query": "chicken", "limit": 20}
+
+
 @pytest.mark.parametrize(("query", "view", "action"), [
     ("How much have I spent this month?", "spending", "spending"),
     ("How much money for this month specifically did I spend?", "spending", "spending"),

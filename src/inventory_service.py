@@ -1213,6 +1213,7 @@ class RecipeService(InventoryService):
         *,
         available_only: bool = False,
         max_shortages: int | None = None,
+        ingredient_query: str | None = None,
         servings: Any | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
@@ -1229,7 +1230,16 @@ class RecipeService(InventoryService):
                 raise InventoryError("max_shortages must be a non-negative integer") from exc
 
         suggestions: list[dict[str, Any]] = []
+        normalized_ingredient_query = normalize_item_name(ingredient_query) if ingredient_query else ""
         for recipe in self.list_recipes(owner)[:50]:
+            if normalized_ingredient_query:
+                ingredients = recipe.get("ingredients") if isinstance(recipe, dict) else None
+                if not any(
+                    normalized_ingredient_query in normalize_item_name(row.get("name"))
+                    for row in (ingredients or [])
+                    if isinstance(row, dict)
+                ):
+                    continue
             plan = self.can_make(owner, recipe["id"], servings=servings)
             shortages = [{
                 "name": row.name, "missing": row.missing,
@@ -1256,6 +1266,7 @@ class RecipeService(InventoryService):
             "recipes": suggestions, "count": len(suggestions),
             "available_only": bool(available_only),
             "max_shortages": bounded_shortages,
+            "ingredient_query": ingredient_query,
             "canonical_store": "inventory_service",
         }
 
@@ -1667,7 +1678,9 @@ class RecipeService(InventoryService):
         if action == "suggest":
             return self.suggest_recipes(
                 owner, available_only=bool(args.get("available_only", False)),
-                max_shortages=args.get("max_shortages"), servings=args.get("servings"),
+                max_shortages=args.get("max_shortages"),
+                ingredient_query=args.get("ingredient_query"),
+                servings=args.get("servings"),
                 limit=args.get("limit", 20),
             )
         if action == "search":
