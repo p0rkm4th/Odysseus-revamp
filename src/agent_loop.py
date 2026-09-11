@@ -2936,6 +2936,8 @@ async def stream_aci_runtime(
     # that *can't* call the tool from looping forever.
     _intent_nudge_count = 0
     _MAX_INTENT_NUDGES = 2
+    _inventory_composition_repair_pending = False
+    _inventory_composition_repair_count = 0
 
     # "I said I would, then didn't" detector. The pattern that breaks debug
     # loops on weak models (deepseek-v4-flash mid-2026): the model writes
@@ -4492,6 +4494,31 @@ async def stream_aci_runtime(
         # explicit live request still deserves one bounded repair if a strict
         # textual model answers in prose without emitting any tool invocation.
         _ody_v38_user_text = str(_last_user or "")
+        if (
+            _inventory_composition_repair_pending
+            and _inventory_composition_repair_count < 1
+            and not tool_blocks
+            and not native_tool_calls
+            and not _force_answer
+        ):
+            _inventory_composition_repair_count += 1
+            _inventory_composition_repair_pending = False
+            messages.append({
+                "role": "system",
+                "content": (
+                    "INVENTORY COMPOSITION REPAIR: Your previous inventory call "
+                    "used the owner's request phrase as an item and was rejected. "
+                    "Your prose answer did not perform the requested change. "
+                    "For a named dish, use recipe_add with concrete ingredient "
+                    "objects, then recipe_missing and recipe_queue_missing; do not "
+                    "call add_item with words such as 'the ingredients I am missing'. "
+                    "If the dish cannot be established safely, ask one concise "
+                    "clarifying question instead of claiming completion. Execute "
+                    "the appropriate canonical action now."
+                ),
+            })
+            yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
+            continue
         # Weak local models sometimes emit the visible text
         # ``[Assistant invoked tool: ...]`` instead of a parseable strict-text
         # invocation.  When the user has supplied an explicit, bounded
@@ -5502,6 +5529,7 @@ async def stream_aci_runtime(
                 and result.get("error_code") == "grocery_item_placeholder"
             ):
                 _was_aci_canonical_read = False
+                _inventory_composition_repair_pending = True
             _post_result_transition = project_post_result_transition(
                 result,
                 canonical_read=_was_aci_canonical_read,
