@@ -1,8 +1,8 @@
 # Hades reliability and owner-dogfood sprint checkpoint
 
-Date: 2026-09-11 18:55 UTC  
-Repository: `p0rkm4th/Odysseus-revamp`  
-Branch: `luna/plaid-readonly-budgeting`  
+Date: 2026-09-11 18:55 UTC
+Repository: `p0rkm4th/Odysseus-revamp`
+Branch: `luna/plaid-readonly-budgeting`
 Head: `0cdd47238ead2dd8c28c7e04986ad731e3139d7e`
 
 ## Verified in this checkpoint
