@@ -1307,7 +1307,7 @@ class RecipeService(InventoryService):
                 owner, _required_text(args.get("recipe_id"), "recipe_id"),
                 servings=args.get("servings"),
             )
-        if action == "queue_missing_by_name":
+        if action in {"missing_by_name", "queue_missing_by_name"}:
             query = normalize_item_name(_required_text(
                 args.get("query") or args.get("recipe_name"), "recipe query",
             ))
@@ -1321,6 +1321,13 @@ class RecipeService(InventoryService):
             if len(recipes) > 1:
                 raise InventoryError("More than one saved recipe matched that dish; choose one.")
             recipe_id = recipes[0]["id"]
+            if action == "missing_by_name":
+                return {
+                    "recipe": recipes[0],
+                    "missing": self.missing_ingredients(
+                        owner, recipe_id, servings=args.get("servings"),
+                    ),
+                }
             queued = self.queue_missing_ingredients(owner, recipe_id, servings=args.get("servings"))
             return {
                 "recipe": recipes[0],

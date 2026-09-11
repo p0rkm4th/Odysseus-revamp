@@ -27,7 +27,7 @@ MANAGE_ASSETS_SCHEMA = {
         "name": "manage_assets",
         "description": "Manage the persistent hardware/asset inventory, component relationships, and observation history. Prefer strong identity evidence such as system UUID, serial, or MAC. Never merge assets solely by IP address.",
         "parameters": {"type": "object", "properties": {
-        "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset", "recipe_list", "recipe_search", "recipe_get", "recipe_add", "recipe_missing", "recipe_queue_missing", "recipe_queue_missing_by_name", "recipe_can_make", "recipe_cook"]},
+        "action": {"type": "string", "enum": ["summary", "list", "search", "get", "add", "update", "record_observation", "link_component", "unlink_component", "retire", "merge", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset", "recipe_list", "recipe_search", "recipe_get", "recipe_add", "recipe_missing", "recipe_missing_by_name", "recipe_queue_missing", "recipe_queue_missing_by_name", "recipe_can_make", "recipe_cook"]},
             "asset": {"type": "string"}, "name": {"type": "string"}, "type": {"type": "string"}, "status": {"type": "string"},
             "manufacturer": {"type": "string"}, "model": {"type": "string"}, "serial": {"type": "string"}, "system_uuid": {"type": "string"},
             "hostname": {"type": "string"}, "mac": {"type": "string"}, "location": {"type": "string"}, "notes": {"type": "string"}, "source": {"type": "string"},
@@ -242,7 +242,8 @@ change succeeded unless the structured tool result confirms it.
 Recipes use the same canonical capability. Use `recipe_add` with a bounded
 ingredient array when the owner provides a recipe, `recipe_get`, `recipe_search`, or `recipe_list`
 to retrieve one, `recipe_missing` to compare required ingredients against
-current stock, and `recipe_queue_missing` or `recipe_queue_missing_by_name` to add only required missing
+current stock, and `recipe_missing_by_name` to compare a named saved recipe without changing inventory.
+Use `recipe_queue_missing` or `recipe_queue_missing_by_name` to add only required missing
 ingredients to the grocery list. Recipe planning never changes stock, and a
 grocery request never implies that an item was purchased.
 

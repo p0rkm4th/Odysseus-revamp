@@ -421,7 +421,7 @@ def test_canonical_asset_reads_are_read_only_and_need_no_approval():
 def test_recipe_reads_are_read_only_capability_actions():
     from src.capability_registry import action_for_tool
 
-    for action_name in ("recipe_list", "recipe_search", "recipe_get", "recipe_missing", "recipe_can_make"):
+    for action_name in ("recipe_list", "recipe_search", "recipe_get", "recipe_missing", "recipe_missing_by_name", "recipe_can_make"):
         action = action_for_tool("manage_assets", {"action": action_name})
         assert action is not None and action.known
         assert action.effects == ("read_private",)

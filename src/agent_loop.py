@@ -89,6 +89,8 @@ from src.aci import (
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
     recipe_composition_name,
+    is_recipe_missing_request,
+    recipe_missing_name,
     usage_bucket,
     usage_bucket_summary,
     compute_final_metrics,
@@ -1942,7 +1944,11 @@ async def stream_aci_runtime(
         _aci_enabled
         and _aci_mode == "aci"
         and is_recipe_composition_request(_last_user)
-        and "household" in set(_intent.get("domains") or set())
+    )
+    _aci_recipe_missing_route = bool(
+        _aci_enabled
+        and _aci_mode == "aci"
+        and is_recipe_missing_request(_last_user)
     )
     _recipe_composition_query = (
         recipe_composition_name(_last_user)
@@ -1965,6 +1971,7 @@ async def stream_aci_runtime(
         and not uploaded_files
         and _canonical_binding
         and not _aci_recipe_composition_route
+        and not _aci_recipe_missing_route
         and isinstance(_intent.get("intent_frame"), dict)
         and str(_intent["intent_frame"].get("domain_concept") or "") not in {"", "UNKNOWN"}
     )
@@ -2660,6 +2667,34 @@ async def stream_aci_runtime(
                 "query": _recipe_composition_query,
             }, sort_keys=True),
         )
+    _recipe_missing_query = recipe_missing_name(_last_user) if _aci_recipe_missing_route else None
+    if (
+        _aci_recipe_missing_route
+        and _recipe_missing_query
+        and not guide_only
+        and "manage_assets" not in disabled_tools
+    ):
+        # A read-only saved-recipe comparison is deterministic and does not
+        # require the model to chain recipe search into recipe_missing.
+        _aci_fast_path_block = ToolBlock(
+            "manage_assets",
+            json.dumps({
+                "action": "recipe_missing_by_name",
+                "domain": "kitchen",
+                "query": _recipe_missing_query,
+            }, sort_keys=True),
+        )
+    if _aci_fast_path_block is not None and (
+        _aci_recipe_composition_route or _aci_recipe_missing_route
+    ):
+        # A deterministic recipe route supersedes a generic NO_APPLICABLE_ACTION
+        # fallback from the provisional intent classifier. The canonical recipe
+        # operation remains the authority; the local model must not be allowed
+        # to replace it with unrelated prose.
+        _aci_model_fallback = False
+        _aci_model_fallback_reason = None
+        _aci_clarification_only = False
+        _aci_clarification_text = ""
     # A caller/RAG route may have selected an observation reader while omitting
     # the executable discovery action. Repair that omission before schemas are
     # projected to the model. This is bounded to explicit network intent and
@@ -3579,7 +3614,7 @@ async def stream_aci_runtime(
                 input_tokens=round_input_tokens,
                 output_tokens=round_output_tokens,
                 usage_source=usage_source,
-            ))
+        ))
         logger.info(
             "[agent-timing] round_start round=%s model=%s endpoint=%s route_source_tokens=%s tools=%s native_tools=%s timeout=%s",
             round_num,

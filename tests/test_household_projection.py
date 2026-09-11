@@ -166,6 +166,20 @@ def test_recipe_queue_missing_by_name_compares_stock_and_queues_only_shortages()
         )
 
 
+def test_recipe_missing_by_name_compares_stock_without_queueing():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    service.create_recipe(
+        "alice", name="Spaghetti", servings="1",
+        ingredients=[{"name": "pasta", "quantity": "400", "unit": "g"}],
+    )
+    result = service.manage_recipes(
+        {"action": "missing_by_name", "query": "spaghetti"}, owner="alice",
+    )
+    assert [row["name"] for row in result["missing"]["shortages"]] == ["pasta"]
+    assert service.list_items("alice", list_name="grocery") == []
+
+
 def test_recipe_shortages_can_be_reviewed_and_queued_without_changing_stock():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
