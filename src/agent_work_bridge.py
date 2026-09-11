@@ -1136,13 +1136,34 @@ def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
             return {"verified": False, "reason": "structured action result is missing"}
         data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
         required = tuple(action.verification or ())
+        work = WorkEngine(db)
+        run = db.query(WorkRun).filter_by(id=action.run_id, owner=str(owner)).one()
+        other_pending = db.query(WorkAction).filter(
+            WorkAction.run_id == run.id,
+            WorkAction.status.notin_(("completed", "failed", "rejected", "cancelled", "expired")),
+            WorkAction.id != action.id,
+        ).count()
+        if other_pending:
+            return {"verified": False, "reason": "run has another pending action"}
+        # Older approval callbacks could persist the Action and Result but
+        # miss the lifecycle transition into VERIFYING. Reconcile that
+        # server-owned state only when there is no other pending Action; never
+        # use this recovery to bypass a later approval in the same Run.
+        if run.lifecycle_state == "planning":
+            work.verified_execution_step(owner, run.id, "ready", reason="reconciling completed bound result")
+            work.verified_execution_step(owner, run.id, "executing", reason="reconciling completed bound result")
+            work.verified_execution_step(owner, run.id, "verifying", reason="reconciling completed bound result")
+        elif run.lifecycle_state == "ready":
+            work.verified_execution_step(owner, run.id, "executing", reason="reconciling completed bound result")
+            work.verified_execution_step(owner, run.id, "verifying", reason="reconciling completed bound result")
+        elif run.lifecycle_state == "executing":
+            work.verified_execution_step(owner, run.id, "verifying", reason="reconciling completed bound result")
         if action.action_id == "execute_network_discovery":
             checks = {
                 "observations_persisted": data.get("observations_recorded") is True,
                 "network_map_reconciled": data.get("network_map_reconciled") is True,
             }
             missing = [name for name in required if not checks.get(name, False)]
-            work = WorkEngine(db)
             if missing:
                 outcome = work.complete_verification(
                     str(owner), action.run_id, success=False,
@@ -1160,7 +1181,6 @@ def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
                 "network_map_reconciled": data.get("network_map_reconciled") is True,
             }
             missing = [name for name in required if not checks.get(name, False)]
-            work = WorkEngine(db)
             outcome = work.complete_verification(
                 str(owner), action.run_id, success=not missing,
                 details={"checks": checks, "missing": missing, "observation_count": data.get("observation_count", 0), "verifier": "network_service_observation"},
