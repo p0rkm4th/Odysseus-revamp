@@ -490,7 +490,12 @@ def _successful_bounded_network_execution(tool_type: str, content: str, result: 
     """
     if tool_type != "manage_homelab" or not isinstance(result, dict):
         return False
-    payload = result.get("data") if isinstance(result.get("data"), dict) else result
+    # The stream executor returns an envelope whose canonical broker Result is
+    # JSON in ``output`` (the Work bridge may additionally wrap it in data).
+    # Inspect that same structured payload used by continuation code; checking
+    # only the envelope makes a successful scan look unfinished and causes the
+    # deterministic planner to ask for approval again.
+    payload = _structured_tool_result(result)
     if payload.get("approval_required") or payload.get("error") or payload.get("success") is not True:
         return False
     try:

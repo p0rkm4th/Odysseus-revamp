@@ -235,6 +235,18 @@ def test_nested_broker_success_terminates_network_turn_without_replanning():
         '{"action":"execute_network_discovery","plan_digest":"' + "a" * 64 + '"}',
         {"success": True, "data": {"success": True, "action": "execute_network_discovery"}},
     ) is True
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        '{"action":"execute_network_discovery","plan_digest":"' + "a" * 64 + '"}',
+        {
+            "output": json.dumps({
+                "action": "execute_network_discovery",
+                "success": True,
+                "observations_recorded": True,
+            }),
+            "exit_code": 0,
+        },
+    ) is True
 
 
 def test_structured_tool_result_unwraps_approval_resume_output():
