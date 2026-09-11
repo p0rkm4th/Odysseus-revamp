@@ -256,6 +256,7 @@ async function onSubmit(event) {
   const submit = form.querySelector('[type=submit]');
   if (submit) submit.disabled = true;
   try {
+    let importedRecipeId = null;
     if (form.id === 'inventory-intake-form') {
       const candidate = {action:data.action, domain:data.domain, name:data.name, quantity:data.quantity, unit:data.unit, category:data.category, brand:data.brand, manufacturer:data.manufacturer, model:data.model, serial_number:data.serial_number, part_number:data.part_number, condition:data.condition};
       if (editingDraft) {
@@ -289,11 +290,17 @@ async function onSubmit(event) {
         payload.url = null;
       }
       const result = await api('/api/recipes/import', {method:'POST', body:JSON.stringify(payload)});
+      importedRecipeId = result.recipe?.id || null;
       uiModule.showToast?.(`${result.recipe?.name || 'Recipe'} saved; review missing ingredients before adding to grocery`);
     }
     form.closest('.inventory-dialog-backdrop')?.remove();
     uiModule.showToast?.('Inventory updated');
-    kind === 'recipe' ? await loadRecipes() : tab === 'grocery' ? await loadGrocery() : tab === 'fridge' ? await loadStorageArea('fridge') : await loadStock();
+    if (kind === 'recipe' || kind === 'recipe-import') {
+      await loadRecipes();
+      if (importedRecipeId) await showRecipe(importedRecipeId);
+    } else if (tab === 'grocery') await loadGrocery();
+    else if (tab === 'fridge') await loadStorageArea('fridge');
+    else await loadStock();
   } catch (error) { uiModule.showError?.(error.message); }
   finally { if (submit) submit.disabled = false; }
 }
