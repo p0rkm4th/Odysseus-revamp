@@ -215,10 +215,11 @@ async function loadSharing() {
         const accessDescription = enabled
           ? (editable ? `${description} Members can also edit shared stock.` : `${description} Members have read-only access.`)
           : 'Private to each member.';
+        const status = enabled ? (editable ? 'Shared with edits' : 'Shared read-only') : 'Private';
         const control = household.can_manage
-          ? `<button class="inventory-primary" data-action="toggle-sharing" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="${enabled ? 'true' : 'false'}">${enabled ? `Stop sharing ${label.toLowerCase()}` : `Share ${label.toLowerCase()} read-only`}</button>${supportsMutation && enabled ? ` <button data-action="toggle-sharing-mutation" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="true" data-mutation="${editable ? 'true' : 'false'}">${editable ? 'Make read-only' : 'Allow member edits'}</button>` : ''}`
-          : `<span class="inventory-ready ${enabled ? 'yes' : 'no'}">${enabled ? (editable ? 'Shared with edits' : 'Shared read-only') : 'Private'}</span>`;
-        return `<div class="inventory-sharing-row"><div><strong>${label}</strong><p>${accessDescription}</p></div><div>${control}</div></div>`;
+          ? `<button class="inventory-primary" data-action="toggle-sharing" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="${enabled ? 'true' : 'false'}">${enabled ? 'Stop sharing' : `Share ${label.toLowerCase()}`}</button>${supportsMutation && enabled ? `<button data-action="toggle-sharing-mutation" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="true" data-mutation="${editable ? 'true' : 'false'}">${editable ? 'Make members read-only' : 'Allow member edits'}</button>` : ''}`
+          : '';
+        return `<div class="inventory-sharing-row"><div class="inventory-sharing-copy"><div class="inventory-sharing-title"><strong>${label}</strong><span class="inventory-sharing-state ${enabled ? 'enabled' : 'private'}">${status}</span></div><p>${accessDescription}</p></div><div class="inventory-sharing-actions">${control}</div></div>`;
       }).join('');
       const addMember = household.can_manage ? `<button data-action="add-member" data-household-id="${escapeHtml(household.household_id)}">Add member</button>` : '';
       return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3><div class="inventory-sharing-member-summary"><strong>Household members</strong>${memberList}</div><div class="inventory-card-actions">${addMember}</div>${controls}</div></article>`;
