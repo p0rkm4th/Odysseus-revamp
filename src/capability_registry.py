@@ -107,7 +107,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                 ActionSpec(
                     action_id=action,
                     effects=("read_private",) if action in {
-                        "summary", "list", "search", "get", "recipe_list", "recipe_get",
+                        "summary", "list", "search", "get", "recipe_list", "recipe_search", "recipe_get",
                         "recipe_missing", "recipe_can_make",
                     } else ("write_private",),
                     executor_key="manage_assets",
@@ -116,7 +116,7 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
                     "summary", "list", "search", "get", "add", "update",
                     "record_observation", "link_component", "unlink_component",
                     "retire", "merge", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock",
-                    "adjust_stock", "update_asset", "recipe_list", "recipe_get", "recipe_add",
+                    "adjust_stock", "update_asset", "recipe_list", "recipe_search", "recipe_get", "recipe_add",
                     "recipe_missing", "recipe_queue_missing", "recipe_can_make", "recipe_cook",
                 )
             )
