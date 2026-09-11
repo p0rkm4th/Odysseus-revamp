@@ -4705,7 +4705,7 @@ def project_action_selection(
         # the grocery-list destination; do not make a small local model
         # invent the name or require it to emit a second private schema.
         if item["binding"] == "manage_assets" and item["action_id"] in {
-            "add_item", "add_stock", "consume_stock", "remove_from_grocery",
+            "add_item", "add_stock", "consume_stock", "remove_from_grocery", "archive_item",
         }:
             grounded = canonical_inventory_mutation_payload(item["action_id"], query)
             if grounded:
@@ -4804,7 +4804,7 @@ def project_action_selection(
             mode = SelectionMode.DIRECT_ACTION
     # Bounded inventory mutations already have server-grounded arguments from
     # the owner request. Do not make the model re-encode a private action
-    # decision for these three canonical operations: malformed or empty model
+    # decision for these canonical operations: malformed or empty model
     # JSON previously caused ordinary grocery additions to fall through to
     # prose even though the requested item and destination were unambiguous.
     if (
