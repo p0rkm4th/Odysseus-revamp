@@ -70,7 +70,10 @@ _RECIPE_LIKE_GROCERY_NAME = re.compile(
     re.IGNORECASE,
 )
 _NON_ITEM_GROCERY_NAME = re.compile(
-    r"^(?:the\s+|those\s+|these\s+)?(?:ingredients?|items?)$",
+    # Conversational models sometimes echo the owner's request fragment as a
+    # fourth "item" (for example, "the ingredients I am missing").  A
+    # grocery record must be a concrete thing to buy, never that placeholder.
+    r"^(?:the\s+|those\s+|these\s+|my\s+|some\s+|all\s+)?(?:ingredients?|items?)\b",
     re.IGNORECASE,
 )
 _UNSET = object()
@@ -121,7 +124,9 @@ def _validate_grocery_name(name: str, shopping_list: bool) -> None:
             "this describes a recipe rather than one grocery item; "
             "no grocery change was made"
         )
-    if _NON_ITEM_GROCERY_NAME.fullmatch(name.strip()):
+    # The expression intentionally matches a conversational suffix as well;
+    # ``ingredients I am missing`` is still a placeholder, not an item.
+    if _NON_ITEM_GROCERY_NAME.match(name.strip()):
         raise InventoryError(
             "please provide the individual grocery items or a saved recipe; "
             "no grocery change was made"
