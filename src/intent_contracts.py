@@ -1786,11 +1786,18 @@ def compile_intent(
     elif concept == "RECIPE" and operation == "READ":
         if re.search(
             r"\b(?:can\s+i\s+(?:make|cook|prepare)|make\s+with\s+what\s+i\s+have|"
-            r"without\s+going\s+to\s+the\s+store|easy(?:\s+\w+){0,3}\s+(?:dinner|meal))\b",
+            r"without\s+going\s+to\s+the\s+store|easy(?:\s+\w+){0,3}\s+(?:dinner|meal)|"
+            r"(?:budget|cheap|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost))\b",
             q,
             re.IGNORECASE,
         ):
             reference_filters.update({"view": "available", "available_only": True})
+            if re.search(
+                r"\b(?:budget|cheap|cheapest|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost)\b",
+                q,
+                re.IGNORECASE,
+            ):
+                reference_filters["budget_constraint"] = True
         elif re.search(r"\brecipes?\s+where\s+i(?:'m|\s+am)?\s+only\s+missing\b", q, re.IGNORECASE):
             reference_filters.update({"view": "few_shortages", "max_shortages": 2})
     elif concept == "HOUSEHOLD_ITEM" and operation == "DELETE":
