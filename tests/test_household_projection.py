@@ -485,6 +485,41 @@ def test_owner_facing_grocery_reference_resolves_conservative_plural_variant():
     assert service.get_item("alice", item["id"])["shopping_list"] is False
 
 
+def test_unique_grocery_descriptor_resolves_a_short_recipe_followup():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    item = service.create_item(
+        "alice", name="Tomato sauce", domain="kitchen", item_kind="ingredient",
+        shopping_list=True,
+    )
+
+    removed = service.manage_inventory({
+        "action": "remove_from_grocery", "name": "sauce",
+    }, owner="alice")
+
+    assert removed["removed"] is True
+    assert removed["item"]["id"] == item["id"]
+    assert service.get_item("alice", item["id"])["shopping_list"] is False
+
+
+def test_grocery_descriptor_still_fails_closed_when_multiple_items_match():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    service.create_item(
+        "alice", name="Tomato sauce", domain="kitchen", item_kind="ingredient",
+        shopping_list=True,
+    )
+    service.create_item(
+        "alice", name="Alfredo sauce", domain="kitchen", item_kind="ingredient",
+        shopping_list=True,
+    )
+
+    with pytest.raises(InventoryConflict, match="more than one matching"):
+        service.manage_inventory({
+            "action": "remove_from_grocery", "name": "sauce",
+        }, owner="alice")
+
+
 def test_conservative_plural_resolution_still_fails_closed_on_ambiguous_items():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
