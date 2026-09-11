@@ -2995,6 +2995,7 @@ def resolve_turn_disposition(
     *,
     model_fallback: bool = False,
     clarification_only: bool = False,
+    awaiting_approval: bool = False,
     answer_only: bool = False,
     completion_satisfied: bool = False,
     fast_path: bool = False,
@@ -3011,6 +3012,12 @@ def resolve_turn_disposition(
         return TurnDisposition.MODEL_FALLBACK
     if clarification_only:
         return TurnDisposition.CLARIFY
+    # Approval is a non-terminal turn boundary.  It must take precedence over
+    # any answer/completion flags that may have been set earlier in the loop
+    # (for example, when a model streamed "Done." before the server created
+    # the approval card).  The requested action has not executed yet.
+    if awaiting_approval:
+        return TurnDisposition.AWAIT_APPROVAL
     if answer_only or completion_satisfied:
         return TurnDisposition.ANSWER
     if fast_path:

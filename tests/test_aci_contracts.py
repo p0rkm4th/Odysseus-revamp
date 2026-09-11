@@ -435,6 +435,11 @@ def test_model_fallback_is_a_non_authoritative_turn_disposition():
 def test_typed_turn_disposition_has_one_authoritative_precedence():
     assert resolve_turn_disposition(model_fallback=True, packet_present=True) is TurnDisposition.MODEL_FALLBACK
     assert resolve_turn_disposition(clarification_only=True, fast_path=True) is TurnDisposition.CLARIFY
+    assert resolve_turn_disposition(
+        awaiting_approval=True,
+        answer_only=True,
+        completion_satisfied=True,
+    ) is TurnDisposition.AWAIT_APPROVAL
     assert resolve_turn_disposition(answer_only=True, fast_path=True) is TurnDisposition.ANSWER
     assert resolve_turn_disposition(completion_satisfied=True) is TurnDisposition.ANSWER
     assert resolve_turn_disposition(fast_path=True, packet_present=True) is TurnDisposition.EXECUTE_DIRECT

@@ -3628,6 +3628,9 @@ async def stream_aci_runtime(
             # Do not run another model round: it can re-select the same
             # deterministic planner and manufacture a second approval card.
             _network_execution_completed = True
+            _aci_terminal_canonical_read = True
+            _aci_answer_only = True
+            _aci_completion_contract_satisfied = True
         _approved_result_injected = True
 
     for round_num in range(1, max_rounds + 1):
@@ -5992,12 +5995,16 @@ async def stream_aci_runtime(
                 and not _network_service_request
             ):
                 _aci_terminal_canonical_read = True
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = True
             if (
                 block.tool_type == "manage_homelab"
                 and _block_action_id == "execute_network_service_enumeration"
                 and _network_result_payload.get("success") is True
             ):
                 _aci_terminal_canonical_read = True
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = True
             if _post_result_transition.answer_only:
                 _aci_answer_only = True
                 _aci_packet = None
@@ -6024,6 +6031,20 @@ async def stream_aci_runtime(
                     })
                 if _was_aci_canonical_read:
                     _aci_terminal_canonical_read = True
+
+            # The bounded network executor returns the complete canonical
+            # observation itself.  Apply its terminal answer projection after
+            # the generic post-result transition so a generic NEEDS_REASONING
+            # result cannot overwrite the verified network completion flags.
+            if (
+                block.tool_type == "manage_homelab"
+                and _successful_bounded_network_execution(
+                    block.tool_type, block.content, result,
+                )
+            ):
+                _aci_terminal_canonical_read = True
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = True
 
             if (
                 _work_action_id
@@ -7068,6 +7089,29 @@ async def stream_aci_runtime(
             "candidate_count": len(_aci_reference_resolution.get("candidate_refs") or []),
             "context_source": _aci_reference_context_source,
         }
+    # An approval card pauses the objective before execution.  Keep the
+    # completion contract unsatisfied even if an earlier model response or a
+    # later renderer flag suggested an answer; otherwise telemetry and the
+    # owner-facing result falsely report the pending turn as completed.
+    if _awaiting_user:
+        _aci_completion_contract_satisfied = False
+
+    try:
+        from src.aci import resolve_turn_disposition
+        _turn_disposition = resolve_turn_disposition(
+            model_fallback=_aci_model_fallback,
+            clarification_only=_aci_clarification_only,
+            awaiting_approval=_awaiting_user,
+            answer_only=_aci_answer_only,
+            completion_satisfied=_aci_completion_contract_satisfied,
+            fast_path=_aci_fast_path_block is not None,
+            packet_present=_aci_packet is not None,
+        )
+        if _turn_disposition is not None:
+            metrics["aci_turn_disposition"] = _turn_disposition.value
+    except Exception:
+        logger.debug("Unable to resolve typed ACI turn disposition", exc_info=True)
+
     metrics["aci_trace"] = project_aci_trace(
         intent=_intent,
         run_id=work_run_id,
@@ -7088,20 +7132,6 @@ async def stream_aci_runtime(
         turn_disposition=metrics.get("aci_turn_disposition"),
         latency_seconds=total_duration,
     )
-    try:
-        from src.aci import resolve_turn_disposition
-        _turn_disposition = resolve_turn_disposition(
-            model_fallback=_aci_model_fallback,
-            clarification_only=_aci_clarification_only,
-            answer_only=_aci_answer_only,
-            completion_satisfied=_aci_completion_contract_satisfied,
-            fast_path=_aci_fast_path_block is not None,
-            packet_present=_aci_packet is not None,
-        )
-        if _turn_disposition is not None:
-            metrics["aci_turn_disposition"] = _turn_disposition.value
-    except Exception:
-        logger.debug("Unable to resolve typed ACI turn disposition", exc_info=True)
     if _aci_model_fallback_reason:
         metrics["aci_model_fallback_reason"] = str(_aci_model_fallback_reason)[:120]
     if _aci_enabled:
