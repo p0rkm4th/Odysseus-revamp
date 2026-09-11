@@ -8,11 +8,11 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 // sees the capability label, never implementation-shaped character soup.
 const capabilityLabels = value => {
   if (Array.isArray(value)) {
-    const labels = value.map(item => String(item ?? '').trim()).filter(Boolean);
-    if (labels.length > 1 && labels.every(label => label.length === 1)) {
-      return labels.join('').split(/\s*,\s*/).map(label => label.trim()).filter(Boolean);
+    const rawLabels = value.map(item => String(item ?? ''));
+    if (rawLabels.length > 1 && rawLabels.every(label => label.length === 1)) {
+      return rawLabels.join('').split(/\s*,\s*/).map(label => label.trim()).filter(Boolean);
     }
-    return labels;
+    return rawLabels.map(label => label.trim()).filter(Boolean);
   }
   if (typeof value === 'string') return value.split(/\s*,\s*/).map(label => label.trim()).filter(Boolean);
   return [];
