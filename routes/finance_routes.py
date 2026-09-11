@@ -382,6 +382,10 @@ def setup_finance_routes(*, session_factory=SessionLocal, plaid_transport_factor
             lambda svc, user: svc.add_member(user, household_id, str(payload.get("user_id") or "")),
         )}
 
+    @router.delete("/households/{household_id}/members/{user_id}", status_code=204)
+    async def remove_member(request: Request, household_id: str, user_id: str):
+        await tx(request, lambda svc, user: svc.remove_member(user, household_id, user_id))
+
     @router.get("/households/{household_id}/shared-expenses")
     async def shared_expenses(request: Request, household_id: str):
         return {"expenses": await tx(

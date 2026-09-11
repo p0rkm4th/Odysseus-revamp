@@ -4,6 +4,7 @@ import pytest
 
 from core import database as cdb
 from core.finance_models import Household, HouseholdMembership
+from src.finance_service import FinanceService
 from src.inventory_service import InventoryNotFound, get_inventory_service
 from tests.helpers.sqlite_db import make_temp_sqlite
 
@@ -134,3 +135,26 @@ def test_member_edits_require_the_second_explicit_permission_and_reuse_canonical
     assert sharing[0]["resources"]["kitchen_inventory"] == {
         "enabled": True, "allow_member_mutation": True,
     }
+
+
+def test_owner_can_revoke_member_and_shared_inventory_stays_private_after_reload():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    household_id = _household(session_factory)
+    item = service.create_item(
+        "alice", name="Revocable milk", domain="kitchen", item_kind="ingredient",
+        default_unit="l", storage_area="fridge",
+    )
+    service.configure_sharing("alice", household_id, resource="kitchen_inventory", enabled=True)
+    assert service.list_items("bob", list_name="fridge")
+
+    db = session_factory()
+    try:
+        FinanceService(db).remove_member("alice", household_id, "bob")
+    finally:
+        db.close()
+
+    reloaded = get_inventory_service(session_factory)
+    assert reloaded.list_items("bob", list_name="fridge") == []
+    with pytest.raises(InventoryNotFound):
+        reloaded.get_item("bob", item["id"])

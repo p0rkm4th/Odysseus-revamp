@@ -188,6 +188,20 @@ class FinanceService:
             raise FinanceError("user is already a household member") from exc
         return self._membership_dict(membership)
 
+    def remove_member(self, actor: str, household_id: str, user_id: str) -> None:
+        """Revoke a member's household access without deleting their account."""
+        household = _household_or_error(self.db, household_id)
+        if household.owner != actor:
+            raise FinanceError("only the household owner can manage membership")
+        user_id = _required_text(user_id, "user_id")
+        if user_id == household.owner:
+            raise FinanceError("the household owner cannot be removed")
+        membership = _membership(self.db, household_id, user_id)
+        if membership is None:
+            raise FinanceError("household membership not found")
+        self.db.delete(membership)
+        self.db.commit()
+
     def _membership_dict(self, membership: HouseholdMembership) -> dict[str, Any]:
         return {
             "id": membership.id,
