@@ -5113,7 +5113,10 @@ async def stream_aci_runtime(
                 break
             if _round_text_buffered and cleaned_round:
                 full_response += cleaned_round
-                yield "data: " + json.dumps({"delta": cleaned_round}) + chr(10) + chr(10)
+                yield "data: " + json.dumps({
+                    "delta": cleaned_round,
+                    "clarification": bool(_aci_clarification_only),
+                }) + chr(10) + chr(10)
             break  # no tools — done
 
         # ── Loop-breaker (Terminus-style stall detector) ──────────────
