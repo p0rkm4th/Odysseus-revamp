@@ -511,7 +511,7 @@ def _is_bounded_network_plan(tool_type: str, action_id: str) -> bool:
     }
 
 
-def _structured_tool_result(result: Mapping[str, Any]) -> Mapping[str, Any]:
+def _structured_tool_result(result: Mapping[str, Any], *, _depth: int = 0) -> Mapping[str, Any]:
     """Unwrap the canonical payload emitted by both tool executors.
 
     The direct executor returns a small envelope whose JSON payload lives in
@@ -520,11 +520,15 @@ def _structured_tool_result(result: Mapping[str, Any]) -> Mapping[str, Any]:
     in either case.  Falling back to the envelope preserves existing error
     handling when a tool did not return JSON.
     """
-    if not isinstance(result, Mapping):
+    if not isinstance(result, Mapping) or _depth > 3:
         return {}
     data = result.get("data")
     if isinstance(data, Mapping):
-        return data
+        if data.get("action") or data.get("success") is not None or data.get("kind"):
+            return data
+        nested = _structured_tool_result(data, _depth=_depth + 1)
+        if nested:
+            return nested
     raw = result.get("output")
     if isinstance(raw, Mapping):
         return raw
@@ -534,7 +538,11 @@ def _structured_tool_result(result: Mapping[str, Any]) -> Mapping[str, Any]:
         except (TypeError, ValueError):
             parsed = None
         if isinstance(parsed, Mapping):
-            return parsed
+            if parsed.get("action") or parsed.get("success") is not None or parsed.get("kind"):
+                return parsed
+            nested = _structured_tool_result(parsed, _depth=_depth + 1)
+            if nested:
+                return nested
     return result
 
 _intent_requires_action = intent_requires_action
