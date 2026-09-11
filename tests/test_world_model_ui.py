@@ -120,6 +120,12 @@ def test_recipe_library_has_owner_facing_hierarchy_and_roomier_window():
     assert ".recipe-stat-ready" in styles
 
 
+def test_recipe_library_surfaces_primary_action_before_long_ingredient_preview():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    assert 'recipe-card-actions recipe-card-actions-top' in inventory
+    assert inventory.index('recipe-card-actions recipe-card-actions-top') < inventory.index('recipe-card-body')
+
+
 def test_household_sharing_uses_explicit_status_and_action_regions():
     inventory = (ROOT / "static/js/inventory.js").read_text()
     styles = (ROOT / "static/style.css").read_text()

@@ -275,8 +275,8 @@ function renderRecipeCatalog() {
       <header class="recipe-card-header"><div><span class="recipe-eyebrow">RECIPE</span><h3>${escapeHtml(recipe.name)}</h3></div><span class="inventory-ready ${plan.can_make ? 'yes' : 'no'}"><i aria-hidden="true"></i>${status}</span></header>
       <p class="recipe-card-meta"><span>${escapeHtml(recipe.servings)} servings</span><span>${ingredients.length} ingredient${ingredients.length === 1 ? '' : 's'}</span></p>
       ${tags ? `<div class="recipe-tags" aria-label="Recipe tags">${tags}</div>` : ''}
+      <div class="recipe-card-actions recipe-card-actions-top"><button data-action="recipe-details">View recipe</button>${plan.can_make ? `<button class="inventory-primary" data-action="cook" data-servings="${escapeHtml(recipe.servings)}">Cook now</button>` : `<button class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(recipe.id)}">Add missing to Grocery</button>`}</div>
       <div class="recipe-card-body"><section class="recipe-card-ingredients"><h4>Ingredient check</h4><ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}</section><aside class="recipe-card-next"><span class="recipe-eyebrow">NEXT STEP</span>${plan.can_make ? '<strong>Everything is on hand.</strong><p>Use the saved recipe when you are ready.</p>' : `<strong>Shop for ${shortageDetails || shortages || 'the missing ingredients'}${shortageMore}</strong><p>Queue only these items; pantry stock stays unchanged.</p>`}</aside></div>
-      <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? `<button class="inventory-primary" data-action="cook" data-servings="${escapeHtml(recipe.servings)}">Cook now</button>` : `<button class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(recipe.id)}">Add missing to Grocery</button>`}</div>
     </article>`;
   }).join('');
 }
