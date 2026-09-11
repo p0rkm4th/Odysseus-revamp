@@ -1596,7 +1596,11 @@ async def _execute_manage_assets_binding(block, owner=None):
 
         def _run():
             return _ody_v34_subprocess.run(
-                argv, cwd="/app", text=True, capture_output=True,
+                # The runtime may be a container mounted at /app or a
+                # checked-out host process. Resolve the trusted application
+                # root from this module instead of assuming a deployment cwd.
+                argv, cwd=str(pathlib.Path(__file__).resolve().parent.parent),
+                text=True, capture_output=True,
                 timeout=45, check=False,
             )
 

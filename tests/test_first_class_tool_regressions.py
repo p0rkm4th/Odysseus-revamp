@@ -16,6 +16,26 @@ def test_canonical_read_projection_preserves_setup_integration_view():
     assert canonical_read_action("INTEGRATION", {"view": "integrations"}) == "integrations"
     assert canonical_read_action("INTEGRATION", {}) == "state"
     assert canonical_read_action("WORK", {"view": "attention"}) == "attention"
+
+
+@pytest.mark.asyncio
+async def test_asset_cli_uses_trusted_source_root_not_deployment_cwd(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    seen = {}
+
+    def fake_run(argv, *, cwd, text, capture_output, timeout, check):
+        seen.update({"argv": argv, "cwd": cwd, "timeout": timeout})
+        return type("Completed", (), {"stdout": "[]", "stderr": "", "returncode": 0})()
+
+    monkeypatch.setattr(tool_execution._ody_v34_subprocess, "run", fake_run)
+    block = type("Block", (), {"content": json.dumps({"action": "list"})})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert seen["cwd"] == str(Path(tool_execution.__file__).resolve().parent.parent)
+    assert seen["cwd"] != "/app"
 from src.privileged_broker import (
     peer_is_allowed,
     validate_packages,

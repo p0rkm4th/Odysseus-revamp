@@ -1355,6 +1355,24 @@ def compile_intent(
     if read_explicit and operation in {"RESEARCH", "MONITOR", "EXECUTE"} and not _network_discovery_language:
         operation = "READ"
     concept = semantic_read_concept or "UNKNOWN"
+    # ``deterministic_read_concept`` quite reasonably classifies a bare
+    # server-health question as an asset collection.  In the conversational
+    # homelab path, however, health/status language asks for observed
+    # network evidence, not hardware inventory. Keep explicit remote/SSH
+    # requests on their existing host-inspection contract.
+    if (
+        concept == "TECHNICAL_ASSET"
+        and re.search(r"\b(?:server|servers|host|hosts|machine|machines|device|devices)\b", q)
+        and re.search(
+            r"\b(?:unhealthy|healthy|health|broken|down|unreachable|offline|acting\s+weird|weird|running|status)\b",
+            q,
+            re.IGNORECASE,
+        )
+        and not re.search(r"\b(?:asset|inventory|own|owned|hardware|specs?|specifications?|cpu|gpu|ram|storage|remote|ssh)\b", q, re.IGNORECASE)
+    ):
+        concept = "NETWORK"
+        operation = "READ"
+        read_explicit = True
     target = None
     if concept != "UNKNOWN":
         pass
@@ -1373,6 +1391,10 @@ def compile_intent(
         concept = "SERVICE"
     elif re.search(r"\b(?:homelab|container(?:s)?|storage|remote host(?:s)?)\b", q) and not re.search(
         r"\b(?:difference\s+between|what(?:'s|\s+is)\s+the\s+difference|explain)\b", q,
+    ):
+        concept = "HOMELAB_HOST"
+    elif re.search(r"\bremote\s+(?:host|server|machine|system)\b", q) and re.search(
+        r"\b(?:inspect|check|running|status|health|reachable|connect)\b", q,
     ):
         concept = "HOMELAB_HOST"
     elif re.search(r"\b(?:mission(?:s)?)\b", q):
@@ -1730,6 +1752,12 @@ def compile_intent(
         reference_filters["view"] = "integrations"
     elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:unidentified|unknown|unrecognised|unrecognized)\b", q):
         reference_filters["view"] = "unidentified"
+    elif concept == "NETWORK" and operation == "READ" and re.search(
+        r"\b(?:unhealthy|healthy|health|broken|down|unreachable|offline|acting\s+weird|weird|running|status)\b",
+        q,
+        re.IGNORECASE,
+    ):
+        reference_filters["view"] = "observations"
     elif concept == "NETWORK" and operation == "READ" and (
         semantic_view == "context" or re.search(
         r"\b(?:what\s+network|which\s+network|network\s+am\s+i|currently\s+connected|current(?:ly)?\s+(?:on|connected))\b",
@@ -2018,6 +2046,8 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_CONTEXT"
     elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "roles":
         action_key = "READ_ROLES"
+    elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "observations":
+        action_key = "READ"
     elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "service_enumeration":
         action_key = "EXECUTE_SERVICES"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "file":
