@@ -1229,11 +1229,14 @@ class RecipeService(InventoryService):
         """Dispatch the narrow model-facing inventory action vocabulary."""
         action = str(args.get("action") or "")
 
-        def resolve_food_item() -> str:
-            item_id = str(args.get("item_id") or "").strip()
+        def resolve_food_item(name_value: Any = None) -> str:
+            item_id = str(args.get("item_id") or "").strip() if name_value is None else ""
             if item_id:
                 return item_id
-            name = _required_text(args.get("name"), "name", maximum=200)
+            name = _required_text(
+                args.get("name") if name_value is None else name_value,
+                "name", maximum=200,
+            )
             normalized = normalize_item_name(name)
             with self._read() as db:
                 owners = self._shared_owner_ids(db, owner)
@@ -1353,7 +1356,18 @@ class RecipeService(InventoryService):
             allowed = {"name", "category", "description", "default_unit", "reorder_point", "shopping_list", "storage_area"}
             return {"item": self.update_item(owner, item_id, **{key: args[key] for key in allowed if key in args})}
         if action == "archive_item":
-            return {"item": self.archive_item(owner, _required_text(args.get("item_id"), "item_id"))}
+            requested_items = args.get("items")
+            if requested_items is not None:
+                if not isinstance(requested_items, list) or not requested_items or len(requested_items) > 32:
+                    raise InventoryError("items must be a non-empty list of at most 32 inventory items")
+                names = [_required_text(value, "item name", maximum=200) for value in requested_items]
+                item_ids = [resolve_food_item(name) for name in names]
+                archived = [self.archive_item(owner, item_id) for item_id in item_ids]
+                return {"items": archived, "count": len(archived), "replayed": all(bool(item.get("archived")) for item in archived)}
+            item_id = str(args.get("item_id") or "").strip()
+            if not item_id:
+                item_id = resolve_food_item()
+            return {"item": self.archive_item(owner, item_id)}
         if action == "remove_from_grocery":
             item_id = resolve_food_item()
             item = self.get_item(owner, item_id)
