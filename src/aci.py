@@ -1505,6 +1505,26 @@ def is_aci_general_fallback_candidate(
     )
 
 
+def is_recipe_composition_request(text: str) -> bool:
+    """Route named-dish ingredient requests to recipe-capable tools.
+
+    These requests are multi-step composition workflows, not a single
+    ``add_item`` mutation. This helper only chooses the routing path; the
+    inventory service remains authoritative for every persisted change.
+    """
+    value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
+    if not value:
+        return False
+    has_dish_intent = bool(re.search(
+        r"\b(?:make|cook|prepare|fix|have)\b.+\b(?:for|tonight|today|dinner|lunch|meal)\b"
+        r"|\b(?:recipe|ingredients?)\b", value,
+    ))
+    asks_for_grocery = bool(re.search(
+        r"\b(?:add|put|queue|shopping|grocery|buy|missing|need)\b", value,
+    ))
+    return has_dish_intent and asks_for_grocery
+
+
 def usage_bucket(
     *,
     round_num: int,
