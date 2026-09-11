@@ -660,6 +660,36 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
         engine.dispose()
 
 
+def test_network_verifier_recovers_legacy_run_missing_verifying_transition(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-legacy-network", "scan my private network",
+            intent={"domains": ["network_ops"]},
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
+        )
+        bridge.bind_approval("alice", action_id, "approval-legacy-network")
+        bridge.resume_approval("alice", action_id, "approval-legacy-network")
+        bridge.record_result(
+            "alice", action_id,
+            {"data": {"observations_recorded": True, "network_map_reconciled": True, "observation_count": 2}},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.lifecycle_state = "planning"
+            run.status = "running"
+            db.commit()
+        verification = bridge.verify_bound_action("alice", action_id)
+        assert verification["verified"] is True
+        assert verification["run_lifecycle_state"] == "succeeded"
+    finally:
+        engine.dispose()
+
+
 def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_projection(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
