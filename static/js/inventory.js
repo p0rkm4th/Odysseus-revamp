@@ -259,10 +259,13 @@ function renderRecipeCatalog() {
     const preview = ingredients.slice(0, 5).map(ingredient => {
       const name = String(ingredient.name || '').trim();
       const missing = shortageNames.has(name.toLowerCase());
-      return `<li class="${missing ? 'is-missing' : 'is-ready'}"><span class="recipe-dot">${missing ? '!' : '✓'}</span>${escapeHtml(name)}</li>`;
+      const amount = `${displayQuantity(ingredient.quantity)} ${escapeHtml(ingredient.unit || '')}`.trim();
+      return `<li class="${missing ? 'is-missing' : 'is-ready'}"><span class="recipe-dot">${missing ? '!' : '✓'}</span><span class="recipe-ingredient-name">${escapeHtml(name)}</span><small>${amount}</small></li>`;
     }).join('');
     const more = ingredients.length > 5 ? `<span class="recipe-more">+${ingredients.length - 5} more</span>` : '';
     const shortages = (plan.shortages || []).slice(0, 3).map(shortage => escapeHtml(shortage.name)).join(', ');
+    const shortageDetails = (plan.shortages || []).slice(0, 3).map(shortage => `${escapeHtml(shortage.name)} (${displayQuantity(shortage.missing)} ${escapeHtml(shortage.unit || '')})`).join(', ');
+    const shortageMore = (plan.shortages || []).length > 3 ? ` +${(plan.shortages || []).length - 3} more` : '';
     const tags = (recipe.tags || []).slice(0, 4).map(tag => `<span>${escapeHtml(tag)}</span>`).join('');
     const status = plan.can_make ? 'Ready to make' : `${(plan.shortages || []).length} missing`;
     return `<article class="inventory-card inventory-recipe-card" data-recipe-id="${escapeHtml(recipe.id)}">
@@ -270,7 +273,7 @@ function renderRecipeCatalog() {
       <p class="recipe-card-meta">${escapeHtml(recipe.servings)} servings <span>·</span> ${ingredients.length} ingredient${ingredients.length === 1 ? '' : 's'}</p>
       ${tags ? `<div class="recipe-tags" aria-label="Recipe tags">${tags}</div>` : ''}
       <ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}
-      ${plan.can_make ? '<p class="recipe-card-note ready-note">Everything is on hand.</p>' : `<p class="recipe-card-note missing-note">Missing: ${shortages || 'review the ingredient check'}</p>`}
+      ${plan.can_make ? '<p class="recipe-card-note ready-note">Everything is on hand.</p>' : `<p class="recipe-card-note missing-note">Missing: ${shortageDetails || shortages || 'review the ingredient check'}${shortageMore}</p>`}
       <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? '<button class="inventory-primary" data-action="cook">Cook now</button>' : `<button class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(recipe.id)}">Add missing to Grocery</button>`}</div>
     </article>`;
   }).join('');
