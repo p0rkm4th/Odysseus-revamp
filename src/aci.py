@@ -3991,7 +3991,7 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     action = str(request.get("action"))
     verification = payload.get("verification")
     verified = isinstance(verification, Mapping) and verification.get("status") == "VERIFIED"
-    if action == "archive_item" and isinstance(payload.get("items"), list):
+    if action in {"add_item", "archive_item"} and isinstance(payload.get("items"), list):
         names = [
             str(item.get("name") or "").strip()
             for item in payload["items"]
@@ -4011,6 +4011,8 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
         "adjust_stock": "Adjusted stock for",
         "update_asset": "Updated",
     }[action]
+    if action == "add_item" and isinstance(payload.get("items"), list):
+        verb = "Recorded grocery items"
     if verified:
         return f"{verb} {label}; the canonical inventory readback is verified."
     return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."
