@@ -37,6 +37,7 @@ from src.inventory_planning import (
     RecipeRequirement,
     RecipeStockPlan,
     StockLot,
+    item_name_variants,
     normalize_item_name,
     plan_recipe_stock,
 )
@@ -1320,14 +1321,13 @@ class RecipeService(InventoryService):
                 args.get("name") if name_value is None else name_value,
                 "name", maximum=200,
             )
-            normalized = normalize_item_name(name)
             with self._read() as db:
                 owners = self._shared_owner_ids(db, owner)
                 rows = db.query(InventoryItem).filter(
                     InventoryItem.owner.in_(owners),
                     InventoryItem.domain.in_(("kitchen", "household")),
                     InventoryItem.archived.is_(False),
-                    InventoryItem.normalized_name == normalized,
+                    InventoryItem.normalized_name.in_(item_name_variants(name)),
                 ).order_by(InventoryItem.id).all()
             if not rows:
                 raise InventoryNotFound("inventory item not found")
@@ -1411,7 +1411,7 @@ class RecipeService(InventoryService):
                 matches = db.query(InventoryItem).filter(
                     InventoryItem.owner.in_(owners),
                     InventoryItem.domain == str(domain).casefold(),
-                    InventoryItem.normalized_name == normalized,
+                    InventoryItem.normalized_name.in_(item_name_variants(requested_name)),
                     InventoryItem.archived.is_(False),
                 ).order_by(InventoryItem.id).all()
             if len(matches) > 1:

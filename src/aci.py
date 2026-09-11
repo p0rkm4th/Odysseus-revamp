@@ -2237,6 +2237,52 @@ def provisional_intent_projection(
 
     latest = str(text or "")
     recent_query = recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+    # A recipe/grocery correction is often elliptical: after Hades queues a
+    # recipe's shortages, the owner may say "Actually, don't add onions." The
+    # current turn contains the concrete item and exclusion; the prior
+    # owner-authored turn supplies the grocery context. Assistant prose is not
+    # used as authority. Re-express the bounded correction as the canonical
+    # unqueue operation so it crosses the ordinary inventory policy,
+    # persistence, and readback path instead of letting the model claim that
+    # it changed state.
+    inventory_correction_query = None
+    prior_owner_text = " ".join(
+        str(message.get("content") or "")
+        for message in (messages or ())
+        if str(message.get("role") or "") == "user"
+        and str(message.get("content") or "").strip().casefold() != latest.strip().casefold()
+    )
+    has_inventory_anchor = bool(re.search(
+        r"\b(?:grocery|groceries|shopping\s+list|recipe|ingredients?|pantry|fridge|freezer)\b",
+        prior_owner_text,
+        re.IGNORECASE,
+    ))
+    if has_inventory_anchor:
+        correction_match = re.search(
+            r"\b(?:don['’]?t|do\s+not|dont)\s+(?:add|put|include|buy|queue)\s+"
+            r"(.+?)(?:\s+(?:to|on)\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list)?\s*[.!?]*$|"
+            r"\b(?:leave\s+out|skip)\s+(.+?)\s*[.!?]*$",
+            latest,
+            re.IGNORECASE,
+        )
+        if correction_match:
+            corrected_name = next(
+                (value for value in correction_match.groups() if value), ""
+            ).strip(" .,!?:;")
+            corrected_name = re.sub(
+                r"^(?:the|an|a|those|these|some)\s+",
+                "",
+                corrected_name,
+                flags=re.IGNORECASE,
+            ).strip(" .,!?:;")
+            if corrected_name and not re.fullmatch(
+                r"(?:the\s+)?(?:ingredients?|items?|things?|stuff|what\s+i\s+need)",
+                corrected_name,
+                re.IGNORECASE,
+            ):
+                inventory_correction_query = (
+                    f"Remove {corrected_name} from my grocery list."
+                )
     finance_followup = bool(
         re.search(
             r"\b(?:last|previous|this|that|next)\s+(?:month|week|year)\b|"
@@ -2400,7 +2446,10 @@ def provisional_intent_projection(
     # when the new text is genuinely underspecified.
     direct_frame = compile_intent(latest, continuation=False)
     direct_request_owned = direct_frame.domain_concept in DOMAIN_CONTRACTS
-    if finance_pending_anchor:
+    if inventory_correction_query:
+        frame = compile_intent(inventory_correction_query, continuation=False)
+        continuation = False
+    elif finance_pending_anchor:
         # The pending question is a semantic follow-up to the prior Finance
         # read, not a request for an unconstrained transaction ledger. Reuse
         # only the prior owner-authored Finance scope; the current question
@@ -2455,7 +2504,9 @@ def provisional_intent_projection(
         continuation = False
     if frame.domain_concept not in DOMAIN_CONTRACTS:
         return None, False
-    if finance_followup_query:
+    if inventory_correction_query:
+        retrieval_query = inventory_correction_query
+    elif finance_followup_query:
         retrieval_query = finance_followup_query
     elif finance_pending_anchor:
         retrieval_query = finance_pending_anchor

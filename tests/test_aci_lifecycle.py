@@ -786,6 +786,33 @@ def test_finance_pending_question_reuses_prior_spending_scope():
     assert frame.filters["view"] == "spending"
 
 
+def test_inventory_correction_reuses_prior_recipe_grocery_context():
+    messages = [
+        {"role": "user", "content": "I wanna make spaghetti, add ingredients to the shopping list."},
+        {"role": "assistant", "content": "Added the missing recipe ingredients to Grocery."},
+    ]
+    intent, owned = provisional_intent_projection(messages, "Actually, don't add onions.")
+    assert owned is True
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "Remove onions from my grocery list."
+    frame = compile_intent(intent["retrieval_query"])
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert resolved.action_id == "remove_from_grocery"
+    assert canonical_inventory_mutation_payload(
+        resolved.action_id, intent["retrieval_query"],
+    )["name"] == "onions"
+
+
+def test_inventory_correction_without_prior_grocery_context_stays_unbound():
+    intent, owned = provisional_intent_projection(
+        [{"role": "user", "content": "I like onions."}],
+        "Actually, don't add onions.",
+    )
+    assert owned is False
+    assert intent is None
+
+
 def test_finance_followup_with_latest_user_in_message_history_uses_prior_turn():
     messages = [
         {"role": "user", "content": "How much did I spend at Publix this year?"},
