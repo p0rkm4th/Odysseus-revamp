@@ -3953,6 +3953,8 @@ def canonical_recipe_queue_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
         return "I couldn't compare that recipe with your stock, so nothing was added to Grocery."
     queued = payload.get("queued")
+    if isinstance(queued, Mapping):
+        queued = queued.get("queued")
     if not isinstance(queued, list):
         return None
     names = []
