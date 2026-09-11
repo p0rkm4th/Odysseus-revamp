@@ -235,3 +235,16 @@ def test_nested_broker_success_terminates_network_turn_without_replanning():
         '{"action":"execute_network_discovery","plan_digest":"' + "a" * 64 + '"}',
         {"success": True, "data": {"success": True, "action": "execute_network_discovery"}},
     ) is True
+
+
+def test_structured_tool_result_unwraps_approval_resume_output():
+    payload = agent_loop._structured_tool_result({
+        "output": json.dumps({
+            "action": "execute_network_discovery",
+            "success": True,
+            "observations_recorded": True,
+        }),
+        "exit_code": 0,
+    })
+    assert payload["action"] == "execute_network_discovery"
+    assert payload["success"] is True
