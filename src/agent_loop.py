@@ -3314,6 +3314,15 @@ async def stream_aci_runtime(
             "approved": True,
             "approval_digest": approved.digest[:16],
         }
+        # Keep the bounded canonical projection with the approval-resume
+        # event. The raw provider result may be large (especially discovery
+        # candidates) and the answer renderer must not depend on a truncated
+        # tool-output string after the turn is resumed.
+        _approved_projection = canonical_tool_result_projection(
+            approved.tool_name, approved_result,
+        )
+        if _approved_projection is not None:
+            approved_tool_event["result_projection"] = _approved_projection
         for key in (
             "image_url",
             "image_prompt",
@@ -3410,14 +3419,24 @@ async def stream_aci_runtime(
         _approved_network_payload = _structured_tool_result(approved_result)
         if (
             approved.tool_name == "manage_homelab"
-            and str(_approved_network_payload.get("action") or "") == "execute_network_discovery"
+            and str(_approved_network_payload.get("action") or "") in {
+                "execute_network_discovery",
+                "execute_network_service_enumeration",
+            }
             and _approved_network_payload.get("success") is True
-            and not is_network_service_enumeration_request(_last_user)
         ):
-            _aci_terminal_canonical_read = True
+            # This is the terminal observed Result for this approval resume.
+            # Do not run another model round: it can re-select the same
+            # deterministic planner and manufacture a second approval card.
+            _network_execution_completed = True
         _approved_result_injected = True
 
     for round_num in range(1, max_rounds + 1):
+        if _network_execution_completed:
+            # Approval-resume already supplied the verified bounded network
+            # Result. Skip model re-entry entirely; the deterministic answer
+            # projection below will render the observed scan.
+            break
         round_response = ""
         _round_text_buffered = False
         round_reasoning = ""  # reasoning_content deltas (DeepSeek-thinking, vLLM --reasoning-parser)
