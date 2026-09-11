@@ -6,6 +6,8 @@ import json
 import src.agent_loop as agent_loop
 from src.aci import ground_action_completion
 from src.intent_contracts import network_discovery_request_cidr, is_network_service_enumeration_request
+from src.tool_approvals import ToolApprovalStore
+from src.tool_capabilities import capabilities_for_action
 
 
 def _collect(generator):
@@ -140,6 +142,73 @@ def test_successful_network_execution_is_terminal_for_the_current_turn():
         json.dumps({"action": "execute_network_discovery"}),
         {"success": True, "approval_required": True},
     ) is False
+
+
+def test_exact_network_approval_resume_executes_once_without_replanning(monkeypatch):
+    """The UI approval continuation must finish the sealed scan in one turn."""
+    store = ToolApprovalStore()
+    content = json.dumps({
+        "action": "execute_network_discovery",
+        "cidr": "192.168.10.0/24",
+        "plan_digest": "a" * 64,
+    })
+    pending = store.create(
+        owner="alice",
+        session_id="session-1",
+        origin_run_id="run-1",
+        tool_name="manage_homelab",
+        content=content,
+        workspace=None,
+        external_untrusted_context_seen=False,
+        capabilities=capabilities_for_action("manage_homelab", content),
+    )
+    grant = store.consume(
+        pending.approval_id,
+        decision="approve_task",
+        owner="alice",
+        session_id="session-1",
+    )
+    assert grant is not None
+    calls = []
+
+    async def fake_execute(block, **kwargs):
+        calls.append(block)
+        return "manage_homelab", {
+            "output": json.dumps({
+                "action": "execute_network_discovery",
+                "success": True,
+                "candidate_count": 2,
+                "observations_recorded": True,
+            }),
+            "exit_code": 0,
+        }
+
+    async def fail_provider(*args, **kwargs):
+        raise AssertionError("approved network execution must not re-enter the model")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(agent_loop, "execute_tool_block", fake_execute)
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", fail_provider)
+    monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None)
+    monkeypatch.setattr(agent_loop, "blocked_tools_for_owner", lambda owner: set())
+    monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default)
+
+    chunks = _collect(agent_loop.stream_aci_runtime(
+        "http://local.test/v1",
+        "local-model",
+        [{"role": "user", "content": "Scan my network"}],
+        max_rounds=3,
+        relevant_tools={"manage_homelab"},
+        owner="alice",
+        session_id="session-1",
+        exact_approval=grant,
+    ))
+    events = _events(chunks)
+
+    assert len(calls) == 1
+    assert not any(event.get("type") == "ask_user" for event in events)
+    assert sum(event.get("type") == "tool_start" for event in events) == 1
+    assert sum(event.get("type") == "tool_output" for event in events) == 1
     assert agent_loop._successful_bounded_network_execution(
         "manage_homelab",
         json.dumps({"action": "plan_network_discovery"}),
