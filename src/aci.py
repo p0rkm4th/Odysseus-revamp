@@ -1517,10 +1517,14 @@ def is_recipe_composition_request(text: str) -> bool:
     value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
     if not value:
         return False
+    has_named_dish_action = bool(re.search(
+        r"\b(?:make|cook|prepare)\s+(?!(?:a|the)?\s*(?:grocery|shopping)\s+list\b)"
+        r"[a-z0-9][^.!?,]{1,120}", value,
+    ))
     has_dish_intent = bool(re.search(
         r"\b(?:make|cook|prepare|fix|have)\b.+\b(?:for|tonight|today|dinner|lunch|meal)\b"
         r"|\b(?:recipe|ingredients?)\b", value,
-    ))
+    )) or has_named_dish_action
     asks_for_grocery = bool(re.search(
         r"\b(?:add|put|queue|shopping|grocery|buy|missing|need)\b", value,
     ))
@@ -1530,10 +1534,21 @@ def is_recipe_composition_request(text: str) -> bool:
 def recipe_composition_name(text: str) -> str | None:
     """Extract only the named dish span for saved-recipe lookup."""
     match = re.search(
-        r"\b(?:make|cook|prepare)\s+(.+?)(?=\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal))\b|[.!?,]|$)",
+        r"\b(?:make|cook|prepare)\s+(?!(?:a|the)?\s*(?:grocery|shopping)\s+list\b)"
+        r"(.+?)(?=\s+(?:and\s+)?(?:add|put|queue|buy|need|missing|shopping|grocery)\b"
+        r"|\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal))\b|[.!?,]|$)",
         str(text or ""), re.IGNORECASE,
     )
-    value = re.sub(r"\s+", " ", match.group(1).strip()) if match else ""
+    if match:
+        value = match.group(1).strip()
+    else:
+        match = re.search(
+            r"\b(?:ingredients?|items?)\s+(?:for|of)\s+(?:the\s+)?(.+?)"
+            r"(?=\s+(?:to|on)\s+(?:my\s+)?(?:grocery|shopping)\s+list\b|[.!?,]|$)",
+            str(text or ""), re.IGNORECASE,
+        )
+        value = match.group(1).strip() if match else ""
+    value = re.sub(r"\s+", " ", value)
     return value[:200] or None
 
 

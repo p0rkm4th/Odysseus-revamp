@@ -20,6 +20,7 @@ from src.aci import (
     canonical_result_answer,
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
+    recipe_composition_name,
     is_recipe_missing_request,
     recipe_missing_name,
     project_final_answer,
@@ -64,6 +65,17 @@ def test_recipe_composition_routes_to_recipe_capable_tools():
         "I want to make spaghetti tonight. Add the ingredients I am missing to my shopping list."
     )
     assert not is_recipe_composition_request("Add spaghetti to my grocery list")
+
+
+def test_recipe_composition_understands_natural_variants_and_bounds_dish_name():
+    variants = (
+        "I wanna make spaghetti, add ingredients to the shopping list",
+        "I want to make spaghetti and add what I need to grocery",
+        "Add the missing ingredients for spaghetti to my grocery list",
+    )
+    for request in variants:
+        assert is_recipe_composition_request(request)
+        assert recipe_composition_name(request) == "spaghetti"
 
 
 def test_recipe_missing_question_uses_bounded_saved_recipe_lookup():
