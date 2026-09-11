@@ -15,6 +15,7 @@ from src.aci import (
     canonical_homelab_read_answer,
     canonical_tool_result_projection,
     canonical_inventory_mutation_answer,
+    canonical_recipe_queue_answer,
     canonical_result_answer,
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
@@ -60,6 +61,17 @@ def test_recipe_composition_routes_to_recipe_capable_tools():
         "I want to make spaghetti tonight. Add the ingredients I am missing to my shopping list."
     )
     assert not is_recipe_composition_request("Add spaghetti to my grocery list")
+
+
+def test_canonical_recipe_queue_answer_lists_verified_grocery_items():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_queue_missing_by_name"}',
+        "output": '{"queued":[{"item":{"name":"spaghetti"}},{"item":{"name":"tomato sauce"}}]}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_queue_answer([event]) == (
+        "Added the missing recipe ingredients to Grocery: spaghetti, tomato sauce."
+    )
 
 
 def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():
