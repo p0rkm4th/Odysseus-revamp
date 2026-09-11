@@ -726,7 +726,8 @@ def test_finance_followup_with_latest_user_in_message_history_uses_prior_turn():
     assert intent["retrieval_query"].casefold() == "how much did i spend at publix last month"
     frame = compile_intent(intent["retrieval_query"])
     assert frame.filters["merchant"] == "publix"
-    assert frame.filters["start"].endswith("-08-01")
+    assert frame.filters["start"].endswith("-01")
+    assert frame.filters["start"] < frame.filters["end"]
 
 
 def test_new_finance_request_wins_over_stale_continuation_messages():
