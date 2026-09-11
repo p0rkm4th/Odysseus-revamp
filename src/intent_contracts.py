@@ -1390,7 +1390,7 @@ def compile_intent(
         concept = "SECURITY_FINDING"
     elif re.search(r"\b(?:osint|open source intelligence|investigations?|cases?)\b", q):
         concept = "OSINT_CASE"
-    elif re.search(r"\b(?:household|pantry|stock|grocery|groceries|shopping|recipe|recipes|kitchen)\b", q) or (
+    elif re.search(r"\b(?:household|pantry|fridge|freezer|stock|grocery|groceries|shopping|recipe|recipes|kitchen)\b", q) or (
         operation == "EXECUTE"
         and re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q)
         and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
