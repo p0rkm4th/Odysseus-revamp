@@ -325,6 +325,32 @@ def test_remove_from_grocery_unqueues_item_without_deleting_owned_stock():
     assert str(service.list_lots("alice", item["id"])[0]["quantity"]) == "1000.000000"
 
 
+def test_clear_grocery_unqueues_the_canonical_set_without_deleting_stock():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    rice = service.create_item(
+        "alice", name="Rice", domain="kitchen", item_kind="ingredient",
+        shopping_list=True, storage_area="pantry", default_unit="kg",
+    )
+    milk = service.create_item(
+        "alice", name="Milk", domain="kitchen", item_kind="ingredient",
+        shopping_list=True,
+    )
+    service.add_stock("alice", rice["id"], quantity="1", unit="kg", idempotency_key="clear-rice-stock")
+
+    cleared = service.manage_inventory({"action": "remove_from_grocery", "clear": True}, owner="alice")
+    assert cleared["clear"] is True
+    assert cleared["count"] == 2
+    assert service.list_items("alice", list_name="grocery") == []
+    assert service.list_items("alice", list_name="pantry")[0]["name"] == "Rice"
+    assert str(service.list_lots("alice", rice["id"])[0]["quantity"]) == "1000.000000"
+
+    replay = service.manage_inventory({"action": "remove_from_grocery", "clear": True}, owner="alice")
+    assert replay["count"] == 0
+    assert replay["replayed"] is True
+    assert service.get_item("alice", milk["id"])["shopping_list"] is False
+
+
 def test_grocery_pantry_and_fridge_are_canonical_list_views():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

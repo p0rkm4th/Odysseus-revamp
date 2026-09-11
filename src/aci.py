@@ -3436,6 +3436,22 @@ def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, A
         }
 
     if action == "remove_from_grocery":
+        # A set-valued grocery clear is resolved against canonical state by
+        # the service.  Do not turn "all" into model-supplied item names or
+        # stable-ID homework; the bounded action owns the current set.
+        if re.search(
+            r"\b(?:clear|empty)\s+(?:(?:out|off)\s+)?(?:all\s+)?(?:of\s+)?"
+            r"(?:the\s+)?(?:items?\s+on\s+)?(?:(?:my|the)\s+)?"
+            r"(?:grocery|shopping)\s+list\b"
+            r"|\b(?:delete|remove)\s+(?:all|everything)\s+(?:of\s+)?"
+            r"(?:the\s+)?(?:items?\s+)?(?:from|on)\s+(?:(?:my|the)\s+)?"
+            r"(?:grocery|shopping)\s+list\b",
+            text, re.IGNORECASE,
+        ):
+            return {
+                "action": action, "clear": True, "list_name": "grocery",
+                "domain": "kitchen", "idempotency_key": f"inventory:{key}",
+            }
         match = re.search(
             r"\b(?:remove|take)\s+(.+?)\s+from\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list\b",
             text, re.IGNORECASE,
@@ -3473,7 +3489,7 @@ def _inventory_payload_complete(payload: Mapping[str, Any], action: str) -> bool
             or str(payload.get("name") or "").strip()
         )
     if action == "remove_from_grocery":
-        return bool(str(payload.get("name") or "").strip())
+        return bool(payload.get("clear")) or bool(str(payload.get("name") or "").strip())
     if action == "archive_item":
         items = payload.get("items")
         return bool(
@@ -4032,6 +4048,10 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     }[action]
     if action == "add_item" and isinstance(payload.get("items"), list):
         verb = "Recorded grocery items"
+    if action == "remove_from_grocery" and request.get("clear"):
+        if verified:
+            return "Done. Your grocery list is empty; the canonical inventory readback is verified."
+        return "The grocery list change was written, but I could not verify that the list is empty."
     if verified:
         return f"{verb} {label}; the canonical inventory readback is verified."
     return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."

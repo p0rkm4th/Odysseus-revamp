@@ -1369,6 +1369,34 @@ class RecipeService(InventoryService):
                 item_id = resolve_food_item()
             return {"item": self.archive_item(owner, item_id)}
         if action == "remove_from_grocery":
+            if bool(args.get("clear")):
+                # Resolve the set from canonical state at execution time.  A
+                # clear is an unqueue operation, never an archive/delete and
+                # never a stock mutation.  Keep the whole bounded set change
+                # in one transaction so replay cannot leave a half-cleared
+                # grocery projection.
+                with self._transaction() as db:
+                    owners = self._shared_owner_ids(db, owner)
+                    rows = db.query(InventoryItem).filter(
+                        InventoryItem.owner.in_(owners),
+                        InventoryItem.domain.in_(("kitchen", "household")),
+                        InventoryItem.shopping_list.is_(True),
+                        InventoryItem.archived.is_(False),
+                    ).order_by(InventoryItem.normalized_name, InventoryItem.id).limit(257).all()
+                    if len(rows) > 256:
+                        raise InventoryError("the grocery list is too large to clear in one bounded change")
+                    cleared: list[dict[str, Any]] = []
+                    for row in rows:
+                        item = self._mutable_item_for_actor(db, owner, row.id)
+                        item.shopping_list = False
+                        cleared.append(_item_view(item))
+                    return {
+                        "items": cleared,
+                        "count": len(cleared),
+                        "clear": True,
+                        "cleared": True,
+                        "replayed": not bool(cleared),
+                    }
             item_id = resolve_food_item()
             item = self.get_item(owner, item_id)
             if not item.get("shopping_list"):
