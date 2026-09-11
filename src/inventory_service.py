@@ -1042,6 +1042,81 @@ class RecipeService(InventoryService):
         if not specs:
             raise InventoryError("recipe must have at least one ingredient")
         with self._transaction() as db:
+            normalized_specs: list[dict[str, Any]] = []
+            for spec in specs:
+                item_id = spec.get("item_id")
+                item = self._item(db, owner, item_id) if item_id else None
+                ingredient_name = item.name if item else _required_text(
+                    spec.get("name"), "ingredient name", maximum=200,
+                )
+                expected_unit = item.default_unit if item else normalize_amount(
+                    1, spec.get("unit"),
+                ).unit
+                normalized_specs.append({
+                    "item_id": item.id if item else None,
+                    "ingredient_name": ingredient_name,
+                    "quantity": _canonical_amount(
+                        spec.get("quantity"), spec.get("unit"), expected_unit,
+                    ),
+                    "unit": expected_unit,
+                    "optional": bool(spec.get("optional", False)),
+                    "substitution_group": _optional_text(
+                        spec.get("substitution_group"), "substitution_group",
+                    ),
+                    "preparation": _optional_text(spec.get("preparation"), "preparation"),
+                })
+
+            # Repeating the same named-dish request is replayable owner work.
+            # Reuse an exact active recipe rather than creating a second row
+            # that would make a later name lookup ambiguous. Different
+            # ingredient/serving contracts remain separate recipes.
+            def recipe_key(rows: Iterable[Mapping[str, Any]], servings_value: Any):
+                def optional_key(value: Any) -> str:
+                    return " ".join(str(value or "").strip().casefold().split())
+
+                def numeric_key(value: Any) -> str:
+                    try:
+                        rendered = format(parse_decimal(value), "f").rstrip("0").rstrip(".")
+                        return rendered or "0"
+                    except (TypeError, ValueError, UnitError):
+                        return str(value)
+
+                return (
+                    numeric_key(servings_value),
+                    tuple(sorted(
+                        (
+                            normalize_item_name(row["ingredient_name"]),
+                            numeric_key(row["quantity"]),
+                            str(row["unit"]),
+                            bool(row.get("optional", False)),
+                            optional_key(row.get("substitution_group")),
+                            str(row.get("preparation") or "").strip().casefold(),
+                        )
+                        for row in rows
+                    )),
+                )
+
+            incoming_key = recipe_key(normalized_specs, serving_count)
+            existing = db.query(InventoryRecipe).filter(
+                InventoryRecipe.owner == owner,
+                InventoryRecipe.normalized_name == normalize_item_name(display_name),
+                InventoryRecipe.archived.is_(False),
+            ).all()
+            for candidate in existing:
+                candidate_ingredients = db.query(InventoryRecipeIngredient).filter_by(
+                    owner=owner, recipe_id=candidate.id,
+                ).all()
+                candidate_rows = ({
+                    "ingredient_name": ingredient.ingredient_name,
+                    "quantity": ingredient.quantity,
+                    "unit": ingredient.unit,
+                    "optional": ingredient.optional,
+                    "substitution_group": ingredient.substitution_group,
+                    "preparation": ingredient.preparation,
+                } for ingredient in candidate_ingredients)
+                if recipe_key(candidate_rows, candidate.servings) == incoming_key:
+                    return self._recipe_view(db, candidate)
+
             recipe = InventoryRecipe(
                 id=str(uuid4()), owner=_required_text(owner, "owner", maximum=255),
                 name=display_name, normalized_name=normalize_item_name(display_name),
@@ -1051,18 +1126,12 @@ class RecipeService(InventoryService):
                 image_refs_json=[str(ref) for ref in (image_refs or [])],
             )
             db.add(recipe)
-            for index, spec in enumerate(specs):
-                item_id = spec.get("item_id")
-                item = self._item(db, owner, item_id) if item_id else None
-                ingredient_name = item.name if item else _required_text(spec.get("name"), "ingredient name", maximum=200)
-                expected_unit = item.default_unit if item else normalize_amount(1, spec.get("unit")).unit
-                quantity = _canonical_amount(spec.get("quantity"), spec.get("unit"), expected_unit)
+            for index, spec in enumerate(normalized_specs):
                 db.add(InventoryRecipeIngredient(
                     id=str(uuid4()), owner=owner, recipe_id=recipe.id,
-                    item_id=item.id if item else None, ingredient_name=ingredient_name,
-                    quantity=quantity, unit=expected_unit, optional=bool(spec.get("optional", False)),
-                    substitution_group=_optional_text(spec.get("substitution_group"), "substitution_group"),
-                    preparation=_optional_text(spec.get("preparation"), "preparation"),
+                    item_id=spec["item_id"], ingredient_name=spec["ingredient_name"],
+                    quantity=spec["quantity"], unit=spec["unit"], optional=spec["optional"],
+                    substitution_group=spec["substitution_group"], preparation=spec["preparation"],
                     sort_order=index,
                 ))
             db.flush()
