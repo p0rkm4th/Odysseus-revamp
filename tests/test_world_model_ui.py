@@ -86,5 +86,5 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
 def test_integration_center_normalizes_legacy_character_split_capabilities():
     integrations = (ROOT / "static/js/integrationCenter.js").read_text()
     assert "capabilityLabels" in integrations
-    assert "labels.every(label => label.length === 1)" in integrations
-    assert "labels.join('').split" in integrations
+    assert "rawLabels.every(label => label.length === 1)" in integrations
+    assert "rawLabels.join('').split" in integrations
