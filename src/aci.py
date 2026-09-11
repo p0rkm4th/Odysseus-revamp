@@ -1584,6 +1584,11 @@ def recipe_composition_name(text: str) -> str | None:
 def is_recipe_cook_request(text: str) -> bool:
     """Recognize an explicit request to cook one saved recipe from stock."""
     value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
+    # Interrogative discovery requests such as "what can I cook tonight?"
+    # belong to the read-only recipe suggestion path. They must never be
+    # interpreted as permission to consume inventory.
+    if re.match(r"^(?:what|which|show|give|suggest|can\s+i)\b", value):
+        return False
     return bool(value and re.search(r"\b(?:cook|prepare)\b", value) and recipe_composition_name(text))
 
 
