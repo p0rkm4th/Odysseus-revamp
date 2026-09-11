@@ -4991,6 +4991,12 @@ def project_action_selection(
             payload["url"] = query
         if item["action_id"] == "plan_network_discovery" and network_cidr:
             payload["cidr"] = str(network_cidr)
+            # An explicit CIDR in the owner turn is the bounded scope
+            # authorization for the plan. Keep this server-owned grounding
+            # here rather than accepting an authorization field invented by
+            # the model. Context-derived scans still use CURRENT_CONTEXT in
+            # HomelabOperations and do not receive this flag.
+            payload["scope_authorization"] = "EXPLICITLY_AUTHORIZED"
         dependency_plan = dependency_manager.ensure_action(
             str(item.get("binding") or ""),
             str(item.get("action_id") or ""),
