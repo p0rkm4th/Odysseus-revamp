@@ -552,6 +552,46 @@ def _structured_tool_result(result: Mapping[str, Any], *, _depth: int = 0) -> Ma
                 return nested
     return result
 
+
+def _recipe_queue_continuation(
+    result: Mapping[str, Any],
+    *,
+    composition_route: bool,
+    following_blocks: List[Any] = (),
+):
+    """Build the bounded grocery continuation after a recipe is accepted."""
+    if not composition_route or not isinstance(result, Mapping):
+        return None
+    if result.get("error") or result.get("approval_required"):
+        return None
+    payload = _structured_tool_result(result)
+    recipe = payload.get("recipe")
+    if not isinstance(recipe, Mapping):
+        return None
+    recipe_id = str(recipe.get("id") or "").strip()
+    if not recipe_id:
+        return None
+    for queued in following_blocks:
+        content = getattr(queued, "content", None)
+        if not isinstance(content, str):
+            continue
+        try:
+            queued_payload = json.loads(content)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(queued_payload, Mapping) and queued_payload.get("action") in {
+            "recipe_queue_missing", "recipe_queue_missing_by_name",
+        }:
+            return None
+    return ToolBlock(
+        "manage_assets",
+        json.dumps({
+            "action": "recipe_queue_missing",
+            "domain": "kitchen",
+            "recipe_id": recipe_id,
+        }, sort_keys=True),
+    )
+
 _intent_requires_action = intent_requires_action
 _usage_bucket = usage_bucket
 
@@ -2731,24 +2771,14 @@ async def stream_aci_runtime(
                 # Explicit compatibility callers retain their historical
                 # behavior; no active production caller uses this mode.
                 _aci_enabled = False
-    if (
-        _aci_recipe_composition_route
-        and _recipe_composition_query
-        and not guide_only
-        and "manage_assets" not in disabled_tools
-    ):
-        # A saved recipe is canonical enough to resolve this common owner
-        # workflow without asking a weak local model to invent a multi-step
-        # action sequence. The operation itself refuses zero/multiple matches
-        # and performs deterministic stock comparison before queueing.
-        _aci_fast_path_block = ToolBlock(
-            "manage_assets",
-            json.dumps({
-                "action": "recipe_queue_missing_by_name",
-                "domain": "kitchen",
-                "query": _recipe_composition_query,
-            }, sort_keys=True),
-        )
+    # Named-dish composition stays on the recipe-capable model route. Do not
+    # preempt it with ``recipe_queue_missing_by_name``: that operation is
+    # correct only when a saved recipe already exists and would turn a normal
+    # request such as "make spaghetti and add what I need" into a premature
+    # recipe_not_found failure before the model can provide a bounded recipe
+    # ingredient proposal. The route directive and proposal fallback below
+    # still require concrete ingredients, canonical stock comparison, and
+    # verified Grocery queueing.
     _recipe_missing_query = recipe_missing_name(_last_user) if _aci_recipe_missing_route else None
     if (
         _aci_recipe_missing_route
@@ -5824,6 +5854,29 @@ async def stream_aci_runtime(
                 _aci_packet = None
                 _aci_selected_action = None
                 _inventory_composition_repair_pending = True
+
+            # A natural named-dish request is one bounded objective, even
+            # though the model may need to propose the recipe before the
+            # canonical inventory service can compare it with stock.  Once a
+            # recipe_add proposal has been accepted, continue immediately with
+            # the server-owned recipe id.  Waiting for another model round
+            # here made Qwen stop after saving the recipe, leaving the owner's
+            # requested grocery queue untouched.  The appended operation still
+            # traverses the normal binding, owner, policy, and verification
+            # path; the model cannot choose a different recipe or invent
+            # ingredient state.
+            if block.tool_type == "manage_assets" and _block_action_id == "recipe_add":
+                _recipe_queue_block = _recipe_queue_continuation(
+                    result,
+                    composition_route=_aci_recipe_composition_route,
+                    following_blocks=tool_blocks[i + 1:],
+                )
+                if _recipe_queue_block is not None:
+                    tool_blocks.append(_recipe_queue_block)
+                    logger.info(
+                        "[hades-inventory] recipe proposal accepted; queued canonical missing-ingredient comparison recipe=%s",
+                        _recipe_queue_block.content,
+                    )
             _post_result_transition = project_post_result_transition(
                 result,
                 canonical_read=_was_aci_canonical_read,

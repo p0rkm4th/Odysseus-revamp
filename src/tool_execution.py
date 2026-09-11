@@ -1512,6 +1512,34 @@ async def _execute_manage_assets_binding(block, owner=None):
             recipe_payload["action"] = recipe_payload["action"].removeprefix("recipe_")
             if recipe_payload.get("recipe_name") and not recipe_payload.get("name"):
                 recipe_payload["name"] = recipe_payload.pop("recipe_name")
+            # Some compatible local models emit the natural field name
+            # ``dish_name`` and a JSON-encoded ingredient list even though the
+            # canonical recipe contract uses ``name`` and structured
+            # ingredient objects. Normalize that bounded transport variation
+            # here so a valid owner request is not rejected before the
+            # inventory service can validate and persist it.
+            if recipe_payload.get("dish_name") and not recipe_payload.get("name"):
+                recipe_payload["name"] = recipe_payload.pop("dish_name")
+            raw_ingredients = recipe_payload.get("ingredients")
+            if isinstance(raw_ingredients, str):
+                try:
+                    raw_ingredients = _ody_v34_json.loads(raw_ingredients)
+                except (TypeError, ValueError):
+                    raw_ingredients = None
+            if isinstance(raw_ingredients, list):
+                normalized_ingredients = []
+                for ingredient in raw_ingredients[:64]:
+                    if isinstance(ingredient, str):
+                        ingredient = {"name": ingredient, "quantity": 1, "unit": "each"}
+                    elif isinstance(ingredient, dict):
+                        ingredient = dict(ingredient)
+                        ingredient.setdefault("quantity", 1)
+                        ingredient.setdefault("unit", "each")
+                    else:
+                        continue
+                    if str(ingredient.get("name") or "").strip():
+                        normalized_ingredients.append(ingredient)
+                recipe_payload["ingredients"] = normalized_ingredients
             if recipe_payload.get("recipe_query") and not recipe_payload.get("query"):
                 recipe_payload["query"] = recipe_payload.pop("recipe_query")
             from src.agent_tools.inventory_tools import ManageRecipesTool
