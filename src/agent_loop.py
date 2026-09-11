@@ -5530,6 +5530,7 @@ async def stream_aci_runtime(
             ):
                 _was_aci_canonical_read = False
                 _was_deterministic_fast_path = False
+                _aci_fast_path_block = None
                 _inventory_composition_repair_pending = True
             _post_result_transition = project_post_result_transition(
                 result,
