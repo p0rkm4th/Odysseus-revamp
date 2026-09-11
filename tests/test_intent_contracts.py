@@ -52,6 +52,14 @@ def test_budget_constraint_on_cooking_request_keeps_recipe_objective():
     assert resolved.action_id == "recipe_suggest"
 
 
+def test_modifier_new_does_not_turn_network_observation_into_create():
+    frame = compile_intent("Anything new on my network?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "READ"
+    assert resolved.action_id == "read_network_observations"
+
+
 def test_recipe_availability_payload_is_bounded_and_read_only():
     from src.aci import canonical_read_fast_path_payload
 
