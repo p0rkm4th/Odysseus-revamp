@@ -3392,6 +3392,12 @@ def canonical_read_fast_path_payload(
         elif action == "overview" and str(filters.get("view") or "").strip().casefold() == "expiring":
             payload["view"] = "expiring"
             payload["expiry_days"] = min(max(int(filters.get("expiry_days") or 30), 0), 365)
+    if binding == "manage_homelab" and action == "read_network_observations":
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        view = str(filters.get("view") or "").strip().casefold()
+        if view in {"observations", "unidentified", "roles"}:
+            payload["view"] = view
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
@@ -3870,6 +3876,8 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             lines.append(f"- {label}")
         if len(nodes) > 50:
             lines.append(f"- …and {len(nodes) - 50} more")
+        if str(payload.get("view") or "").strip().casefold() == "observations":
+            lines.append("These are persisted observations; current health was not directly verified for every node.")
         return "\n".join(lines)
     if action == "execute_network_discovery":
         if payload.get("success") is not True:
@@ -4012,6 +4020,7 @@ def canonical_tool_result_projection(
             "edges": list(raw_edges[:50]) if isinstance(raw_edges, list) else [],
             "node_count": payload.get("node_count"),
             "edge_count": payload.get("edge_count"),
+            "view": payload.get("view"),
         })
         return common
     if action == "execute_network_discovery":

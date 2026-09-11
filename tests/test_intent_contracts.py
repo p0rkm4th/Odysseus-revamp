@@ -982,6 +982,9 @@ def test_registered_collection_read_accepts_empty_typed_collection():
 @pytest.mark.parametrize(("query", "concept", "action_id", "binding"), [
     ("What is the status of my homelab services?", "SERVICE", "service_status", "manage_homelab"),
     ("Inspect my homelab host", "HOMELAB_HOST", "inspect_host", "manage_homelab"),
+    ("Which server looks unhealthy?", "NETWORK", "read_network_observations", "manage_homelab"),
+    ("Which server was acting weird earlier?", "NETWORK", "read_network_observations", "manage_homelab"),
+    ("What is the health of my servers?", "NETWORK", "read_network_observations", "manage_homelab"),
     ("Show my security engagements", "SECURITY_ENGAGEMENT", "list_engagements", "manage_security_assessment"),
     ("Show my security evidence", "SECURITY_EVIDENCE", "list_evidence", "manage_security_assessment"),
     ("What research history do I have?", "RESEARCH", "list_cases", "manage_osint"),
