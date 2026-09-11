@@ -2591,6 +2591,15 @@ async def stream_aci_runtime(
             # host set before the separate service-enumeration plan is made;
             # the model never invents targets and the approval boundary is
             # unchanged.
+            _network_service_followup = bool(
+                is_network_service_enumeration_request(_last_user)
+                and re.search(
+                    r"\b(?:responding|discovered|identified|these|those)\s+"
+                    r"(?:hosts?|devices?|machines?)\b",
+                    str(_last_user or ""),
+                    re.IGNORECASE,
+                )
+            )
             if (
                 _aci_mode == "aci"
                 and not _aci_answer_only
@@ -2598,6 +2607,7 @@ async def stream_aci_runtime(
                 and _canonical_binding == "manage_homelab"
                 and "network_ops" in set(_intent_domains or set())
                 and is_network_service_enumeration_request(_last_user)
+                and not _network_service_followup
                 and projection.mode is not SelectionMode.NEED_CONTEXT
             ):
                 _aci_fast_path_block = ToolBlock(
@@ -2624,6 +2634,34 @@ async def stream_aci_runtime(
                 )
                 _record_aci_framework("deterministic_network_discovery_before_service_plan")
                 logger.info("[hades-aci] deterministic discovery first for network service request")
+            # If the owner refers to hosts already observed by discovery, use
+            # the owner-scoped canonical projection for the service plan. Do
+            # not repeat discovery or ask the model to invent targets; the
+            # homelab operation resolves only fresh persisted observations
+            # and fails closed when none are available.
+            if (
+                _aci_mode == "aci"
+                and not _aci_answer_only
+                and _aci_canonical_tool_projection
+                and _canonical_binding == "manage_homelab"
+                and "network_ops" in set(_intent_domains or set())
+                and _network_service_followup
+                and projection.mode is not SelectionMode.NEED_CONTEXT
+            ):
+                _aci_fast_path_block = ToolBlock(
+                    "manage_homelab",
+                    json.dumps({"action": "plan_network_service_enumeration"}, sort_keys=True),
+                )
+                _aci_selected_action = next(
+                    (
+                        trace for trace in _aci_action_candidates
+                        if trace["binding"] == "manage_homelab"
+                        and trace["action_id"] == "plan_network_service_enumeration"
+                    ),
+                    None,
+                )
+                _record_aci_framework("deterministic_existing_hosts_service_plan_selection")
+                logger.info("[hades-aci] deterministic service plan from existing observations")
             for _event in projection.framework_events:
                 if _event:
                     _record_aci_framework(_event)
