@@ -134,6 +134,28 @@ def test_all_grocery_write_boundaries_reject_recipe_placeholders():
     with pytest.raises(InventoryError, match="individual grocery items"):
         service.update_item("alice", item["id"], shopping_list=True)
 
+
+def test_recipe_queue_missing_by_name_compares_stock_and_queues_only_shortages():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    rice = service.create_item(
+        "alice", name="Rice", domain="kitchen", item_kind="ingredient",
+        default_unit="kg",
+    )
+    service.add_stock("alice", rice["id"], quantity="1", unit="kg", idempotency_key="rice-stock")
+    service.create_recipe(
+        "alice", name="Rice Bowl", servings="1",
+        ingredients=[
+            {"name": "Rice", "quantity": "0.5", "unit": "kg"},
+            {"name": "Eggs", "quantity": "2", "unit": "each"},
+        ],
+    )
+    result = service.manage_recipes(
+        {"action": "queue_missing_by_name", "query": "rice bowl"}, owner="alice",
+    )
+    assert [row["name"] for row in result["missing"]["shortages"]] == ["eggs"]
+    assert [row["name"] for row in service.list_items("alice", list_name="grocery")] == ["eggs"]
+
     with pytest.raises(InventoryError, match="individual grocery items"):
         service.create_item(
             "alice", name="the ingredients I am missing", domain="kitchen",

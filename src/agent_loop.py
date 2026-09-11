@@ -88,6 +88,7 @@ from src.aci import (
     is_canonical_read_contract,
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
+    recipe_composition_name,
     usage_bucket,
     usage_bucket_summary,
     compute_final_metrics,
@@ -1943,6 +1944,10 @@ async def stream_aci_runtime(
         and is_recipe_composition_request(_last_user)
         and "household" in set(_intent.get("domains") or set())
     )
+    _recipe_composition_query = (
+        recipe_composition_name(_last_user)
+        if _aci_recipe_composition_route else None
+    )
     # Once ACI has resolved a supported semantic contract, its binding is the
     # only model-facing capability for this turn.  The old route used to add
     # ALWAYS_AVAILABLE, domain maps, skills, and (sometimes) the generic tool
@@ -2637,6 +2642,24 @@ async def stream_aci_runtime(
                 # Explicit compatibility callers retain their historical
                 # behavior; no active production caller uses this mode.
                 _aci_enabled = False
+    if (
+        _aci_recipe_composition_route
+        and _recipe_composition_query
+        and not guide_only
+        and "manage_assets" not in disabled_tools
+    ):
+        # A saved recipe is canonical enough to resolve this common owner
+        # workflow without asking a weak local model to invent a multi-step
+        # action sequence. The operation itself refuses zero/multiple matches
+        # and performs deterministic stock comparison before queueing.
+        _aci_fast_path_block = ToolBlock(
+            "manage_assets",
+            json.dumps({
+                "action": "recipe_queue_missing_by_name",
+                "domain": "kitchen",
+                "query": _recipe_composition_query,
+            }, sort_keys=True),
+        )
     # A caller/RAG route may have selected an observation reader while omitting
     # the executable discovery action. Repair that omission before schemas are
     # projected to the model. This is bounded to explicit network intent and
