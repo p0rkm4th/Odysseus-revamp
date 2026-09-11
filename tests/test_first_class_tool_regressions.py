@@ -2,6 +2,7 @@
 
 import argparse
 import json
+from pathlib import Path
 
 import pytest
 
@@ -409,6 +410,13 @@ async def test_missing_recipe_error_preserves_actionable_owner_guidance(monkeypa
     )
     assert result["exit_code"] == 1
     assert "Import or paste the recipe first" in result["error"]
+
+
+def test_clarification_stream_has_one_accumulation_path():
+    source = Path("src/agent_loop.py").read_text()
+    marker = "if _aci_clarification_only:\n                # The outer round accumulator"
+    assert marker in source
+    assert 'yield "data: " + json.dumps({"delta": _aci_clarification_text})' not in source
 
 
 def test_recipe_placeholder_does_not_become_a_grocery_item():

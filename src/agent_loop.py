@@ -3676,7 +3676,10 @@ async def stream_aci_runtime(
             logger.debug("Provider context trace unavailable", exc_info=True)
         async def _round_stream():
             if _aci_clarification_only:
-                yield "data: " + json.dumps({"delta": _aci_clarification_text}) + "\n\n"
+                # The outer round accumulator emits the buffered
+                # clarification once after this stream completes.  Emitting
+                # the text here as well makes the transport append the same
+                # owner-facing question twice.
                 yield "data: [DONE]\n\n"
                 return
             if _skip_model_round:
@@ -3705,6 +3708,11 @@ async def stream_aci_runtime(
             ):
                 yield item
 
+        if _aci_clarification_only:
+            # Keep clarification on the same buffered path as other ACI
+            # answers so the route receives one delta and persists one reply.
+            round_response = _aci_clarification_text
+            _round_text_buffered = True
         async for chunk in _round_stream():
             if not _round_first_event_logged:
                 _round_first_event_logged = True
