@@ -331,6 +331,34 @@ def test_canonical_household_read_answer_hides_inventory_storage_precision():
     assert answer == "I found 1 pantry item on hand:\n- Rice (domain=kitchen, quantity=1500 g)"
 
 
+def test_canonical_household_read_answer_renders_expiring_stock():
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": json.dumps({
+            "view": "expiring",
+            "freshness": {"expiry_horizon_days": 30},
+            "expiring_lots": [{
+                "status": "expiring",
+                "item": {"name": "Spinach"},
+                "lot": {"quantity": "250.000000", "unit": "g", "expiry_date": "2026-09-13"},
+            }],
+        }),
+    }])
+    assert answer == "Food to use soon (within 30 days):\n- Spinach: 250 g (use by 2026-09-13)"
+
+
+def test_expiring_household_read_payload_preserves_bounded_horizon():
+    from src.intent_contracts import compile_intent, resolve_intent
+
+    frame = compile_intent("What food do we have that needs used soon?")
+    resolved = resolve_intent(frame)
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(),
+        query="What food do we have that needs used soon?",
+    )
+    assert payload == {"action": "overview", "view": "expiring", "expiry_days": 30}
+
+
 def test_grocery_read_fast_path_preserves_list_scope_and_answer_label():
     from src.aci import canonical_read_fast_path_payload
     from src.intent_contracts import compile_intent, resolve_intent

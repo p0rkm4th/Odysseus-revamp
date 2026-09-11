@@ -1909,6 +1909,16 @@ async def _execute_read_household_binding(block, owner=None):
             list_name = str(payload.get("list_name") or "").strip().casefold()
             if list_name in {"grocery", "pantry", "fridge", "freezer"}:
                 result = {"list_name": list_name, "items": service.list_items(owner, list_name=list_name)}
+            elif str(payload.get("view") or "").strip().casefold() == "expiring":
+                overview = service.household_overview(
+                    owner, expiry_days=int(payload.get("expiry_days") or 30),
+                )
+                result = {
+                    "view": "expiring",
+                    "expiring_lots": overview.get("expiring_lots", []),
+                    "freshness": overview.get("freshness", {}),
+                    "canonical_store": overview.get("canonical_store"),
+                }
             else:
                 result = service.household_overview(owner, expiry_days=int(payload.get("expiry_days") or 30))
         elif action == "list_items":
