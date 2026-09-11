@@ -2495,6 +2495,17 @@ def setup_chat_routes(
                                     if data.get("thinking"):
                                         thinking_response += data["delta"]
                                     else:
+                                        # A clarification is a complete
+                                        # framework answer. Older agent paths
+                                        # could emit the same buffered text once
+                                        # while closing the round and once while
+                                        # flushing it; do not append or stream a
+                                        # duplicate completion.
+                                        if (
+                                            data.get("clarification")
+                                            and full_response.endswith(str(data.get("delta") or ""))
+                                        ):
+                                            continue
                                         full_response += data["delta"]
                                         _stream_set(session, partial=full_response)
                                     yield chunk
