@@ -133,6 +133,13 @@ def _validate_grocery_name(name: str, shopping_list: bool) -> None:
         )
 
 
+def _is_grocery_placeholder(name: str) -> bool:
+    return bool(
+        _RECIPE_LIKE_GROCERY_NAME.search(name)
+        or _NON_ITEM_GROCERY_NAME.match(name.strip())
+    )
+
+
 def _item_view(item: InventoryItem) -> dict[str, Any]:
     return {
         "id": item.id,
@@ -1120,11 +1127,19 @@ class RecipeService(InventoryService):
                 names = [_required_text(value, "item name", maximum=200) for value in requested_items]
                 if len(set(normalize_item_name(value) for value in names)) != len(names):
                     raise InventoryConflict("the grocery request contains duplicate items")
-                # Validate the entire set before changing canonical state so a
-                # recipe placeholder or malformed member cannot leave a
-                # partially applied shopping request.
-                for value in names:
-                    _validate_grocery_name(value, bool(shopping_list))
+                # Models occasionally echo the owner's recipe phrase as one
+                # member of an otherwise valid item array. Discard that
+                # non-item member, while still failing closed when the array
+                # contains no concrete grocery item. This keeps the canonical
+                # write atomic without turning conversational filler into a
+                # persisted item.
+                if shopping_list:
+                    names = [value for value in names if not _is_grocery_placeholder(value)]
+                    if not names:
+                        raise InventoryError(
+                            "please provide the individual grocery items or a saved recipe; "
+                            "no grocery change was made"
+                        )
                 results = []
                 replayed = True
                 for value in names:
