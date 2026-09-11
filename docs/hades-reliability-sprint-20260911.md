@@ -82,6 +82,10 @@ Hades branding/UI projections. No new duplicate subsystem was introduced.
   `web_search` was still being sent to retired `mcp__web_search__web_search`.
   Native folded-tool dispatch now routes `web_search` and `web_fetch` through
   their in-process handlers. A regression test covers this boundary.
+- The first live weather-shaped dogfood also showed the canonical ACI payload
+  omitted the owner query. Web search/fetch fast-path payloads now preserve
+  the bounded query or URL, and final answer projection renders the returned
+  public evidence instead of model filler such as `Done.`
 - Hades was restarted once after the code change; port 7000 remained healthy.
   Recent chat logs showed the failed search attempts and routine research
   polling; no owner message content was copied into the sprint record.
