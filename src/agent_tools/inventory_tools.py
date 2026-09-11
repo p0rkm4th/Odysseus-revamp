@@ -75,6 +75,18 @@ async def _execute(content: str, ctx: Mapping[str, Any], *, method: str, actions
         # Do not log request payloads or exception text: both may contain
         # private inventory/recipe names supplied by the owner.
         logger.warning("%s service call failed (%s)", method, type(exc).__name__)
+        if method == "manage_recipes":
+            from src.inventory_service import InventoryNotFound
+            if isinstance(exc, InventoryNotFound):
+                return {
+                    "error": (
+                        "No saved recipe matched that dish. Import or paste the recipe first; "
+                        "I will compare it with current stock before changing Grocery."
+                    ),
+                    "error_code": "recipe_not_found",
+                    "retryable": True,
+                    "exit_code": 1,
+                }
         if method == "manage_inventory" and "individual grocery items" in str(exc):
             return {
                 "error": (

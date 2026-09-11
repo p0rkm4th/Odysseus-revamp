@@ -394,6 +394,23 @@ async def test_recipe_actions_are_exposed_through_the_canonical_inventory_bindin
     assert result["provenance"] == "CANONICAL_RECIPE"
 
 
+@pytest.mark.asyncio
+async def test_missing_recipe_error_preserves_actionable_owner_guidance(monkeypatch):
+    from src.agent_tools import inventory_tools
+    from src.inventory_service import InventoryNotFound
+
+    class MissingRecipeService:
+        def manage_recipes(self, _args, *, owner):
+            raise InventoryNotFound("recipe not found")
+
+    monkeypatch.setattr(inventory_tools, "_load_inventory_service", lambda: MissingRecipeService())
+    result = await inventory_tools.ManageRecipesTool().execute(
+        '{"action":"queue_missing_by_name","query":"spaghetti"}', {"owner": "alice"},
+    )
+    assert result["exit_code"] == 1
+    assert "Import or paste the recipe first" in result["error"]
+
+
 def test_recipe_placeholder_does_not_become_a_grocery_item():
     from src.inventory_service import InventoryError, RecipeService
 
