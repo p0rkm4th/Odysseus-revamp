@@ -41867,17 +41867,36 @@ body.settings-sidebar-resize-active {
 .recipe-empty-state { padding:48px 18px; }
 .recipe-empty-state strong { display:block; margin-bottom:6px; color:var(--hades-text, var(--fg)); font-size:1rem; }
 .recipe-empty-state p { margin:0 auto 15px; max-width:360px; line-height:1.45; }
+.hades-workspace-window .inventory-recipe-card {
+  align-items:stretch;
+  border-top:2px solid color-mix(in srgb, var(--hades-border-subtle, var(--border)) 75%, transparent);
+  transition:border-color .16s ease, background .16s ease;
+}
+.hades-workspace-window .inventory-recipe-card:focus-within,
+.hades-workspace-window .inventory-recipe-card:hover {
+  border-top-color:color-mix(in srgb, var(--accent, #9b83c7) 70%, var(--hades-border-subtle, var(--border)));
+  background:color-mix(in srgb, var(--hades-surface-raised, var(--panel)) 88%, var(--accent, #9b83c7));
+}
+.recipe-card-next {
+  border:1px solid var(--hades-border-subtle, var(--border));
+  border-radius:var(--hades-radius-sm, 8px);
+  padding:10px;
+}
+.recipe-card-next .recipe-eyebrow { margin-bottom:2px; }
 @media (max-width:700px) {
   .hades-workspace-window .recipe-hero { flex-direction:column; }
   .recipe-hero-actions { justify-content:flex-start; width:100%; }
-  .hades-workspace-window .inventory-tabs { flex-wrap:wrap; overflow:visible; }
-  .hades-workspace-window .inventory-tabs button { flex:0 1 auto; }
+  .hades-workspace-window .inventory-tabs { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:3px; overflow:visible; }
+  .hades-workspace-window .inventory-tabs button { min-width:0; padding:7px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .recipe-library-tools { align-items:stretch; flex-direction:column; }
   .recipe-search { flex:0 0 auto; }
   .recipe-filters { overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; }
   .recipe-filters button { flex:0 0 auto; }
   .recipe-preview { grid-template-columns:1fr; }
-  .recipe-summary { grid-template-columns:1fr; }
+  .recipe-summary { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; }
+  .recipe-stat { min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:8px 9px; }
+  .recipe-stat strong { font-size:1rem; }
+  .recipe-stat span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
   .recipe-card-body { grid-template-columns:1fr; }
 }
 .inventory-sharing-member-summary > strong { display:block; font-size:.78rem; letter-spacing:.02em; }
