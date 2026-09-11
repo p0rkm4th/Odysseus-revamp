@@ -78,6 +78,14 @@ def test_recipe_composition_understands_natural_variants_and_bounds_dish_name():
         assert recipe_composition_name(request) == "spaghetti"
 
 
+def test_recipe_composition_drops_sentence_article_before_saved_recipe_lookup():
+    request = (
+        "I want to make the Shared pasta test. Add whatever ingredients "
+        "we are missing to my grocery list."
+    )
+    assert recipe_composition_name(request) == "Shared pasta test"
+
+
 def test_recipe_missing_question_uses_bounded_saved_recipe_lookup():
     question = "What am I missing for spaghetti?"
     assert is_recipe_missing_request(question)
