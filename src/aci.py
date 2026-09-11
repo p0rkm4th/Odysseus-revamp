@@ -4125,14 +4125,33 @@ def canonical_tool_result_projection(
     if not isinstance(result, Mapping):
         return None
     tool_name = str(tool_name or "").strip()
-    raw = result.get("data") if isinstance(result.get("data"), Mapping) else result.get("output")
-    if isinstance(raw, Mapping):
-        payload = raw
+    data_payload = result.get("data") if isinstance(result.get("data"), Mapping) else None
+    serialized_payload = None
+    try:
+        parsed_output = json.loads(str(result.get("output") or ""))
+        if isinstance(parsed_output, Mapping):
+            serialized_payload = parsed_output
+    except (TypeError, ValueError):
+        serialized_payload = None
+
+    # Registered executors normally return the complete structured result in
+    # ``data``.  Some compatibility/transport paths retain only a compact
+    # coverage envelope there while the complete bounded Finance projection is
+    # still present in ``output``.  Prefer the structured envelope, but merge
+    # the serialized result when it carries fields the envelope omitted.  A
+    # missing merge here turns a successful read into the generic ``Done.``
+    # fallback even though the executor produced valid totals.
+    if tool_name == "read_finance" and data_payload is not None and serialized_payload is not None:
+        payload = dict(serialized_payload)
+        serialized_coverage = serialized_payload.get("coverage")
+        data_coverage = data_payload.get("coverage")
+        payload.update(data_payload)
+        if isinstance(serialized_coverage, Mapping) and isinstance(data_coverage, Mapping):
+            payload["coverage"] = {**serialized_coverage, **data_coverage}
+    elif data_payload is not None:
+        payload = data_payload
     else:
-        try:
-            payload = json.loads(str(raw or ""))
-        except (TypeError, ValueError):
-            return None
+        payload = serialized_payload
     if not isinstance(payload, Mapping):
         return None
     action = str(payload.get("action") or "").strip()
