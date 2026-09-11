@@ -1510,6 +1510,15 @@ def compile_intent(
         read_explicit = True
     if concept == "UNKNOWN" and _network_discovery_language and operation in {"EXECUTE", "RESEARCH"}:
         concept = "NETWORK"
+    # A port/service follow-up may refer to "the responding hosts" rather
+    # than repeat "network". The bounded detector already requires an active
+    # service/port term plus a host/discovery anchor; promote that evidence to
+    # the canonical network operation instead of sending the owner to generic
+    # prose or shell fallback.
+    if concept == "UNKNOWN" and is_network_service_enumeration_request(q):
+        concept = "NETWORK"
+        operation = "EXECUTE"
+        read_explicit = False
     # Safe host inspection is a first-class read even when the user phrases
     # it as exploration or a hardware scan.  It never selects shell access.
     if (
@@ -1517,6 +1526,7 @@ def compile_intent(
         and re.search(r"\b(?:hardware|computational\s+assets?|machine|computer|host|system)\b", q)
         and re.search(r"\b(?:explore|inspect|check|scan)\b", q)
         and not re.search(r"\b(?:network|lan|subnet|service|daemon)\b", q)
+        and not is_network_service_enumeration_request(q)
     ):
         concept = "HOMELAB_HOST"
         operation = "READ"
@@ -1548,6 +1558,7 @@ def compile_intent(
         and not re.search(r"\b(?:my|mine|right\s+now|current(?:ly)?|on\s+my\s+plate)\b", q)
         and not re.search(r"\bwe\b.{0,20}\bworking\b", q)
         and not re.search(r"\b(?:hades|waiting\s+on|needs?\s+attention|pending\s+approvals?)\b", q)
+        and not is_network_service_enumeration_request(q)
     ):
         concept = "UNKNOWN"
     # Make the operation class explicit for genuinely conceptual questions
