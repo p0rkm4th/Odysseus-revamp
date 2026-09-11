@@ -134,6 +134,12 @@ def test_all_grocery_write_boundaries_reject_recipe_placeholders():
     with pytest.raises(InventoryError, match="individual grocery items"):
         service.update_item("alice", item["id"], shopping_list=True)
 
+    with pytest.raises(InventoryError, match="individual grocery items"):
+        service.create_item(
+            "alice", name="the ingredients I am missing", domain="kitchen",
+            item_kind="ingredient", shopping_list=True,
+        )
+
 
 def test_recipe_shortages_can_be_reviewed_and_queued_without_changing_stock():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
