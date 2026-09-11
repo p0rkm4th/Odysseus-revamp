@@ -18,6 +18,7 @@ from src.aci import (
     canonical_inventory_mutation_answer,
     canonical_recipe_missing_answer,
     canonical_recipe_queue_answer,
+    canonical_recipe_list_answer,
     canonical_result_answer,
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
@@ -996,6 +997,16 @@ def test_canonical_grocery_clear_answer_requires_verified_empty_readback():
     }
     assert canonical_inventory_mutation_answer([event]) == (
         "Done. Your grocery list is empty; the canonical inventory readback is verified."
+    )
+
+
+def test_canonical_saved_recipe_list_answer_does_not_render_household_items():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_list"}',
+        "output": '{"recipes":[{"name":"Shared pasta test"}]}', "exit_code": 0,
+    }
+    assert canonical_recipe_list_answer([event]) == (
+        "Your saved recipes: Shared pasta test."
     )
 
 

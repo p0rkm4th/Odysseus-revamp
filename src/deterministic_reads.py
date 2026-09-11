@@ -207,6 +207,14 @@ def deterministic_read_concept(text: str) -> str | None:
         )
     ):
         return "FINANCE"
+    # Saved recipes are a distinct canonical collection from household stock.
+    # Route recipe-list questions to the existing recipe action instead of the
+    # broader household overview, which otherwise makes pantry items appear
+    # to be recipes.
+    if re.search(r"\b(?:recipe|recipes|cooking\s+recipes|saved\s+recipes)\b", query) and re.search(
+        r"\b(?:what|which|show|list|have|saved)\b", query,
+    ):
+        return "RECIPE"
     if _HOUSEHOLD_SUBJECT.search(query) and _HOUSEHOLD_READ.search(query):
         return "HOUSEHOLD_ITEM"
     if _FINANCE_RANKED_TRANSACTIONS.search(query):

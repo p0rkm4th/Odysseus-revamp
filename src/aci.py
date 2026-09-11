@@ -4099,6 +4099,35 @@ def canonical_recipe_queue_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     return "Added the missing recipe ingredients to Grocery: " + ", ".join(names) + "."
 
 
+def canonical_recipe_list_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render the saved-recipe collection without substituting pantry state."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") != "recipe_list":
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        return "I couldn't read your saved recipes; no recipe list is confirmed."
+    recipes = payload.get("recipes")
+    if not isinstance(recipes, list):
+        return None
+    names = [
+        str(recipe.get("name") or "").strip()
+        for recipe in recipes
+        if isinstance(recipe, Mapping) and str(recipe.get("name") or "").strip()
+    ]
+    if not names:
+        return "You don't have any saved recipes yet."
+    return "Your saved recipes: " + ", ".join(names) + "."
+
+
 def canonical_recipe_missing_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render a read-only saved-recipe stock comparison."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
@@ -4370,6 +4399,7 @@ def canonical_result_answer(
     authoritative or merely another piece of model prose.
     """
     candidates = (
+        (canonical_recipe_list_answer(tool_events), "canonical saved recipe Result"),
         (canonical_recipe_missing_answer(tool_events), "canonical recipe stock Result"),
         (canonical_recipe_queue_answer(tool_events), "canonical recipe grocery Result"),
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),

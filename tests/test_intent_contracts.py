@@ -319,6 +319,20 @@ def test_grocery_clear_is_a_bounded_set_unqueue_action(query):
     }
 
 
+@pytest.mark.parametrize("query", [
+    "What recipes do I have?",
+    "Show my saved recipes.",
+    "What cooking recipes do we have?",
+])
+def test_saved_recipe_questions_use_the_canonical_recipe_collection(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.read_explicit is True
+    assert resolved.binding_name == "manage_assets"
+    assert resolved.action_id == "recipe_list"
+
+
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
     messages = [
         {"role": "user", "content": "scan the current network"},

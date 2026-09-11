@@ -982,6 +982,11 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "household_overview",
     ),
+    "RECIPE": DomainContract(
+        "RECIPE", "inventory.manage", {"READ": "recipe_list"}, "manage_assets",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "saved_recipe_list",
+    ),
     "FINANCE": DomainContract(
         "FINANCE", "finance.read", {"READ": "coverage", "READ_SPENDING": "spending", "READ_TRANSACTIONS": "transactions", "READ_CASH_FLOW": "cash_flow"}, "read_finance",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "finance_read",
@@ -1067,6 +1072,7 @@ CANONICAL_DOMAIN_PROJECTIONS: Mapping[str, str] = {
     "MISSION": "work",
     "WATCH": "work",
     "HOUSEHOLD_ITEM": "household",
+    "RECIPE": "household",
     "FINANCE": "finance",
     "INTEGRATION": "setup",
     "COMMUNICATIONS": "communications",
