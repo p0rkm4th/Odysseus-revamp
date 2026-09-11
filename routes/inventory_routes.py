@@ -86,6 +86,29 @@ def setup_inventory_routes(
         """Canonical Household/Inventory read projection for the workspace."""
         return await call(inventory.household_overview, _owner(request), expiry_days=expiry_days)
 
+    @router.get("/inventory/sharing")
+    async def inventory_sharing(request: Request):
+        """Return explicit household inventory-sharing policy for the owner."""
+        return {"households": await call(inventory.list_sharing, _owner(request))}
+
+    @router.put("/inventory/sharing/{household_id}")
+    async def configure_inventory_sharing(
+        request: Request, household_id: str, payload: dict[str, Any] = Body(...),
+    ):
+        allowed = {"resource", "enabled", "allow_member_mutation"}
+        unknown = set(payload) - allowed
+        if unknown:
+            raise HTTPException(400, "unsupported sharing fields: " + ", ".join(sorted(unknown)))
+        resource = payload.get("resource")
+        if not isinstance(resource, str) or not isinstance(payload.get("enabled"), bool):
+            raise HTTPException(400, "resource and enabled are required")
+        if payload.get("allow_member_mutation", False) is not False:
+            raise HTTPException(400, "member mutation is not enabled for shared inventory")
+        return await call(
+            inventory.configure_sharing, _owner(request), household_id,
+            resource=resource, enabled=payload["enabled"], allow_member_mutation=False,
+        )
+
     @router.get("/inventory/history")
     async def inventory_history(request: Request, limit: int = Query(50, ge=1, le=200)):
         return {"history": await call(inventory.inventory_history, _owner(request), limit=limit)}
