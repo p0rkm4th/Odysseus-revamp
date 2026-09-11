@@ -2684,7 +2684,6 @@ async def stream_aci_runtime(
                 and "network_ops" in set(_intent_domains or set())
                 and is_network_service_enumeration_request(_last_user)
                 and not _network_service_followup
-                and projection.mode is not SelectionMode.NEED_CONTEXT
             ):
                 _aci_fast_path_block = ToolBlock(
                     "manage_homelab",
@@ -2722,7 +2721,6 @@ async def stream_aci_runtime(
                 and _canonical_binding == "manage_homelab"
                 and "network_ops" in set(_intent_domains or set())
                 and _network_service_followup
-                and projection.mode is not SelectionMode.NEED_CONTEXT
             ):
                 _service_plan = {"action": "plan_network_service_enumeration"}
                 _sealed_targets = (

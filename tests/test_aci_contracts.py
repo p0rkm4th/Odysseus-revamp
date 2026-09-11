@@ -187,6 +187,41 @@ def test_finance_spending_projection_preserves_answer_fields_after_reload():
     assert "Coverage limitation:" in answer
 
 
+def test_finance_projection_recovers_full_output_when_data_is_compact_envelope():
+    """A successful executor read must never degrade to the generic Done fallback."""
+    projection = canonical_tool_result_projection("read_finance", {
+        "data": {
+            "status": "SUCCESS_WITH_DATA",
+            "coverage": {
+                "coverage_state": "LIMITED",
+                "coverage_limitations": ["requested range exceeds imported coverage"],
+            },
+        },
+        "output": (
+            '{"action":"spending","start":"2026-01-01","end":"2026-09-11",'
+            '"posted_outflow_by_currency":{"USD":"51657.3200"},'
+            '"posted_outflow_by_category":{"Groceries":{"USD":"1920.3800"}},'
+            '"posted_outflow_by_merchant":{"Publix":{"USD":"1386.4300"}},'
+            '"pending_outflow_by_currency":{"USD":"46.3200"},'
+            '"pending_outflow_count":2,"coverage":{'
+            '"coverage_state":"LIMITED","coverage_limitations":[],'
+            '"data_sources":[{"source":"local_csv","live":false}]}}'
+        ),
+        "exit_code": 0,
+    })
+    assert projection is not None
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "result_projection": projection,
+    }], owner_query="How much did I spend this year?")
+    assert answer is not None
+    assert answer != "Done."
+    assert "USD 51657.32" in answer
+    assert "Largest merchant totals: Publix USD 1386.43" in answer
+    assert "USD 46.32" in answer
+
+
 def _packet(cards=(ActionCard("A", "inspect", "Inspect", "Read state"),)):
     return AgentTaskPacket(
         task_type="BOUNDED_REASONING", objective={"summary": "diagnose"},
