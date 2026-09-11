@@ -121,7 +121,26 @@ def parse_recipe_text(text: str, *, name: str | None = None) -> dict[str, Any]:
         elif not in_ingredients and line != title and not _SERVINGS.search(line):
             instructions.append(line)
     if not ingredients:
-        raise ValueError("could not find a bounded Ingredients section")
+        # Clipboard copies frequently lose section headings but retain
+        # bullets/quantities. Accept only a small run of explicit candidate
+        # lines; prose remains instructions and is never silently saved as an
+        # ingredient.
+        fallback: list[dict[str, Any]] = []
+        for line in lines:
+            if line == title or _SERVINGS.search(line) or _SECTION_END.match(line):
+                continue
+            stripped = line.lstrip()
+            if not (stripped.startswith(("-", "*", "•")) or re.match(r"^\d", stripped)):
+                continue
+            candidate = _ingredient(line)
+            if candidate and len(candidate["name"]) <= 200 and not re.search(
+                r"\b(?:degrees?|minutes?|hours?)\b", candidate["name"], re.I
+            ):
+                fallback.append(candidate)
+        if len(fallback) >= 2:
+            ingredients = fallback[:MAX_INGREDIENTS]
+    if not ingredients:
+        raise ValueError("could not find a bounded Ingredients section or explicit ingredient lines")
     return {
         "name": title[:200], "servings": servings,
         "ingredients": ingredients,
