@@ -670,6 +670,56 @@ def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_proje
         engine.dispose()
 
 
+def test_recent_session_discovery_targets_survive_terminal_run_for_service_followup(monkeypatch):
+    """A completed discovery remains a bounded chat reference on the next turn."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        first_run = bridge.ensure_agent_run(
+            "alice", "chat-network-followup", "scan my network",
+            intent={"domains": ["network_ops"]},
+        )
+        discovery_id = bridge.prepare_action(
+            "alice", first_run, "manage_homelab",
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
+        )
+        bridge.bind_approval("alice", discovery_id, "approval-discovery-followup")
+        bridge.resume_approval("alice", discovery_id, "approval-discovery-followup")
+        bridge.record_result(
+            "alice", discovery_id,
+            {"data": {
+                "success": True,
+                "asset_draft_candidates": [
+                    {"ip_addresses": ["192.168.10.4", "192.168.10.6"]},
+                ],
+                "observations_recorded": True,
+                "network_map_reconciled": True,
+            }},
+        )
+        bridge.verify_bound_action("alice", discovery_id)
+
+        context = bridge.recent_session_network_discovery_context(
+            "alice", "chat-network-followup",
+        )
+        assert context["network_discovery_targets"] == ["192.168.10.4", "192.168.10.6"]
+
+        second_run = bridge.ensure_agent_run(
+            "alice", "chat-network-followup",
+            "check port 22 on the responding hosts",
+            intent={"domains": ["network_ops"]},
+            reference_context=context,
+        )
+        plan_id = bridge.prepare_action(
+            "alice", second_run, "manage_homelab",
+            {"action": "plan_network_service_enumeration"},
+        )
+        with session_factory() as db:
+            plan = db.query(WorkAction).filter_by(id=plan_id).one()
+            assert plan.normalized_input["targets"] == ["192.168.10.4", "192.168.10.6"]
+    finally:
+        engine.dispose()
+
+
 def test_network_continuation_uses_canonical_plan_result_not_transcript(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
