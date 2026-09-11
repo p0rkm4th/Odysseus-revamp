@@ -137,6 +137,34 @@ def test_member_edits_require_the_second_explicit_permission_and_reuse_canonical
     }
 
 
+def test_member_can_cook_shared_recipe_and_consumes_owner_stock_once():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    household_id = _household(session_factory)
+    rice = service.create_item(
+        "alice", name="Shared rice", domain="kitchen", item_kind="ingredient",
+        default_unit="g", storage_area="pantry",
+    )
+    service.add_stock("alice", rice["id"], quantity=500, unit="g", idempotency_key="shared-rice-stock")
+    recipe = service.create_recipe(
+        "alice", name="Shared rice bowl", servings=1,
+        ingredients=[{"item_id": rice["id"], "quantity": 250, "unit": "g"}],
+    )
+    service.configure_sharing("alice", household_id, resource="recipes", enabled=True)
+    service.configure_sharing(
+        "alice", household_id, resource="kitchen_inventory", enabled=True,
+        allow_member_mutation=True,
+    )
+
+    result = service.cook("bob", recipe["id"], idempotency_key="bob-cook-rice")
+    assert result["replayed"] is False
+    assert str(service.list_lots("bob", rice["id"])[0]["quantity"]) == "250.000000"
+
+    replay = service.cook("bob", recipe["id"], idempotency_key="bob-cook-rice")
+    assert replay["replayed"] is True
+    assert str(service.list_lots("alice", rice["id"])[0]["quantity"]) == "250.000000"
+
+
 def test_owner_can_revoke_member_and_shared_inventory_stays_private_after_reload():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
