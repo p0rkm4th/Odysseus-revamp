@@ -227,7 +227,7 @@ async function loadSharing() {
 }
 
 function renderRecipesScaffold() {
-  return `<section class="recipe-hero"><div><span class="recipe-eyebrow">COOKBOOK</span><h3>Recipes</h3><p>See what you can make, what is missing, and queue only the ingredients you need.</p></div><div class="recipe-hero-actions"><button data-action="import-recipe">Import recipe</button><button class="inventory-primary" data-action="new-recipe">+ New recipe</button></div></section><div class="recipe-guidance"><span class="recipe-guidance-mark">✦</span><span><strong>Recipes use your canonical stock.</strong> Grocery is only a to-buy queue; cooking changes owned stock after you confirm.</span></div><div class="recipe-library-tools"><label class="recipe-search"><span class="sr-only">Search recipes</span><input id="recipe-search" type="search" maxlength="200" value="${escapeHtml(recipeQuery)}" placeholder="Search recipes or ingredients" aria-label="Search recipes or ingredients"></label><div class="recipe-filters" role="group" aria-label="Recipe filters">${[['all','All'],['ready','Ready now'],['missing','Missing something']].map(([value, label]) => `<button type="button" data-recipe-filter="${value}" class="${recipeFilter === value ? 'active' : ''}">${label}</button>`).join('')}</div></div><div id="inventory-recipe-summary" class="recipe-summary" aria-live="polite"></div><div id="inventory-recipe-list">${loading()}</div>`;
+  return `<section class="recipe-hero"><div><span class="recipe-eyebrow">COOKBOOK</span><h3>What can we cook?</h3><p>Recipes check your on-hand stock. Missing ingredients can be queued for the next shop.</p></div><div class="recipe-hero-actions"><button data-action="import-recipe">Import recipe</button><button class="inventory-primary" data-action="new-recipe">+ New recipe</button></div></section><div class="recipe-guidance"><span class="recipe-guidance-mark" aria-hidden="true">✦</span><span><strong>Pantry is what you have.</strong> <b>Grocery is what you need to buy.</b> Cooking deducts owned stock only after you confirm.</span></div><div class="recipe-library-tools"><label class="recipe-search"><span class="sr-only">Search recipes</span><input id="recipe-search" type="search" maxlength="200" value="${escapeHtml(recipeQuery)}" placeholder="Search recipes or ingredients" aria-label="Search recipes or ingredients"></label><div class="recipe-filters" role="group" aria-label="Recipe filters">${[['all','All recipes'],['ready','Ready now'],['missing','Needs shopping']].map(([value, label]) => `<button type="button" data-recipe-filter="${value}" class="${recipeFilter === value ? 'active' : ''}">${label}</button>`).join('')}</div></div><div id="inventory-recipe-summary" class="recipe-summary" aria-live="polite"></div><div id="inventory-recipe-list" class="recipe-card-grid">${loading()}</div>`;
 }
 
 function renderRecipeCatalog() {
@@ -236,7 +236,7 @@ function renderRecipeCatalog() {
   if (!summary || !list) return;
   const readyCount = recipeCatalog.filter(entry => entry.plan.can_make).length;
   const missingCount = recipeCatalog.reduce((total, entry) => total + (entry.plan.shortages || []).length, 0);
-  summary.innerHTML = `<span><strong>${recipeCatalog.length}</strong> saved</span><span><strong>${readyCount}</strong> ready now</span><span><strong>${missingCount}</strong> missing checks</span>`;
+  summary.innerHTML = `<div class="recipe-stat"><strong>${recipeCatalog.length}</strong><span>Saved recipes</span></div><div class="recipe-stat recipe-stat-ready"><strong>${readyCount}</strong><span>Ready to cook</span></div><div class="recipe-stat recipe-stat-missing"><strong>${missingCount}</strong><span>Missing checks</span></div>`;
   const needle = recipeQuery.trim().toLowerCase();
   const filtered = recipeCatalog.filter(({recipe, plan}) => {
     if (recipeFilter === 'ready' && !plan.can_make) return false;
@@ -269,11 +269,10 @@ function renderRecipeCatalog() {
     const tags = (recipe.tags || []).slice(0, 4).map(tag => `<span>${escapeHtml(tag)}</span>`).join('');
     const status = plan.can_make ? 'Ready to make' : `${(plan.shortages || []).length} missing`;
     return `<article class="inventory-card inventory-recipe-card" data-recipe-id="${escapeHtml(recipe.id)}">
-      <header class="recipe-card-header"><div><span class="recipe-eyebrow">RECIPE</span><h3>${escapeHtml(recipe.name)}</h3></div><span class="inventory-ready ${plan.can_make ? 'yes' : 'no'}">${status}</span></header>
-      <p class="recipe-card-meta">${escapeHtml(recipe.servings)} servings <span>·</span> ${ingredients.length} ingredient${ingredients.length === 1 ? '' : 's'}</p>
+      <header class="recipe-card-header"><div><span class="recipe-eyebrow">RECIPE</span><h3>${escapeHtml(recipe.name)}</h3></div><span class="inventory-ready ${plan.can_make ? 'yes' : 'no'}"><i aria-hidden="true"></i>${status}</span></header>
+      <p class="recipe-card-meta"><span>${escapeHtml(recipe.servings)} servings</span><span>${ingredients.length} ingredient${ingredients.length === 1 ? '' : 's'}</span></p>
       ${tags ? `<div class="recipe-tags" aria-label="Recipe tags">${tags}</div>` : ''}
-      <ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}
-      ${plan.can_make ? '<p class="recipe-card-note ready-note">Everything is on hand.</p>' : `<p class="recipe-card-note missing-note">Missing: ${shortageDetails || shortages || 'review the ingredient check'}${shortageMore}</p>`}
+      <div class="recipe-card-body"><section class="recipe-card-ingredients"><h4>Ingredient check</h4><ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}</section><aside class="recipe-card-next"><span class="recipe-eyebrow">NEXT STEP</span>${plan.can_make ? '<strong>Everything is on hand.</strong><p>Use the saved recipe when you are ready.</p>' : `<strong>Shop for ${shortageDetails || shortages || 'the missing ingredients'}${shortageMore}</strong><p>Queue only these items; pantry stock stays unchanged.</p>`}</aside></div>
       <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? '<button class="inventory-primary" data-action="cook">Cook now</button>' : `<button class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(recipe.id)}">Add missing to Grocery</button>`}</div>
     </article>`;
   }).join('');
@@ -649,7 +648,14 @@ function renderTab() {
 export function openPanel() {
   if (open) return;
   open = true;
-  windowEl = openWindow({id:'inventory-window', view:'inventory', title:'Pantry & grocery', content:''});
+  const compact = window.matchMedia('(max-width: 768px)').matches;
+  const initialRect = compact ? null : {
+    left: Math.max(24, Math.round((window.innerWidth - Math.min(980, Math.max(620, window.innerWidth - 300))) / 2)),
+    top: Math.max(24, Math.round((window.innerHeight - Math.min(760, Math.max(480, window.innerHeight - 72))) / 2)),
+    width: Math.min(980, Math.max(620, window.innerWidth - 300)),
+    height: Math.min(760, Math.max(480, window.innerHeight - 72)),
+  };
+  windowEl = openWindow({id:'inventory-window', view:'inventory', title:'Pantry & grocery', content:'', initialRect});
   windowEl.querySelector('.hades-window-body').appendChild(shell());
   windowEl.querySelector('[data-win="close"]')?.addEventListener('click', () => {
     open = false;
