@@ -97,6 +97,7 @@ function shell() {
     <nav class="inventory-tabs" aria-label="Inventory views">
       <button data-tab="stock" class="active">Pantry · On hand</button>
       <button data-tab="fridge">Fridge</button>
+      <button data-tab="freezer">Freezer</button>
       <button data-tab="grocery" aria-label="Grocery list · items to buy">Grocery · To buy</button>
       <button data-tab="recipes">Recipes</button>
       <button data-tab="sharing">Household sharing</button>
@@ -192,16 +193,16 @@ async function loadSharing() {
     const {households = []} = await api('/api/inventory/sharing');
     const list = document.getElementById('inventory-sharing-list');
     if (!households.length) {
-      list.innerHTML = '<div class="inventory-state">You are not a member of a household yet.</div>';
+      list.innerHTML = '<div class="inventory-state"><p>You are not in a household yet.</p><button class="inventory-primary" data-action="new-household">Create household</button></div>';
       return;
     }
     list.innerHTML = households.map(household => {
       const members = Array.isArray(household.members) ? household.members : [];
       const memberList = members.length
-        ? `<ul class="inventory-sharing-members">${members.map(member => `<li><strong>${escapeHtml(member.user_id || 'Household member')}</strong><span>${escapeHtml(member.role || 'member')}</span></li>`).join('')}</ul>`
+        ? `<ul class="inventory-sharing-members">${members.map(member => `<li><strong>${escapeHtml(member.user_id || 'Household member')}</strong><span>${escapeHtml(member.role || 'member')}</span>${household.can_manage && member.role !== 'owner' ? ` <button class="inventory-link-button" data-action="remove-member" data-household-id="${escapeHtml(household.household_id)}" data-user-id="${escapeHtml(member.user_id)}">Remove</button>` : ''}</li>`).join('')}</ul>`
         : '<p class="inventory-sharing-empty-members">No members are configured yet.</p>';
       const resources = [
-        ['kitchen_inventory', 'Pantry and fridge', 'Members can see shared kitchen stock.', true],
+        ['kitchen_inventory', 'Pantry, fridge, and freezer', 'Members can see shared kitchen stock.', true],
         ['recipes', 'Recipes', 'Members can see saved recipes.', false],
       ];
       const controls = resources.map(([resource, label, description, supportsMutation]) => {
@@ -216,7 +217,8 @@ async function loadSharing() {
           : `<span class="inventory-ready ${enabled ? 'yes' : 'no'}">${enabled ? (editable ? 'Shared with edits' : 'Shared read-only') : 'Private'}</span>`;
         return `<div class="inventory-sharing-row"><div><strong>${label}</strong><p>${accessDescription}</p></div><div>${control}</div></div>`;
       }).join('');
-      return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3><div class="inventory-sharing-member-summary"><strong>Household members</strong>${memberList}</div>${controls}</div></article>`;
+      const addMember = household.can_manage ? `<button data-action="add-member" data-household-id="${escapeHtml(household.household_id)}">Add member</button>` : '';
+      return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3><div class="inventory-sharing-member-summary"><strong>Household members</strong>${memberList}</div><div class="inventory-card-actions">${addMember}</div>${controls}</div></article>`;
     }).join('');
   } catch (error) { showInlineError(error); }
 }
@@ -337,6 +339,8 @@ async function onSubmit(event) {
       return;
     }
     const kind = form.dataset.kind;
+    if (kind === 'household') await api('/api/finance/households', {method:'POST', body:JSON.stringify({name:data.name})});
+    if (kind === 'add-member') await api(`/api/finance/households/${encodeURIComponent(form.dataset.id)}/members`, {method:'POST', body:JSON.stringify({user_id:data.user_id})});
     if (kind === 'item' || kind === 'grocery') await api('/api/inventory/items', {method:'POST', body:JSON.stringify({name:data.name, domain:data.domain || 'kitchen', item_kind:data.domain === 'it' ? 'asset' : 'ingredient', default_unit:data.unit || 'each', category:data.category, shopping_list:kind === 'grocery' || data.shopping_list === 'on', storage_area:data.storage_area || null})});
     if (kind === 'edit-item') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}`, {method:'PATCH', body:JSON.stringify({name:data.name, category:data.category, default_unit:data.unit, shopping_list:data.shopping_list === 'on', storage_area:data.storage_area || null})});
     if (kind === 'asset') await api(`/api/inventory/assets/${encodeURIComponent(form.dataset.id)}`, {method:'PUT', body:JSON.stringify(assetPayload(data))});
@@ -364,11 +368,13 @@ async function onSubmit(event) {
     }
     form.closest('.inventory-dialog-backdrop')?.remove();
     uiModule.showToast?.('Inventory updated');
-    if (kind === 'recipe' || kind === 'recipe-import') {
+    if (kind === 'household' || kind === 'add-member') {
+      await loadSharing();
+    } else if (kind === 'recipe' || kind === 'recipe-import') {
       await loadRecipes();
       if (importedRecipeId) await showRecipe(importedRecipeId);
     } else if (tab === 'grocery') await loadGrocery();
-    else if (tab === 'fridge') await loadStorageArea('fridge');
+    else if (tab === 'fridge' || tab === 'freezer') await loadStorageArea(tab);
     else await loadStock();
   } catch (error) { uiModule.showError?.(error.message); }
   finally { if (submit) submit.disabled = false; }
@@ -406,6 +412,18 @@ async function onClick(event) {
         method: 'PUT', body: JSON.stringify({resource: button.dataset.resource, enabled}),
       });
       uiModule.showToast?.(enabled ? 'Household sharing enabled' : 'Household sharing disabled');
+      await loadSharing();
+    } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
+    return;
+  }
+  if (action === 'new-household') return modalForm('Create household', `${field('Household name','name','required maxlength="200"')}`, 'Create', 'household');
+  if (action === 'add-member') return modalForm('Add household member', `${field('Hades username','user_id','required maxlength="255"')}<p class="inventory-muted">The person must already have a Hades account. Adding them here grants only the resources you explicitly share below.</p>`, 'Add member', 'add-member', button.dataset.householdId);
+  if (action === 'remove-member') {
+    if (!window.confirm(`Remove ${button.dataset.userId} from this household? Their shared inventory and recipe access will be revoked.`)) return;
+    button.disabled = true;
+    try {
+      await api(`/api/finance/households/${encodeURIComponent(button.dataset.householdId)}/members/${encodeURIComponent(button.dataset.userId)}`, {method:'DELETE'});
+      uiModule.showToast?.('Household access revoked');
       await loadSharing();
     } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
     return;
@@ -539,6 +557,7 @@ function renderTab() {
   document.querySelectorAll('.inventory-tabs [data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (tab === 'stock') { editingDraft = null; loadStock(); }
   else if (tab === 'fridge') { editingDraft = null; loadStorageArea('fridge'); }
+  else if (tab === 'freezer') { editingDraft = null; loadStorageArea('freezer'); }
   else if (tab === 'grocery') { editingDraft = null; loadGrocery(); }
   else if (tab === 'recipes') { editingDraft = null; loadRecipes(); }
   else if (tab === 'sharing') { editingDraft = null; loadSharing(); }
