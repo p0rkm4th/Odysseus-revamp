@@ -68,6 +68,9 @@ def test_recipe_composition_routes_to_recipe_capable_tools():
         "I want to make spaghetti tonight. Add the ingredients I am missing to my shopping list."
     )
     assert not is_recipe_composition_request("Add spaghetti to my grocery list")
+    assert not is_recipe_composition_request(
+        "I want to make spaghetti tonight. What are we missing?"
+    )
 
 
 def test_recipe_composition_understands_natural_variants_and_bounds_dish_name():
@@ -111,6 +114,9 @@ def test_recipe_missing_question_uses_bounded_saved_recipe_lookup():
     question = "What am I missing for spaghetti?"
     assert is_recipe_missing_request(question)
     assert recipe_missing_name(question) == "spaghetti"
+    natural_question = "I want to make spaghetti tonight. What are we missing?"
+    assert is_recipe_missing_request(natural_question)
+    assert recipe_missing_name(natural_question) == "spaghetti"
 
 
 def test_canonical_recipe_missing_answer_is_read_only_and_grounded():

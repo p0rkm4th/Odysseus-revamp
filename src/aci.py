@@ -1544,8 +1544,12 @@ def is_recipe_composition_request(text: str) -> bool:
         r"\b(?:make|cook|prepare|fix|have)\b.+\b(?:for|tonight|today|dinner|lunch|meal)\b"
         r"|\b(?:recipe|ingredients?)\b", value,
     )) or has_named_dish_action
+    # Asking what is missing is a read-only stock comparison.  Only an
+    # explicit queue/purchase verb should enter the mutation route; otherwise
+    # "I want to make spaghetti tonight. What are we missing?" must not add
+    # anything to Grocery merely because the word "missing" is present.
     asks_for_grocery = bool(re.search(
-        r"\b(?:add|put|queue|shopping|grocery|buy|missing|need)\b", value,
+        r"\b(?:add|put|queue|buy)\b", value,
     ))
     return has_dish_intent and asks_for_grocery
 
@@ -1580,9 +1584,15 @@ def is_recipe_missing_request(text: str) -> bool:
     value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
     if not value:
         return False
+    asks_missing = bool(re.search(r"\b(?:missing|need|short)\b", value))
+    names_recipe = bool(re.search(r"\b(?:recipe|ingredients?|for)\b", value))
+    names_dish = bool(re.search(
+        r"\b(?:make|cook|prepare)\s+(?!a\s+grocery\b)[a-z0-9]",
+        value,
+    ))
     return bool(
-        re.search(r"\b(?:missing|need|short)\b", value)
-        and re.search(r"\b(?:recipe|ingredients?|for)\b", value)
+        asks_missing
+        and (names_recipe or names_dish)
         and not re.search(r"\b(?:add|put|queue|buy|shopping|grocery)\b", value)
     )
 
@@ -1594,6 +1604,12 @@ def recipe_missing_name(text: str) -> str | None:
         str(text or ""), re.IGNORECASE,
     )
     value = re.sub(r"\s+", " ", match.group(1).strip()) if match else ""
+    if not value:
+        # Natural read-only questions often name the dish after "make" rather
+        # than using "for": "I want to make spaghetti tonight; what are we
+        # missing?" Reuse the same bounded dish-span extractor as the queue
+        # route, without changing the operation class.
+        value = recipe_composition_name(text) or ""
     return value[:200] or None
 
 
