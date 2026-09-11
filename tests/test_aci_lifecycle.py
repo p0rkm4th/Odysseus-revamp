@@ -9,6 +9,7 @@ from src.aci import (
     SelectionMode,
     canonical_read_fast_path_payload,
     canonical_inventory_mutation_payload,
+    _inventory_payload_complete,
     canonical_asset_read_answer,
     canonical_household_read_answer,
     canonical_network_read_answer,
@@ -975,6 +976,27 @@ def test_inventory_mutation_grounding_can_unqueue_a_grocery_item():
     assert payload is not None
     assert payload["name"] == "rice"
     assert payload["action"] == "remove_from_grocery"
+
+
+def test_inventory_mutation_grounding_resolves_grocery_clear_without_item_ids():
+    payload = canonical_inventory_mutation_payload(
+        "remove_from_grocery", "Clear my grocery list.",
+    )
+    assert payload is not None
+    assert payload["clear"] is True
+    assert _inventory_payload_complete(payload, "remove_from_grocery")
+
+
+def test_canonical_grocery_clear_answer_requires_verified_empty_readback():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"remove_from_grocery","clear":true}',
+        "output": '{"clear":true,"verification":{"status":"VERIFIED","readback":{"items":[]}}}',
+        "exit_code": 0,
+    }
+    assert canonical_inventory_mutation_answer([event]) == (
+        "Done. Your grocery list is empty; the canonical inventory readback is verified."
+    )
 
 
 def test_action_projection_carries_canonical_dependency_plan():

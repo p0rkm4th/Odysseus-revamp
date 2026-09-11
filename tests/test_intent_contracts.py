@@ -296,6 +296,29 @@ def test_grocery_removal_resolves_to_owner_scoped_unqueue_action():
     assert resolved.action_id == "remove_from_grocery"
 
 
+@pytest.mark.parametrize("query", [
+    "Clear my grocery list.",
+    "Empty the shopping list.",
+    "Delete everything on the grocery list.",
+])
+def test_grocery_clear_is_a_bounded_set_unqueue_action(query):
+    from src.aci import canonical_inventory_mutation_payload
+
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_inventory_mutation_payload(resolved.action_id, query)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "DELETE"
+    assert resolved.action_id == "remove_from_grocery"
+    assert payload == {
+        "action": "remove_from_grocery",
+        "clear": True,
+        "list_name": "grocery",
+        "domain": "kitchen",
+        "idempotency_key": payload["idempotency_key"],
+    }
+
+
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
     messages = [
         {"role": "user", "content": "scan the current network"},

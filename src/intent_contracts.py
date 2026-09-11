@@ -1252,7 +1252,10 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     q = text.lower().strip()
     if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
-    if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
+    if re.search(r"\b(?:delete|remove|retire|forget)\b", q) or (
+        re.search(r"\b(?:clear|empty)\b", q)
+        and re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q)
+    ): return "DELETE"
     # Household inventory uses natural stock language that does not contain
     # the generic CRUD verbs. Keep this semantic projection bounded to an
     # inventory noun so ordinary prose such as "I bought a book" stays a

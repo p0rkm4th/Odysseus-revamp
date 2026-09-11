@@ -1546,7 +1546,15 @@ async def _execute_manage_assets_binding(block, owner=None):
                         movements = result.get("movements") or []
                         first = movements[0] if movements and isinstance(movements[0], dict) else {}
                         item_id = first.get("item_id")
-                    if item_id:
+                    if str(payload.get("action") or "") == "remove_from_grocery" and request.get("clear"):
+                        current = service.list_items(owner, list_name="grocery")
+                        if current:
+                            raise ValueError("grocery clear readback still contains queued items")
+                        result["verification"] = {
+                            "status": "VERIFIED",
+                            "readback": {"list_name": "grocery", "items": []},
+                        }
+                    elif item_id:
                         result["verification"] = {
                             "status": "VERIFIED",
                             "readback": {
