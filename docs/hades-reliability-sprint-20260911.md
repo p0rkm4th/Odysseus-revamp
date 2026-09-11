@@ -167,3 +167,21 @@ owner monitoring is not installed or active in this session.
   and the returned evidence replaces generic filler. The repaired path is
   installed in the current `ac2a3db3` checkout; no replay of the owner request
   was performed.
+
+## Finalization handoff
+
+- The final focused regression command
+  `pytest -q tests/test_network_intent_execution.py tests/test_review_regressions.py -k 'network or web_search'`
+  passed: 15 tests passed and 41 were deselected. `git diff --check` also
+  passed.
+- The last running Hades test revision before shutdown is
+  `562a4791cba10668c93f25d5cb2af552b7f168bb`; it reported healthy and matched
+  its checkout provenance. The owner-directed endpoint is now a stable,
+  documented handoff rather than an ongoing dogfood campaign.
+- The owner requested the Hades project be stopped. The Hades test service on
+  port 7000 is the shutdown target. The original comparison service on port
+  7001, the laptop, and owner data remain outside that action.
+- Production promotion/merge is not asserted from this host: PR metadata,
+  Dependency Review repository settings, hosted pytest/Trivy completion, and
+  authenticated owner acceptance still require the corresponding maintainer or
+  owner action listed above.
