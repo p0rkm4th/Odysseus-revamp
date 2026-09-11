@@ -3669,6 +3669,21 @@ async def stream_aci_runtime(
             # Result. Skip model re-entry entirely; the deterministic answer
             # projection below will render the observed scan.
             break
+        if _aci_unscoped_network_refusal:
+            # This is a server-owned safety response, not a language-model
+            # decision. Sending it through the model can stall in reasoning
+            # or repeatedly select the unavailable network plan. There is no
+            # tool authority or completion claim on this path.
+            _unscoped_network_message = (
+                "I cannot plan a bounded discovery scan until you provide one "
+                "current, private network scope—such as a CIDR. No scan was run."
+            )
+            _aci_clarification_only = True
+            _aci_clarification_text = _unscoped_network_message
+            full_response = _unscoped_network_message
+            yield "data: " + json.dumps({"delta": _unscoped_network_message}) + "\n\n"
+            _record_aci_framework("unscoped_network_terminal_response")
+            break
         round_response = ""
         _round_text_buffered = False
         round_reasoning = ""  # reasoning_content deltas (DeepSeek-thinking, vLLM --reasoning-parser)
