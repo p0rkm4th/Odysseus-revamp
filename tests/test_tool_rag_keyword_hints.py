@@ -56,6 +56,12 @@ def test_genuine_email_query_still_gets_email_tools():
     assert {"reply_to_email", "send_email", "read_email"} <= tools
 
 
+def test_recipe_and_grocery_queries_retain_canonical_inventory_tools():
+    ti = _index_without_embeddings()
+    tools = ti.get_tools_for_query("what am I missing for my spaghetti recipe?")
+    assert {"manage_assets", "read_household"} <= tools
+
+
 def test_plain_tell_request_stays_minimal():
     """A bare 'tell me a joke' must not pull in email tools either."""
     ti = _index_without_embeddings()
