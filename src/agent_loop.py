@@ -1518,6 +1518,15 @@ async def stream_aci_runtime(
     _active_run_context = None
     _session_reference_context = None
     _active_reference_entities = []
+    _network_service_reference_request = bool(
+        is_network_service_enumeration_request(_last_user)
+        and re.search(
+            r"\b(?:responding|discovered|identified|these|those)\s+"
+            r"(?:hosts?|devices?|machines?)\b",
+            str(_last_user or ""),
+            re.IGNORECASE,
+        )
+    )
     try:
         from src.agent_work_bridge import reference_context_for_turn
         _active_run_context, _session_reference_context, _active_reference_entities = await asyncio.to_thread(
@@ -1530,6 +1539,7 @@ async def stream_aci_runtime(
                 str(_last_user or ""),
                 re.IGNORECASE,
             )),
+            network_service_reference=_network_service_reference_request,
         )
     except Exception:
         logger.debug("durable reference context unavailable", exc_info=True)
@@ -2646,6 +2656,12 @@ async def stream_aci_runtime(
                 if isinstance(_active_run_context, dict)
                 else None
             )
+            if not isinstance(_network_service_reference, dict):
+                _network_service_reference = (
+                    _session_reference_context
+                    if isinstance(_session_reference_context, dict)
+                    else None
+                )
             _network_service_reference_available = bool(
                 isinstance(_network_service_reference, dict)
                 and _network_service_reference.get("network_discovery_targets")
@@ -2708,9 +2724,20 @@ async def stream_aci_runtime(
                 and _network_service_followup
                 and projection.mode is not SelectionMode.NEED_CONTEXT
             ):
+                _service_plan = {"action": "plan_network_service_enumeration"}
+                _sealed_targets = (
+                    _network_service_reference.get("network_discovery_targets")
+                    if isinstance(_network_service_reference, dict)
+                    else None
+                )
+                if isinstance(_sealed_targets, list) and _sealed_targets:
+                    _service_plan["targets"] = [
+                        str(target).strip() for target in _sealed_targets[:256]
+                        if str(target).strip()
+                    ]
                 _aci_fast_path_block = ToolBlock(
                     "manage_homelab",
-                    json.dumps({"action": "plan_network_service_enumeration"}, sort_keys=True),
+                    json.dumps(_service_plan, sort_keys=True),
                 )
                 _aci_selected_action = next(
                     (
