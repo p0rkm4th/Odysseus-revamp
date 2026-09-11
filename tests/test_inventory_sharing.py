@@ -55,12 +55,6 @@ def test_kitchen_sharing_is_explicit_read_only_and_household_scoped():
         service.add_stock(
             "bob", item["id"], quantity="1", unit="l", idempotency_key="bob-write",
         )
-    with pytest.raises(ValueError, match="not enabled"):
-        service.configure_sharing(
-            "alice", household_id, resource="kitchen_inventory", enabled=True,
-            allow_member_mutation=True,
-        )
-
     service.configure_sharing("alice", household_id, resource="kitchen_inventory", enabled=False)
     assert service.list_items("bob", list_name="fridge") == []
 
@@ -99,3 +93,33 @@ def test_recipe_visibility_and_stock_planning_follow_separate_explicit_policies(
 
     service.configure_sharing("alice", household_id, resource="kitchen_inventory", enabled=True)
     assert service.can_make("bob", recipe["id"]).can_make is True
+
+
+def test_member_edits_require_the_second_explicit_permission_and_reuse_canonical_lots():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    household_id = _household(session_factory)
+    item = service.create_item(
+        "alice", name="Shared eggs", domain="kitchen", item_kind="ingredient",
+        default_unit="each", storage_area="fridge",
+    )
+    service.configure_sharing("alice", household_id, resource="kitchen_inventory", enabled=True)
+    with pytest.raises(InventoryNotFound):
+        service.add_stock("bob", item["id"], quantity="1", unit="each", idempotency_key="blocked")
+
+    policy = service.configure_sharing(
+        "alice", household_id, resource="kitchen_inventory", enabled=True,
+        allow_member_mutation=True,
+    )
+    assert policy["allow_member_mutation"] is True
+    added = service.add_stock(
+        "bob", item["id"], quantity="6", unit="each", idempotency_key="bob-add",
+    )
+    assert added["lot"]["owner"] == "alice"
+    consumed = service.consume_stock(
+        "bob", item["id"], quantity="2", unit="each", idempotency_key="bob-use",
+    )
+    assert consumed["quantity"] == 2
+    assert service.list_items("alice", list_name="fridge", include_stock=True)[0]["stock_quantity"] == "4.000000"
+    service.update_item("bob", item["id"], shopping_list=True)
+    assert service.list_items("alice", list_name="grocery")[0]["name"] == "Shared eggs"
