@@ -76,7 +76,8 @@ _NON_ITEM_GROCERY_NAME = re.compile(
     # Conversational models sometimes echo the owner's request fragment as a
     # fourth "item" (for example, "the ingredients I am missing").  A
     # grocery record must be a concrete thing to buy, never that placeholder.
-    r"^(?:the\s+|those\s+|these\s+|my\s+|some\s+|all\s+)?(?:ingredients?|items?)\b",
+    r"^(?:the\s+|those\s+|these\s+|my\s+|some\s+|all\s+)?"
+    r"(?:individual\s+)?(?:ingredients?|items?|things?|stuff)\b",
     re.IGNORECASE,
 )
 _UNSET = object()

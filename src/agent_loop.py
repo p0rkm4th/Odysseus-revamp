@@ -2036,6 +2036,45 @@ async def stream_aci_runtime(
         recipe_composition_name(_last_user)
         if _aci_recipe_composition_route else None
     )
+    # Prefer an already-saved canonical recipe before asking the model to
+    # compose one.  This keeps "make X and add what I'm missing" on the
+    # deterministic recipe queue path when X is known, while preserving the
+    # proposal path for a genuinely new/unknown dish.  In particular, a
+    # model must not be able to turn the phrase "the things I'm missing" into
+    # a literal grocery item and then claim the queue was verified.
+    if _aci_recipe_composition_route and _recipe_composition_query and not guide_only:
+        try:
+            from src.inventory_service import get_inventory_service
+            from src.inventory_planning import normalize_item_name
+
+            _recipe_query_normalized = normalize_item_name(_recipe_composition_query)
+            _saved_recipes = await asyncio.to_thread(
+                get_inventory_service().list_recipes, owner,
+            )
+            _saved_matches = [
+                recipe for recipe in _saved_recipes
+                if isinstance(recipe, dict)
+                and (
+                    _recipe_query_normalized == normalize_item_name(recipe.get("name"))
+                    or _recipe_query_normalized in normalize_item_name(recipe.get("name"))
+                )
+            ]
+            if len(_saved_matches) == 1:
+                _aci_fast_path_block = ToolBlock(
+                    "manage_assets",
+                    json.dumps({
+                        "action": "recipe_queue_missing_by_name",
+                        "domain": "kitchen",
+                        "query": str(_saved_matches[0].get("name") or _recipe_composition_query),
+                    }, sort_keys=True),
+                )
+                _record_aci_framework("deterministic_saved_recipe_queue_selection")
+                logger.info("[hades-inventory] selected saved recipe queue path")
+        except Exception:
+            # A lookup failure must not widen authority or turn an unknown
+            # recipe into a mutation. The existing bounded proposal path can
+            # still ask for/import a concrete recipe.
+            logger.debug("[hades-inventory] saved recipe lookup unavailable", exc_info=True)
     _recipe_cook_query = recipe_cook_name(_last_user) if _aci_recipe_cook_route else None
     # Once ACI has resolved a supported semantic contract, its binding is the
     # only model-facing capability for this turn.  The old route used to add

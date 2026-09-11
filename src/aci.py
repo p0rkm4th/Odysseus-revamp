@@ -1531,7 +1531,8 @@ def is_recipe_composition_request(text: str) -> bool:
     if explicit_add:
         names = explicit_add.group(1).strip(" .,!?:;")
         if names and not re.match(
-            r"^(?:(?:the|those|these|my|some|all)\s+)?(?:missing\s+)?(?:ingredients?|items?|things?|what|whatever|stuff)\b",
+            r"^(?:(?:the|those|these|my|some|all)\s+)?(?:individual\s+)?"
+            r"(?:missing\s+)?(?:ingredients?|items?|things?|what|whatever|stuff)\b",
             names,
             re.IGNORECASE,
         ):

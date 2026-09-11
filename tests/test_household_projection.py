@@ -170,6 +170,11 @@ def test_recipe_queue_missing_by_name_compares_stock_and_queues_only_shortages()
             "alice", name="the ingredients I am missing", domain="kitchen",
             item_kind="ingredient", shopping_list=True,
         )
+    with pytest.raises(InventoryError, match="individual grocery items"):
+        service.create_item(
+            "alice", name="the individual things I am missing", domain="kitchen",
+            item_kind="ingredient", shopping_list=True,
+        )
 
 
 def test_recipe_missing_by_name_compares_stock_without_queueing():
