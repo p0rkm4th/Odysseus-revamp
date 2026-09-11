@@ -128,6 +128,18 @@ def test_current_network_figure_it_out_is_context_read_not_discovery():
     assert resolved.action_id == "read_network_context"
 
 
+def test_finance_driver_breakdown_is_a_deterministic_spending_read():
+    query = "Break down my spending by merchant and explain the biggest drivers."
+    assert deterministic_read_concept(query) == "FINANCE"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.operation_class == "READ"
+    assert frame.filters["view"] == "spending"
+    assert resolved.binding_name == "read_finance"
+    assert resolved.action_id == "spending"
+
+
 def test_content_topic_does_not_create_hades_pentest_action_without_target():
     from src.agent_loop import _classify_agent_request, _normalize_operational_intent_evidence
     for query in ("Explain pentesting", "can you help me pentest?"):
