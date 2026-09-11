@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import date, datetime, timezone
+import json
 import logging
 import re
 from typing import Any
@@ -24,6 +25,7 @@ from src.inventory_service import (
     InventoryNotFound,
     get_inventory_service,
 )
+from src.recipe_import import extract_pdf_text, parse_recipe_text
 from src.owner_identity import effective_storage_owner
 
 
@@ -203,6 +205,60 @@ def setup_inventory_routes(
             inventory.create_recipe, _owner(request),
             **{key: value for key, value in payload.items() if key in allowed},
         )}
+
+    @router.post("/recipes/import", status_code=201)
+    async def import_recipe(request: Request, payload: dict[str, Any] = Body(...)):
+        """Save a recipe from pasted text, a public URL, or one owned PDF upload.
+
+        Import is deliberately separate from grocery/stock mutation.  The
+        response includes deterministic shortages so the owner can explicitly
+        queue them through the existing queue-missing action.
+        """
+        owner = _owner(request)
+        source_text = payload.get("source_text")
+        url = str(payload.get("url") or "").strip()
+        attachment_ids = payload.get("attachment_ids") or []
+        if source_text is not None and not isinstance(source_text, str):
+            raise HTTPException(400, "source_text must be a string")
+        if isinstance(source_text, str) and len(source_text) > 24_000:
+            raise HTTPException(400, "source_text exceeds the 24000 character limit")
+        supplied = int(bool((source_text or "").strip())) + int(bool(url)) + int(bool(attachment_ids))
+        if supplied != 1:
+            raise HTTPException(400, "provide exactly one of source_text, url, or attachment_ids")
+        source_kind = "text"
+        source_url = None
+        if url:
+            from src.agent_tools.web_tools import WebFetchTool
+            fetched = await WebFetchTool().execute(json.dumps({"url": url}), {})
+            if fetched.get("exit_code", 1) != 0:
+                raise HTTPException(422, fetched.get("error") or "recipe URL could not be read")
+            source_text = str(fetched.get("output") or "")
+            source_kind = "url"
+            source_url = url
+        elif attachment_ids:
+            resolved = await asyncio.to_thread(resolve_attachments, owner, attachment_ids)
+            if len(resolved) != 1:
+                raise HTTPException(400, "provide exactly one managed PDF upload")
+            attachment = resolved[0]
+            mime = str(attachment.get("mime") or attachment.get("content_type") or "").casefold()
+            path = attachment.get("path")
+            if mime != "application/pdf" and not str(path or "").lower().endswith(".pdf"):
+                raise HTTPException(400, "recipe import attachment must be a PDF")
+            if not isinstance(path, str) or not path:
+                raise HTTPException(400, "managed PDF is unavailable")
+            try:
+                source_text = await asyncio.to_thread(extract_pdf_text, path)
+            except (OSError, ValueError) as exc:
+                raise HTTPException(422, str(exc)) from exc
+            source_kind = "pdf"
+        try:
+            candidate = parse_recipe_text(source_text or "", name=payload.get("name"))
+            candidate["source_url"] = source_url
+            recipe = await call(inventory.create_recipe, owner, **candidate)
+            missing = await call(inventory.missing_ingredients, owner, recipe["id"])
+        except (ValueError, InventoryError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {"recipe": recipe, "missing": missing, "source": {"kind": source_kind, "url": source_url}}
 
     @router.get("/recipes/{recipe_id}/can-make")
     async def can_make(request: Request, recipe_id: str, servings: str | None = None):

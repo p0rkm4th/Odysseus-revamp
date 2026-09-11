@@ -65,9 +65,10 @@ export function apiError(payload, status) {
 }
 
 async function api(path, options = {}) {
+  const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const response = await fetch(path, {
     credentials: 'same-origin',
-    headers: options.body ? {'Content-Type': 'application/json'} : undefined,
+    headers: options.body && !isForm ? {'Content-Type': 'application/json'} : undefined,
     ...options,
   });
   let payload = null;
@@ -173,7 +174,7 @@ async function loadStorageArea(area) {
 }
 
 function renderRecipesScaffold() {
-  return `<div class="inventory-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><button class="inventory-primary" data-action="new-recipe">+ Recipe</button></div><div id="inventory-recipe-list">${loading()}</div>`;
+  return `<div class="inventory-toolbar"><div><h3>Recipes</h3><p>Check live stock before cooking.</p></div><div><button data-action="import-recipe">Import</button><button class="inventory-primary" data-action="new-recipe">+ Recipe</button></div></div><div id="inventory-recipe-list">${loading()}</div>`;
 }
 
 async function loadRecipes() {
@@ -276,6 +277,20 @@ async function onSubmit(event) {
       const ingredients = data.ingredients.split('\n').map(line => line.trim()).filter(Boolean).map(line => { const match = line.match(/^(.+?)\s*\|\s*([0-9.]+)\s*\|\s*([\w-]+)$/); if (!match) throw new Error('Use one ingredient per line: name | quantity | unit'); return {name:match[1].trim(), quantity:match[2], unit:match[3]}; });
       await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, source_url:data.source_url || null})});
     }
+    if (kind === 'recipe-import') {
+      const payload = {name:data.name || null, source_text:data.source_text || null, url:data.url || null};
+      const pdf = form.querySelector('input[name="pdf"]')?.files?.[0];
+      if (pdf) {
+        const upload = new FormData();
+        upload.append('files', pdf);
+        const uploaded = await api('/api/upload', {method:'POST', body:upload});
+        payload.source_text = null;
+        payload.attachment_ids = [uploaded.files[0].id];
+        payload.url = null;
+      }
+      const result = await api('/api/recipes/import', {method:'POST', body:JSON.stringify(payload)});
+      uiModule.showToast?.(`${result.recipe?.name || 'Recipe'} saved; review missing ingredients before adding to grocery`);
+    }
     form.closest('.inventory-dialog-backdrop')?.remove();
     uiModule.showToast?.('Inventory updated');
     kind === 'recipe' ? await loadRecipes() : tab === 'grocery' ? await loadGrocery() : tab === 'fridge' ? await loadStorageArea('fridge') : await loadStock();
@@ -320,6 +335,7 @@ async function onClick(event) {
   }
   if (action === 'stock-add' || action === 'stock-consume') return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
   if (action === 'new-recipe') return modalForm('New recipe', `${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}<label>Ingredients <small>one per line: name | quantity | unit</small><textarea name="ingredients" placeholder="spaghetti | 400 | g\ntomato sauce | 1 | jar" required></textarea></label>${field('Source URL (optional)','source_url','type="url" maxlength="4000"')}<label>Instructions<textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
+  if (action === 'import-recipe') return modalForm('Import recipe', `<p class="inventory-muted">Paste a recipe, provide a public URL, or choose a PDF. Import only saves the recipe; stock and groceries change only when you explicitly queue missing items.</p>${field('Recipe name (optional)','name','maxlength="200"')}${field('Public recipe URL (optional)','url','type="url" maxlength="4000"')}<label>Paste recipe text<textarea name="source_text" maxlength="24000" placeholder="Ingredients:\n2 cups tomato sauce\n400 g spaghetti\n\nDirections:\n..."></textarea></label><label>PDF recipe (optional)<input type="file" name="pdf" accept="application/pdf,.pdf"></label>`, 'Import recipe', 'recipe-import');
   const recipeCard = button.closest('[data-recipe-id]');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);
   if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button);
