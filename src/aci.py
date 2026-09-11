@@ -1525,6 +1525,16 @@ def is_recipe_composition_request(text: str) -> bool:
     return has_dish_intent and asks_for_grocery
 
 
+def recipe_composition_name(text: str) -> str | None:
+    """Extract only the named dish span for saved-recipe lookup."""
+    match = re.search(
+        r"\b(?:make|cook|prepare)\s+(.+?)(?=\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal))\b|[.!?,]|$)",
+        str(text or ""), re.IGNORECASE,
+    )
+    value = re.sub(r"\s+", " ", match.group(1).strip()) if match else ""
+    return value[:200] or None
+
+
 def usage_bucket(
     *,
     round_num: int,

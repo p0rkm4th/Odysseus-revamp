@@ -1478,7 +1478,7 @@ async def _execute_manage_assets_binding(block, owner=None):
             "list", "search", "get", "add_item", "update_item", "archive_item",
             "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset",
             "recipe_list", "recipe_search", "recipe_get", "recipe_add", "recipe_missing",
-            "recipe_queue_missing", "recipe_can_make", "recipe_cook",
+            "recipe_queue_missing", "recipe_queue_missing_by_name", "recipe_can_make", "recipe_cook",
         }
         _inventory_marker = isinstance(payload, dict) and (
             payload.get("domain") in {"kitchen", "household"}
@@ -1505,7 +1505,7 @@ async def _execute_manage_assets_binding(block, owner=None):
         # binding or installer-like subsystem.
         _recipe_action = isinstance(payload, dict) and payload.get("action") in {
             "recipe_list", "recipe_search", "recipe_get", "recipe_add", "recipe_missing",
-            "recipe_queue_missing", "recipe_can_make", "recipe_cook",
+            "recipe_queue_missing", "recipe_queue_missing_by_name", "recipe_can_make", "recipe_cook",
         }
         if _recipe_action:
             recipe_payload = dict(payload)
