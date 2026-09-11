@@ -345,6 +345,29 @@ def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
     assert pantry[0]["stock_quantity"] == "1500.000000"
 
 
+def test_model_facing_stock_action_creates_a_missing_owner_item_and_replays_safely():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+
+    purchased = service.manage_inventory({
+        "action": "add_stock", "name": "dogfood test rice", "quantity": 250,
+        "unit": "g", "storage_area": "pantry", "idempotency_key": "buy-new-rice",
+    }, owner="alice")
+    assert purchased["created"] is True
+    assert purchased["item"]["name"] == "dogfood test rice"
+    assert str(purchased["lot"]["quantity"]) == "250.000000"
+
+    replay = service.manage_inventory({
+        "action": "add_stock", "name": "dogfood test rice", "quantity": 250,
+        "unit": "g", "storage_area": "pantry", "idempotency_key": "buy-new-rice",
+    }, owner="alice")
+    assert replay["replayed"] is True
+    pantry = service.list_items("alice", list_name="pantry")
+    assert [(row["name"], row["stock_quantity"]) for row in pantry] == [
+        ("dogfood test rice", "250.000000"),
+    ]
+
+
 def test_remove_from_grocery_unqueues_item_without_deleting_owned_stock():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)

@@ -1486,7 +1486,37 @@ class RecipeService(InventoryService):
                 return {"item": item, "removed": False, "replayed": True}
             return {"item": self.update_item(owner, item_id, shopping_list=False), "removed": True}
         if action == "add_stock":
-            item_id = resolve_food_item()
+            created_item: dict[str, Any] | None = None
+            try:
+                item_id = resolve_food_item()
+            except InventoryNotFound:
+                # A natural purchase/stock request is also a valid first
+                # observation of an item.  Grocery additions already create
+                # their canonical item; requiring a separate hidden
+                # ``add_item`` turn here made "I bought X; put it in the
+                # pantry" fail even though the owner supplied an explicit
+                # quantity and destination.  Create only when no accessible
+                # item matched the owner-scoped name.  If a shared item did
+                # match but mutation is not allowed, resolve_food_item()
+                # returns its id and add_stock() still fails closed at the
+                # normal permission boundary.
+                if args.get("item_id"):
+                    raise
+                requested_name = _required_text(args.get("name"), "name", maximum=200)
+                try:
+                    canonical_unit = normalize_amount(1, args.get("unit")).unit
+                except UnitError as exc:
+                    raise InventoryError(str(exc)) from exc
+                created_item = self.create_item(
+                    owner,
+                    name=requested_name,
+                    domain=args.get("domain") or "kitchen",
+                    item_kind=args.get("item_kind") or "ingredient",
+                    default_unit=canonical_unit,
+                    shopping_list=False,
+                    storage_area=args.get("storage_area"),
+                )
+                item_id = created_item["id"]
             if not args.get("item_id"):
                 # A grocery item may begin with the neutral `count` unit
                 # because the owner only named it on the shopping list. If
@@ -1513,12 +1543,16 @@ class RecipeService(InventoryService):
                     kwargs["expiry_date"] = date.fromisoformat(str(args["expiry_date"]))
                 except ValueError as exc:
                     raise InventoryError("expiry_date must be an ISO date") from exc
-            return self.add_stock(
+            result = self.add_stock(
                 owner, item_id,
                 quantity=args.get("quantity"), unit=args.get("unit"),
                 idempotency_key=args.get("idempotency_key"),
                 location_id=args.get("location_id"), **kwargs,
             )
+            if created_item is not None:
+                result["item"] = created_item
+                result["created"] = True
+            return result
         if action == "update_asset":
             item_id = _required_text(args.get("item_id"), "item_id")
             allowed = {
