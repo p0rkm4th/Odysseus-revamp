@@ -3674,6 +3674,31 @@ def canonical_inventory_mutation_payload(
         # the pantry"). Only the purchase noun phrase is an item selector.
         before = re.split(r"\s*[;,]\s*(?:put|place|store)\b", before, maxsplit=1, flags=re.IGNORECASE)[0]
         before = re.sub(r"^I\s+", "", before, flags=re.IGNORECASE)
+
+        # Owners commonly describe counted purchases by package rather than
+        # by the canonical ``each`` unit: "two jars of sauce", "a bottle of
+        # oil", or "3 cans of beans".  The package is presentation language,
+        # not a new inventory unit.  Ground it to a bounded count while
+        # preserving the ingredient name and the existing storage destination.
+        package_match = re.search(
+            rf"(?:bought|buy|purchased|purchase|add|put|store|place)?\s*"
+            rf"(?:(\d+(?:\.\d+)?|{'|'.join(words)})\s+)?"
+            r"(?:jars?|cans?|bottles?|cartons?|boxes?|packages?|packs?|"
+            r"containers?|bunches?|heads?|loaves?)\s+of\s+(.+)$",
+            before, re.IGNORECASE,
+        )
+        if package_match:
+            count, name = package_match.groups()
+            count_value = words.get(count.casefold(), None) if count and not count[0].isdigit() else (float(count) if count else 1)
+            name = name.strip(" .,!?:;")
+            if name and count_value is not None and count_value > 0:
+                return {
+                    "action": action, "name": name, "domain": "kitchen",
+                    "item_kind": "ingredient", "quantity": count_value,
+                    "unit": "each", "storage_area": destination.group(1).casefold(),
+                    "idempotency_key": f"inventory:{key}",
+                }
+
         match = re.search(
             rf"(?:bought|buy|purchased|purchase|add|put|store|place)?\s*"
             rf"(?:(\d+(?:\.\d+)?|{'|'.join(words)})\s+)?"
