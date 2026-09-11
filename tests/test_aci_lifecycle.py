@@ -1212,6 +1212,17 @@ def test_inventory_mutation_grounding_covers_stock_and_consumption_without_ids()
     assert counted["unit"] == "each"
 
 
+def test_inventory_mutation_grounding_normalizes_counted_package_purchases():
+    purchased = canonical_inventory_mutation_payload(
+        "add_stock", "I bought two jars of tomato sauce; put them in the pantry."
+    )
+    assert purchased is not None
+    assert purchased["name"] == "tomato sauce"
+    assert purchased["quantity"] == 2
+    assert purchased["unit"] == "each"
+    assert purchased["storage_area"] == "pantry"
+
+
 def test_inventory_mutation_idempotency_is_scoped_to_the_durable_turn():
     first = canonical_inventory_mutation_payload(
         "add_stock", "Add 250 g of rice to the pantry.", operation_scope="run-a",
