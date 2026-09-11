@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 import pytest
 
 from src.aci import (
@@ -10,6 +12,7 @@ from src.aci import (
     parse_decision_json, state_fingerprint,
     build_base_prompt,
     canonical_finance_read_answer,
+    canonical_tool_result_projection,
 )
 from src.aci import minimal_aci_model_fallback_messages
 
@@ -51,6 +54,80 @@ def test_finance_overview_surfaces_bounded_insight_and_guidance():
     assert "What stands out: Housing" in answer
     assert "Largest merchant totals: Rent USD 70.00" in answer
     assert "Guidance:" in answer
+
+
+def test_large_finance_transaction_read_uses_bounded_projection_after_output_cap():
+    rows = [
+        {
+            "transaction_date": "2026-09-10",
+            "merchant": "Market",
+            "amount": "8.9900",
+            "currency": "USD",
+            "status": "pending" if index == 0 else "posted",
+            "direction": "outflow",
+        }
+        for index in range(20)
+    ]
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        # Simulate the persisted display output being cut before its JSON
+        # closes. The structured projection is the durable renderer input.
+        "output": '{"action":"transactions","transactions":[{"merchant":"Market"',
+        "result_projection": {
+            "action": "transactions",
+            "status": "SUCCESS_WITH_DATA",
+            "transactions": rows,
+            "returned_count": 50,
+            "limit": 50,
+            "coverage": {
+                "coverage_state": "AVAILABLE",
+                "data_sources": [{"source": "local_csv", "live": False}],
+                "as_of": "2026-09-10 18:31:00",
+                "posted_count": 537,
+                "pending_count": 2,
+                "coverage_limitations": [],
+            },
+        },
+    }])
+    assert answer is not None
+    assert answer != "Done."
+    assert "pending" in answer.lower()
+    assert "2 pending" in answer
+    assert "local CSV" in answer
+    assert "30 more" in answer
+
+
+def test_finance_projection_is_json_safe_for_sse_and_reload():
+    projection = canonical_tool_result_projection("read_finance", {
+        "data": {
+            "status": "SUCCESS_WITH_DATA",
+            "transactions": [{
+                "transaction_date": date(2026, 9, 10),
+                "merchant": "Market",
+                "amount": "8.9900",
+                "currency": "USD",
+                "status": "pending",
+                "direction": "outflow",
+            }],
+            "coverage": {
+                "as_of": datetime(2026, 9, 10, 18, 31),
+                "transaction_date_start": date(2026, 1, 2),
+                "transaction_date_end": date(2026, 9, 10),
+                "coverage_state": "AVAILABLE",
+                "coverage_limitations": [],
+                "data_sources": [{"source": "local_csv", "live": False}],
+                "posted_count": 537,
+                "pending_count": 2,
+            },
+        },
+    })
+    assert projection is not None
+    # The same object is passed through json.dumps when metrics are emitted.
+    import json
+    json.dumps(projection)
+    assert projection["coverage"]["as_of"] == "2026-09-10 18:31:00"
+    assert projection["transactions"][0]["transaction_date"] == "2026-09-10"
 
 
 def _packet(cards=(ActionCard("A", "inspect", "Inspect", "Read state"),)):
