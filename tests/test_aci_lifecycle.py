@@ -702,13 +702,31 @@ def test_provisional_intent_projection_owns_supported_route_entry():
 
 def test_finance_followup_reuses_bounded_recent_finance_context():
     messages = [
-        {"role": "user", "content": "How much have I spent this month?"},
+        {"role": "user", "content": "How much have I spent at restaurants this year?"},
         {"role": "assistant", "content": "Here is your spending summary."},
     ]
     intent, owned = provisional_intent_projection(messages, "What about last month?")
     assert owned is True
-    assert intent["continuation"] is True
-    assert "spent this month" in intent["retrieval_query"]
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "How much did I spend on Restaurants last month"
+    frame = compile_intent(intent["retrieval_query"])
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["category"] == "Restaurants"
+    assert frame.filters["start"] != "2026-01-01"
+
+
+def test_finance_followup_with_latest_user_in_message_history_uses_prior_turn():
+    messages = [
+        {"role": "user", "content": "How much did I spend at Publix this year?"},
+        {"role": "assistant", "content": "Here is your spending summary."},
+        {"role": "user", "content": "What about last month?"},
+    ]
+    intent, owned = provisional_intent_projection(messages, "What about last month?")
+    assert owned is True
+    assert intent["retrieval_query"].casefold() == "how much did i spend at publix last month"
+    frame = compile_intent(intent["retrieval_query"])
+    assert frame.filters["merchant"] == "publix"
+    assert frame.filters["start"].endswith("-08-01")
 
 
 def test_new_finance_request_wins_over_stale_continuation_messages():
