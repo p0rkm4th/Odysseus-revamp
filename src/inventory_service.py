@@ -1236,8 +1236,9 @@ class RecipeService(InventoryService):
             name = _required_text(args.get("name"), "name", maximum=200)
             normalized = normalize_item_name(name)
             with self._read() as db:
+                owners = self._shared_owner_ids(db, owner)
                 rows = db.query(InventoryItem).filter(
-                    InventoryItem.owner == owner,
+                    InventoryItem.owner.in_(owners),
                     InventoryItem.domain.in_(("kitchen", "household")),
                     InventoryItem.archived.is_(False),
                     InventoryItem.normalized_name == normalized,
@@ -1320,8 +1321,9 @@ class RecipeService(InventoryService):
             _validate_grocery_name(requested_name, bool(shopping_list))
             normalized = normalize_item_name(requested_name)
             with self._read() as db:
+                owners = self._shared_owner_ids(db, owner)
                 matches = db.query(InventoryItem).filter(
-                    InventoryItem.owner == owner,
+                    InventoryItem.owner.in_(owners),
                     InventoryItem.domain == str(domain).casefold(),
                     InventoryItem.normalized_name == normalized,
                     InventoryItem.archived.is_(False),
