@@ -1274,7 +1274,21 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     ):
         if re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q):
             return "EXECUTE"
-        if re.search(r"\b(?:put|place|store|stock|bought|buy|purchased|purchase)\b", q):
+        # ``add`` is a natural stock verb when the owner names a concrete
+        # quantity and a storage destination ("add 250 g of rice to the
+        # pantry").  Grocery-list additions remain CREATE because they do
+        # not name owned stock or a storage destination.
+        stock_verb = re.search(r"\b(?:put|place|store|stock|bought|buy|purchased|purchase)\b", q)
+        quantified_add = (
+            re.search(r"\badd\b", q)
+            and re.search(r"\b(?:pantry|fridge|freezer)\b", q)
+            and re.search(
+                r"\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*"
+                r"(?:kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each|items?)\b",
+                q,
+            )
+        )
+        if stock_verb or quantified_add:
             return "UPDATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
