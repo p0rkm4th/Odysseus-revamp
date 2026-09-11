@@ -41870,6 +41870,8 @@ body.settings-sidebar-resize-active {
 @media (max-width:700px) {
   .hades-workspace-window .recipe-hero { flex-direction:column; }
   .recipe-hero-actions { justify-content:flex-start; width:100%; }
+  .hades-workspace-window .inventory-tabs { flex-wrap:wrap; overflow:visible; }
+  .hades-workspace-window .inventory-tabs button { flex:0 1 auto; }
   .recipe-library-tools { align-items:stretch; flex-direction:column; }
   .recipe-search { flex:0 0 auto; }
   .recipe-filters { overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; }

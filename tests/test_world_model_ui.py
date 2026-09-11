@@ -114,6 +114,7 @@ def test_recipe_library_has_owner_facing_hierarchy_and_roomier_window():
     assert "initialRect" in manager
     assert ".recipe-card-body" in styles
     assert ".recipe-preview { display:grid; grid-template-columns:1fr;" in styles
+    assert ".hades-workspace-window .inventory-tabs { flex-wrap:wrap; overflow:visible; }" in styles
     assert ".recipe-detail-check .recipe-ingredient-list" in styles
     assert ".recipe-serving-control" in styles
     assert ".recipe-stat-ready" in styles
