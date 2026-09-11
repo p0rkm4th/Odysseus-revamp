@@ -73,7 +73,8 @@ def test_household_workspace_uses_canonical_overview_and_common_states():
     assert "hades-module-header" in source
     assert "hades-empty-state" in source
     assert "/api/inventory/sharing" in inventory_source
-    assert "Share pantry read-only" in inventory_source
+    assert "Household sharing" in inventory_source
+    assert 'data-resource="${resource}"' in inventory_source
 
 
 def test_pantry_grocery_crud_is_owner_scoped_and_does_not_fake_stock_changes():

@@ -196,12 +196,19 @@ async function loadSharing() {
       return;
     }
     list.innerHTML = households.map(household => {
-      const policy = household.resources?.kitchen_inventory || {};
-      const enabled = Boolean(policy.enabled);
-      const control = household.can_manage
-        ? `<button class="inventory-primary" data-action="toggle-sharing" data-household-id="${escapeHtml(household.household_id)}" data-enabled="${enabled ? 'true' : 'false'}">${enabled ? 'Stop sharing pantry' : 'Share pantry read-only'}</button>`
-        : `<span class="inventory-ready ${enabled ? 'yes' : 'no'}">${enabled ? 'Shared read-only' : 'Private'}</span>`;
-      return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3><p>${enabled ? 'Members can see this household kitchen inventory.' : 'Kitchen inventory remains private to each owner.'}</p></div><div class="inventory-card-actions">${control}</div></article>`;
+      const resources = [
+        ['kitchen_inventory', 'Pantry and fridge', 'Members can see shared kitchen stock.'],
+        ['recipes', 'Recipes', 'Members can see saved recipes.'],
+      ];
+      const controls = resources.map(([resource, label, description]) => {
+        const policy = household.resources?.[resource] || {};
+        const enabled = Boolean(policy.enabled);
+        const control = household.can_manage
+          ? `<button class="inventory-primary" data-action="toggle-sharing" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="${enabled ? 'true' : 'false'}">${enabled ? `Stop sharing ${label.toLowerCase()}` : `Share ${label.toLowerCase()} read-only`}</button>`
+          : `<span class="inventory-ready ${enabled ? 'yes' : 'no'}">${enabled ? 'Shared read-only' : 'Private'}</span>`;
+        return `<div class="inventory-sharing-row"><div><strong>${label}</strong><p>${enabled ? description : 'Visible only to each owner.'}</p></div><div>${control}</div></div>`;
+      }).join('');
+      return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3>${controls}</div></article>`;
     }).join('');
   } catch (error) { showInlineError(error); }
 }
@@ -388,9 +395,9 @@ async function onClick(event) {
     try {
       const enabled = button.dataset.enabled !== 'true';
       await api(`/api/inventory/sharing/${encodeURIComponent(button.dataset.householdId)}`, {
-        method: 'PUT', body: JSON.stringify({resource: 'kitchen_inventory', enabled}),
+        method: 'PUT', body: JSON.stringify({resource: button.dataset.resource, enabled}),
       });
-      uiModule.showToast?.(enabled ? 'Pantry sharing enabled' : 'Pantry sharing disabled');
+      uiModule.showToast?.(enabled ? 'Household sharing enabled' : 'Household sharing disabled');
       await loadSharing();
     } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
     return;
