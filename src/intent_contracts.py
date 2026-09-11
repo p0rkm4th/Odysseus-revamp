@@ -1702,13 +1702,17 @@ def compile_intent(
         # Finance reads. The selector is data, not a new capability or query
         # language; FinanceService still applies the owner scope and limit.
         merchant_match = re.search(
-            r"\b(?:at|from|merchant)\s+([A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}?)(?="
+            r"\b(?:at|from)\s+([A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}?)(?="
+            r"\s+(?:this|last|next|for|since|between|during|on|in)\b|[?.!,]|$)"
+            r"|\bmerchant\s+(?:named|called)\s+([A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}?)(?="
             r"\s+(?:this|last|next|for|since|between|during|on|in)\b|[?.!,]|$)",
             q,
             re.IGNORECASE,
         )
         if merchant_match:
-            merchant = re.sub(r"\s+", " ", merchant_match.group(1)).strip(" .,!?:;")
+            merchant = re.sub(
+                r"\s+", " ", merchant_match.group(1) or merchant_match.group(2) or "",
+            ).strip(" .,!?:;")
             if merchant and merchant.casefold() not in {"the", "that", "this", "it"}:
                 reference_filters["merchant"] = merchant[:100]
                 if finance_view in {None, "coverage"}:
