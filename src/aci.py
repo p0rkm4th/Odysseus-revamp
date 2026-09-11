@@ -4509,6 +4509,28 @@ def canonical_action_failure_answer(
     return None
 
 
+def canonical_web_search_answer(
+    tool_events: Sequence[Mapping[str, Any]],
+) -> str | None:
+    """Render the successful public-search payload instead of model filler.
+
+    Local models commonly emit ``Done.`` after a web tool call.  Search output
+    is already bounded and source-bearing at the native handler boundary, so
+    it is the authoritative answer payload for this turn; asking the model to
+    restate it can discard the weather/fact result or claim completion without
+    showing evidence.
+    """
+    for event in reversed(tuple(tool_events or ())):
+        if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "web_search":
+            continue
+        if event.get("ask_user") or event.get("exit_code") not in (None, 0):
+            continue
+        output = str(event.get("output") or "").strip()
+        if output:
+            return output
+    return None
+
+
 def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the terminal inventory mutation from its structured Result."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
@@ -5048,6 +5070,7 @@ def canonical_result_answer(
     authoritative or merely another piece of model prose.
     """
     candidates = (
+        (canonical_web_search_answer(tool_events), "bounded web-search Result"),
         (canonical_recipe_suggest_answer(tool_events), "canonical recipe availability Result"),
         (canonical_recipe_list_answer(tool_events), "canonical saved recipe Result"),
         (canonical_recipe_missing_answer(tool_events), "canonical recipe stock Result"),

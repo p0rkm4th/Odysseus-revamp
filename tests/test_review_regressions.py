@@ -1019,6 +1019,25 @@ async def test_web_search_uses_native_handler_not_retired_mcp_alias(monkeypatch)
     assert result == {"output": "native search result", "exit_code": 0}
 
 
+def test_successful_web_search_replaces_generic_done_answer():
+    from src.aci import project_final_answer
+
+    answer, provenance = project_final_answer(
+        "Done.",
+        [{
+            "tool": "web_search",
+            "command": '{"query":"Nashville weather"}',
+            "output": "Nashville: sunny, 72F\n\n[Source](https://weather.example)",
+            "exit_code": 0,
+        }],
+        intent_domains={"web"},
+    )
+
+    assert answer.startswith("Nashville: sunny")
+    assert "Done." not in answer
+    assert provenance is not None
+
+
 @pytest.mark.asyncio
 async def test_plan_mode_blocks_mutating_email_aliases_without_mcp_inventory(monkeypatch):
     """Plan-mode safety for bare email aliases must hold from the STATIC
