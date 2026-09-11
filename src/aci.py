@@ -4458,7 +4458,12 @@ def canonical_recipe_queue_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
                 "the recipe first, and I’ll compare it with your stock and queue "
                 "only what’s missing."
             )
-        if "more than one saved recipe" in detail.casefold():
+        detail_lower = detail.casefold()
+        if (
+            "more than one saved recipe" in detail_lower
+            or "multiple saved recipes" in detail_lower
+            or str(payload.get("error_code") or "").casefold() == "recipe_ambiguous"
+        ):
             return "I found multiple saved recipes for that dish. Choose one before I queue ingredients."
         return "I couldn't compare that recipe with your stock, so nothing was added to Grocery."
     queued = payload.get("queued")
@@ -4574,7 +4579,12 @@ def canonical_recipe_missing_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         detail = str(payload.get("error") or payload.get("message") or "").strip()
         if "no saved recipe matched" in detail.casefold():
             return "I don’t have a saved recipe for that dish yet. Import or paste the recipe first, and I’ll compare it with your stock."
-        if "more than one saved recipe" in detail.casefold():
+        detail_lower = detail.casefold()
+        if (
+            "more than one saved recipe" in detail_lower
+            or "multiple saved recipes" in detail_lower
+            or str(payload.get("error_code") or "").casefold() == "recipe_ambiguous"
+        ):
             return "I found multiple saved recipes for that dish. Choose one before I compare ingredients."
         return "I couldn't compare that recipe with your stock. No inventory was changed."
     missing = payload.get("missing")
