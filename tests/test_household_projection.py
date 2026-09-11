@@ -74,6 +74,9 @@ def test_household_workspace_uses_canonical_overview_and_common_states():
     assert "hades-empty-state" in source
     assert "/api/inventory/sharing" in inventory_source
     assert "Household sharing" in inventory_source
+    assert "Household members" in inventory_source
+    assert "inventory-sharing-members" in inventory_source
+    assert "Members have read-only access." in inventory_source
     assert 'data-resource="${resource}"' in inventory_source
 
 
