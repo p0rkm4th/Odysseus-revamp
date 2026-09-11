@@ -21,6 +21,15 @@ function escapeHtml(value) {
   })[c]);
 }
 
+function displayQuantity(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return escapeHtml(value);
+  return escapeHtml(amount.toLocaleString(undefined, {
+    maximumFractionDigits: 3,
+    useGrouping: false,
+  }));
+}
+
 export function opaqueAttachmentIds(value) {
   const ids = String(value || '').split(/[\s,]+/).map(v => v.trim()).filter(Boolean);
   if (ids.length > 20 || ids.some(id => !/^[0-9a-fA-F]{32}(?:\.[A-Za-z0-9]+)?$/.test(id))) {
@@ -186,11 +195,11 @@ async function loadRecipes() {
     const {recipes = []} = await api('/api/recipes');
     const plans = await Promise.all(recipes.map(recipe => api(`/api/recipes/${encodeURIComponent(recipe.id)}/can-make`)));
     const list = document.getElementById('inventory-recipe-list');
-    list.innerHTML = recipes.length ? recipes.map((recipe, i) => `<article class="inventory-card inventory-recipe" data-recipe-id="${escapeHtml(recipe.id)}">
-      <div class="inventory-card-main"><h3>${escapeHtml(recipe.name)}</h3><p>${escapeHtml(recipe.servings)} servings · ${(recipe.ingredients || []).length} ingredients</p></div>
+    list.innerHTML = recipes.length ? recipes.map((recipe, i) => { const ingredientCount = (recipe.ingredients || []).length; return `<article class="inventory-card inventory-recipe" data-recipe-id="${escapeHtml(recipe.id)}">
+      <div class="inventory-card-main"><h3>${escapeHtml(recipe.name)}</h3><p>${escapeHtml(recipe.servings)} servings · ${ingredientCount} ingredient${ingredientCount === 1 ? '' : 's'}</p></div>
       <span class="inventory-ready ${plans[i].can_make ? 'yes' : 'no'}">${plans[i].can_make ? 'Ready to make' : `${plans[i].shortages.length} shortage${plans[i].shortages.length === 1 ? '' : 's'}`}</span>
       <button data-action="recipe-details">Details</button>${plans[i].can_make ? '<button class="inventory-primary" data-action="cook">Cook</button>' : ''}
-    </article>`).join('') : '<div class="inventory-state">No recipes yet.</div>';
+    </article>`; }).join('') : '<div class="inventory-state">No recipes yet.</div>';
   } catch (error) { showInlineError(error); }
 }
 
@@ -418,10 +427,10 @@ async function showRecipe(id) {
     const ingredients = (recipe.ingredients || []).map(ingredient => {
       const name = String(ingredient.name || '').trim();
       const missing = shortageNames.has(name.toLowerCase());
-      const amount = `${escapeHtml(ingredient.quantity)} ${escapeHtml(ingredient.unit)}`;
+      const amount = `${displayQuantity(ingredient.quantity)} ${escapeHtml(ingredient.unit)}`;
       return `<li class="recipe-ingredient ${missing ? 'missing' : 'available'}"><span>${missing ? 'Missing' : 'On hand'}</span> ${escapeHtml(name)} · ${amount}</li>`;
     }).join('');
-    const shortages = (plan.shortages || []).map(s => `<li>${escapeHtml(s.name)}: need ${escapeHtml(s.missing)} ${escapeHtml(s.unit)} more${s.optional ? ' (optional)' : ''}</li>`).join('');
+    const shortages = (plan.shortages || []).map(s => `<li>${escapeHtml(s.name)}: need ${displayQuantity(s.missing)} ${escapeHtml(s.unit)} more${s.optional ? ' (optional)' : ''}</li>`).join('');
     const queue = plan.can_make ? '' : `<button type="button" class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(id)}">Add required missing items to grocery list</button>`;
     const shortageBlock = plan.can_make ? '' : `<h4>Missing stock</h4><ul>${shortages}</ul>`;
     modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p><h4>Ingredient check</h4><ul class="recipe-ingredient-list">${ingredients || '<li>No ingredients saved.</li>'}</ul>${shortageBlock}${queue}`, 'Close', 'view', id);
