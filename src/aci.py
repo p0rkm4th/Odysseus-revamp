@@ -1549,6 +1549,10 @@ def recipe_composition_name(text: str) -> str | None:
         )
         value = match.group(1).strip() if match else ""
     value = re.sub(r"\s+", " ", value)
+    # Articles belong to the surrounding sentence, not to the saved recipe
+    # name.  Keeping them here makes a natural request such as "make the
+    # lasagna" miss an otherwise exact canonical recipe lookup.
+    value = re.sub(r"^(?:a|an|the)\s+", "", value, flags=re.IGNORECASE)
     return value[:200] or None
 
 
