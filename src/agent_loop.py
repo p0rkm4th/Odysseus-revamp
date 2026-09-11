@@ -418,6 +418,8 @@ _DOMAIN_RULES["household"] = (
     "- Keep the owner-facing concepts distinct: the Grocery list is the queue of items missing/needed to buy; Pantry, Fridge, and Freezer are owned stock already on hand. A grocery item is not proof that stock exists.\n"
     "- Adding an item to Grocery must not add stock. Marking a purchase/add_stock moves it into owned storage and removes it from the buy queue only after the canonical mutation succeeds.\n"
     "- Never answer a Grocery question from Pantry/Fridge/Freezer results or describe a queued grocery item as on hand.\n"
+    "- When the owner asks to make a named dish and add what is needed to Grocery, use the canonical recipe actions: create or retrieve a bounded recipe, compare it with current stock, then queue only required missing ingredients. Do not save the phrase 'ingredients' or a whole recipe as one grocery item.\n"
+    "- Recipe planning is read/queue work: it must not consume stock or claim a dish was cooked. Ask only when the dish or ingredient quantities are materially ambiguous.\n"
     "- Technical asset identity belongs to CMDB/IT Assets; do not answer household questions from CMDB or filesystem data.\n"
     "- Distinguish empty household inventory from unavailable or failed retrieval."
 )
