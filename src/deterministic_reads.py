@@ -207,6 +207,17 @@ def deterministic_read_concept(text: str) -> str | None:
         )
     ):
         return "FINANCE"
+    # Recipe availability questions are a distinct canonical projection from
+    # both the saved-recipe list and household stock.  Route them to the
+    # deterministic stock planner rather than asking the model to reason over
+    # an absent ledger dump.
+    if (
+        re.search(r"\b(?:what|which|show|give|suggest)\b", query)
+        and re.search(r"\b(?:can\s+i\s+(?:make|cook|prepare)|make\s+with\s+what\s+i\s+have|"
+                      r"without\s+going\s+to\s+the\s+store|easy(?:\s+\w+){0,3}\s+(?:dinner|meal)|"
+                      r"recipes?\s+where\s+i(?:'m|\s+am)?\s+only\s+missing)\b", query)
+    ):
+        return "RECIPE"
     # Saved recipes are a distinct canonical collection from household stock.
     # Route recipe-list questions to the existing recipe action instead of the
     # broader household overview, which otherwise makes pantry items appear

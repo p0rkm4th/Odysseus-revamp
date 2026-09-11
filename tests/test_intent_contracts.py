@@ -31,6 +31,31 @@ def test_contract_registry_is_complete_for_registered_contracts():
 
 
 @pytest.mark.parametrize(("query", "view", "action"), [
+    ("What can I make with what we have?", "available", "recipe_suggest"),
+    ("Show me recipes where I am only missing one or two things.", "few_shortages", "recipe_suggest"),
+])
+def test_recipe_availability_questions_use_canonical_stock_planning(query, view, action):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["view"] == view
+    assert resolved.available is True
+    assert resolved.action_id == action
+
+
+def test_recipe_availability_payload_is_bounded_and_read_only():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "Show me recipes where I am only missing one or two things."
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
+    )
+    assert payload == {"action": "recipe_suggest", "max_shortages": 2, "limit": 20}
+
+
+@pytest.mark.parametrize(("query", "view", "action"), [
     ("How much have I spent this month?", "spending", "spending"),
     ("How much money for this month specifically did I spend?", "spending", "spending"),
     ("What have I spent on restaurants lately?", "spending", "spending"),

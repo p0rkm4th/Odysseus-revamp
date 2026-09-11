@@ -825,7 +825,7 @@ class IntentFrame:
 
 
 _BOUNDED_OWNER_CAPABILITY_CONCEPTS = frozenset({
-    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM", "FINANCE",
+    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM", "RECIPE", "FINANCE",
 })
 
 
@@ -983,7 +983,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "household_overview",
     ),
     "RECIPE": DomainContract(
-        "RECIPE", "inventory.manage", {"READ": "recipe_list"}, "manage_assets",
+        "RECIPE", "inventory.manage", {"READ": "recipe_list", "READ_SUGGEST": "recipe_suggest"}, "manage_assets",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "saved_recipe_list",
     ),
@@ -1118,6 +1118,8 @@ def canonical_read_action(
         operation = "READ_ROLES"
     elif domain_concept == "FINANCE" and view in {"spending", "transactions", "cash_flow"}:
         operation = {"spending": "READ_SPENDING", "transactions": "READ_TRANSACTIONS", "cash_flow": "READ_CASH_FLOW"}[view]
+    elif domain_concept == "RECIPE" and view in {"available", "few_shortages"}:
+        operation = "READ_SUGGEST"
     return contract.actions.get(operation)
 
 
@@ -1752,6 +1754,16 @@ def compile_intent(
         elif re.search(r"\brestaurants?\b", q):
             reference_filters["category"] = "Restaurants"
             reference_filters["view"] = "spending"
+    elif concept == "RECIPE" and operation == "READ":
+        if re.search(
+            r"\b(?:can\s+i\s+(?:make|cook|prepare)|make\s+with\s+what\s+i\s+have|"
+            r"without\s+going\s+to\s+the\s+store|easy(?:\s+\w+){0,3}\s+(?:dinner|meal))\b",
+            q,
+            re.IGNORECASE,
+        ):
+            reference_filters.update({"view": "available", "available_only": True})
+        elif re.search(r"\brecipes?\s+where\s+i(?:'m|\s+am)?\s+only\s+missing\b", q, re.IGNORECASE):
+            reference_filters.update({"view": "few_shortages", "max_shortages": 2})
     elif concept == "HOUSEHOLD_ITEM" and operation == "DELETE":
         if re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q):
             reference_filters["list_name"] = "grocery"
@@ -2001,9 +2013,9 @@ def validate_contracts() -> list[str]:
                 )
                 if missing_textual:
                     errors.append(f"{concept}: textual contract omits ActionSpec exposure {missing_textual}")
-            if operation in {"READ", "READ_DETAIL", "REMOTE_READ", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
+            if operation in {"READ", "READ_SUGGEST", "READ_DETAIL", "REMOTE_READ", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
-            if operation in {"READ", "READ_DETAIL", "REMOTE_READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id not in {"developer.read", "web.evidence"} and "read_private" not in action.effects:
+            if operation in {"READ", "READ_SUGGEST", "READ_DETAIL", "REMOTE_READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id not in {"developer.read", "web.evidence"} and "read_private" not in action.effects:
                 errors.append(f"{concept}/{action_id}: read lacks read_private effect")
             if operation in {"READ_FILE", "READ_MAP"} and "read_workspace" not in action.effects:
                 errors.append(f"{concept}/{action_id}: developer read lacks read_workspace effect")
@@ -2101,7 +2113,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
         for operation, registered_action in contract.actions.items():
             if registered_action != action_id:
                 continue
-            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
+            if operation in {"READ", "READ_SUGGEST", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
                 filters = {}
                 if operation == "READ_INTEGRATIONS":
                     filters["view"] = "integrations"
@@ -2140,6 +2152,8 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     ("WATCH", "list_watches"): "watches",
                     ("HOUSEHOLD_ITEM", "list_items"): "items",
                     ("HOUSEHOLD_ITEM", "search_items"): "items",
+                    ("RECIPE", "recipe_list"): "recipes",
+                    ("RECIPE", "recipe_suggest"): "recipes",
                     ("COMMUNICATIONS", "overview"): "email",
                     ("CONTACT", "contacts"): "contacts",
                 }.get((concept, action_id))

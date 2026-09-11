@@ -1123,6 +1123,58 @@ class RecipeService(InventoryService):
             } for row in plan.shortages],
         }
 
+    def suggest_recipes(
+        self,
+        owner: str,
+        *,
+        available_only: bool = False,
+        max_shortages: int | None = None,
+        servings: Any | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Return a bounded, read-only projection of recipes versus stock."""
+        try:
+            bounded_limit = max(1, min(int(limit), 50))
+        except (TypeError, ValueError) as exc:
+            raise InventoryError("limit must be a positive integer") from exc
+        bounded_shortages: int | None = None
+        if max_shortages is not None:
+            try:
+                bounded_shortages = max(0, min(int(max_shortages), 32))
+            except (TypeError, ValueError) as exc:
+                raise InventoryError("max_shortages must be a non-negative integer") from exc
+
+        suggestions: list[dict[str, Any]] = []
+        for recipe in self.list_recipes(owner)[:50]:
+            plan = self.can_make(owner, recipe["id"], servings=servings)
+            shortages = [{
+                "name": row.name, "missing": row.missing,
+                "unit": row.unit, "optional": row.optional,
+            } for row in plan.shortages]
+            required_shortages = [row for row in shortages if not row["optional"]]
+            if available_only and required_shortages:
+                continue
+            if bounded_shortages is not None and len(required_shortages) > bounded_shortages:
+                continue
+            suggestions.append({
+                "recipe_id": recipe["id"], "name": recipe["name"],
+                "servings": recipe["servings"],
+                "can_make": not required_shortages,
+                "missing_count": len(required_shortages),
+                "shortages": shortages,
+            })
+            if len(suggestions) >= bounded_limit:
+                break
+        suggestions.sort(key=lambda row: (
+            not row["can_make"], row["missing_count"], str(row["name"]).casefold(),
+        ))
+        return {
+            "recipes": suggestions, "count": len(suggestions),
+            "available_only": bool(available_only),
+            "max_shortages": bounded_shortages,
+            "canonical_store": "inventory_service",
+        }
+
     def queue_missing_ingredients(
         self, owner: str, recipe_id: str, *, servings: Any | None = None,
     ) -> dict[str, Any]:
@@ -1478,6 +1530,12 @@ class RecipeService(InventoryService):
             return {"recipes": self.list_recipes(
                 owner, include_archived=bool(args.get("include_archived", False))
             )}
+        if action == "suggest":
+            return self.suggest_recipes(
+                owner, available_only=bool(args.get("available_only", False)),
+                max_shortages=args.get("max_shortages"), servings=args.get("servings"),
+                limit=args.get("limit", 20),
+            )
         if action == "search":
             query = normalize_item_name(args.get("query"))
             return {"recipes": [recipe for recipe in self.list_recipes(owner)
