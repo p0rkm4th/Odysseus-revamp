@@ -3936,6 +3936,37 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."
 
 
+def canonical_recipe_queue_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render saved-recipe grocery composition from its structured result."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") not in {
+        "recipe_queue_missing", "recipe_queue_missing_by_name",
+    } or not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        return "I couldn't compare that recipe with your stock, so nothing was added to Grocery."
+    queued = payload.get("queued")
+    if not isinstance(queued, list):
+        return None
+    names = []
+    for row in queued:
+        if isinstance(row, Mapping):
+            item = row.get("item") if isinstance(row.get("item"), Mapping) else row
+            name = str(item.get("name") or "").strip()
+            if name and name not in names:
+                names.append(name)
+    if not names:
+        return "I checked the saved recipe against your current stock; nothing was added to Grocery."
+    return "Added the missing recipe ingredients to Grocery: " + ", ".join(names) + "."
+
+
 def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the already-projected owner Memory Result exactly once."""
     event = next(
@@ -4167,6 +4198,7 @@ def canonical_result_answer(
     authoritative or merely another piece of model prose.
     """
     candidates = (
+        (canonical_recipe_queue_answer(tool_events), "canonical recipe grocery Result"),
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
