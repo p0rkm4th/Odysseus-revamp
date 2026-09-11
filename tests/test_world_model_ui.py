@@ -88,3 +88,9 @@ def test_integration_center_normalizes_legacy_character_split_capabilities():
     assert "capabilityLabels" in integrations
     assert "rawLabels.every(label => label.length === 1)" in integrations
     assert "rawLabels.join('').split" in integrations
+
+
+def test_recipe_missing_action_carries_canonical_recipe_id_from_library_card():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    assert 'data-action="queue-missing"' in inventory
+    assert 'data-recipe-id="${escapeHtml(recipe.id)}"' in inventory

@@ -271,7 +271,7 @@ function renderRecipeCatalog() {
       ${tags ? `<div class="recipe-tags" aria-label="Recipe tags">${tags}</div>` : ''}
       <ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}
       ${plan.can_make ? '<p class="recipe-card-note ready-note">Everything is on hand.</p>' : `<p class="recipe-card-note missing-note">Missing: ${shortages || 'review the ingredient check'}</p>`}
-      <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? '<button class="inventory-primary" data-action="cook">Cook now</button>' : '<button class="inventory-primary" data-action="queue-missing">Add missing to Grocery</button>'}</div>
+      <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? '<button class="inventory-primary" data-action="cook">Cook now</button>' : `<button class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(recipe.id)}">Add missing to Grocery</button>`}</div>
     </article>`;
   }).join('');
 }
