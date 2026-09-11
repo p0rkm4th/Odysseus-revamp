@@ -402,7 +402,7 @@ async function onSubmit(event) {
     if (kind === 'edit-item') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}`, {method:'PATCH', body:JSON.stringify({name:data.name, category:data.category, default_unit:data.unit, shopping_list:data.shopping_list === 'on', storage_area:data.storage_area || null})});
     if (kind === 'asset') await api(`/api/inventory/assets/${encodeURIComponent(form.dataset.id)}`, {method:'PUT', body:JSON.stringify(assetPayload(data))});
     if (kind === 'stock') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/stock`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, idempotency_key:makeIdempotencyKey('stock')})});
-    if (kind === 'stock' && tab === 'grocery') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}`, {method:'PATCH', body:JSON.stringify({shopping_list:false})});
+    if (kind === 'stock' && tab === 'grocery') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}`, {method:'PATCH', body:JSON.stringify({shopping_list:false, storage_area:data.storage_area || 'pantry'})});
     if (kind === 'consume') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/consume`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, reason:data.reason, idempotency_key:makeIdempotencyKey('consume')})});
     if (kind === 'recipe') {
       const ingredients = data.ingredients.split('\n').map(line => line.trim()).filter(Boolean).map(line => { const match = line.match(/^(.+?)\s*\|\s*([0-9.]+)\s*\|\s*([\w-]+)$/); if (!match) throw new Error('Use one ingredient per line: name | quantity | unit'); return {name:match[1].trim(), quantity:match[2], unit:match[3]}; });
@@ -548,7 +548,7 @@ async function onClick(event) {
   if (action === 'archive-item') { if (!window.confirm('Archive this item? Its history stays available.')) return; await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}/archive`, {method:'POST'}); return tab === 'grocery' ? loadGrocery() : loadStock(); }
   if (action === 'grocery-bought') {
     const {item} = await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`);
-    return modalForm('Mark as bought', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${unitOptions(item.default_unit)}</select></label>`, 'Add stock', 'stock', card.dataset.itemId);
+    return modalForm('Mark as bought', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${unitOptions(item.default_unit)}</select></label><label>Store in<select name="storage_area" required><option value="pantry" selected>Pantry</option><option value="fridge">Fridge</option><option value="freezer">Freezer</option></select></label><p class="inventory-muted">This moves the item from Grocery · To buy into owned stock.</p>`, 'Add stock', 'stock', card.dataset.itemId);
   }
   if (action === 'asset-details') {
     try {

@@ -126,6 +126,13 @@ def test_recipe_library_surfaces_primary_action_before_long_ingredient_preview()
     assert inventory.index('recipe-card-actions recipe-card-actions-top') < inventory.index('recipe-card-body')
 
 
+def test_grocery_purchase_requires_a_storage_area_and_restores_owned_stock_view():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    assert 'Store in<select name="storage_area" required>' in inventory
+    assert "storage_area:data.storage_area || 'pantry'" in inventory
+    assert "shopping_list:false" in inventory
+
+
 def test_household_sharing_uses_explicit_status_and_action_regions():
     inventory = (ROOT / "static/js/inventory.js").read_text()
     styles = (ROOT / "static/style.css").read_text()
