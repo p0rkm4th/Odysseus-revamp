@@ -159,6 +159,48 @@ def parse_recipe_text(text: str, *, name: str | None = None) -> dict[str, Any]:
     }
 
 
+def parse_model_recipe_proposal(text: str, *, name: str) -> dict[str, Any]:
+    """Extract a deliberately narrow ingredient list from model prose.
+
+    This is only a proposal adapter for weak text-only local models. It
+    requires an explicit ``ingredients``/``need`` section, bounds the number
+    of short lines, and returns ordinary recipe data for the canonical service
+    to validate. It never mutates inventory itself.
+    """
+    title = str(name or "").strip()[:200]
+    if not title:
+        raise ValueError("recipe name is required")
+    lines = [line.strip() for line in str(text or "").replace("\r", "").split("\n")]
+    start = next(
+        (index for index, line in enumerate(lines)
+         if re.search(r"\b(?:ingredients?|you\s+will\s+need|need)\b", line, re.I)),
+        None,
+    )
+    if start is None:
+        raise ValueError("model did not provide an explicit ingredient section")
+    ingredients: list[dict[str, Any]] = []
+    for raw in lines[start + 1:start + 25]:
+        line = re.sub(r"^\s*(?:[-*•]|\d+[.)])\s*", "", raw).strip()
+        if not line:
+            if ingredients:
+                break
+            continue
+        if re.search(r"\b(?:missing ingredients?|directions?|instructions?|steps?|add the missing|shopping list)\b", line, re.I):
+            break
+        line = re.sub(r"\*+", "", line).strip(" .:-")
+        line = re.sub(r"\s*\([^)]{0,80}\)\s*$", "", line).strip()
+        if not line or len(line) > 100 or re.search(r"[.!?]$", line):
+            continue
+        if re.search(r"\b(?:choose|make sure|around|required|recipe|tool|invoke|step)\b", line, re.I):
+            continue
+        ingredients.append({"name": line, "quantity": "1", "unit": "each"})
+        if len(ingredients) >= 16:
+            break
+    if len(ingredients) < 2:
+        raise ValueError("model ingredient section was not concrete enough")
+    return {"name": title, "servings": "1", "ingredients": ingredients}
+
+
 def extract_pdf_text(path: str) -> str:
     """Extract text from a managed PDF upload, with a strict page bound."""
     from pypdf import PdfReader
