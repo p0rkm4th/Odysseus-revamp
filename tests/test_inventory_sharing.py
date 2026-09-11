@@ -125,3 +125,12 @@ def test_member_edits_require_the_second_explicit_permission_and_reuse_canonical
     assert service.list_items("alice", list_name="fridge", include_stock=True)[0]["stock_quantity"] == "5.000000"
     service.update_item("bob", item["id"], shopping_list=True)
     assert service.list_items("alice", list_name="grocery")[0]["name"] == "Shared eggs"
+
+    sharing = service.list_sharing("alice")
+    assert sharing[0]["members"] == [
+        {"user_id": "alice", "role": "owner"},
+        {"user_id": "bob", "role": "member"},
+    ]
+    assert sharing[0]["resources"]["kitchen_inventory"] == {
+        "enabled": True, "allow_member_mutation": True,
+    }

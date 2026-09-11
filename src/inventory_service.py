@@ -351,6 +351,12 @@ class InventoryService:
             ).all()
             result = []
             for membership, household in memberships:
+                member_rows = db.query(HouseholdMembership).filter(
+                    HouseholdMembership.household_id == household.id,
+                ).order_by(
+                    HouseholdMembership.role.desc(),
+                    HouseholdMembership.user_id,
+                ).all()
                 policies = db.query(InventorySharePolicy).filter_by(
                     household_id=household.id,
                 ).all()
@@ -363,6 +369,14 @@ class InventoryService:
                     "household_name": household.name,
                     "role": membership.role,
                     "can_manage": household.owner == actor,
+                    # Membership is household-scoped, not a global user
+                    # directory. Returning only members of households the
+                    # caller already belongs to lets the owner audit the
+                    # sharing boundary without exposing unrelated accounts.
+                    "members": [{
+                        "user_id": member.user_id,
+                        "role": member.role,
+                    } for member in member_rows],
                     "resources": {resource: by_resource.get(resource, {
                         "enabled": False, "allow_member_mutation": False,
                     }) for resource in ("kitchen_inventory", "recipes")},

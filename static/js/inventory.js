@@ -196,6 +196,10 @@ async function loadSharing() {
       return;
     }
     list.innerHTML = households.map(household => {
+      const members = Array.isArray(household.members) ? household.members : [];
+      const memberList = members.length
+        ? `<ul class="inventory-sharing-members">${members.map(member => `<li><strong>${escapeHtml(member.user_id || 'Household member')}</strong><span>${escapeHtml(member.role || 'member')}</span></li>`).join('')}</ul>`
+        : '<p class="inventory-sharing-empty-members">No members are configured yet.</p>';
       const resources = [
         ['kitchen_inventory', 'Pantry and fridge', 'Members can see shared kitchen stock.', true],
         ['recipes', 'Recipes', 'Members can see saved recipes.', false],
@@ -204,12 +208,15 @@ async function loadSharing() {
         const policy = household.resources?.[resource] || {};
         const enabled = Boolean(policy.enabled);
         const editable = Boolean(policy.allow_member_mutation);
+        const accessDescription = enabled
+          ? (editable ? `${description} Members can also edit shared stock.` : `${description} Members have read-only access.`)
+          : 'Private to each member.';
         const control = household.can_manage
           ? `<button class="inventory-primary" data-action="toggle-sharing" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="${enabled ? 'true' : 'false'}">${enabled ? `Stop sharing ${label.toLowerCase()}` : `Share ${label.toLowerCase()} read-only`}</button>${supportsMutation && enabled ? ` <button data-action="toggle-sharing-mutation" data-resource="${resource}" data-household-id="${escapeHtml(household.household_id)}" data-enabled="true" data-mutation="${editable ? 'true' : 'false'}">${editable ? 'Make read-only' : 'Allow member edits'}</button>` : ''}`
           : `<span class="inventory-ready ${enabled ? 'yes' : 'no'}">${enabled ? (editable ? 'Shared with edits' : 'Shared read-only') : 'Private'}</span>`;
-        return `<div class="inventory-sharing-row"><div><strong>${label}</strong><p>${enabled ? description : 'Visible only to each owner.'}</p></div><div>${control}</div></div>`;
+        return `<div class="inventory-sharing-row"><div><strong>${label}</strong><p>${accessDescription}</p></div><div>${control}</div></div>`;
       }).join('');
-      return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3>${controls}</div></article>`;
+      return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3><div class="inventory-sharing-member-summary"><strong>Household members</strong>${memberList}</div>${controls}</div></article>`;
     }).join('');
   } catch (error) { showInlineError(error); }
 }
