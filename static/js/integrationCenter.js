@@ -3,6 +3,21 @@ import { errorState, loadingState, moduleHeader, statusBadge } from './ui-compon
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+// Older setup projections could serialize a single permission string as an
+// array of characters. Normalize at the presentation boundary so an owner
+// sees the capability label, never implementation-shaped character soup.
+const capabilityLabels = value => {
+  if (Array.isArray(value)) {
+    const labels = value.map(item => String(item ?? '').trim()).filter(Boolean);
+    if (labels.length > 1 && labels.every(label => label.length === 1)) {
+      return labels.join('').split(/\s*,\s*/).map(label => label.trim()).filter(Boolean);
+    }
+    return labels;
+  }
+  if (typeof value === 'string') return value.split(/\s*,\s*/).map(label => label.trim()).filter(Boolean);
+  return [];
+};
+
 async function load(el) {
   const body = el.querySelector('.hades-window-body');
   body.innerHTML = loadingState('Loading Integration Center…');
@@ -15,7 +30,7 @@ async function load(el) {
       fetch('/api/finance/plaid/config', {credentials:'same-origin'}).then(async response => { const data=await response.json(); if (!response.ok) throw Error(data.detail||'Plaid configuration unavailable'); return data; }),
       fetch('/api/finance/accounts', {credentials:'same-origin'}).then(async response => { const data=await response.json(); if (!response.ok) throw Error(data.detail||'Finance accounts unavailable'); return data; }),
     ]);
-    const cards=(integrations.integrations||[]).map(item => `<article class="hades-record-card"><div><strong>${esc(item.title)}</strong><p>${esc(item.capabilities?.join(', ')||'No capabilities recorded')}</p><small>Last success: ${esc(item.last_success||'not recorded')} · secrets hidden</small></div><div>${statusBadge(item.connection,item.connection==='CONNECTED'?'success':item.connection==='DEGRADED'?'warning':'info')}</div></article>`).join('') || '<p class="muted">No canonical integrations are registered.</p>';
+    const cards=(integrations.integrations||[]).map(item => `<article class="hades-record-card"><div><strong>${esc(item.title)}</strong><p>${esc(capabilityLabels(item.capabilities).join(', ')||'No capabilities recorded')}</p><small>Last success: ${esc(item.last_success||'not recorded')} · secrets hidden</small></div><div>${statusBadge(item.connection,item.connection==='CONNECTED'?'success':item.connection==='DEGRADED'?'warning':'info')}</div></article>`).join('') || '<p class="muted">No canonical integrations are registered.</p>';
     const items = plaid.items || [];
     const lifecycle = connection.connection || {};
     const connectionRows = Array.isArray(lifecycle.connections) ? lifecycle.connections : [];
