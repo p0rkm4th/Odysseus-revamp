@@ -154,6 +154,39 @@ def test_finance_projection_is_json_safe_for_sse_and_reload():
     assert projection["transactions"][0]["transaction_date"] == "2026-09-10"
 
 
+def test_finance_spending_projection_preserves_answer_fields_after_reload():
+    projection = canonical_tool_result_projection("read_finance", {
+        "data": {
+            "status": "SUCCESS_WITH_DATA",
+            "start": "2026-01-01",
+            "end": "2026-09-11",
+            "posted_outflow_by_currency": {"USD": "51657.3200"},
+            "pending_outflow_by_currency": {"USD": "46.3200"},
+            "pending_outflow_count": 2,
+            "coverage": {
+                "as_of": datetime(2026, 9, 10, 18, 31),
+                "coverage_state": "LIMITED",
+                "coverage_limitations": [
+                    "requested date range extends beyond canonical transaction coverage",
+                ],
+                "data_sources": [{"source": "local_csv", "live": False}],
+            },
+        },
+    })
+
+    assert projection is not None
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "result_projection": projection,
+    }], owner_query="Does that include pending transactions?")
+    assert answer is not None
+    assert answer != "Done."
+    assert "USD 51657.32" in answer
+    assert "USD 46.32" in answer
+    assert "Coverage limitation:" in answer
+
+
 def _packet(cards=(ActionCard("A", "inspect", "Inspect", "Read state"),)):
     return AgentTaskPacket(
         task_type="BOUNDED_REASONING", objective={"summary": "diagnose"},
