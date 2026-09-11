@@ -78,3 +78,24 @@ def test_non_member_cannot_read_explicitly_shared_inventory():
     assert service.list_items("mallory", list_name="pantry") == []
     with pytest.raises(InventoryNotFound):
         service.get_item("mallory", item["id"])
+
+
+def test_recipe_visibility_and_stock_planning_follow_separate_explicit_policies():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    household_id = _household(session_factory)
+    rice = service.create_item(
+        "alice", name="Rice", domain="kitchen", item_kind="ingredient", default_unit="kg",
+    )
+    service.add_stock("alice", rice["id"], quantity="1", unit="kg", idempotency_key="rice-1")
+    recipe = service.create_recipe(
+        "alice", name="Rice bowl", servings="1",
+        ingredients=[{"item_id": rice["id"], "quantity": "0.5", "unit": "kg"}],
+    )
+    assert service.list_recipes("bob") == []
+    service.configure_sharing("alice", household_id, resource="recipes", enabled=True)
+    assert [row["name"] for row in service.list_recipes("bob")] == ["Rice bowl"]
+    assert service.can_make("bob", recipe["id"]).can_make is False
+
+    service.configure_sharing("alice", household_id, resource="kitchen_inventory", enabled=True)
+    assert service.can_make("bob", recipe["id"]).can_make is True

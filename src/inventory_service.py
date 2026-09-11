@@ -940,6 +940,15 @@ class RecipeService(InventoryService):
             raise InventoryNotFound("recipe not found")
         return recipe
 
+    @classmethod
+    def _recipe_for_actor(cls, db: Session, actor: str, recipe_id: str) -> InventoryRecipe:
+        recipe = db.query(InventoryRecipe).filter_by(id=recipe_id).one_or_none()
+        if recipe is None:
+            raise InventoryNotFound("recipe not found")
+        if recipe.owner == actor or recipe.owner in cls._shared_owner_ids(db, actor, "recipes"):
+            return recipe
+        raise InventoryNotFound("recipe not found")
+
     @staticmethod
     def _recipe_view(db: Session, recipe: InventoryRecipe) -> dict[str, Any]:
         ingredients = db.query(InventoryRecipeIngredient).filter_by(
@@ -1002,11 +1011,12 @@ class RecipeService(InventoryService):
 
     def get_recipe(self, owner: str, recipe_id: str) -> dict[str, Any]:
         with self._read() as db:
-            return self._recipe_view(db, self._recipe(db, owner, recipe_id))
+            return self._recipe_view(db, self._recipe_for_actor(db, owner, recipe_id))
 
     def list_recipes(self, owner: str, *, include_archived: bool = False) -> list[dict[str, Any]]:
         with self._read() as db:
-            query = db.query(InventoryRecipe).filter_by(owner=owner)
+            owners = self._shared_owner_ids(db, owner, "recipes")
+            query = db.query(InventoryRecipe).filter(InventoryRecipe.owner.in_(owners))
             if not include_archived:
                 query = query.filter(InventoryRecipe.archived.is_(False))
             recipes = query.order_by(InventoryRecipe.normalized_name, InventoryRecipe.id).all()
@@ -1016,13 +1026,14 @@ class RecipeService(InventoryService):
         requested = parse_decimal(servings)
         multiplier = requested / recipe.servings
         ingredients = db.query(InventoryRecipeIngredient).filter_by(
-            owner=owner, recipe_id=recipe.id
+            owner=recipe.owner, recipe_id=recipe.id
         ).order_by(InventoryRecipeIngredient.sort_order).all()
         requirements: list[RecipeRequirement] = []
         candidate_items: dict[str, tuple[InventoryItem, str]] = {}
+        visible_owners = self._shared_owner_ids(db, owner, "kitchen_inventory")
         for ingredient in ingredients:
             item_query = db.query(InventoryItem).filter(
-                InventoryItem.owner == owner, InventoryItem.archived.is_(False)
+                InventoryItem.owner.in_(visible_owners), InventoryItem.archived.is_(False)
             )
             if ingredient.item_id:
                 item_query = item_query.filter(InventoryItem.id == ingredient.item_id)
@@ -1042,7 +1053,7 @@ class RecipeService(InventoryService):
         lots: list[StockLot] = []
         for item, ingredient_name in candidate_items.values():
             for lot in db.query(InventoryLot).filter(
-                InventoryLot.owner == owner, InventoryLot.item_id == item.id,
+                InventoryLot.owner == item.owner, InventoryLot.item_id == item.id,
                 InventoryLot.quantity > 0,
             ).with_for_update().all():
                 lots.append(StockLot(
@@ -1053,7 +1064,7 @@ class RecipeService(InventoryService):
 
     def can_make(self, owner: str, recipe_id: str, *, servings: Any | None = None) -> RecipeStockPlan:
         with self._read() as db:
-            recipe = self._recipe(db, owner, recipe_id)
+            recipe = self._recipe_for_actor(db, owner, recipe_id)
             return self._stock_plan(db, owner, recipe, servings if servings is not None else recipe.servings)
 
     def missing_ingredients(self, owner: str, recipe_id: str, *, servings: Any | None = None) -> dict[str, Any]:
