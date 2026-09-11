@@ -4159,10 +4159,16 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     recipes = payload.get("recipes")
     if not isinstance(recipes, list):
         return None
+    budget_note = (
+        " I can compare what you have, but I do not have a verified ingredient-price "
+        "or budget projection, so this is not a cost ranking."
+        if payload.get("budget_constraint")
+        else ""
+    )
     if not recipes:
         if payload.get("available_only"):
-            return "I couldn't find a saved recipe you can make from current stock."
-        return "I couldn't find saved recipes within that shortage limit."
+            return "I couldn't find a saved recipe you can make from current stock." + budget_note
+        return "I couldn't find saved recipes within that shortage limit." + budget_note
     labels = []
     for recipe in recipes:
         if not isinstance(recipe, Mapping):
@@ -4179,12 +4185,7 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         return None
     prefix = "You can make" if payload.get("available_only") else "Closest saved recipes"
     answer = prefix + ": " + ", ".join(labels) + "."
-    if payload.get("budget_constraint"):
-        answer += (
-            " I can compare what you have, but I do not have a verified ingredient-price "
-            "or budget projection, so this is not a cost ranking."
-        )
-    return answer
+    return answer + budget_note
 
 
 def canonical_recipe_missing_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
