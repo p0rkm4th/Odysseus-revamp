@@ -146,3 +146,24 @@ owner monitoring is not installed or active in this session.
   local service/process state, and sanitized runtime logs. No authenticated
   owner chat, browser interaction, live Plaid authorization, or live network
   scan was observed. Monitoring is not persistent after this session.
+
+## Newly correlated owner dogfood
+
+- Sanitized Hades logs exposed an owner-authenticated weather interaction in
+  session `bf163fd2-3371-4bab-b6f2-7220a0de2850` on the pre-refresh runtime.
+  The request intent was classified as web search and `web_search` was
+  selected, but the first tool payload was the bare `{"action":"search"}`;
+  SearXNG consequently searched that JSON text and fetched unrelated pages.
+  This is a confirmed interpretation/payload-projection failure, not a
+  provider or authorization failure.
+- The same trace shows the model returned no streamed text before the search,
+  then a later completion call succeeded. That success signal did not prove
+  the weather objective was met. The repeated `stream_status` 404s occurred
+  after the stream was no longer active and match the existing frontend
+  cleanup path, so they are not independently actionable.
+- The repair is the bounded web-search payload preservation and canonical
+  result projection in commits `5dc07f29` and `39b7d1cb`. Focused regression
+  coverage and a direct handler dogfood run verified the owner query survives
+  and the returned evidence replaces generic filler. The repaired path is
+  installed in the current `ac2a3db3` checkout; no replay of the owner request
+  was performed.
