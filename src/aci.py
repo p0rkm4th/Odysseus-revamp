@@ -53,7 +53,9 @@ def _display_inventory_quantity(value: Any) -> str:
     """
     try:
         quantity = Decimal(str(value))
-        rendered = format(quantity, "f").rstrip("0").rstrip(".")
+        rendered = format(quantity, "f")
+        if "." in rendered:
+            rendered = rendered.rstrip("0").rstrip(".")
         return rendered or "0"
     except (InvalidOperation, ValueError, TypeError):
         return str(value or "0")
@@ -1529,6 +1531,28 @@ def recipe_composition_name(text: str) -> str | None:
     """Extract only the named dish span for saved-recipe lookup."""
     match = re.search(
         r"\b(?:make|cook|prepare)\s+(.+?)(?=\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal))\b|[.!?,]|$)",
+        str(text or ""), re.IGNORECASE,
+    )
+    value = re.sub(r"\s+", " ", match.group(1).strip()) if match else ""
+    return value[:200] or None
+
+
+def is_recipe_missing_request(text: str) -> bool:
+    """Recognize a read-only request to compare a saved recipe with stock."""
+    value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
+    if not value:
+        return False
+    return bool(
+        re.search(r"\b(?:missing|need|short)\b", value)
+        and re.search(r"\b(?:recipe|ingredients?|for)\b", value)
+        and not re.search(r"\b(?:add|put|queue|buy|shopping|grocery)\b", value)
+    )
+
+
+def recipe_missing_name(text: str) -> str | None:
+    """Extract a bounded saved-recipe name from a comparison question."""
+    match = re.search(
+        r"\b(?:for|from)\s+(?:the\s+)?(.+?)(?:\s+recipe)?(?:[?.!,]|$)",
         str(text or ""), re.IGNORECASE,
     )
     value = re.sub(r"\s+", " ", match.group(1).strip()) if match else ""
@@ -3978,6 +4002,46 @@ def canonical_recipe_queue_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     return "Added the missing recipe ingredients to Grocery: " + ", ".join(names) + "."
 
 
+def canonical_recipe_missing_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render a read-only saved-recipe stock comparison."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") != "recipe_missing_by_name":
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        detail = str(payload.get("error") or payload.get("message") or "").strip()
+        if "no saved recipe matched" in detail.casefold():
+            return "I don’t have a saved recipe for that dish yet. Import or paste the recipe first, and I’ll compare it with your stock."
+        if "more than one saved recipe" in detail.casefold():
+            return "I found multiple saved recipes for that dish. Choose one before I compare ingredients."
+        return "I couldn't compare that recipe with your stock. No inventory was changed."
+    missing = payload.get("missing")
+    if not isinstance(missing, Mapping):
+        return None
+    shortages = missing.get("shortages")
+    if not isinstance(shortages, list):
+        return None
+    if not shortages:
+        return "You have everything needed for that recipe in stock."
+    names = []
+    for row in shortages:
+        if isinstance(row, Mapping):
+            name = str(row.get("name") or "").strip()
+            amount = _display_inventory_quantity(row.get("missing"))
+            unit = str(row.get("unit") or "").strip()
+            if name and name not in names:
+                names.append(f"{name} ({amount} {unit})".strip())
+    return "You're missing: " + ", ".join(names) + ". You can ask me to add those to Grocery." if names else None
+
+
 def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the already-projected owner Memory Result exactly once."""
     event = next(
@@ -4209,6 +4273,7 @@ def canonical_result_answer(
     authoritative or merely another piece of model prose.
     """
     candidates = (
+        (canonical_recipe_missing_answer(tool_events), "canonical recipe stock Result"),
         (canonical_recipe_queue_answer(tool_events), "canonical recipe grocery Result"),
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),

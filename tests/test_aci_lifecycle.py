@@ -15,10 +15,13 @@ from src.aci import (
     canonical_homelab_read_answer,
     canonical_tool_result_projection,
     canonical_inventory_mutation_answer,
+    canonical_recipe_missing_answer,
     canonical_recipe_queue_answer,
     canonical_result_answer,
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
+    is_recipe_missing_request,
+    recipe_missing_name,
     project_final_answer,
     project_model_decision,
     AnswerSource,
@@ -61,6 +64,23 @@ def test_recipe_composition_routes_to_recipe_capable_tools():
         "I want to make spaghetti tonight. Add the ingredients I am missing to my shopping list."
     )
     assert not is_recipe_composition_request("Add spaghetti to my grocery list")
+
+
+def test_recipe_missing_question_uses_bounded_saved_recipe_lookup():
+    question = "What am I missing for spaghetti?"
+    assert is_recipe_missing_request(question)
+    assert recipe_missing_name(question) == "spaghetti"
+
+
+def test_canonical_recipe_missing_answer_is_read_only_and_grounded():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_missing_by_name"}',
+        "output": '{"missing":{"shortages":[{"name":"spaghetti","missing":"200","unit":"g"}]}}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_missing_answer([event]) == (
+        "You're missing: spaghetti (200 g). You can ask me to add those to Grocery."
+    )
 
 
 def test_canonical_recipe_queue_answer_lists_verified_grocery_items():
