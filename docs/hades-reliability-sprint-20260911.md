@@ -3,7 +3,7 @@
 Date: 2026-09-11 18:55 UTC
 Repository: `p0rkm4th/Odysseus-revamp`
 Branch: `luna/plaid-readonly-budgeting`
-Head: `0cdd47238ead2dd8c28c7e04986ad731e3139d7e`
+Head: `9249e32a8bfb20578e92af762c9e258e4bd35ddf`
 
 ## Verified in this checkpoint
 
@@ -20,13 +20,16 @@ Head: `0cdd47238ead2dd8c28c7e04986ad731e3139d7e`
   failure.
 - Hosted syntax, JavaScript syntax, ACI/security, container, secret,
   workflow-security, and pip-audit checks were green for the PR head.
-- The hosted broad pytest job failed, but its test-level failure output is not
-  available through the unauthenticated API. This remains an unresolved CI
-  gate, not a diagnosed product defect.
+- The hosted broad pytest job failed on the prior head, but its test-level
+  failure output is not available through the unauthenticated API. The fresh
+  CI run for `9249e32a` was still in progress at this checkpoint. This remains
+  an unresolved CI gate, not a diagnosed product defect.
 - Dependency Review failed with the exact diagnostic: `Dependency review is
   not supported on this repository. Please ensure that Dependency graph is
   enabled`, directing the maintainer to repository Settings → Code security
   and analysis (`/settings/security_analysis`). The gate remains enabled.
+- The fresh run for `9249e32a` reproduced the same Dependency Review failure;
+  secret, container, and workflow-security checks remained green.
 
 ## Owner/runtime coverage
 
