@@ -3446,13 +3446,25 @@ def canonical_read_fast_path_payload(
     return payload
 
 
-def canonical_inventory_mutation_payload(action: str, query: str) -> dict[str, Any] | None:
+def canonical_inventory_mutation_payload(
+    action: str,
+    query: str,
+    *,
+    operation_scope: str | None = None,
+) -> dict[str, Any] | None:
     """Ground simple owner inventory mutations without trusting model prose."""
     action = str(action or "").strip()
     text = re.sub(r"\s+", " ", str(query or "").strip())
     if not text:
         return None
-    key = hashlib.sha256(f"{action}:{text.casefold()}".encode("utf-8")).hexdigest()[:24]
+    # Idempotency belongs to one durable owner turn, not to the natural
+    # language itself. Repeating the same request after a completed turn must
+    # be a new operation, while retries inside the same Work run must replay
+    # safely. Legacy direct callers without a run scope retain the stable
+    # text-derived key used by their deterministic fixtures.
+    scope = str(operation_scope or "").strip()
+    key_material = f"{action}:{scope}:{text.casefold()}" if scope else f"{action}:{text.casefold()}"
+    key = hashlib.sha256(key_material.encode("utf-8")).hexdigest()[:24]
     if action == "add_item":
         match = re.search(
             r"\b(?:add|put)\s+(.+?)\s+(?:to|on)\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list\b",
@@ -4900,6 +4912,7 @@ def project_action_selection(
     profile: Any = None,
     network_cidr: str | None = None,
     read_payload_builder: Callable[..., Mapping[str, Any]] | None = None,
+    operation_scope: str | None = None,
 ) -> ActionProjection:
     """Build one bounded ActionCard packet from canonical semantic inputs."""
     frame = intent.get("intent_frame") if isinstance(intent.get("intent_frame"), Mapping) else {}
@@ -4980,7 +4993,15 @@ def project_action_selection(
         if item["binding"] == "manage_assets" and item["action_id"] in {
             "add_item", "add_stock", "consume_stock", "remove_from_grocery", "archive_item",
         }:
-            grounded = canonical_inventory_mutation_payload(item["action_id"], query)
+            grounded = canonical_inventory_mutation_payload(
+                item["action_id"],
+                query,
+                operation_scope=(
+                    str(operation_scope or "").strip()
+                    or str((active_run or {}).get("id") or "").strip()
+                    or None
+                ),
+            )
             if grounded:
                 payload.update(grounded)
         if item["action_id"] == "summarize_owner_memory":

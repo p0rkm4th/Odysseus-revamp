@@ -1049,6 +1049,29 @@ def test_inventory_action_projection_grounds_natural_grocery_name():
     }
 
 
+def test_inventory_action_projection_uses_run_scope_for_repeated_owner_requests():
+    def payload_for(run_id):
+        projection = project_action_selection(
+            intent=_intent("Add 250 g of rice to the pantry."),
+            relevant_tools=["manage_assets"],
+            disabled_tools=set(),
+            owner="owner",
+            active_run=None,
+            query="Add 250 g of rice to the pantry.",
+            operation_scope=run_id,
+        )
+        return next(
+            value["payload"] for value in projection.choice_map.values()
+            if value["payload"].get("action") == "add_stock"
+        )
+
+    first = payload_for("run-a")
+    retry = payload_for("run-a")
+    later = payload_for("run-b")
+    assert first["idempotency_key"] == retry["idempotency_key"]
+    assert first["idempotency_key"] != later["idempotency_key"]
+
+
 def test_inventory_mutation_grounding_accepts_the_grocery_list():
     payload = canonical_inventory_mutation_payload("add_item", "Add doritos to the grocery list")
     assert payload is not None
@@ -1077,6 +1100,21 @@ def test_inventory_mutation_grounding_covers_stock_and_consumption_without_ids()
     assert consumed["name"] == "rice"
     assert consumed["quantity"] == 500.0
     assert consumed["unit"] == "grams"
+
+
+def test_inventory_mutation_idempotency_is_scoped_to_the_durable_turn():
+    first = canonical_inventory_mutation_payload(
+        "add_stock", "Add 250 g of rice to the pantry.", operation_scope="run-a",
+    )
+    retry = canonical_inventory_mutation_payload(
+        "add_stock", "Add 250 g of rice to the pantry.", operation_scope="run-a",
+    )
+    later = canonical_inventory_mutation_payload(
+        "add_stock", "Add 250 g of rice to the pantry.", operation_scope="run-b",
+    )
+    assert first is not None and retry is not None and later is not None
+    assert first["idempotency_key"] == retry["idempotency_key"]
+    assert first["idempotency_key"] != later["idempotency_key"]
 
 
 def test_inventory_mutation_grounding_can_unqueue_a_grocery_item():
