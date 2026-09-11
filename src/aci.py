@@ -3389,6 +3389,9 @@ def canonical_read_fast_path_payload(
         list_name = str(filters.get("list_name") or "").strip().casefold()
         if list_name in {"grocery", "pantry", "fridge", "freezer"}:
             payload["list_name"] = list_name
+        elif action == "overview" and str(filters.get("view") or "").strip().casefold() == "expiring":
+            payload["view"] = "expiring"
+            payload["expiry_days"] = min(max(int(filters.get("expiry_days") or 30), 0), 365)
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
@@ -3736,6 +3739,30 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
     }:
         return None
+
+    if str(payload.get("view") or "").strip().casefold() == "expiring":
+        rows = payload.get("expiring_lots")
+        if not isinstance(rows, list):
+            return None
+        horizon = (payload.get("freshness") or {}).get("expiry_horizon_days", 30)
+        if not rows:
+            return f"I found no stocked food expiring within the next {horizon} days."
+        lines = [f"Food to use soon (within {horizon} days):"]
+        for row in rows[:100]:
+            if not isinstance(row, Mapping):
+                continue
+            item = row.get("item") if isinstance(row.get("item"), Mapping) else {}
+            lot = row.get("lot") if isinstance(row.get("lot"), Mapping) else {}
+            name = str(item.get("name") or "Unnamed item").strip()
+            status = str(row.get("status") or "expiring").strip().lower()
+            expiry = str(lot.get("expiry_date") or "date unknown").strip()
+            quantity = _display_inventory_quantity(lot.get("quantity"))
+            unit = str(lot.get("unit") or "").strip()
+            label = "expired" if status == "expired" else "use by"
+            lines.append(f"- {name}: {quantity}{(' ' + unit) if unit else ''} ({label} {expiry})")
+        if len(rows) > 100:
+            lines.append(f"- …and {len(rows) - 100} more")
+        return "\n".join(lines)
 
     items = payload.get("items")
     if not isinstance(items, list):

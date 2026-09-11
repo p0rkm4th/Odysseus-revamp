@@ -558,6 +558,25 @@ def test_natural_shared_fridge_question_reaches_canonical_inventory_read():
     assert resolved.binding_name == "read_household"
 
 
+def test_freezer_typo_still_reaches_canonical_storage_read():
+    frame = compile_intent("whats in the frezer rn")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "READ"
+    assert frame.filters["list_name"] == "freezer"
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_household"
+
+
+def test_use_soon_question_projects_expiry_aware_household_read():
+    frame = compile_intent("What food do we have that needs used soon?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.filters == {"view": "expiring", "expiry_days": 30}
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_household"
+
+
 @pytest.mark.parametrize("query", [
     "look up summary in my technical asset state",
     "show my technical asset list information",

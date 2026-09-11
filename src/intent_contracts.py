@@ -1307,6 +1307,11 @@ def compile_intent(
 ) -> IntentFrame:
     """Compile common current product concepts into a bounded IntentFrame."""
     text = str(query or "").strip()
+    # Owner language is often transcribed or typed quickly. Normalize a
+    # bounded set of unambiguous freezer misspellings before semantic
+    # projection so the canonical storage read remains available without
+    # teaching the owner implementation vocabulary.
+    text = re.sub(r"\b(?:frezer|freezr|freeezer)\b", "freezer", text, flags=re.IGNORECASE)
     q = text.lower()
     reference_resolution = dict(resolve_structured_reference(text, reference_context))
     # Keep the low-level resolver's stable public shape while exposing an
@@ -1425,6 +1430,9 @@ def compile_intent(
         operation == "EXECUTE"
         and re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q)
         and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
+    ) or (
+        re.search(r"\b(?:food|ingredient|ingredients)\b", q)
+        and re.search(r"\b(?:(?:use|used|uses)\s+(?:soon|up)|going\s+bad|spoiled?|expir\w*)\b", q)
     ):
         concept = "HOUSEHOLD_ITEM"
     elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
@@ -1823,7 +1831,11 @@ def compile_intent(
             elif re.search(r"\b(?:kitchen|inventory|stock)\b", q):
                 reference_filters["storage_area"] = "kitchen"
     elif concept == "HOUSEHOLD_ITEM" and operation == "READ":
-        if re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q):
+        if re.search(r"\b(?:(?:use|used|uses)\s+(?:soon|up)|going\s+bad|spoiled?|expir\w*)\b", q):
+            reference_filters["view"] = "expiring"
+            reference_filters["expiry_days"] = 30
+            read_explicit = True
+        elif re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q):
             reference_filters["list_name"] = "grocery"
             read_explicit = True
         elif re.search(r"\bpantry\b", q):
