@@ -86,6 +86,10 @@ Hades branding/UI projections. No new duplicate subsystem was introduced.
   omitted the owner query. Web search/fetch fast-path payloads now preserve
   the bounded query or URL, and final answer projection renders the returned
   public evidence instead of model filler such as `Done.`
+- The previously failing unscoped-network contract now terminates
+  deterministically in about 0.7 seconds with zero model calls and zero tool
+  calls; the scorer reports refusal true. A missing private CIDR or persisted
+  continuation cannot enter the model decision loop.
 - Hades was restarted once after the code change; port 7000 remained healthy.
   Recent chat logs showed the failed search attempts and routine research
   polling; no owner message content was copied into the sprint record.
