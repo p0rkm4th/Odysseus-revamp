@@ -897,6 +897,34 @@ def test_inventory_mutation_uses_grounded_fast_path_without_model_json():
     }
 
 
+def test_explicit_network_scope_is_server_grounded_as_authorized_plan():
+    projection = project_action_selection(
+        intent={
+            "intent_frame": {
+                "domain_concept": "NETWORK",
+                "operation_class": "EXECUTE",
+                "read_explicit": False,
+                "filters": {},
+            },
+            "resolved_contract": {
+                "binding": "manage_homelab",
+                "action_id": "plan_network_discovery",
+            },
+        },
+        relevant_tools={"manage_homelab"},
+        disabled_tools=set(),
+        owner="scotty",
+        active_run=None,
+        query="Scan my network at 192.168.10.254/24",
+        network_cidr="192.168.10.0/24",
+    )
+    assert projection.choice_map["A"]["payload"] == {
+        "action": "plan_network_discovery",
+        "cidr": "192.168.10.0/24",
+        "scope_authorization": "EXPLICITLY_AUTHORIZED",
+    }
+
+
 def test_aci_completion_uses_canonical_transition_not_legacy_verifier():
     assert legacy_completion_verifier_allowed(
         aci_mode="aci", effectful_used=True, claimed_done=True,
