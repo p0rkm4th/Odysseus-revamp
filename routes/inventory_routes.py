@@ -191,10 +191,6 @@ def setup_inventory_routes(
             inventory.list_recipes, _owner(request), include_archived=include_archived,
         )}
 
-    @router.get("/recipes/{recipe_id}")
-    async def get_recipe(request: Request, recipe_id: str):
-        return {"recipe": await call(inventory.get_recipe, _owner(request), recipe_id)}
-
     @router.post("/recipes", status_code=201)
     async def create_recipe(request: Request, payload: dict[str, Any] = Body(...)):
         if "image_refs" in payload:
@@ -258,6 +254,10 @@ def setup_inventory_routes(
         except (ValueError, InventoryError) as exc:
             raise HTTPException(422, str(exc)) from exc
         return {"recipe": recipe, "missing": missing, "source": {"kind": source_kind, "url": source_url}}
+
+    @router.get("/recipes/{recipe_id}")
+    async def get_recipe(request: Request, recipe_id: str):
+        return {"recipe": await call(inventory.get_recipe, _owner(request), recipe_id)}
 
     @router.get("/recipes/{recipe_id}/can-make")
     async def can_make(request: Request, recipe_id: str, servings: str | None = None):

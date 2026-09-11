@@ -41774,3 +41774,6 @@ body.settings-sidebar-resize-active {
   .hades-workspace-window .work-header > *,
   .hades-workspace-window .security-header > * { width:100%; }
 }
+
+/* Inventory dialogs must sit above workspace windows for reliable hit-testing. */
+.inventory-dialog-backdrop { z-index: 6000; }
