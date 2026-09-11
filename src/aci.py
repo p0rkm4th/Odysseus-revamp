@@ -3659,12 +3659,15 @@ def canonical_inventory_mutation_payload(
             "storage_area": "kitchen", "idempotency_key": f"inventory:{key}",
         }
 
-    units = r"kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each|counts?|items?|units?"
+    units = r"kg|kilograms?|g|grams?|ml|milliliters?|l|liters?|litres?|lb|pounds?|oz|ounces?|each|counts?|items?|units?"
     words = {"one": 1, "a": 1, "an": 1, "two": 2, "three": 3,
              "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
              "nine": 9, "ten": 10}
     if action == "add_stock":
-        destination = re.search(r"\b(?:in|into|to)\s+the\s+(pantry|fridge|freezer)\b", text, re.IGNORECASE)
+        destination = re.search(
+            r"\b(?:in|into|to)\s+(?:(?:my|our|the)\s+)?(?:shared\s+)?"
+            r"(pantry|fridge|freezer)\b", text, re.IGNORECASE,
+        )
         if not destination:
             destination = re.search(r"\b(pantry|fridge|freezer)\b", text, re.IGNORECASE)
         if not destination:
@@ -3764,7 +3767,8 @@ def canonical_inventory_mutation_payload(
         if unit in {"count", "counts", "item", "items", "unit", "units"}:
             unit = "each"
         name = re.sub(
-            r"\s+from\s+(?:the\s+)?(?:pantry|fridge|freezer)\b.*$",
+            r"\s+from\s+(?:(?:my|our|the)\s+)?(?:shared\s+)?"
+            r"(?:pantry|fridge|freezer)\b.*$",
             "", name, flags=re.IGNORECASE,
         ).strip()
         return {

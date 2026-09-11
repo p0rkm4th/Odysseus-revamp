@@ -1270,7 +1270,7 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     # normal conversation turn.
     if re.search(r"\b(?:pantry|fridge|freezer|grocery|groceries|shopping\s+list|kitchen\s+inventory|household\s+stock)\b", q) or (
         re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q)
-        and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
+        and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|ml|milliliter(?:s)?|l|liter(?:s)?|litre(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
     ):
         if re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q):
             return "EXECUTE"
@@ -1284,7 +1284,7 @@ def _operation(text: str, *, continuation: bool = False) -> str:
             and re.search(r"\b(?:pantry|fridge|freezer)\b", q)
             and re.search(
                 r"\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*"
-                r"(?:kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each|items?)\b",
+                r"(?:kg|kilograms?|g|grams?|ml|milliliters?|l|liters?|litres?|lb|pounds?|oz|ounces?|each|items?)\b",
                 q,
             )
         )
@@ -1451,7 +1451,7 @@ def compile_intent(
     elif re.search(r"\b(?:household|pantry|fridge|freezer|stock|grocery|groceries|shopping|recipe|recipes|kitchen)\b", q) or (
         operation == "EXECUTE"
         and re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q)
-        and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
+        and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|ml|milliliter(?:s)?|l|liter(?:s)?|litre(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
     ) or (
         re.search(r"\b(?:food|ingredient|ingredients)\b", q)
         and re.search(r"\b(?:(?:use|used|uses)\s+(?:soon|up)|going\s+bad|spoiled?|expir\w*)\b", q)
@@ -1707,7 +1707,7 @@ def compile_intent(
         and re.search(r"\b(?:pantry|fridge|freezer)\b", q)
         and not re.search(
             r"\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*"
-            r"(?:kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each|items?)\b",
+            r"(?:kg|kilograms?|g|grams?|ml|milliliters?|l|liters?|litres?|lb|pounds?|oz|ounces?|each|items?)\b",
             q,
             re.IGNORECASE,
         )

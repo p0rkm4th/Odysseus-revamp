@@ -1223,6 +1223,25 @@ def test_inventory_mutation_grounding_normalizes_counted_package_purchases():
     assert purchased["storage_area"] == "pantry"
 
 
+def test_inventory_mutation_grounding_accepts_volume_units():
+    purchased = canonical_inventory_mutation_payload(
+        "add_stock", "Add 2 l of milk to our shared pantry."
+    )
+    assert purchased is not None
+    assert purchased["name"] == "milk"
+    assert purchased["quantity"] == 2.0
+    assert purchased["unit"] == "l"
+    assert purchased["storage_area"] == "pantry"
+
+    consumed = canonical_inventory_mutation_payload(
+        "consume_stock", "Use 500 ml of milk from our shared pantry."
+    )
+    assert consumed is not None
+    assert consumed["name"] == "milk"
+    assert consumed["quantity"] == 500.0
+    assert consumed["unit"] == "ml"
+
+
 def test_inventory_mutation_idempotency_is_scoped_to_the_durable_turn():
     first = canonical_inventory_mutation_payload(
         "add_stock", "Add 250 g of rice to the pantry.", operation_scope="run-a",
