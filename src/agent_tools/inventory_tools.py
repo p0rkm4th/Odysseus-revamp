@@ -87,6 +87,18 @@ async def _execute(content: str, ctx: Mapping[str, Any], *, method: str, actions
                 "retryable": True,
                 "exit_code": 1,
             }
+        if method == "manage_inventory":
+            from src.inventory_service import InventoryNotFound
+            if isinstance(exc, InventoryNotFound):
+                return {
+                    "error": (
+                        "One or more requested inventory items were not found. "
+                        "No change was made; check the item names and try again."
+                    ),
+                    "error_code": "inventory_item_not_found",
+                    "retryable": True,
+                    "exit_code": 1,
+                }
         return {
             "error": "The inventory service could not complete that request. No change was confirmed.",
             "exit_code": 1,
