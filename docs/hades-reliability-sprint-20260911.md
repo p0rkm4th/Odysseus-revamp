@@ -180,7 +180,9 @@ owner monitoring is not installed or active in this session.
   documented handoff rather than an ongoing dogfood campaign.
 - The owner requested the Hades project be stopped. The Hades test service on
   port 7000 is the shutdown target. The original comparison service on port
-  7001, the laptop, and owner data remain outside that action.
+  7001, the laptop, and owner data remain outside that action. The explicitly
+  started SearXNG and ChromaDB support containers were also stopped cleanly;
+  their volumes were not removed.
 - Production promotion/merge is not asserted from this host: PR metadata,
   Dependency Review repository settings, hosted pytest/Trivy completion, and
   authenticated owner acceptance still require the corresponding maintainer or
