@@ -271,6 +271,24 @@ def test_recipe_suggestions_use_canonical_stock_without_mutating_it():
     assert str(service.list_lots("alice", rice["id"])[0]["quantity"]) == "500.000000"
 
 
+def test_recipe_suggestions_can_filter_by_canonical_ingredient_without_mutating_stock():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    chicken = service.create_item("alice", name="Chicken", domain="kitchen", item_kind="ingredient", default_unit="g")
+    service.add_stock("alice", chicken["id"], quantity=500, unit="g", idempotency_key="chicken-stock")
+    service.create_recipe(
+        "alice", name="Chicken Rice", servings="1",
+        ingredients=[{"item_id": chicken["id"], "quantity": 250, "unit": "g"}],
+    )
+    service.create_recipe(
+        "alice", name="Tomato Soup", servings="1",
+        ingredients=[{"name": "tomato", "quantity": 2, "unit": "each"}],
+    )
+    result = service.manage_recipes({"action": "suggest", "ingredient_query": "chicken"}, owner="alice")
+    assert [row["name"] for row in result["recipes"]] == ["Chicken Rice"]
+    assert str(service.list_lots("alice", chicken["id"])[0]["quantity"]) == "500.000000"
+
+
 def test_imported_recipe_reaches_canonical_stock_comparison_and_grocery_queue():
     from src.recipe_import import parse_recipe_text
 

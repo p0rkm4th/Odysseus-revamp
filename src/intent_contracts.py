@@ -1118,7 +1118,7 @@ def canonical_read_action(
         operation = "READ_ROLES"
     elif domain_concept == "FINANCE" and view in {"spending", "transactions", "cash_flow"}:
         operation = {"spending": "READ_SPENDING", "transactions": "READ_TRANSACTIONS", "cash_flow": "READ_CASH_FLOW"}[view]
-    elif domain_concept == "RECIPE" and view in {"available", "few_shortages"}:
+    elif domain_concept == "RECIPE" and view in {"available", "few_shortages", "ingredient"}:
         operation = "READ_SUGGEST"
     return contract.actions.get(operation)
 
@@ -1844,7 +1844,18 @@ def compile_intent(
             if str(reference_filters.get("merchant") or "").casefold() == "restaurants":
                 reference_filters.pop("merchant", None)
     elif concept == "RECIPE" and operation == "READ":
-        if re.search(
+        ingredient_match = re.search(
+            r"\b(?:what|which)\s+recipes?\s+(?:use|include|contain|with)\s+"
+            r"([a-z][a-z0-9 &'/-]{0,79}?)(?=\s+(?:before|while|that|which|when)\b|[?.!,]|$)",
+            q,
+            re.IGNORECASE,
+        )
+        if ingredient_match:
+            ingredient_query = re.sub(r"\s+", " ", ingredient_match.group(1)).strip(" .,!?:;")
+            ingredient_query = re.sub(r"^(?:the|a|an)\s+", "", ingredient_query, flags=re.IGNORECASE)
+            if ingredient_query:
+                reference_filters.update({"view": "ingredient", "ingredient_query": ingredient_query[:100]})
+        elif re.search(
             r"\b(?:can\s+i\s+(?:make|cook|prepare)|make\s+with\s+what\s+i\s+have|"
             r"without\s+going\s+to\s+the\s+store|easy(?:\s+\w+){0,3}\s+(?:dinner|meal)|"
             r"(?:budget|cheap|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost))\b",

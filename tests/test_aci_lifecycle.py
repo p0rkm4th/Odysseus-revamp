@@ -201,6 +201,16 @@ def test_canonical_recipe_suggest_answer_uses_structured_availability_result():
     assert canonical_recipe_suggest_answer([event]) == "You can make: Rice Bowl (ready)."
 
 
+def test_canonical_recipe_suggest_answer_labels_ingredient_filter():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","ingredient_query":"chicken"}',
+        "output": '{"success":true,"ingredient_query":"chicken","recipes":[{"name":"Chicken Rice","can_make":true,"missing_count":0}]}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_suggest_answer([event]) == "Recipes using chicken: Chicken Rice (ready)."
+
+
 def test_canonical_recipe_suggest_answer_qualifies_unavailable_budget_ranking():
     event = {
         "tool": "manage_assets",
