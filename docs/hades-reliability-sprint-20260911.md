@@ -85,6 +85,9 @@ Hades branding/UI projections. No new duplicate subsystem was introduced.
 - Hades was restarted once after the code change; port 7000 remained healthy.
   Recent chat logs showed the failed search attempts and routine research
   polling; no owner message content was copied into the sprint record.
+- The restart also reported ChromaDB unavailable at `localhost:8100`; only the
+  compose `chromadb` service was started afterward. Its heartbeat now returns
+  HTTP 200. No Hades, owner, or vector records were written by this repair.
 
 ## Remaining gates and exact actions
 
