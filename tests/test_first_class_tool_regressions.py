@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from src import asset_inventory as inventory
-from src.agent_loop import _assemble_prompt, _asset_read_request
+from src.agent_loop import _assemble_prompt, _asset_read_request, _recipe_queue_continuation
 from src.capability_registry import requires_exact_approval
 from src.intent_contracts import canonical_read_action, is_explicit_continuation
 
@@ -413,6 +413,62 @@ async def test_recipe_actions_are_exposed_through_the_canonical_inventory_bindin
     assert result["success"] is True
     assert result["canonical_store"] == "inventory_service"
     assert result["provenance"] == "CANONICAL_RECIPE"
+
+
+@pytest.mark.asyncio
+async def test_recipe_binding_normalizes_model_dish_name_and_json_ingredient_names(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeRecipeTool:
+        async def execute(self, content, ctx):
+            payload = json.loads(content)
+            assert payload["action"] == "add"
+            assert payload["name"] == "Spaghetti Bolognese"
+            assert payload["ingredients"] == [
+                {"name": "spaghetti", "quantity": 1, "unit": "each"},
+                {"name": "tomato sauce", "quantity": 1, "unit": "each"},
+            ]
+            assert ctx["owner"] == "alice"
+            return {"recipe": {"id": "recipe-spaghetti"}, "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageRecipesTool", FakeRecipeTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "recipe_add",
+        "dish_name": "Spaghetti Bolognese",
+        "ingredients": '["spaghetti", "tomato sauce"]',
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+
+
+def test_recipe_composition_continues_from_saved_recipe_to_canonical_grocery_queue():
+    result = {
+        "output": json.dumps({
+            "success": True,
+            "recipe": {"id": "recipe-spaghetti"},
+        }),
+        "exit_code": 0,
+    }
+    block = _recipe_queue_continuation(result, composition_route=True)
+    assert block is not None
+    assert block.tool_type == "manage_assets"
+    assert json.loads(block.content) == {
+        "action": "recipe_queue_missing",
+        "domain": "kitchen",
+        "recipe_id": "recipe-spaghetti",
+    }
+
+    already_queued = type("Block", (), {"content": json.dumps({
+        "action": "recipe_queue_missing_by_name", "query": "spaghetti",
+    })})()
+    assert _recipe_queue_continuation(
+        result,
+        composition_route=True,
+        following_blocks=[already_queued],
+    ) is None
 
 
 @pytest.mark.asyncio
