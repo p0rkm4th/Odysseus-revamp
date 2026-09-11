@@ -540,12 +540,16 @@ def reference_context_for_turn(
     run_id: str | None,
     *,
     structured_reference: bool = False,
+    network_service_reference: bool = False,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]]]:
     """Resolve the bounded durable reference sources for one turn.
 
     The active Run is preferred. Recent session results are consulted only for
-    an explicit structured reference, preventing unrelated turns from
-    inheriting stale ordinal/pronoun context.
+    an explicit structured reference, or for the narrow network service
+    continuation detected by the canonical intent contract. This prevents
+    unrelated turns from inheriting stale state while allowing a request such
+    as "check port 22 on the responding hosts" to use the sealed host set from
+    the immediately preceding discovery.
     """
     active: dict[str, Any] | None = None
     session: dict[str, Any] | None = None
@@ -557,7 +561,12 @@ def reference_context_for_turn(
     reference = active.get("reference_context") if isinstance(active, dict) else None
     entities = reference.get("entities", []) if isinstance(reference, dict) else []
     active_entities = entities if isinstance(entities, list) else []
-    if owner and session_id and not active_entities and structured_reference:
+    if owner and session_id and not active_entities and network_service_reference:
+        try:
+            session = recent_session_network_discovery_context(str(owner), str(session_id))
+        except Exception:
+            session = None
+    elif owner and session_id and not active_entities and structured_reference:
         try:
             session = recent_session_reference_context(str(owner), str(session_id))
         except Exception:

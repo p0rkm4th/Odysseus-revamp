@@ -45,6 +45,30 @@ def test_agent_network_intent_creates_one_owner_session_run_and_reuses_it(monkey
         engine.dispose()
 
 
+def test_network_service_reference_uses_sealed_same_session_discovery(monkeypatch):
+    sealed = {
+        "network_discovery_targets": ["192.168.10.4", "192.168.10.7"],
+        "network_discovery_run_id": "run-discovery",
+    }
+    monkeypatch.setattr(bridge, "continuation_run_projection", lambda *_args: None)
+    monkeypatch.setattr(
+        bridge,
+        "recent_session_network_discovery_context",
+        lambda owner, session_id: sealed if (owner, session_id) == ("alice", "chat-network") else None,
+    )
+
+    active, session, entities = bridge.reference_context_for_turn(
+        "alice",
+        "chat-network",
+        None,
+        network_service_reference=True,
+    )
+
+    assert active is None
+    assert session == sealed
+    assert entities == []
+
+
 def test_stale_complete_continuation_is_reconciled_before_new_owner_turn(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
