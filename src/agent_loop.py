@@ -2584,10 +2584,13 @@ async def stream_aci_runtime(
                     "[hades-aci] deterministic network plan fast path scope=current_context"
                 )
             # Port/service language is an active bounded operation, not a
-            # historical observation read. Start from the latest fresh,
-            # owner-scoped discovery inside HomelabOperations; it will reject
-            # stale or missing observations rather than letting the model
-            # invent targets.
+            # historical observation read. Start with discovery so a natural
+            # request such as "check open ports on the responding devices"
+            # remains owner-usable even when the prior observations are stale
+            # or absent. The discovery result below seals the exact private
+            # host set before the separate service-enumeration plan is made;
+            # the model never invents targets and the approval boundary is
+            # unchanged.
             if (
                 _aci_mode == "aci"
                 and not _aci_answer_only
@@ -2599,20 +2602,28 @@ async def stream_aci_runtime(
             ):
                 _aci_fast_path_block = ToolBlock(
                     "manage_homelab",
-                    json.dumps({"action": "plan_network_service_enumeration"}, sort_keys=True),
+                    json.dumps(
+                        {
+                            "action": "plan_network_discovery",
+                            **(
+                                {"cidr": network_discovery_request_cidr(_last_user)}
+                                if network_discovery_request_cidr(_last_user)
+                                else {}
+                            ),
+                        },
+                        sort_keys=True,
+                    ),
                 )
                 _aci_selected_action = next(
                     (
                         trace for trace in _aci_action_candidates
                         if trace["binding"] == "manage_homelab"
-                        and trace["action_id"] == "plan_network_service_enumeration"
+                        and trace["action_id"] == "plan_network_discovery"
                     ),
                     None,
                 )
-                _record_aci_framework("deterministic_network_service_plan_selection")
-                logger.info(
-                    "[hades-aci] deterministic network service plan fast path from fresh discovery"
-                )
+                _record_aci_framework("deterministic_network_discovery_before_service_plan")
+                logger.info("[hades-aci] deterministic discovery first for network service request")
             for _event in projection.framework_events:
                 if _event:
                     _record_aci_framework(_event)
