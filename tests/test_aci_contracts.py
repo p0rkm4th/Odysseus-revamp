@@ -44,6 +44,30 @@ def test_finance_answer_preserves_year_range_and_category_scope():
     assert "Plaid connection requires attention" in answer
 
 
+def test_finance_pending_followup_answers_the_question_not_a_ledger_dump():
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "result_projection": {
+            "action": "spending",
+            "start": "2026-01-01",
+            "end": "2026-09-11",
+            "posted_outflow_by_currency": {"USD": "51657.3200"},
+            "pending_outflow_by_currency": {"USD": "46.3200"},
+            "pending_outflow_count": 2,
+            "coverage": {
+                "coverage_state": "LIMITED",
+                "as_of": "2026-09-10 18:31:00",
+                "coverage_limitations": ["requested date range extends beyond canonical transaction coverage"],
+            },
+        },
+    }], owner_query="Does that include pending transactions?")
+    assert answer.startswith("No. The spending total is posted transactions only")
+    assert "USD 51657.32" in answer
+    assert "USD 46.32" in answer
+    assert "ledger" not in answer.lower()
+
+
 def test_finance_overview_surfaces_bounded_insight_and_guidance():
     answer = canonical_finance_read_answer([{
         "tool": "read_finance",

@@ -2250,6 +2250,45 @@ def provisional_intent_projection(
             re.IGNORECASE,
         )
     )
+    finance_pending_followup = bool(
+        re.search(
+            r"\b(?:does|did|is|are)\b.{0,32}\b(?:include|including|count)\b.{0,32}\bpending\b|"
+            r"\b(?:include|including|count)\b.{0,32}\bpending\b",
+            latest,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|"
+            r"cash\s+flow|transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
+    finance_pending_anchor = None
+    if finance_pending_followup:
+        seen_latest = False
+        for message in reversed(tuple(messages or ())):
+            if str(message.get("role") or "") != "user":
+                continue
+            content = message.get("content", "")
+            if isinstance(content, list):
+                content = " ".join(
+                    str(block.get("text") or "")
+                    for block in content
+                    if isinstance(block, Mapping)
+                )
+            content = str(content or "").strip()
+            if not content:
+                continue
+            if not seen_latest and content.casefold() == latest.casefold():
+                seen_latest = True
+                continue
+            candidate = compile_intent(content, continuation=False)
+            if candidate.domain_concept == "FINANCE" and candidate.operation_class == "READ":
+                finance_pending_anchor = content
+                break
+            if not seen_latest:
+                seen_latest = True
     # Corrections to a just-retrieved Finance result are often elliptical:
     # "there are two on the CSV" or "that merchant is missing". Keep these
     # in the bounded Finance continuation path when the recent user context
@@ -2338,6 +2377,7 @@ def provisional_intent_projection(
         or is_contextual_retry_continuation(messages, latest)
         or is_contextual_reference_followup(messages, latest)
         or finance_followup
+        or finance_pending_followup
         or finance_correction_followup
         or finance_answer_correction
         or finance_period_correction
@@ -2346,6 +2386,7 @@ def provisional_intent_projection(
     finance_followup_query = _finance_followup_query(messages, latest) if finance_followup else None
     contextual_finance_read = (
         finance_followup
+        or finance_pending_followup
         or finance_correction_followup
         or finance_answer_correction
         or finance_period_correction
@@ -2359,7 +2400,14 @@ def provisional_intent_projection(
     # when the new text is genuinely underspecified.
     direct_frame = compile_intent(latest, continuation=False)
     direct_request_owned = direct_frame.domain_concept in DOMAIN_CONTRACTS
-    if direct_request_owned:
+    if finance_pending_anchor:
+        # The pending question is a semantic follow-up to the prior Finance
+        # read, not a request for an unconstrained transaction ledger. Reuse
+        # only the prior owner-authored Finance scope; the current question
+        # still controls the answer wording below.
+        frame = compile_intent(finance_pending_anchor, continuation=False)
+        continuation = False
+    elif direct_request_owned:
         frame = direct_frame
         continuation = False
     else:
@@ -2409,6 +2457,8 @@ def provisional_intent_projection(
         return None, False
     if finance_followup_query:
         retrieval_query = finance_followup_query
+    elif finance_pending_anchor:
+        retrieval_query = finance_pending_anchor
     elif finance_ranked_followup:
         retrieval_query = f"{recent_query}\n{latest}".strip()
     else:
@@ -4572,7 +4622,11 @@ def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str 
     return f"I found {total} work record{'s' if total != 1 else ''} ({labels})."
 
 
-def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+def canonical_finance_read_answer(
+    tool_events: Sequence[Mapping[str, Any]],
+    *,
+    owner_query: str = "",
+) -> str | None:
     """Render deterministic Finance reads instead of accepting a bare model completion."""
     event = next(
         (item for item in reversed(tuple(tool_events or ()))
@@ -4608,6 +4662,33 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     action = str(payload.get("action") or "").casefold()
     lines: list[str] = []
     if "posted_outflow_by_currency" in payload:
+        if re.search(
+            r"\b(?:does|did|is|are)\b.{0,32}\b(?:include|including|count)\b.{0,32}\bpending\b|"
+            r"\b(?:include|including|count)\b.{0,32}\bpending\b",
+            str(owner_query or ""),
+            re.IGNORECASE,
+        ):
+            pending = payload.get("pending_outflow_by_currency") or {}
+            pending_count = payload.get("pending_outflow_count") or 0
+            pending_rendered = ", ".join(
+                f"{currency} {_display_finance_amount(amount, currency)}"
+                for currency, amount in pending.items()
+            ) or "none recorded"
+            total_rendered = ", ".join(
+                f"{currency} {_display_finance_amount(amount, currency)}"
+                for currency, amount in (payload.get("posted_outflow_by_currency") or {}).items()
+            ) or "none recorded"
+            answer = (
+                "No. The spending total is posted transactions only; pending transactions are excluded. "
+                f"Posted spending for the requested range is {total_rendered}. "
+                f"Pending outflows tracked separately: {pending_rendered} "
+                f"({pending_count} transaction{'s' if pending_count != 1 else ''})."
+            )
+            if coverage.get("as_of"):
+                answer += f" As of {coverage['as_of']}."
+            if limitations:
+                answer += " Coverage limitation: " + "; ".join(str(item) for item in limitations) + "."
+            return answer
         period = f"{payload.get('start', 'the requested period')} through {payload.get('end', 'today')}"
         totals = payload.get("posted_outflow_by_currency") or {}
         rendered = ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in totals.items()) or "none recorded"
@@ -4764,6 +4845,8 @@ def canonical_structured_empty_read_answer(tool_events: Sequence[Mapping[str, An
 
 def canonical_result_answer(
     tool_events: Sequence[Mapping[str, Any]],
+    *,
+    owner_query: str = "",
 ) -> CanonicalAnswer | None:
     """Select one deterministic owner-state answer for a completed turn.
 
@@ -4781,7 +4864,7 @@ def canonical_result_answer(
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
-        (canonical_finance_read_answer(tool_events), "canonical Finance Result"),
+        (canonical_finance_read_answer(tool_events, owner_query=owner_query), "canonical Finance Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
         (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
         (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
@@ -4805,9 +4888,10 @@ def project_final_answer(
     intent_domains: Sequence[str] = (),
     stored_evidence: bool = False,
     clarification_only: bool = False,
+    owner_query: str = "",
 ) -> tuple[str, CanonicalAnswer | None]:
     """Select the authoritative answer before the transport emits it."""
-    canonical = canonical_result_answer(tool_events)
+    canonical = canonical_result_answer(tool_events, owner_query=owner_query)
     if canonical is not None:
         return canonical.content, canonical
     if clarification_only:

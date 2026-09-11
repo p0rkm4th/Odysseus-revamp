@@ -6849,6 +6849,7 @@ async def stream_aci_runtime(
         intent_domains=_intent_domains,
         stored_evidence=has_stored_canonical_evidence(messages),
         clarification_only=_aci_clarification_only,
+        owner_query=_last_user,
     )
     if _projected_response.strip() != full_response.strip():
         if _canonical_answer is None:
