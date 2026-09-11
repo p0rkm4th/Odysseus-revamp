@@ -3984,9 +3984,10 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() != "manage_homelab" or not isinstance(result, Mapping):
+    if not isinstance(result, Mapping):
         return None
-    raw = result.get("output")
+    tool_name = str(tool_name or "").strip()
+    raw = result.get("data") if isinstance(result.get("data"), Mapping) else result.get("output")
     if isinstance(raw, Mapping):
         payload = raw
     else:
@@ -3997,6 +3998,91 @@ def canonical_tool_result_projection(
     if not isinstance(payload, Mapping):
         return None
     action = str(payload.get("action") or "").strip()
+    if tool_name == "read_finance":
+        # FinanceService returns the action's result payload rather than
+        # repeating the request verb inside it. Infer only from its
+        # unambiguous result shape; this is routing metadata, not a new
+        # authority decision.
+        if not action:
+            if isinstance(payload.get("transactions"), list):
+                action = "transactions"
+            elif "posted_outflow_by_currency" in payload:
+                action = "spending"
+            elif isinstance(payload.get("by_currency"), Mapping):
+                action = "cash_flow"
+            elif isinstance(payload.get("shared_expenses"), list):
+                action = "shared_expenses"
+            elif "coverage_state" in payload or "transaction_date_start" in payload:
+                action = "coverage"
+        coverage = payload.get("coverage") if isinstance(payload.get("coverage"), Mapping) else {}
+        common = {
+            "action": action,
+            "status": payload.get("status"),
+            "start": payload.get("start"),
+            "end": payload.get("end"),
+            "coverage": {
+                key: coverage.get(key)
+                for key in (
+                    "as_of", "account_count", "transaction_date_start",
+                    "transaction_date_end", "posted_count", "pending_count",
+                    "coverage_state", "coverage_limitations", "data_sources",
+                    "requested_range_exceeds_coverage",
+                )
+                if key in coverage
+            },
+        }
+        if action == "transactions":
+            rows = payload.get("transactions")
+            common["transactions"] = [
+                {
+                    key: row.get(key)
+                    for key in (
+                        "transaction_date", "merchant", "description", "amount",
+                        "currency", "status", "direction",
+                    )
+                    if row.get(key) not in (None, "")
+                }
+                for row in (rows[:20] if isinstance(rows, list) else [])
+                if isinstance(row, Mapping)
+            ]
+            common["returned_count"] = len(rows) if isinstance(rows, list) else 0
+            common["limit"] = payload.get("limit")
+        elif action == "spending":
+            for key in (
+                "posted_outflow_by_currency", "posted_outflow_by_category",
+                "posted_outflow_by_merchant", "pending_outflow_by_currency",
+                "pending_outflow_count", "merchant", "category",
+            ):
+                if key in payload:
+                    common[key] = payload.get(key)
+        elif action == "cash_flow" and isinstance(payload.get("by_currency"), Mapping):
+            common["by_currency"] = payload.get("by_currency")
+        elif action == "shared_expenses":
+            expenses = payload.get("shared_expenses")
+            common["shared_expenses"] = expenses[:50] if isinstance(expenses, list) else []
+        elif action == "coverage":
+            # Coverage is already compact; keep the projection explicit so
+            # answer rendering does not depend on serialized tool text.
+            common.update({
+                key: payload.get(key)
+                for key in (
+                    "account_count", "as_of", "transaction_date_start",
+                    "transaction_date_end", "posted_count", "pending_count",
+                    "coverage_state", "coverage_limitations", "data_sources",
+                    "requested_range_exceeds_coverage", "ingestion_complete",
+                )
+                if key in payload
+            })
+        # The executor's structured data may still contain Python ``date``,
+        # ``datetime``, or Decimal values even though its serialized output is
+        # JSON text. This projection is emitted inside SSE metrics and saved
+        # metadata, so normalize it before it crosses that transport boundary.
+        try:
+            return json.loads(json.dumps(common, default=str))
+        except (TypeError, ValueError):
+            return None
+    if tool_name != "manage_homelab":
+        return None
     common = {
         "action": action,
         "status": payload.get("status"),
@@ -4431,10 +4517,17 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
     )
     if event is None or event.get("exit_code") not in (None, 0):
         return None
-    try:
-        payload = json.loads(str(event.get("output") or ""))
-    except (TypeError, ValueError):
-        return None
+    # Large transaction reads are intentionally capped before they are saved
+    # in chat metadata. Prefer the bounded structured projection attached by
+    # the executor; parsing the display text first makes a valid read degrade
+    # to a bare model completion when the serialized ledger preview is cut in
+    # the middle of JSON.
+    payload = event.get("result_projection")
+    if not isinstance(payload, Mapping):
+        try:
+            payload = json.loads(str(event.get("output") or ""))
+        except (TypeError, ValueError):
+            return None
     if not isinstance(payload, Mapping) or str(payload.get("status") or "").upper() in {
         "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
     }:
@@ -4533,8 +4626,21 @@ def canonical_finance_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             if isinstance(row, Mapping):
                 currency = row.get('currency', '')
                 lines.append(f"- {row.get('transaction_date', 'date unknown')}: {row.get('merchant') or row.get('description') or 'unnamed'} — {currency} {_display_finance_amount(row.get('amount', ''), currency)} ({row.get('status', 'posted')})")
-        if len(transactions) > 20:
+        returned_count = payload.get("returned_count")
+        if isinstance(returned_count, int) and returned_count > len(transactions):
+            lines.append(f"- …and {returned_count - len(transactions)} more in the bounded result.")
+        elif len(transactions) > 20:
             lines.append(f"- …and {len(transactions) - 20} more in the bounded result.")
+        transaction_coverage = coverage if isinstance(coverage, Mapping) else {}
+        pending_count = transaction_coverage.get("pending_count")
+        posted_count = transaction_coverage.get("posted_count")
+        if pending_count is not None or posted_count is not None:
+            lines.append(
+                "This view includes pending rows when they match the request; "
+                f"the requested coverage records {pending_count or 0} pending and "
+                f"{posted_count or 0} posted transaction(s). Pending transactions "
+                "are not included in posted spending totals."
+            )
     elif isinstance(payload.get("shared_expenses"), list):
         lines.append(f"I found {len(payload['shared_expenses'])} explicitly shared household expense{'s' if len(payload['shared_expenses']) != 1 else ''}.")
     elif action == "coverage" or "coverage_state" in payload:
