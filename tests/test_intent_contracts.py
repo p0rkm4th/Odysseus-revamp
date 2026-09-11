@@ -462,6 +462,15 @@ def test_singular_grocery_read_uses_the_canonical_household_path():
     assert resolved.binding_name == "read_household"
 
 
+def test_natural_shared_fridge_question_reaches_canonical_inventory_read():
+    frame = compile_intent("What do we have in the shared fridge right now?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.filters["list_name"] == "fridge"
+    assert resolved.available is True
+    assert resolved.binding_name == "read_household"
+
+
 @pytest.mark.parametrize("query", [
     "look up summary in my technical asset state",
     "show my technical asset list information",

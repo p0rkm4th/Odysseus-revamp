@@ -62,6 +62,16 @@ _FINANCE_PAYCHECKS = re.compile(
     r"\b(?:paychecks?|pay\s+checks?|salary|salaries|deposits?|income|earnings?|paid|earned)\b",
     re.IGNORECASE,
 )
+_HOUSEHOLD_SUBJECT = re.compile(
+    r"\b(?:pantry|fridge|freezer|grocery|groceries|shopping\s+list|"
+    r"kitchen\s+inventory|household\s+stock|shared\s+(?:pantry|fridge|groceries?))\b",
+    re.IGNORECASE,
+)
+_HOUSEHOLD_READ = re.compile(
+    r"\b(?:what\s+(?:do\s+(?:i|we)|have\s+i)\s+have|what(?:'s|\s+is)\s+in|"
+    r"show|list|how\s+much|do\s+(?:i|we)\s+have|is\s+there|are\s+there|check)\b",
+    re.IGNORECASE,
+)
 _FINANCE_OVERVIEW = re.compile(
     r"\b(?:go\s+over|walk\s+(?:me\s+)?through|review|look\s+at|check|tell\s+me\s+about|summari[sz]e|analy[sz]e|"
     r"insight(?:s)?|guidance|advice|advise|pattern(?:s)?|trend(?:s)?|what\s+stands\s+out|"
@@ -196,6 +206,8 @@ def deterministic_read_concept(text: str) -> str | None:
         )
     ):
         return "FINANCE"
+    if _HOUSEHOLD_SUBJECT.search(query) and _HOUSEHOLD_READ.search(query):
+        return "HOUSEHOLD_ITEM"
     if _FINANCE_RANKED_TRANSACTIONS.search(query):
         return "FINANCE"
     if _MEMORY_STORE_QUERY.search(query) and not re.search(
