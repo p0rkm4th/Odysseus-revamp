@@ -38,6 +38,13 @@ def test_pasted_recipe_without_heading_accepts_only_explicit_quantity_lines():
     assert [row["name"] for row in result["ingredients"]] == ["spaghetti", "sauce"]
 
 
+def test_recipe_import_normalizes_unicode_fractions():
+    result = parse_recipe_text("Pancakes\n\nIngredients:\n½ cup milk\n1½ cups flour")
+    assert [(row["quantity"], row["unit"]) for row in result["ingredients"]] == [
+        ("118.294118", "ml"), ("354.882355", "ml"),
+    ]
+
+
 def test_recipe_import_is_bounded():
     with pytest.raises(ValueError, match="24000"):
         parse_recipe_text("x" * 24_001)
