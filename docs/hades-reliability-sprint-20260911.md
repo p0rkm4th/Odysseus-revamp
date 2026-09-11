@@ -31,14 +31,38 @@ Head: `9249e32a8bfb20578e92af762c9e258e4bd35ddf`
 - The fresh run for `9249e32a` reproduced the same Dependency Review failure;
   secret, container, and workflow-security checks remained green.
 
+## Follow-up runtime evidence
+
+- The bounded synthetic conversational run was repeated with the configured
+  host-side Docker bridge endpoint `http://172.18.0.1:11434` rather than the
+  invalid host-loopback default. It completed 62 cases with 59 functional,
+  60 architectural, 100% security, zero duplicate rate, and 1 timeout. The
+  prior loopback run is classified as environment/configuration failure, not
+  Hades semantic evidence.
+- After the owner clarified the port mapping, only `odysseus-hades.service`
+  was started. The test instance on port 7000 became healthy in about 10
+  seconds; `/api/health` returned 200 and `/api/ready` returned 401 without
+  authentication, as expected. The port-7001 original comparison service was
+  not restarted.
+- Running Hades provenance reports runtime source commit
+  `5c5d8feabb5f61f7c4490c3e9fb30b95594cc1f3`, checkout-tree runtime,
+  `source_match: null`, and `build_id: unbuilt-source`. This is a running
+  source checkout, not an immutable promoted release.
+- The corrected port mapping is now established: port 7000 is the Hades test
+  instance and port 7001 is the original Odysseus comparison instance. The
+  Hades service is active; the comparison service was not restarted.
+- The Hades test instance's auth metadata exposes only the bootstrap account;
+  no usable acceptance/owner session is available to this agent. Authenticated
+  chat dogfood remains gated on an existing authorized session or owner action.
+
 ## Owner/runtime coverage
 
-The installed owner runtime available on this host is not Hades: the AEGIS
-owner service is stopped, and the only unrelated listening application is an
-Odysseus process on port 7001. No authenticated Hades owner interaction was
-replayed, no real Plaid authorization was attempted, and no live network scan
-was issued. Unit and contract tests therefore do not claim owner acceptance,
-provider behavior, screenshot evidence, or live scan completion.
+The Hades test runtime is active on port 7000 from the source checkout; the
+original Odysseus comparison instance remains on port 7001. No authenticated
+Hades owner interaction was replayed, no real Plaid authorization was
+attempted, and no live network scan was issued. Unit, contract, and synthetic
+conversational tests therefore do not claim owner acceptance, provider
+behavior, screenshot evidence, or live scan completion.
 
 The affected implementation is nevertheless covered by existing bounded
 tests for Plaid configuration/link authorization/sync recovery, canonical
