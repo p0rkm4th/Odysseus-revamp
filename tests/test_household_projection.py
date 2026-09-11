@@ -186,6 +186,27 @@ def test_recipe_missing_by_name_compares_stock_without_queueing():
     assert service.list_items("alice", list_name="grocery") == []
 
 
+def test_repeated_identical_recipe_composition_reuses_canonical_recipe():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    first = service.create_recipe(
+        "alice", name="Spaghetti", servings="1",
+        ingredients=[
+            {"name": "Pasta", "quantity": 1, "unit": "each"},
+            {"name": "Tomato sauce", "quantity": 1, "unit": "each"},
+        ],
+    )
+    replay = service.create_recipe(
+        "alice", name="spaghetti", servings="1",
+        ingredients=[
+            {"name": "tomato sauce", "quantity": 1, "unit": "each"},
+            {"name": "pasta", "quantity": 1, "unit": "each"},
+        ],
+    )
+    assert replay["id"] == first["id"]
+    assert [recipe["name"] for recipe in service.list_recipes("alice")] == ["Spaghetti"]
+
+
 def test_recipe_shortages_can_be_reviewed_and_queued_without_changing_stock():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
