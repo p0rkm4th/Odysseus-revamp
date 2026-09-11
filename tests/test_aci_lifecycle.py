@@ -1101,6 +1101,14 @@ def test_inventory_mutation_grounding_covers_stock_and_consumption_without_ids()
     assert consumed["quantity"] == 500.0
     assert consumed["unit"] == "grams"
 
+    counted = canonical_inventory_mutation_payload(
+        "consume_stock", "Use 1 count of shared milk from the fridge."
+    )
+    assert counted is not None
+    assert counted["name"] == "shared milk"
+    assert counted["quantity"] == 1.0
+    assert counted["unit"] == "each"
+
 
 def test_inventory_mutation_idempotency_is_scoped_to_the_durable_turn():
     first = canonical_inventory_mutation_payload(

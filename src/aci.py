@@ -3527,7 +3527,7 @@ def canonical_inventory_mutation_payload(
             "storage_area": "kitchen", "idempotency_key": f"inventory:{key}",
         }
 
-    units = r"kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each"
+    units = r"kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each|counts?|items?|units?"
     words = {"one": 1, "a": 1, "an": 1, "two": 2, "three": 3,
              "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
              "nine": 9, "ten": 10}
@@ -3595,12 +3595,21 @@ def canonical_inventory_mutation_payload(
         }
     if action == "consume_stock":
         match = re.search(
-            rf"\b(?:use|used|consume|consumed|take|took)\s+(\d+(?:\.\d+)?)\s*({units})\s+(?:of\s+)?(.+)$",
+            rf"\b(?:use|used|consume|consumed|take|took)\s+"
+            rf"(\d+(?:\.\d+)?|{'|'.join(words)})\s*({units})\s+(?:of\s+)?(.+)$",
             text, re.IGNORECASE,
         )
         if not match:
             return None
         quantity, unit, name = match.groups()
+        quantity = words.get(quantity.casefold(), quantity)
+        unit = unit.casefold()
+        if unit in {"count", "counts", "item", "items", "unit", "units"}:
+            unit = "each"
+        name = re.sub(
+            r"\s+from\s+(?:the\s+)?(?:pantry|fridge|freezer)\b.*$",
+            "", name, flags=re.IGNORECASE,
+        ).strip()
         return {
             "action": action, "name": name.strip(" .,!?:;"),
             "quantity": float(quantity), "unit": unit.casefold(),
