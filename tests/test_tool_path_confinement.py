@@ -176,6 +176,22 @@ def test_application_data_root_is_not_an_agent_root(tmp_path):
         os.unlink(target)
 
 
+def test_application_data_root_is_not_reopened_by_tmp_allowlist(tmp_path, monkeypatch):
+    """A DATA_DIR nested below /tmp remains private to the app."""
+    import src.tool_execution as tool_execution
+
+    app_data = tmp_path / "data"
+    agent_workspace = app_data / "agent_workspace"
+    app_data.mkdir()
+    agent_workspace.mkdir()
+    target = app_data / "sessions.json"
+    target.write_text("private")
+    monkeypatch.setattr(tool_execution, "_APPLICATION_DATA_ROOT", os.path.realpath(app_data))
+    monkeypatch.setattr(tool_execution, "_AGENT_WORKDIR", os.path.realpath(agent_workspace))
+    with pytest.raises(ValueError, match="outside the allowed roots"):
+        tool_execution._resolve_tool_path(str(target))
+
+
 def test_dedicated_agent_workspace_is_allowed(tmp_path):
     from src.tool_execution import _AGENT_WORKDIR, _resolve_tool_path
     target = os.path.join(_AGENT_WORKDIR, "agent-file.txt")

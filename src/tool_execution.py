@@ -55,6 +55,29 @@ NO_TOOL_SECURITY_CONTEXT = _NoToolSecurityContext()
 # integrations, or secrets.
 _AGENT_WORKDIR = os.path.realpath(os.path.join(DATA_DIR, "agent_workspace"))
 os.makedirs(_AGENT_WORKDIR, mode=0o700, exist_ok=True)
+_APPLICATION_DATA_ROOT = os.path.realpath(DATA_DIR)
+
+
+def _path_is_within(path: str, root: str) -> bool:
+    """Return whether canonical *path* is *root* or a child of it."""
+    path = os.path.normcase(os.path.realpath(path))
+    root = os.path.normcase(os.path.realpath(root))
+    try:
+        return os.path.commonpath([path, root]) == root
+    except ValueError:
+        return False
+
+
+def _is_application_state_path(path: str) -> bool:
+    """Keep application state out of model-controlled filesystem roots.
+
+    ``/tmp`` is a legitimate fallback root for short-lived files, and in
+    some deployments DATA_DIR itself may live below it.  A broad temporary
+    root must not therefore re-admit the application database, sessions, or
+    credentials.  The one intentional exception is the dedicated agent
+    workspace child.
+    """
+    return _path_is_within(path, _APPLICATION_DATA_ROOT) and not _path_is_within(path, _AGENT_WORKDIR)
 
 
 
@@ -221,6 +244,8 @@ def _resolve_tool_path(raw_path: str) -> str:
             f"path '{raw_path}' is inside a sensitive directory "
             f"(e.g. .ssh, .gnupg) or matches a sensitive filename"
         )
+    if _is_application_state_path(resolved):
+        raise ValueError(f"path '{raw_path}' is outside the allowed roots")
 
     for root in _tool_path_roots():
         if resolved == root:
@@ -248,6 +273,8 @@ def _resolve_tool_path_in_workspace(workspace: str, raw_path: str) -> str:
     if raw_path is None or not str(raw_path).strip():
         raise ValueError("path is required")
     base = os.path.realpath(workspace)
+    if _is_application_state_path(base):
+        raise ValueError(f"workspace '{workspace}' is application state")
     expanded = os.path.expanduser(str(raw_path).strip())
     candidate = expanded if os.path.isabs(expanded) else os.path.join(base, expanded)
     resolved = os.path.realpath(candidate)
@@ -305,6 +332,8 @@ def vet_workspace(raw: str) -> Optional[str]:
         return None
     resolved = os.path.realpath(os.path.expanduser(raw))
     if not os.path.isdir(resolved) or _is_sensitive_path(resolved):
+        return None
+    if _is_application_state_path(resolved):
         return None
     # Reject filesystem roots: binding / (or a Windows drive/UNC root) as the
     # workspace would make every absolute path "inside" it, collapsing the
