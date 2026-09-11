@@ -2952,6 +2952,10 @@ async def stream_aci_runtime(
     yield f"data: {json.dumps({'type': 'agent_prep', 'data': {k: round(v, 3) for k, v in prep_timings.items()}})}\n\n"
 
     full_response = ""
+    # Approval-resume can terminate before entering a model round when the
+    # approved bounded network Result is already complete. Keep finalization
+    # safe for that path as well as the ordinary round path.
+    round_reasoning = ""
     if _reference_ack:
         # This is a server-owned conversational acknowledgement only. It
         # prevents weak-model prose from erasing the user's selection while
