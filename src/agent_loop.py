@@ -180,6 +180,7 @@ from src.intent_contracts import (
     explicitly_allows_diagnostic_install,
     is_explicit_continuation,
     is_explicit_network_discovery_request,
+    is_network_observation_result_request,
     is_network_prerequisite_request,
     is_network_service_enumeration_request,
     network_discovery_request_cidr,
@@ -2435,6 +2436,7 @@ async def stream_aci_runtime(
     _network_discovery_followup = (
         bool(_intent.get("continuation"))
         and "network_ops" in _intent_domains
+        and not is_network_observation_result_request(_last_user)
         and bool(re.search(
             r"\b(?:nmap|network[- ]discovery|network discovery|plan_network_discovery|"
             r"bounded discovery|private subnet|"
@@ -5649,6 +5651,36 @@ async def stream_aci_runtime(
                     # The Work projection is diagnostic durability; it must
                     # never weaken or replace the existing policy gate.
                     logger.warning("[work-bridge] failed to prepare bound action", exc_info=True)
+
+            # The model-facing block may omit an internal continuation
+            # reference that the route already sealed into the canonical Work
+            # Action.  Rebuild only this bounded read from that server-owned
+            # input so the executor sees the same exact discovery result that
+            # the Work ledger records; transcript/model text never supplies
+            # the reference.
+            if (
+                _work_action_id
+                and block.tool_type == "manage_homelab"
+            ):
+                try:
+                    _block_payload_for_binding = json.loads(block.content or "{}")
+                    if (
+                        isinstance(_block_payload_for_binding, dict)
+                        and _block_payload_for_binding.get("action") == "read_network_observations"
+                    ):
+                        from src.agent_work_bridge import bound_action_input
+                        _bound_input = await asyncio.to_thread(
+                            bound_action_input, owner, _work_action_id,
+                        )
+                        if isinstance(_bound_input, dict) and _bound_input.get("result_id"):
+                            block = ToolBlock(
+                                block.tool_type,
+                                json.dumps(_bound_input, sort_keys=True),
+                            )
+                            full_command = block.content.strip()
+                            cmd_display = full_command
+                except Exception:
+                    logger.warning("[work-bridge] failed to project bound read input", exc_info=True)
 
             security_decision = run_security.decision_for(
                 block.tool_type,
