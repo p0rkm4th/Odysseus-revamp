@@ -19,7 +19,7 @@ _SECTION_START = re.compile(r"^(ingredients?|what you need)\s*:?[\s]*$", re.I)
 _SECTION_END = re.compile(r"^(directions?|instructions?|method|steps?|preparation)\s*:?[\s]*$", re.I)
 _SERVINGS = re.compile(r"(?:serves?|servings?|yield)\s*[:\-]?\s*(\d+(?:\.\d+)?)", re.I)
 _LINE = re.compile(
-    r"^(?:[-*•]\s*)?(?:(\d+(?:\.\d+)?(?:\s+\d+/\d+)?)\s+)?"
+    r"^(?:[-*•▢□▪◦]\s*)?(?:(\d+(?:\.\d+)?(?:\s+\d+/\d+)?)\s+)?"
     r"([A-Za-z]+)?\s*(?:of\s+)?(.+?)\s*$"
 )
 _UNITS = {
@@ -47,13 +47,21 @@ def recipe_text_from_web_result(result: dict[str, Any]) -> str:
         lines = [str(value).strip() for value in raw_list if str(value).strip()]
         if len(lines) < 2:
             continue
-        score = sum(bool(re.match(r"^(?:[-*•]\s*)?\d", line)) for line in lines)
+        score = sum(bool(re.match(
+            r"^(?:[-*•▢□▪◦]\s*)?(?:\d|[¼½¾⅓⅔⅛⅜⅝⅞])", line,
+        )) for line in lines)
         if score:
             candidates.append(lines[:MAX_INGREDIENTS])
     ingredients = max(candidates, key=lambda rows: (sum(bool(re.match(r"^\d", row)) for row in rows), len(rows)), default=[])
     if not ingredients:
-        return f"{title}\n{content}"
-    return f"{title}\n{content}\n\nIngredients:\n" + "\n".join(ingredients)
+        return f"{title}\n{content}"[:MAX_RECIPE_TEXT]
+    ingredient_block = "\n\nIngredients:\n" + "\n".join(ingredients)
+    # Public recipe pages often include reviews, navigation, and related
+    # recipes far beyond the parser bound. Keep the structured ingredient
+    # list intact and spend the remaining budget on untrusted page context.
+    prefix = f"{title}\n"
+    context_budget = max(0, MAX_RECIPE_TEXT - len(prefix) - len(ingredient_block))
+    return prefix + content[:context_budget] + ingredient_block
 
 
 def _fraction(value: str) -> str:
@@ -72,17 +80,19 @@ def _ingredient(line: str) -> dict[str, Any] | None:
     normalized_line = " ".join(line.split())
     # Expand a leading standalone or mixed Unicode fraction without touching
     # ordinary ingredient names later in the line.
-    mixed = re.match(r"^((?:[-*•]\s*)?)(\d+)([¼½¾⅓⅔⅛⅜⅝⅞])(?=\s)", normalized_line)
+    mixed = re.match(r"^((?:[-*•▢□▪◦]\s*)?)(\d+)([¼½¾⅓⅔⅛⅜⅝⅞])(?=\s)", normalized_line)
     if mixed:
         normalized_line = f"{mixed.group(1)}{float(mixed.group(2)) + float(_UNICODE_FRACTIONS[mixed.group(3)])} {normalized_line[mixed.end():]}"
     else:
-        standalone = re.match(r"^((?:[-*•]\s*)?)([¼½¾⅓⅔⅛⅜⅝⅞])(?=\s)", normalized_line)
+        standalone = re.match(r"^((?:[-*•▢□▪◦]\s*)?)([¼½¾⅓⅔⅛⅜⅝⅞])(?=\s)", normalized_line)
         if standalone:
             normalized_line = f"{standalone.group(1)}{_UNICODE_FRACTIONS[standalone.group(2)]} {normalized_line[standalone.end():]}"
     match = _LINE.match(normalized_line)
     if not match:
         return None
     quantity, possible_unit, name = match.groups()
+    had_quantity = bool(quantity)
+    raw_possible_unit = possible_unit
     if not quantity:
         # Ingredient lines without a quantity are valid count-based recipe
         # requirements, but prose/directions are filtered by section parsing.
@@ -94,11 +104,21 @@ def _ingredient(line: str) -> dict[str, Any] | None:
         # pretend package sizes are convertible; treat it as one count while
         # retaining the actual ingredient name for stock matching.
         unit = "each"
+    if not had_quantity and raw_possible_unit and raw_possible_unit.casefold() not in _UNITS:
+        name = f"{raw_possible_unit} {name}"
     try:
         amount = normalize_amount(_fraction(quantity), unit)
     except (UnitError, ValueError):
         return None
-    return {"name": name.strip(" ,.;"), "quantity": str(amount.quantity), "unit": amount.unit}
+    cleaned_name = re.sub(r"\s*\(\s*\$\s*\d+(?:\.\d+)?\s*\)\s*$", "", name)
+    cleaned_name = re.sub(r"\s*\([^)]*\$\s*\d+(?:\.\d+)?[^)]*\)\s*$", "", cleaned_name)
+    cleaned_name = cleaned_name.lstrip(" .,:;-")
+    if had_quantity:
+        cleaned_name = re.sub(
+            r"^(?:can|jar|bottle|bag|box|packet|package|clove|cloves|stalk|stalks)\s+",
+            "", cleaned_name, flags=re.IGNORECASE,
+        )
+    return {"name": cleaned_name.strip(" ,.;"), "quantity": str(amount.quantity), "unit": amount.unit}
 
 
 def parse_recipe_text(text: str, *, name: str | None = None) -> dict[str, Any]:
@@ -141,7 +161,7 @@ def parse_recipe_text(text: str, *, name: str | None = None) -> dict[str, Any]:
             if line == title or _SERVINGS.search(line) or _SECTION_END.match(line):
                 continue
             stripped = line.lstrip()
-            if not (stripped.startswith(("-", "*", "•")) or re.match(r"^\d", stripped)):
+            if not (stripped.startswith(("-", "*", "•", "▢", "□", "▪", "◦")) or re.match(r"^(?:\d|[¼½¾⅓⅔⅛⅜⅝⅞])", stripped)):
                 continue
             candidate = _ingredient(line)
             if candidate and len(candidate["name"]) <= 200 and not re.search(

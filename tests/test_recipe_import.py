@@ -80,6 +80,27 @@ def test_web_recipe_projection_recovers_structured_ingredient_list_after_text_fl
     assert [row["name"] for row in result["ingredients"]] == ["spaghetti", "tomato sauce"]
 
 
+def test_web_recipe_projection_bounds_long_page_context_but_keeps_ingredients():
+    text = recipe_text_from_web_result({
+        "title": "Long pasta",
+        "content": "navigation and reviews " * 5000,
+        "lists": [["400 g pasta", "1 can sauce"]],
+    })
+    assert len(text) <= 24_000
+    result = parse_recipe_text(text)
+    assert [row["name"] for row in result["ingredients"]] == ["pasta", "sauce"]
+
+
+def test_web_recipe_projection_accepts_checkbox_bullets_and_removes_prices():
+    text = recipe_text_from_web_result({
+        "title": "Sauce",
+        "content": "Recipe page",
+        "lists": [["▢ ½ lb. ground beef ($3.16)", "▢ 1 Tbsp olive oil ($0.19)", "▢ 28 oz. can crushed tomatoes ($1.52)", "▢ black pepper (freshly cracked, $0.05)", "▢ salt (to taste, $0.02)"]],
+    })
+    result = parse_recipe_text(text)
+    assert [row["name"] for row in result["ingredients"]] == ["ground beef", "olive oil", "crushed tomatoes", "black pepper", "salt"]
+
+
 def test_pdf_import_uses_existing_pdf_text_extractor(tmp_path: Path):
     pytest.importorskip("pypdf")
     # A malformed/empty file must fail closed rather than producing a recipe.
