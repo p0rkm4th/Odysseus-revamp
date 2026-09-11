@@ -1194,7 +1194,9 @@ class RecipeService(InventoryService):
     ) -> dict[str, Any]:
         """Queue required shortages without changing owned stock."""
         with self._transaction() as db:
-            recipe = self._recipe(db, owner, recipe_id)
+            recipe = self._recipe_for_actor(db, owner, recipe_id)
+            if owner != recipe.owner and not self._member_mutation_allowed(db, owner, recipe.owner):
+                raise InventoryNotFound("recipe not found")
             plan = self._stock_plan(db, owner, recipe, servings if servings is not None else recipe.servings)
             queued: list[dict[str, Any]] = []
             for shortage in plan.shortages:
@@ -1245,7 +1247,9 @@ class RecipeService(InventoryService):
                     raise InventoryConflict("idempotency key was already used for another cook")
                 return {"id": prior.id, "recipe_id": prior.recipe_id, "servings": prior.servings,
                         "movement_ids": list(prior.movement_ids_json or []), "replayed": True}
-            recipe = self._recipe(db, owner, recipe_id)
+            recipe = self._recipe_for_actor(db, owner, recipe_id)
+            if owner != recipe.owner and not self._member_mutation_allowed(db, owner, recipe.owner):
+                raise InventoryNotFound("recipe not found")
             try:
                 requested = parse_decimal(servings if servings is not None else recipe.servings)
             except UnitError as exc:
@@ -1261,14 +1265,15 @@ class RecipeService(InventoryService):
             if not plan.can_make:
                 raise InsufficientStock(plan)
             lots = {lot.id: lot for lot in db.query(InventoryLot).filter(
-                InventoryLot.owner == owner,
                 InventoryLot.id.in_([deduction.lot_id for deduction in plan.deductions]),
             ).with_for_update().all()}
+            if len(lots) != len(plan.deductions):
+                raise InsufficientStock(plan)
             movement_ids: list[str] = []
             for index, deduction in enumerate(plan.deductions):
                 lot = lots[deduction.lot_id]
                 changed = db.query(InventoryLot).filter(
-                    InventoryLot.id == lot.id, InventoryLot.owner == owner,
+                    InventoryLot.id == lot.id, InventoryLot.owner == lot.owner,
                     InventoryLot.item_id == deduction.item_id,
                     InventoryLot.quantity >= deduction.quantity,
                 ).update(
@@ -1278,10 +1283,11 @@ class RecipeService(InventoryService):
                 if changed != 1:
                     raise InsufficientStock(plan)
                 movement = InventoryMovement(
-                    id=str(uuid4()), owner=owner, item_id=deduction.item_id,
+                    id=str(uuid4()), owner=lot.owner, item_id=deduction.item_id,
                     lot_id=lot.id, quantity_delta=-deduction.quantity,
                     unit=deduction.unit, reason="recipe", source_kind="recipe_cook",
                     source_id=cook.id, idempotency_key=f"cook:{cook.id}:{index}",
+                    actor=owner,
                 )
                 db.add(movement)
                 movement_ids.append(movement.id)
