@@ -739,9 +739,17 @@ def test_recent_session_discovery_targets_survive_terminal_run_for_service_follo
         )
         with session_factory() as db:
             plan = db.query(WorkAction).filter_by(id=plan_id).one()
-            assert plan.normalized_input["targets"] == ["192.168.10.4", "192.168.10.6"]
+        assert plan.normalized_input["targets"] == ["192.168.10.4", "192.168.10.6"]
     finally:
         engine.dispose()
+
+
+def test_empty_active_reference_does_not_hide_session_discovery_reference():
+    selected = bridge.select_network_service_reference(
+        {"entities": [], "last": None},
+        {"network_discovery_targets": ["192.168.10.4"]},
+    )
+    assert selected["network_discovery_targets"] == ["192.168.10.4"]
 
 
 def test_network_continuation_uses_canonical_plan_result_not_transcript(monkeypatch):

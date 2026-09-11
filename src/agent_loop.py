@@ -2656,12 +2656,11 @@ async def stream_aci_runtime(
                 if isinstance(_active_run_context, dict)
                 else None
             )
-            if not isinstance(_network_service_reference, dict):
-                _network_service_reference = (
-                    _session_reference_context
-                    if isinstance(_session_reference_context, dict)
-                    else None
-                )
+            from src.agent_work_bridge import select_network_service_reference
+            _network_service_reference = select_network_service_reference(
+                _network_service_reference,
+                _session_reference_context,
+            )
             _network_service_reference_available = bool(
                 isinstance(_network_service_reference, dict)
                 and _network_service_reference.get("network_discovery_targets")

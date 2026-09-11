@@ -574,6 +574,26 @@ def reference_context_for_turn(
     return active, session, active_entities
 
 
+def select_network_service_reference(
+    active: dict[str, Any] | None,
+    session: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Choose the most specific sealed host reference for a service follow-up.
+
+    Every active Run has a reference-context envelope, including Runs that do
+    not yet contain a network result. That empty envelope must not hide the
+    populated owner/session-scoped discovery result from the preceding turn.
+    """
+    for candidate in (active, session):
+        if isinstance(candidate, dict) and candidate.get("network_discovery_targets"):
+            return candidate
+    if isinstance(active, dict):
+        return active
+    if isinstance(session, dict):
+        return session
+    return None
+
+
 def _latest_result_references(results: list[Any]) -> list[dict[str, Any]]:
     """Extract the ordered refs from the newest result that exposes them.
 
