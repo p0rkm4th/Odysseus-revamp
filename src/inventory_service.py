@@ -997,8 +997,13 @@ class RecipeService(InventoryService):
                     "item": _item_view(item), "missing": shortage.missing,
                     "unit": shortage.unit, "replayed": replayed,
                 })
+            shortages = [{
+                "name": row.name, "missing": row.missing,
+                "unit": row.unit, "optional": row.optional,
+            } for row in plan.shortages]
             return {"recipe_id": recipe.id, "queued": queued,
-                    "count": len(queued), "stock_changed": False}
+                    "count": len(queued), "stock_changed": False,
+                    "shortages": shortages, "can_make": not shortages}
 
     def cook(
         self, owner: str, recipe_id: str, *, servings: Any | None = None,
@@ -1316,9 +1321,16 @@ class RecipeService(InventoryService):
             if len(recipes) > 1:
                 raise InventoryError("More than one saved recipe matched that dish; choose one.")
             recipe_id = recipes[0]["id"]
-            missing = self.missing_ingredients(owner, recipe_id, servings=args.get("servings"))
             queued = self.queue_missing_ingredients(owner, recipe_id, servings=args.get("servings"))
-            return {"recipe": recipes[0], "missing": missing, "queued": queued}
+            return {
+                "recipe": recipes[0],
+                "missing": {
+                    "recipe_id": recipe_id,
+                    "can_make": bool(queued.get("can_make")),
+                    "shortages": list(queued.get("shortages") or []),
+                },
+                "queued": queued,
+            }
         if action == "add":
             return {"recipe": self.create_recipe(
                 owner, name=args.get("name"), servings=args.get("servings") or "1",
