@@ -274,7 +274,7 @@ function renderRecipeCatalog() {
       <p class="recipe-card-meta"><span>${escapeHtml(recipe.servings)} servings</span><span>${ingredients.length} ingredient${ingredients.length === 1 ? '' : 's'}</span></p>
       ${tags ? `<div class="recipe-tags" aria-label="Recipe tags">${tags}</div>` : ''}
       <div class="recipe-card-body"><section class="recipe-card-ingredients"><h4>Ingredient check</h4><ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}</section><aside class="recipe-card-next"><span class="recipe-eyebrow">NEXT STEP</span>${plan.can_make ? '<strong>Everything is on hand.</strong><p>Use the saved recipe when you are ready.</p>' : `<strong>Shop for ${shortageDetails || shortages || 'the missing ingredients'}${shortageMore}</strong><p>Queue only these items; pantry stock stays unchanged.</p>`}</aside></div>
-      <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? '<button class="inventory-primary" data-action="cook">Cook now</button>' : `<button class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(recipe.id)}">Add missing to Grocery</button>`}</div>
+      <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? `<button class="inventory-primary" data-action="cook" data-servings="${escapeHtml(recipe.servings)}">Cook now</button>` : `<button class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(recipe.id)}">Add missing to Grocery</button>`}</div>
     </article>`;
   }).join('');
 }
@@ -471,6 +471,10 @@ async function onClick(event) {
     return;
   }
   if (action === 'dismiss-dialog') return button.closest('.inventory-dialog-backdrop')?.remove();
+  if (action === 'recipe-plan') {
+    const form = button.closest('.inventory-dialog[data-kind="view"]');
+    return showRecipe(form?.dataset.id || button.dataset.recipeId, form?.querySelector('[name="recipe-servings"]')?.value);
+  }
   if (action === 'toggle-sharing') {
     button.disabled = true;
     try {
@@ -510,13 +514,17 @@ async function onClick(event) {
   if (action === 'queue-missing') {
     button.disabled = true;
     try {
-      const result = await api(`/api/recipes/${encodeURIComponent(button.dataset.recipeId)}/queue-missing`, {method:'POST', body:JSON.stringify({})});
+      const servings = button.dataset.servingCount;
+      const result = await api(`/api/recipes/${encodeURIComponent(button.dataset.recipeId)}/queue-missing`, {method:'POST', body:JSON.stringify(servings ? {servings} : {})});
       uiModule.showToast?.(`${result.count || 0} required item${result.count === 1 ? '' : 's'} added to grocery list`);
       button.textContent = 'Queued in Grocery';
       button.classList.remove('inventory-primary');
       button.disabled = true;
     } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
     return;
+  }
+  if (action === 'cook' && button.closest('.inventory-dialog[data-kind="view"]')) {
+    return cookRecipe(button.closest('.inventory-dialog').dataset.id, button, button.dataset.servings);
   }
   if (action === 'new-item' || action === 'new-grocery') return modalForm(action === 'new-grocery' ? 'Add item to grocery · To buy' : 'Add pantry item · On hand', `${action === 'new-grocery' ? '<p class="inventory-muted">This queues an item to buy; it does not add owned stock.</p>' : ''}${field('Name','name','required maxlength="200"')}<label>Area<select name="domain"><option value="kitchen">Kitchen</option><option value="household">Household</option><option value="it">IT</option></select></label>${action === 'new-grocery' ? '' : '<label>Storage<select name="storage_area"><option value="">Unassigned</option><option value="pantry">Pantry</option><option value="fridge">Fridge</option><option value="freezer">Freezer</option></select></label>'}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${field('Category','category','maxlength="80"')}${action === 'new-grocery' ? '<input type="hidden" name="shopping_list" value="on">' : '<label><input type="checkbox" name="shopping_list"> Also queue to buy (does not add stock)</label>'}`, action === 'new-grocery' ? 'Add to buy list' : 'Add item', action === 'new-grocery' ? 'grocery' : 'item');
   const card = button.closest('[data-item-id]');
@@ -554,7 +562,7 @@ async function onClick(event) {
   if (action === 'new-recipe') return modalForm('New recipe', `${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}<label>Ingredients <small>one per line: name | quantity | unit</small><textarea name="ingredients" placeholder="spaghetti | 400 | g\ntomato sauce | 1 | jar" required></textarea></label>${field('Tags (optional)','tags','maxlength="400" placeholder="weeknight, freezer"')}${field('Source URL (optional)','source_url','type="url" maxlength="4000"')}<label>Instructions<textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
   if (action === 'import-recipe') return modalForm('Import recipe', `<p class="inventory-muted">Paste a recipe, provide a public URL, or choose a PDF. Import only saves the recipe; stock and groceries change only when you explicitly queue missing items.</p>${field('Recipe name (optional)','name','maxlength="200"')}${field('Public recipe URL (optional)','url','type="url" maxlength="4000"')}<label>Paste recipe text<textarea name="source_text" maxlength="24000" placeholder="Ingredients:\n2 cups tomato sauce\n400 g spaghetti\n\nDirections:\n..."></textarea></label><label>PDF recipe (optional)<input type="file" name="pdf" accept="application/pdf,.pdf"></label>`, 'Import recipe', 'recipe-import');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);
-  if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button);
+  if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button, button.dataset.servings);
   if (action === 'confirm-draft') {
     const draft = button.closest('[data-draft-id]');
     return confirmDraft(draft.dataset.draftId, draft.dataset.revision, button);
@@ -580,24 +588,33 @@ function onChange(event) {
   }
 }
 
-async function showRecipe(id) {
+async function showRecipe(id, requestedServings = '') {
   try {
-    const [{recipe}, plan] = await Promise.all([api(`/api/recipes/${encodeURIComponent(id)}`), api(`/api/recipes/${encodeURIComponent(id)}/can-make`)]);
+    document.querySelector('.inventory-dialog-backdrop .inventory-dialog[data-kind="view"]')?.closest('.inventory-dialog-backdrop')?.remove();
+    const {recipe} = await api(`/api/recipes/${encodeURIComponent(id)}`);
+    const baseServings = Number(recipe.servings);
+    const parsedServings = Number(requestedServings);
+    const servings = Number.isFinite(parsedServings) && parsedServings > 0 ? parsedServings : baseServings;
+    const servingsText = displayQuantity(servings);
+    const plan = await api(`/api/recipes/${encodeURIComponent(id)}/can-make?servings=${encodeURIComponent(servingsText)}`);
     const shortageNames = new Set((plan.shortages || []).map(s => String(s.name || '').trim().toLowerCase()));
     const availableCount = (recipe.ingredients || []).filter(ingredient => !shortageNames.has(String(ingredient.name || '').trim().toLowerCase())).length;
+    const scale = Number.isFinite(baseServings) && baseServings > 0 ? servings / baseServings : 1;
     const ingredients = (recipe.ingredients || []).map(ingredient => {
       const name = String(ingredient.name || '').trim();
       const missing = shortageNames.has(name.toLowerCase());
-      const amount = `${displayQuantity(ingredient.quantity)} ${escapeHtml(ingredient.unit)}`;
+      const quantity = Number(ingredient.quantity);
+      const amount = `${displayQuantity(Number.isFinite(quantity) ? quantity * scale : ingredient.quantity)} ${escapeHtml(ingredient.unit)}`;
       return `<li class="recipe-ingredient ${missing ? 'missing' : 'available'}"><span class="recipe-detail-state">${missing ? 'Missing' : 'On hand'}</span><span class="recipe-detail-name">${escapeHtml(name)}</span><strong>${amount}</strong></li>`;
     }).join('');
     const shortages = (plan.shortages || []).map(s => `<li>${escapeHtml(s.name)}: need ${displayQuantity(s.missing)} ${escapeHtml(s.unit)} more${s.optional ? ' (optional)' : ''}</li>`).join('');
-    const queue = plan.can_make ? '' : `<button type="button" class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(id)}">Add required missing items to grocery list</button>`;
+    const queue = plan.can_make ? '' : `<button type="button" class="inventory-primary" data-action="queue-missing" data-recipe-id="${escapeHtml(id)}" data-serving-count="${escapeHtml(servingsText)}">Add required missing items to grocery list</button>`;
     const shortageBlock = plan.can_make ? '' : `<section class="recipe-detail-shortage"><div><h4>Shopping list</h4><p>${(plan.shortages || []).length} ingredient${(plan.shortages || []).length === 1 ? '' : 's'} still needed. Queue them without changing pantry stock.</p></div><ul>${shortages}</ul>${queue}</section>`;
     const status = plan.can_make ? '<span class="inventory-ready yes"><i aria-hidden="true"></i>Ready to cook</span>' : `<span class="inventory-ready no"><i aria-hidden="true"></i>${(plan.shortages || []).length} missing</span>`;
-    const intro = `<div class="recipe-detail-intro"><div><span class="recipe-eyebrow">${escapeHtml(recipe.servings)} servings · ${(recipe.ingredients || []).length} ingredients</span>${status}</div><p>${escapeHtml(recipe.instructions || 'No instructions saved yet.')}</p></div>`;
+    const cook = plan.can_make ? `<button type="button" class="inventory-primary" data-action="cook" data-servings="${escapeHtml(servingsText)}">Cook ${escapeHtml(servingsText)} servings</button>` : '';
+    const intro = `<div class="recipe-detail-intro"><div><span class="recipe-eyebrow">${escapeHtml(servingsText)} servings · ${(recipe.ingredients || []).length} ingredients</span>${status}</div><div class="recipe-serving-control"><label for="recipe-serving-count">Make for</label><input id="recipe-serving-count" name="recipe-servings" type="number" min="0.1" step="0.1" value="${escapeHtml(servingsText)}"><span>people</span><button type="button" data-action="recipe-plan" data-recipe-id="${escapeHtml(id)}">Update check</button><small>Base recipe: ${escapeHtml(recipe.servings)} servings</small></div><p>${escapeHtml(recipe.instructions || 'No instructions saved yet.')}</p></div>`;
     const checkLabel = plan.can_make ? 'Everything is on hand.' : `${availableCount} of ${(recipe.ingredients || []).length} ingredients on hand.`;
-    modalForm(recipe.name, `${intro}<section class="recipe-detail-check"><div class="recipe-detail-section-heading"><h4>Ingredient check</h4><span>${checkLabel}</span></div><ul class="recipe-ingredient-list">${ingredients || '<li>No ingredients saved.</li>'}</ul></section>${shortageBlock}`, 'Close', 'view', id);
+    modalForm(recipe.name, `${intro}<section class="recipe-detail-check"><div class="recipe-detail-section-heading"><h4>Ingredient check</h4><span>${checkLabel}</span></div><ul class="recipe-ingredient-list">${ingredients || '<li>No ingredients saved.</li>'}</ul></section>${shortageBlock}${cook ? `<div class="recipe-detail-actions">${cook}</div>` : ''}`, 'Close', 'view', id);
     const form = document.querySelector('.inventory-dialog[data-kind="view"]');
     const closeButton = form?.querySelector('[type=submit]');
     if (closeButton) {
@@ -607,10 +624,10 @@ async function showRecipe(id) {
   } catch (error) { uiModule.showError?.(error.message); }
 }
 
-async function cookRecipe(id, button) {
+async function cookRecipe(id, button, servings = '') {
   if (!window.confirm('Cook this recipe and deduct its ingredients from stock?')) return;
   button.disabled = true;
-  try { await api(`/api/recipes/${encodeURIComponent(id)}/cook`, {method:'POST', body:JSON.stringify({idempotency_key:makeIdempotencyKey('cook')})}); uiModule.showToast?.('Recipe cooked and stock updated'); await loadRecipes(); }
+  try { await api(`/api/recipes/${encodeURIComponent(id)}/cook`, {method:'POST', body:JSON.stringify({servings: servings || undefined, idempotency_key:makeIdempotencyKey('cook')})}); uiModule.showToast?.('Recipe cooked and stock updated'); await loadRecipes(); }
   catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
 }
 
