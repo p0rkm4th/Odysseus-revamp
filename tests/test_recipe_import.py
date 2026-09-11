@@ -2,7 +2,27 @@ from pathlib import Path
 
 import pytest
 
-from src.recipe_import import extract_pdf_text, parse_recipe_text, recipe_text_from_web_result
+from src.recipe_import import (
+    extract_pdf_text,
+    parse_model_recipe_proposal,
+    parse_recipe_text,
+    recipe_text_from_web_result,
+)
+
+
+def test_model_recipe_proposal_requires_explicit_concrete_ingredients():
+    candidate = parse_model_recipe_proposal(
+        "Spaghetti\n\nYou will need:\nSpaghetti pasta\nOlive oil\nGarlic (4 cloves)\n\nMissing Ingredients:\nSpaghetti pasta",
+        name="spaghetti",
+    )
+    assert [item["name"] for item in candidate["ingredients"]] == [
+        "Spaghetti pasta", "Olive oil", "Garlic",
+    ]
+
+
+def test_model_recipe_proposal_rejects_unstructured_prose():
+    with pytest.raises(ValueError):
+        parse_model_recipe_proposal("I can help you make dinner.", name="dinner")
 
 
 def test_pasted_recipe_import_extracts_bounded_ingredients_and_instructions():

@@ -452,6 +452,7 @@ _DOMAIN_RULES["career"] = (
 # source ACI's binding registry directly from its canonical owners.
 from src.legacy_domain_contract import DOMAIN_TOOL_MAP as _DOMAIN_TOOL_MAP
 from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings, tools_for_domains
+from src.recipe_import import parse_model_recipe_proposal
 from src.tool_overrides import get_builtin_overrides
 _canonical_tools_for_domains = tools_for_domains
 _DOMAIN_RULES["asset_inventory"] = (
@@ -4678,6 +4679,50 @@ async def stream_aci_runtime(
                 + chr(10)
             )
             continue
+
+        # Text-only local models sometimes describe a recipe and simulate a
+        # tool result instead of emitting the documented invoke block. If the
+        # response contains an explicit bounded ingredient section, convert
+        # only that untrusted proposal into the canonical recipe_add action.
+        # The recipe service still validates and persists it; prose without a
+        # concrete list remains a truthful non-completion.
+        if (
+            _aci_recipe_composition_route
+            and _first_class_action_repair_count >= 1
+            and not tool_blocks
+            and not native_tool_calls
+            and not tool_events
+        ):
+            _dish_match = re.search(
+                r"\b(?:make|cook|prepare)\s+(.+?)(?=\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal))\b|[.!?,]|$)",
+                _last_user,
+                re.IGNORECASE,
+            )
+            _dish_name = _dish_match.group(1).strip() if _dish_match else ""
+            try:
+                _recipe_candidate = parse_model_recipe_proposal(
+                    round_response, name=_dish_name,
+                )
+            except ValueError:
+                _recipe_candidate = None
+            if _recipe_candidate is not None:
+                if round_response and full_response.endswith(round_response):
+                    full_response = full_response[:-len(round_response)]
+                tool_blocks.append(ToolBlock(
+                    "manage_assets",
+                    json.dumps({
+                        "action": "recipe_add",
+                        "domain": "kitchen",
+                        "recipe_name": _recipe_candidate["name"],
+                        "servings": _recipe_candidate["servings"],
+                        "ingredients": _recipe_candidate["ingredients"],
+                        "source": "model_proposal",
+                    }, sort_keys=True),
+                ))
+                logger.info(
+                    "[agent] bounded recipe proposal fallback ingredients=%s",
+                    len(_recipe_candidate["ingredients"]),
+                )
 
         # A strict-text local model can ignore the repair instruction again.
         # For an explicitly scoped network request, finish capability
