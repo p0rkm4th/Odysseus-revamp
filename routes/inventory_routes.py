@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from datetime import date, datetime, timezone
-import json
 import logging
 import re
 from typing import Any
@@ -25,7 +24,7 @@ from src.inventory_service import (
     InventoryNotFound,
     get_inventory_service,
 )
-from src.recipe_import import extract_pdf_text, parse_recipe_text
+from src.recipe_import import extract_pdf_text, parse_recipe_text, recipe_text_from_web_result
 from src.owner_identity import effective_storage_owner
 
 
@@ -228,11 +227,11 @@ def setup_inventory_routes(
         source_kind = "text"
         source_url = None
         if url:
-            from src.agent_tools.web_tools import WebFetchTool
-            fetched = await WebFetchTool().execute(json.dumps({"url": url}), {})
-            if fetched.get("exit_code", 1) != 0:
+            from services.search.content import fetch_webpage_content
+            fetched = await asyncio.to_thread(fetch_webpage_content, url)
+            if not fetched.get("success"):
                 raise HTTPException(422, fetched.get("error") or "recipe URL could not be read")
-            source_text = str(fetched.get("output") or "")
+            source_text = recipe_text_from_web_result(fetched)
             source_kind = "url"
             source_url = url
         elif attachment_ids:
