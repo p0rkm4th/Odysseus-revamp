@@ -203,6 +203,23 @@ def test_multi_item_grocery_mutation_creates_individual_canonical_items():
     assert {row["name"] for row in rows} == {"eggs", "milk", "rice"}
 
 
+def test_multi_item_grocery_mutation_discards_model_recipe_phrase():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    result = service.manage_inventory({
+        "action": "add_item",
+        "items": ["spaghetti", "tomato sauce", "the ingredients I am missing"],
+        "shopping_list": True,
+        "domain": "kitchen",
+        "item_kind": "ingredient",
+    }, owner="alice")
+
+    assert result["count"] == 2
+    assert {row["name"] for row in service.list_items("alice", list_name="grocery")} == {
+        "spaghetti", "tomato sauce",
+    }
+
+
 def test_model_facing_stock_actions_resolve_canonical_name_and_replay_safely():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
