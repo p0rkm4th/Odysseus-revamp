@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Any, Optional, TYPE_CHECKING
 
 from src.tool_approval_scopes import (
+    CHAT_SESSION_APPROVED_ACTIONS,
     CHAT_SESSION_APPROVAL_CONTEXT_MARKER,
     CHAT_SESSION_APPROVAL_DECISION,
 )
@@ -63,6 +64,48 @@ def _history_grants_chat_session_approval(
             ):
                 return True
     return False
+
+
+def _history_chat_session_actions(
+    history: List["ChatMessage"],
+    session_id: str,
+) -> list[str]:
+    """Return server-recorded tool/action identities approved for this chat."""
+    expected_session = str(session_id or "")
+    actions: list[str] = []
+    if not expected_session:
+        return actions
+    for message in reversed(history or []):
+        metadata = getattr(message, "metadata", None)
+        if not isinstance(metadata, dict):
+            continue
+        tool_events = metadata.get("tool_events")
+        if not isinstance(tool_events, list):
+            continue
+        for event in reversed(tool_events):
+            ask_user = event.get("ask_user") if isinstance(event, dict) else None
+            if not isinstance(ask_user, dict) or (
+                ask_user.get("kind") != "tool_approval"
+                or ask_user.get("resolved") != CHAT_SESSION_APPROVAL_DECISION
+                or str(ask_user.get("session_id") or "") != expected_session
+            ):
+                continue
+            action = ask_user.get("action") if isinstance(ask_user.get("action"), dict) else {}
+            tool = str(action.get("tool") or "").strip()
+            content = str(action.get("content") or "").strip()
+            if not tool:
+                continue
+            action_id = ""
+            try:
+                import json
+                parsed = json.loads(content or "{}")
+                action_id = str(parsed.get("action") or "").strip().casefold() if isinstance(parsed, dict) else ""
+            except (TypeError, ValueError):
+                pass
+            key = f"{tool}:{action_id or '*'}"
+            if key not in actions:
+                actions.append(key)
+    return actions
 
 
 @dataclass
@@ -167,6 +210,9 @@ class Session:
             message = dict(messages[index])
             metadata = dict(message.get("metadata") or {})
             metadata[CHAT_SESSION_APPROVAL_CONTEXT_MARKER] = True
+            actions = _history_chat_session_actions(self.history, self.id)
+            if actions:
+                metadata[CHAT_SESSION_APPROVED_ACTIONS] = actions
             message["metadata"] = metadata
             messages[index] = message
             break

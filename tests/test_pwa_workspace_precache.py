@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_service_worker_precaches_current_product_workspaces_and_bumps_cache():
     sw = (ROOT / "static/sw.js").read_text()
-    assert "odysseus-v381-product-workspaces" in sw
+    assert "const CACHE_NAME = 'hades-v384-hades-mark';" in sw
     for path in (
         "/static/js/ui-components.js",
         "/static/js/workspaceWindowManager.js",

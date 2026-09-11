@@ -59,6 +59,47 @@ def test_work_run_projection_does_not_invoke_legacy_agent_classifier(monkeypatch
     ) == "run-aci-owned"
 
 
+def test_household_mutation_attaches_to_a_durable_run_for_operation_scoping(monkeypatch):
+    captured = {}
+
+    def fake_ensure(owner, session_id, query, **kwargs):
+        captured.update({"owner": owner, "session_id": session_id, "query": query, **kwargs})
+        return "run-inventory-mutation"
+
+    monkeypatch.setattr("src.agent_work_bridge.ensure_agent_run", fake_ensure)
+    run_id = chat_helpers.ensure_chat_agent_work_run(
+        "alice", "chat-inventory", "Add 250 g of rice to the pantry.", enabled=True,
+    )
+    assert run_id == "run-inventory-mutation"
+    assert captured["intent"]["domain_concept"] == "HOUSEHOLD_ITEM"
+    assert captured["intent"]["operation_class"] == "UPDATE"
+
+
+def test_network_service_followup_carries_sealed_discovery_reference(monkeypatch):
+    captured = {}
+
+    def fake_ensure(owner, session_id, query, **kwargs):
+        captured.update({"owner": owner, "session_id": session_id, "query": query, **kwargs})
+        return "run-network-service-followup"
+
+    monkeypatch.setattr("src.agent_work_bridge.ensure_agent_run", fake_ensure)
+    monkeypatch.setattr(
+        "src.agent_work_bridge.recent_session_network_discovery_context",
+        lambda owner, session_id: {
+            "network_discovery_targets": ["192.168.10.4"],
+            "network_discovery_run_id": "run-network-discovery",
+        },
+    )
+
+    run_id = chat_helpers.ensure_chat_agent_work_run(
+        "alice", "chat-network", "Check port 22 on the responding hosts",
+        enabled=True,
+    )
+
+    assert run_id == "run-network-service-followup"
+    assert captured["reference_context"]["network_discovery_targets"] == ["192.168.10.4"]
+
+
 def test_asset_detail_read_is_deferred_until_reference_is_resolved(monkeypatch):
     """The route must not terminalize a Run with an asset-less ``get``."""
     captured = {}

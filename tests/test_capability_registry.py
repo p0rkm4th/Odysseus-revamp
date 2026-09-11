@@ -59,6 +59,7 @@ def test_network_discovery_is_host_brokered_and_private_scope_bound():
     action = capability.actions["execute_network_discovery"]
     assert action.executor_key == "manage_homelab"
     assert action.approval is ApprovalMode.EXACT
+    assert action.effects == ("brokered_network_read",)
     assert action.execution_location == "host_broker"
     assert action.target_scope == "private_network"
     assert action.requires_direct_container_access is False
@@ -74,6 +75,7 @@ def test_network_service_enumeration_is_a_distinct_bounded_host_broker_action():
     action = capability.actions["execute_network_service_enumeration"]
     assert action.executor_key == "manage_homelab"
     assert action.approval is ApprovalMode.EXACT
+    assert action.effects == ("brokered_network_read",)
     assert action.execution_location == "host_broker"
     assert action.target_scope == "private_network"
     assert action.requires_direct_container_access is False
@@ -81,6 +83,11 @@ def test_network_service_enumeration_is_a_distinct_bounded_host_broker_action():
     assert action.locks == ("network:private_scope",)
     assert action.precheck_actions == ("plan_network_service_enumeration",)
     assert action.verification == ("service_observations_persisted", "network_map_reconciled")
+
+
+def test_workspace_shell_remains_exact_approval_gated():
+    action = capability_for_tool("yolo_shell").actions["execute"]
+    assert action.approval is ApprovalMode.EXACT
 
 
 def test_security_classifier_projects_status_and_install_effects():

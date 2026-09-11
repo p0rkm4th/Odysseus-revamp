@@ -44,6 +44,42 @@ _WORK_OWNER = re.compile(
     r"\b(?:my|me|we|i(?:'m|\s+am)?|i\s+have|have\s+i|i(?:'ve)?\s+got)\b",
     re.IGNORECASE,
 )
+_FINANCE_SUBJECT = re.compile(
+    r"\b(?:spend|spent|spending|expense|expenses|budget|budgeting|inflow|outflow|cash\s+flow|transaction|transactions|financial|finance|finances|money|bank|banking|income|incomes|paycheck|paychecks|deposit|deposits|salary|earnings|paid|earned)\b",
+    re.IGNORECASE,
+)
+_FINANCE_FILE_CONTEXT = re.compile(
+    r"(?:\b(?:csv|statement|export)\b.{0,48}\b(?:finance|financial|finances|bank|transaction|spend|expense)\b|"
+    r"\b(?:finance|financial|finances|bank|transaction|spend|expense)\b.{0,48}\b(?:csv|statement|export)\b)",
+    re.IGNORECASE,
+)
+_FINANCE_RANKED_TRANSACTIONS = re.compile(
+    r"\b(?:most\s+expensive|largest|biggest|highest|top)\b.{0,48}\b"
+    r"(?:charge|charges|purchase|purchases|transaction|transactions|line\s+items?)\b",
+    re.IGNORECASE,
+)
+_FINANCE_PAYCHECKS = re.compile(
+    r"\b(?:paychecks?|pay\s+checks?|salary|salaries|deposits?|income|earnings?|paid|earned)\b",
+    re.IGNORECASE,
+)
+_HOUSEHOLD_SUBJECT = re.compile(
+    r"\b(?:pantry|fridge|freezer|grocery|groceries|shopping\s+list|"
+    r"kitchen\s+inventory|household\s+stock|shared\s+(?:pantry|fridge|groceries?))\b",
+    re.IGNORECASE,
+)
+_HOUSEHOLD_READ = re.compile(
+    r"\b(?:what\s+(?:do\s+(?:i|we)|have\s+i)\s+have|what(?:'s|\s+is)\s+in|"
+    r"show|list|how\s+much|do\s+(?:i|we)\s+have|is\s+there|are\s+there|check)\b",
+    re.IGNORECASE,
+)
+_FINANCE_OVERVIEW = re.compile(
+    r"\b(?:go\s+over|walk\s+(?:me\s+)?through|review|look\s+at|check|tell\s+me\s+about|summari[sz]e|analy[sz]e|"
+    r"insight(?:s)?|guidance|advice|advise|pattern(?:s)?|trend(?:s)?|what\s+stands\s+out|"
+    r"break\s+down|breakdown|biggest\s+drivers?|top\s+drivers?|"
+    r"where\s+can\s+i\s+(?:cut|save)|what\s+should\s+i\s+(?:review|look\s+at)|"
+    r"(?:all|total)\s+(?:my|our)\s+(?:finances?|financial\s+activity|money|spending))\b",
+    re.IGNORECASE,
+)
 _ASSET_SUBJECT = re.compile(
     r"\b(?:it\s+assets?|assets?|tech(?:nical)?|computers?|machines?|hardware|"
     r"computational\s+(?:assets?|hardware)|boxes?|gear|"
@@ -118,8 +154,8 @@ def _normalized(text: str) -> str:
     # slips from changing the semantic class.  This is intentionally a token
     # normalization layer, not a list of benchmark sentences.
     tokens = {
-        "abotu": "about", "abt": "about", "bout": "about",
-        "yuo": "you", "teh": "the", "wht": "what",
+        "abotu": "about", "abt": "about", "bout": "about", "howmuch": "how much",
+        "yuo": "you", "teh": "the", "wht": "what", "walkme": "walk me",
     }
     value = re.sub(r"\b[^\s]+\b", lambda match: tokens.get(match.group(0), match.group(0)), value)
     value = re.sub(r"\s+", " ", value).strip(" .?!")
@@ -129,6 +165,16 @@ def _normalized(text: str) -> str:
 def deterministic_read_concept(text: str) -> str | None:
     """Return an existing DomainContract concept for an unambiguous read."""
     query = _normalized(text)
+    # A budget phrase can occur as a constraint on a cooking request ("what
+    # can I cook without spending much?").  That is still primarily a recipe
+    # availability question; routing it to Finance alone drops the requested
+    # meal outcome.  Keep this narrow so ordinary spending questions remain
+    # Finance reads.
+    recipe_budget_request = (
+        re.search(r"\b(?:cook|cooking|make|prepare|meal|dinner|recipe|recipes)\b", query)
+        and re.search(r"\b(?:budget|cheap|cheapest|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost)\b", query)
+        and re.search(r"\b(?:what|which|suggest|can\s+i|help\s+me|tonight|today)\b", query)
+    )
     # Operational health questions also commonly begin with ``are``/``is``
     # ("Are my services alive?", "Is anything unhealthy?").  Let the
     # already-composed infrastructure predicate admit those forms without
@@ -137,6 +183,18 @@ def deterministic_read_concept(text: str) -> str | None:
         not _READ_REQUEST.search(query)
         and not _INFRASTRUCTURE_STATUS.search(query)
         and not _HOST_INSPECTION.search(query)
+        and not (
+            (_FINANCE_SUBJECT.search(query) or _FINANCE_FILE_CONTEXT.search(query))
+            and (
+                re.search(r"\b(?:how|what|which|where|who|show|list|is|are|did|have|check)\b", query)
+                or _FINANCE_OVERVIEW.search(query)
+                or (_FINANCE_FILE_CONTEXT.search(query) and re.search(r"\b(?:uploaded|imported|attached|earlier|already)\b", query))
+            )
+        )
+        and not (
+            _FINANCE_RANKED_TRANSACTIONS.search(query)
+            and re.search(r"\b(?:what|which|show|list|tell|give|provide|identify)\b", query)
+        )
         and not (
             _NETWORK_SUBJECT.search(query)
             and re.search(r"\b(?:current(?:ly)?|now|figure\s+it\s+out|explore)\b", query)
@@ -150,6 +208,40 @@ def deterministic_read_concept(text: str) -> str | None:
         return None
     if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
         return None
+    if recipe_budget_request:
+        return "RECIPE"
+    if (
+        (_FINANCE_SUBJECT.search(query) or _FINANCE_FILE_CONTEXT.search(query))
+        and (
+            re.search(r"\b(?:how\s+much|what|which|where|who|show|list|is|are|did|have|check)\b", query)
+            or _FINANCE_OVERVIEW.search(query)
+            or (_FINANCE_FILE_CONTEXT.search(query) and re.search(r"\b(?:uploaded|imported|attached|earlier|already)\b", query))
+        )
+    ):
+        return "FINANCE"
+    # Recipe availability questions are a distinct canonical projection from
+    # both the saved-recipe list and household stock.  Route them to the
+    # deterministic stock planner rather than asking the model to reason over
+    # an absent ledger dump.
+    if (
+        re.search(r"\b(?:what|which|show|give|suggest)\b", query)
+        and re.search(r"\b(?:can\s+i\s+(?:make|cook|prepare)|make\s+with\s+what\s+i\s+have|"
+                      r"without\s+going\s+to\s+the\s+store|easy(?:\s+\w+){0,3}\s+(?:dinner|meal)|"
+                      r"recipes?\s+where\s+i(?:'m|\s+am)?\s+only\s+missing)\b", query)
+    ):
+        return "RECIPE"
+    # Saved recipes are a distinct canonical collection from household stock.
+    # Route recipe-list questions to the existing recipe action instead of the
+    # broader household overview, which otherwise makes pantry items appear
+    # to be recipes.
+    if re.search(r"\b(?:recipe|recipes|cooking\s+recipes|saved\s+recipes)\b", query) and re.search(
+        r"\b(?:what|which|show|list|have|saved)\b", query,
+    ):
+        return "RECIPE"
+    if _HOUSEHOLD_SUBJECT.search(query) and _HOUSEHOLD_READ.search(query):
+        return "HOUSEHOLD_ITEM"
+    if _FINANCE_RANKED_TRANSACTIONS.search(query):
+        return "FINANCE"
     if _MEMORY_STORE_QUERY.search(query) and not re.search(
         r"\b(?:file|files|document|documents|secret|secrets|password|passwords)\b",
         query,
@@ -269,4 +361,12 @@ def deterministic_read_view(text: str, concept: str | None) -> str | None:
         return "context"
     if concept == "WORK" and re.search(r"\b(?:attention|on\s+my\s+plate|needs?\s+attention)\b", query):
         return "attention"
+    if concept == "FINANCE":
+        if _FINANCE_PAYCHECKS.search(query): return "transactions"
+        if _FINANCE_RANKED_TRANSACTIONS.search(query): return "transactions"
+        if re.search(r"\b(?:transaction|transactions|recent)\b", query): return "transactions"
+        if re.search(r"\b(?:inflow|outflow|cash\s+flow)\b", query): return "cash_flow"
+        if _FINANCE_OVERVIEW.search(query): return "spending"
+        if re.search(r"\b(?:spend|spent|spending|expense|expenses|merchant|restaurant|budget)\b", query): return "spending"
+        return "coverage"
     return None

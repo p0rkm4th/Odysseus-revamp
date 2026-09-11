@@ -2,11 +2,12 @@
 
 import argparse
 import json
+from pathlib import Path
 
 import pytest
 
 from src import asset_inventory as inventory
-from src.agent_loop import _assemble_prompt, _asset_read_request
+from src.agent_loop import _assemble_prompt, _asset_read_request, _recipe_queue_continuation
 from src.capability_registry import requires_exact_approval
 from src.intent_contracts import canonical_read_action, is_explicit_continuation
 
@@ -15,6 +16,26 @@ def test_canonical_read_projection_preserves_setup_integration_view():
     assert canonical_read_action("INTEGRATION", {"view": "integrations"}) == "integrations"
     assert canonical_read_action("INTEGRATION", {}) == "state"
     assert canonical_read_action("WORK", {"view": "attention"}) == "attention"
+
+
+@pytest.mark.asyncio
+async def test_asset_cli_uses_trusted_source_root_not_deployment_cwd(monkeypatch):
+    import src.tool_execution as tool_execution
+
+    seen = {}
+
+    def fake_run(argv, *, cwd, text, capture_output, timeout, check):
+        seen.update({"argv": argv, "cwd": cwd, "timeout": timeout})
+        return type("Completed", (), {"stdout": "[]", "stderr": "", "returncode": 0})()
+
+    monkeypatch.setattr(tool_execution._ody_v34_subprocess, "run", fake_run)
+    block = type("Block", (), {"content": json.dumps({"action": "list"})})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert seen["cwd"] == str(Path(tool_execution.__file__).resolve().parent.parent)
+    assert seen["cwd"] != "/app"
 from src.privileged_broker import (
     peer_is_allowed,
     validate_packages,
@@ -94,6 +115,12 @@ def test_broker_peer_boundary_requires_pid_uid_and_gid():
     assert not peer_is_allowed(2, 1000, 1000, 1, 1000, 1000)
     assert not peer_is_allowed(1, 1001, 1000, 1, 1000, 1000)
     assert not peer_is_allowed(1, 1000, 1001, 1, 1000, 1000)
+
+
+def test_read_only_broker_pid_zero_is_same_user_fallback_not_pid_zero():
+    assert peer_is_allowed(43210, 1000, 1000, 0, 1000, 1000)
+    assert not peer_is_allowed(43210, 1001, 1000, 0, 1000, 1000)
+    assert not peer_is_allowed(43210, 1000, 1001, 0, 1000, 1000)
 
 
 def test_privileged_actions_are_action_aware_and_policy_still_wins():
@@ -295,6 +322,251 @@ async def test_kitchen_mutation_binding_delegates_to_existing_inventory_service(
     assert result["success"] is True
     assert result["canonical_store"] == "inventory_service"
     assert result["provenance"] == "USER_ASSERTED"
+    assert result["data"]["item"]["id"] == "pasta-1"
+
+
+@pytest.mark.asyncio
+async def test_inventory_specific_action_without_optional_domain_marker_stays_on_inventory_path(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeInventoryTool:
+        async def execute(self, content, ctx):
+            assert json.loads(content)["action"] == "add_item"
+            assert ctx["owner"] == "alice"
+            return {"item": {"id": "rice-1"}, "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageInventoryTool", FakeInventoryTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "add_item", "name": "rice",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+
+
+@pytest.mark.asyncio
+async def test_grocery_read_binding_delegates_to_canonical_inventory_service(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeInventoryTool:
+        async def execute(self, content, ctx):
+            payload = json.loads(content)
+            assert payload == {"action": "list", "domain": "kitchen", "list_name": "grocery"}
+            assert ctx["owner"] == "alice"
+            return {"items": [{"id": "rice-1", "name": "Rice", "shopping_list": True}], "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageInventoryTool", FakeInventoryTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "list", "domain": "kitchen", "list_name": "grocery",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+    assert result["items"][0]["name"] == "Rice"
+
+
+@pytest.mark.asyncio
+async def test_grocery_unqueue_delegates_to_canonical_inventory_service(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeInventoryTool:
+        async def execute(self, content, ctx):
+            payload = json.loads(content)
+            assert payload == {"action": "remove_from_grocery", "name": "ketchup"}
+            assert ctx["owner"] == "alice"
+            return {"item": {"id": "ketchup-1", "shopping_list": False}, "removed": True, "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageInventoryTool", FakeInventoryTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "remove_from_grocery", "name": "ketchup",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+    assert result["removed"] is True
+
+
+@pytest.mark.asyncio
+async def test_recipe_actions_are_exposed_through_the_canonical_inventory_binding(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeRecipeTool:
+        async def execute(self, content, ctx):
+            payload = json.loads(content)
+            assert payload["action"] == "queue_missing"
+            assert payload["recipe_id"] == "recipe-1"
+            assert ctx["owner"] == "alice"
+            return {"recipe_id": "recipe-1", "queued": [], "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageRecipesTool", FakeRecipeTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "recipe_queue_missing", "recipe_id": "recipe-1",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+    assert result["provenance"] == "CANONICAL_RECIPE"
+    assert result["data"]["recipe_id"] == "recipe-1"
+
+
+@pytest.mark.asyncio
+async def test_recipe_queue_binding_verifies_canonical_grocery_readback(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.inventory_service as inventory_service
+    import src.tool_execution as tool_execution
+
+    class FakeRecipeTool:
+        async def execute(self, content, ctx):
+            return {
+                "recipe_id": "recipe-1",
+                "queued": [{"item": {"id": "item-tomato"}, "missing": 1, "unit": "jar"}],
+                "count": 1,
+                "exit_code": 0,
+            }
+
+    class FakeInventoryService:
+        def get_item(self, owner, item_id):
+            assert owner == "alice"
+            assert item_id == "item-tomato"
+            return {"id": item_id, "name": "tomato sauce", "shopping_list": True}
+
+        def list_lots(self, owner, item_id):
+            return []
+
+    monkeypatch.setattr(inventory_tools, "ManageRecipesTool", FakeRecipeTool)
+    monkeypatch.setattr(inventory_service, "get_inventory_service", lambda: FakeInventoryService())
+    block = type("Block", (), {"content": json.dumps({
+        "action": "recipe_queue_missing", "recipe_id": "recipe-1",
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["data"]["verification"]["status"] == "VERIFIED"
+    assert result["data"]["verification"]["readback"]["grocery_items"][0]["item"]["shopping_list"] is True
+
+
+@pytest.mark.asyncio
+async def test_recipe_binding_normalizes_model_dish_name_and_json_ingredient_names(monkeypatch):
+    import src.agent_tools.inventory_tools as inventory_tools
+    import src.tool_execution as tool_execution
+
+    class FakeRecipeTool:
+        async def execute(self, content, ctx):
+            payload = json.loads(content)
+            assert payload["action"] == "add"
+            assert payload["name"] == "Spaghetti Bolognese"
+            assert payload["ingredients"] == [
+                {"name": "spaghetti", "quantity": 1, "unit": "each"},
+                {"name": "tomato sauce", "quantity": 1, "unit": "each"},
+            ]
+            assert ctx["owner"] == "alice"
+            return {"recipe": {"id": "recipe-spaghetti"}, "exit_code": 0}
+
+    monkeypatch.setattr(inventory_tools, "ManageRecipesTool", FakeRecipeTool)
+    block = type("Block", (), {"content": json.dumps({
+        "action": "recipe_add",
+        "dish_name": "Spaghetti Bolognese",
+        "ingredients": '["spaghetti", "tomato sauce"]',
+    })})()
+    binding, result = await tool_execution._execute_manage_assets_binding(block, owner="alice")
+    assert binding == "manage_assets"
+    assert result["success"] is True
+    assert result["canonical_store"] == "inventory_service"
+
+
+def test_recipe_composition_continues_from_saved_recipe_to_canonical_grocery_queue():
+    result = {
+        "output": json.dumps({
+            "success": True,
+            "recipe": {"id": "recipe-spaghetti"},
+        }),
+        "exit_code": 0,
+    }
+    block = _recipe_queue_continuation(result, composition_route=True)
+    assert block is not None
+    assert block.tool_type == "manage_assets"
+    assert json.loads(block.content) == {
+        "action": "recipe_queue_missing",
+        "domain": "kitchen",
+        "recipe_id": "recipe-spaghetti",
+    }
+
+    already_queued = type("Block", (), {"content": json.dumps({
+        "action": "recipe_queue_missing_by_name", "query": "spaghetti",
+    })})()
+    assert _recipe_queue_continuation(
+        result,
+        composition_route=True,
+        following_blocks=[already_queued],
+    ) is None
+
+
+@pytest.mark.asyncio
+async def test_missing_recipe_error_preserves_actionable_owner_guidance(monkeypatch):
+    from src.agent_tools import inventory_tools
+    from src.inventory_service import InventoryNotFound
+
+    class MissingRecipeService:
+        def manage_recipes(self, _args, *, owner):
+            raise InventoryNotFound("recipe not found")
+
+    monkeypatch.setattr(inventory_tools, "_load_inventory_service", lambda: MissingRecipeService())
+    result = await inventory_tools.ManageRecipesTool().execute(
+        '{"action":"queue_missing_by_name","query":"spaghetti"}', {"owner": "alice"},
+    )
+    assert result["exit_code"] == 1
+    assert "Import or paste the recipe first" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_recipe_error_preserves_owner_choice_guidance(monkeypatch):
+    from src.agent_tools import inventory_tools
+    from src.inventory_service import InventoryError
+
+    class AmbiguousRecipeService:
+        def manage_recipes(self, _args, *, owner):
+            raise InventoryError("More than one saved recipe matched that dish; choose one.")
+
+    monkeypatch.setattr(inventory_tools, "_load_inventory_service", lambda: AmbiguousRecipeService())
+    result = await inventory_tools.ManageRecipesTool().execute(
+        '{"action":"missing_by_name","query":"spaghetti"}', {"owner": "alice"},
+    )
+    assert result["exit_code"] == 1
+    assert result["error_code"] == "recipe_ambiguous"
+    assert "multiple saved recipes" in result["error"]
+
+
+def test_clarification_stream_has_one_accumulation_path():
+    source = Path("src/agent_loop.py").read_text()
+    marker = "if _aci_clarification_only:\n                # The outer round accumulator"
+    assert marker in source
+    assert 'yield "data: " + json.dumps({"delta": _aci_clarification_text})' not in source
+    assert "_ody_qwen_finetune_model and not _aci_clarification_only" in source
+    route = Path("routes/chat_routes.py").read_text()
+    assert 'data.get("clarification")' in route
+
+
+def test_recipe_placeholder_does_not_become_a_grocery_item():
+    from src.inventory_service import InventoryError, RecipeService
+
+    service = RecipeService()
+    with pytest.raises(InventoryError, match="individual grocery items"):
+        service.manage_inventory(
+            {
+                "action": "add_item",
+                "name": "ingredients",
+                "list_name": "grocery",
+                "shopping_list": True,
+            },
+            owner="scotty",
+        )
 
 
 def test_canonical_asset_reads_are_read_only_and_need_no_approval():
@@ -303,6 +575,15 @@ def test_canonical_asset_reads_are_read_only_and_need_no_approval():
     assert action.effects == ("read_private",)
     assert action.approval.value == "none"
     assert requires_exact_approval("manage_assets", {"action": "list"}) is False
+
+
+def test_recipe_reads_are_read_only_capability_actions():
+    from src.capability_registry import action_for_tool
+
+    for action_name in ("recipe_list", "recipe_suggest", "recipe_search", "recipe_get", "recipe_missing", "recipe_missing_by_name", "recipe_can_make"):
+        action = action_for_tool("manage_assets", {"action": action_name})
+        assert action is not None and action.known
+        assert action.effects == ("read_private",)
 
 
 def test_tainted_run_still_allows_registered_owner_scoped_reads():
@@ -315,8 +596,17 @@ def test_tainted_run_still_allows_registered_owner_scoped_reads():
         ("manage_homelab", {"action": "read_network_context"}),
     ):
         assert security.decision_for(tool, payload).allowed is True
+    # Bounded host-brokered discovery is a read. External context does not
+    # create a second interactive approval card; the owner-bound plan receipt
+    # and broker still enforce scope and execution.
     assert security.decision_for(
         "manage_homelab", {"action": "execute_network_discovery", "cidr": "10.0.0.0/24"}
+    ).allowed is True
+    assert security.decision_for(
+        "manage_assets", {"action": "remove_from_grocery", "name": "basil-test"}
+    ).allowed is True
+    assert security.decision_for(
+        "yolo_shell", {"action": "execute", "command": "id"}
     ).allowed is False
 
 

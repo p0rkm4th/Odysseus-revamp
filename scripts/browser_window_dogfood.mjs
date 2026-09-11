@@ -29,12 +29,16 @@ async function desktop() {
   if (await page.locator('[data-view="it-asset"][data-entity="cmdb-test-1"]').count() !== 1) throw new Error('cross-domain window failed');
   const w = page.locator('[data-view="network"][data-entity="cmdb-test-1"]');
   await page.evaluate(() => window.hadesWindowManager.focus('network:cmdb-test-1'));
-  await w.getByLabel('Snap left').click({ force: true });
+  // Snap/maximize remain supported window-manager operations, but the
+  // default Hades titlebar intentionally keeps those advanced controls out
+  // of the everyday chrome. Exercise the public manager contract rather
+  // than reaching through a hidden control cluster.
+  await page.evaluate(() => window.hadesWindowManager.snap('network:cmdb-test-1', 'left'));
   await w.getByLabel('Minimize').click();
   if (await w.isVisible()) throw new Error('minimize failed');
   await page.getByRole('button', { name: 'Network device' }).click();
   if (!await w.isVisible()) throw new Error('restore failed');
-  await w.getByLabel('Maximize').click();
+  await page.evaluate(() => window.hadesWindowManager.snap('network:cmdb-test-1', 'maximize'));
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => !!window.hadesWindowManager);
   await page.waitForTimeout(500);

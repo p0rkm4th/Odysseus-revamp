@@ -6,7 +6,7 @@ needed by those supported capabilities on a known platform.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 import os
 import platform
@@ -49,7 +49,7 @@ class DependencySpec:
 
     dependency_id: str
     binary: str
-    packages: Mapping[str, str] = MappingProxyType({})
+    packages: Mapping[str, str] = field(default_factory=lambda: MappingProxyType({}))
     minimum_version: str | None = None
     installation_class: InstallationClass = InstallationClass.HOST_PACKAGE
     verification: tuple[str, ...] = ()

@@ -81,3 +81,62 @@ def test_control_center_is_visible_and_inspects_durable_run_state():
     assert "openIntegrationCenter" in app
     assert "/api/setup-center/integrations" in integrations
     assert "secrets hidden" in integrations
+
+
+def test_integration_center_normalizes_legacy_character_split_capabilities():
+    integrations = (ROOT / "static/js/integrationCenter.js").read_text()
+    assert "capabilityLabels" in integrations
+    assert "rawLabels.every(label => label.length === 1)" in integrations
+    assert "rawLabels.join('').split" in integrations
+
+
+def test_recipe_missing_action_carries_canonical_recipe_id_from_library_card():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    assert 'data-action="queue-missing"' in inventory
+    assert 'data-recipe-id="${escapeHtml(recipe.id)}"' in inventory
+
+
+def test_recipe_library_has_owner_facing_hierarchy_and_roomier_window():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    manager = (ROOT / "static/js/workspaceWindowManager.js").read_text()
+    styles = (ROOT / "static/style.css").read_text()
+    assert "What can we cook?" in inventory
+    assert "recipe-card-grid" in inventory
+    assert "Ingredient check" in inventory
+    assert "NEXT STEP" in inventory
+    assert "Ingredients to buy" in inventory
+    assert 'aria-label="${missing ? \'Missing\' : \'On hand\'}"' in inventory
+    assert "recipe-detail-shortage" in inventory
+    assert "kind === 'view' ? ''" in inventory
+    assert "recipe-serving-count" in inventory
+    assert "data-action=\"recipe-plan\"" in inventory
+    assert "data-serving-count" in inventory
+    assert "initialRect" in manager
+    assert ".recipe-card-body" in styles
+    assert ".recipe-preview { display:grid; grid-template-columns:1fr;" in styles
+    assert ".hades-workspace-window .inventory-tabs { flex-wrap:wrap; overflow:visible; }" in styles
+    assert ".recipe-detail-check .recipe-ingredient-list" in styles
+    assert ".recipe-serving-control" in styles
+    assert ".recipe-stat-ready" in styles
+
+
+def test_recipe_library_surfaces_primary_action_before_long_ingredient_preview():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    assert 'recipe-card-actions recipe-card-actions-top' in inventory
+    assert inventory.index('recipe-card-actions recipe-card-actions-top') < inventory.index('recipe-card-body')
+
+
+def test_grocery_purchase_requires_a_storage_area_and_restores_owned_stock_view():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    assert 'Store in<select name="storage_area" required>' in inventory
+    assert "storage_area:data.storage_area || 'pantry'" in inventory
+    assert "shopping_list:false" in inventory
+
+
+def test_household_sharing_uses_explicit_status_and_action_regions():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    styles = (ROOT / "static/style.css").read_text()
+    assert "inventory-sharing-state" in inventory
+    assert "inventory-sharing-actions" in inventory
+    assert "Make members read-only" in inventory
+    assert ".inventory-sharing-row" in styles

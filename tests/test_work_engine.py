@@ -202,6 +202,7 @@ def test_exact_work_approval_binding_and_resume(db):
     resumed=svc.resume_approved_action("alice", action["id"], "approval-1", digest=action["sealed_input_digest"])
     assert resumed["status"] == "approved"
     assert svc.complete_action("alice", action["id"], {})["status"] == "completed"
+    assert svc.bind_approval("alice", action["id"], "approval-1")["replayed"] is True
     assert svc.resume_approved_action("alice", action["id"], "approval-1")["replayed"] is True
 
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
-import argparse, concurrent.futures, datetime as dt, errno, fcntl, ipaddress, json, os
+import argparse, concurrent.futures, datetime as dt, errno, fcntl, ipaddress, json, os, re
 from pathlib import Path
 import shutil, socket, sqlite3, struct, subprocess, uuid
+from src.constants import DATA_DIR
 
-DB_PATH = Path(os.environ.get("ODY_ASSET_DB", "/app/data/assets/assets.db"))
+DB_PATH = Path(os.environ.get("ODY_ASSET_DB", Path(DATA_DIR) / "assets" / "assets.db"))
 COMMON_PORTS = (22, 53, 80, 443, 445, 3389, 8000, 8080, 8443)
 
 def now(): return dt.datetime.now(dt.timezone.utc).isoformat()
@@ -367,7 +368,40 @@ def bind_legacy_owner(owner):
     c.commit()
     return {"owner": owner, "assets_bound": assets, "observations_bound": observations, "preserved": True}
 
-def reconcile_candidate(owner, candidate, decision, *, name=None, asset_type="network_device"):
+_SSH_USER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+_SSH_HOST = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,252}$")
+
+
+def _ssh_metadata(*, ssh_host=None, ssh_user=None, ssh_port=None, observed_host=None):
+    """Validate optional non-secret SSH target metadata for a CMDB asset.
+
+    This deliberately stores no password, key, token, or command.  The SSH
+    executor continues to obtain credentials from its existing environment.
+    A host may be supplied by the owner or, for a scan candidate, may be the
+    observed IP; a username is always required before an SSH target is stored.
+    """
+    values = [ssh_host, ssh_user, ssh_port]
+    if not any(value not in (None, "") for value in values):
+        return {}
+    host = str(ssh_host or observed_host or "").strip()
+    user = str(ssh_user or "").strip()
+    if not host or not _SSH_HOST.fullmatch(host):
+        raise ValueError("SSH host must be a hostname or IP address")
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        if len(host) > 253 or not all(1 <= len(label) <= 63 and not label.startswith("-") and not label.endswith("-") for label in host.split(".")):
+            raise ValueError("SSH host must be a hostname or IP address")
+    if not _SSH_USER.fullmatch(user):
+        raise ValueError("SSH username is required and contains invalid characters")
+    port = 22 if ssh_port in (None, "") else int(ssh_port)
+    if not 1 <= port <= 65535:
+        raise ValueError("SSH port must be between 1 and 65535")
+    return {"ssh_host": host, "ssh_user": user, "ssh_port": port}
+
+
+def reconcile_candidate(owner, candidate, decision, *, name=None, asset_type="network_device",
+                        ssh_host=None, ssh_user=None, ssh_port=None):
     """Apply an explicit owner decision to a network asset candidate.
 
     Network observations remain evidence and IP addresses remain non-canonical
@@ -428,13 +462,36 @@ def reconcile_candidate(owner, candidate, decision, *, name=None, asset_type="ne
                 )
                 result = {"decision": "rejected", "asset_id": candidate}
         else:
+            observed_host = None
+            existing_attributes = {}
+            if candidate.startswith("unidentified:"):
+                observed_host = candidate.split(":", 1)[1].strip()
+            else:
+                try:
+                    existing_attributes = json.loads(row["attributes_json"] or "{}")
+                except (TypeError, ValueError):
+                    existing_attributes = {}
+                latest = c.execute(
+                    "SELECT data_json FROM observations WHERE asset_id=? AND owner=? ORDER BY id DESC LIMIT 1",
+                    (candidate, owner),
+                ).fetchone()
+                if latest:
+                    try:
+                        observed_host = json.loads(latest["data_json"] or "{}").get("ip")
+                    except (TypeError, ValueError):
+                        observed_host = None
+            ssh_attributes = _ssh_metadata(
+                ssh_host=ssh_host, ssh_user=ssh_user, ssh_port=ssh_port,
+                observed_host=observed_host,
+            )
+            existing_attributes.update(ssh_attributes)
             if candidate.startswith("unidentified:"):
                 asset_id = str(uuid.uuid4())
                 c.execute(
                     "INSERT INTO assets(id,name,type,status,source,confidence,"
                     "attributes_json,created_at,updated_at,owner) VALUES(?,?,?,?,?,?,?,?,?,?)",
                     (asset_id, str(name).strip(), asset_type, "active",
-                     "owner_reconciliation", .9, "{}", timestamp, timestamp, owner),
+                     "owner_reconciliation", .9, jd(existing_attributes), timestamp, timestamp, owner),
                 )
                 c.execute(
                     "UPDATE observations SET asset_id=? WHERE id=? AND owner=?",
@@ -444,10 +501,10 @@ def reconcile_candidate(owner, candidate, decision, *, name=None, asset_type="ne
                 asset_id = candidate
                 c.execute(
                     "UPDATE assets SET status='active', retired_at=NULL, "
-                    "updated_at=?" + (", name=?" if name else "") +
+                    "updated_at=?, attributes_json=?" + (", name=?" if name else "") +
                     " WHERE id=? AND owner=?",
-                    ((timestamp, str(name).strip(), asset_id, owner) if name else
-                     (timestamp, asset_id, owner)),
+                    ((timestamp, jd(existing_attributes), str(name).strip(), asset_id, owner) if name else
+                     (timestamp, jd(existing_attributes), asset_id, owner)),
                 )
             result = {"decision": "confirmed", "asset_id": asset_id,
                       "name": str(name).strip() if name else None}

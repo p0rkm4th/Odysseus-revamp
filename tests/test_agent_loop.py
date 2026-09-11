@@ -2,6 +2,7 @@
 and _append_tool_results. Uses mock imports to avoid loading the full app stack."""
 
 import sys
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 _MOCKED_IMPORTS = [
@@ -40,6 +41,7 @@ try:
         _classify_agent_request,
         _append_tool_results,
         _select_local_mcp_schemas,
+        _stream_json,
     )
     _IMPORTED_AGENT_LOOP = sys.modules.get("src.agent_loop")
 finally:
@@ -162,6 +164,17 @@ def test_completed_owner_memory_read_is_answer_terminal_not_action_reentry():
         "success": False,
         "exit_code": 1,
     }) is False
+
+
+def test_stream_json_preserves_completed_tool_result_with_datetime_metadata():
+    payload = _stream_json({
+        "type": "metrics",
+        "data": {"tool_events": [{"result_projection": {
+            "coverage": {"as_of": datetime(2026, 9, 11, tzinfo=timezone.utc)},
+        }}]},
+    })
+    assert '"type": "metrics"' in payload
+    assert "2026-09-11 00:00:00+00:00" in payload
 
 
 # ---------------------------------------------------------------------------

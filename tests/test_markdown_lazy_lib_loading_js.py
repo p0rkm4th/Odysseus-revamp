@@ -503,7 +503,10 @@ def test_vendored_assets_exist_and_index_html_has_no_cdn_reference():
     # and the comment explaining the move can keep naming the CDN it left.
     index = (_REPO / "static/index.html").read_text(encoding="utf-8")
     remote_loads = re.findall(r"<(?:script|link)\b[^>]*\b(?:src|href)=\"https?://[^\"]+", index)
-    assert remote_loads == [], f"index.html loads remote resources: {remote_loads}"
+    # Plaid Link is the single intentional exception: its hosted SDK is the
+    # provider's browser boundary and does not expose a HADES secret. All
+    # rendering libraries remain vendored/offline.
+    assert remote_loads == ['<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js'], remote_loads
 
     sw = (_REPO / "static/sw.js").read_text(encoding="utf-8")
     assert KATEX_SRC in sw

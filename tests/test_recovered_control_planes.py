@@ -93,6 +93,53 @@ def test_homelab_network_plan_is_private_and_nmap_candidates_are_review_only(tmp
     assert candidates[0]["hostname"] == "switch"
 
 
+def test_network_plan_normalizes_host_form_cidr_without_widening_scope(tmp_path):
+    async def run():
+        ops = HomelabOperations(receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"))
+        planned = await ops.execute({
+            "action": "plan_network_discovery",
+            "cidr": "192.168.10.254/24",
+            "scope_authorization": "EXPLICITLY_AUTHORIZED",
+        }, owner="alice")
+        assert planned["target"] == "192.168.10.0/24"
+        assert planned["scanner"] == "nmap_ping_scan"
+        assert planned["target"] != "192.168.10.254/24"
+
+    asyncio.run(run())
+
+
+def test_network_execution_continuation_reuses_approved_target_without_context_reread(tmp_path, monkeypatch):
+    import src.privileged_broker as broker
+
+    def request(payload, timeout=5, **_kwargs):
+        if payload.get("action") == "status":
+            return {"ok": True, "network_scanner_available": True}
+        return {"ok": True, "returncode": 0, "output": "<nmaprun/>"}
+
+    monkeypatch.setattr(broker, "client_request", request)
+
+    async def run():
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            observation_recorder=lambda _payload: None,
+        )
+        plan = await ops.execute({
+            "action": "plan_network_discovery",
+            "cidr": "192.168.10.254/24",
+            "scope_authorization": "EXPLICITLY_AUTHORIZED",
+        }, owner="alice")
+        # The real approval continuation carries only the digest. It must use
+        # the exact target committed in the plan receipt, not re-read context.
+        result = await ops.execute({
+            "action": "execute_network_discovery",
+            "plan_digest": plan["operation_digest"],
+        }, owner="alice")
+        assert result["success"] is True
+        assert result["target"] == "192.168.10.0/24"
+
+    asyncio.run(run())
+
+
 def test_network_context_read_separates_vpn_and_runtime_interfaces(monkeypatch):
     import src.privileged_broker as broker
     monkeypatch.setattr(
@@ -110,6 +157,8 @@ def test_network_context_read_separates_vpn_and_runtime_interfaces(monkeypatch):
         result = await HomelabOperations().execute({"action": "read_network_context"}, owner="alice")
         assert result["status"] == "SUCCESS_WITH_DATA"
         assert {item["kind"] for item in result["interfaces"]} == {"PHYSICAL_LAN", "VPN", "DOCKER_BRIDGE"}
+        assert any(scope["ownership"] == "PHYSICAL_LAN_CANDIDATE" for scope in result["candidate_scopes"])
+        assert not any(scope["ownership"] == "OWNER_LOCAL_NETWORK" for scope in result["candidate_scopes"])
         assert any(scope["ownership"] == "VPN/CORPORATE_OR_UNKNOWN" for scope in result["candidate_scopes"])
         assert any(scope["ownership"] == "RUNTIME_INTERNAL" for scope in result["candidate_scopes"])
         assert result["vpn_present"] is True
@@ -202,6 +251,26 @@ def test_privileged_broker_network_discovery_is_bounded(monkeypatch):
         assert rejected["ok"] is False
 
 
+def test_read_only_host_broker_allows_bounded_scans_but_rejects_mutation(monkeypatch):
+    import src.privileged_broker as broker
+
+    monkeypatch.setattr(broker.shutil, "which", lambda name: "/usr/bin/nmap" if name == "nmap" else None)
+    monkeypatch.setattr(
+        broker, "run_root",
+        lambda argv, timeout=300: {"returncode": 0, "output": "<nmaprun/>"},
+    )
+    scan = broker.handle(
+        {"action": "run_network_discovery", "cidr": "192.168.10.0/24"},
+        1, 1000, execution_location="HOST", read_only=True,
+    )
+    assert scan["ok"] is True
+    install = broker.handle(
+        {"action": "install_packages", "packages": ["nmap"]},
+        1, 1000, execution_location="HOST", read_only=True,
+    )
+    assert install == {"ok": False, "error": "host network broker is read-only"}
+
+
 def test_privileged_broker_service_enumeration_is_bounded_and_version_only(monkeypatch):
     import src.privileged_broker as broker
     captured = []
@@ -250,7 +319,7 @@ def test_network_service_enumeration_persists_through_existing_cmdb_writer(tmp_p
     import src.privileged_broker as broker
     recorded = []
 
-    def request(payload, timeout=5):
+    def request(payload, timeout=5, **_kwargs):
         if payload.get("action") == "run_network_service_enumeration":
             return {
                 "ok": True, "returncode": 0,
@@ -286,10 +355,41 @@ def test_network_service_enumeration_persists_through_existing_cmdb_writer(tmp_p
     asyncio.run(run())
 
 
+def test_network_service_continuation_reuses_sealed_plan_targets(tmp_path, monkeypatch):
+    import src.privileged_broker as broker
+    calls = []
+
+    def request(payload, timeout=5, **_kwargs):
+        calls.append(payload)
+        if payload.get("action") == "run_network_service_enumeration":
+            return {"ok": True, "returncode": 0, "output": "<nmaprun></nmaprun>"}
+        return {"ok": True, "network_scanner_available": True}
+
+    monkeypatch.setattr(broker, "client_request", request)
+
+    async def run():
+        ops = HomelabOperations(
+            receipt_store=HomelabReceiptStore(tmp_path / "receipts.jsonl"),
+            observation_recorder=lambda payload: None,
+        )
+        plan = await ops.execute(
+            {"action": "plan_network_service_enumeration", "targets": ["192.168.10.4"]},
+            owner="alice",
+        )
+        result = await ops.execute(
+            {"action": "execute_network_service_enumeration", "plan_digest": plan["operation_digest"]},
+            owner="alice",
+        )
+        assert result["success"] is True
+        assert calls[-1]["targets"] == ["192.168.10.4"]
+
+    asyncio.run(run())
+
+
 def test_discovery_plan_is_single_use_and_unrelated_homelab_actions_fail(tmp_path, monkeypatch):
     import src.privileged_broker as broker
 
-    def request(payload, timeout=5):
+    def request(payload, timeout=5, **_kwargs):
         if payload.get("action") == "status":
             return {"ok": True, "network_scanner_available": True}
         return {"ok": True, "returncode": 0, "output": "<nmaprun/>"}
@@ -324,8 +424,11 @@ def test_network_discovery_persists_candidates_through_canonical_cmdb_writer(tmp
     import src.privileged_broker as broker
 
     recorded = []
+    socket_paths = []
+    monkeypatch.setenv("ODYSSEUS_HOST_NETWORK_BROKER_SOCKET", "/tmp/test-host-network.sock")
 
-    def request(payload, timeout=5):
+    def request(payload, timeout=5, **_kwargs):
+        socket_paths.append(_kwargs.get("socket_path"))
         if payload.get("action") == "status":
             return {"ok": True, "network_scanner_available": True}
         return {
@@ -356,6 +459,11 @@ def test_network_discovery_persists_candidates_through_canonical_cmdb_writer(tmp
         assert result["network_map_reconciled"] is True
         assert recorded[0]["hosts"][0]["ip"] == "192.168.10.4"
         assert recorded[0]["hosts"][0]["mac"] == "aa:bb:cc:dd:ee:ff"
+        assert socket_paths == [
+            "/tmp/test-host-network.sock",
+            "/tmp/test-host-network.sock",
+            "/tmp/test-host-network.sock",
+        ]
 
     asyncio.run(run())
 
@@ -363,7 +471,7 @@ def test_network_discovery_persists_candidates_through_canonical_cmdb_writer(tmp
 def test_network_discovery_does_not_claim_success_when_cmdb_persistence_fails(tmp_path, monkeypatch):
     import src.privileged_broker as broker
 
-    def request(payload, timeout=5):
+    def request(payload, timeout=5, **_kwargs):
         if payload.get("action") == "status":
             return {"ok": True, "network_scanner_available": True}
         return {"ok": True, "returncode": 0, "output": "<nmaprun/>"}

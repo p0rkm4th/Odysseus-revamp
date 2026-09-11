@@ -2,8 +2,32 @@
 
 import asyncio
 import json
+import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from types import SimpleNamespace
+
+
+@pytest.mark.parametrize("raw", ["{", '"--flag"', "{}", "1", "true", "null", '[1]'])
+def test_mcp_args_reject_invalid_json_or_non_string_array(raw):
+    from routes.mcp.mcp_routes import _parse_mcp_args
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc_info:
+        _parse_mcp_args(raw)
+    assert exc_info.value.status_code == 400
+
+
+@pytest.mark.parametrize("raw", [None, "", "   ", "[]"])
+def test_mcp_args_only_empty_input_normalizes_to_empty_array(raw):
+    from routes.mcp.mcp_routes import _parse_mcp_args
+
+    assert _parse_mcp_args(raw) == []
+
+
+def test_mcp_args_preserve_valid_string_array():
+    from routes.mcp.mcp_routes import _parse_mcp_args
+
+    assert _parse_mcp_args('["--flag", "value"]') == ["--flag", "value"]
 
 
 def test_reconnect_passes_full_server_config():
