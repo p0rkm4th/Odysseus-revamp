@@ -41804,6 +41804,15 @@ body.settings-sidebar-resize-active {
 .recipe-summary { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
 .recipe-summary span { padding:6px 9px; border:1px solid var(--hades-border-subtle, var(--border)); border-radius:999px; color:var(--hades-text-muted, var(--muted)); font-size:.72rem; }
 .recipe-summary strong { color:var(--hades-text, var(--fg)); }
+.recipe-library-tools { display:flex; align-items:center; gap:10px; margin:0 0 12px; }
+.recipe-search { flex:1 1 240px; }
+.recipe-search input { width:100%; min-height:36px; padding:8px 11px; border:1px solid var(--hades-border-subtle, var(--border)); border-radius:var(--hades-radius-sm, 8px); background:color-mix(in srgb, var(--panel) 72%, transparent); color:var(--hades-text, var(--fg)); }
+.recipe-search input:focus { outline:2px solid color-mix(in srgb, var(--accent, #9b83c7) 70%, transparent); outline-offset:1px; }
+.recipe-filters { display:flex; gap:5px; flex-wrap:wrap; }
+.recipe-filters button { border:1px solid var(--hades-border-subtle, var(--border)); border-radius:999px; padding:7px 9px; color:var(--hades-text-muted, var(--muted)); background:transparent; font-size:.72rem; }
+.recipe-filters button.active { border-color:color-mix(in srgb, var(--accent, #9b83c7) 55%, var(--hades-border-subtle, var(--border))); color:var(--hades-text, var(--fg)); background:color-mix(in srgb, var(--accent, #9b83c7) 15%, transparent); }
+.recipe-tags { display:flex; flex-wrap:wrap; gap:5px; margin:0 0 10px; }
+.recipe-tags span { padding:3px 7px; border-radius:999px; background:color-mix(in srgb, var(--accent, #9b83c7) 11%, transparent); color:var(--hades-text-muted, var(--muted)); font-size:.68rem; }
 .hades-workspace-window .inventory-recipe-card { display:block; padding:15px; }
 .recipe-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .recipe-card-header h3 { margin:4px 0 0; font-size:1rem; }
@@ -41824,6 +41833,9 @@ body.settings-sidebar-resize-active {
 @media (max-width:700px) {
   .hades-workspace-window .recipe-hero { flex-direction:column; }
   .recipe-hero-actions { justify-content:flex-start; width:100%; }
+  .recipe-library-tools { align-items:stretch; flex-direction:column; }
+  .recipe-filters { overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; }
+  .recipe-filters button { flex:0 0 auto; }
   .recipe-preview { grid-template-columns:1fr; }
 }
 .inventory-sharing-member-summary > strong { display:block; font-size:.78rem; letter-spacing:.02em; }
