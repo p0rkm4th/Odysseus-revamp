@@ -2099,6 +2099,83 @@ def last_user_message(messages: Sequence[Mapping[str, Any]]) -> str:
     return ""
 
 
+def _finance_followup_query(
+    messages: Sequence[Mapping[str, Any]], latest: str,
+) -> str | None:
+    """Turn a bounded Finance period follow-up into a canonical read query.
+
+    A phrase such as ``What about last month?`` is not independently a
+    Finance query.  The prior *user* Finance request supplies the bounded
+    subject (merchant/category/view), while the current user turn supplies
+    only the new period.  Assistant prose and tool output are deliberately
+    ignored so they cannot become query authority.
+    """
+    from src.intent_contracts import compile_intent
+
+    latest_text = str(latest or "").strip()
+    period = re.search(
+        r"\b(?:last|previous|this|that|next)\s+(?:month|week|year)\b|"
+        r"\b(?:past|last|previous)\s+(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
+        latest_text,
+        re.IGNORECASE,
+    )
+    if not period:
+        return None
+
+    prior_frame = None
+    seen_latest = False
+    for message in reversed(tuple(messages or ())):
+        if str(message.get("role") or "") != "user":
+            continue
+        content = message.get("content", "")
+        if isinstance(content, list):
+            content = " ".join(
+                str(block.get("text") or "")
+                for block in content
+                if isinstance(block, Mapping)
+            )
+        content = str(content or "").strip()
+        if not content:
+            continue
+        # Some transports include the current user turn in ``messages`` and
+        # some pass it separately.  Exclude exactly that latest turn once.
+        if not seen_latest and content.casefold() == latest_text.casefold():
+            seen_latest = True
+            continue
+        candidate = compile_intent(content, continuation=False)
+        if candidate.domain_concept == "FINANCE" and candidate.operation_class == "READ":
+            prior_frame = candidate
+            break
+        if not seen_latest:
+            # When the transport omits the separately supplied latest turn,
+            # the first user message is already the prior anchor.
+            seen_latest = True
+            if candidate.domain_concept == "FINANCE":
+                prior_frame = candidate
+                break
+    if prior_frame is None:
+        return None
+
+    filters = dict(prior_frame.filters or {})
+    view = str(filters.get("view") or "spending").casefold()
+    if view == "cash_flow":
+        base = "What was my inflow and outflow"
+    elif view == "transactions":
+        base = "Show my transactions"
+    elif str(filters.get("direction") or "").casefold() == "inflow":
+        base = "How much was my inflow"
+    else:
+        base = "How much did I spend"
+
+    merchant = str(filters.get("merchant") or "").strip()
+    category = str(filters.get("category") or "").strip()
+    if merchant:
+        base += f" at {merchant}"
+    elif category:
+        base += f" on {category}"
+    return f"{base} {period.group(0)}"
+
+
 def user_turn_count(messages: Sequence[Mapping[str, Any]]) -> int:
     """Count user turns without considering injected/system envelopes."""
     return sum(1 for message in messages or () if message.get("role") == "user")
@@ -2238,7 +2315,15 @@ def provisional_intent_projection(
         or finance_period_correction
         or finance_access_correction
     )
-    contextual_finance_read = finance_correction_followup or finance_answer_correction or finance_period_correction or finance_access_correction or finance_ranked_followup
+    finance_followup_query = _finance_followup_query(messages, latest) if finance_followup else None
+    contextual_finance_read = (
+        finance_followup
+        or finance_correction_followup
+        or finance_answer_correction
+        or finance_period_correction
+        or finance_access_correction
+        or finance_ranked_followup
+    )
     # A stale continuation marker must not demote a new, independently
     # classifiable owner request. This occurs after an interrupted turn where
     # the UI may leave a literal "Continue" message in the session. Compile
@@ -2263,6 +2348,14 @@ def provisional_intent_projection(
         contextual_frame = compile_intent(contextual_query)
         if contextual_frame.domain_concept in DOMAIN_CONTRACTS:
             frame = contextual_frame
+    if finance_followup_query:
+        # Recompile the merged, user-authored Finance request so its new
+        # period reaches the canonical Action payload. The earlier frame is
+        # only a continuation marker and must not silently retain the old
+        # range.
+        followup_frame = compile_intent(finance_followup_query, continuation=False)
+        if followup_frame.domain_concept == "FINANCE":
+            frame = followup_frame
     if finance_ranked_followup and frame.domain_concept == "FINANCE":
         # An independent ranked question owns its own bounded scope.  Only
         # explicit references such as "from that" may inherit the prior
@@ -2286,7 +2379,9 @@ def provisional_intent_projection(
         continuation = False
     if frame.domain_concept not in DOMAIN_CONTRACTS:
         return None, False
-    if finance_ranked_followup:
+    if finance_followup_query:
+        retrieval_query = finance_followup_query
+    elif finance_ranked_followup:
         retrieval_query = f"{recent_query}\n{latest}".strip()
     else:
         retrieval_query = (
