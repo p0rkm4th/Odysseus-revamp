@@ -78,6 +78,15 @@ def test_recipe_composition_understands_natural_variants_and_bounds_dish_name():
         assert recipe_composition_name(request) == "spaghetti"
 
 
+def test_named_dish_preface_keeps_explicit_grocery_items_on_inventory_path():
+    assert not is_recipe_composition_request(
+        "I wanna make spaghetti tonight. Add spaghetti, tomato sauce, and parmesan to the shopping list."
+    )
+    assert is_recipe_composition_request(
+        "I wanna make spaghetti tonight. Add the ingredients I am missing to the shopping list."
+    )
+
+
 def test_recipe_composition_drops_sentence_article_before_saved_recipe_lookup():
     request = (
         "I want to make the Shared pasta test. Add whatever ingredients "

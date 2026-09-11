@@ -1517,6 +1517,25 @@ def is_recipe_composition_request(text: str) -> bool:
     value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
     if not value:
         return False
+    # A named-dish preface does not erase a concrete grocery set the owner
+    # supplied in the same sentence.  Route "make spaghetti; add spaghetti,
+    # sauce, and parmesan" through the ordinary bounded inventory mutation;
+    # reserve recipe composition for requests such as "add the ingredients I
+    # am missing", where the system would otherwise have to invent or look up
+    # a recipe.
+    explicit_add = re.search(
+        r"\b(?:add|put)\s+(.+?)\s+(?:to|on)\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list\b",
+        value,
+        re.IGNORECASE,
+    )
+    if explicit_add:
+        names = explicit_add.group(1).strip(" .,!?:;")
+        if names and not re.match(
+            r"^(?:(?:the|those|these|my|some|all)\s+)?(?:missing\s+)?(?:ingredients?|items?|things?|what|whatever|stuff)\b",
+            names,
+            re.IGNORECASE,
+        ):
+            return False
     has_named_dish_action = bool(re.search(
         r"\b(?:make|cook|prepare)\s+(?!(?:a|the)?\s*(?:grocery|shopping)\s+list\b)"
         r"[a-z0-9][^.!?,]{1,120}", value,
