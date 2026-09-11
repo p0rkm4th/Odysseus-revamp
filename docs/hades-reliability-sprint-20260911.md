@@ -69,6 +69,23 @@ tests for Plaid configuration/link authorization/sync recovery, canonical
 Finance and grocery/pantry state, network approval/continuation/results, and
 Hades branding/UI projections. No new duplicate subsystem was introduced.
 
+## Web-search runtime repair
+
+- The test runtime initially had no SearXNG container and port 8080 refused
+  connections. Only the compose `searxng` service was started; the Hades
+  service on 7000 and the original comparison service on 7001 were not
+  container-restarted.
+- SearXNG is now healthy at `127.0.0.1:8080/healthz` (HTTP 200). Its pinned
+  engine query path returned 11 results for a synthetic `OpenAI` lookup; the
+  provider-level Hades call returned 5 results.
+- Chat logs also identified a separate dispatch defect: canonical
+  `web_search` was still being sent to retired `mcp__web_search__web_search`.
+  Native folded-tool dispatch now routes `web_search` and `web_fetch` through
+  their in-process handlers. A regression test covers this boundary.
+- Hades was restarted once after the code change; port 7000 remained healthy.
+  Recent chat logs showed the failed search attempts and routine research
+  polling; no owner message content was copied into the sprint record.
+
 ## Remaining gates and exact actions
 
 1. A maintainer with GitHub write access must update PR #6's title and body

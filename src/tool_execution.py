@@ -464,6 +464,13 @@ _MCP_TOOL_MAP = {
     "web_fetch":      ("web_fetch",  "web_fetch"),
     "generate_image": ("image_gen",  "generate_image"),
 }
+
+# These bindings used to be exposed as MCP servers, but their implementations
+# now live in-process. Keep the legacy map above for compatibility with older
+# callers; the dispatcher must not manufacture a qualified MCP name for them.
+_NATIVE_TOOL_NAMES = frozenset({
+    "bash", "python", "read_file", "write_file", "web_search", "web_fetch",
+})
 _EMAIL_MCP_OWNER_ARG = "_odysseus_owner"
 
 
@@ -1052,10 +1059,18 @@ async def _execute_tool_block_impl(
     # Route MCP-extracted tools through the MCP manager. Forward
     # the progress callback so long-running subprocess tools
     # (bash, python) can stream `tool_progress` events to the UI.
-    if tool in _MCP_TOOL_MAP:
+    if tool in _MCP_TOOL_MAP and tool not in _NATIVE_TOOL_NAMES:
         first_line = content.split(chr(10))[0][:80]
         desc = f"{tool}: {first_line}"
         result = await _call_mcp_tool(tool, content, progress_cb=progress_cb)
+    elif tool in _NATIVE_TOOL_NAMES:
+        # Native folded tools are application capabilities, not dynamic MCP
+        # servers. Routing web_search through the old MCP alias causes a
+        # healthy SearXNG instance to look unavailable at the manager gate.
+        first_line = content.split(chr(10))[0][:80]
+        desc = f"{tool}: {first_line}"
+        result = await _direct_fallback(tool, content, progress_cb=progress_cb) \
+            or {"error": f"{tool}: execution failed", "exit_code": 1}
     elif tool in ("grep", "glob", "ls", "get_workspace"):
         # Code-navigation tools — no MCP server; run the direct implementation.
         first_line = content.split(chr(10))[0][:80]
