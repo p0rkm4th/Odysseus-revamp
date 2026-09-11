@@ -1645,6 +1645,64 @@ def test_aci_turn_does_not_reenter_legacy_tool_index_projection(monkeypatch):
     assert owner_metrics["aci_compatibility_fallback"] is False
 
 
+def test_finance_read_fast_path_executes_without_model_round(monkeypatch):
+    """A natural Finance read must not depend on Qwen emitting an ACI packet."""
+    import src.agent_loop as agent_loop
+
+    monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default, raising=False)
+    monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None, raising=False)
+    monkeypatch.setattr(agent_loop, "blocked_tools_for_owner", lambda owner: set(), raising=False)
+    monkeypatch.setattr(agent_loop, "estimate_tokens", lambda *args, **kwargs: 10, raising=False)
+
+    executed = []
+
+    async def fake_execute(block, *args, **kwargs):
+        executed.append((block.tool_type, json.loads(block.content)))
+        return block.tool_type, {
+            "action": "spending",
+            "status": "SUCCESS_WITH_DATA",
+            "posted_outflow_by_currency": {"USD": "42.5000"},
+            "coverage": {
+                "coverage_state": "AVAILABLE",
+                "as_of": "2026-09-11T12:00:00Z",
+                "coverage_limitations": [],
+            },
+            "output": json.dumps({
+                "action": "spending",
+                "start": "2026-01-01",
+                "end": "2026-09-11",
+                "posted_outflow_by_currency": {"USD": "42.5000"},
+                "coverage": {
+                    "coverage_state": "AVAILABLE",
+                    "as_of": "2026-09-11T12:00:00Z",
+                    "coverage_limitations": [],
+                },
+            }),
+            "exit_code": 0,
+        }
+
+    async def unexpected_model_round(*args, **kwargs):
+        raise AssertionError("Finance fast path re-entered the model")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", unexpected_model_round, raising=False)
+    events = _collect_stream_events(agent_loop.stream_agent_loop(
+        "http://local.test/v1",
+        "small-local-model",
+        [{"role": "user", "content": "How much did I spend this year?"}],
+        aci_mode="aci",
+        tool_executor=fake_execute,
+    ))
+
+    assert executed == [("read_finance", {
+        "action": "spending",
+        "start": "2026-01-01",
+        "end": "2026-09-11",
+    })]
+    assert any(event.get("type") == "response_replace" for event in events)
+    assert any(event.get("type") == "metrics" for event in events)
+
+
 def test_canonical_aci_turn_does_not_append_legacy_hard_capability_directive(monkeypatch):
     import src.agent_loop as agent_loop
 
