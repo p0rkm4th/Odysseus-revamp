@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import date
 
 from src.aci import (
     CapabilityGapResolution,
@@ -1648,6 +1649,9 @@ def test_aci_turn_does_not_reenter_legacy_tool_index_projection(monkeypatch):
 def test_finance_read_fast_path_executes_without_model_round(monkeypatch):
     """A natural Finance read must not depend on Qwen emitting an ACI packet."""
     import src.agent_loop as agent_loop
+    today = date.today()
+    today_text = today.isoformat()
+    year_start = date(today.year, 1, 1).isoformat()
 
     monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default, raising=False)
     monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None, raising=False)
@@ -1669,8 +1673,8 @@ def test_finance_read_fast_path_executes_without_model_round(monkeypatch):
             },
             "output": json.dumps({
                 "action": "spending",
-                "start": "2026-01-01",
-                "end": "2026-09-11",
+                "start": year_start,
+                "end": today_text,
                 "posted_outflow_by_currency": {"USD": "42.5000"},
                 "coverage": {
                     "coverage_state": "AVAILABLE",
@@ -1696,8 +1700,8 @@ def test_finance_read_fast_path_executes_without_model_round(monkeypatch):
 
     assert executed == [("read_finance", {
         "action": "spending",
-        "start": "2026-01-01",
-        "end": "2026-09-11",
+        "start": year_start,
+        "end": today_text,
     })]
     assert any(event.get("type") == "response_replace" for event in events)
     assert any(event.get("type") == "metrics" for event in events)
