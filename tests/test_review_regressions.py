@@ -1038,6 +1038,14 @@ def test_successful_web_search_replaces_generic_done_answer():
     assert provenance is not None
 
 
+def test_canonical_web_search_payload_preserves_owner_query():
+    from src.aci import canonical_read_fast_path_payload
+
+    assert canonical_read_fast_path_payload(
+        "web_search", "search", {}, query="weather in Nashville this weekend"
+    ) == {"query": "weather in Nashville this weekend"}
+
+
 @pytest.mark.asyncio
 async def test_plan_mode_blocks_mutating_email_aliases_without_mcp_inventory(monkeypatch):
     """Plan-mode safety for bare email aliases must hold from the STATIC

@@ -3557,6 +3557,14 @@ def canonical_read_fast_path_payload(
         frame = frame.as_dict()
     if binding == "manage_assets" and action == "get":
         return canonical_asset_read_payload(frame)
+    # Web bindings are single-purpose transports: their ActionSpec is
+    # `search`/`fetch`, while the actual user-authored query or URL is the
+    # required bounded input. Omitting it produces an apparently successful
+    # empty/default search and leaves the model to invent the answer.
+    if binding == "web_search" and action == "search":
+        return {"query": str(query or "").strip()[:1000]}
+    if binding == "web_fetch" and action == "fetch":
+        return {"url": str(query or "").strip()[:2000]}
     payload = {"action": action}
     if binding == "read_finance" and action in {"spending", "transactions"}:
         frame = frame if isinstance(frame, Mapping) else {}
