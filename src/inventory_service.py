@@ -30,7 +30,9 @@ from core.inventory_models import (
     InventoryRecipeCook,
     InventoryRecipeIngredient,
     InventoryDraft,
+    InventorySharePolicy,
 )
+from core.finance_models import Household, HouseholdMembership
 from src.inventory_planning import (
     RecipeRequirement,
     RecipeStockPlan,
@@ -271,6 +273,98 @@ class InventoryService:
         ).first():
             raise InventoryNotFound("inventory location not found")
 
+    @staticmethod
+    def _shared_owner_ids(
+        db: Session, actor: str, resource: str = "kitchen_inventory",
+    ) -> set[str]:
+        """Return owners whose resource is explicitly shared with ``actor``."""
+        rows = db.query(InventorySharePolicy.household_id).join(
+            HouseholdMembership,
+            HouseholdMembership.household_id == InventorySharePolicy.household_id,
+        ).filter(
+            HouseholdMembership.user_id == actor,
+            InventorySharePolicy.resource == resource,
+            InventorySharePolicy.enabled.is_(True),
+        ).all()
+        household_ids = {row[0] for row in rows}
+        if not household_ids:
+            return {actor}
+        members = db.query(HouseholdMembership.user_id).filter(
+            HouseholdMembership.household_id.in_(household_ids),
+        ).all()
+        return {actor, *(row[0] for row in members)}
+
+    @classmethod
+    def _item_for_actor(cls, db: Session, actor: str, item_id: str) -> InventoryItem:
+        item = db.query(InventoryItem).filter_by(id=item_id).one_or_none()
+        if item is None:
+            raise InventoryNotFound("inventory item not found")
+        if item.owner == actor:
+            return item
+        if item.domain in {"kitchen", "household"} and item.owner in cls._shared_owner_ids(db, actor):
+            return item
+        raise InventoryNotFound("inventory item not found")
+
+    def list_sharing(self, actor: str) -> list[dict[str, Any]]:
+        """Return household memberships and explicit inventory policies."""
+        with self._read() as db:
+            memberships = db.query(HouseholdMembership, Household).join(
+                Household, Household.id == HouseholdMembership.household_id,
+            ).filter(HouseholdMembership.user_id == actor).order_by(
+                HouseholdMembership.created_at.asc(), Household.id,
+            ).all()
+            result = []
+            for membership, household in memberships:
+                policies = db.query(InventorySharePolicy).filter_by(
+                    household_id=household.id,
+                ).all()
+                by_resource = {policy.resource: {
+                    "enabled": bool(policy.enabled),
+                    "allow_member_mutation": bool(policy.allow_member_mutation),
+                } for policy in policies}
+                result.append({
+                    "household_id": household.id,
+                    "household_name": household.name,
+                    "role": membership.role,
+                    "can_manage": household.owner == actor,
+                    "resources": {resource: by_resource.get(resource, {
+                        "enabled": False, "allow_member_mutation": False,
+                    }) for resource in ("kitchen_inventory", "recipes")},
+                })
+            return result
+
+    def configure_sharing(
+        self, actor: str, household_id: str, *, resource: str,
+        enabled: bool, allow_member_mutation: bool = False,
+    ) -> dict[str, Any]:
+        resource = str(resource or "").strip().casefold()
+        if resource not in {"kitchen_inventory", "recipes"}:
+            raise InventoryError("unsupported household sharing resource")
+        if allow_member_mutation:
+            raise InventoryError(
+                "member inventory mutation is not enabled yet; sharing remains read-only"
+            )
+        with self._transaction() as db:
+            household = db.get(Household, household_id)
+            membership = db.query(HouseholdMembership).filter_by(
+                household_id=household_id, user_id=actor,
+            ).one_or_none()
+            if household is None or household.owner != actor or membership is None:
+                raise InventoryNotFound("household sharing configuration not found")
+            policy = db.query(InventorySharePolicy).filter_by(
+                household_id=household_id, resource=resource,
+            ).one_or_none()
+            if policy is None:
+                policy = InventorySharePolicy(
+                    id=str(uuid4()), household_id=household_id, resource=resource,
+                )
+                db.add(policy)
+            policy.enabled = bool(enabled)
+            policy.allow_member_mutation = False
+            db.flush()
+            return {"household_id": household_id, "resource": resource,
+                    "enabled": bool(policy.enabled), "allow_member_mutation": False}
+
     def create_item(
         self,
         owner: str,
@@ -372,7 +466,7 @@ class InventoryService:
 
     def get_item(self, owner: str, item_id: str) -> dict[str, Any]:
         with self._read() as db:
-            return _item_view(self._item(db, owner, item_id))
+            return _item_view(self._item_for_actor(db, owner, item_id))
 
     @staticmethod
     def _require_asset(db: Session, owner: str, item_id: str) -> InventoryItem:
@@ -519,7 +613,8 @@ class InventoryService:
         limit = max(1, min(int(limit), 500))
         offset = max(0, int(offset))
         with self._read() as db:
-            query = db.query(InventoryItem).filter(InventoryItem.owner == owner)
+            owners = self._shared_owner_ids(db, owner)
+            query = db.query(InventoryItem).filter(InventoryItem.owner.in_(owners))
             normalized_list = str(list_name).strip().casefold() if list_name else ""
             if domain is not None:
                 query = query.filter(InventoryItem.domain == str(domain).casefold())
@@ -540,7 +635,7 @@ class InventoryService:
             if (include_stock or normalized_list in {"pantry", "fridge", "freezer"}) and items:
                 item_ids = [item.id for item in items]
                 lots = db.query(InventoryLot).filter(
-                    InventoryLot.owner == owner,
+                    InventoryLot.owner.in_(owners),
                     InventoryLot.item_id.in_(item_ids),
                     InventoryLot.quantity > 0,
                 ).all()
@@ -557,8 +652,9 @@ class InventoryService:
         term = normalize_item_name(query)
         limit = max(1, min(int(limit), 200))
         with self._read() as db:
+            owners = self._shared_owner_ids(db, owner)
             statement = db.query(InventoryItem).filter(
-                InventoryItem.owner == owner,
+                InventoryItem.owner.in_(owners),
                 InventoryItem.archived.is_(False),
                 InventoryItem.normalized_name.contains(term),
             )
@@ -729,8 +825,8 @@ class InventoryService:
 
     def list_lots(self, owner: str, item_id: str) -> list[dict[str, Any]]:
         with self._read() as db:
-            self._item(db, owner, item_id)
-            lots = db.query(InventoryLot).filter_by(owner=owner, item_id=item_id).order_by(
+            item = self._item_for_actor(db, owner, item_id)
+            lots = db.query(InventoryLot).filter_by(owner=item.owner, item_id=item_id).order_by(
                 InventoryLot.expiry_date.is_(None), InventoryLot.expiry_date, InventoryLot.id
             ).all()
             return [_lot_view(lot) for lot in lots]
@@ -747,14 +843,15 @@ class InventoryService:
         horizon = max(0, min(int(expiry_days), 365))
         today = date.today()
         with self._read() as db:
+            owners = self._shared_owner_ids(db, owner)
             items = db.query(InventoryItem).filter(
-                InventoryItem.owner == owner,
+                InventoryItem.owner.in_(owners),
                 InventoryItem.domain.in_(("kitchen", "household")),
                 InventoryItem.archived.is_(False),
             ).order_by(InventoryItem.normalized_name, InventoryItem.id).all()
             item_by_id = {item.id: item for item in items}
             lots = db.query(InventoryLot).filter(
-                InventoryLot.owner == owner,
+                InventoryLot.owner.in_(owners),
                 InventoryLot.item_id.in_(list(item_by_id) or ["__none__"]),
                 InventoryLot.quantity > 0,
             ).order_by(InventoryLot.expiry_date.is_(None), InventoryLot.expiry_date, InventoryLot.id).all()
@@ -783,7 +880,7 @@ class InventoryService:
             recipe_count = db.query(InventoryRecipe).filter_by(
                 owner=owner, archived=False,
             ).count()
-            recent = self._history_rows(db, owner, item_by_id=item_by_id, limit=10)
+            recent = self._history_rows(db, owner, item_by_id=item_by_id, owners=owners, limit=10)
             return {
                 "owner": owner,
                 "canonical_store": "inventory_service",
@@ -803,15 +900,22 @@ class InventoryService:
             }
 
     @staticmethod
-    def _history_rows(db: Session, owner: str, *, item_by_id: dict[str, InventoryItem] | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    def _history_rows(
+        db: Session, owner: str, *, item_by_id: dict[str, InventoryItem] | None = None,
+        owners: set[str] | None = None, limit: int = 50,
+    ) -> list[dict[str, Any]]:
         limit = max(1, min(int(limit), 200))
-        rows = db.query(InventoryMovement).filter_by(owner=owner).order_by(
+        visible_owners = owners or {owner}
+        rows = db.query(InventoryMovement).filter(
+            InventoryMovement.owner.in_(visible_owners),
+        ).order_by(
             InventoryMovement.occurred_at.desc(), InventoryMovement.id.desc(),
         ).limit(limit).all()
         if item_by_id is None:
             ids = {row.item_id for row in rows}
             item_by_id = {item.id: item for item in db.query(InventoryItem).filter(
-                InventoryItem.owner == owner, InventoryItem.id.in_(list(ids) or ["__none__"]),
+                InventoryItem.owner.in_(visible_owners),
+                InventoryItem.id.in_(list(ids) or ["__none__"]),
             ).all()}
         return [{
             "movement": _movement_view(row),
@@ -820,10 +924,12 @@ class InventoryService:
         } for row in rows]
 
     def inventory_history(self, owner: str, *, limit: int = 50) -> list[dict[str, Any]]:
-        """Return the append-only, owner-scoped movement history."""
+        """Return the append-only movement history visible to the owner."""
         owner = _required_text(owner, "owner", maximum=255)
         with self._read() as db:
-            return self._history_rows(db, owner, limit=limit)
+            return self._history_rows(
+                db, owner, owners=self._shared_owner_ids(db, owner), limit=limit,
+            )
 
 
 class RecipeService(InventoryService):

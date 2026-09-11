@@ -99,6 +99,7 @@ function shell() {
       <button data-tab="fridge">Fridge</button>
       <button data-tab="grocery" aria-label="Grocery list · items to buy">Grocery · To buy</button>
       <button data-tab="recipes">Recipes</button>
+      <button data-tab="sharing">Household sharing</button>
       <button data-tab="intake">Add from text or media</button>
     </nav>
     <main id="inventory-content" class="inventory-content"></main>`;
@@ -180,6 +181,28 @@ async function loadStorageArea(area) {
     const {items = []} = await api(`/api/inventory/items?list_name=${encodeURIComponent(area)}`);
     if (generation !== requestGeneration) return;
     document.getElementById('inventory-storage-list').innerHTML = items.length ? items.map(item => `<article class="inventory-card" data-item-id="${escapeHtml(item.id)}"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(item.storage_area || area)}</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category || 'Household item')} · ${escapeHtml(item.default_unit || 'each')}</p></div><div class="inventory-card-actions"><button data-action="stock-add">Add stock</button><button data-action="stock-consume" ${Number(item.stock_quantity || 0) <= 0 ? 'disabled' : ''}>Use</button><button data-action="edit-item">Edit</button><button data-action="move-to-grocery">Add to grocery</button><button data-action="archive-item">Archive</button></div></article>`).join('') : `<div class="inventory-state">Your ${area} list is empty.</div>`;
+  } catch (error) { showInlineError(error); }
+}
+
+async function loadSharing() {
+  const content = document.getElementById('inventory-content');
+  if (!content) return;
+  content.innerHTML = `<div class="inventory-toolbar"><div><h3>Household sharing</h3><p>Share the kitchen inventory explicitly with household members. Shared access is read-only until member editing is deliberately enabled.</p></div></div><div id="inventory-sharing-list">${loading()}</div>`;
+  try {
+    const {households = []} = await api('/api/inventory/sharing');
+    const list = document.getElementById('inventory-sharing-list');
+    if (!households.length) {
+      list.innerHTML = '<div class="inventory-state">You are not a member of a household yet.</div>';
+      return;
+    }
+    list.innerHTML = households.map(household => {
+      const policy = household.resources?.kitchen_inventory || {};
+      const enabled = Boolean(policy.enabled);
+      const control = household.can_manage
+        ? `<button class="inventory-primary" data-action="toggle-sharing" data-household-id="${escapeHtml(household.household_id)}" data-enabled="${enabled ? 'true' : 'false'}">${enabled ? 'Stop sharing pantry' : 'Share pantry read-only'}</button>`
+        : `<span class="inventory-ready ${enabled ? 'yes' : 'no'}">${enabled ? 'Shared read-only' : 'Private'}</span>`;
+      return `<article class="inventory-card"><div class="inventory-card-main"><span class="inventory-domain">${escapeHtml(household.role)}</span><h3>${escapeHtml(household.household_name)}</h3><p>${enabled ? 'Members can see this household kitchen inventory.' : 'Kitchen inventory remains private to each owner.'}</p></div><div class="inventory-card-actions">${control}</div></article>`;
+    }).join('');
   } catch (error) { showInlineError(error); }
 }
 
@@ -360,6 +383,18 @@ async function onClick(event) {
   const action = button.dataset.action;
   if (action === 'retry') return renderTab();
   if (action === 'dismiss-dialog') return button.closest('.inventory-dialog-backdrop')?.remove();
+  if (action === 'toggle-sharing') {
+    button.disabled = true;
+    try {
+      const enabled = button.dataset.enabled !== 'true';
+      await api(`/api/inventory/sharing/${encodeURIComponent(button.dataset.householdId)}`, {
+        method: 'PUT', body: JSON.stringify({resource: 'kitchen_inventory', enabled}),
+      });
+      uiModule.showToast?.(enabled ? 'Pantry sharing enabled' : 'Pantry sharing disabled');
+      await loadSharing();
+    } catch (error) { uiModule.showError?.(error.message); button.disabled = false; }
+    return;
+  }
   if (action === 'queue-missing') {
     button.disabled = true;
     try {
@@ -479,6 +514,7 @@ function renderTab() {
   else if (tab === 'fridge') { editingDraft = null; loadStorageArea('fridge'); }
   else if (tab === 'grocery') { editingDraft = null; loadGrocery(); }
   else if (tab === 'recipes') { editingDraft = null; loadRecipes(); }
+  else if (tab === 'sharing') { editingDraft = null; loadSharing(); }
   else {
     document.getElementById('inventory-content').innerHTML = intakeForm();
     updateIntakeSourceVisibility(document.getElementById('inventory-intake-form'));

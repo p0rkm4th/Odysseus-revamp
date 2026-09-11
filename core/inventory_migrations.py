@@ -41,6 +41,13 @@ INVENTORY_V4_VERSION = "20260910_004_inventory_storage_area"
 INVENTORY_V4_DEFINITION = "inventory-v4\ninventory_items:storage-area\n"
 INVENTORY_V4_CHECKSUM = migration_checksum(INVENTORY_V4_DEFINITION)
 
+INVENTORY_V5_VERSION = "20260911_005_inventory_household_sharing"
+INVENTORY_V5_DEFINITION = """inventory-v5
+explicit-household-scoped-kitchen-sharing-policy
+member-mutation-remains-explicit
+"""
+INVENTORY_V5_CHECKSUM = migration_checksum(INVENTORY_V5_DEFINITION)
+
 
 def apply_inventory_v1(connection: Connection) -> None:
     for table in INVENTORY_TABLES:
@@ -71,6 +78,19 @@ def apply_inventory_v4(connection: Connection) -> None:
 
 register_schema_migration(SchemaMigration(
     version=INVENTORY_V4_VERSION, checksum=INVENTORY_V4_CHECKSUM, apply=apply_inventory_v4,
+))
+
+
+def apply_inventory_v5(connection: Connection) -> None:
+    from core.inventory_models import InventorySharePolicy
+
+    InventorySharePolicy.__table__.create(bind=connection, checkfirst=True)
+    if not inspect(connection).has_table(InventorySharePolicy.__tablename__):
+        raise RuntimeError("inventory v5 migration did not create sharing policy")
+
+
+register_schema_migration(SchemaMigration(
+    version=INVENTORY_V5_VERSION, checksum=INVENTORY_V5_CHECKSUM, apply=apply_inventory_v5,
 ))
 
 
