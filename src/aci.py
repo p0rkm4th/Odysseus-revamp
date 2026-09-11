@@ -4811,7 +4811,7 @@ def project_action_selection(
         frame.get("domain_concept") == "HOUSEHOLD_ITEM"
         and frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE", "DELETE"}
         and desired_binding == "manage_assets"
-        and desired_action in {"add_item", "add_stock", "consume_stock", "remove_from_grocery"}
+        and desired_action in {"add_item", "add_stock", "consume_stock", "remove_from_grocery", "archive_item"}
         and desired_binding in candidate_bindings
         and desired_binding not in disabled
     ):
