@@ -201,6 +201,7 @@ def test_exact_network_approval_resume_executes_once_without_replanning(monkeypa
         relevant_tools={"manage_homelab"},
         owner="alice",
         session_id="session-1",
+        aci_mode="aci",
         exact_approval=grant,
     ))
     events = _events(chunks)
@@ -209,6 +210,10 @@ def test_exact_network_approval_resume_executes_once_without_replanning(monkeypa
     assert not any(event.get("type") == "ask_user" for event in events)
     assert sum(event.get("type") == "tool_start" for event in events) == 1
     assert sum(event.get("type") == "tool_output" for event in events) == 1
+    metrics = next(event["data"] for event in reversed(events) if event.get("type") == "metrics")
+    assert metrics["aci_turn_disposition"] == "ANSWER"
+    assert metrics["aci_completion_contract_satisfied"] is True
+    assert metrics["aci_completion_transition"] == "ANSWER"
     assert agent_loop._successful_bounded_network_execution(
         "manage_homelab",
         json.dumps({"action": "plan_network_discovery"}),
