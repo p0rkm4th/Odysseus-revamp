@@ -11,6 +11,9 @@ let open = false;
 let tab = 'stock';
 let domain = 'all';
 let query = '';
+let recipeQuery = '';
+let recipeFilter = 'all';
+let recipeCatalog = [];
 let requestGeneration = 0;
 let editingDraft = null;
 let windowEl = null;
@@ -224,7 +227,53 @@ async function loadSharing() {
 }
 
 function renderRecipesScaffold() {
-  return `<section class="recipe-hero"><div><span class="recipe-eyebrow">COOKBOOK</span><h3>Recipes</h3><p>See what you can make, what is missing, and queue only the ingredients you need.</p></div><div class="recipe-hero-actions"><button data-action="import-recipe">Import recipe</button><button class="inventory-primary" data-action="new-recipe">+ New recipe</button></div></section><div class="recipe-guidance"><span class="recipe-guidance-mark">✦</span><span><strong>Recipes use your canonical stock.</strong> Grocery is only a to-buy queue; cooking changes owned stock after you confirm.</span></div><div id="inventory-recipe-summary" class="recipe-summary" aria-live="polite"></div><div id="inventory-recipe-list">${loading()}</div>`;
+  return `<section class="recipe-hero"><div><span class="recipe-eyebrow">COOKBOOK</span><h3>Recipes</h3><p>See what you can make, what is missing, and queue only the ingredients you need.</p></div><div class="recipe-hero-actions"><button data-action="import-recipe">Import recipe</button><button class="inventory-primary" data-action="new-recipe">+ New recipe</button></div></section><div class="recipe-guidance"><span class="recipe-guidance-mark">✦</span><span><strong>Recipes use your canonical stock.</strong> Grocery is only a to-buy queue; cooking changes owned stock after you confirm.</span></div><div class="recipe-library-tools"><label class="recipe-search"><span class="sr-only">Search recipes</span><input id="recipe-search" type="search" maxlength="200" value="${escapeHtml(recipeQuery)}" placeholder="Search recipes or ingredients" aria-label="Search recipes or ingredients"></label><div class="recipe-filters" role="group" aria-label="Recipe filters">${[['all','All'],['ready','Ready now'],['missing','Missing something']].map(([value, label]) => `<button type="button" data-recipe-filter="${value}" class="${recipeFilter === value ? 'active' : ''}">${label}</button>`).join('')}</div></div><div id="inventory-recipe-summary" class="recipe-summary" aria-live="polite"></div><div id="inventory-recipe-list">${loading()}</div>`;
+}
+
+function renderRecipeCatalog() {
+  const summary = document.getElementById('inventory-recipe-summary');
+  const list = document.getElementById('inventory-recipe-list');
+  if (!summary || !list) return;
+  const readyCount = recipeCatalog.filter(entry => entry.plan.can_make).length;
+  const missingCount = recipeCatalog.reduce((total, entry) => total + (entry.plan.shortages || []).length, 0);
+  summary.innerHTML = `<span><strong>${recipeCatalog.length}</strong> saved</span><span><strong>${readyCount}</strong> ready now</span><span><strong>${missingCount}</strong> missing checks</span>`;
+  const needle = recipeQuery.trim().toLowerCase();
+  const filtered = recipeCatalog.filter(({recipe, plan}) => {
+    if (recipeFilter === 'ready' && !plan.can_make) return false;
+    if (recipeFilter === 'missing' && plan.can_make) return false;
+    if (!needle) return true;
+    const haystack = [recipe.name, ...(recipe.tags || []), ...(recipe.ingredients || []).map(ingredient => ingredient.name)].join(' ').toLowerCase();
+    return haystack.includes(needle);
+  });
+  if (!recipeCatalog.length) {
+    list.innerHTML = '<div class="inventory-state recipe-empty-state"><strong>Your cookbook is empty.</strong><p>Save a recipe or import one, then Hades will compare it with Pantry stock.</p><button class="inventory-primary" data-action="new-recipe">Create your first recipe</button></div>';
+    return;
+  }
+  if (!filtered.length) {
+    list.innerHTML = `<div class="inventory-state recipe-empty-state"><strong>No recipes match.</strong><p>Try another search or clear the current filter.</p><button data-action="clear-recipe-search">Show all recipes</button></div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(({recipe, plan}) => {
+    const ingredients = recipe.ingredients || [];
+    const shortageNames = new Set((plan.shortages || []).map(shortage => String(shortage.name || '').toLowerCase()));
+    const preview = ingredients.slice(0, 5).map(ingredient => {
+      const name = String(ingredient.name || '').trim();
+      const missing = shortageNames.has(name.toLowerCase());
+      return `<li class="${missing ? 'is-missing' : 'is-ready'}"><span class="recipe-dot">${missing ? '!' : '✓'}</span>${escapeHtml(name)}</li>`;
+    }).join('');
+    const more = ingredients.length > 5 ? `<span class="recipe-more">+${ingredients.length - 5} more</span>` : '';
+    const shortages = (plan.shortages || []).slice(0, 3).map(shortage => escapeHtml(shortage.name)).join(', ');
+    const tags = (recipe.tags || []).slice(0, 4).map(tag => `<span>${escapeHtml(tag)}</span>`).join('');
+    const status = plan.can_make ? 'Ready to make' : `${(plan.shortages || []).length} missing`;
+    return `<article class="inventory-card inventory-recipe-card" data-recipe-id="${escapeHtml(recipe.id)}">
+      <header class="recipe-card-header"><div><span class="recipe-eyebrow">RECIPE</span><h3>${escapeHtml(recipe.name)}</h3></div><span class="inventory-ready ${plan.can_make ? 'yes' : 'no'}">${status}</span></header>
+      <p class="recipe-card-meta">${escapeHtml(recipe.servings)} servings <span>·</span> ${ingredients.length} ingredient${ingredients.length === 1 ? '' : 's'}</p>
+      ${tags ? `<div class="recipe-tags" aria-label="Recipe tags">${tags}</div>` : ''}
+      <ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}
+      ${plan.can_make ? '<p class="recipe-card-note ready-note">Everything is on hand.</p>' : `<p class="recipe-card-note missing-note">Missing: ${shortages || 'review the ingredient check'}</p>`}
+      <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? '<button class="inventory-primary" data-action="cook">Cook now</button>' : '<button class="inventory-primary" data-action="queue-missing">Add missing to Grocery</button>'}</div>
+    </article>`;
+  }).join('');
 }
 
 async function loadRecipes() {
@@ -234,31 +283,8 @@ async function loadRecipes() {
   try {
     const {recipes = []} = await api('/api/recipes');
     const plans = await Promise.all(recipes.map(recipe => api(`/api/recipes/${encodeURIComponent(recipe.id)}/can-make`)));
-    const readyCount = plans.filter(plan => plan.can_make).length;
-    const missingCount = plans.reduce((total, plan) => total + (plan.shortages || []).length, 0);
-    const summary = document.getElementById('inventory-recipe-summary');
-    if (summary) summary.innerHTML = `<span><strong>${recipes.length}</strong> saved</span><span><strong>${readyCount}</strong> ready now</span><span><strong>${missingCount}</strong> missing checks</span>`;
-    const list = document.getElementById('inventory-recipe-list');
-    list.innerHTML = recipes.length ? recipes.map((recipe, i) => {
-      const plan = plans[i] || {};
-      const ingredients = recipe.ingredients || [];
-      const shortageNames = new Set((plan.shortages || []).map(shortage => String(shortage.name || '').toLowerCase()));
-      const preview = ingredients.slice(0, 5).map(ingredient => {
-        const name = String(ingredient.name || '').trim();
-        const missing = shortageNames.has(name.toLowerCase());
-        return `<li class="${missing ? 'is-missing' : 'is-ready'}"><span class="recipe-dot">${missing ? '!' : '✓'}</span>${escapeHtml(name)}</li>`;
-      }).join('');
-      const more = ingredients.length > 5 ? `<span class="recipe-more">+${ingredients.length - 5} more</span>` : '';
-      const shortages = (plan.shortages || []).slice(0, 3).map(shortage => escapeHtml(shortage.name)).join(', ');
-      const status = plan.can_make ? 'Ready to make' : `${(plan.shortages || []).length} missing`;
-      return `<article class="inventory-card inventory-recipe-card" data-recipe-id="${escapeHtml(recipe.id)}">
-        <header class="recipe-card-header"><div><span class="recipe-eyebrow">RECIPE</span><h3>${escapeHtml(recipe.name)}</h3></div><span class="inventory-ready ${plan.can_make ? 'yes' : 'no'}">${status}</span></header>
-        <p class="recipe-card-meta">${escapeHtml(recipe.servings)} servings <span>·</span> ${ingredients.length} ingredient${ingredients.length === 1 ? '' : 's'}</p>
-        <ul class="recipe-preview">${preview || '<li class="recipe-empty-ingredients">No ingredients saved yet.</li>'}</ul>${more}
-        ${plan.can_make ? '<p class="recipe-card-note ready-note">Everything is on hand.</p>' : `<p class="recipe-card-note missing-note">Missing: ${shortages || 'review the ingredient check'}</p>`}
-        <div class="recipe-card-actions"><button data-action="recipe-details">View recipe</button>${plan.can_make ? '<button class="inventory-primary" data-action="cook">Cook now</button>' : '<button class="inventory-primary" data-action="queue-missing">Add missing to Grocery</button>'}</div>
-      </article>`;
-    }).join('') : '<div class="inventory-state recipe-empty-state"><strong>Your cookbook is empty.</strong><p>Save a recipe or import one, then Hades will compare it with Pantry stock.</p><button class="inventory-primary" data-action="new-recipe">Create your first recipe</button></div>';
+    recipeCatalog = recipes.map((recipe, index) => ({recipe, plan: plans[index] || {}}));
+    renderRecipeCatalog();
   } catch (error) { showInlineError(error); }
 }
 
@@ -374,7 +400,8 @@ async function onSubmit(event) {
     if (kind === 'consume') await api(`/api/inventory/items/${encodeURIComponent(form.dataset.id)}/consume`, {method:'POST', body:JSON.stringify({quantity:data.quantity, unit:data.unit, reason:data.reason, idempotency_key:makeIdempotencyKey('consume')})});
     if (kind === 'recipe') {
       const ingredients = data.ingredients.split('\n').map(line => line.trim()).filter(Boolean).map(line => { const match = line.match(/^(.+?)\s*\|\s*([0-9.]+)\s*\|\s*([\w-]+)$/); if (!match) throw new Error('Use one ingredient per line: name | quantity | unit'); return {name:match[1].trim(), quantity:match[2], unit:match[3]}; });
-      await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, source_url:data.source_url || null})});
+      const tags = String(data.tags || '').split(',').map(tag => tag.trim()).filter(Boolean).slice(0, 12);
+      await api('/api/recipes', {method:'POST', body:JSON.stringify({name:data.name, servings:data.servings, ingredients, instructions:data.instructions, source_url:data.source_url || null, tags})});
     }
     if (kind === 'recipe-import') {
       const payload = {name:data.name || null, source_text:data.source_text || null, url:data.url || null};
@@ -425,9 +452,20 @@ async function onClick(event) {
   if (!button) return;
   if (button.matches('[data-close]')) return closePanel();
   if (button.dataset.tab) { tab = button.dataset.tab; renderTab(); return; }
+  if (button.dataset.recipeFilter) {
+    recipeFilter = button.dataset.recipeFilter;
+    renderTab();
+    return;
+  }
   if (button.dataset.domain) { domain = button.dataset.domain; loadStock(); return; }
   const action = button.dataset.action;
   if (action === 'retry') return renderTab();
+  if (action === 'clear-recipe-search') {
+    recipeQuery = '';
+    recipeFilter = 'all';
+    renderTab();
+    return;
+  }
   if (action === 'dismiss-dialog') return button.closest('.inventory-dialog-backdrop')?.remove();
   if (action === 'toggle-sharing') {
     button.disabled = true;
@@ -509,7 +547,7 @@ async function onClick(event) {
     const {item} = await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`);
     return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${unitOptions(item.default_unit)}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
   }
-  if (action === 'new-recipe') return modalForm('New recipe', `${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}<label>Ingredients <small>one per line: name | quantity | unit</small><textarea name="ingredients" placeholder="spaghetti | 400 | g\ntomato sauce | 1 | jar" required></textarea></label>${field('Source URL (optional)','source_url','type="url" maxlength="4000"')}<label>Instructions<textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
+  if (action === 'new-recipe') return modalForm('New recipe', `${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}<label>Ingredients <small>one per line: name | quantity | unit</small><textarea name="ingredients" placeholder="spaghetti | 400 | g\ntomato sauce | 1 | jar" required></textarea></label>${field('Tags (optional)','tags','maxlength="400" placeholder="weeknight, freezer"')}${field('Source URL (optional)','source_url','type="url" maxlength="4000"')}<label>Instructions<textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
   if (action === 'import-recipe') return modalForm('Import recipe', `<p class="inventory-muted">Paste a recipe, provide a public URL, or choose a PDF. Import only saves the recipe; stock and groceries change only when you explicitly queue missing items.</p>${field('Recipe name (optional)','name','maxlength="200"')}${field('Public recipe URL (optional)','url','type="url" maxlength="4000"')}<label>Paste recipe text<textarea name="source_text" maxlength="24000" placeholder="Ingredients:\n2 cups tomato sauce\n400 g spaghetti\n\nDirections:\n..."></textarea></label><label>PDF recipe (optional)<input type="file" name="pdf" accept="application/pdf,.pdf"></label>`, 'Import recipe', 'recipe-import');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);
   if (action === 'cook') return cookRecipe(recipeCard.dataset.recipeId, button);
@@ -521,6 +559,11 @@ async function onClick(event) {
 
 let searchTimer;
 function onInput(event) {
+  if (event.target.id === 'recipe-search') {
+    recipeQuery = event.target.value;
+    renderRecipeCatalog();
+    return;
+  }
   if (event.target.id !== 'inventory-search') return;
   query = event.target.value;
   clearTimeout(searchTimer);
