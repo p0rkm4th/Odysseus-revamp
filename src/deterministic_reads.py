@@ -165,6 +165,16 @@ def _normalized(text: str) -> str:
 def deterministic_read_concept(text: str) -> str | None:
     """Return an existing DomainContract concept for an unambiguous read."""
     query = _normalized(text)
+    # A budget phrase can occur as a constraint on a cooking request ("what
+    # can I cook without spending much?").  That is still primarily a recipe
+    # availability question; routing it to Finance alone drops the requested
+    # meal outcome.  Keep this narrow so ordinary spending questions remain
+    # Finance reads.
+    recipe_budget_request = (
+        re.search(r"\b(?:cook|cooking|make|prepare|meal|dinner|recipe|recipes)\b", query)
+        and re.search(r"\b(?:budget|cheap|cheapest|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost)\b", query)
+        and re.search(r"\b(?:what|which|suggest|can\s+i|help\s+me|tonight|today)\b", query)
+    )
     # Operational health questions also commonly begin with ``are``/``is``
     # ("Are my services alive?", "Is anything unhealthy?").  Let the
     # already-composed infrastructure predicate admit those forms without
@@ -198,6 +208,8 @@ def deterministic_read_concept(text: str) -> str | None:
         return None
     if re.search(r"\bwhat\s+should\s+(?:you|i)\s+remember\b", query):
         return None
+    if recipe_budget_request:
+        return "RECIPE"
     if (
         (_FINANCE_SUBJECT.search(query) or _FINANCE_FILE_CONTEXT.search(query))
         and (

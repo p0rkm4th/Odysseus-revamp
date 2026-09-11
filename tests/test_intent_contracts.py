@@ -43,6 +43,15 @@ def test_recipe_availability_questions_use_canonical_stock_planning(query, view,
     assert resolved.action_id == action
 
 
+def test_budget_constraint_on_cooking_request_keeps_recipe_objective():
+    frame = compile_intent("What can I cook tonight without spending much?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["view"] == "available"
+    assert frame.filters["budget_constraint"] is True
+    assert resolved.action_id == "recipe_suggest"
+
+
 def test_recipe_availability_payload_is_bounded_and_read_only():
     from src.aci import canonical_read_fast_path_payload
 

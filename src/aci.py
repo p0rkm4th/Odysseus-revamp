@@ -3314,6 +3314,10 @@ def canonical_read_fast_path_payload(
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
         if filters.get("available_only"):
             payload["available_only"] = True
+        if filters.get("budget_constraint"):
+            # This flag qualifies the deterministic recipe result.  It does
+            # not authorize a price calculation or make the model infer one.
+            payload["budget_constraint"] = True
         if filters.get("max_shortages") is not None:
             payload["max_shortages"] = min(max(int(filters.get("max_shortages") or 0), 0), 32)
         payload["limit"] = min(max(int(filters.get("limit") or 20), 1), 50)
@@ -4174,7 +4178,13 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     if not labels:
         return None
     prefix = "You can make" if payload.get("available_only") else "Closest saved recipes"
-    return prefix + ": " + ", ".join(labels) + "."
+    answer = prefix + ": " + ", ".join(labels) + "."
+    if payload.get("budget_constraint"):
+        answer += (
+            " I can compare what you have, but I do not have a verified ingredient-price "
+            "or budget projection, so this is not a cost ranking."
+        )
+    return answer
 
 
 def canonical_recipe_missing_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:

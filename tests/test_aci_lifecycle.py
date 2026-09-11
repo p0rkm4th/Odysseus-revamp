@@ -153,6 +153,18 @@ def test_canonical_recipe_suggest_answer_uses_structured_availability_result():
     assert canonical_recipe_suggest_answer([event]) == "You can make: Rice Bowl (ready)."
 
 
+def test_canonical_recipe_suggest_answer_qualifies_unavailable_budget_ranking():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","budget_constraint":true}',
+        "output": '{"available_only":true,"budget_constraint":true,"recipes":[{"name":"Rice Bowl","can_make":true,"missing_count":0}]}',
+        "exit_code": 0,
+    }
+    answer = canonical_recipe_suggest_answer([event])
+    assert answer.startswith("You can make: Rice Bowl (ready).")
+    assert "not a cost ranking" in answer
+
+
 def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():
     for query in (
         "yo what computers do i got",
