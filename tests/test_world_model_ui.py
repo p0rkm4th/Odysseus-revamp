@@ -94,3 +94,16 @@ def test_recipe_missing_action_carries_canonical_recipe_id_from_library_card():
     inventory = (ROOT / "static/js/inventory.js").read_text()
     assert 'data-action="queue-missing"' in inventory
     assert 'data-recipe-id="${escapeHtml(recipe.id)}"' in inventory
+
+
+def test_recipe_library_has_owner_facing_hierarchy_and_roomier_window():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    manager = (ROOT / "static/js/workspaceWindowManager.js").read_text()
+    styles = (ROOT / "static/style.css").read_text()
+    assert "What can we cook?" in inventory
+    assert "recipe-card-grid" in inventory
+    assert "Ingredient check" in inventory
+    assert "NEXT STEP" in inventory
+    assert "initialRect" in manager
+    assert ".recipe-card-body" in styles
+    assert ".recipe-stat-ready" in styles
