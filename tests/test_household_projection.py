@@ -135,6 +135,30 @@ def test_all_grocery_write_boundaries_reject_recipe_placeholders():
         service.update_item("alice", item["id"], shopping_list=True)
 
 
+def test_recipe_shortages_can_be_reviewed_and_queued_without_changing_stock():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    rice = service.create_item("alice", name="Rice", domain="kitchen", item_kind="ingredient", default_unit="g")
+    service.add_stock("alice", rice["id"], quantity=500, unit="g", idempotency_key="recipe-stock")
+    recipe = service.create_recipe(
+        "alice", name="Spaghetti", servings=2,
+        ingredients=[
+            {"item_id": rice["id"], "quantity": 250, "unit": "g"},
+            {"name": "tomato sauce", "quantity": 1, "unit": "each"},
+        ],
+    )
+    missing = service.missing_ingredients("alice", recipe["id"])
+    assert missing["can_make"] is False
+    assert [row["name"] for row in missing["shortages"]] == ["tomato sauce"]
+    queued = service.queue_missing_ingredients("alice", recipe["id"])
+    assert queued["stock_changed"] is False
+    assert queued["count"] == 1
+    assert [row["name"] for row in service.list_items("alice", list_name="grocery")] == ["tomato sauce"]
+    replay = service.queue_missing_ingredients("alice", recipe["id"])
+    assert replay["count"] == 1 and replay["queued"][0]["replayed"] is True
+    assert str(service.list_lots("alice", rice["id"])[0]["quantity"]) == "500.000000"
+
+
 def test_multi_item_grocery_mutation_creates_individual_canonical_items():
     session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
     service = get_inventory_service(session_factory)
