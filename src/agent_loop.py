@@ -3390,12 +3390,11 @@ async def stream_aci_runtime(
         # the same terminal guard here so the model cannot plan the scan again
         # and show a second approval card. Port/service requests intentionally
         # continue into their separate bounded operation.
-        _approved_network_payload = (
-            approved_result.get("data")
-            if isinstance(approved_result, dict)
-            and isinstance(approved_result.get("data"), dict)
-            else approved_result if isinstance(approved_result, dict) else {}
-        )
+        # Approval-resume results use the same executor envelope as ordinary
+        # tool rounds.  Unwrap ``output``/``data`` through the shared parser;
+        # checking only ``data`` made a successful discovery look non-terminal
+        # and re-planned the original scan, producing a second approval card.
+        _approved_network_payload = _structured_tool_result(approved_result)
         if (
             approved.tool_name == "manage_homelab"
             and str(_approved_network_payload.get("action") or "") == "execute_network_discovery"
