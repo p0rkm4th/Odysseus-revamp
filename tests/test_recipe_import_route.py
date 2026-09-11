@@ -42,12 +42,11 @@ def test_recipe_import_route_returns_saved_recipe_and_deterministic_shortages(mo
 
 
 def test_recipe_import_route_uses_existing_web_fetch_boundary(monkeypatch):
-    class FakeWebFetch:
-        async def execute(self, content, _ctx):
-            assert "recipe.example" in content
-            return {"output": "Pasta\n\nIngredients:\n400 g pasta", "exit_code": 0}
+    def fake_fetch(url):
+        assert "recipe.example" in url
+        return {"success": True, "title": "Pasta", "content": "Pasta page", "lists": [["400 g pasta", "1 can sauce"]]}
 
-    monkeypatch.setattr("src.agent_tools.web_tools.WebFetchTool", FakeWebFetch)
+    monkeypatch.setattr("services.search.content.fetch_webpage_content", fake_fetch)
     router = inventory_routes.setup_inventory_routes(_Uploads(), service=_Service())
     endpoint = next(route.endpoint for route in router.routes if route.path == "/api/recipes/import")
     monkeypatch.setattr(inventory_routes, "_owner", lambda _request: "alice")

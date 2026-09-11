@@ -30,6 +30,31 @@ _UNITS = {
 }
 
 
+def recipe_text_from_web_result(result: dict[str, Any]) -> str:
+    """Build parser-friendly text from the shared web fetch projection.
+
+    HTML extraction commonly flattens page text, while recipe ingredients are
+    still available in the fetcher's structured list projection. Prefer a
+    bounded list that looks ingredient-like and keep the page text as context.
+    """
+    title = str(result.get("title") or "Imported recipe").strip()[:200]
+    content = str(result.get("content") or "").strip()
+    candidates: list[list[str]] = []
+    for raw_list in result.get("lists") or []:
+        if not isinstance(raw_list, list):
+            continue
+        lines = [str(value).strip() for value in raw_list if str(value).strip()]
+        if len(lines) < 2:
+            continue
+        score = sum(bool(re.match(r"^(?:[-*•]\s*)?\d", line)) for line in lines)
+        if score:
+            candidates.append(lines[:MAX_INGREDIENTS])
+    ingredients = max(candidates, key=lambda rows: (sum(bool(re.match(r"^\d", row)) for row in rows), len(rows)), default=[])
+    if not ingredients:
+        return f"{title}\n{content}"
+    return f"{title}\n{content}\n\nIngredients:\n" + "\n".join(ingredients)
+
+
 def _fraction(value: str) -> str:
     value = value.strip()
     if " " in value:

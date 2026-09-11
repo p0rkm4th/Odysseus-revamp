@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.recipe_import import extract_pdf_text, parse_recipe_text
+from src.recipe_import import extract_pdf_text, parse_recipe_text, recipe_text_from_web_result
 
 
 def test_pasted_recipe_import_extracts_bounded_ingredients_and_instructions():
@@ -36,6 +36,16 @@ def test_pasted_recipe_import_requires_an_ingredients_section():
 def test_recipe_import_is_bounded():
     with pytest.raises(ValueError, match="24000"):
         parse_recipe_text("x" * 24_001)
+
+
+def test_web_recipe_projection_recovers_structured_ingredient_list_after_text_flattening():
+    text = recipe_text_from_web_result({
+        "title": "Web pasta",
+        "content": "Web pasta Ingredients 400 g spaghetti Directions boil.",
+        "lists": [["400 g spaghetti", "1 can tomato sauce"], ["Home", "About"]],
+    })
+    result = parse_recipe_text(text)
+    assert [row["name"] for row in result["ingredients"]] == ["spaghetti", "tomato sauce"]
 
 
 def test_pdf_import_uses_existing_pdf_text_extractor(tmp_path: Path):
