@@ -706,10 +706,42 @@ def is_explicit_network_discovery_request(text: str) -> bool:
     query = str(text or "").lower()
     if re.search(r"^\s*(?:what\s+is|what\s+are|define|explain|how\s+does)\b", query):
         return False
+    # Questions about an already completed scan are reads.  Keeping this
+    # distinction in the shared semantic predicate prevents ACI and the chat
+    # route from turning a natural follow-up into a second approval request.
+    if is_network_observation_result_request(query):
+        return False
     return bool(
         re.search(r"\b(?:scan|discover|map|enumerate|identify|find)\b", query)
         and re.search(r"\b(?:network|lan|subnet|devices?|hosts?|192(?:\.168)?|rfc1918)\b", query)
     )
+
+
+def is_network_observation_result_request(text: str) -> bool:
+    """Recognize a bounded question about a completed network observation.
+
+    This never supplies a target or grants authority.  The canonical
+    ``read_network_observations`` ActionSpec still has to resolve the
+    owner-scoped persisted result.
+    """
+    query = str(text or "").strip()
+    if not query:
+        return False
+    result_language = re.search(
+        r"\b(?:what\s+did|what\s+was|which|show(?:\s+me)?|list|tell\s+me)\b"
+        r".{0,70}\b(?:scan|discovery|discovered|respond(?:ed|ing)|found|results?|hosts?|devices?)\b",
+        query,
+        re.IGNORECASE,
+    )
+    past_or_reference = re.search(
+        r"\b(?:that|the|my|this|last|previous|earlier)\s+"
+        r"(?:scan|discovery|network|hosts?|devices?)\b|"
+        r"\b(?:responded|responding|were\s+(?:found|discovered)|"
+        r"results?\s+of\s+(?:the|that|my|this)\s+scan)\b",
+        query,
+        re.IGNORECASE,
+    )
+    return bool(result_language and past_or_reference)
 
 
 def is_network_service_enumeration_request(text: str) -> bool:
@@ -1352,6 +1384,7 @@ def compile_intent(
             re.IGNORECASE,
         )
     )
+    _network_observation_result_language = is_network_observation_result_request(q)
     if read_explicit and operation in {"RESEARCH", "MONITOR", "EXECUTE"} and not _network_discovery_language:
         operation = "READ"
     concept = semantic_read_concept or "UNKNOWN"
@@ -1531,7 +1564,14 @@ def compile_intent(
         concept = "HOMELAB_HOST"
         operation = "READ"
         read_explicit = True
-    if concept == "NETWORK" and _network_discovery_language:
+    if _network_observation_result_language:
+        # A result question must read the owner-scoped persisted observation;
+        # it must never be promoted to a fresh discovery merely because the
+        # words "scan" or "hosts" appear in the follow-up.
+        concept = "NETWORK"
+        operation = "READ"
+        read_explicit = True
+    if concept == "NETWORK" and _network_discovery_language and not _network_observation_result_language:
         # The question can contain "what" and still be an executable
         # discovery objective.  A missing CIDR remains unauthorized/clarify-
         # bound below; current host context is not silently promoted to scope.

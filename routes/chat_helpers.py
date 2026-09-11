@@ -188,6 +188,7 @@ def ensure_chat_agent_work_run(
             compile_intent,
             resolve_intent,
             resolve_structured_reference,
+            is_network_observation_result_request,
             is_network_service_enumeration_request,
         )
         from src.agent_work_bridge import (
@@ -225,6 +226,19 @@ def ensure_chat_agent_work_run(
                 re.IGNORECASE,
             )
         ):
+            network_context = recent_session_network_discovery_context(
+                str(owner), str(session_id),
+            )
+            if network_context:
+                reference_context = {
+                    **(reference_context or {}),
+                    **network_context,
+                }
+        # A question about the just-completed scan is a read of that exact
+        # canonical result, not a request to start another scan and not a
+        # broad read of every historical observation.  Carry only the
+        # server-owned result reference into the next Run.
+        if is_network_observation_result_request(query):
             network_context = recent_session_network_discovery_context(
                 str(owner), str(session_id),
             )
@@ -300,6 +314,15 @@ def ensure_chat_agent_work_run(
                     )
                 else:
                     payload = {"action": resolved.action_id}
+                    if (
+                        frame.domain_concept == "NETWORK"
+                        and resolved.action_id == "read_network_observations"
+                        and isinstance(reference_context, dict)
+                        and reference_context.get("network_discovery_result_id")
+                    ):
+                        payload["result_id"] = str(
+                            reference_context["network_discovery_result_id"]
+                        )
                     if frame.domain_concept == "MEMORY":
                         payload["query"] = query
                     if frame.entity_reference and frame.domain_concept == "TECHNICAL_ASSET":

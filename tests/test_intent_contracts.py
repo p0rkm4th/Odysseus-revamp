@@ -16,6 +16,7 @@ from src.intent_contracts import (
     resolve_structured_reference,
     explicit_private_discovery_cidr,
     is_explicit_network_discovery_request,
+    is_network_observation_result_request,
     is_network_prerequisite_request,
     is_network_service_enumeration_request,
     network_discovery_request_cidr,
@@ -28,6 +29,22 @@ from src.aci import is_contextual_reference_followup
 
 def test_contract_registry_is_complete_for_registered_contracts():
     assert validate_contracts() == []
+
+
+@pytest.mark.parametrize("query", [
+    "What did that scan find?",
+    "Which hosts responded, and what did that scan actually find?",
+    "Show me the results of the previous scan.",
+])
+def test_completed_network_scan_followup_is_a_read_not_a_new_approval(query):
+    assert is_network_observation_result_request(query) is True
+    assert is_explicit_network_discovery_request(query) is False
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "READ"
+    assert frame.read_explicit is True
+    assert resolved.action_id == "read_network_observations"
 
 
 @pytest.mark.parametrize(("query", "view", "action"), [

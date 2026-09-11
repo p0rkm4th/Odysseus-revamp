@@ -69,6 +69,34 @@ def test_network_service_reference_uses_sealed_same_session_discovery(monkeypatc
     assert entities == []
 
 
+def test_network_result_read_preserves_exact_discovery_result_reference(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-network-result", "what did that scan find?",
+            intent={"domains": ["network_ops"], "domain_concept": "NETWORK", "operation_class": "READ"},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.continuation_state = {
+                **run.continuation_state,
+                "reference_context": {
+                    "network_discovery_result_id": "result-exact",
+                },
+            }
+            db.commit()
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "read_network_observations"},
+        )
+        with session_factory() as db:
+            action = db.query(WorkAction).filter_by(id=action_id).one()
+            assert action.normalized_input["result_id"] == "result-exact"
+    finally:
+        engine.dispose()
+
+
 def test_stale_complete_continuation_is_reconciled_before_new_owner_turn(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)

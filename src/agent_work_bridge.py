@@ -705,6 +705,16 @@ def prepare_action(
                     {"lifecycle_state": "waiting_input", "current_step": f"precheck required: {', '.join(missing)}"},
                 )
                 return None
+        # Preserve the exact server-owned discovery result for a natural
+        # follow-up even if the model emits a second plain
+        # ``read_network_observations`` block without the internal reference.
+        # The model cannot widen this scope: the reference is copied only from
+        # the Run's authenticated continuation state and is checked again by
+        # the Homelab executor against the same owner and action type.
+        if spec.action_id == "read_network_observations" and not payload.get("result_id"):
+            carried_context = run.continuation_state.get("reference_context") if isinstance(run.continuation_state, dict) else None
+            if isinstance(carried_context, dict) and carried_context.get("network_discovery_result_id"):
+                payload["result_id"] = str(carried_context["network_discovery_result_id"])
         if spec.action_id in {"plan_network_service_enumeration", "execute_network_service_enumeration"} and not payload.get("targets"):
             carried_context = run.continuation_state.get("reference_context") if isinstance(run.continuation_state, dict) else None
             carried_targets = (
@@ -844,6 +854,23 @@ def prepare_action(
             ),
         })
         return action["id"]
+
+
+def bound_action_input(owner: str, action_id: str) -> dict[str, Any] | None:
+    """Return one owner-scoped Action's normalized input for execution adapters."""
+    with SessionLocal() as db:
+        row = (
+            db.query(WorkAction)
+            .join(WorkRun, WorkRun.id == WorkAction.run_id)
+            .filter(
+                WorkAction.id == str(action_id),
+                WorkRun.owner == str(owner),
+            )
+            .one_or_none()
+        )
+        if row is None or not isinstance(row.normalized_input, dict):
+            return None
+        return dict(row.normalized_input)
 
 
 def bind_approval(owner: str, action_id: str, approval_reference: str) -> dict[str, Any] | None:

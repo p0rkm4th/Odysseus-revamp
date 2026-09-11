@@ -552,6 +552,68 @@ class HomelabOperations:
                 "context_kinds": sorted({item["kind"] for item in interfaces}),
             }
         if action == "read_network_observations":
+            # A conversational follow-up may carry a server-owned result ID
+            # for the immediately preceding discovery.  Read that exact
+            # result rather than collapsing the request into the whole
+            # historical CMDB projection; otherwise "what did that scan
+            # find?" can report stale observations from older scans.
+            result_id = str(request.get("result_id") or "").strip()
+            if result_id:
+                from core.database import SessionLocal
+                from core.work_models import WorkAction, WorkResult
+                with SessionLocal() as db:
+                    row = (
+                        db.query(WorkResult)
+                        .join(WorkAction, WorkAction.id == WorkResult.action_id)
+                        .filter(
+                            WorkResult.id == result_id,
+                            WorkResult.owner == owner,
+                            WorkAction.action_id == "execute_network_discovery",
+                        )
+                        .one_or_none()
+                    )
+                    data = row.domain_reference if row and isinstance(row.domain_reference, dict) else None
+                if not isinstance(data, dict) or data.get("success") is not True:
+                    return {
+                        "status": "UNAVAILABLE",
+                        "action": action,
+                        "error_code": "DISCOVERY_RESULT_UNAVAILABLE",
+                        "source": "canonical_work_result",
+                        "owner_scope": owner,
+                        "exit_code": 1,
+                    }
+                nodes = []
+                seen: set[str] = set()
+                for candidate in data.get("asset_draft_candidates") or []:
+                    if not isinstance(candidate, dict):
+                        continue
+                    addresses = candidate.get("ip_addresses") or []
+                    if isinstance(addresses, str):
+                        addresses = [addresses]
+                    for address in addresses:
+                        ip = str(address or "").strip()
+                        if not ip or ip in seen:
+                            continue
+                        seen.add(ip)
+                        nodes.append({
+                            "id": f"observation:{ip}",
+                            "name": f"Unidentified device {ip}",
+                            "attributes": {"observed_ip": ip},
+                        })
+                return {
+                    "status": "EMPTY_RESULT" if not nodes else "SUCCESS",
+                    "action": action,
+                    "nodes": nodes,
+                    "edges": [],
+                    "node_count": len(nodes),
+                    "edge_count": 0,
+                    "source": "canonical_work_result",
+                    "owner_scope": owner,
+                    "observation_kind": "CURRENT_DISCOVERY_RESULT",
+                    "freshness": "current_result",
+                    "source_result_id": result_id,
+                    "exit_code": 0,
+                }
             from src.network_projection import map_projection
             projection = map_projection(owner=owner)
             if projection.get("warning"):
