@@ -248,3 +248,14 @@ def test_structured_tool_result_unwraps_approval_resume_output():
     })
     assert payload["action"] == "execute_network_discovery"
     assert payload["success"] is True
+    nested = agent_loop._structured_tool_result({
+        "data": {
+            "output": json.dumps({
+                "action": "execute_network_discovery",
+                "success": True,
+            }),
+            "exit_code": 0,
+        },
+    })
+    assert nested["action"] == "execute_network_discovery"
+    assert nested["success"] is True
