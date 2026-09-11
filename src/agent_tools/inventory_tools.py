@@ -75,6 +75,18 @@ async def _execute(content: str, ctx: Mapping[str, Any], *, method: str, actions
         # Do not log request payloads or exception text: both may contain
         # private inventory/recipe names supplied by the owner.
         logger.warning("%s service call failed (%s)", method, type(exc).__name__)
+        if method == "manage_inventory" and "individual grocery items" in str(exc):
+            return {
+                "error": (
+                    "The grocery action used a request phrase instead of concrete items. "
+                    "No change was made. For a named dish, use the recipe actions with "
+                    "individual ingredients, compare stock, then queue the missing items; "
+                    "otherwise ask the owner for the individual items."
+                ),
+                "error_code": "grocery_item_placeholder",
+                "retryable": True,
+                "exit_code": 1,
+            }
         return {
             "error": "The inventory service could not complete that request. No change was confirmed.",
             "exit_code": 1,

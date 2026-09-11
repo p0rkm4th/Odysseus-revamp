@@ -1387,6 +1387,16 @@ def test_post_result_transition_projects_completion_without_loop_authority():
     assert failed.framework_event == "canonical_action_failure"
 
 
+def test_retryable_inventory_shape_failure_can_receive_bounded_repair():
+    retry = project_post_result_transition(
+        {"error_code": "grocery_item_placeholder", "retryable": True, "exit_code": 1},
+        selected_action={"binding": "manage_assets", "action_id": "add_item"},
+    )
+    assert retry.state.value == "BLOCKED"
+    assert retry.answer_only is False
+
+
+
 def test_composition_only_accepts_registered_primitives_and_acyclic_graphs():
     composite, errors = compile_composite_action(
         owner="owner",
