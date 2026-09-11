@@ -299,6 +299,12 @@ function modalForm(title, body, submitLabel, kind, id = '') {
 
 function field(label, name, attrs = '') { return `<label>${label}<input name="${name}" ${attrs}></label>`; }
 
+function unitOptions(selected) {
+  const value = String(selected || '').trim();
+  const units = value && !UNITS.includes(value) ? [value, ...UNITS] : UNITS;
+  return units.map(unit => `<option value="${escapeHtml(unit)}"${unit === value ? ' selected' : ''}>${escapeHtml(unit)}</option>`).join('');
+}
+
 async function onSubmit(event) {
   const form = event.target;
   if (!form.matches('#inventory-intake-form, .inventory-dialog')) return;
@@ -467,7 +473,10 @@ async function onClick(event) {
   if (action === 'remove-grocery') { await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`, {method:'PATCH', body:JSON.stringify({shopping_list:false})}); return loadGrocery(); }
   if (action === 'move-to-grocery') { await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`, {method:'PATCH', body:JSON.stringify({shopping_list:true})}); uiModule.showToast?.('Added to grocery list'); return loadStorageArea(tab); }
   if (action === 'archive-item') { if (!window.confirm('Archive this item? Its history stays available.')) return; await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}/archive`, {method:'POST'}); return tab === 'grocery' ? loadGrocery() : loadStock(); }
-  if (action === 'grocery-bought') return modalForm('Mark as bought', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>`, 'Add stock', 'stock', card.dataset.itemId);
+  if (action === 'grocery-bought') {
+    const {item} = await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`);
+    return modalForm('Mark as bought', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${unitOptions(item.default_unit)}</select></label>`, 'Add stock', 'stock', card.dataset.itemId);
+  }
   if (action === 'asset-details') {
     try {
       const {asset = {}} = await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`);
@@ -475,7 +484,10 @@ async function onClick(event) {
       return modalForm('Hardware asset details', body, 'Save asset', 'asset', card.dataset.itemId);
     } catch (error) { uiModule.showError?.(error.message); return; }
   }
-  if (action === 'stock-add' || action === 'stock-consume') return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
+  if (action === 'stock-add' || action === 'stock-consume') {
+    const {item} = await api(`/api/inventory/items/${encodeURIComponent(card.dataset.itemId)}`);
+    return modalForm(action === 'stock-add' ? 'Add stock' : 'Use stock', `${field('Quantity','quantity','required inputmode="decimal"')}<label>Unit<select name="unit">${unitOptions(item.default_unit)}</select></label>${action === 'stock-consume' ? field('Reason','reason','maxlength="200"') : ''}`, action === 'stock-add' ? 'Add' : 'Use', action === 'stock-add' ? 'stock' : 'consume', card.dataset.itemId);
+  }
   if (action === 'new-recipe') return modalForm('New recipe', `${field('Name','name','required maxlength="200"')}${field('Servings','servings','required inputmode="decimal"')}<label>Ingredients <small>one per line: name | quantity | unit</small><textarea name="ingredients" placeholder="spaghetti | 400 | g\ntomato sauce | 1 | jar" required></textarea></label>${field('Source URL (optional)','source_url','type="url" maxlength="4000"')}<label>Instructions<textarea name="instructions"></textarea></label>`, 'Save recipe', 'recipe');
   if (action === 'import-recipe') return modalForm('Import recipe', `<p class="inventory-muted">Paste a recipe, provide a public URL, or choose a PDF. Import only saves the recipe; stock and groceries change only when you explicitly queue missing items.</p>${field('Recipe name (optional)','name','maxlength="200"')}${field('Public recipe URL (optional)','url','type="url" maxlength="4000"')}<label>Paste recipe text<textarea name="source_text" maxlength="24000" placeholder="Ingredients:\n2 cups tomato sauce\n400 g spaghetti\n\nDirections:\n..."></textarea></label><label>PDF recipe (optional)<input type="file" name="pdf" accept="application/pdf,.pdf"></label>`, 'Import recipe', 'recipe-import');
   if (action === 'recipe-details') return showRecipe(recipeCard.dataset.recipeId);

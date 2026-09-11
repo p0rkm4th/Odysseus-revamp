@@ -562,3 +562,11 @@ def test_inventory_ui_has_pantry_and_grocery_crud_surfaces():
     source = (Path(__file__).resolve().parents[1] / "static/js/inventory.js").read_text()
     for marker in ("Grocery list", "new-grocery", "shopping_list", "PATCH", "archive"):
         assert marker in source
+
+
+def test_inventory_ui_defaults_stock_dialog_to_canonical_item_unit():
+    from pathlib import Path
+    source = (Path(__file__).resolve().parents[1] / "static/js/inventory.js").read_text()
+    assert "function unitOptions(selected)" in source
+    assert "unitOptions(item.default_unit)" in source
+    assert "grocery-bought" in source
