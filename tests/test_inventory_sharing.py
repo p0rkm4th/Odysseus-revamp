@@ -112,6 +112,8 @@ def test_member_edits_require_the_second_explicit_permission_and_reuse_canonical
         allow_member_mutation=True,
     )
     assert policy["allow_member_mutation"] is True
+    assert service.manage_inventory({"action": "list", "list_name": "fridge"}, owner="bob")["items"][0]["name"] == "Shared eggs"
+    assert service.manage_inventory({"action": "add_stock", "name": "Shared eggs", "quantity": "1", "unit": "each", "idempotency_key": "bob-add-tool"}, owner="bob")["lot"]["owner"] == "alice"
     added = service.add_stock(
         "bob", item["id"], quantity="6", unit="each", idempotency_key="bob-add",
     )
@@ -120,6 +122,6 @@ def test_member_edits_require_the_second_explicit_permission_and_reuse_canonical
         "bob", item["id"], quantity="2", unit="each", idempotency_key="bob-use",
     )
     assert consumed["quantity"] == 2
-    assert service.list_items("alice", list_name="fridge", include_stock=True)[0]["stock_quantity"] == "4.000000"
+    assert service.list_items("alice", list_name="fridge", include_stock=True)[0]["stock_quantity"] == "5.000000"
     service.update_item("bob", item["id"], shopping_list=True)
     assert service.list_items("alice", list_name="grocery")[0]["name"] == "Shared eggs"
