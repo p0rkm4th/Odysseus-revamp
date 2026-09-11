@@ -1789,6 +1789,13 @@ def compile_intent(
         elif re.search(r"\brestaurants?\b", q):
             reference_filters["category"] = "Restaurants"
             reference_filters["view"] = "spending"
+            # The generic ``at/from`` extractor sees the category noun as a
+            # merchant ("at restaurants this year").  Once the bounded
+            # category projection recognizes the generic plural, do not send
+            # both selectors to FinanceService or accidentally require a
+            # merchant literally named "Restaurants".
+            if str(reference_filters.get("merchant") or "").casefold() == "restaurants":
+                reference_filters.pop("merchant", None)
     elif concept == "RECIPE" and operation == "READ":
         if re.search(
             r"\b(?:can\s+i\s+(?:make|cook|prepare)|make\s+with\s+what\s+i\s+have|"

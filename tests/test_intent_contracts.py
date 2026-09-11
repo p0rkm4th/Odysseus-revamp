@@ -126,6 +126,13 @@ def test_finance_insight_question_uses_bounded_spending_overview():
     assert frame.filters["view"] == "spending"
 
 
+def test_generic_restaurant_phrase_is_category_not_literal_merchant():
+    frame = compile_intent("How much did I spend at restaurants this year?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["category"] == "Restaurants"
+    assert "merchant" not in frame.filters
+
+
 def test_finance_walkme_transcription_typo_stays_on_canonical_read_path():
     frame = compile_intent("Walkme through my past 4 months of finances")
     assert frame.domain_concept == "FINANCE"
