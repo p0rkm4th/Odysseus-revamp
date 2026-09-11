@@ -5491,6 +5491,17 @@ async def stream_aci_runtime(
                 )
                 and not _is_network_plan
             )
+            # A bounded inventory-shape rejection is recoverable model input
+            # error, not a terminal canonical read failure. Let the next model
+            # round see the structured hint and compose a recipe action or
+            # concrete item list; do not turn the rejected placeholder into a
+            # final owner-facing failure.
+            if (
+                block.tool_type == "manage_assets"
+                and isinstance(result, dict)
+                and result.get("error_code") == "grocery_item_placeholder"
+            ):
+                _was_aci_canonical_read = False
             _post_result_transition = project_post_result_transition(
                 result,
                 canonical_read=_was_aci_canonical_read,
