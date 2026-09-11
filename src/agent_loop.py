@@ -87,6 +87,7 @@ from src.aci import (
     classify_no_action_reason,
     is_canonical_read_contract,
     is_aci_general_fallback_candidate,
+    is_recipe_composition_request,
     usage_bucket,
     usage_bucket_summary,
     compute_final_metrics,
@@ -1931,6 +1932,16 @@ async def stream_aci_runtime(
     _canonical_read_fast = is_canonical_read_contract(
         _intent.get("intent_frame"), _intent.get("resolved_contract")
     )
+    # A named-dish request needs recipe_add -> recipe_missing -> queue, not a
+    # model decision packet for one add_item mutation. Keep the normal
+    # recipe-capable tool route while retaining all server-side policy and
+    # canonical inventory checks.
+    _aci_recipe_composition_route = bool(
+        _aci_enabled
+        and _aci_mode == "aci"
+        and is_recipe_composition_request(_last_user)
+        and "household" in set(_intent.get("domains") or set())
+    )
     # Once ACI has resolved a supported semantic contract, its binding is the
     # only model-facing capability for this turn.  The old route used to add
     # ALWAYS_AVAILABLE, domain maps, skills, and (sometimes) the generic tool
@@ -1947,6 +1958,7 @@ async def stream_aci_runtime(
         and not _active_document_relevant
         and not uploaded_files
         and _canonical_binding
+        and not _aci_recipe_composition_route
         and isinstance(_intent.get("intent_frame"), dict)
         and str(_intent["intent_frame"].get("domain_concept") or "") not in {"", "UNKNOWN"}
     )
@@ -2453,7 +2465,7 @@ async def stream_aci_runtime(
         _relevant_tools.update({"developer_read"})
         _relevant_tools.difference_update({"bash", "python", "read_file", "grep", "glob", "ls", "get_workspace"})
         _record_aci_framework("developer_read_contract")
-    if _aci_enabled:
+    if _aci_enabled and not _aci_recipe_composition_route:
         try:
             projection = project_action_selection(
                 intent=_intent,

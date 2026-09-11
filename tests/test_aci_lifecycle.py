@@ -17,6 +17,7 @@ from src.aci import (
     canonical_inventory_mutation_answer,
     canonical_result_answer,
     is_aci_general_fallback_candidate,
+    is_recipe_composition_request,
     project_final_answer,
     project_model_decision,
     AnswerSource,
@@ -52,6 +53,13 @@ from src.intent_contracts import canonical_domain_projection, compile_intent, re
 from src.capability_registry import action_for_tool, capability_for_tool
 from src.tool_capabilities import ToolEffect, capabilities_for_action
 from src.tool_policy import web_access_mode
+
+
+def test_recipe_composition_routes_to_recipe_capable_tools():
+    assert is_recipe_composition_request(
+        "I want to make spaghetti tonight. Add the ingredients I am missing to my shopping list."
+    )
+    assert not is_recipe_composition_request("Add spaghetti to my grocery list")
 
 
 def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():
