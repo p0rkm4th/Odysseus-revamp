@@ -1215,6 +1215,8 @@ class RecipeService(InventoryService):
         available_only: bool = False,
         max_shortages: int | None = None,
         ingredient_query: str | None = None,
+        use_expiring: bool = False,
+        expiry_days: int = 30,
         servings: Any | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
@@ -1229,37 +1231,88 @@ class RecipeService(InventoryService):
                 bounded_shortages = max(0, min(int(max_shortages), 32))
             except (TypeError, ValueError) as exc:
                 raise InventoryError("max_shortages must be a non-negative integer") from exc
+        try:
+            bounded_expiry_days = max(0, min(int(expiry_days), 365))
+        except (TypeError, ValueError) as exc:
+            raise InventoryError("expiry_days must be a non-negative integer") from exc
 
         suggestions: list[dict[str, Any]] = []
         normalized_ingredient_query = normalize_item_name(ingredient_query) if ingredient_query else ""
-        for recipe in self.list_recipes(owner)[:50]:
-            if normalized_ingredient_query:
+        today = date.today()
+        expiry_cutoff = today + timedelta(days=bounded_expiry_days)
+        with self._read() as db:
+            visible_owners = self._shared_owner_ids(db, owner, "kitchen_inventory")
+            for recipe in self.list_recipes(owner)[:50]:
                 ingredients = recipe.get("ingredients") if isinstance(recipe, dict) else None
-                if not any(
-                    normalized_ingredient_query in normalize_item_name(row.get("name"))
-                    for row in (ingredients or [])
+                matching_ingredients = [
+                    row for row in (ingredients or [])
                     if isinstance(row, dict)
-                ):
+                    and (
+                        not normalized_ingredient_query
+                        or normalized_ingredient_query in normalize_item_name(row.get("name"))
+                    )
+                ]
+                if normalized_ingredient_query and not matching_ingredients:
                     continue
-            plan = self.can_make(owner, recipe["id"], servings=servings)
-            shortages = [{
-                "name": row.name, "missing": row.missing,
-                "unit": row.unit, "optional": row.optional,
-            } for row in plan.shortages]
-            required_shortages = [row for row in shortages if not row["optional"]]
-            if available_only and required_shortages:
-                continue
-            if bounded_shortages is not None and len(required_shortages) > bounded_shortages:
-                continue
-            suggestions.append({
-                "recipe_id": recipe["id"], "name": recipe["name"],
-                "servings": recipe["servings"],
-                "can_make": not required_shortages,
-                "missing_count": len(required_shortages),
-                "shortages": shortages,
-            })
-            if len(suggestions) >= bounded_limit:
-                break
+
+                expiring_names: list[str] = []
+                if use_expiring:
+                    for ingredient in matching_ingredients or (ingredients or []):
+                        if not isinstance(ingredient, dict):
+                            continue
+                        item_query = db.query(InventoryItem).filter(
+                            InventoryItem.owner.in_(visible_owners),
+                            InventoryItem.archived.is_(False),
+                        )
+                        if ingredient.get("item_id"):
+                            item_query = item_query.filter(InventoryItem.id == ingredient["item_id"])
+                        else:
+                            item_query = item_query.filter(
+                                InventoryItem.normalized_name
+                                == normalize_item_name(ingredient.get("name"))
+                            )
+                        items = item_query.all()
+                        if any(
+                            db.query(InventoryLot.id).filter(
+                                InventoryLot.owner == item.owner,
+                                InventoryLot.item_id == item.id,
+                                InventoryLot.quantity > 0,
+                                InventoryLot.expiry_date >= today,
+                                InventoryLot.expiry_date <= expiry_cutoff,
+                            ).first()
+                            for item in items
+                        ):
+                            name = str(ingredient.get("name") or "").strip()
+                            if name and name not in expiring_names:
+                                expiring_names.append(name)
+                    if not expiring_names:
+                        continue
+
+                plan = self._stock_plan(
+                    db, owner, db.get(InventoryRecipe, recipe["id"]),
+                    servings if servings is not None else recipe["servings"],
+                )
+                shortages = [{
+                    "name": row.name, "missing": row.missing,
+                    "unit": row.unit, "optional": row.optional,
+                } for row in plan.shortages]
+                required_shortages = [row for row in shortages if not row["optional"]]
+                if available_only and required_shortages:
+                    continue
+                if bounded_shortages is not None and len(required_shortages) > bounded_shortages:
+                    continue
+                result = {
+                    "recipe_id": recipe["id"], "name": recipe["name"],
+                    "servings": recipe["servings"],
+                    "can_make": not required_shortages,
+                    "missing_count": len(required_shortages),
+                    "shortages": shortages,
+                }
+                if use_expiring:
+                    result["expiring_ingredients"] = expiring_names
+                suggestions.append(result)
+                if len(suggestions) >= bounded_limit:
+                    break
         suggestions.sort(key=lambda row: (
             not row["can_make"], row["missing_count"], str(row["name"]).casefold(),
         ))
@@ -1268,6 +1321,8 @@ class RecipeService(InventoryService):
             "available_only": bool(available_only),
             "max_shortages": bounded_shortages,
             "ingredient_query": ingredient_query,
+            "use_expiring": bool(use_expiring),
+            "expiry_days": bounded_expiry_days,
             "canonical_store": "inventory_service",
         }
 
@@ -1681,6 +1736,8 @@ class RecipeService(InventoryService):
                 owner, available_only=bool(args.get("available_only", False)),
                 max_shortages=args.get("max_shortages"),
                 ingredient_query=args.get("ingredient_query"),
+                use_expiring=bool(args.get("use_expiring", False)),
+                expiry_days=args.get("expiry_days", 30),
                 servings=args.get("servings"),
                 limit=args.get("limit", 20),
             )

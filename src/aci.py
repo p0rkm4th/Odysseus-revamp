@@ -3557,6 +3557,9 @@ def canonical_read_fast_path_payload(
         ingredient_query = str(filters.get("ingredient_query") or "").strip()
         if ingredient_query:
             payload["ingredient_query"] = ingredient_query[:100]
+        if filters.get("use_expiring"):
+            payload["use_expiring"] = True
+            payload["expiry_days"] = min(max(int(filters.get("expiry_days") or 30), 0), 365)
         payload["limit"] = min(max(int(filters.get("limit") or 20), 1), 50)
     if action == "summarize_owner_memory":
         payload["query"] = query or "what do you remember about me"
@@ -4585,6 +4588,7 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         return None
     budget_requested = bool(payload.get("budget_constraint") or request.get("budget_constraint"))
     ingredient_query = str(payload.get("ingredient_query") or request.get("ingredient_query") or "").strip()
+    use_expiring = bool(payload.get("use_expiring") or request.get("use_expiring"))
     budget_note = (
         " I can compare what you have, but I do not have a verified ingredient-price "
         "or budget projection, so this is not a cost ranking."
@@ -4595,7 +4599,8 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
         if payload.get("available_only"):
             return "I couldn't find a saved recipe you can make from current stock." + budget_note
         if ingredient_query:
-            return f"I couldn't find a saved recipe using {ingredient_query}."
+            suffix = " before it goes bad" if use_expiring else ""
+            return f"I couldn't find a saved recipe using {ingredient_query}{suffix}."
         return "I couldn't find saved recipes within that shortage limit." + budget_note
     labels = []
     for recipe in recipes:
@@ -4612,7 +4617,7 @@ def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     if not labels:
         return None
     if ingredient_query:
-        prefix = f"Recipes using {ingredient_query}"
+        prefix = f"Recipes using {ingredient_query}{' before it goes bad' if use_expiring else ''}"
     else:
         prefix = "You can make" if payload.get("available_only") else "Closest saved recipes"
     answer = prefix + ": " + ", ".join(labels) + "."

@@ -36,7 +36,7 @@ MANAGE_ASSETS_SCHEMA = {
             "relation": {"type": "string"}, "source_asset": {"type": "string"}, "target_asset": {"type": "string"}, "reason": {"type": "string"},
             "item_id": {"type": "string"}, "items": {"type": "array", "items": {"type": "string"}, "maxItems": 32}, "clear": {"type": "boolean"}, "domain": {"type": "string", "enum": ["kitchen", "household", "it"]}, "item_kind": {"type": "string", "enum": ["ingredient", "consumable", "asset"]}, "default_unit": {"type": "string"}, "shopping_list": {"type": "boolean"}, "storage_area": {"type": "string", "enum": ["pantry", "fridge", "freezer"]}, "list_name": {"type": "string", "enum": ["grocery", "pantry", "fridge", "freezer"]}, "reorder_point": {"type": "number"},
             "quantity": {"type": "number"}, "unit": {"type": "string"}, "idempotency_key": {"type": "string"},
-            "recipe_id": {"type": "string"}, "recipe_name": {"type": "string"}, "recipe_query": {"type": "string"}, "ingredient_query": {"type": "string"}, "servings": {"type": "number"},
+            "recipe_id": {"type": "string"}, "recipe_name": {"type": "string"}, "recipe_query": {"type": "string"}, "ingredient_query": {"type": "string"}, "use_expiring": {"type": "boolean"}, "expiry_days": {"type": "integer", "minimum": 0, "maximum": 365}, "servings": {"type": "number"},
             "ingredients": {"type": "array", "maxItems": 64, "items": {"type": "object", "properties": {"name": {"type": "string"}, "quantity": {"type": "number"}, "unit": {"type": "string"}, "optional": {"type": "boolean"}, "preparation": {"type": "string"}}, "required": ["name", "quantity", "unit"]}},
             "instructions": {"type": "string", "maxLength": 20000}, "source_url": {"type": "string", "maxLength": 4000},
         }, "required": ["action"]},
@@ -241,7 +241,9 @@ change succeeded unless the structured tool result confirms it.
 
 Recipes use the same canonical capability. Use `recipe_suggest` for a bounded,
 read-only comparison of saved recipes with current stock. It may also filter
-recipes by an owner-supplied ingredient through `ingredient_query`. Use `recipe_add` with a bounded
+recipes by an owner-supplied ingredient through `ingredient_query`, or by
+positive canonical stock expiring within `expiry_days` when the owner asks what
+to use before it goes bad. Use `recipe_add` with a bounded
 ingredient array when the owner provides a recipe, `recipe_get`, `recipe_search`, or `recipe_list`
 to retrieve one, `recipe_missing` to compare required ingredients against
 current stock, and `recipe_missing_by_name` to compare a named saved recipe without changing inventory.

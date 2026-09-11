@@ -214,6 +214,18 @@ def test_canonical_recipe_suggest_answer_labels_ingredient_filter():
     assert canonical_recipe_suggest_answer([event]) == "Recipes using chicken: Chicken Rice (ready)."
 
 
+def test_canonical_recipe_suggest_answer_labels_expiring_ingredient_filter():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","ingredient_query":"chicken","use_expiring":true}',
+        "output": '{"success":true,"ingredient_query":"chicken","use_expiring":true,"recipes":[{"name":"Chicken Rice","can_make":false,"missing_count":1}]}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_suggest_answer([event]) == (
+        "Recipes using chicken before it goes bad: Chicken Rice (missing 1 item)."
+    )
+
+
 def test_canonical_recipe_suggest_answer_qualifies_unavailable_budget_ranking():
     event = {
         "tool": "manage_assets",
