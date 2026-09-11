@@ -19,6 +19,7 @@ from src.aci import (
     canonical_recipe_missing_answer,
     canonical_recipe_queue_answer,
     canonical_recipe_list_answer,
+    canonical_recipe_suggest_answer,
     canonical_result_answer,
     is_aci_general_fallback_candidate,
     is_recipe_composition_request,
@@ -141,6 +142,15 @@ def test_canonical_recipe_queue_answer_explains_missing_saved_recipe():
         "exit_code": 1,
     }
     assert "Import or paste the recipe first" in canonical_recipe_queue_answer([event])
+
+
+def test_canonical_recipe_suggest_answer_uses_structured_availability_result():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_suggest"}',
+        "output": '{"available_only":true,"recipes":[{"name":"Rice Bowl","can_make":true,"missing_count":0}]}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_suggest_answer([event]) == "You can make: Rice Bowl (ready)."
 
 
 def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():

@@ -3309,6 +3309,14 @@ def canonical_read_fast_path_payload(
                 r"\bhow\s+many\b", requested_query, re.IGNORECASE
             ):
                 payload["result_projection"] = "count"
+    if binding == "manage_assets" and action == "recipe_suggest":
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        if filters.get("available_only"):
+            payload["available_only"] = True
+        if filters.get("max_shortages") is not None:
+            payload["max_shortages"] = min(max(int(filters.get("max_shortages") or 0), 0), 32)
+        payload["limit"] = min(max(int(filters.get("limit") or 20), 1), 50)
     if action == "summarize_owner_memory":
         payload["query"] = query or "what do you remember about me"
     elif binding == "developer_read":
@@ -4128,6 +4136,47 @@ def canonical_recipe_list_answer(tool_events: Sequence[Mapping[str, Any]]) -> st
     return "Your saved recipes: " + ", ".join(names) + "."
 
 
+def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render deterministic recipe availability/shortage suggestions."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") != "recipe_suggest":
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        return "I couldn't compare your saved recipes with current stock; no inventory was changed."
+    recipes = payload.get("recipes")
+    if not isinstance(recipes, list):
+        return None
+    if not recipes:
+        if payload.get("available_only"):
+            return "I couldn't find a saved recipe you can make from current stock."
+        return "I couldn't find saved recipes within that shortage limit."
+    labels = []
+    for recipe in recipes:
+        if not isinstance(recipe, Mapping):
+            continue
+        name = str(recipe.get("name") or "").strip()
+        if not name:
+            continue
+        if recipe.get("can_make"):
+            labels.append(f"{name} (ready)")
+        else:
+            count = recipe.get("missing_count")
+            labels.append(f"{name} (missing {count} item{'s' if count != 1 else ''})")
+    if not labels:
+        return None
+    prefix = "You can make" if payload.get("available_only") else "Closest saved recipes"
+    return prefix + ": " + ", ".join(labels) + "."
+
+
 def canonical_recipe_missing_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render a read-only saved-recipe stock comparison."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
@@ -4399,6 +4448,7 @@ def canonical_result_answer(
     authoritative or merely another piece of model prose.
     """
     candidates = (
+        (canonical_recipe_suggest_answer(tool_events), "canonical recipe availability Result"),
         (canonical_recipe_list_answer(tool_events), "canonical saved recipe Result"),
         (canonical_recipe_missing_answer(tool_events), "canonical recipe stock Result"),
         (canonical_recipe_queue_answer(tool_events), "canonical recipe grocery Result"),
