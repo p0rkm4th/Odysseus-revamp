@@ -735,7 +735,7 @@ def is_network_observation_result_request(text: str) -> bool:
     )
     past_or_reference = re.search(
         r"\b(?:that|the|my|this|last|previous|earlier)\s+"
-        r"(?:scan|discovery|network|hosts?|devices?)\b|"
+        r"(?:scan|discovery|hosts?|devices?)\b|"
         r"\b(?:responded|responding|were\s+(?:found|discovered)|"
         r"results?\s+of\s+(?:the|that|my|this)\s+scan)\b",
         query,
