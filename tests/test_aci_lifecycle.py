@@ -136,6 +136,23 @@ def test_recipe_missing_question_uses_bounded_saved_recipe_lookup():
     assert recipe_missing_name(natural_question) == "spaghetti"
 
 
+def test_recipe_missing_question_understands_conversational_cooking_plans():
+    variants = (
+        "I want spaghetti tonight. What are we missing?",
+        "We're having tacos tonight; what do we need?",
+        "Planning lasagna for dinner — what am I missing?",
+    )
+    for question in variants:
+        assert is_recipe_missing_request(question)
+        assert recipe_missing_name(question) in {"spaghetti", "tacos", "lasagna"}
+
+
+def test_recipe_missing_question_does_not_turn_vague_cooking_into_recipe_lookup():
+    question = "I want something easy tonight. What are we missing?"
+    assert not is_recipe_missing_request(question)
+    assert recipe_missing_name(question) is None
+
+
 def test_recipe_catalog_question_does_not_become_a_fictitious_recipe_lookup():
     question = "What recipes can I make right now, and what ingredients are missing for the others?"
     assert not is_recipe_missing_request(question)

@@ -1617,6 +1617,14 @@ def is_recipe_missing_request(text: str) -> bool:
         r"\b(?:make|cook|prepare)\s+(?!a\s+grocery\b)[a-z0-9]",
         value,
     ))
+    # Owners often name the dish through an ordinary plan rather than an
+    # imperative: "I want spaghetti tonight" or "we're having tacos".  The
+    # bounded extractor below only treats that as a recipe when it can isolate
+    # a concrete dish span; generic phrases such as "something easy" remain
+    # ordinary discovery/fallback requests.
+    names_dish = names_dish or (not catalog_question and bool(
+        _natural_recipe_missing_name(text)
+    ))
     return bool(
         asks_missing
         and (names_dish or (names_recipe and not catalog_question))
@@ -1626,6 +1634,12 @@ def is_recipe_missing_request(text: str) -> bool:
 
 def recipe_missing_name(text: str) -> str | None:
     """Extract a bounded saved-recipe name from a comparison question."""
+    # Prefer a direct conversational plan before the generic "for/from"
+    # fallback.  Otherwise "planning lasagna for dinner — what do I need?"
+    # can capture the tail of the sentence as the recipe name.
+    value = _natural_recipe_missing_name(text) or ""
+    if value:
+        return value[:200]
     match = re.search(
         r"\b(?:for|from)\s+(?:the\s+)?(.+?)(?:\s+recipe)?(?:[?.!,]|$)",
         str(text or ""), re.IGNORECASE,
@@ -1637,7 +1651,40 @@ def recipe_missing_name(text: str) -> str | None:
         # missing?" Reuse the same bounded dish-span extractor as the queue
         # route, without changing the operation class.
         value = recipe_composition_name(text) or ""
+    if not value:
+        value = _natural_recipe_missing_name(text) or ""
     return value[:200] or None
+
+
+def _natural_recipe_missing_name(text: str) -> str | None:
+    """Extract a concrete dish from a conversational cooking plan.
+
+    This deliberately stays narrow.  It supports ordinary forms such as
+    "I want spaghetti tonight" and "we're having tacos; what do we need?"
+    without turning vague requests like "something easy" into a fictitious
+    saved-recipe lookup.
+    """
+    match = re.search(
+        r"\b(?:want|wanna|have|having|make|making|cook|cooking|prepare|"
+        r"preparing|plan|planning)\s+"
+        r"(?:(?:to|for)\s+)?"
+        r"(?:(?:make|cook|prepare|have)\s+)?"
+        r"(?:(?:a|an|the|our|my)\s+)?"
+        r"(?P<name>[a-z0-9][^.!?,;]*?)"
+        r"(?=\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal)|"
+        r"what|which|how)\b|[.!?,;]|$)",
+        str(text or ""),
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+    value = re.sub(r"\s+", " ", match.group("name").strip())
+    if not value:
+        return None
+    first_word = value.casefold().split()[0]
+    if first_word in {"something", "anything", "whatever", "what", "which", "recipe", "recipes", "food", "stuff"}:
+        return None
+    return value[:200]
 
 
 def usage_bucket(
