@@ -110,3 +110,12 @@ def test_recipe_library_has_owner_facing_hierarchy_and_roomier_window():
     assert ".recipe-card-body" in styles
     assert ".recipe-detail-check .recipe-ingredient-list" in styles
     assert ".recipe-stat-ready" in styles
+
+
+def test_household_sharing_uses_explicit_status_and_action_regions():
+    inventory = (ROOT / "static/js/inventory.js").read_text()
+    styles = (ROOT / "static/style.css").read_text()
+    assert "inventory-sharing-state" in inventory
+    assert "inventory-sharing-actions" in inventory
+    assert "Make members read-only" in inventory
+    assert ".inventory-sharing-row" in styles
