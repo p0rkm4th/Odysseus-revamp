@@ -72,6 +72,16 @@ def test_recipe_availability_payload_is_bounded_and_read_only():
     assert payload == {"action": "recipe_suggest", "max_shortages": 2, "limit": 20}
 
 
+def test_recipe_catalog_question_keeps_ready_and_missing_recipes_in_scope():
+    query = "What recipes can I make right now, and what ingredients are missing for the others?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["view"] == "available"
+    assert frame.filters["available_only"] is False
+    assert resolved.action_id == "recipe_suggest"
+
+
 def test_recipe_ingredient_question_uses_bounded_canonical_filter():
     from src.aci import canonical_read_fast_path_payload
 

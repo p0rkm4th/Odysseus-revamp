@@ -1864,7 +1864,19 @@ def compile_intent(
             q,
             re.IGNORECASE,
         ):
-            reference_filters.update({"view": "available", "available_only": True})
+            # A compound catalog question asks for both ready recipes and
+            # the closest recipes with shortages. Keep the second clause in
+            # scope instead of collapsing the query to ready-only results.
+            asks_for_other_shortages = bool(re.search(
+                r"\b(?:and\s+)?(?:what|which)\s+(?:ingredients?|items?)\s+(?:are\s+)?missing\b"
+                r"|\bfor\s+(?:the\s+)?others?\b",
+                q,
+                re.IGNORECASE,
+            ))
+            reference_filters.update({
+                "view": "available",
+                "available_only": not asks_for_other_shortages,
+            })
             if re.search(
                 r"\b(?:budget|cheap|cheapest|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost)\b",
                 q,

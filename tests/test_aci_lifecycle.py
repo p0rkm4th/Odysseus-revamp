@@ -132,6 +132,11 @@ def test_recipe_missing_question_uses_bounded_saved_recipe_lookup():
     assert recipe_missing_name(natural_question) == "spaghetti"
 
 
+def test_recipe_catalog_question_does_not_become_a_fictitious_recipe_lookup():
+    question = "What recipes can I make right now, and what ingredients are missing for the others?"
+    assert not is_recipe_missing_request(question)
+
+
 def test_canonical_recipe_missing_answer_is_read_only_and_grounded():
     event = {
         "tool": "manage_assets", "command": '{"action":"recipe_missing_by_name"}',

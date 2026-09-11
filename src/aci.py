@@ -1599,13 +1599,22 @@ def is_recipe_missing_request(text: str) -> bool:
         return False
     asks_missing = bool(re.search(r"\b(?:missing|need|short)\b", value))
     names_recipe = bool(re.search(r"\b(?:recipe|ingredients?|for)\b", value))
-    names_dish = bool(re.search(
+    # Plural catalog questions such as "what recipes can I make" or "what
+    # ingredients are missing for the others" describe the saved-recipe
+    # collection, not one named dish. Let the canonical recipe suggestion
+    # reader answer those questions instead of extracting "the others" as a
+    # fictitious recipe name.
+    catalog_question = bool(re.search(
+        r"\b(?:what|which|show|list)\s+recipes?\b|\b(?:the|those|these|all)\s+others?\b",
+        value,
+    ))
+    names_dish = not catalog_question and bool(re.search(
         r"\b(?:make|cook|prepare)\s+(?!a\s+grocery\b)[a-z0-9]",
         value,
     ))
     return bool(
         asks_missing
-        and (names_recipe or names_dish)
+        and (names_dish or (names_recipe and not catalog_question))
         and not re.search(r"\b(?:add|put|queue|buy|shopping|grocery)\b", value)
     )
 
