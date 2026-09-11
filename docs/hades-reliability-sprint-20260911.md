@@ -118,3 +118,31 @@ This checkpoint observed repository state, public PR/check metadata, local
 tests, and local service/process state only. It did not observe owner chat,
 browser clicks, background Hades work, or private financial payloads. Durable
 owner monitoring is not installed or active in this session.
+
+## Current handoff refresh (2026-09-11)
+
+- Current branch is `luna/plaid-readonly-budgeting` at pushed commit
+  `39b7d1cbe6e8b0e266a5300385795a9b09286b97`. The worktree is clean and the
+  PR head matches this commit.
+- The installed Hades process on port 7000 reports
+  `runtime_source_commit=39b7d1cbe6e8b0e266a5300385795a9b09286b97`,
+  `runtime_source_kind=checkout_tree`, and `build_id=unbuilt-source`.
+  `/api/health` returned HTTP 200. This remains a source-checkout runtime,
+  not an immutable promoted release.
+- A recent Hades lifecycle stop/start completed with systemd result `success`,
+  exit status 0, and `NRestarts=0`; it was not an OOM or crash recovery.
+  ChromaDB returned HTTP 200 during startup and SearXNG remains healthy at
+  `127.0.0.1:8080/healthz`. Embedding uses the existing local FastEmbed
+  fallback because the optional HTTP embedding lane is unavailable.
+- Port 7001 remains active and was not restarted. No related dogfood worker,
+  fuzz worker, pytest process, or persistent observer remains active.
+- For the current PR head, focused ACI/security, syntax, secret, workflow,
+  container, and audit checks pass. Hosted broad pytest is still in progress;
+  Dependency Review still fails with the repository's unsupported-configuration
+  diagnostic. PR title and description checks still fail because PR metadata
+  has not been updated; an unauthenticated metadata write previously returned
+  HTTP 401.
+- Current observation coverage remains repository, public PR/check metadata,
+  local service/process state, and sanitized runtime logs. No authenticated
+  owner chat, browser interaction, live Plaid authorization, or live network
+  scan was observed. Monitoring is not persistent after this session.
