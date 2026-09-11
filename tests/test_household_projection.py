@@ -294,6 +294,40 @@ def test_recipe_suggestions_can_filter_by_canonical_ingredient_without_mutating_
     assert str(service.list_lots("alice", chicken["id"])[0]["quantity"]) == "500.000000"
 
 
+def test_recipe_suggestions_can_target_positive_stock_expiring_soon():
+    session_factory, _engine, _tmp = make_temp_sqlite(cdb.Base.metadata)
+    service = get_inventory_service(session_factory)
+    chicken = service.create_item(
+        "alice", name="Chicken", domain="kitchen", item_kind="ingredient", default_unit="g",
+    )
+    rice = service.create_item(
+        "alice", name="Rice", domain="kitchen", item_kind="ingredient", default_unit="g",
+    )
+    service.add_stock(
+        "alice", chicken["id"], quantity=500, unit="g", idempotency_key="chicken-expiring",
+        expiry_date=date.today() + timedelta(days=2),
+    )
+    service.add_stock("alice", rice["id"], quantity=500, unit="g", idempotency_key="rice-no-expiry")
+    service.create_recipe(
+        "alice", name="Chicken Rice", servings=1,
+        ingredients=[
+            {"item_id": chicken["id"], "name": "Chicken", "quantity": 250, "unit": "g"},
+            {"item_id": rice["id"], "name": "Rice", "quantity": 100, "unit": "g"},
+        ],
+    )
+    service.create_recipe(
+        "alice", name="Rice Bowl", servings=1,
+        ingredients=[{"item_id": rice["id"], "name": "Rice", "quantity": 100, "unit": "g"}],
+    )
+
+    result = service.suggest_recipes("alice", use_expiring=True, ingredient_query="chicken")
+    assert [row["name"] for row in result["recipes"]] == ["Chicken Rice"]
+    assert result["recipes"][0]["expiring_ingredients"] == ["Chicken"]
+
+    all_expiring = service.suggest_recipes("alice", use_expiring=True)
+    assert [row["name"] for row in all_expiring["recipes"]] == ["Chicken Rice"]
+
+
 def test_imported_recipe_reaches_canonical_stock_comparison_and_grocery_queue():
     from src.recipe_import import parse_recipe_text
 

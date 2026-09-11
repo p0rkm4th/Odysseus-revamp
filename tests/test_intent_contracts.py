@@ -79,11 +79,17 @@ def test_recipe_ingredient_question_uses_bounded_canonical_filter():
     frame = compile_intent(query)
     resolved = resolve_intent(frame)
     assert frame.domain_concept == "RECIPE"
-    assert frame.filters == {"view": "ingredient", "ingredient_query": "chicken"}
+    assert frame.filters == {
+        "view": "ingredient", "ingredient_query": "chicken",
+        "use_expiring": True, "expiry_days": 30,
+    }
     assert resolved.action_id == "recipe_suggest"
     assert canonical_read_fast_path_payload(
         resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
-    ) == {"action": "recipe_suggest", "ingredient_query": "chicken", "limit": 20}
+    ) == {
+        "action": "recipe_suggest", "ingredient_query": "chicken",
+        "use_expiring": True, "expiry_days": 30, "limit": 20,
+    }
 
 
 @pytest.mark.parametrize(("query", "view", "action"), [

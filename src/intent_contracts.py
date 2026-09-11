@@ -1855,6 +1855,8 @@ def compile_intent(
             ingredient_query = re.sub(r"^(?:the|a|an)\s+", "", ingredient_query, flags=re.IGNORECASE)
             if ingredient_query:
                 reference_filters.update({"view": "ingredient", "ingredient_query": ingredient_query[:100]})
+                if re.search(r"\b(?:go(?:es)?\s+bad|spoil\w*|expir\w*)\b", q, re.IGNORECASE):
+                    reference_filters.update({"use_expiring": True, "expiry_days": 30})
         elif re.search(
             r"\b(?:can\s+i\s+(?:make|cook|prepare)|make\s+with\s+what\s+i\s+have|"
             r"without\s+going\s+to\s+the\s+store|easy(?:\s+\w+){0,3}\s+(?:dinner|meal)|"
