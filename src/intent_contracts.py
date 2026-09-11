@@ -1637,6 +1637,21 @@ def compile_intent(
         r"\b(?:public|internet|external)\b", q,
     ):
         safety_constraints.append("public_scope_requires_authorization")
+    # Pantry/fridge/freezer additions mean owned stock, not merely creating a
+    # named catalog item.  Require the bounded quantity before any model can
+    # claim a stock mutation; grocery additions remain quantity-free.
+    if (
+        concept == "HOUSEHOLD_ITEM"
+        and operation == "CREATE"
+        and re.search(r"\b(?:pantry|fridge|freezer)\b", q)
+        and not re.search(
+            r"\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*"
+            r"(?:kg|kilograms?|g|grams?|lb|pounds?|oz|ounces?|each|items?)\b",
+            q,
+            re.IGNORECASE,
+        )
+    ):
+        safety_constraints.append("inventory_quantity_required")
     if re.search(r"\b(?:approve|replay)\b", q) and re.search(
         r"\b(?:changed|modified|completed|finished|old|stale)\b", q,
     ):

@@ -1004,6 +1004,13 @@ def test_security_boundary_constraints_are_framework_resolvable(query, constrain
     assert constraint in frame.constraints
 
 
+def test_pantry_stock_addition_requires_a_bounded_quantity():
+    missing = compile_intent("Add shared dogfood salt to the pantry.")
+    supplied = compile_intent("Add 500 g of shared dogfood salt to the pantry.")
+    assert "inventory_quantity_required" in missing.constraints
+    assert "inventory_quantity_required" not in supplied.constraints
+
+
 def test_osint_reads_compile_to_the_existing_case_store_binding():
     resolved = resolve_intent(compile_intent("What investigations do I have?"))
     assert resolved.available is True

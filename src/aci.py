@@ -4964,6 +4964,7 @@ def project_action_selection(
         "public_scope_requires_authorization": "I can't scan a public or external range without an explicitly authorized target scope.",
         "network_scope_requires_authorization": "I need one current, private network scope before I can scan. I can inspect the current host context to resolve that safely.",
         "action_revalidation_required": "I can't approve or replay a changed or completed Action; it must be freshly revalidated through the normal approval path.",
+        "inventory_quantity_required": "How much stock should I put in the pantry, fridge, or freezer? Include a quantity and unit; I won't claim a stock change without it.",
     }
     for constraint, message in safety_messages.items():
         if constraint in set(frame.get("constraints") or ()):
