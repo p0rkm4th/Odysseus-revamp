@@ -41789,6 +41789,13 @@ body.settings-sidebar-resize-active {
 .recipe-ingredient.missing { background:color-mix(in srgb, var(--red, #d66) 10%, transparent); }
 .recipe-detail-intro { display:grid; gap:10px; margin:-4px 0 16px; padding-bottom:14px; border-bottom:1px solid var(--hades-border-subtle, var(--border)); }
 .recipe-detail-intro > div { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.recipe-serving-control { display:flex; align-items:center; flex-wrap:wrap; gap:7px; padding:9px 10px; border:1px solid var(--hades-border-subtle, var(--border)); border-radius:var(--hades-radius-sm, 8px); background:color-mix(in srgb, var(--hades-surface-raised, var(--panel)) 60%, transparent); }
+.recipe-serving-control label { color:var(--hades-text-muted, var(--muted)); font-size:.75rem; }
+.recipe-serving-control input { width:72px; min-height:30px; padding:5px 7px; border:1px solid var(--hades-border-subtle, var(--border)); border-radius:6px; background:var(--input-bg, var(--panel)); color:inherit; font:inherit; }
+.recipe-serving-control span { color:var(--hades-text-muted, var(--muted)); font-size:.75rem; }
+.recipe-serving-control button { border:1px solid var(--hades-border-subtle, var(--border)); border-radius:6px; padding:6px 8px; background:transparent; color:inherit; font:inherit; cursor:pointer; }
+.recipe-serving-control small { flex-basis:100%; color:var(--hades-text-muted, var(--muted)); font-size:.68rem; }
+.recipe-detail-actions { display:flex; justify-content:flex-end; margin-top:12px; }
 .recipe-detail-intro p { margin:0; color:var(--hades-text-muted, var(--muted)); white-space:pre-wrap; line-height:1.55; }
 .recipe-detail-section-heading { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
 .recipe-detail-section-heading h4 { margin:0; }

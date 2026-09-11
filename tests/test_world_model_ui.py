@@ -106,9 +106,13 @@ def test_recipe_library_has_owner_facing_hierarchy_and_roomier_window():
     assert "NEXT STEP" in inventory
     assert "recipe-detail-shortage" in inventory
     assert "kind === 'view' ? ''" in inventory
+    assert "recipe-serving-count" in inventory
+    assert "data-action=\"recipe-plan\"" in inventory
+    assert "data-serving-count" in inventory
     assert "initialRect" in manager
     assert ".recipe-card-body" in styles
     assert ".recipe-detail-check .recipe-ingredient-list" in styles
+    assert ".recipe-serving-control" in styles
     assert ".recipe-stat-ready" in styles
 
 
