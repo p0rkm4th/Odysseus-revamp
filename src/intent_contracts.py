@@ -1873,9 +1873,22 @@ def compile_intent(
                 q,
                 re.IGNORECASE,
             ))
+            budget_discovery = bool(re.search(
+                r"\b(?:budget|cheap|cheapest|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost)\b",
+                q,
+                re.IGNORECASE,
+            )) and not bool(re.search(
+                r"\b(?:with\s+(?:what\s+)?(?:we|i)\s+have|without\s+(?:going\s+to\s+)?the\s+store)\b",
+                q,
+                re.IGNORECASE,
+            ))
             reference_filters.update({
                 "view": "available",
-                "available_only": not asks_for_other_shortages,
+                # Budget discovery is not a claim that each result is
+                # immediately cookable. Keep bounded near matches in scope so
+                # the answer can remain useful while disclosing that prices
+                # are unavailable.
+                "available_only": not (asks_for_other_shortages or budget_discovery),
             })
             if re.search(
                 r"\b(?:budget|cheap|cheapest|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost)\b",

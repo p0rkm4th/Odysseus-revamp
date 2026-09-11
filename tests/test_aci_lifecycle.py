@@ -260,6 +260,18 @@ def test_empty_budget_recipe_result_still_discloses_cost_limit():
     assert "not a cost ranking" in answer
 
 
+def test_budget_recipe_discovery_can_report_bounded_near_matches():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","budget_constraint":true}',
+        "output": '{"available_only":false,"budget_constraint":true,"recipes":[{"name":"Spaghetti","can_make":false,"missing_count":3}]}',
+        "exit_code": 0,
+    }
+    answer = canonical_recipe_suggest_answer([event])
+    assert answer.startswith("Closest saved recipes: Spaghetti (missing 3 items).")
+    assert "not a cost ranking" in answer
+
+
 def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():
     for query in (
         "yo what computers do i got",

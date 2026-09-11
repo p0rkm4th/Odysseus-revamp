@@ -49,7 +49,13 @@ def test_budget_constraint_on_cooking_request_keeps_recipe_objective():
     assert frame.domain_concept == "RECIPE"
     assert frame.filters["view"] == "available"
     assert frame.filters["budget_constraint"] is True
+    assert frame.filters["available_only"] is False
     assert resolved.action_id == "recipe_suggest"
+
+
+def test_explicit_on_hand_recipe_question_stays_ready_only():
+    frame = compile_intent("What can I make with what we have?")
+    assert frame.filters["available_only"] is True
 
 
 def test_modifier_new_does_not_turn_network_observation_into_create():
