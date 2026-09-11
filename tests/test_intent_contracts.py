@@ -527,6 +527,7 @@ def test_inventory_state_is_a_canonical_asset_read_but_household_inventory_is_no
 @pytest.mark.parametrize(("query", "operation", "action"), [
     ("Add rice to my grocery list.", "CREATE", "add_item"),
     ("Add 250 g of rice to the pantry.", "UPDATE", "add_stock"),
+    ("Add 2 l of milk to the pantry.", "UPDATE", "add_stock"),
     ("I bought two 1-kilogram bags of rice; put them in the pantry.", "UPDATE", "add_stock"),
     ("Use 500 grams of rice.", "EXECUTE", "consume_stock"),
 ])
