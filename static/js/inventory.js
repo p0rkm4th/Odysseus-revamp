@@ -237,7 +237,7 @@ function renderRecipeCatalog() {
   if (!summary || !list) return;
   const readyCount = recipeCatalog.filter(entry => entry.plan.can_make).length;
   const missingCount = recipeCatalog.reduce((total, entry) => total + (entry.plan.shortages || []).length, 0);
-  summary.innerHTML = `<div class="recipe-stat"><strong>${recipeCatalog.length}</strong><span>Saved recipes</span></div><div class="recipe-stat recipe-stat-ready"><strong>${readyCount}</strong><span>Ready to cook</span></div><div class="recipe-stat recipe-stat-missing"><strong>${missingCount}</strong><span>Missing checks</span></div>`;
+  summary.innerHTML = `<div class="recipe-stat"><strong>${recipeCatalog.length}</strong><span>Saved recipes</span></div><div class="recipe-stat recipe-stat-ready"><strong>${readyCount}</strong><span>Ready to cook</span></div><div class="recipe-stat recipe-stat-missing"><strong>${missingCount}</strong><span>Ingredients to buy</span></div>`;
   const needle = recipeQuery.trim().toLowerCase();
   const filtered = recipeCatalog.filter(({recipe, plan}) => {
     if (recipeFilter === 'ready' && !plan.can_make) return false;
@@ -261,7 +261,7 @@ function renderRecipeCatalog() {
       const name = String(ingredient.name || '').trim();
       const missing = shortageNames.has(name.toLowerCase());
       const amount = `${displayQuantity(ingredient.quantity)} ${escapeHtml(ingredient.unit || '')}`.trim();
-      return `<li class="${missing ? 'is-missing' : 'is-ready'}"><span class="recipe-dot">${missing ? '!' : '✓'}</span><span class="recipe-ingredient-name">${escapeHtml(name)}</span><small>${amount}</small></li>`;
+      return `<li class="${missing ? 'is-missing' : 'is-ready'}"><span class="recipe-dot" aria-label="${missing ? 'Missing' : 'On hand'}">${missing ? '!' : '✓'}</span><span class="recipe-ingredient-name">${escapeHtml(name)}</span><small>${amount}</small></li>`;
     }).join('');
     const more = ingredients.length > 5 ? `<span class="recipe-more">+${ingredients.length - 5} more</span>` : '';
     const shortages = (plan.shortages || []).slice(0, 3).map(shortage => escapeHtml(shortage.name)).join(', ');
