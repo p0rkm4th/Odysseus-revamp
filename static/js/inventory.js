@@ -383,7 +383,11 @@ async function showRecipe(id) {
     const shortageBlock = plan.can_make ? '' : `<h4>Missing stock</h4><ul>${shortages}</ul>`;
     modalForm(recipe.name, `<p>${escapeHtml(recipe.instructions || 'No instructions saved.')}</p><h4>Ingredient check</h4><ul class="recipe-ingredient-list">${ingredients || '<li>No ingredients saved.</li>'}</ul>${shortageBlock}${queue}`, 'Close', 'view', id);
     const form = document.querySelector('.inventory-dialog[data-kind="view"]');
-    form.querySelector('[type=submit]').type = 'button'; form.querySelector('[type=submit]').dataset.action = 'dismiss-dialog';
+    const closeButton = form?.querySelector('[type=submit]');
+    if (closeButton) {
+      closeButton.type = 'button';
+      closeButton.dataset.action = 'dismiss-dialog';
+    }
   } catch (error) { uiModule.showError?.(error.message); }
 }
 
