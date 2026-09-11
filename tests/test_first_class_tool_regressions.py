@@ -417,6 +417,7 @@ def test_clarification_stream_has_one_accumulation_path():
     marker = "if _aci_clarification_only:\n                # The outer round accumulator"
     assert marker in source
     assert 'yield "data: " + json.dumps({"delta": _aci_clarification_text})' not in source
+    assert "_ody_qwen_finetune_model and not _aci_clarification_only" in source
 
 
 def test_recipe_placeholder_does_not_become_a_grocery_item():

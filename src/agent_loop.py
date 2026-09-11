@@ -4985,7 +4985,7 @@ async def stream_aci_runtime(
                 logger.debug("[work-bridge] model provenance observation unavailable", exc_info=True)
         round_endpoint_ids.append(_round_actual_endpoint_id)
         round_endpoint_labels.append(_round_actual_endpoint_label)
-        if _ody_qwen_finetune_model and not tool_blocks and cleaned_round:
+        if _ody_qwen_finetune_model and not _aci_clarification_only and not tool_blocks and cleaned_round:
             yield f'data: {json.dumps({"delta": cleaned_round})}\n\n'
 
         if not tool_blocks:
