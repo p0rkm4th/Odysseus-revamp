@@ -769,6 +769,23 @@ def test_finance_followup_reuses_bounded_recent_finance_context():
     assert frame.filters["start"] != "2026-01-01"
 
 
+def test_finance_pending_question_reuses_prior_spending_scope():
+    messages = [
+        {"role": "user", "content": "How much did I spend at Publix this year?"},
+        {"role": "assistant", "content": "Posted spending at Publix: USD 25.72. Pending spending not included."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "Does that include pending transactions?",
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "How much did I spend at Publix this year?"
+    frame = compile_intent(intent["retrieval_query"])
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["merchant"] == "publix"
+    assert frame.filters["view"] == "spending"
+
+
 def test_finance_followup_with_latest_user_in_message_history_uses_prior_turn():
     messages = [
         {"role": "user", "content": "How much did I spend at Publix this year?"},
