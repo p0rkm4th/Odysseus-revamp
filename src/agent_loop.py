@@ -2754,6 +2754,20 @@ async def stream_aci_runtime(
             workspace=workspace,
             intent_domains=_intent_domains,
         )
+        if _aci_recipe_composition_route and not guide_only:
+            prepend_agent_directive(
+                route_messages,
+                "RECIPE COMPOSITION MODE: The owner asked for a named dish and "
+                "missing ingredients on the shopping list. Do the work now; do "
+                "not answer with a plan or ask whether to proceed. Use the "
+                "documented strict-text XML invoke for manage_assets: first "
+                "recipe_add with a bounded concrete ingredient array for the "
+                "named dish, then recipe_missing, then recipe_queue_missing. "
+                "Never call add_item with the words 'ingredients I am missing' "
+                "or another request phrase. Recipe planning does not purchase "
+                "or consume stock. If the dish is genuinely too ambiguous to "
+                "compose safely, ask one concise clarification instead."
+            )
         if _aci_answer_only:
             route_messages = minimal_aci_answer_messages(route_messages)
             route_mcp_schemas = []
