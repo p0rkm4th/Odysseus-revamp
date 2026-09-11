@@ -3983,7 +3983,7 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     except (TypeError, ValueError):
         return None
     if not isinstance(request, Mapping) or request.get("action") not in {
-        "add_item", "add_stock", "consume_stock", "remove_from_grocery", "adjust_stock", "update_asset",
+        "add_item", "add_stock", "consume_stock", "remove_from_grocery", "archive_item", "adjust_stock", "update_asset",
     } or not isinstance(payload, Mapping):
         return None
     if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
@@ -3991,14 +3991,23 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     action = str(request.get("action"))
     verification = payload.get("verification")
     verified = isinstance(verification, Mapping) and verification.get("status") == "VERIFIED"
-    item = payload.get("item") or payload.get("asset") or {}
-    name = item.get("name") if isinstance(item, Mapping) else None
-    label = str(name or request.get("name") or "the inventory item").strip()
+    if action == "archive_item" and isinstance(payload.get("items"), list):
+        names = [
+            str(item.get("name") or "").strip()
+            for item in payload["items"]
+            if isinstance(item, Mapping) and str(item.get("name") or "").strip()
+        ]
+        label = ", ".join(names) if names else "the inventory items"
+    else:
+        item = payload.get("item") or payload.get("asset") or {}
+        name = item.get("name") if isinstance(item, Mapping) else None
+        label = str(name or request.get("name") or "the inventory item").strip()
     verb = {
         "add_item": "Recorded",
         "add_stock": "Added stock for",
         "consume_stock": "Consumed stock for",
         "remove_from_grocery": "Removed from the grocery list",
+        "archive_item": "Archived from kitchen inventory",
         "adjust_stock": "Adjusted stock for",
         "update_asset": "Updated",
     }[action]

@@ -539,6 +539,21 @@ def test_canonical_inventory_mutation_answer_requires_structured_result_and_read
     assert "not completed" in canonical_inventory_mutation_answer([event])
 
 
+def test_canonical_inventory_archive_answer_requires_all_item_readback():
+    event = {
+        "tool": "manage_assets", "exit_code": 0,
+        "command": '{"action":"archive_item","items":["basil","sauce"]}',
+        "output": json.dumps({
+            "success": True,
+            "items": [{"id": "i-1", "name": "basil"}, {"id": "i-2", "name": "sauce"}],
+            "verification": {"status": "VERIFIED", "readback": {"items": []}},
+        }),
+    }
+    assert canonical_inventory_mutation_answer([event]) == (
+        "Archived from kitchen inventory basil, sauce; the canonical inventory readback is verified."
+    )
+
+
 def test_canonical_memory_and_work_reads_have_terminal_answers():
     from src.aci import canonical_result_answer
 
