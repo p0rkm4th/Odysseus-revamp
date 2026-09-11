@@ -1471,6 +1471,53 @@ class RecipeService(InventoryService):
                 raise InventoryConflict("more than one matching inventory item requires clarification")
             return rows[0].id
 
+        def resolve_grocery_item(name_value: Any = None) -> str:
+            """Resolve a grocery reference, allowing one safe descriptor match.
+
+            Follow-up language often shortens a canonical ingredient name:
+            ``the sauce`` can refer to the only queued ``tomato sauce``. Exact
+            and conservative singular/plural matches remain preferred. A
+            descriptive fallback is accepted only when it identifies exactly
+            one current grocery item; ambiguity still fails closed.
+            """
+            item_id = str(args.get("item_id") or "").strip() if name_value is None else ""
+            if item_id:
+                return item_id
+            name = _required_text(
+                args.get("name") if name_value is None else name_value,
+                "name", maximum=200,
+            )
+            normalized = normalize_item_name(name)
+            variants = item_name_variants(name)
+            with self._read() as db:
+                owners = self._shared_owner_ids(db, owner)
+                base_query = db.query(InventoryItem).filter(
+                    InventoryItem.owner.in_(owners),
+                    InventoryItem.domain.in_(("kitchen", "household")),
+                    InventoryItem.archived.is_(False),
+                ).order_by(InventoryItem.normalized_name, InventoryItem.id)
+                rows = base_query.filter(
+                    InventoryItem.normalized_name.in_(variants),
+                ).limit(257).all()
+                if not rows and len(normalized) >= 3:
+                    # Keep this bounded and deterministic. A descriptor such
+                    # as "sauce" may resolve only to a unique queued item;
+                    # never choose among multiple sauces by ordering.
+                    candidates = base_query.filter(
+                        InventoryItem.shopping_list.is_(True),
+                    ).limit(257).all()
+                    rows = [
+                        row for row in candidates
+                        if normalized in str(row.normalized_name or "")
+                    ]
+            if len(rows) > 256:
+                raise InventoryConflict("too many grocery items match; please be more specific")
+            if not rows:
+                raise InventoryNotFound("inventory item not found")
+            if len(rows) > 1:
+                raise InventoryConflict("more than one matching grocery item requires clarification")
+            return rows[0].id
+
         if action == "list":
             requested_list = str(args.get("list_name") or "").strip().casefold()
             return {"items": self.list_items(
@@ -1616,7 +1663,7 @@ class RecipeService(InventoryService):
                         "cleared": True,
                         "replayed": not bool(cleared),
                     }
-            item_id = resolve_food_item()
+            item_id = resolve_grocery_item()
             item = self.get_item(owner, item_id)
             if not item.get("shopping_list"):
                 return {"item": item, "removed": False, "replayed": True}
