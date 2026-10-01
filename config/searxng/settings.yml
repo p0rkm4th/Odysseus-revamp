@@ -7,3 +7,27 @@ search:
   formats:
     - html
     - json
+
+# Keep the default catalog available, but use engines that are currently
+# responding reliably from this self-hosted instance.  The frequently
+# CAPTCHA/rate-limited defaults are disabled explicitly so an empty result
+# set is not mistaken for a healthy search.
+engines:
+  - name: brave
+    disabled: true
+  - name: duckduckgo
+    disabled: true
+  - name: startpage
+    disabled: true
+  - name: bing
+    engine: bing
+    shortcut: bi
+    disabled: false
+  - name: mojeek
+    engine: mojeek
+    shortcut: mj
+    disabled: false
+  - name: qwant
+    engine: qwant
+    shortcut: qw
+    disabled: false
