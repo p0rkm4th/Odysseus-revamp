@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 import pytest
 
 from src.aci import (
@@ -9,8 +11,215 @@ from src.aci import (
     adaptive_shortlist, hard_filter_actions, model_burden,
     parse_decision_json, state_fingerprint,
     build_base_prompt,
+    canonical_finance_read_answer,
+    canonical_tool_result_projection,
 )
 from src.aci import minimal_aci_model_fallback_messages
+
+
+def test_finance_tool_result_cannot_collapse_to_done():
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "output": '{"action":"spending","start":"2026-09-01","end":"2026-09-10","posted_outflow_by_currency":{"USD":"15.0000"},"pending_outflow_by_currency":{"USD":"7.0000"},"pending_outflow_count":1,"coverage":{"coverage_state":"AVAILABLE","data_sources":[{"source":"local_csv","live":false}],"as_of":"2026-09-10 17:35:31","coverage_limitations":[]}}',
+    }])
+    assert answer is not None
+    assert "USD 15.00" in answer
+    assert "pending" in answer.lower()
+    assert "USD 7.00" in answer
+    assert "local CSV" in answer
+    assert answer != "Done."
+
+
+def test_finance_answer_preserves_year_range_and_category_scope():
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "output": '{"action":"spending","start":"2026-01-01","end":"2026-09-10","category":"dining_out","posted_outflow_by_currency":{"USD":"3953.1500"},"posted_outflow_by_category":{"Restaurants":{"USD":"1541.3900"}},"coverage":{"coverage_state":"LIMITED","data_sources":[{"source":"local_csv","live":false}],"as_of":"2026-09-10 19:00:00","coverage_limitations":["Plaid connection requires attention"]}}',
+    }])
+    assert answer is not None
+    assert "dining out" in answer
+    assert "2026-01-01 through 2026-09-10" in answer
+    assert "USD 3953.15" in answer
+    assert "Plaid connection requires attention" in answer
+
+
+def test_finance_pending_followup_answers_the_question_not_a_ledger_dump():
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "result_projection": {
+            "action": "spending",
+            "start": "2026-01-01",
+            "end": "2026-09-11",
+            "posted_outflow_by_currency": {"USD": "51657.3200"},
+            "pending_outflow_by_currency": {"USD": "46.3200"},
+            "pending_outflow_count": 2,
+            "coverage": {
+                "coverage_state": "LIMITED",
+                "as_of": "2026-09-10 18:31:00",
+                "coverage_limitations": ["requested date range extends beyond canonical transaction coverage"],
+            },
+        },
+    }], owner_query="Does that include pending transactions?")
+    assert answer.startswith("No. The spending total is posted transactions only")
+    assert "USD 51657.32" in answer
+    assert "USD 46.32" in answer
+    assert "ledger" not in answer.lower()
+
+
+def test_finance_overview_surfaces_bounded_insight_and_guidance():
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "output": '{"action":"spending","start":"2026-01-01","end":"2026-09-10","posted_outflow_by_currency":{"USD":"100.0000"},"posted_outflow_by_category":{"Housing":{"USD":"70.0000"},"Dining":{"USD":"30.0000"}},"posted_outflow_by_merchant":{"Rent":{"USD":"70.0000"},"Cafe":{"USD":"30.0000"}},"coverage":{"coverage_state":"AVAILABLE","data_sources":[{"source":"local_csv","live":false}],"as_of":"2026-09-10 19:00:00","coverage_limitations":[]}}',
+    }])
+    assert answer is not None
+    assert "What stands out: Housing" in answer
+    assert "Largest merchant totals: Rent USD 70.00" in answer
+    assert "Guidance:" in answer
+
+
+def test_large_finance_transaction_read_uses_bounded_projection_after_output_cap():
+    rows = [
+        {
+            "transaction_date": "2026-09-10",
+            "merchant": "Market",
+            "amount": "8.9900",
+            "currency": "USD",
+            "status": "pending" if index == 0 else "posted",
+            "direction": "outflow",
+        }
+        for index in range(20)
+    ]
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        # Simulate the persisted display output being cut before its JSON
+        # closes. The structured projection is the durable renderer input.
+        "output": '{"action":"transactions","transactions":[{"merchant":"Market"',
+        "result_projection": {
+            "action": "transactions",
+            "status": "SUCCESS_WITH_DATA",
+            "transactions": rows,
+            "returned_count": 50,
+            "limit": 50,
+            "coverage": {
+                "coverage_state": "AVAILABLE",
+                "data_sources": [{"source": "local_csv", "live": False}],
+                "as_of": "2026-09-10 18:31:00",
+                "posted_count": 537,
+                "pending_count": 2,
+                "coverage_limitations": [],
+            },
+        },
+    }])
+    assert answer is not None
+    assert answer != "Done."
+    assert "pending" in answer.lower()
+    assert "2 pending" in answer
+    assert "local CSV" in answer
+    assert "30 more" in answer
+
+
+def test_finance_projection_is_json_safe_for_sse_and_reload():
+    projection = canonical_tool_result_projection("read_finance", {
+        "data": {
+            "status": "SUCCESS_WITH_DATA",
+            "transactions": [{
+                "transaction_date": date(2026, 9, 10),
+                "merchant": "Market",
+                "amount": "8.9900",
+                "currency": "USD",
+                "status": "pending",
+                "direction": "outflow",
+            }],
+            "coverage": {
+                "as_of": datetime(2026, 9, 10, 18, 31),
+                "transaction_date_start": date(2026, 1, 2),
+                "transaction_date_end": date(2026, 9, 10),
+                "coverage_state": "AVAILABLE",
+                "coverage_limitations": [],
+                "data_sources": [{"source": "local_csv", "live": False}],
+                "posted_count": 537,
+                "pending_count": 2,
+            },
+        },
+    })
+    assert projection is not None
+    # The same object is passed through json.dumps when metrics are emitted.
+    import json
+    json.dumps(projection)
+    assert projection["coverage"]["as_of"] == "2026-09-10 18:31:00"
+    assert projection["transactions"][0]["transaction_date"] == "2026-09-10"
+
+
+def test_finance_spending_projection_preserves_answer_fields_after_reload():
+    projection = canonical_tool_result_projection("read_finance", {
+        "data": {
+            "status": "SUCCESS_WITH_DATA",
+            "start": "2026-01-01",
+            "end": "2026-09-11",
+            "posted_outflow_by_currency": {"USD": "51657.3200"},
+            "pending_outflow_by_currency": {"USD": "46.3200"},
+            "pending_outflow_count": 2,
+            "coverage": {
+                "as_of": datetime(2026, 9, 10, 18, 31),
+                "coverage_state": "LIMITED",
+                "coverage_limitations": [
+                    "requested date range extends beyond canonical transaction coverage",
+                ],
+                "data_sources": [{"source": "local_csv", "live": False}],
+            },
+        },
+    })
+
+    assert projection is not None
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "result_projection": projection,
+    }], owner_query="Does that include pending transactions?")
+    assert answer is not None
+    assert answer != "Done."
+    assert "USD 51657.32" in answer
+    assert "USD 46.32" in answer
+    assert "Coverage limitation:" in answer
+
+
+def test_finance_projection_recovers_full_output_when_data_is_compact_envelope():
+    """A successful executor read must never degrade to the generic Done fallback."""
+    projection = canonical_tool_result_projection("read_finance", {
+        "data": {
+            "status": "SUCCESS_WITH_DATA",
+            "coverage": {
+                "coverage_state": "LIMITED",
+                "coverage_limitations": ["requested range exceeds imported coverage"],
+            },
+        },
+        "output": (
+            '{"action":"spending","start":"2026-01-01","end":"2026-09-11",'
+            '"posted_outflow_by_currency":{"USD":"51657.3200"},'
+            '"posted_outflow_by_category":{"Groceries":{"USD":"1920.3800"}},'
+            '"posted_outflow_by_merchant":{"Publix":{"USD":"1386.4300"}},'
+            '"pending_outflow_by_currency":{"USD":"46.3200"},'
+            '"pending_outflow_count":2,"coverage":{'
+            '"coverage_state":"LIMITED","coverage_limitations":[],'
+            '"data_sources":[{"source":"local_csv","live":false}]}}'
+        ),
+        "exit_code": 0,
+    })
+    assert projection is not None
+    answer = canonical_finance_read_answer([{
+        "tool": "read_finance",
+        "exit_code": 0,
+        "result_projection": projection,
+    }], owner_query="How much did I spend this year?")
+    assert answer is not None
+    assert answer != "Done."
+    assert "USD 51657.32" in answer
+    assert "Largest merchant totals: Publix USD 1386.43" in answer
+    assert "USD 46.32" in answer
 
 
 def _packet(cards=(ActionCard("A", "inspect", "Inspect", "Read state"),)):
@@ -226,6 +435,11 @@ def test_model_fallback_is_a_non_authoritative_turn_disposition():
 def test_typed_turn_disposition_has_one_authoritative_precedence():
     assert resolve_turn_disposition(model_fallback=True, packet_present=True) is TurnDisposition.MODEL_FALLBACK
     assert resolve_turn_disposition(clarification_only=True, fast_path=True) is TurnDisposition.CLARIFY
+    assert resolve_turn_disposition(
+        awaiting_approval=True,
+        answer_only=True,
+        completion_satisfied=True,
+    ) is TurnDisposition.AWAIT_APPROVAL
     assert resolve_turn_disposition(answer_only=True, fast_path=True) is TurnDisposition.ANSWER
     assert resolve_turn_disposition(completion_satisfied=True) is TurnDisposition.ANSWER
     assert resolve_turn_disposition(fast_path=True, packet_present=True) is TurnDisposition.EXECUTE_DIRECT

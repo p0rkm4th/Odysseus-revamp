@@ -19,6 +19,18 @@ import uuid
 from typing import Any, AsyncGenerator, List, Dict, Mapping, Optional, Set
 from urllib.parse import urlparse
 
+
+def _stream_json(payload: Any) -> str:
+    """Serialize bounded SSE payloads without dropping a completed answer.
+
+    Canonical read projections may contain provider/database timestamps (and
+    other scalar values such as Decimal) that are safe to expose in the
+    already-authorized result but are not natively JSON serializable.  A
+    metrics serialization failure must never turn a successful tool result
+    into an empty or interrupted owner response.
+    """
+    return json.dumps(payload, default=str)
+
 from src.llm_core import (
     dedupe_model_candidates,
     stream_llm_with_fallback,
@@ -87,6 +99,12 @@ from src.aci import (
     classify_no_action_reason,
     is_canonical_read_contract,
     is_aci_general_fallback_candidate,
+    is_recipe_composition_request,
+    recipe_composition_name,
+    is_recipe_cook_request,
+    recipe_cook_name,
+    is_recipe_missing_request,
+    recipe_missing_name,
     usage_bucket,
     usage_bucket_summary,
     compute_final_metrics,
@@ -96,6 +114,7 @@ from src.aci import (
     build_actions_snapshot,
     detect_runaway_call,
     canonical_asset_read_payload,
+    canonical_inventory_mutation_payload,
     canonical_tool_result_projection,
     project_final_answer,
     project_model_decision,
@@ -161,6 +180,7 @@ from src.intent_contracts import (
     explicitly_allows_diagnostic_install,
     is_explicit_continuation,
     is_explicit_network_discovery_request,
+    is_network_observation_result_request,
     is_network_prerequisite_request,
     is_network_service_enumeration_request,
     network_discovery_request_cidr,
@@ -402,9 +422,23 @@ _DOMAIN_RULES["work"] = (
     "- Distinguish empty canonical Work results from unavailable or failed retrieval."
 )
 
+_DOMAIN_RULES["finance"] = (
+    "## Canonical Finance rules\n"
+    "- Explicit questions about spending, transactions, cash flow, coverage, or shared expenses use the owner-scoped read_finance contract.\n"
+    "- Local CSV imports are canonical, owner-scoped read-only Finance data and must be queried through read_finance like Plaid data.\n"
+    "- Plaid being unconfigured, stale, or unhealthy does not make an existing local CSV snapshot unavailable; report its source and coverage honestly.\n"
+    "- Never calculate authoritative totals from conversation text or a raw ledger dump. Preserve currency, posted/pending status, date coverage, and freshness limitations from the deterministic result.\n"
+    "- Distinguish no canonical transactions from unavailable/failed retrieval and from incomplete coverage."
+)
+
 _DOMAIN_RULES["household"] = (
     "## Canonical Household Inventory rules\n"
     "- Explicit questions about household items, pantry, stock, recipes, or shopping use the owner-scoped Inventory service read contract.\n"
+    "- Keep the owner-facing concepts distinct: the Grocery list is the queue of items missing/needed to buy; Pantry, Fridge, and Freezer are owned stock already on hand. A grocery item is not proof that stock exists.\n"
+    "- Adding an item to Grocery must not add stock. Marking a purchase/add_stock moves it into owned storage and removes it from the buy queue only after the canonical mutation succeeds.\n"
+    "- Never answer a Grocery question from Pantry/Fridge/Freezer results or describe a queued grocery item as on hand.\n"
+    "- When the owner asks to make a named dish and add what is needed to Grocery, use the canonical recipe actions: create or retrieve a bounded recipe, compare it with current stock, then queue only required missing ingredients. Do not save the phrase 'ingredients' or a whole recipe as one grocery item.\n"
+    "- Recipe planning is read/queue work: it must not consume stock or claim a dish was cooked. Ask only when the dish or ingredient quantities are materially ambiguous.\n"
     "- Technical asset identity belongs to CMDB/IT Assets; do not answer household questions from CMDB or filesystem data.\n"
     "- Distinguish empty household inventory from unavailable or failed retrieval."
 )
@@ -436,6 +470,7 @@ _DOMAIN_RULES["career"] = (
 # source ACI's binding registry directly from its canonical owners.
 from src.legacy_domain_contract import DOMAIN_TOOL_MAP as _DOMAIN_TOOL_MAP
 from src.tool_bindings import TOOL_BINDINGS as _capability_v1_bindings, tools_for_domains
+from src.recipe_import import parse_model_recipe_proposal
 from src.tool_overrides import get_builtin_overrides
 _canonical_tools_for_domains = tools_for_domains
 _DOMAIN_RULES["asset_inventory"] = (
@@ -458,6 +493,117 @@ def _domain_tools_for_projection(domain: str, *, canonical: bool = False) -> set
 _HARD_TOOL_DOMAINS = HARD_TOOL_DOMAINS
 _DETERMINISTIC_TOOL_DOMAINS = DETERMINISTIC_TOOL_DOMAINS
 _SPECIALIZED_OPERATIONAL_DOMAINS = SPECIALIZED_OPERATIONAL_DOMAINS
+
+
+def _successful_bounded_network_execution(tool_type: str, content: str, result: dict) -> bool:
+    """Return whether a network execution has supplied its terminal result.
+
+    Network execution is intentionally terminal for the current model turn:
+    the broker result is already the authoritative observation.  Feeding it
+    back through the same deterministic selector can recreate the plan and
+    approval card, causing an apparent approval loop.
+    """
+    if tool_type != "manage_homelab" or not isinstance(result, dict):
+        return False
+    # The stream executor returns an envelope whose canonical broker Result is
+    # JSON in ``output`` (the Work bridge may additionally wrap it in data).
+    # Inspect that same structured payload used by continuation code; checking
+    # only the envelope makes a successful scan look unfinished and causes the
+    # deterministic planner to ask for approval again.
+    payload = _structured_tool_result(result)
+    if payload.get("approval_required") or payload.get("error") or payload.get("success") is not True:
+        return False
+    try:
+        action = str(json.loads(content or "{}").get("action") or "")
+    except (TypeError, ValueError):
+        return False
+    return action in {
+        "execute_network_discovery",
+        "execute_network_service_enumeration",
+    }
+
+
+def _is_bounded_network_plan(tool_type: str, action_id: str) -> bool:
+    """Identify a network preflight that must continue to approval/execution."""
+    return tool_type == "manage_homelab" and action_id in {
+        "plan_network_discovery",
+        "plan_network_service_enumeration",
+    }
+
+
+def _structured_tool_result(result: Mapping[str, Any], *, _depth: int = 0) -> Mapping[str, Any]:
+    """Unwrap the canonical payload emitted by both tool executors.
+
+    The direct executor returns a small envelope whose JSON payload lives in
+    ``output``; the Work/ACI bridge may instead provide that payload under
+    ``data``.  Continuation decisions must inspect the same structured result
+    in either case.  Falling back to the envelope preserves existing error
+    handling when a tool did not return JSON.
+    """
+    if not isinstance(result, Mapping) or _depth > 3:
+        return {}
+    data = result.get("data")
+    if isinstance(data, Mapping):
+        if data.get("action") or data.get("success") is not None or data.get("kind"):
+            return data
+        nested = _structured_tool_result(data, _depth=_depth + 1)
+        if nested:
+            return nested
+    raw = result.get("output")
+    if isinstance(raw, Mapping):
+        return raw
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError):
+            parsed = None
+        if isinstance(parsed, Mapping):
+            if parsed.get("action") or parsed.get("success") is not None or parsed.get("kind"):
+                return parsed
+            nested = _structured_tool_result(parsed, _depth=_depth + 1)
+            if nested:
+                return nested
+    return result
+
+
+def _recipe_queue_continuation(
+    result: Mapping[str, Any],
+    *,
+    composition_route: bool,
+    following_blocks: List[Any] = (),
+):
+    """Build the bounded grocery continuation after a recipe is accepted."""
+    if not composition_route or not isinstance(result, Mapping):
+        return None
+    if result.get("error") or result.get("approval_required"):
+        return None
+    payload = _structured_tool_result(result)
+    recipe = payload.get("recipe")
+    if not isinstance(recipe, Mapping):
+        return None
+    recipe_id = str(recipe.get("id") or "").strip()
+    if not recipe_id:
+        return None
+    for queued in following_blocks:
+        content = getattr(queued, "content", None)
+        if not isinstance(content, str):
+            continue
+        try:
+            queued_payload = json.loads(content)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(queued_payload, Mapping) and queued_payload.get("action") in {
+            "recipe_queue_missing", "recipe_queue_missing_by_name",
+        }:
+            return None
+    return ToolBlock(
+        "manage_assets",
+        json.dumps({
+            "action": "recipe_queue_missing",
+            "domain": "kitchen",
+            "recipe_id": recipe_id,
+        }, sort_keys=True),
+    )
 
 _intent_requires_action = intent_requires_action
 _usage_bucket = usage_bucket
@@ -1295,6 +1441,7 @@ async def stream_aci_runtime(
     # execute a duplicate Action or ask the model to choose one.
     _aci_answer_only = False
     _aci_clarification_only = False
+    _aci_unscoped_network_refusal = False
     _aci_clarification_text = ""
     _aci_completion_contract_satisfied = False
     _aci_repair_count = 0
@@ -1385,6 +1532,15 @@ async def stream_aci_runtime(
     _active_run_context = None
     _session_reference_context = None
     _active_reference_entities = []
+    _network_service_reference_request = bool(
+        is_network_service_enumeration_request(_last_user)
+        and re.search(
+            r"\b(?:responding|discovered|identified|these|those)\s+"
+            r"(?:hosts?|devices?|machines?)\b",
+            str(_last_user or ""),
+            re.IGNORECASE,
+        )
+    )
     try:
         from src.agent_work_bridge import reference_context_for_turn
         _active_run_context, _session_reference_context, _active_reference_entities = await asyncio.to_thread(
@@ -1397,6 +1553,7 @@ async def stream_aci_runtime(
                 str(_last_user or ""),
                 re.IGNORECASE,
             )),
+            network_service_reference=_network_service_reference_request,
         )
     except Exception:
         logger.debug("durable reference context unavailable", exc_info=True)
@@ -1539,7 +1696,7 @@ async def stream_aci_runtime(
             "tool_calls": 0,
             "missing_workspace": True,
         }
-        yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
+        yield f"data: {_stream_json({'type': 'metrics', 'data': metrics})}\n\n"
         yield "data: [DONE]\n\n"
         return
     logger.info(
@@ -1675,6 +1832,19 @@ async def stream_aci_runtime(
                     except json.JSONDecodeError:
                         yield chunk
                         continue
+                    # Keep provider-specific reasoning event wrappers from
+                    # being mistaken for answer text if a fallback adapter
+                    # forwards one without transport normalization.
+                    if str(data.get("type") or "").lower() in {
+                        "reasoning", "thinking", "reasoning_delta", "thinking_delta",
+                    }:
+                        _reasoning_delta = (
+                            data.get("delta") or data.get("text")
+                            or data.get("reasoning") or data.get("reasoning_content")
+                            or data.get("thinking") or ""
+                        )
+                        if isinstance(_reasoning_delta, str) and _reasoning_delta:
+                            data = {"delta": _reasoning_delta, "thinking": True}
                     if data.get("type") == "usage":
                         usage = data.get("data", {}) or {}
                         direct_actual_model = usage.get("model") or direct_actual_model
@@ -1815,7 +1985,7 @@ async def stream_aci_runtime(
         }
         if isinstance(direct_actual_endpoint_cost_tracked, bool):
             metrics["endpoint_cost_tracked"] = direct_actual_endpoint_cost_tracked
-        yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
+        yield f"data: {_stream_json({'type': 'metrics', 'data': metrics})}\n\n"
         yield "data: [DONE]\n\n"
         return
 
@@ -1845,6 +2015,69 @@ async def stream_aci_runtime(
     _canonical_read_fast = is_canonical_read_contract(
         _intent.get("intent_frame"), _intent.get("resolved_contract")
     )
+    # A named-dish request needs recipe_add -> recipe_missing -> queue, not a
+    # model decision packet for one add_item mutation. Keep the normal
+    # recipe-capable tool route while retaining all server-side policy and
+    # canonical inventory checks.
+    _aci_recipe_composition_route = bool(
+        _aci_enabled
+        and _aci_mode == "aci"
+        and is_recipe_composition_request(_last_user)
+    )
+    _aci_recipe_missing_route = bool(
+        _aci_enabled
+        and _aci_mode == "aci"
+        and is_recipe_missing_request(_last_user)
+    )
+    _aci_recipe_cook_route = bool(
+        _aci_enabled
+        and _aci_mode == "aci"
+        and is_recipe_cook_request(_last_user)
+    )
+    _recipe_composition_query = (
+        recipe_composition_name(_last_user)
+        if _aci_recipe_composition_route else None
+    )
+    # Prefer an already-saved canonical recipe before asking the model to
+    # compose one.  This keeps "make X and add what I'm missing" on the
+    # deterministic recipe queue path when X is known, while preserving the
+    # proposal path for a genuinely new/unknown dish.  In particular, a
+    # model must not be able to turn the phrase "the things I'm missing" into
+    # a literal grocery item and then claim the queue was verified.
+    if _aci_recipe_composition_route and _recipe_composition_query and not guide_only:
+        try:
+            from src.inventory_service import get_inventory_service
+            from src.inventory_planning import normalize_item_name
+
+            _recipe_query_normalized = normalize_item_name(_recipe_composition_query)
+            _saved_recipes = await asyncio.to_thread(
+                get_inventory_service().list_recipes, owner,
+            )
+            _saved_matches = [
+                recipe for recipe in _saved_recipes
+                if isinstance(recipe, dict)
+                and (
+                    _recipe_query_normalized == normalize_item_name(recipe.get("name"))
+                    or _recipe_query_normalized in normalize_item_name(recipe.get("name"))
+                )
+            ]
+            if len(_saved_matches) == 1:
+                _aci_fast_path_block = ToolBlock(
+                    "manage_assets",
+                    json.dumps({
+                        "action": "recipe_queue_missing_by_name",
+                        "domain": "kitchen",
+                        "query": str(_saved_matches[0].get("name") or _recipe_composition_query),
+                    }, sort_keys=True),
+                )
+                _record_aci_framework("deterministic_saved_recipe_queue_selection")
+                logger.info("[hades-inventory] selected saved recipe queue path")
+        except Exception:
+            # A lookup failure must not widen authority or turn an unknown
+            # recipe into a mutation. The existing bounded proposal path can
+            # still ask for/import a concrete recipe.
+            logger.debug("[hades-inventory] saved recipe lookup unavailable", exc_info=True)
+    _recipe_cook_query = recipe_cook_name(_last_user) if _aci_recipe_cook_route else None
     # Once ACI has resolved a supported semantic contract, its binding is the
     # only model-facing capability for this turn.  The old route used to add
     # ALWAYS_AVAILABLE, domain maps, skills, and (sometimes) the generic tool
@@ -1861,6 +2094,9 @@ async def stream_aci_runtime(
         and not _active_document_relevant
         and not uploaded_files
         and _canonical_binding
+        and not _aci_recipe_composition_route
+        and not _aci_recipe_missing_route
+        and not _aci_recipe_cook_route
         and isinstance(_intent.get("intent_frame"), dict)
         and str(_intent["intent_frame"].get("domain_concept") or "") not in {"", "UNKNOWN"}
     )
@@ -2201,6 +2437,7 @@ async def stream_aci_runtime(
     _network_discovery_followup = (
         bool(_intent.get("continuation"))
         and "network_ops" in _intent_domains
+        and not is_network_observation_result_request(_last_user)
         and bool(re.search(
             r"\b(?:nmap|network[- ]discovery|network discovery|plan_network_discovery|"
             r"bounded discovery|private subnet|"
@@ -2305,7 +2542,7 @@ async def stream_aci_runtime(
             and not guide_only
             # Operational intent must retain its first-class capability tools;
             # the generic local-model no-tool route is for ordinary prose.
-            and not (_intent_domains & {"homelab", "network_ops", "developer"})
+            and not (_intent_domains & {"homelab", "network_ops", "developer", "household", "finance"})
         )
         return (
             is_ody,
@@ -2367,7 +2604,7 @@ async def stream_aci_runtime(
         _relevant_tools.update({"developer_read"})
         _relevant_tools.difference_update({"bash", "python", "read_file", "grep", "glob", "ls", "get_workspace"})
         _record_aci_framework("developer_read_contract")
-    if _aci_enabled:
+    if _aci_enabled and not _aci_recipe_composition_route:
         try:
             projection = project_action_selection(
                 intent=_intent,
@@ -2379,6 +2616,7 @@ async def stream_aci_runtime(
                 profile=_aci_profile,
                 network_cidr=network_discovery_request_cidr(_last_user),
                 read_payload_builder=canonical_read_fast_path_payload,
+                operation_scope=str(work_run_id or "").strip() or None,
             )
 
             _aci_packet = projection.packet
@@ -2388,6 +2626,23 @@ async def stream_aci_runtime(
                 for choice, selected in sorted(_aci_choice_map.items())
                 if (trace := action_trace(choice, selected)) is not None
             ]
+            # An implicit network scan has no owner-authorized target.  Do not
+            # expose the plan ActionCard and rely on a small model to infer
+            # that boundary: without a CIDR or a persisted continuation, this
+            # turn is a refusal/clarification response with no tool authority.
+            # Explicit CIDRs and server-owned approval continuations retain
+            # the normal bounded plan and exact-approval path.
+            _aci_unscoped_network_refusal = bool(
+                _aci_mode == "aci"
+                and _intent_frame.domain_concept == "NETWORK"
+                and _intent_frame.operation_class == "EXECUTE"
+                and not network_discovery_request_cidr(_last_user)
+                and not _intent.get("continuation")
+            )
+            if _aci_unscoped_network_refusal:
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = False
+                _record_aci_framework("unscoped_network_refusal")
             if projection.fast_path and _aci_mode == "aci" and not _aci_answer_only:
                 _fast_binding = str(
                     (_intent.get("resolved_contract") or {}).get("binding") or ""
@@ -2404,6 +2659,164 @@ async def stream_aci_runtime(
                 _aci_fast_path_block = ToolBlock(
                     _fast_binding, json.dumps(projection.fast_path, sort_keys=True)
                 )
+            # Network discovery has a safe, deterministic first step even when
+            # the owner leaves the target implicit: ask the canonical Homelab
+            # operation to resolve the current authorized private scope. Do not
+            # make a local model choose or describe this ActionCard. The
+            # operation still performs scope validation and the normal exact
+            # approval gate remains downstream.
+            if (
+                _aci_mode == "aci"
+                and not _aci_answer_only
+                and _aci_canonical_tool_projection
+                and _canonical_binding == "manage_homelab"
+                and "network_ops" in set(_intent_domains or set())
+                and (
+                    is_explicit_network_discovery_request(_last_user)
+                    or _network_discovery_reply
+                    or _network_discovery_followup
+                )
+                and not network_discovery_request_cidr(_last_user)
+                and projection.mode is not SelectionMode.NEED_CONTEXT
+            ):
+                _network_plan = {"action": "plan_network_discovery"}
+                # A plan is a durable continuation point. On an explicit
+                # follow-up, resolve the next step from owner/session/run
+                # state. Transcript text is presentation context only and
+                # must never be used to recover an approval digest.
+                if work_run_id:
+                    from src.agent_work_bridge import network_continuation_projection
+                    _network_continuation = await asyncio.to_thread(
+                        network_continuation_projection, owner, str(work_run_id),
+                    )
+                    if isinstance(_network_continuation, dict):
+                        _network_plan = json.loads(
+                            str(_network_continuation.get("content") or "{}")
+                        )
+                        logger.info(
+                            "[hades-aci] canonical network continuation action=%s digest=%s",
+                            _network_plan.get("action"),
+                            str(_network_plan.get("plan_digest") or "")[:16],
+                        )
+                _aci_fast_path_block = ToolBlock(
+                    "manage_homelab", json.dumps(_network_plan, sort_keys=True)
+                )
+                _network_action_id = str(_network_plan.get("action") or "plan_network_discovery")
+                _aci_selected_action = next(
+                    (
+                        trace for trace in _aci_action_candidates
+                        if trace["binding"] == "manage_homelab"
+                        and trace["action_id"] == _network_action_id
+                    ),
+                    None,
+                )
+                _record_aci_framework("deterministic_network_plan_selection")
+                logger.info(
+                    "[hades-aci] deterministic network plan fast path scope=current_context"
+                )
+            # Port/service language is an active bounded operation, not a
+            # historical observation read. Start with discovery so a natural
+            # request such as "check open ports on the responding devices"
+            # remains owner-usable even when the prior observations are stale
+            # or absent. The discovery result below seals the exact private
+            # host set before the separate service-enumeration plan is made;
+            # the model never invents targets and the approval boundary is
+            # unchanged.
+            _network_service_reference = (
+                _active_run_context.get("reference_context")
+                if isinstance(_active_run_context, dict)
+                else None
+            )
+            from src.agent_work_bridge import select_network_service_reference
+            _network_service_reference = select_network_service_reference(
+                _network_service_reference,
+                _session_reference_context,
+            )
+            _network_service_reference_available = bool(
+                isinstance(_network_service_reference, dict)
+                and _network_service_reference.get("network_discovery_targets")
+            )
+            _network_service_followup = bool(
+                is_network_service_enumeration_request(_last_user)
+                and re.search(
+                    r"\b(?:responding|discovered|identified|these|those)\s+"
+                    r"(?:hosts?|devices?|machines?)\b",
+                    str(_last_user or ""),
+                    re.IGNORECASE,
+                )
+                and _network_service_reference_available
+            )
+            if (
+                _aci_mode == "aci"
+                and not _aci_answer_only
+                and _aci_canonical_tool_projection
+                and _canonical_binding == "manage_homelab"
+                and "network_ops" in set(_intent_domains or set())
+                and is_network_service_enumeration_request(_last_user)
+                and not _network_service_followup
+            ):
+                _aci_fast_path_block = ToolBlock(
+                    "manage_homelab",
+                    json.dumps(
+                        {
+                            "action": "plan_network_discovery",
+                            **(
+                                {"cidr": network_discovery_request_cidr(_last_user)}
+                                if network_discovery_request_cidr(_last_user)
+                                else {}
+                            ),
+                        },
+                        sort_keys=True,
+                    ),
+                )
+                _aci_selected_action = next(
+                    (
+                        trace for trace in _aci_action_candidates
+                        if trace["binding"] == "manage_homelab"
+                        and trace["action_id"] == "plan_network_discovery"
+                    ),
+                    None,
+                )
+                _record_aci_framework("deterministic_network_discovery_before_service_plan")
+                logger.info("[hades-aci] deterministic discovery first for network service request")
+            # If the owner refers to hosts already observed by discovery, use
+            # the owner-scoped canonical projection for the service plan. Do
+            # not repeat discovery or ask the model to invent targets; the
+            # homelab operation resolves only fresh persisted observations
+            # and fails closed when none are available.
+            if (
+                _aci_mode == "aci"
+                and not _aci_answer_only
+                and _aci_canonical_tool_projection
+                and _canonical_binding == "manage_homelab"
+                and "network_ops" in set(_intent_domains or set())
+                and _network_service_followup
+            ):
+                _service_plan = {"action": "plan_network_service_enumeration"}
+                _sealed_targets = (
+                    _network_service_reference.get("network_discovery_targets")
+                    if isinstance(_network_service_reference, dict)
+                    else None
+                )
+                if isinstance(_sealed_targets, list) and _sealed_targets:
+                    _service_plan["targets"] = [
+                        str(target).strip() for target in _sealed_targets[:256]
+                        if str(target).strip()
+                    ]
+                _aci_fast_path_block = ToolBlock(
+                    "manage_homelab",
+                    json.dumps(_service_plan, sort_keys=True),
+                )
+                _aci_selected_action = next(
+                    (
+                        trace for trace in _aci_action_candidates
+                        if trace["binding"] == "manage_homelab"
+                        and trace["action_id"] == "plan_network_service_enumeration"
+                    ),
+                    None,
+                )
+                _record_aci_framework("deterministic_existing_hosts_service_plan_selection")
+                logger.info("[hades-aci] deterministic service plan from existing observations")
             for _event in projection.framework_events:
                 if _event:
                     _record_aci_framework(_event)
@@ -2417,7 +2830,17 @@ async def stream_aci_runtime(
                 _aci_packet = None
             if _aci_answer_only:
                 _aci_packet = None
-            if _aci_answer_only:
+            if _aci_unscoped_network_refusal:
+                aci_instruction = (
+                    "HADES ACI SAFE REFUSAL MODE. The owner requested a network "
+                    "discovery scan without an explicit private CIDR or an "
+                    "existing server-owned continuation. Do not call tools and "
+                    "do not return a machine decision. Explain briefly that "
+                    "you need one current private network scope, such as a "
+                    "CIDR, before a bounded scan can be planned. Do not claim "
+                    "that any scan ran."
+                )
+            elif _aci_answer_only:
                 aci_instruction = (
                     "HADES ACI ANSWER MODE. The protected canonical owner-scoped "
                     "Memory Result for this turn is already complete. Do not call "
@@ -2453,6 +2876,63 @@ async def stream_aci_runtime(
                 # Explicit compatibility callers retain their historical
                 # behavior; no active production caller uses this mode.
                 _aci_enabled = False
+    # Named-dish composition stays on the recipe-capable model route. Do not
+    # preempt it with ``recipe_queue_missing_by_name``: that operation is
+    # correct only when a saved recipe already exists and would turn a normal
+    # request such as "make spaghetti and add what I need" into a premature
+    # recipe_not_found failure before the model can provide a bounded recipe
+    # ingredient proposal. The route directive and proposal fallback below
+    # still require concrete ingredients, canonical stock comparison, and
+    # verified Grocery queueing.
+    _recipe_missing_query = recipe_missing_name(_last_user) if _aci_recipe_missing_route else None
+    if (
+        _aci_recipe_missing_route
+        and _recipe_missing_query
+        and not guide_only
+        and "manage_assets" not in disabled_tools
+    ):
+        # A read-only saved-recipe comparison is deterministic and does not
+        # require the model to chain recipe search into recipe_missing.
+        _aci_fast_path_block = ToolBlock(
+            "manage_assets",
+            json.dumps({
+                "action": "recipe_missing_by_name",
+                "domain": "kitchen",
+                "query": _recipe_missing_query,
+            }, sort_keys=True),
+        )
+    if (
+        _aci_recipe_cook_route
+        and _recipe_cook_query
+        and not guide_only
+        and "manage_assets" not in disabled_tools
+    ):
+        # Cooking is an explicit bounded inventory mutation. Resolve the saved
+        # recipe by name server-side and bind replay safety to this durable
+        # owner turn rather than to the natural-language sentence alone.
+        _cook_scope = str(work_run_id or "").strip() or hashlib.sha256(
+            f"{owner}:{_last_user}".encode("utf-8")
+        ).hexdigest()[:24]
+        _aci_fast_path_block = ToolBlock(
+            "manage_assets",
+            json.dumps({
+                "action": "recipe_cook",
+                "domain": "kitchen",
+                "recipe_query": _recipe_cook_query,
+                "idempotency_key": f"recipe-cook:{_cook_scope}",
+            }, sort_keys=True),
+        )
+    if _aci_fast_path_block is not None and (
+        _aci_recipe_composition_route or _aci_recipe_missing_route or _aci_recipe_cook_route
+    ):
+        # A deterministic recipe route supersedes a generic NO_APPLICABLE_ACTION
+        # fallback from the provisional intent classifier. The canonical recipe
+        # operation remains the authority; the local model must not be allowed
+        # to replace it with unrelated prose.
+        _aci_model_fallback = False
+        _aci_model_fallback_reason = None
+        _aci_clarification_only = False
+        _aci_clarification_text = ""
     # A caller/RAG route may have selected an observation reader while omitting
     # the executable discovery action. Repair that omission before schemas are
     # projected to the model. This is bounded to explicit network intent and
@@ -2571,6 +3051,20 @@ async def stream_aci_runtime(
             workspace=workspace,
             intent_domains=_intent_domains,
         )
+        if _aci_recipe_composition_route and not guide_only:
+            prepend_agent_directive(
+                route_messages,
+                "RECIPE COMPOSITION MODE: The owner asked for a named dish and "
+                "missing ingredients on the shopping list. Do the work now; do "
+                "not answer with a plan or ask whether to proceed. Use the "
+                "documented strict-text XML invoke for manage_assets: first "
+                "recipe_add with a bounded concrete ingredient array for the "
+                "named dish, then recipe_missing, then recipe_queue_missing. "
+                "Never call add_item with the words 'ingredients I am missing' "
+                "or another request phrase. Recipe planning does not purchase "
+                "or consume stock. If the dish is genuinely too ambiguous to "
+                "compose safely, ask one concise clarification instead."
+            )
         if _aci_answer_only:
             route_messages = minimal_aci_answer_messages(route_messages)
             route_mcp_schemas = []
@@ -2683,6 +3177,10 @@ async def stream_aci_runtime(
     yield f"data: {json.dumps({'type': 'agent_prep', 'data': {k: round(v, 3) for k, v in prep_timings.items()}})}\n\n"
 
     full_response = ""
+    # Approval-resume can terminate before entering a model round when the
+    # approved bounded network Result is already complete. Keep finalization
+    # safe for that path as well as the ordinary round path.
+    round_reasoning = ""
     if _reference_ack:
         # This is a server-owned conversational acknowledgement only. It
         # prevents weak-model prose from erasing the user's selection while
@@ -2728,6 +3226,10 @@ async def stream_aci_runtime(
     # of already-declared safe reads without allowing an agent turn to grow
     # without limit.
     _safe_auto_continuations = 0
+    # A successful bounded network execution is terminal for this turn.  Do
+    # not let the next model round re-enter the deterministic planner and ask
+    # for approval for the same sealed operation a second time.
+    _network_execution_completed = False
     _ody_notes_tool_completed = False
     _pinned_fallback_candidate = None
     _pinned_fallback_route = None
@@ -2761,6 +3263,8 @@ async def stream_aci_runtime(
     # that *can't* call the tool from looping forever.
     _intent_nudge_count = 0
     _MAX_INTENT_NUDGES = 2
+    _inventory_composition_repair_pending = False
+    _inventory_composition_repair_count = 0
 
     # "I said I would, then didn't" detector. The pattern that breaks debug
     # loops on weak models (deepseek-v4-flash mid-2026): the model writes
@@ -2904,6 +3408,43 @@ async def stream_aci_runtime(
                 + "\n\n"
             )
 
+        # The approval-resume path executes the sealed action before the
+        # ordinary tool-round persistence hook runs. Reattach that result to
+        # the same durable WorkAction here, otherwise the UI can show a tool
+        # result while verification still sees only the earlier plan (or no
+        # result at all). The approval reference and origin Run are
+        # server-owned; this does not trust transcript text or create a new
+        # action.
+        try:
+            from src.agent_work_bridge import (
+                persist_approved_result as _persist_approved_result,
+                verify_bound_action as _verify_approved_action,
+            )
+            _approved_persisted = await asyncio.to_thread(
+                _persist_approved_result,
+                owner,
+                approved.origin_run_id,
+                approved.approval_id,
+                approved.tool_name,
+                approved.content,
+                approved_result,
+            )
+            if (
+                isinstance(_approved_persisted, dict)
+                and _approved_persisted.get("run_lifecycle_state") == "verifying"
+            ):
+                await asyncio.to_thread(
+                    _verify_approved_action,
+                    owner,
+                    _approved_persisted.get("action_id") or "",
+                )
+        except Exception:
+            # Durable evidence must never turn a valid owner-visible tool
+            # response into a transport failure. The result remains visible,
+            # but the warning makes a missing verification projection
+            # diagnosable instead of silently claiming completion.
+            logger.warning("[work-bridge] failed to persist approved action result", exc_info=True)
+
         approved_output = str(
             approved_result.get("output")
             or approved_result.get("stdout")
@@ -3002,6 +3543,15 @@ async def stream_aci_runtime(
             "approved": True,
             "approval_digest": approved.digest[:16],
         }
+        # Keep the bounded canonical projection with the approval-resume
+        # event. The raw provider result may be large (especially discovery
+        # candidates) and the answer renderer must not depend on a truncated
+        # tool-output string after the turn is resumed.
+        _approved_projection = canonical_tool_result_projection(
+            approved.tool_name, approved_result,
+        )
+        if _approved_projection is not None:
+            approved_tool_event["result_projection"] = _approved_projection
         for key in (
             "image_url",
             "image_prompt",
@@ -3086,9 +3636,54 @@ async def stream_aci_runtime(
             else:
                 _hard_action_bash_completed = True
                 logger.info("[agent] approved bash satisfied hard action before round 1")
+        # Approval-resume runs before the ordinary tool-round projection. A
+        # successful host discovery is already the requested deliverable; set
+        # the same terminal guard here so the model cannot plan the scan again
+        # and show a second approval card. Port/service requests intentionally
+        # continue into their separate bounded operation.
+        # Approval-resume results use the same executor envelope as ordinary
+        # tool rounds.  Unwrap ``output``/``data`` through the shared parser;
+        # checking only ``data`` made a successful discovery look non-terminal
+        # and re-planned the original scan, producing a second approval card.
+        _approved_network_payload = _structured_tool_result(approved_result)
+        if (
+            approved.tool_name == "manage_homelab"
+            and str(_approved_network_payload.get("action") or "") in {
+                "execute_network_discovery",
+                "execute_network_service_enumeration",
+            }
+            and _approved_network_payload.get("success") is True
+        ):
+            # This is the terminal observed Result for this approval resume.
+            # Do not run another model round: it can re-select the same
+            # deterministic planner and manufacture a second approval card.
+            _network_execution_completed = True
+            _aci_terminal_canonical_read = True
+            _aci_answer_only = True
+            _aci_completion_contract_satisfied = True
         _approved_result_injected = True
 
     for round_num in range(1, max_rounds + 1):
+        if _network_execution_completed:
+            # Approval-resume already supplied the verified bounded network
+            # Result. Skip model re-entry entirely; the deterministic answer
+            # projection below will render the observed scan.
+            break
+        if _aci_unscoped_network_refusal:
+            # This is a server-owned safety response, not a language-model
+            # decision. Sending it through the model can stall in reasoning
+            # or repeatedly select the unavailable network plan. There is no
+            # tool authority or completion claim on this path.
+            _unscoped_network_message = (
+                "I cannot plan a bounded discovery scan until you provide one "
+                "current, private network scope—such as a CIDR. No scan was run."
+            )
+            _aci_clarification_only = True
+            _aci_clarification_text = _unscoped_network_message
+            full_response = _unscoped_network_message
+            yield "data: " + json.dumps({"delta": _unscoped_network_message}) + "\n\n"
+            _record_aci_framework("unscoped_network_terminal_response")
+            break
         round_response = ""
         _round_text_buffered = False
         round_reasoning = ""  # reasoning_content deltas (DeepSeek-thinking, vLLM --reasoning-parser)
@@ -3221,6 +3816,11 @@ async def stream_aci_runtime(
                             },
                             "required": ["decision"],
                         },
+                        # Strict ACI decisions are machine packets. Keep
+                        # provider reasoning separate from ordinary
+                        # conversation so a thinking channel cannot consume
+                        # the JSON answer budget or leave content empty.
+                        "reasoning_mode": "structured",
                         "max_tokens": min(max_tokens or 512, 512),
                     } if _aci_enabled and _aci_mode == "aci" and not _aci_answer_only and not _aci_model_fallback else {}),
                     "temperature": (
@@ -3292,7 +3892,7 @@ async def stream_aci_runtime(
                 input_tokens=round_input_tokens,
                 output_tokens=round_output_tokens,
                 usage_source=usage_source,
-            ))
+        ))
         logger.info(
             "[agent-timing] round_start round=%s model=%s endpoint=%s route_source_tokens=%s tools=%s native_tools=%s timeout=%s",
             round_num,
@@ -3319,7 +3919,10 @@ async def stream_aci_runtime(
             logger.debug("Provider context trace unavailable", exc_info=True)
         async def _round_stream():
             if _aci_clarification_only:
-                yield "data: " + json.dumps({"delta": _aci_clarification_text}) + "\n\n"
+                # The outer round accumulator emits the buffered
+                # clarification once after this stream completes.  Emitting
+                # the text here as well makes the transport append the same
+                # owner-facing question twice.
                 yield "data: [DONE]\n\n"
                 return
             if _skip_model_round:
@@ -3348,6 +3951,11 @@ async def stream_aci_runtime(
             ):
                 yield item
 
+        if _aci_clarification_only:
+            # Keep clarification on the same buffered path as other ACI
+            # answers so the route receives one delta and persists one reply.
+            round_response = _aci_clarification_text
+            _round_text_buffered = True
         async for chunk in _round_stream():
             if not _round_first_event_logged:
                 _round_first_event_logged = True
@@ -3443,6 +4051,20 @@ async def stream_aci_runtime(
             if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
                 try:
                     data = json.loads(chunk[6:])
+                    # Normalize provider event wrappers before checking type or
+                    # delta. Some gateways emit reasoning as a typed event;
+                    # without this it enters the answer buffer and appears
+                    # dropped when structured/tool rounds suppress that buffer.
+                    if str(data.get("type") or "").lower() in {
+                        "reasoning", "thinking", "reasoning_delta", "thinking_delta",
+                    }:
+                        _reasoning_delta = (
+                            data.get("delta") or data.get("text")
+                            or data.get("reasoning") or data.get("reasoning_content")
+                            or data.get("thinking") or ""
+                        )
+                        if isinstance(_reasoning_delta, str) and _reasoning_delta:
+                            data = {"delta": _reasoning_delta, "thinking": True}
                     # IMPORTANT: check type-based events BEFORE "delta" key,
                     # because tool_call_delta also has an "arg_delta" field.
                     if data.get("type") == "tool_call_delta":
@@ -3664,7 +4286,33 @@ async def stream_aci_runtime(
                 repair_count=_aci_repair_count,
                 max_repairs=getattr(_aci_profile, "max_decision_repairs", 1),
             )
-            if _aci_decision is None:
+            # A canonical contract fallback is already a server-owned action
+            # selection. Preserve it for the normal approval/execution path;
+            # do not immediately discard it as model prose fallback.
+            if _aci_decision is None and _invalid_resolution.mode == "CONTRACT_FALLBACK":
+                _fallback_selected = _invalid_resolution.action
+                if _fallback_selected:
+                    tool_blocks = [
+                        ToolBlock(
+                            _fallback_selected["binding"],
+                            json.dumps(_fallback_selected["payload"], sort_keys=True),
+                        )
+                    ]
+                    used_native = False
+                    converted_calls = []
+                    round_response = ""
+                    _aci_contract_fallback_used = True
+                    _aci_selected_action = action_trace(
+                        "CONTRACT_FALLBACK", _fallback_selected
+                    )
+                    _record_aci_framework("deterministic_contract_fallback")
+                    logger.warning(
+                        "[hades-aci] preserved framework contract fallback binding=%s action=%s invalid_model_decision=%s",
+                        _fallback_selected["binding"],
+                        _fallback_selected["payload"].get("action"),
+                        _aci_error,
+                    )
+            if _aci_decision is None and _invalid_resolution.mode != "CONTRACT_FALLBACK":
                 # If deterministic contract resolution already identified a
                 # unique harmless planning/read Action, the malformed model
                 # response is not needed to choose it. This is a framework
@@ -3738,7 +4386,7 @@ async def stream_aci_runtime(
                 )
                 round_response = ""
                 continue
-            else:
+            elif _aci_decision is not None:
                 selected = _decision_outcome.action
                 if _decision_outcome.invalid_action:
                     round_response = "I could not validate the selected operation."
@@ -3811,84 +4459,25 @@ async def stream_aci_runtime(
             and bool(_intent.get("continuation"))
             and "network_ops" in set(_intent_domains or set())
         ):
-            _conversation_for_discovery = " ".join(
-                str(message.get("content") or "")
-                for message in messages[-12:]
-                if message.get("role") in {"user", "assistant"}
-            )
-            _planned_discovery_digest = re.search(
-                r"(?:operation_digest|plan_digest)\"?\s*[:=]\s*\"?([0-9a-f]{64})",
-                _conversation_for_discovery,
-                re.IGNORECASE,
-            )
-            _discovery_result_present = bool(
-                _planned_discovery_digest
-                and re.search(
-                    r'(?:\"kind\"\s*:\s*\"discovery\".*?\"success\"\s*:\s*true|'
-                    r'\"candidate_count\"\s*:\s*\d+.*?\"nmap_ping_scan\")',
-                    _conversation_for_discovery,
-                    re.IGNORECASE | re.DOTALL,
+            # The pending plan/digest comes only from the owner/session/run
+            # Work projection. Transcript text is deliberately ignored here.
+            if re.match(r"^(?:continue|go ahead|yes|proceed|run it|do it)\b", str(_last_user or "").strip(), re.IGNORECASE) and work_run_id:
+                from src.agent_work_bridge import network_continuation_projection
+                _network_continuation = await asyncio.to_thread(
+                    network_continuation_projection, owner, str(work_run_id),
                 )
-                and _planned_discovery_digest.group(1).lower()
-                in _conversation_for_discovery.lower()
-            )
-            _service_action_in_conversation = bool(re.search(
-                r"plan_network_service_enumeration",
-                _conversation_for_discovery,
-                re.IGNORECASE,
-            ))
-            _service_plan_digest = re.search(
-                r"(?:operation_digest|plan_digest)\"?\s*[:=]\s*\"?([0-9a-f]{64})",
-                _conversation_for_discovery,
-                re.IGNORECASE,
-            ) if _service_action_in_conversation else None
-            _service_result_present = bool(re.search(
-                r"(?:service_enumeration|service_observations).*?(?:success\"?\s*[:=]\s*true|observation_count|nmap_service_version_observation)",
-                _conversation_for_discovery,
-                re.IGNORECASE | re.DOTALL,
-            ))
-            if _service_plan_digest and not _service_result_present:
-                logger.info(
-                    "[agent] deterministic service-enumeration continuation repair digest=%s",
-                    _service_plan_digest.group(1)[:16],
-                )
-                tool_blocks = [ToolBlock(
-                    "manage_homelab",
-                    json.dumps({
-                        "action": "execute_network_service_enumeration",
-                        "plan_digest": _service_plan_digest.group(1),
-                    }),
-                )]
-                converted_calls = []
-                used_native = False
-            elif _network_service_request and _discovery_result_present:
-                # The service plan is deterministic and read-only. The bridge
-                # inherits the completed discovery Result's exact targets.
-                tool_blocks = [ToolBlock(
-                    "manage_homelab",
-                    json.dumps({"action": "plan_network_service_enumeration"}),
-                )]
-                converted_calls = []
-                used_native = False
-            if not tool_blocks and _planned_discovery_digest and re.search(
-                r"\b(?:network discovery|plan_network_discovery|private subnet|bounded discovery)\b",
-                _conversation_for_discovery,
-                re.IGNORECASE,
-            ) and _network_request_cidr and not _discovery_result_present:
-                logger.info(
-                    "[agent] deterministic approved discovery continuation repair digest=%s",
-                    _planned_discovery_digest.group(1)[:16],
-                )
-                tool_blocks = [ToolBlock(
-                    "manage_homelab",
-                    json.dumps({
-                        "action": "execute_network_discovery",
-                        "cidr": _network_request_cidr,
-                        "plan_digest": _planned_discovery_digest.group(1),
-                    }),
-                )]
-                converted_calls = []
-                used_native = False
+                if isinstance(_network_continuation, dict):
+                    logger.info(
+                        "[agent] canonical network continuation action=%s digest=%s",
+                        _network_continuation.get("action"),
+                        str(_network_continuation.get("plan_digest") or "")[:16],
+                    )
+                    tool_blocks = [ToolBlock(
+                        str(_network_continuation["tool"]),
+                        str(_network_continuation["content"]),
+                    )]
+                    converted_calls = []
+                    used_native = False
         _asset_frame = _intent.get("intent_frame") if isinstance(_intent.get("intent_frame"), dict) else {}
         _resolved_read = _intent.get("resolved_contract") if isinstance(_intent.get("resolved_contract"), dict) else {}
         _continuation_step = _intent.get("continuation_next_step") if isinstance(_intent.get("continuation_next_step"), dict) else {}
@@ -3992,6 +4581,35 @@ async def stream_aci_runtime(
             tool_blocks = [ToolBlock(_read_binding, json.dumps(_read_payload))]
             converted_calls = []
             used_native = False
+        # Household mutations are canonical writes, not ordinary prose. If a
+        # weak model answers without a tool call, project only the already
+        # resolved inventory action with bounded owner-authored arguments.
+        # The normal policy, executor, and verified readback path still owns
+        # persistence and completion.
+        _mutation_action = str(_resolved_read.get("action_id") or "").strip()
+        if (
+            _asset_frame.get("domain_concept") == "HOUSEHOLD_ITEM"
+            and _asset_frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE", "DELETE"}
+            and _resolved_read.get("binding") == "manage_assets"
+            and _mutation_action in {"add_item", "add_stock", "consume_stock", "remove_from_grocery"}
+            and not tool_blocks
+            and not tool_events
+            and total_tool_calls == 0
+            and "manage_assets" in set(_relevant_tools or set())
+            and "manage_assets" not in disabled_tools
+        ):
+            _mutation_payload = canonical_inventory_mutation_payload(
+                _mutation_action,
+                _retrieval_query or _last_user,
+                operation_scope=str(work_run_id or "").strip() or None,
+            )
+            if _mutation_payload:
+                logger.info("[agent] deterministic canonical inventory mutation action=%s", _mutation_action)
+                if round_response and full_response.endswith(round_response):
+                    full_response = full_response[:-len(round_response)]
+                tool_blocks = [ToolBlock("manage_assets", json.dumps(_mutation_payload, sort_keys=True))]
+                converted_calls = []
+                used_native = False
         _compiled_asset_read = (
             _asset_frame.get("domain_concept") == "TECHNICAL_ASSET"
             and _asset_frame.get("operation_class") == "READ"
@@ -4249,6 +4867,31 @@ async def stream_aci_runtime(
         # explicit live request still deserves one bounded repair if a strict
         # textual model answers in prose without emitting any tool invocation.
         _ody_v38_user_text = str(_last_user or "")
+        if (
+            _inventory_composition_repair_pending
+            and _inventory_composition_repair_count < 1
+            and not tool_blocks
+            and not native_tool_calls
+            and not _force_answer
+        ):
+            _inventory_composition_repair_count += 1
+            _inventory_composition_repair_pending = False
+            messages.append({
+                "role": "system",
+                "content": (
+                    "INVENTORY COMPOSITION REPAIR: Your previous inventory call "
+                    "used the owner's request phrase as an item and was rejected. "
+                    "Your prose answer did not perform the requested change. "
+                    "For a named dish, use recipe_add with concrete ingredient "
+                    "objects, then recipe_missing and recipe_queue_missing; do not "
+                    "call add_item with words such as 'the ingredients I am missing'. "
+                    "If the dish cannot be established safely, ask one concise "
+                    "clarifying question instead of claiming completion. Execute "
+                    "the appropriate canonical action now."
+                ),
+            })
+            yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
+            continue
         # Weak local models sometimes emit the visible text
         # ``[Assistant invoked tool: ...]`` instead of a parseable strict-text
         # invocation.  When the user has supplied an explicit, bounded
@@ -4320,6 +4963,14 @@ async def stream_aci_runtime(
                 )
                 )
             )
+            or (
+                _aci_recipe_composition_route
+                and re.search(
+                    r"\b(?:make|cook|prepare|recipe|ingredient|grocery|shopping|missing)\b",
+                    _ody_v38_user_text,
+                    re.IGNORECASE,
+                )
+            )
         )
         _ody_v38_first_class_no_action = (
             not guide_only
@@ -4374,6 +5025,65 @@ async def stream_aci_runtime(
                 + chr(10)
             )
             continue
+
+        # Text-only local models sometimes describe a recipe and simulate a
+        # tool result instead of emitting the documented invoke block. If the
+        # response contains an explicit bounded ingredient section, convert
+        # only that untrusted proposal into the canonical recipe_add action.
+        # The recipe service still validates and persists it; prose without a
+        # concrete list remains a truthful non-completion.
+        if (
+            _aci_recipe_composition_route
+            and _first_class_action_repair_count >= 1
+            and not tool_blocks
+            and not native_tool_calls
+            and not tool_events
+        ):
+            _dish_match = re.search(
+                r"\b(?:make|cook|prepare)\s+(.+?)(?=\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal))\b|[.!?,]|$)",
+                _last_user,
+                re.IGNORECASE,
+            )
+            _dish_name = _dish_match.group(1).strip() if _dish_match else ""
+            try:
+                _recipe_candidate = parse_model_recipe_proposal(
+                    round_response, name=_dish_name,
+                )
+            except ValueError:
+                _recipe_candidate = None
+            if _recipe_candidate is not None:
+                if round_response and full_response.endswith(round_response):
+                    full_response = full_response[:-len(round_response)]
+                tool_blocks.append(ToolBlock(
+                    "manage_assets",
+                    json.dumps({
+                        "action": "recipe_add",
+                        "domain": "kitchen",
+                        "recipe_name": _recipe_candidate["name"],
+                        "servings": _recipe_candidate["servings"],
+                        "ingredients": _recipe_candidate["ingredients"],
+                        "source": "model_proposal",
+                    }, sort_keys=True),
+                ))
+                logger.info(
+                    "[agent] bounded recipe proposal fallback ingredients=%s",
+                    len(_recipe_candidate["ingredients"]),
+                )
+            else:
+                # Never let a text-only model's simulated tool narrative reach
+                # the owner as if it were an observation. A named dish can
+                # have materially different recipes, so ask for the smallest
+                # missing input instead of guessing or mutating inventory.
+                if round_response and full_response.endswith(round_response):
+                    full_response = full_response[:-len(round_response)]
+                round_response = (
+                    "I can add the missing ingredients, but I need a specific "
+                    "recipe or ingredient list for that dish first. Import or "
+                    "paste the recipe, and I’ll compare it with your pantry "
+                    "and add only what’s missing to Grocery."
+                )
+                full_response += round_response
+                _force_answer = True
 
         # A strict-text local model can ignore the repair instruction again.
         # For an explicitly scoped network request, finish capability
@@ -4520,7 +5230,7 @@ async def stream_aci_runtime(
                 logger.debug("[work-bridge] model provenance observation unavailable", exc_info=True)
         round_endpoint_ids.append(_round_actual_endpoint_id)
         round_endpoint_labels.append(_round_actual_endpoint_label)
-        if _ody_qwen_finetune_model and not tool_blocks and cleaned_round:
+        if _ody_qwen_finetune_model and not _aci_clarification_only and not tool_blocks and cleaned_round:
             yield f'data: {json.dumps({"delta": cleaned_round})}\n\n'
 
         if not tool_blocks:
@@ -4648,7 +5358,10 @@ async def stream_aci_runtime(
                 break
             if _round_text_buffered and cleaned_round:
                 full_response += cleaned_round
-                yield "data: " + json.dumps({"delta": cleaned_round}) + chr(10) + chr(10)
+                yield "data: " + json.dumps({
+                    "delta": cleaned_round,
+                    "clarification": bool(_aci_clarification_only),
+                }) + chr(10) + chr(10)
             break  # no tools — done
 
         # ── Loop-breaker (Terminus-style stall detector) ──────────────
@@ -4710,6 +5423,31 @@ async def stream_aci_runtime(
             _off_note = (f" ({', '.join(_off)} is currently disabled — say so if "
                          f"you needed it.)" if _off else "")
             _force_answer = True
+            # A bounded network preflight must either hand its server-issued
+            # digest to the exact approval continuation or stop.  Keeping the
+            # ACI packet alive here lets a weak model re-select the same plan
+            # after a fixture/adapter result that contains no digest, turning
+            # a safe no-progress state into a decision-budget loop.  Drop the
+            # packet and enter answer-only mode for this turn; this does not
+            # grant authority or claim that a scan completed.
+            _repeated_network_plan = False
+            for _repeated_block in tool_blocks:
+                try:
+                    _repeated_action = json.loads(
+                        _repeated_block.content or "{}"
+                    ).get("action")
+                except (TypeError, json.JSONDecodeError):
+                    _repeated_action = None
+                if _is_bounded_network_plan(
+                    _repeated_block.tool_type, str(_repeated_action or "")
+                ):
+                    _repeated_network_plan = True
+                    break
+            if _aci_enabled and _aci_mode == "aci" and _repeated_network_plan:
+                _aci_packet = None
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = False
+                _record_aci_framework("network_plan_repeat_guard")
             messages.append({
                 "role": "system",
                 "content": (
@@ -4982,16 +5720,46 @@ async def stream_aci_runtime(
                     # never weaken or replace the existing policy gate.
                     logger.warning("[work-bridge] failed to prepare bound action", exc_info=True)
 
+            # The model-facing block may omit an internal continuation
+            # reference that the route already sealed into the canonical Work
+            # Action.  Rebuild only this bounded read from that server-owned
+            # input so the executor sees the same exact discovery result that
+            # the Work ledger records; transcript/model text never supplies
+            # the reference.
+            if (
+                _work_action_id
+                and block.tool_type == "manage_homelab"
+            ):
+                try:
+                    _block_payload_for_binding = json.loads(block.content or "{}")
+                    if (
+                        isinstance(_block_payload_for_binding, dict)
+                        and _block_payload_for_binding.get("action") == "read_network_observations"
+                    ):
+                        from src.agent_work_bridge import bound_action_input
+                        _bound_input = await asyncio.to_thread(
+                            bound_action_input, owner, _work_action_id,
+                        )
+                        if isinstance(_bound_input, dict) and _bound_input.get("result_id"):
+                            block = ToolBlock(
+                                block.tool_type,
+                                json.dumps(_bound_input, sort_keys=True),
+                            )
+                            full_command = block.content.strip()
+                            cmd_display = full_command
+                except Exception:
+                    logger.warning("[work-bridge] failed to project bound read input", exc_info=True)
+
             security_decision = run_security.decision_for(
                 block.tool_type,
                 block.content,
             )
             # Capability V1 exact-approval bridge. The decision is derived
             # from ActionSpec metadata, not from a tool-specific action list.
-            # Every registered ActionSpec marked EXACT must enter the same
-            # approval projection. The historical helper name is retained for
-            # compatibility, but approval is no longer limited to the
-            # privileged_action transport (network discovery is also exact).
+            # Host-brokered network execution remains exact-approval gated;
+            # its sealed plan and broker scope constrain the approved action,
+            # but do not replace owner approval. Shell/YOLO and other
+            # consequential host mutations remain exact as well.
             if requires_exact_approval(
                 block.tool_type,
                 block.content,
@@ -5169,6 +5937,47 @@ async def stream_aci_runtime(
                             f'data: {json.dumps({"type": "tool_progress", "tool": block.tool_type, "round": round_num, **evt})}\n\n'
                         )
 
+            # Queue the server-issued network digest before semantic result
+            # projection can classify a read-only preflight as answer-only.
+            # The queued block still traverses the normal policy, ownership,
+            # ActionSpec, and exact-approval path below.
+            if block.tool_type == "manage_homelab" and isinstance(result, dict):
+                try:
+                    _early_payload = json.loads(block.content or "{}")
+                except (TypeError, ValueError):
+                    _early_payload = {}
+                _early_result = _structured_tool_result(result)
+                _early_digest = str(
+                    _early_result.get("operation_digest")
+                    or _early_result.get("plan_digest")
+                    or ""
+                ).strip().lower()
+                if (
+                    _early_payload.get("action") == "plan_network_discovery"
+                    and (
+                        _early_result.get("action") == "execute_network_discovery"
+                        or _early_result.get("kind") == "plan"
+                    )
+                    and re.fullmatch(r"[0-9a-f]{64}", _early_digest)
+                    and not _early_result.get("error")
+                    and not any(
+                        isinstance(getattr(_queued, "content", None), str)
+                        and '"action": "execute_network_discovery"' in _queued.content
+                        for _queued in tool_blocks[i + 1:]
+                    )
+                ):
+                    tool_blocks.append(ToolBlock(
+                        "manage_homelab",
+                        json.dumps({
+                            "action": "execute_network_discovery",
+                            "plan_digest": _early_digest,
+                        }, sort_keys=True),
+                    ))
+                    logger.info(
+                        "[hades-aci] queued exact network approval continuation digest=%s",
+                        _early_digest[:16],
+                    )
+
             # ACI owns the semantic post-Result transition. This loop only
             # applies its transient flags, persists the Result, and delivers
             # the resulting answer/continuation.
@@ -5191,6 +6000,9 @@ async def stream_aci_runtime(
                 and block.tool_type == _aci_selected_action.get("binding")
                 and _block_action_id == _aci_selected_action.get("action_id")
             )
+            _is_network_plan = _is_bounded_network_plan(
+                block.tool_type, _block_action_id,
+            )
             _was_aci_canonical_read = bool(
                 _aci_enabled
                 and _aci_mode == "aci"
@@ -5202,7 +6014,47 @@ async def stream_aci_runtime(
                     )
                     or _was_deterministic_fast_path
                 )
+                and not _is_network_plan
             )
+            # A bounded inventory-shape rejection is recoverable model input
+            # error, not a terminal canonical read failure. Let the next model
+            # round see the structured hint and compose a recipe action or
+            # concrete item list; do not turn the rejected placeholder into a
+            # final owner-facing failure.
+            if (
+                block.tool_type == "manage_assets"
+                and isinstance(result, dict)
+                and result.get("error_code") == "grocery_item_placeholder"
+            ):
+                _was_aci_canonical_read = False
+                _was_deterministic_fast_path = False
+                _aci_fast_path_block = None
+                _aci_packet = None
+                _aci_selected_action = None
+                _inventory_composition_repair_pending = True
+
+            # A natural named-dish request is one bounded objective, even
+            # though the model may need to propose the recipe before the
+            # canonical inventory service can compare it with stock.  Once a
+            # recipe_add proposal has been accepted, continue immediately with
+            # the server-owned recipe id.  Waiting for another model round
+            # here made Qwen stop after saving the recipe, leaving the owner's
+            # requested grocery queue untouched.  The appended operation still
+            # traverses the normal binding, owner, policy, and verification
+            # path; the model cannot choose a different recipe or invent
+            # ingredient state.
+            if block.tool_type == "manage_assets" and _block_action_id == "recipe_add":
+                _recipe_queue_block = _recipe_queue_continuation(
+                    result,
+                    composition_route=_aci_recipe_composition_route,
+                    following_blocks=tool_blocks[i + 1:],
+                )
+                if _recipe_queue_block is not None:
+                    tool_blocks.append(_recipe_queue_block)
+                    logger.info(
+                        "[hades-inventory] recipe proposal accepted; queued canonical missing-ingredient comparison recipe=%s",
+                        _recipe_queue_block.content,
+                    )
             _post_result_transition = project_post_result_transition(
                 result,
                 canonical_read=_was_aci_canonical_read,
@@ -5226,6 +6078,33 @@ async def stream_aci_runtime(
             _aci_approval_state = _result_observation["approval_state"]
             _aci_policy_state = _result_observation["policy_state"]
             _aci_executors = _result_observation["executors"]
+            # A completed host discovery is itself the terminal deliverable
+            # for a plain scan request. Without this guard, the successful
+            # observation was sent back to the model, which could emit a new
+            # plan and show a second approval card instead of reporting the
+            # scan result. Port/service requests intentionally continue into
+            # their separately bounded enumeration step.
+            _network_result_payload = (
+                _structured_tool_result(result)
+                if isinstance(result, dict) else {}
+            )
+            if (
+                block.tool_type == "manage_homelab"
+                and _block_action_id == "execute_network_discovery"
+                and _network_result_payload.get("success") is True
+                and not _network_service_request
+            ):
+                _aci_terminal_canonical_read = True
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = True
+            if (
+                block.tool_type == "manage_homelab"
+                and _block_action_id == "execute_network_service_enumeration"
+                and _network_result_payload.get("success") is True
+            ):
+                _aci_terminal_canonical_read = True
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = True
             if _post_result_transition.answer_only:
                 _aci_answer_only = True
                 _aci_packet = None
@@ -5252,6 +6131,20 @@ async def stream_aci_runtime(
                     })
                 if _was_aci_canonical_read:
                     _aci_terminal_canonical_read = True
+
+            # The bounded network executor returns the complete canonical
+            # observation itself.  Apply its terminal answer projection after
+            # the generic post-result transition so a generic NEEDS_REASONING
+            # result cannot overwrite the verified network completion flags.
+            if (
+                block.tool_type == "manage_homelab"
+                and _successful_bounded_network_execution(
+                    block.tool_type, block.content, result,
+                )
+            ):
+                _aci_terminal_canonical_read = True
+                _aci_answer_only = True
+                _aci_completion_contract_satisfied = True
 
             if (
                 _work_action_id
@@ -5346,6 +6239,108 @@ async def stream_aci_runtime(
                     logger.warning("[work-bridge] failed to persist bound action result", exc_info=True)
 
             run_security.observe_tool_result(block.tool_type, result, block.content)
+            # Planning a network discovery is a read-only preflight, but it
+            # must immediately hand its server-issued digest to the exact
+            # approval gate. Do this in the same turn so the owner gets one
+            # clear approval card instead of a "plan completed" dead end or a
+            # model-dependent follow-up round.
+            if block.tool_type == "manage_homelab" and isinstance(result, dict):
+                try:
+                    _planned_payload = json.loads(block.content or "{}")
+                except (TypeError, ValueError):
+                    _planned_payload = {}
+                _planned_result = _structured_tool_result(result)
+                _planned_digest = str(
+                    _planned_result.get("operation_digest")
+                    or _planned_result.get("plan_digest")
+                    or ""
+                ).strip().lower()
+                if (
+                    _planned_payload.get("action") == "plan_network_discovery"
+                    and (
+                        _planned_result.get("action") == "execute_network_discovery"
+                        or _planned_result.get("kind") == "plan"
+                    )
+                    and re.fullmatch(r"[0-9a-f]{64}", _planned_digest)
+                    and not _planned_result.get("error")
+                    and not any(
+                        isinstance(getattr(_queued, "content", None), str)
+                        and '"action": "execute_network_discovery"' in _queued.content
+                        for _queued in tool_blocks[i + 1:]
+                    )
+                ):
+                    tool_blocks.append(ToolBlock(
+                        "manage_homelab",
+                        json.dumps({
+                            "action": "execute_network_discovery",
+                            "plan_digest": _planned_digest,
+                        }, sort_keys=True),
+                    ))
+                    logger.info(
+                        "[hades-aci] network plan produced exact approval continuation digest=%s",
+                        _planned_digest[:16],
+                    )
+                # A port/service request is a second bounded operation. Feed
+                # it only the exact private hosts returned by the completed
+                # discovery result; never let the model invent or widen the
+                # target list.
+                if (
+                    _planned_payload.get("action") == "execute_network_discovery"
+                    and _planned_result.get("success") is True
+                    and _network_service_request
+                ):
+                    _service_targets = []
+                    for item in (_planned_result.get("asset_draft_candidates") or []):
+                        if not isinstance(item, dict):
+                            continue
+                        candidate_targets = item.get("ip_addresses") or []
+                        if isinstance(candidate_targets, str):
+                            candidate_targets = [candidate_targets]
+                        candidate_targets = candidate_targets or [item.get("ip"), item.get("address")]
+                        for target in candidate_targets:
+                            target = str(target or "").strip()
+                            if target and target not in _service_targets:
+                                _service_targets.append(target)
+                            if len(_service_targets) >= 256:
+                                break
+                        if len(_service_targets) >= 256:
+                            break
+                    if _service_targets:
+                        tool_blocks.append(ToolBlock(
+                            "manage_homelab",
+                            json.dumps({
+                                "action": "plan_network_service_enumeration",
+                            "targets": _service_targets[:256],
+                            }, sort_keys=True),
+                        ))
+                        logger.info(
+                            "[hades-aci] discovery produced bounded service plan targets=%s",
+                            len(_service_targets),
+                        )
+            if block.tool_type == "manage_homelab" and isinstance(result, dict):
+                _service_result = _structured_tool_result(result)
+            else:
+                _service_result = {}
+            if (
+                block.tool_type == "manage_homelab"
+                and _service_result.get("action") == "execute_network_service_enumeration"
+                and _service_result.get("operation_digest")
+                and _service_result.get("kind") == "plan"
+            ):
+                _service_digest = str(_service_result["operation_digest"]).strip().lower()
+                if re.fullmatch(r"[0-9a-f]{64}", _service_digest):
+                    tool_blocks.append(ToolBlock(
+                        "manage_homelab",
+                        json.dumps({
+                            "action": "execute_network_service_enumeration",
+                            "plan_digest": _service_digest,
+                            "targets": _service_result.get("targets") or [],
+                        }, sort_keys=True),
+                    ))
+                    logger.info(
+                        "[hades-aci] service plan produced exact approval continuation digest=%s",
+                        _service_digest[:16],
+                    )
             if block.tool_type == "bash" and isinstance(result, dict):
                 _bash_exit = result.get("exit_code")
                 _is_deterministic_starter = bool(
@@ -5532,6 +6527,23 @@ async def stream_aci_runtime(
                     _auq_delta = ("\n\n" if full_response.strip() else "") + _auq_q
                     full_response += _auq_delta
                     yield 'data: ' + json.dumps({"delta": _auq_delta}) + '\n\n'
+                # A model can stream a premature completion claim (for
+                # example, "Done.") in the same turn that the server creates
+                # an approval card.  Approval is a non-terminal pause: the
+                # requested action has not started and no result exists yet.
+                # Do not persist or leave that prose as the owner-visible
+                # answer.  Replace it with the server-owned question so a
+                # reload cannot turn a pending action into false completion.
+                if _auq_q:
+                    _approval_response = _auq_q
+                    if full_response.strip() != _approval_response:
+                        full_response = _approval_response
+                        yield (
+                            'data: ' + json.dumps({
+                                "type": "response_replace",
+                                "content": _approval_response,
+                            }) + '\n\n'
+                        )
                 _pending_ask_user_event = _auq
                 _awaiting_user = True
 
@@ -5836,6 +6848,18 @@ async def stream_aci_runtime(
             if block.tool_type in _VERIFIER_EFFECTFUL_TOOLS:
                 _effectful_used = True
 
+            # Network discovery/service execution already returns the
+            # authoritative bounded observation and is persisted through the
+            # Work bridge above.  Feeding that result back into another model
+            # round lets the round-one deterministic network selector rebuild
+            # the same plan, which produces a duplicate approval card.  Mark
+            # only a successful, non-approval execution terminal; failures
+            # and approval pauses still follow the normal recovery path.
+            if _successful_bounded_network_execution(
+                block.tool_type, block.content, result,
+            ):
+                _network_execution_completed = True
+
             formatted = (
                 _memory_projection_text
                 if _memory_projection_text is not None
@@ -5877,6 +6901,12 @@ async def stream_aci_runtime(
         # arrives as the next message and the agent resumes from there. The
         # question text is already in the streamed response, so it persists.
         if _awaiting_user:
+            break
+
+        if _network_execution_completed:
+            logger.info(
+                "[agent] completed bounded network execution without re-planning"
+            )
             break
 
         if _aci_terminal_canonical_read:
@@ -6068,6 +7098,7 @@ async def stream_aci_runtime(
         intent_domains=_intent_domains,
         stored_evidence=has_stored_canonical_evidence(messages),
         clarification_only=_aci_clarification_only,
+        owner_query=_last_user,
     )
     if _projected_response.strip() != full_response.strip():
         if _canonical_answer is None:
@@ -6158,6 +7189,29 @@ async def stream_aci_runtime(
             "candidate_count": len(_aci_reference_resolution.get("candidate_refs") or []),
             "context_source": _aci_reference_context_source,
         }
+    # An approval card pauses the objective before execution.  Keep the
+    # completion contract unsatisfied even if an earlier model response or a
+    # later renderer flag suggested an answer; otherwise telemetry and the
+    # owner-facing result falsely report the pending turn as completed.
+    if _awaiting_user:
+        _aci_completion_contract_satisfied = False
+
+    try:
+        from src.aci import resolve_turn_disposition
+        _turn_disposition = resolve_turn_disposition(
+            model_fallback=_aci_model_fallback,
+            clarification_only=_aci_clarification_only,
+            awaiting_approval=_awaiting_user,
+            answer_only=_aci_answer_only,
+            completion_satisfied=_aci_completion_contract_satisfied,
+            fast_path=_aci_fast_path_block is not None,
+            packet_present=_aci_packet is not None,
+        )
+        if _turn_disposition is not None:
+            metrics["aci_turn_disposition"] = _turn_disposition.value
+    except Exception:
+        logger.debug("Unable to resolve typed ACI turn disposition", exc_info=True)
+
     metrics["aci_trace"] = project_aci_trace(
         intent=_intent,
         run_id=work_run_id,
@@ -6178,20 +7232,6 @@ async def stream_aci_runtime(
         turn_disposition=metrics.get("aci_turn_disposition"),
         latency_seconds=total_duration,
     )
-    try:
-        from src.aci import resolve_turn_disposition
-        _turn_disposition = resolve_turn_disposition(
-            model_fallback=_aci_model_fallback,
-            clarification_only=_aci_clarification_only,
-            answer_only=_aci_answer_only,
-            completion_satisfied=_aci_completion_contract_satisfied,
-            fast_path=_aci_fast_path_block is not None,
-            packet_present=_aci_packet is not None,
-        )
-        if _turn_disposition is not None:
-            metrics["aci_turn_disposition"] = _turn_disposition.value
-    except Exception:
-        logger.debug("Unable to resolve typed ACI turn disposition", exc_info=True)
     if _aci_model_fallback_reason:
         metrics["aci_model_fallback_reason"] = str(_aci_model_fallback_reason)[:120]
     if _aci_enabled:
@@ -6242,7 +7282,7 @@ async def stream_aci_runtime(
         metrics["aci_answer_synthesis_count"] = int(
             _aci_model_burden.get("answer_synthesis", 0)
         )
-    yield f"data: {json.dumps({'type': 'metrics', 'data': metrics})}\n\n"
+    yield f"data: {_stream_json({'type': 'metrics', 'data': metrics})}\n\n"
 
     # Teacher-escalation: inline takeover visible in the chat stream.
     # The student just finished; if Tier 1 flags failure, the teacher

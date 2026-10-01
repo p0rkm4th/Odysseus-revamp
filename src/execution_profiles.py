@@ -53,6 +53,27 @@ _PROFILES = {
     "workspace_yolo": ExecutionProfile(
         "workspace_yolo", frozenset({ToolEffect.READ_WORKSPACE, ToolEffect.WRITE_WORKSPACE, ToolEffect.EXECUTE_CODE, ToolEffect.USER_INTERACTION}), "host", requires_workspace=True,
     ),
+    # Explicitly separate network-enabled disposable execution from the
+    # historical host-backed workspace_yolo profile.  The host workspace is
+    # mounted read-only; writes happen only in an ephemeral sandbox mount.
+    # Selecting this profile is not authorization by itself: the normal exact
+    # approval and owner/tool gates must still admit the command.
+    "hardcore_yolo": ExecutionProfile(
+        "hardcore_yolo",
+        frozenset({
+            ToolEffect.READ_PUBLIC,
+            ToolEffect.READ_WORKSPACE,
+            ToolEffect.WRITE_WORKSPACE,
+            ToolEffect.EXECUTE_CODE,
+            ToolEffect.NETWORK_EGRESS,
+            ToolEffect.USER_INTERACTION,
+        }),
+        "bubblewrap_network",
+        requires_workspace=True,
+        allowed_tools=frozenset({
+            "bash", "python", "get_workspace", "glob", "grep", "ls", "read_file",
+        }),
+    ),
 }
 EXECUTION_PROFILES = MappingProxyType(_PROFILES)
 
@@ -105,7 +126,7 @@ def profile_block_reason(
         if denied:
             names = ", ".join(sorted(effect.value for effect in denied))
             return f"Execution profile '{profile.name}' blocks effects: {names}."
-    if profile.subprocess_backend == "bubblewrap":
+    if profile.subprocess_backend in {"bubblewrap", "bubblewrap_network"}:
         missing = [name for name in ("bwrap", "prlimit") if shutil.which(name) is None]
         if missing:
             return "The isolated workspace backend is unavailable; missing: " + ", ".join(missing) + "."
@@ -113,31 +134,57 @@ def profile_block_reason(
 
 
 def bubblewrap_argv(workspace: str, command: list[str]) -> list[str]:
-    """Build a minimal, networkless bubblewrap process invocation."""
-    if active_execution_profile().subprocess_backend != "bubblewrap":
+    """Build an isolated subprocess invocation for the active profile.
+
+    ``hardcore_yolo`` intentionally shares the host network namespace only
+    after its separate exact-approval path selects that profile.  It never
+    mounts the host workspace writable: the agent can inspect source, but any
+    files it creates live in the disposable sandbox and disappear with it.
+    """
+    profile = active_execution_profile()
+    if profile.subprocess_backend not in {"bubblewrap", "bubblewrap_network"}:
         return command
     if not workspace or not os.path.isdir(workspace):
         raise RuntimeError("isolated workspace execution requires a valid workspace")
-    bwrap = shutil.which("bwrap")
-    if not bwrap:
-        raise RuntimeError("isolated workspace execution requires bubblewrap")
-    prlimit = shutil.which("prlimit")
-    if not prlimit:
-        raise RuntimeError("isolated workspace execution requires prlimit")
+    # Availability is enforced by ``profile_block_reason`` immediately before
+    # dispatch.  Keep argv construction pure so callers/tests can inspect the
+    # exact bounded command even on hosts that do not ship the optional
+    # isolation primitives.  If an unsafe caller bypasses that gate, exec
+    # still fails closed with the normal missing-binary error.
+    bwrap = shutil.which("bwrap") or "bwrap"
+    prlimit = shutil.which("prlimit") or "prlimit"
 
-    argv = [
-        bwrap,
-        "--die-with-parent", "--new-session", "--unshare-all",
-        "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp",
-    ]
+    if profile.subprocess_backend == "bubblewrap_network":
+        argv = [
+            bwrap, "--die-with-parent", "--new-session",
+            "--unshare-user", "--unshare-pid", "--unshare-ipc",
+            "--unshare-uts", "--unshare-cgroup", "--share-net",
+            "--uid", "65534", "--gid", "65534",
+            "--proc", "/proc", "--dev", "/dev",
+            "--tmpfs", "/tmp", "--tmpfs", "/work", "--chmod", "1777", "/work",
+        ]
+    else:
+        argv = [
+            bwrap,
+            "--die-with-parent", "--new-session", "--unshare-all",
+            "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp",
+        ]
     # Executables and their dynamic loaders only. Do not mount /etc, /home,
     # application data, credentials, or the host root into the sandbox.
     for path in ("/usr", "/bin", "/lib", "/lib64"):
         if os.path.exists(path):
             argv.extend(("--ro-bind", path, path))
+    if profile.subprocess_backend == "bubblewrap_network":
+        # Read-only source view; /work is the only writable location and is
+        # tmpfs-backed, so host files cannot be deleted or modified.
+        argv.extend(("--ro-bind", workspace, "/source", "--chdir", "/work"))
+        if os.path.exists("/etc/resolv.conf"):
+            argv.extend(("--ro-bind", "/etc/resolv.conf", "/etc/resolv.conf"))
+        if os.path.exists("/etc/hosts"):
+            argv.extend(("--ro-bind", "/etc/hosts", "/etc/hosts"))
+    else:
+        argv.extend(("--bind", workspace, workspace, "--chdir", workspace))
     argv.extend((
-        "--bind", workspace, workspace,
-        "--chdir", workspace,
         "--clearenv",
         "--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin",
         "--setenv", "HOME", "/tmp",

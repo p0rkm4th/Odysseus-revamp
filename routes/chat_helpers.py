@@ -188,8 +188,15 @@ def ensure_chat_agent_work_run(
             compile_intent,
             resolve_intent,
             resolve_structured_reference,
+            is_network_observation_result_request,
+            is_network_service_enumeration_request,
         )
-        from src.agent_work_bridge import ensure_agent_run, prepare_action, recent_session_reference_context
+        from src.agent_work_bridge import (
+            ensure_agent_run,
+            prepare_action,
+            recent_session_network_discovery_context,
+            recent_session_reference_context,
+        )
         query = str(message or "")
         # Work-run creation is an ACI projection, not a second pre-router. The
         # provisional frame only answers whether this concept has a canonical
@@ -203,6 +210,43 @@ def ensure_chat_agent_work_run(
         reference_context = None
         if resolve_structured_reference(query, {}).get("status") != "NOT_REFERENCE":
             reference_context = recent_session_reference_context(str(owner), str(session_id))
+        # "the responding/discovered hosts" is a structured continuation of
+        # the immediately preceding discovery, even though it is not a
+        # pronoun/ordinal reference understood by the generic entity resolver.
+        # Carry only the server-owned sealed candidate set from this owner and
+        # chat session.  An expired/missing result deliberately stays absent;
+        # the agent loop will stage a fresh bounded discovery instead of using
+        # stale observations or transcript text as authority.
+        if (
+            is_network_service_enumeration_request(query)
+            and re.search(
+                r"\b(?:responding|discovered|identified|these|those)\s+"
+                r"(?:hosts?|devices?|machines?)\b",
+                query,
+                re.IGNORECASE,
+            )
+        ):
+            network_context = recent_session_network_discovery_context(
+                str(owner), str(session_id),
+            )
+            if network_context:
+                reference_context = {
+                    **(reference_context or {}),
+                    **network_context,
+                }
+        # A question about the just-completed scan is a read of that exact
+        # canonical result, not a request to start another scan and not a
+        # broad read of every historical observation.  Carry only the
+        # server-owned result reference into the next Run.
+        if is_network_observation_result_request(query):
+            network_context = recent_session_network_discovery_context(
+                str(owner), str(session_id),
+            )
+            if network_context:
+                reference_context = {
+                    **(reference_context or {}),
+                    **network_context,
+                }
         frame = compile_intent(query, reference_context=reference_context)
         continuation = frame.operation_class == "CONTINUE"
         domains = set(canonical_domain_projection(frame))
@@ -212,11 +256,16 @@ def ensure_chat_agent_work_run(
             "communications",
         }) and not continuation:
             return None
-        if not continuation and not frame.read_explicit and not re.search(
-            r"\b(?:scan|discover|discovery|map|enumerate|identify|install|restart|"
-            r"execute|inspect|check|diagnose|list|show|find|begin|start)\b",
-            query,
-            re.IGNORECASE,
+        if (
+            not continuation
+            and not frame.read_explicit
+            and frame.domain_concept != "HOUSEHOLD_ITEM"
+            and not re.search(
+                r"\b(?:scan|discover|discovery|map|enumerate|identify|install|restart|"
+                r"execute|inspect|check|diagnose|list|show|find|begin|start)\b",
+                query,
+                re.IGNORECASE,
+            )
         ):
             return None
         run_id = ensure_agent_run(
@@ -265,6 +314,15 @@ def ensure_chat_agent_work_run(
                     )
                 else:
                     payload = {"action": resolved.action_id}
+                    if (
+                        frame.domain_concept == "NETWORK"
+                        and resolved.action_id == "read_network_observations"
+                        and isinstance(reference_context, dict)
+                        and reference_context.get("network_discovery_result_id")
+                    ):
+                        payload["result_id"] = str(
+                            reference_context["network_discovery_result_id"]
+                        )
                     if frame.domain_concept == "MEMORY":
                         payload["query"] = query
                     if frame.entity_reference and frame.domain_concept == "TECHNICAL_ASSET":

@@ -6,6 +6,8 @@ import json
 import src.agent_loop as agent_loop
 from src.aci import ground_action_completion
 from src.intent_contracts import network_discovery_request_cidr, is_network_service_enumeration_request
+from src.tool_approvals import ToolApprovalStore
+from src.tool_capabilities import capabilities_for_action
 
 
 def _collect(generator):
@@ -36,15 +38,15 @@ def test_network_discovery_request_without_cidr_does_not_reuse_historical_scope(
     assert network_discovery_request_cidr(query) is None
 
 
-def test_unscoped_network_deep_dive_is_framework_clarification_bound():
+def test_unscoped_network_deep_dive_is_not_rejected_before_context_resolution():
     from src.intent_contracts import compile_intent
 
     frame = compile_intent("Do a deep dive on my local network.")
     assert frame.domain_concept == "NETWORK"
-    assert "network_scope_requires_authorization" in frame.constraints
+    assert "network_scope_requires_authorization" not in frame.constraints
 
 
-def test_unscoped_network_deep_dive_does_not_enter_bounded_selection(monkeypatch):
+def test_unscoped_network_deep_dive_can_reach_bounded_selection(monkeypatch):
     calls = []
     provider_calls = []
 
@@ -77,14 +79,13 @@ def test_unscoped_network_deep_dive_does_not_enter_bounded_selection(monkeypatch
     events = _events(chunks)
 
     assert calls == []
-    assert provider_calls == []
-    assert any(
+    assert provider_calls
+    assert not any(
         "explicitly authorized target scope" in str(event.get("delta") or "")
         for event in events
     )
     metrics = next(event["data"] for event in reversed(events) if event.get("type") == "metrics")
-    assert metrics["aci_turn_disposition"] == "CLARIFY"
-    assert metrics["model_burden"].get("bounded_action_decision", 0) == 0
+    assert metrics["aci_turn_disposition"] != "CLARIFY"
 
 
 def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_active_scan():
@@ -105,6 +106,18 @@ def test_service_enumeration_intent_is_distinct_and_grounding_rejects_plan_as_ac
     assert response.startswith("No action completed:")
 
 
+def test_network_preflight_is_not_terminal_before_approval_or_execution():
+    assert agent_loop._is_bounded_network_plan(
+        "manage_homelab", "plan_network_service_enumeration",
+    ) is True
+    assert agent_loop._is_bounded_network_plan(
+        "manage_homelab", "execute_network_service_enumeration",
+    ) is False
+    assert agent_loop._is_bounded_network_plan(
+        "manage_assets", "plan_network_service_enumeration",
+    ) is False
+
+
 def test_service_result_action_supports_grounded_active_execution_language():
     response = ground_action_completion(
         "The bounded service scan is running now.",
@@ -115,6 +128,97 @@ def test_service_result_action_supports_grounded_active_execution_language():
         }],
     )
     assert response == "The bounded service scan is running now."
+
+
+def test_successful_network_execution_is_terminal_for_the_current_turn():
+    """A completed scan must not be replanned into a second approval card."""
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        json.dumps({"action": "execute_network_discovery"}),
+        {"success": True, "observations_recorded": True},
+    ) is True
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        json.dumps({"action": "execute_network_discovery"}),
+        {"success": True, "approval_required": True},
+    ) is False
+
+
+def test_exact_network_approval_resume_executes_once_without_replanning(monkeypatch):
+    """The UI approval continuation must finish the sealed scan in one turn."""
+    store = ToolApprovalStore()
+    content = json.dumps({
+        "action": "execute_network_discovery",
+        "cidr": "192.168.10.0/24",
+        "plan_digest": "a" * 64,
+    })
+    pending = store.create(
+        owner="alice",
+        session_id="session-1",
+        origin_run_id="run-1",
+        tool_name="manage_homelab",
+        content=content,
+        workspace=None,
+        external_untrusted_context_seen=False,
+        capabilities=capabilities_for_action("manage_homelab", content),
+    )
+    grant = store.consume(
+        pending.approval_id,
+        decision="approve_task",
+        owner="alice",
+        session_id="session-1",
+    )
+    assert grant is not None
+    calls = []
+
+    async def fake_execute(block, **kwargs):
+        calls.append(block)
+        return "manage_homelab", {
+            "output": json.dumps({
+                "action": "execute_network_discovery",
+                "success": True,
+                "candidate_count": 2,
+                "observations_recorded": True,
+            }),
+            "exit_code": 0,
+        }
+
+    async def fail_provider(*args, **kwargs):
+        raise AssertionError("approved network execution must not re-enter the model")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(agent_loop, "execute_tool_block", fake_execute)
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", fail_provider)
+    monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None)
+    monkeypatch.setattr(agent_loop, "blocked_tools_for_owner", lambda owner: set())
+    monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default)
+
+    chunks = _collect(agent_loop.stream_aci_runtime(
+        "http://local.test/v1",
+        "local-model",
+        [{"role": "user", "content": "Scan my network"}],
+        max_rounds=3,
+        relevant_tools={"manage_homelab"},
+        owner="alice",
+        session_id="session-1",
+        aci_mode="aci",
+        exact_approval=grant,
+    ))
+    events = _events(chunks)
+
+    assert len(calls) == 1
+    assert not any(event.get("type") == "ask_user" for event in events)
+    assert sum(event.get("type") == "tool_start" for event in events) == 1
+    assert sum(event.get("type") == "tool_output" for event in events) == 1
+    metrics = next(event["data"] for event in reversed(events) if event.get("type") == "metrics")
+    assert metrics["aci_turn_disposition"] == "ANSWER"
+    assert metrics["aci_completion_contract_satisfied"] is True
+    assert metrics["aci_completion_transition"] == "ANSWER"
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        json.dumps({"action": "plan_network_discovery"}),
+        {"success": True},
+    ) is False
 
 
 def test_stored_canonical_evidence_supports_truthful_followup_without_new_action():
@@ -199,3 +303,45 @@ def test_qwen_prose_only_network_request_does_not_get_a_stale_scope_repair(monke
     # The grounding boundary remains intact: only the synthetic tool result,
     # not the model's ARP prose, authorizes an action-completed response.
     assert not any("No action completed" in str(event.get("delta")) for event in _events(chunks))
+def test_nested_broker_success_terminates_network_turn_without_replanning():
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        '{"action":"execute_network_discovery","plan_digest":"' + "a" * 64 + '"}',
+        {"success": True, "data": {"success": True, "action": "execute_network_discovery"}},
+    ) is True
+    assert agent_loop._successful_bounded_network_execution(
+        "manage_homelab",
+        '{"action":"execute_network_discovery","plan_digest":"' + "a" * 64 + '"}',
+        {
+            "output": json.dumps({
+                "action": "execute_network_discovery",
+                "success": True,
+                "observations_recorded": True,
+            }),
+            "exit_code": 0,
+        },
+    ) is True
+
+
+def test_structured_tool_result_unwraps_approval_resume_output():
+    payload = agent_loop._structured_tool_result({
+        "output": json.dumps({
+            "action": "execute_network_discovery",
+            "success": True,
+            "observations_recorded": True,
+        }),
+        "exit_code": 0,
+    })
+    assert payload["action"] == "execute_network_discovery"
+    assert payload["success"] is True
+    nested = agent_loop._structured_tool_result({
+        "data": {
+            "output": json.dumps({
+                "action": "execute_network_discovery",
+                "success": True,
+            }),
+            "exit_code": 0,
+        },
+    })
+    assert nested["action"] == "execute_network_discovery"
+    assert nested["success"] is True

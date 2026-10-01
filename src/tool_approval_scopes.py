@@ -15,6 +15,7 @@ DENY_APPROVAL_DECISION = "deny"
 # Session.get_context_messages() adds this server-owned marker only when the
 # session history contains a matching, resolved chat-session approval.
 CHAT_SESSION_APPROVAL_CONTEXT_MARKER = "_tool_approval_chat_session_granted"
+CHAT_SESSION_APPROVED_ACTIONS = "_tool_approval_chat_session_actions"
 
 
 class ToolApprovalScope(str, Enum):

@@ -7,6 +7,7 @@ import time
 import collections
 from typing import Optional, Callable, Awaitable, Tuple, Dict
 from core.platform_compat import IS_WINDOWS, find_bash
+from core.platform_compat import kill_process_tree
 from src.constants import MAX_OUTPUT_CHARS
 
 DEFAULT_BASH_TIMEOUT = 60 * 60     # 1 hour
@@ -27,6 +28,10 @@ async def _create_bash_subprocess(command: str, **kwargs):
     argument; Git Bash inherits that native Windows directory and exposes it
     using its normal ``/c/...`` representation.
     """
+    if not IS_WINDOWS:
+        # Give every direct agent command its own process group so timeout or
+        # cancellation can reap descendants rather than only the shell.
+        kwargs.setdefault("start_new_session", True)
     if IS_WINDOWS:
         bash = find_bash()
         if not bash:
@@ -253,18 +258,24 @@ async def _run_subprocess_streaming(
     except asyncio.TimeoutError:
         timed_out = True
         try:
-            proc.kill()
+            await asyncio.to_thread(kill_process_tree, proc.pid)
         except Exception:
-            pass
+            try:
+                proc.kill()
+            except Exception:
+                pass
         try:
             await asyncio.wait_for(proc.wait(), timeout=2)
         except Exception:
             pass
     except asyncio.CancelledError:
         try:
-            proc.kill()
+            await asyncio.to_thread(kill_process_tree, proc.pid)
         except Exception:
-            pass
+            try:
+                proc.kill()
+            except Exception:
+                pass
         try:
             await asyncio.wait_for(proc.wait(), timeout=2)
         except Exception:

@@ -44,8 +44,9 @@ export function iconSvg(name='hades', className='hades-nav-icon') {
   return `<svg class="${esc(className)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconFor(name)}</svg>`;
 }
 
-export function moduleHeader({icon='hades', title, description='', status='', primary='', primaryId='', onAsk=false}) {
-  return `<header class="hades-module-header"><div class="hades-module-heading"><span class="hades-module-icon" aria-hidden="true">${iconSvg(icon, 'hades-module-svg')}</span><div><h2>${esc(title)}</h2><p>${esc(description)}</p>${status ? `<span class="hades-status-line">${esc(status)}</span>` : ''}</div></div><div class="hades-module-actions">${onAsk ? '<button type="button" class="hades-btn-secondary">Ask Hades</button>' : ''}${primary ? `<button type="button" class="hades-btn-primary"${primaryId ? ` id="${esc(primaryId)}"` : ''}>${esc(primary)}</button>` : ''}</div></header>`;
+export function moduleHeader({icon='hades', title, description='', status='', primary='', primaryId='', onAsk=false, showIcon=true}) {
+  const iconMarkup = showIcon ? `<span class="hades-module-icon" aria-hidden="true">${iconSvg(icon, 'hades-module-svg')}</span>` : '';
+  return `<header class="hades-module-header"><div class="hades-module-heading">${iconMarkup}<div><h2>${esc(title)}</h2><p>${esc(description)}</p>${status ? `<span class="hades-status-line">${esc(status)}</span>` : ''}</div></div><div class="hades-module-actions">${onAsk ? '<button type="button" class="hades-btn-secondary">Ask Hades</button>' : ''}${primary ? `<button type="button" class="hades-btn-primary"${primaryId ? ` id="${esc(primaryId)}"` : ''}>${esc(primary)}</button>` : ''}</div></header>`;
 }
 
 export function statusBadge(value, kind='neutral') {

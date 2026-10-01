@@ -45,6 +45,20 @@ _receipt_lock = threading.Lock()
 logger = logging.getLogger(__name__)
 
 
+def _host_broker_request(payload: dict[str, Any], *, timeout: float) -> dict[str, Any]:
+    """Send LAN reads to the host-network broker, never the app broker.
+
+    The application runtime may have a broker for local diagnostics, but it is
+    not in the host network namespace.  Discovery must use the explicitly
+    deployed host boundary so a successful status probe cannot be followed by
+    a scan sent to the wrong socket.
+    """
+    from src.privileged_broker import HOST_NETWORK_SOCKET_PATH, client_request
+
+    socket_path = os.getenv("ODYSSEUS_HOST_NETWORK_BROKER_SOCKET", HOST_NETWORK_SOCKET_PATH)
+    return client_request(payload, socket_path=socket_path, timeout=timeout)
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -68,7 +82,11 @@ def _public(receipt: dict[str, Any]) -> dict[str, Any]:
 
 def _private_network(value: Any) -> ipaddress.IPv4Network:
     try:
-        network = ipaddress.ip_network(str(value or "").strip(), strict=True)
+        # Owners commonly name a subnet from one of its hosts (for example
+        # ``192.168.10.254/24``).  Normalize that bounded scope to its
+        # canonical network address before authorization/digesting; rejecting
+        # it as non-canonical makes the safe request look unavailable.
+        network = ipaddress.ip_network(str(value or "").strip(), strict=False)
     except ValueError as exc:
         raise HomelabOperationError("cidr must be a canonical private IPv4 network") from exc
     if not isinstance(network, ipaddress.IPv4Network) or not network.is_private:
@@ -267,6 +285,33 @@ class HomelabReceiptStore:
                 return False
         return False
 
+    def get_valid_plan(self, *, owner: str, digest: str, now: datetime | None = None) -> dict[str, Any] | None:
+        """Return the exact still-live plan for a continuation.
+
+        Execution continuations carry only the opaque digest. Reusing the
+        persisted owner-bound plan keeps the approved target stable across a
+        restart or a changed host-context read.
+        """
+        if not self.path.is_file():
+            return None
+        current = now or _now()
+        with _receipt_lock:
+            lines = self.path.read_text(encoding="utf-8").splitlines()
+        for line in reversed(lines[-1000:]):
+            try:
+                receipt = json.loads(line)
+                created = datetime.fromisoformat(receipt["created_at"])
+            except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+                continue
+            if (
+                receipt.get("kind") == "plan"
+                and receipt.get("owner") == owner
+                and receipt.get("operation_digest") == digest
+                and current <= created + timedelta(minutes=10)
+            ):
+                return receipt
+        return None
+
 
 async def _default_runner(argv: list[str], timeout: float = 30) -> tuple[int, str]:
     process = await asyncio.create_subprocess_exec(
@@ -430,8 +475,7 @@ class HomelabOperations:
             health = dependency_manager.inspect_operation("network_discovery")
             broker_scanner = False
             try:
-                from src.privileged_broker import client_request
-                broker_scanner = bool((await asyncio.to_thread(client_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
+                broker_scanner = bool((await asyncio.to_thread(_host_broker_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
             except Exception:
                 pass
             return {
@@ -485,7 +529,10 @@ class HomelabOperations:
                             runtime_internal = item["kind"] in {"APPLICATION_RUNTIME", "DOCKER_BRIDGE", "SANDBOX_INTERNAL"}
                             ownership = (
                                 "RUNTIME_INTERNAL" if runtime_internal
-                                else "VPN/CORPORATE_OR_UNKNOWN" if vpn
+                                else "VPN/CORPORATE_OR_UNKNOWN" if item["kind"] == "VPN"
+                                # A physical interface is only evidence of a
+                                # candidate LAN, not proof of owner management.
+                                else "PHYSICAL_LAN_CANDIDATE" if item["kind"] == "PHYSICAL_LAN"
                                 else "UNKNOWN"
                             )
                             scope = {"interface": item["name"], "cidr": cidr, "ownership": ownership, "context_kind": item["kind"]}
@@ -505,6 +552,68 @@ class HomelabOperations:
                 "context_kinds": sorted({item["kind"] for item in interfaces}),
             }
         if action == "read_network_observations":
+            # A conversational follow-up may carry a server-owned result ID
+            # for the immediately preceding discovery.  Read that exact
+            # result rather than collapsing the request into the whole
+            # historical CMDB projection; otherwise "what did that scan
+            # find?" can report stale observations from older scans.
+            result_id = str(request.get("result_id") or "").strip()
+            if result_id:
+                from core.database import SessionLocal
+                from core.work_models import WorkAction, WorkResult
+                with SessionLocal() as db:
+                    row = (
+                        db.query(WorkResult)
+                        .join(WorkAction, WorkAction.id == WorkResult.action_id)
+                        .filter(
+                            WorkResult.id == result_id,
+                            WorkResult.owner == owner,
+                            WorkAction.action_id == "execute_network_discovery",
+                        )
+                        .one_or_none()
+                    )
+                    data = row.domain_reference if row and isinstance(row.domain_reference, dict) else None
+                if not isinstance(data, dict) or data.get("success") is not True:
+                    return {
+                        "status": "UNAVAILABLE",
+                        "action": action,
+                        "error_code": "DISCOVERY_RESULT_UNAVAILABLE",
+                        "source": "canonical_work_result",
+                        "owner_scope": owner,
+                        "exit_code": 1,
+                    }
+                nodes = []
+                seen: set[str] = set()
+                for candidate in data.get("asset_draft_candidates") or []:
+                    if not isinstance(candidate, dict):
+                        continue
+                    addresses = candidate.get("ip_addresses") or []
+                    if isinstance(addresses, str):
+                        addresses = [addresses]
+                    for address in addresses:
+                        ip = str(address or "").strip()
+                        if not ip or ip in seen:
+                            continue
+                        seen.add(ip)
+                        nodes.append({
+                            "id": f"observation:{ip}",
+                            "name": f"Unidentified device {ip}",
+                            "attributes": {"observed_ip": ip},
+                        })
+                return {
+                    "status": "EMPTY_RESULT" if not nodes else "SUCCESS",
+                    "action": action,
+                    "nodes": nodes,
+                    "edges": [],
+                    "node_count": len(nodes),
+                    "edge_count": 0,
+                    "source": "canonical_work_result",
+                    "owner_scope": owner,
+                    "observation_kind": "CURRENT_DISCOVERY_RESULT",
+                    "freshness": "current_result",
+                    "source_result_id": result_id,
+                    "exit_code": 0,
+                }
             from src.network_projection import map_projection
             projection = map_projection(owner=owner)
             if projection.get("warning"):
@@ -659,19 +768,73 @@ class HomelabOperations:
     async def _network_discovery(
         self, request: dict[str, Any], *, owner: str, action: str,
     ) -> dict[str, Any]:
-        if not str(request.get("cidr") or "").strip():
-            raise HomelabOperationError("current network context or an explicitly authorized CIDR is required; historical scope is not reused")
-        network = _private_network(request.get("cidr"))
+        requested_cidr = str(request.get("cidr") or "").strip()
+        scope_source = "owner_request"
+        supplied_authorization = str(request.get("scope_authorization") or "").strip().upper()
+        # An approved continuation has an exact server-issued target. Reuse
+        # it rather than resolving a fresh interface set, which can change
+        # after a restart and must never invalidate an otherwise valid owner
+        # approval or silently widen it.
+        if not requested_cidr and action == "execute_network_discovery":
+            plan_digest = str(request.get("plan_digest") or "").strip().lower()
+            planned = await asyncio.to_thread(
+                self.receipts.get_valid_plan, owner=owner, digest=plan_digest,
+            ) if plan_digest else None
+            if planned:
+                requested_cidr = str(planned.get("target") or planned.get("cidr") or "").strip()
+                supplied_authorization = str(planned.get("scope_authorization") or "").strip().upper()
+                scope_source = str(planned.get("scope_source") or "approved_plan")
+        if requested_cidr:
+            network = _private_network(requested_cidr)
+        else:
+            # Natural language such as "scan my network" may use the
+            # current trusted host context.  This is bounded semantic
+            # resolution, not authorization: the resulting scope still goes
+            # through the exact approval and broker gates below.
+            context = await self.execute({"action": "read_network_context"}, owner=owner)
+            if str(context.get("status") or "").upper() not in {"SUCCESS_WITH_DATA", "SUCCESS"}:
+                raise HomelabOperationError(
+                    "I couldn't read the current host network context, so I can't safely choose a scan scope"
+                )
+            candidates = context.get("user_network_scopes")
+            candidates = candidates if isinstance(candidates, list) else []
+            physical = {
+                str(item.get("cidr") or "").strip()
+                for item in candidates
+                if isinstance(item, dict)
+                and str(item.get("context_kind") or "").upper() == "PHYSICAL_LAN"
+                and str(item.get("ownership") or "").upper() != "VPN/CORPORATE_OR_UNKNOWN"
+            }
+            physical.discard("")
+            if len(physical) != 1:
+                if not physical:
+                    raise HomelabOperationError(
+                        "I couldn't identify one current private physical network to scan"
+                    )
+                raise HomelabOperationError(
+                    "I found multiple current private networks; tell me which one to scan"
+                )
+            network = _private_network(next(iter(physical)))
+            scope_source = "current_host_context"
         cidr = str(network)
-        authorization = str(request.get("scope_authorization") or "").strip().upper()
-        if authorization not in {"USER_MANAGED", "EXPLICITLY_AUTHORIZED"}:
+        # A plan selected from the owner's current physical LAN is bounded by
+        # the server-owned plan receipt and broker scope. CURRENT_CONTEXT
+        # identifies a server-resolved candidate; it is not a license to widen
+        # the target beyond that receipt.
+        if requested_cidr and not supplied_authorization:
             raise HomelabOperationError(
-                "active discovery requires USER_MANAGED or EXPLICITLY_AUTHORIZED scope; "
+                "active discovery requires CURRENT_CONTEXT or EXPLICITLY_AUTHORIZED scope; "
+                "private addressing alone is not authorization"
+            )
+        authorization = supplied_authorization or "CURRENT_CONTEXT"
+        if authorization not in {"CURRENT_CONTEXT", "EXPLICITLY_AUTHORIZED"}:
+            raise HomelabOperationError(
+                "active discovery requires CURRENT_CONTEXT or EXPLICITLY_AUTHORIZED scope; "
                 "private addressing alone is not authorization"
             )
         operation = {
             "action": "execute_network_discovery", "target_kind": "private_ipv4_network",
-            "target": cidr, "scanner": "nmap_ping_scan",
+            "target": cidr, "scanner": "nmap_ping_scan", "scope_source": scope_source,
             "scope_authorization": authorization,
         }
         digest = _digest(operation)
@@ -682,8 +845,7 @@ class HomelabOperations:
         broker_scanner = False
         if not scanner:
             try:
-                from src.privileged_broker import client_request
-                broker_scanner = bool((await asyncio.to_thread(client_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
+                broker_scanner = bool((await asyncio.to_thread(_host_broker_request, {"action": "status"}, timeout=5)).get("network_scanner_available"))
             except Exception:
                 pass
         health = dependency_manager.inspect_operation(
@@ -703,6 +865,7 @@ class HomelabOperations:
                 "capability_health": health,
                 "required_packages": health.get("packages", []),
                 "preflight": f"Probe only {cidr} for live hosts; open ports and services are not enumerated.",
+                "scope_source": scope_source,
                 "recovery": "Discovery is read-only; discard any unwanted draft candidates.",
             }
             await asyncio.to_thread(self.receipts.append, receipt)
@@ -714,10 +877,10 @@ class HomelabOperations:
             raise HomelabOperationError("a current owner-bound discovery plan is required")
         # The broker is the execution boundary for discovery.  Do not require
         # the Hades application request itself to be in a host-networked or
-        # privileged process profile: the persisted exact approval gates the
-        # ActionSpec, and the broker authenticates the caller and runs Nmap on
-        # the host.  This is what allows approval continuation to resume the
-        # same RunAction without falling back to container-local reasoning.
+        # privileged process profile: the persisted owner-bound plan receipt
+        # gates the bounded scan, and the broker authenticates the caller and
+        # runs Nmap on the host. This keeps execution out of the application
+        # container without adding an interactive approval card for a scan.
         if not broker_scanner:
             # Never ask the model to guess a distro package name. Return a
             # deterministic remediation handoff to the existing exact-
@@ -741,9 +904,8 @@ class HomelabOperations:
                 "operation_digest": digest, "handoff": handoff,
                 "untrusted_content": False,
             }
-        from src.privileged_broker import client_request
         broker_result = await asyncio.to_thread(
-            client_request, {"action": "run_network_discovery", "cidr": cidr}, timeout=70,
+            _host_broker_request, {"action": "run_network_discovery", "cidr": cidr}, timeout=70,
         )
         code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
         output = str(broker_result.get("output") or broker_result.get("error") or "")
@@ -782,7 +944,41 @@ class HomelabOperations:
     async def _network_service_enumeration(
         self, request: dict[str, Any], *, owner: str, action: str,
     ) -> dict[str, Any]:
-        targets = _private_targets(request.get("targets"))
+        raw_targets = request.get("targets")
+        if action == "plan_network_service_enumeration" and not raw_targets:
+            # A natural request such as "check the responding devices for
+            # open ports" refers to the latest owner-scoped discovery, not a
+            # new model-supplied target list. Reuse only fresh private
+            # observations from the canonical CMDB; stale/unknown evidence
+            # must trigger a new discovery instead of a silent scan.
+            from src.network_projection import map_projection
+            projection = await asyncio.to_thread(map_projection, owner=owner)
+            discovered: list[str] = []
+            for node in projection.get("nodes", []) if isinstance(projection, dict) else []:
+                if not isinstance(node, dict) or str(node.get("freshness") or "").upper() != "FRESH":
+                    continue
+                attrs = node.get("attributes") if isinstance(node.get("attributes"), dict) else {}
+                candidate = attrs.get("ip") or attrs.get("observed_ip")
+                if candidate and str(candidate) not in discovered:
+                    discovered.append(str(candidate))
+                if len(discovered) >= 256:
+                    break
+            raw_targets = discovered
+        # A continuation may carry only the server-issued plan digest.  Load
+        # the sealed target set from that receipt instead of asking the model
+        # to repeat (or invent) discovered IPs.
+        if action == "execute_network_service_enumeration" and not raw_targets:
+            plan_digest = str(request.get("plan_digest") or "").strip().lower()
+            planned = await asyncio.to_thread(
+                self.receipts.get_valid_plan, owner=owner, digest=plan_digest,
+            ) if plan_digest else None
+            if planned:
+                raw_targets = planned.get("targets")
+        if not raw_targets:
+            raise HomelabOperationError(
+                "no fresh authorized discovery hosts are available; run a network discovery first"
+            )
+        targets = _private_targets(raw_targets)
         operation = {
             "action": "execute_network_service_enumeration",
             "target_kind": "discovered_private_ipv4_hosts",
@@ -802,9 +998,8 @@ class HomelabOperations:
         supplied = str(request.get("plan_digest") or "")
         if supplied != digest or not await asyncio.to_thread(self.receipts.valid_plan, owner=owner, digest=supplied):
             raise HomelabOperationError("a current owner-bound service enumeration plan is required")
-        from src.privileged_broker import client_request
         broker_result = await asyncio.to_thread(
-            client_request, {"action": "run_network_service_enumeration", "targets": targets}, timeout=90,
+            _host_broker_request, {"action": "run_network_service_enumeration", "targets": targets}, timeout=90,
         )
         code = int(broker_result.get("returncode", 1)) if broker_result.get("ok") else 1
         output = str(broker_result.get("output") or broker_result.get("error") or "")

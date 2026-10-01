@@ -24,6 +24,7 @@ from src.inventory_service import (
     InventoryNotFound,
     get_inventory_service,
 )
+from src.recipe_import import extract_pdf_text, parse_recipe_text, recipe_text_from_web_result
 from src.owner_identity import effective_storage_owner
 
 
@@ -71,12 +72,12 @@ def setup_inventory_routes(
 
     @router.get("/inventory/items")
     async def list_items(
-        request: Request, domain: str | None = None,
+        request: Request, domain: str | None = None, list_name: str | None = None,
         include_archived: bool = False, limit: int = Query(100, ge=1, le=500),
         offset: int = Query(0, ge=0),
     ):
         return {"items": await call(
-            inventory.list_items, _owner(request), domain=domain,
+            inventory.list_items, _owner(request), domain=domain, list_name=list_name,
             include_archived=include_archived, limit=limit, offset=offset,
         )}
 
@@ -84,6 +85,30 @@ def setup_inventory_routes(
     async def inventory_overview(request: Request, expiry_days: int = Query(30, ge=0, le=365)):
         """Canonical Household/Inventory read projection for the workspace."""
         return await call(inventory.household_overview, _owner(request), expiry_days=expiry_days)
+
+    @router.get("/inventory/sharing")
+    async def inventory_sharing(request: Request):
+        """Return explicit household inventory-sharing policy for the owner."""
+        return {"households": await call(inventory.list_sharing, _owner(request))}
+
+    @router.put("/inventory/sharing/{household_id}")
+    async def configure_inventory_sharing(
+        request: Request, household_id: str, payload: dict[str, Any] = Body(...),
+    ):
+        allowed = {"resource", "enabled", "allow_member_mutation"}
+        unknown = set(payload) - allowed
+        if unknown:
+            raise HTTPException(400, "unsupported sharing fields: " + ", ".join(sorted(unknown)))
+        resource = payload.get("resource")
+        if not isinstance(resource, str) or not isinstance(payload.get("enabled"), bool):
+            raise HTTPException(400, "resource and enabled are required")
+        if not isinstance(payload.get("allow_member_mutation", False), bool):
+            raise HTTPException(400, "allow_member_mutation must be boolean")
+        return await call(
+            inventory.configure_sharing, _owner(request), household_id,
+            resource=resource, enabled=payload["enabled"],
+            allow_member_mutation=payload.get("allow_member_mutation", False),
+        )
 
     @router.get("/inventory/history")
     async def inventory_history(request: Request, limit: int = Query(50, ge=1, le=200)):
@@ -131,12 +156,24 @@ def setup_inventory_routes(
         allowed = {
             "name", "domain", "item_kind", "default_unit", "category", "description",
             "brand", "manufacturer", "model", "sku", "barcode", "reorder_point",
-            "location_id", "metadata", "image_refs",
+            "location_id", "metadata", "image_refs", "shopping_list", "storage_area",
         }
         return {"item": await call(
             inventory.create_item, _owner(request),
             **{key: value for key, value in payload.items() if key in allowed},
         )}
+
+    @router.patch("/inventory/items/{item_id}")
+    async def update_item(request: Request, item_id: str, payload: dict[str, Any] = Body(...)):
+        allowed = {"name", "category", "description", "default_unit", "reorder_point", "shopping_list", "storage_area"}
+        unknown = set(payload) - allowed
+        if unknown:
+            raise HTTPException(400, "unsupported item fields: " + ", ".join(sorted(unknown)))
+        return {"item": await call(inventory.update_item, _owner(request), item_id, **payload)}
+
+    @router.post("/inventory/items/{item_id}/archive")
+    async def archive_item(request: Request, item_id: str):
+        return {"item": await call(inventory.archive_item, _owner(request), item_id)}
 
     @router.post("/inventory/items/{item_id}/stock", status_code=201)
     async def add_stock(request: Request, item_id: str, payload: dict[str, Any] = Body(...)):
@@ -178,10 +215,6 @@ def setup_inventory_routes(
             inventory.list_recipes, _owner(request), include_archived=include_archived,
         )}
 
-    @router.get("/recipes/{recipe_id}")
-    async def get_recipe(request: Request, recipe_id: str):
-        return {"recipe": await call(inventory.get_recipe, _owner(request), recipe_id)}
-
     @router.post("/recipes", status_code=201)
     async def create_recipe(request: Request, payload: dict[str, Any] = Body(...)):
         if "image_refs" in payload:
@@ -191,6 +224,64 @@ def setup_inventory_routes(
             inventory.create_recipe, _owner(request),
             **{key: value for key, value in payload.items() if key in allowed},
         )}
+
+    @router.post("/recipes/import", status_code=201)
+    async def import_recipe(request: Request, payload: dict[str, Any] = Body(...)):
+        """Save a recipe from pasted text, a public URL, or one owned PDF upload.
+
+        Import is deliberately separate from grocery/stock mutation.  The
+        response includes deterministic shortages so the owner can explicitly
+        queue them through the existing queue-missing action.
+        """
+        owner = _owner(request)
+        source_text = payload.get("source_text")
+        url = str(payload.get("url") or "").strip()
+        attachment_ids = payload.get("attachment_ids") or []
+        if source_text is not None and not isinstance(source_text, str):
+            raise HTTPException(400, "source_text must be a string")
+        if isinstance(source_text, str) and len(source_text) > 24_000:
+            raise HTTPException(400, "source_text exceeds the 24000 character limit")
+        supplied = int(bool((source_text or "").strip())) + int(bool(url)) + int(bool(attachment_ids))
+        if supplied != 1:
+            raise HTTPException(400, "provide exactly one of source_text, url, or attachment_ids")
+        source_kind = "text"
+        source_url = None
+        if url:
+            from services.search.content import fetch_webpage_content
+            fetched = await asyncio.to_thread(fetch_webpage_content, url)
+            if not fetched.get("success"):
+                raise HTTPException(422, fetched.get("error") or "recipe URL could not be read")
+            source_text = recipe_text_from_web_result(fetched)
+            source_kind = "url"
+            source_url = url
+        elif attachment_ids:
+            resolved = await asyncio.to_thread(resolve_attachments, owner, attachment_ids)
+            if len(resolved) != 1:
+                raise HTTPException(400, "provide exactly one managed PDF upload")
+            attachment = resolved[0]
+            mime = str(attachment.get("mime") or attachment.get("content_type") or "").casefold()
+            path = attachment.get("path")
+            if mime != "application/pdf" and not str(path or "").lower().endswith(".pdf"):
+                raise HTTPException(400, "recipe import attachment must be a PDF")
+            if not isinstance(path, str) or not path:
+                raise HTTPException(400, "managed PDF is unavailable")
+            try:
+                source_text = await asyncio.to_thread(extract_pdf_text, path)
+            except (OSError, ValueError) as exc:
+                raise HTTPException(422, str(exc)) from exc
+            source_kind = "pdf"
+        try:
+            candidate = parse_recipe_text(source_text or "", name=payload.get("name"))
+            candidate["source_url"] = source_url
+            recipe = await call(inventory.create_recipe, owner, **candidate)
+            missing = await call(inventory.missing_ingredients, owner, recipe["id"])
+        except (ValueError, InventoryError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {"recipe": recipe, "missing": missing, "source": {"kind": source_kind, "url": source_url}}
+
+    @router.get("/recipes/{recipe_id}")
+    async def get_recipe(request: Request, recipe_id: str):
+        return {"recipe": await call(inventory.get_recipe, _owner(request), recipe_id)}
 
     @router.get("/recipes/{recipe_id}/can-make")
     async def can_make(request: Request, recipe_id: str, servings: str | None = None):
@@ -207,6 +298,17 @@ def setup_inventory_routes(
             inventory.cook, _owner(request), recipe_id,
             servings=payload.get("servings"), idempotency_key=payload.get("idempotency_key"),
         )}
+
+    @router.get("/recipes/{recipe_id}/missing")
+    async def missing_ingredients(request: Request, recipe_id: str, servings: str | None = None):
+        return await call(inventory.missing_ingredients, _owner(request), recipe_id, servings=servings)
+
+    @router.post("/recipes/{recipe_id}/queue-missing")
+    async def queue_missing_ingredients(request: Request, recipe_id: str, payload: dict[str, Any] = Body(default={} )):
+        return await call(
+            inventory.queue_missing_ingredients, _owner(request), recipe_id,
+            servings=payload.get("servings"),
+        )
 
     def resolve_attachments(owner: str, attachment_ids: Any) -> list[dict[str, Any]]:
         if not isinstance(attachment_ids, list) or len(attachment_ids) > 20:

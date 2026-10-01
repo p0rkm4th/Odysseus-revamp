@@ -9,6 +9,8 @@ chain before a tool can run.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from datetime import date
+import calendar
 import ipaddress
 import logging
 import re
@@ -19,6 +21,85 @@ from src.tool_bindings import binding_for_tool
 from src.deterministic_reads import deterministic_read_concept, deterministic_read_view
 
 logger = logging.getLogger(__name__)
+
+_MONTH_NUMBERS = {
+    name.casefold(): number
+    for number, name in enumerate(calendar.month_name)
+    if name
+}
+_MONTH_NUMBERS.update({
+    name.casefold(): number
+    for number, name in enumerate(calendar.month_abbr)
+    if name
+})
+
+
+def _named_month_range(text: str) -> dict[str, str]:
+    """Project one explicit natural-language month into a bounded date range."""
+    match = re.search(
+        r"\b(?:in|during|for)\s+(January|February|March|April|May|June|July|"
+        r"August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|"
+        r"Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:\s+(20\d{2}))?\b",
+        str(text or ""),
+        re.IGNORECASE,
+    )
+    if not match:
+        return {}
+    month_name = match.group(1).casefold()
+    if month_name == "sept":
+        month_name = "sep"
+    month = _MONTH_NUMBERS.get(month_name)
+    if month is None:
+        return {}
+    today = date.today()
+    year = int(match.group(2)) if match.group(2) else today.year
+    if not match.group(2) and month > today.month:
+        year -= 1
+    start = date(year, month, 1)
+    end = date(year, month, calendar.monthrange(year, month)[1])
+    return {"start": start.isoformat(), "end": end.isoformat()}
+
+
+def _relative_finance_range(text: str) -> dict[str, str]:
+    """Project common bounded Finance periods instead of defaulting to month."""
+    query = str(text or "")
+    today = date.today()
+    number_words = {
+        "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+        "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+        "eleven": 11, "twelve": 12,
+    }
+    explicit_year = re.search(r"\b(?:in|during|for)\s+(20\d{2})\b", query, re.IGNORECASE)
+    if explicit_year:
+        year = int(explicit_year.group(1))
+        return {"start": date(year, 1, 1).isoformat(), "end": date(year, 12, 31).isoformat()}
+    months_match = re.search(
+        r"\b(?:past|last|previous)\s+(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
+        query, re.IGNORECASE,
+    )
+    if months_match:
+        count_text = months_match.group(1).casefold()
+        count = int(count_text) if count_text.isdigit() else number_words[count_text]
+        month_index = today.year * 12 + (today.month - 1) - count
+        start_year, start_month_zero = divmod(month_index, 12)
+        start_month = start_month_zero + 1
+        day = min(today.day, calendar.monthrange(start_year, start_month)[1])
+        return {"start": date(start_year, start_month, day).isoformat(), "end": today.isoformat()}
+    if re.search(r"\b(?:this\s+year|year\s+to\s+date|ytd|for\s+the\s+year)\b", query, re.IGNORECASE):
+        return {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}
+    if re.search(r"\b(?:last|previous)\s+year\b", query, re.IGNORECASE):
+        year = today.year - 1
+        return {"start": date(year, 1, 1).isoformat(), "end": date(year, 12, 31).isoformat()}
+    if re.search(r"\b(?:this\s+month|month\s+to\s+date|mtd)\b", query, re.IGNORECASE):
+        return {"start": today.replace(day=1).isoformat(), "end": today.isoformat()}
+    if re.search(r"\b(?:last|previous)\s+month\b", query, re.IGNORECASE):
+        month = today.month - 1 or 12
+        year = today.year if today.month > 1 else today.year - 1
+        return {
+            "start": date(year, month, 1).isoformat(),
+            "end": date(year, month, calendar.monthrange(year, month)[1]).isoformat(),
+        }
+    return {}
 
 
 # Operational domain metadata used by prompt/capability projections.  These
@@ -625,10 +706,42 @@ def is_explicit_network_discovery_request(text: str) -> bool:
     query = str(text or "").lower()
     if re.search(r"^\s*(?:what\s+is|what\s+are|define|explain|how\s+does)\b", query):
         return False
+    # Questions about an already completed scan are reads.  Keeping this
+    # distinction in the shared semantic predicate prevents ACI and the chat
+    # route from turning a natural follow-up into a second approval request.
+    if is_network_observation_result_request(query):
+        return False
     return bool(
         re.search(r"\b(?:scan|discover|map|enumerate|identify|find)\b", query)
         and re.search(r"\b(?:network|lan|subnet|devices?|hosts?|192(?:\.168)?|rfc1918)\b", query)
     )
+
+
+def is_network_observation_result_request(text: str) -> bool:
+    """Recognize a bounded question about a completed network observation.
+
+    This never supplies a target or grants authority.  The canonical
+    ``read_network_observations`` ActionSpec still has to resolve the
+    owner-scoped persisted result.
+    """
+    query = str(text or "").strip()
+    if not query:
+        return False
+    result_language = re.search(
+        r"\b(?:what\s+did|what\s+was|which|show(?:\s+me)?|list|tell\s+me)\b"
+        r".{0,70}\b(?:scan|discovery|discovered|respond(?:ed|ing)|found|results?|hosts?|devices?)\b",
+        query,
+        re.IGNORECASE,
+    )
+    past_or_reference = re.search(
+        r"\b(?:that|the|my|this|last|previous|earlier)\s+"
+        r"(?:scan|discovery|hosts?|devices?)\b|"
+        r"\b(?:responded|responding|were\s+(?:found|discovered)|"
+        r"results?\s+of\s+(?:the|that|my|this)\s+scan)\b",
+        query,
+        re.IGNORECASE,
+    )
+    return bool(result_language and past_or_reference)
 
 
 def is_network_service_enumeration_request(text: str) -> bool:
@@ -744,7 +857,7 @@ class IntentFrame:
 
 
 _BOUNDED_OWNER_CAPABILITY_CONCEPTS = frozenset({
-    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM",
+    "TECHNICAL_ASSET", "HOMELAB_HOST", "NETWORK", "HOUSEHOLD_ITEM", "RECIPE", "FINANCE",
 })
 
 
@@ -845,7 +958,7 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         "security_evidence_list",
     ),
     "NETWORK": DomainContract(
-        "NETWORK", "homelab.manage", {"READ": "read_network_observations", "READ_CONTEXT": "read_network_context", "READ_UNIDENTIFIED": "list_unidentified_hosts", "READ_ROLES": "infer_role_hypotheses", "EXECUTE": "plan_network_discovery"}, "manage_homelab",
+        "NETWORK", "homelab.manage", {"READ": "read_network_observations", "READ_CONTEXT": "read_network_context", "READ_UNIDENTIFIED": "list_unidentified_hosts", "READ_ROLES": "infer_role_hypotheses", "EXECUTE": "plan_network_discovery", "EXECUTE_SERVICES": "plan_network_service_enumeration"}, "manage_homelab",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "network_capability_or_discovery",
     ),
@@ -901,13 +1014,22 @@ DOMAIN_CONTRACTS: Mapping[str, DomainContract] = {
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "household_overview",
     ),
+    "RECIPE": DomainContract(
+        "RECIPE", "inventory.manage", {"READ": "recipe_list", "READ_SUGGEST": "recipe_suggest"}, "manage_assets",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
+        "saved_recipe_list",
+    ),
+    "FINANCE": DomainContract(
+        "FINANCE", "finance.read", {"READ": "coverage", "READ_SPENDING": "spending", "READ_TRANSACTIONS": "transactions", "READ_CASH_FLOW": "cash_flow"}, "read_finance",
+        {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"}, "finance_read",
+    ),
     # Mutations use the same Inventory service as the human-facing inventory
     # adapter.  Keeping this as a separate contract avoids changing the
     # established read-only Household binding while making CREATE/UPDATE
     # explicit canonical Actions instead of model-selected prose.
     "INVENTORY_MUTATION": DomainContract(
         "INVENTORY_MUTATION", "inventory.manage",
-        {"CREATE": "add_item", "UPDATE": "add_stock", "EXECUTE": "consume_stock"},
+        {"CREATE": "add_item", "UPDATE": "add_stock", "EXECUTE": "consume_stock", "DELETE": "remove_from_grocery", "ARCHIVE": "archive_item"},
         "manage_assets",
         {"MODEL": "YES", "API": "YES", "WORK": "YES", "UI": "YES", "AUTOMATION": "N/A"},
         "inventory_mutation",
@@ -982,6 +1104,8 @@ CANONICAL_DOMAIN_PROJECTIONS: Mapping[str, str] = {
     "MISSION": "work",
     "WATCH": "work",
     "HOUSEHOLD_ITEM": "household",
+    "RECIPE": "household",
+    "FINANCE": "finance",
     "INTEGRATION": "setup",
     "COMMUNICATIONS": "communications",
     "CONTACT": "contacts",
@@ -1024,6 +1148,10 @@ def canonical_read_action(
         operation = "READ_CONTEXT"
     elif domain_concept == "NETWORK" and view == "roles":
         operation = "READ_ROLES"
+    elif domain_concept == "FINANCE" and view in {"spending", "transactions", "cash_flow"}:
+        operation = {"spending": "READ_SPENDING", "transactions": "READ_TRANSACTIONS", "cash_flow": "READ_CASH_FLOW"}[view]
+    elif domain_concept == "RECIPE" and view in {"available", "few_shortages", "ingredient"}:
+        operation = "READ_SUGGEST"
     return contract.actions.get(operation)
 
 
@@ -1164,7 +1292,36 @@ def _operation(text: str, *, continuation: bool = False) -> str:
     q = text.lower().strip()
     if continuation or _is_continuation_phrase(q):
         return "CONTINUE"
-    if re.search(r"\b(?:delete|remove|retire|forget)\b", q): return "DELETE"
+    if re.search(r"\b(?:delete|remove|retire|forget)\b", q) or (
+        re.search(r"\b(?:clear|empty)\b", q)
+        and re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q)
+    ): return "DELETE"
+    # Household inventory uses natural stock language that does not contain
+    # the generic CRUD verbs. Keep this semantic projection bounded to an
+    # inventory noun so ordinary prose such as "I bought a book" stays a
+    # normal conversation turn.
+    if re.search(r"\b(?:pantry|fridge|freezer|grocery|groceries|shopping\s+list|kitchen\s+inventory|household\s+stock)\b", q) or (
+        re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q)
+        and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|ml|milliliter(?:s)?|l|liter(?:s)?|litre(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
+    ):
+        if re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q):
+            return "EXECUTE"
+        # ``add`` is a natural stock verb when the owner names a concrete
+        # quantity and a storage destination ("add 250 g of rice to the
+        # pantry").  Grocery-list additions remain CREATE because they do
+        # not name owned stock or a storage destination.
+        stock_verb = re.search(r"\b(?:put|place|store|stock|bought|buy|purchased|purchase)\b", q)
+        quantified_add = (
+            re.search(r"\badd\b", q)
+            and re.search(r"\b(?:pantry|fridge|freezer)\b", q)
+            and re.search(
+                r"\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*"
+                r"(?:kg|kilograms?|g|grams?|ml|milliliters?|l|liters?|litres?|lb|pounds?|oz|ounces?|each|items?)\b",
+                q,
+            )
+        )
+        if stock_verb or quantified_add:
+            return "UPDATE"
     if re.search(r"\b(?:update|change|edit|rename|reconcile|confirm)\b", q): return "UPDATE"
     if re.search(r"\b(?:create|add|new)\b", q): return "CREATE"
     if re.search(r"\b(?:restart|recover|execute|run|scan|discover\w*|install|turn on|start|begin)\b", q): return "EXECUTE"
@@ -1182,15 +1339,26 @@ def compile_intent(
 ) -> IntentFrame:
     """Compile common current product concepts into a bounded IntentFrame."""
     text = str(query or "").strip()
+    # Owner language is often transcribed or typed quickly. Normalize a
+    # bounded set of unambiguous freezer misspellings before semantic
+    # projection so the canonical storage read remains available without
+    # teaching the owner implementation vocabulary.
+    text = re.sub(r"\b(?:frezer|freezr|freeezer)\b", "freezer", text, flags=re.IGNORECASE)
     q = text.lower()
     reference_resolution = dict(resolve_structured_reference(text, reference_context))
     # Keep the low-level resolver's stable public shape while exposing an
     # explicit attempt bit in the IntentFrame projection for evaluator metrics.
     reference_resolution["attempted"] = reference_resolution.get("status") != "NOT_REFERENCE"
     operation = _operation(text, continuation=continuation)
-    semantic_read_concept = (
-        deterministic_read_concept(text) if operation == "READ" else None
-    )
+    # Lexical CRUD words can be modifiers inside a question ("anything
+    # new?", "what should I add?") rather than the requested operation. Let
+    # an unambiguous canonical read reclaim precedence over that lexical
+    # token; explicit discovery/service execution remains handled by the
+    # bounded network predicates below.
+    read_candidate = deterministic_read_concept(text)
+    semantic_read_concept = read_candidate if operation in {"READ", "CREATE", "UPDATE"} else None
+    if semantic_read_concept and operation in {"CREATE", "UPDATE"}:
+        operation = "READ"
     # READ is the safe fallback operation for semantically incomplete text,
     # but canonical read projection must not treat every imperative containing
     # a domain noun as a request to inspect state. Keep this as bounded intent
@@ -1216,9 +1384,28 @@ def compile_intent(
             re.IGNORECASE,
         )
     )
+    _network_observation_result_language = is_network_observation_result_request(q)
     if read_explicit and operation in {"RESEARCH", "MONITOR", "EXECUTE"} and not _network_discovery_language:
         operation = "READ"
     concept = semantic_read_concept or "UNKNOWN"
+    # ``deterministic_read_concept`` quite reasonably classifies a bare
+    # server-health question as an asset collection.  In the conversational
+    # homelab path, however, health/status language asks for observed
+    # network evidence, not hardware inventory. Keep explicit remote/SSH
+    # requests on their existing host-inspection contract.
+    if (
+        concept == "TECHNICAL_ASSET"
+        and re.search(r"\b(?:server|servers|host|hosts|machine|machines|device|devices)\b", q)
+        and re.search(
+            r"\b(?:unhealthy|healthy|health|broken|down|unreachable|offline|acting\s+weird|weird|running|status)\b",
+            q,
+            re.IGNORECASE,
+        )
+        and not re.search(r"\b(?:asset|inventory|own|owned|hardware|specs?|specifications?|cpu|gpu|ram|storage|remote|ssh)\b", q, re.IGNORECASE)
+    ):
+        concept = "NETWORK"
+        operation = "READ"
+        read_explicit = True
     target = None
     if concept != "UNKNOWN":
         pass
@@ -1237,6 +1424,10 @@ def compile_intent(
         concept = "SERVICE"
     elif re.search(r"\b(?:homelab|container(?:s)?|storage|remote host(?:s)?)\b", q) and not re.search(
         r"\b(?:difference\s+between|what(?:'s|\s+is)\s+the\s+difference|explain)\b", q,
+    ):
+        concept = "HOMELAB_HOST"
+    elif re.search(r"\bremote\s+(?:host|server|machine|system)\b", q) and re.search(
+        r"\b(?:inspect|check|running|status|health|reachable|connect)\b", q,
     ):
         concept = "HOMELAB_HOST"
     elif re.search(r"\b(?:mission(?:s)?)\b", q):
@@ -1290,7 +1481,14 @@ def compile_intent(
         concept = "SECURITY_FINDING"
     elif re.search(r"\b(?:osint|open source intelligence|investigations?|cases?)\b", q):
         concept = "OSINT_CASE"
-    elif re.search(r"\b(?:household|pantry|stock|shopping|recipe|recipes|groceries|kitchen)\b", q):
+    elif re.search(r"\b(?:household|pantry|fridge|freezer|stock|grocery|groceries|shopping|recipe|recipes|kitchen)\b", q) or (
+        operation == "EXECUTE"
+        and re.search(r"\b(?:use|used|consume|consumed|take|took)\b", q)
+        and re.search(r"\b\d+(?:\.\d+)?\s*(?:g|gram(?:s)?|kg|kilogram(?:s)?|ml|milliliter(?:s)?|l|liter(?:s)?|litre(?:s)?|oz|ounce(?:s)?|lb|pound(?:s)?)\b", q)
+    ) or (
+        re.search(r"\b(?:food|ingredient|ingredients)\b", q)
+        and re.search(r"\b(?:(?:use|used|uses)\s+(?:soon|up)|going\s+bad|spoiled?|expir\w*)\b", q)
+    ):
         concept = "HOUSEHOLD_ITEM"
     elif re.search(r"\b(?:what(?:'s| is)\s+hades\s+waiting\s+on|what\s+needs\s+attention|waiting\s+on|pending\s+approvals?)\b", q):
         concept = "WORK"
@@ -1300,6 +1498,19 @@ def compile_intent(
         concept = "WORK"
     elif re.search(r"\b(?:communications?|email accounts?|calendars?|calendar events?)\b", q):
         concept = "COMMUNICATIONS"
+    # A concise merchant follow-up such as "How much at Publix?" is a
+    # natural continuation of a spending question.  Preserve it as the
+    # bounded Finance spending read instead of letting the model choose an
+    # unfiltered date-range total.  The selector remains limited to the
+    # merchant phrase extracted below; it does not create a general query
+    # language or broaden Finance scope.
+    elif re.search(
+        r"\bhow\s+much\s+(?:did\s+i\s+spend\s+)?(?:at|from)\s+"
+        r"[A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}[?.!,]?\s*$",
+        q,
+        re.IGNORECASE,
+    ):
+        concept = "FINANCE"
     elif re.search(r"\b(?:contacts?|address\s*book)\b", q):
         concept = "CONTACT"
     elif re.search(r"\b(?:setup|configured|integrations?|connected)\b", q):
@@ -1332,6 +1543,15 @@ def compile_intent(
         read_explicit = True
     if concept == "UNKNOWN" and _network_discovery_language and operation in {"EXECUTE", "RESEARCH"}:
         concept = "NETWORK"
+    # A port/service follow-up may refer to "the responding hosts" rather
+    # than repeat "network". The bounded detector already requires an active
+    # service/port term plus a host/discovery anchor; promote that evidence to
+    # the canonical network operation instead of sending the owner to generic
+    # prose or shell fallback.
+    if concept == "UNKNOWN" and is_network_service_enumeration_request(q):
+        concept = "NETWORK"
+        operation = "EXECUTE"
+        read_explicit = False
     # Safe host inspection is a first-class read even when the user phrases
     # it as exploration or a hardware scan.  It never selects shell access.
     if (
@@ -1339,14 +1559,28 @@ def compile_intent(
         and re.search(r"\b(?:hardware|computational\s+assets?|machine|computer|host|system)\b", q)
         and re.search(r"\b(?:explore|inspect|check|scan)\b", q)
         and not re.search(r"\b(?:network|lan|subnet|service|daemon)\b", q)
+        and not is_network_service_enumeration_request(q)
     ):
         concept = "HOMELAB_HOST"
         operation = "READ"
         read_explicit = True
-    if concept == "NETWORK" and _network_discovery_language:
+    if _network_observation_result_language:
+        # A result question must read the owner-scoped persisted observation;
+        # it must never be promoted to a fresh discovery merely because the
+        # words "scan" or "hosts" appear in the follow-up.
+        concept = "NETWORK"
+        operation = "READ"
+        read_explicit = True
+    if concept == "NETWORK" and _network_discovery_language and not _network_observation_result_language:
         # The question can contain "what" and still be an executable
         # discovery objective.  A missing CIDR remains unauthorized/clarify-
         # bound below; current host context is not silently promoted to scope.
+        operation = "EXECUTE"
+        read_explicit = False
+    if concept == "NETWORK" and is_network_service_enumeration_request(q):
+        # Port/service inspection is an active, bounded homelab operation,
+        # not a historical network-read question. Keep it on the same
+        # canonical approval/execution path as discovery.
         operation = "EXECUTE"
         read_explicit = False
     # Keep advice, definitions, and generic explanations off specialized
@@ -1364,6 +1598,7 @@ def compile_intent(
         and not re.search(r"\b(?:my|mine|right\s+now|current(?:ly)?|on\s+my\s+plate)\b", q)
         and not re.search(r"\bwe\b.{0,20}\bworking\b", q)
         and not re.search(r"\b(?:hades|waiting\s+on|needs?\s+attention|pending\s+approvals?)\b", q)
+        and not is_network_service_enumeration_request(q)
     ):
         concept = "UNKNOWN"
     # Make the operation class explicit for genuinely conceptual questions
@@ -1503,25 +1738,30 @@ def compile_intent(
         r"\b(?:public|internet|external)\b", q,
     ):
         safety_constraints.append("public_scope_requires_authorization")
+    # Pantry/fridge/freezer additions mean owned stock, not merely creating a
+    # named catalog item.  Require the bounded quantity before any model can
+    # claim a stock mutation; grocery additions remain quantity-free.
+    if (
+        concept == "HOUSEHOLD_ITEM"
+        and operation == "CREATE"
+        and re.search(r"\b(?:pantry|fridge|freezer)\b", q)
+        and not re.search(
+            r"\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*"
+            r"(?:kg|kilograms?|g|grams?|ml|milliliters?|l|liters?|litres?|lb|pounds?|oz|ounces?|each|items?)\b",
+            q,
+            re.IGNORECASE,
+        )
+    ):
+        safety_constraints.append("inventory_quantity_required")
     if re.search(r"\b(?:approve|replay)\b", q) and re.search(
         r"\b(?:changed|modified|completed|finished|old|stale)\b", q,
     ):
         safety_constraints.append("action_revalidation_required")
-    # Active network observation is never authorized by a vague reference to
-    # "my/local network" or by historical/current host context.  An explicit
-    # bounded CIDR remains on the normal plan/approval/policy path; an
-    # unscoped research/deep-dive request is a framework-owned clarification
-    # instead of an empty bounded decision problem.
-    if (
-        concept == "NETWORK"
-        and operation in {"EXECUTE", "RESEARCH"}
-        and not re.search(
-            r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
-            r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
-            q,
-        )
-    ):
-        safety_constraints.append("network_scope_requires_authorization")
+    # A missing CIDR is not by itself a reason to strand an owner.  The
+    # Homelab operation may resolve exactly one current physical-LAN scope
+    # from the trusted host context, then present that bounded scope for the
+    # normal exact-approval gate.  Ambiguous, VPN, public, or unavailable
+    # context still fails closed at the operation boundary.
     if (
         concept == "UNKNOWN"
         and operation in {"EXECUTE", "RESEARCH"}
@@ -1536,18 +1776,9 @@ def compile_intent(
         )
     ):
         concept = "NETWORK"
-    if (
-        concept == "NETWORK"
-        and operation in {"EXECUTE", "RESEARCH"}
-        and not re.search(
-            r"(?<![\w.])(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
-            r"(?:\.\d{1,3}){2}/\d{1,2}(?!\w)",
-            q,
-        )
-        and "network_scope_requires_authorization" not in safety_constraints
-    ):
-        safety_constraints.append("network_scope_requires_authorization")
     reference_filters = {}
+    if concept == "NETWORK" and is_network_service_enumeration_request(q):
+        reference_filters["view"] = "service_enumeration"
     if remote_requested:
         reference_filters["remote"] = True
     if reference_resolution.get("status") == "RESOLVED" and len(reference_resolution.get("refs") or []) > 1:
@@ -1572,6 +1803,12 @@ def compile_intent(
         reference_filters["view"] = "integrations"
     elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:unidentified|unknown|unrecognised|unrecognized)\b", q):
         reference_filters["view"] = "unidentified"
+    elif concept == "NETWORK" and operation == "READ" and re.search(
+        r"\b(?:unhealthy|healthy|health|broken|down|unreachable|offline|acting\s+weird|weird|running|status)\b",
+        q,
+        re.IGNORECASE,
+    ):
+        reference_filters["view"] = "observations"
     elif concept == "NETWORK" and operation == "READ" and (
         semantic_view == "context" or re.search(
         r"\b(?:what\s+network|which\s+network|network\s+am\s+i|currently\s+connected|current(?:ly)?\s+(?:on|connected))\b",
@@ -1580,6 +1817,153 @@ def compile_intent(
         reference_filters["view"] = "context"
     elif concept == "NETWORK" and operation == "READ" and re.search(r"\b(?:role|roles|server|servers|router|routers|nas|printer|workstation|iot)\b", q):
         reference_filters["view"] = "roles"
+    elif concept == "FINANCE":
+        finance_view = deterministic_read_view(text, concept)
+        if finance_view:
+            reference_filters["view"] = finance_view
+        if re.search(r"\b(?:paychecks?|pay\s+checks?|salary|salaries|deposits?|income|earnings?|paid|earned)\b", q, re.IGNORECASE):
+            reference_filters.update({"view": "transactions", "category": "Paycheck", "direction": "inflow", "status": "posted", "limit": 20})
+        if re.search(
+            r"\b(?:most\s+expensive|largest|biggest|highest|top)\b.{0,48}\b"
+            r"(?:charge|charges|purchase|purchases|transaction|transactions|line\s+items?)\b",
+            q,
+            re.IGNORECASE,
+        ):
+            reference_filters.update({"view": "transactions", "sort": "amount_desc", "direction": "outflow", "limit": 10})
+        reference_filters.update(_relative_finance_range(text) or _named_month_range(text))
+        # Preserve a bounded owner-supplied merchant selector for deterministic
+        # Finance reads. The selector is data, not a new capability or query
+        # language; FinanceService still applies the owner scope and limit.
+        merchant_match = re.search(
+            r"\b(?:at|from)\s+([A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}?)(?="
+            r"\s+(?:this|last|next|for|since|between|during|on|in)\b|[?.!,]|$)"
+            r"|\bmerchant\s+(?:named|called)\s+([A-Za-z0-9][A-Za-z0-9 &'&.\-]{0,79}?)(?="
+            r"\s+(?:this|last|next|for|since|between|during|on|in)\b|[?.!,]|$)",
+            q,
+            re.IGNORECASE,
+        )
+        if merchant_match:
+            merchant = re.sub(
+                r"\s+", " ", merchant_match.group(1) or merchant_match.group(2) or "",
+            ).strip(" .,!?:;")
+            if merchant and merchant.casefold() not in {"the", "that", "this", "it"}:
+                reference_filters["merchant"] = merchant[:100]
+                if finance_view in {None, "coverage"}:
+                    reference_filters["view"] = "spending"
+        # Preserve ordinary category language for deterministic Finance reads.
+        # This is intentionally bounded to the phrase after "spending on" /
+        # "spent on" (or "expenses for"), and stops at a date qualifier;
+        # FinanceService remains authoritative for matching canonical provider
+        # categories. Without this projection, a request such as "insurance
+        # this year" silently became an unfiltered year total.
+        category_match = re.search(
+            r"\b(?:spend(?:ing|t)?|expense|expenses|cost)\s+(?:on|for)\s+"
+            r"([a-z][a-z &'\-/]{1,79}?)(?=\s+(?:this|last|next|for|since|between|during|in|on)\b|[?.!,]|$)",
+            q,
+            re.IGNORECASE,
+        )
+        if category_match:
+            category = re.sub(r"\s+", " ", category_match.group(1)).strip(" .,!?:;")
+            # In phrases such as "spending for September", the preposition
+            # introduces a date range, not a provider category.  Never send a
+            # calendar month into FinanceService as a category filter.
+            if category.casefold() not in {"the", "that", "it", *set(_MONTH_NUMBERS)}:
+                reference_filters["category"] = category[:100]
+                reference_filters["view"] = "spending"
+        if re.search(r"\b(?:dining\s+out|eating\s+out)\b", q):
+            reference_filters["category"] = "dining_out"
+            reference_filters["view"] = "spending"
+        elif re.search(r"\brestaurants?\b", q):
+            reference_filters["category"] = "Restaurants"
+            reference_filters["view"] = "spending"
+            # The generic ``at/from`` extractor sees the category noun as a
+            # merchant ("at restaurants this year").  Once the bounded
+            # category projection recognizes the generic plural, do not send
+            # both selectors to FinanceService or accidentally require a
+            # merchant literally named "Restaurants".
+            if str(reference_filters.get("merchant") or "").casefold() == "restaurants":
+                reference_filters.pop("merchant", None)
+    elif concept == "RECIPE" and operation == "READ":
+        ingredient_match = re.search(
+            r"\b(?:what|which)\s+recipes?\s+(?:use|include|contain|with)\s+"
+            r"([a-z][a-z0-9 &'/-]{0,79}?)(?=\s+(?:before|while|that|which|when)\b|[?.!,]|$)",
+            q,
+            re.IGNORECASE,
+        )
+        if ingredient_match:
+            ingredient_query = re.sub(r"\s+", " ", ingredient_match.group(1)).strip(" .,!?:;")
+            ingredient_query = re.sub(r"^(?:the|a|an)\s+", "", ingredient_query, flags=re.IGNORECASE)
+            if ingredient_query:
+                reference_filters.update({"view": "ingredient", "ingredient_query": ingredient_query[:100]})
+                if re.search(r"\b(?:go(?:es)?\s+bad|spoil\w*|expir\w*)\b", q, re.IGNORECASE):
+                    reference_filters.update({"use_expiring": True, "expiry_days": 30})
+        elif re.search(
+            r"\b(?:can\s+i\s+(?:make|cook|prepare)|make\s+with\s+what\s+i\s+have|"
+            r"without\s+going\s+to\s+the\s+store|easy(?:\s+\w+){0,3}\s+(?:dinner|meal)|"
+            r"(?:budget|cheap|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost))\b",
+            q,
+            re.IGNORECASE,
+        ):
+            # A compound catalog question asks for both ready recipes and
+            # the closest recipes with shortages. Keep the second clause in
+            # scope instead of collapsing the query to ready-only results.
+            asks_for_other_shortages = bool(re.search(
+                r"\b(?:and\s+)?(?:what|which)\s+(?:ingredients?|items?)\s+(?:are\s+)?missing\b"
+                r"|\bfor\s+(?:the\s+)?others?\b",
+                q,
+                re.IGNORECASE,
+            ))
+            budget_discovery = bool(re.search(
+                r"\b(?:budget|cheap|cheapest|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost)\b",
+                q,
+                re.IGNORECASE,
+            )) and not bool(re.search(
+                r"\b(?:with\s+(?:what\s+)?(?:we|i)\s+have|without\s+(?:going\s+to\s+)?the\s+store)\b",
+                q,
+                re.IGNORECASE,
+            ))
+            reference_filters.update({
+                "view": "available",
+                # Budget discovery is not a claim that each result is
+                # immediately cookable. Keep bounded near matches in scope so
+                # the answer can remain useful while disclosing that prices
+                # are unavailable.
+                "available_only": not (asks_for_other_shortages or budget_discovery),
+            })
+            if re.search(
+                r"\b(?:budget|cheap|cheapest|affordable|inexpensive|spend(?:ing)?\s+(?:much|less)|low[- ]cost)\b",
+                q,
+                re.IGNORECASE,
+            ):
+                reference_filters["budget_constraint"] = True
+        elif re.search(r"\brecipes?\s+where\s+i(?:'m|\s+am)?\s+only\s+missing\b", q, re.IGNORECASE):
+            reference_filters.update({"view": "few_shortages", "max_shortages": 2})
+    elif concept == "HOUSEHOLD_ITEM" and operation == "DELETE":
+        if re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q):
+            reference_filters["list_name"] = "grocery"
+        else:
+            storage = re.search(r"\b(?:pantry|fridge|freezer)\b", q)
+            if storage:
+                reference_filters["storage_area"] = storage.group(0).casefold()
+            elif re.search(r"\b(?:kitchen|inventory|stock)\b", q):
+                reference_filters["storage_area"] = "kitchen"
+    elif concept == "HOUSEHOLD_ITEM" and operation == "READ":
+        if re.search(r"\b(?:(?:use|used|uses)\s+(?:soon|up)|going\s+bad|spoiled?|expir\w*)\b", q):
+            reference_filters["view"] = "expiring"
+            reference_filters["expiry_days"] = 30
+            read_explicit = True
+        elif re.search(r"\b(?:grocery|groceries|shopping\s+list)\b", q):
+            reference_filters["list_name"] = "grocery"
+            read_explicit = True
+        elif re.search(r"\bpantry\b", q):
+            reference_filters["list_name"] = "pantry"
+            read_explicit = True
+        elif re.search(r"\bfridge\b", q):
+            reference_filters["list_name"] = "fridge"
+            read_explicit = True
+        elif re.search(r"\bfreezer\b", q):
+            reference_filters["list_name"] = "freezer"
+            read_explicit = True
     if concept == "TECHNICAL_ASSET" and operation == "READ":
         # Aggregations remain canonical Asset reads.  Preserve only the
         # bounded component/model term for the inventory adapter; never ask
@@ -1704,7 +2088,7 @@ def resolve_continuation(frame: IntentFrame, active_run: Mapping[str, Any] | Non
 
 def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     contract_key = frame.domain_concept
-    if frame.domain_concept == "HOUSEHOLD_ITEM" and frame.operation_class in {"CREATE", "UPDATE", "EXECUTE"}:
+    if frame.domain_concept == "HOUSEHOLD_ITEM" and frame.operation_class in {"CREATE", "UPDATE", "EXECUTE", "DELETE"}:
         contract_key = "INVENTORY_MUTATION"
     contract = DOMAIN_CONTRACTS.get(contract_key)
     if contract is None:
@@ -1712,6 +2096,31 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
     if frame.domain_concept == "SERVICE" and frame.operation_class == "EXECUTE" and not frame.target:
         return ResolvedContract(frame, contract, None, None, contract.binding, False, "target_required")
     action_key = frame.operation_class
+    if (
+        frame.domain_concept == "HOUSEHOLD_ITEM"
+        and frame.operation_class == "DELETE"
+        and frame.filters.get("list_name") != "grocery"
+    ):
+        action_key = "ARCHIVE"
+    # Read views are part of the canonical frame.  In particular, Finance
+    # spending/cash-flow/transaction reads must not collapse to the generic
+    # coverage action, or the renderer receives the wrong contract and the
+    # owner gets a truthful coverage answer instead of the requested result.
+    if frame.operation_class == "READ":
+        selected_action = canonical_read_action(
+            frame.domain_concept,
+            frame.filters,
+            entity_reference=frame.entity_reference,
+        )
+        if selected_action:
+            action_key = next(
+                (
+                    operation
+                    for operation, registered_action in contract.actions.items()
+                    if registered_action == selected_action
+                ),
+                action_key,
+            )
     if frame.domain_concept == "HOMELAB_HOST" and frame.filters.get("remote") and frame.operation_class == "READ":
         action_key = "REMOTE_READ"
     if frame.domain_concept == "TECHNICAL_ASSET" and frame.operation_class == "READ" and frame.entity_reference:
@@ -1726,6 +2135,10 @@ def resolve_intent(frame: IntentFrame) -> ResolvedContract:
         action_key = "READ_CONTEXT"
     elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "roles":
         action_key = "READ_ROLES"
+    elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "observations":
+        action_key = "READ"
+    elif frame.domain_concept == "NETWORK" and frame.filters.get("view") == "service_enumeration":
+        action_key = "EXECUTE_SERVICES"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "file":
         action_key = "READ_FILE"
     elif frame.domain_concept == "DEVELOPER" and frame.filters.get("view") == "map":
@@ -1780,9 +2193,9 @@ def validate_contracts() -> list[str]:
                 )
                 if missing_textual:
                     errors.append(f"{concept}: textual contract omits ActionSpec exposure {missing_textual}")
-            if operation in {"READ", "READ_DETAIL", "REMOTE_READ", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
+            if operation in {"READ", "READ_SUGGEST", "READ_DETAIL", "REMOTE_READ", "READ_FILE", "READ_MAP", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and action.approval.value != "none":
                 errors.append(f"{concept}/{action_id}: read requires approval")
-            if operation in {"READ", "READ_DETAIL", "REMOTE_READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id not in {"developer.read", "web.evidence"} and "read_private" not in action.effects:
+            if operation in {"READ", "READ_SUGGEST", "READ_DETAIL", "REMOTE_READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES", "READ_CONTEXT"} and contract.capability_id not in {"developer.read", "web.evidence"} and "read_private" not in action.effects:
                 errors.append(f"{concept}/{action_id}: read lacks read_private effect")
             if operation in {"READ_FILE", "READ_MAP"} and "read_workspace" not in action.effects:
                 errors.append(f"{concept}/{action_id}: developer read lacks read_workspace effect")
@@ -1880,7 +2293,7 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
         for operation, registered_action in contract.actions.items():
             if registered_action != action_id:
                 continue
-            if operation in {"READ", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
+            if operation in {"READ", "READ_SUGGEST", "READ_INTEGRATIONS", "READ_UNIDENTIFIED", "READ_ROLES"}:
                 filters = {}
                 if operation == "READ_INTEGRATIONS":
                     filters["view"] = "integrations"
@@ -1919,6 +2332,8 @@ def validate_bound_result(binding_name: str, action_id: str, result: Any) -> tup
                     ("WATCH", "list_watches"): "watches",
                     ("HOUSEHOLD_ITEM", "list_items"): "items",
                     ("HOUSEHOLD_ITEM", "search_items"): "items",
+                    ("RECIPE", "recipe_list"): "recipes",
+                    ("RECIPE", "recipe_suggest"): "recipes",
                     ("COMMUNICATIONS", "overview"): "email",
                     ("CONTACT", "contacts"): "contacts",
                 }.get((concept, action_id))
@@ -1959,6 +2374,52 @@ def classify_compatibility_request(
         or retry_continuation
         or contextual_reference
     )
+    # Ordinary chat mode still uses this compatibility projection when ACI is
+    # not enabled. Keep elliptical corrections attached to the prior bounded
+    # Finance read so the later canonical frame can invoke read_finance; never
+    # calculate from the transcript itself.
+    recent_query = recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+    recent_assistant = ""
+    for message in reversed(messages or ()):
+        if str(message.get("role") or "") == "assistant":
+            recent_assistant = str(message.get("content") or "")
+            break
+    inventory_list_followup = bool(
+        re.search(
+            r"\b(?:what(?:'s|\s+is)|show|list|which)\b.*\b(?:list|items?|in\s+it|there)\b",
+            text,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:grocery|groceries|shopping\s+list|pantry|fridge|freezer|kitchen\s+inventory|household\s+stock)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
+    finance_correction = bool(
+        re.search(
+            r"\b(?:missing|missed|another|one|two|both|wrong|incorrect|about\s+\$?\d|"
+            r"(?:this|last|previous)\s+(?:month|year)|year\s+to\s+date|ytd|"
+            r"(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?)\b",
+            text,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|cash\s+flow|"
+            r"transaction|transactions|financial|finance|finances|bank|banking|csv|publix)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+        and (
+            not recent_assistant
+            or re.search(
+                r"\b(?:posted spending|pending spending|finance coverage|transaction)\b",
+                recent_assistant,
+                re.IGNORECASE,
+            )
+        )
+    )
+    continuation = continuation or finance_correction
     if re.fullmatch(r"192\.168\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?", text):
         recent_text = " ".join(
             str(message.get("content") or "")
@@ -1968,10 +2429,22 @@ def classify_compatibility_request(
         continuation = continuation or bool(
             re.search(r"\b(scan|discover|network|subnet|range)\b", recent_text)
         )
-    retrieval_query = (
-        recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
-        if continuation else text
-    )
+    if finance_correction:
+        # Reuse the prior Finance question as bounded read context, but do not
+        # compile it as a durable CONTINUE operation.
+        continuation = False
+        retrieval_query = recent_query
+    elif inventory_list_followup:
+        # A short list follow-up is a fresh bounded Household read, not a
+        # durable CONTINUE operation. Derive only the list kind from recent
+        # owner context; the inventory service remains canonical.
+        list_name = "grocery" if re.search(
+            r"\b(?:grocery|groceries|shopping\s+list)\b", recent_query, re.IGNORECASE,
+        ) else "pantry" if re.search(r"\bpantry\b", recent_query, re.IGNORECASE) else "household"
+        continuation = False
+        retrieval_query = f"Show my {list_name} list."
+    else:
+        retrieval_query = recent_query if continuation else text
     query = retrieval_query.lower()
     if explicit_memory_query(text):
         return {

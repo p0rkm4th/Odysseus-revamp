@@ -2062,6 +2062,8 @@ def _migrate_seed_email_account():
 # existing database bootstrap owns their tables without creating a second DB.
 from core import inventory_models as inventory_models  # noqa: E402,F401
 from core import inventory_migrations as inventory_migrations  # noqa: E402,F401
+from core import finance_models as finance_models  # noqa: E402,F401
+from core import finance_migrations as finance_migrations  # noqa: E402,F401
 from core import economic_models as economic_models  # noqa: E402,F401
 from core import economic_migrations as economic_migrations  # noqa: E402,F401
 from core import improvement_models as improvement_models  # noqa: E402,F401

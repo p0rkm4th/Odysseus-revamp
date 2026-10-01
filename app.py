@@ -680,6 +680,9 @@ upload_cleanup_task = None
 from routes.inventory_routes import setup_inventory_routes
 app.include_router(setup_inventory_routes(upload_handler))
 
+from routes.finance_routes import setup_finance_routes
+app.include_router(setup_finance_routes())
+
 # Recovered supervised control-plane surfaces. They manage durable authority,
 # receipts, pairing, and metadata only; no external economic execution,
 # Telegram polling, or artifact loading is started by route registration.

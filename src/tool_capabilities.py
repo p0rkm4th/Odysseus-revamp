@@ -14,7 +14,10 @@ from enum import Enum
 from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
-from src.tool_approval_scopes import CHAT_SESSION_APPROVAL_CONTEXT_MARKER
+from src.tool_approval_scopes import (
+    CHAT_SESSION_APPROVED_ACTIONS,
+    CHAT_SESSION_APPROVAL_CONTEXT_MARKER,
+)
 from src.tool_security import BUILTIN_EMAIL_TOOLS
 
 
@@ -279,6 +282,12 @@ _register(
     result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
 )
 _register(
+    {"yolo_shell"},
+    ToolEffect.READ_PRIVATE,
+    ToolEffect.EXECUTE_CODE,
+    result_integrity=ResultIntegrity.EXTERNAL_UNTRUSTED,
+)
+_register(
     {"manage_osint"},
     ToolEffect.BROKERED_NETWORK_READ,
     ToolEffect.NETWORK_EGRESS,
@@ -302,6 +311,11 @@ _register(
 )
 _register(
     {"read_household"},
+    ToolEffect.READ_PRIVATE,
+    result_integrity=ResultIntegrity.SYSTEM,
+)
+_register(
+    {"read_finance"},
     ToolEffect.READ_PRIVATE,
     result_integrity=ResultIntegrity.SYSTEM,
 )
@@ -722,6 +736,7 @@ class ToolRunSecurityContext:
     # The bypass affects only this automatic gate; current tool policy, ownership,
     # workspace confinement, and execution/sandbox restrictions still apply.
     approval_gate_bypassed: bool = False
+    chat_session_approved_actions: frozenset[str] = field(default_factory=frozenset)
 
     def observe_messages(self, messages: Iterable[dict]) -> None:
         """Apply server-owned chat scope and promote untrusted prompt context."""
@@ -735,8 +750,27 @@ class ToolRunSecurityContext:
             for message in message_list
         ):
             self.approval_gate_bypassed = True
+        approved_actions: set[str] = set()
+        for message in message_list:
+            metadata = message.get("metadata") if isinstance(message, dict) else None
+            values = metadata.get(CHAT_SESSION_APPROVED_ACTIONS) if isinstance(metadata, dict) else None
+            if isinstance(values, list):
+                approved_actions.update(str(value).strip().casefold() for value in values if str(value).strip())
+        if approved_actions:
+            self.chat_session_approved_actions = frozenset(approved_actions)
         if messages_contain_external_untrusted_context(message_list):
             self.external_untrusted_context_seen = True
+
+    def chat_session_allows(self, tool_name: Any, content: Any = None) -> bool:
+        """Allow only an action identity explicitly approved for this chat."""
+        if not self.chat_session_approved_actions:
+            return False
+        try:
+            from src.capability_registry import action_from_content
+            action_id = action_from_content(str(tool_name or ""), content) or ""
+        except Exception:
+            action_id = ""
+        return f"{str(tool_name or '').strip()}:{action_id.casefold()}" in self.chat_session_approved_actions
 
     def decision_for(self, tool_name: Any, content: Any = None) -> ToolGateDecision:
         if self.approval_gate_bypassed:
@@ -757,9 +791,16 @@ class ToolRunSecurityContext:
             spec is not None
             and spec.known
             and spec.approval is ApprovalMode.NONE
+            # First-class owner-scoped operations are already bounded by
+            # their ActionSpec, canonical executor, and server-side owner
+            # policy. External context must not manufacture a second
+            # approval card for these operations. Keep execute_code,
+            # admin_change, external effects, and unknown capabilities out of
+            # this set; shell/YOLO and consequential host actions remain
+            # approval-gated.
             and set(spec.effects).issubset({
                 "read_private", "read_public", "read_workspace",
-                "brokered_network_read",
+                "write_private", "network_plan", "brokered_network_read",
             })
         ):
             return ToolGateDecision(True)

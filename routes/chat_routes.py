@@ -1099,6 +1099,23 @@ def setup_chat_routes(
                     compile_intent, is_bounded_owner_capability_turn,
                 )
                 _owner_frame = compile_intent(message)
+                # Short Finance corrections such as "this year, not month"
+                # have no Finance noun of their own. Reuse only the bounded
+                # prior owner-question projection to decide whether this turn
+                # needs the deterministic Finance capability. The canonical
+                # compiler remains the only classifier here; transcript text
+                # is context for routing, never authority or data truth.
+                if _owner_frame.domain_concept == "UNKNOWN":
+                    for _prior in reversed(getattr(sess, "history", []) or []):
+                        if str(getattr(_prior, "role", "")) != "user":
+                            continue
+                        _prior_text = str(getattr(_prior, "content", "") or "").strip()
+                        if not _prior_text or _prior_text == message:
+                            continue
+                        _prior_frame = compile_intent(_prior_text)
+                        if _prior_frame.domain_concept == "FINANCE":
+                            _owner_frame = _prior_frame
+                            break
                 if is_bounded_owner_capability_turn(_owner_frame):
                     chat_mode = "agent"
                     auto_escalated = True
@@ -2056,6 +2073,16 @@ def setup_chat_routes(
                         if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
                             try:
                                 data = json.loads(chunk[6:])
+                                if str(data.get("type") or "").lower() in {
+                                    "reasoning", "thinking", "reasoning_delta", "thinking_delta",
+                                }:
+                                    _reasoning_delta = (
+                                        data.get("delta") or data.get("text")
+                                        or data.get("reasoning") or data.get("reasoning_content")
+                                        or data.get("thinking") or ""
+                                    )
+                                    if isinstance(_reasoning_delta, str) and _reasoning_delta:
+                                        data = {"delta": _reasoning_delta, "thinking": True}
                                 if "delta" in data:
                                     if _commit_chat_compaction(_actual_candidate_index):
                                         _compacted_length = _chat_request_state["context_lengths"].get(
@@ -2468,6 +2495,17 @@ def setup_chat_routes(
                                     if data.get("thinking"):
                                         thinking_response += data["delta"]
                                     else:
+                                        # A clarification is a complete
+                                        # framework answer. Older agent paths
+                                        # could emit the same buffered text once
+                                        # while closing the round and once while
+                                        # flushing it; do not append or stream a
+                                        # duplicate completion.
+                                        if (
+                                            data.get("clarification")
+                                            and full_response.endswith(str(data.get("delta") or ""))
+                                        ):
+                                            continue
                                         full_response += data["delta"]
                                         _stream_set(session, partial=full_response)
                                     yield chunk

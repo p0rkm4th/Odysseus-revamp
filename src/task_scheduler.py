@@ -84,18 +84,29 @@ async def _cached(key: Tuple, ttl: float, fetch: Callable[[], Awaitable[Any]]) -
             pending = fut
             owner = True
     if not owner:
-        return await pending
+        # A caller cancelling its wait must not cancel the shared fetch for
+        # every other waiter.  The owner owns the pending Future lifecycle.
+        return await asyncio.shield(pending)
     try:
         val = await fetch()
         async with _shared_cache_lock:
-            _shared_cache[key] = (time.monotonic() + ttl, val)
-            _shared_cache_pending.pop(key, None)
-        pending.set_result(val)
+            if _shared_cache_pending.get(key) is pending:
+                _shared_cache[key] = (time.monotonic() + ttl, val)
+                _shared_cache_pending.pop(key, None)
+        if not pending.done():
+            pending.set_result(val)
         return val
-    except Exception as e:
+    except BaseException as exc:
         async with _shared_cache_lock:
-            _shared_cache_pending.pop(key, None)
-        pending.set_exception(e)
+            if _shared_cache_pending.get(key) is pending:
+                _shared_cache_pending.pop(key, None)
+        # Cancellation must release waiters without leaving a poisoned Future;
+        # ordinary failures remain visible to every waiter.
+        if not pending.done():
+            if isinstance(exc, asyncio.CancelledError):
+                pending.cancel()
+            else:
+                pending.set_exception(exc)
         raise
 
 
@@ -723,7 +734,14 @@ class TaskScheduler:
         finally:
             db.close()
 
-    async def _execute_task(self, task_id: str, *, bypass_model_slot: bool = False, release_executing: bool = True):
+    async def _execute_task(
+        self,
+        task_id: str,
+        *,
+        bypass_model_slot: bool = False,
+        release_executing: bool = True,
+        owner_initiated: bool = False,
+    ):
         # Create the run record with status="queued" BEFORE waiting on the
         # semaphore so the UI can show that a manually-triggered task is in
         # line behind another. Once we acquire the slot, flip to "running"
@@ -755,7 +773,7 @@ class TaskScheduler:
                     task_id,
                     run_id,
                     release_executing=release_executing,
-                    gate_foreground=not bypass_model_slot,
+                    gate_foreground=not owner_initiated and not bypass_model_slot,
                 )
                 return
 
@@ -764,7 +782,7 @@ class TaskScheduler:
                     task_id,
                     run_id,
                     release_executing=release_executing,
-                    gate_foreground=True,
+                    gate_foreground=not owner_initiated,
                 )
         except asyncio.CancelledError:
             # If cancellation happens while queued behind the semaphore,
@@ -2247,15 +2265,25 @@ class TaskScheduler:
             logger.error(f"Task {task.id} MCP delivery failed: {e}")
 
     async def run_task_now(self, task_id: str, *, force: bool = False):
-        """Manually trigger a task execution."""
+        """Manually trigger a task execution.
+
+        A manual Run now click is an owner foreground request.  It bypasses
+        the background quiet/yield gate, while still using the normal model
+        slot unless the existing explicit ``force`` option is requested.
+        """
         if force:
-            asyncio.create_task(self._execute_task(task_id, bypass_model_slot=True, release_executing=False))
+            asyncio.create_task(self._execute_task(
+                task_id,
+                bypass_model_slot=True,
+                release_executing=False,
+                owner_initiated=True,
+            ))
             return True
         async with self._executing_lock:
             if task_id in self._executing:
                 return False
             self._executing.add(task_id)
-        asyncio.create_task(self._execute_task(task_id))
+        asyncio.create_task(self._execute_task(task_id, owner_initiated=True))
         return True
 
     async def stop_task(self, task_id: str) -> bool:

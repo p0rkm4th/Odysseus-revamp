@@ -17,6 +17,7 @@ from src.capability_dependencies import (
     inspect_dependency,
     verify,
 )
+from src.capability_dependencies import DependencySpec
 from src.capability_registry import capability_for_tool
 
 
@@ -26,6 +27,13 @@ def test_shared_resource_backend_exposes_one_contract_vocabulary_without_secrets
     assert "artifact.huggingface_snapshot" in {item["artifact_id"] for item in contracts["artifacts"]}
     assert "runtime.ollama" in {item["runtime_id"] for item in contracts["runtimes"]}
     assert "secret_value" not in json.dumps(contracts)
+
+
+def test_dependency_spec_default_packages_is_python311_safe_and_immutable():
+    spec = DependencySpec("binary.example", "example")
+    assert dict(spec.packages) == {}
+    with pytest.raises(TypeError):
+        spec.packages["linux"] = "example"
 
 
 def test_missing_host_dependency_is_typed_and_requires_normal_authority():
