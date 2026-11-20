@@ -17,6 +17,29 @@ def normalize_item_name(value: Any) -> str:
     return name
 
 
+def item_name_variants(value: Any) -> tuple[str, ...]:
+    """Return conservative singular/plural lookup variants.
+
+    Inventory identity remains the canonical normalized name. These variants
+    are only for resolving an owner-facing reference such as ``onions`` to a
+    stored ``onion`` item (or vice versa). Callers still treat more than one
+    matching canonical row as an ambiguity and fail closed.
+    """
+    name = normalize_item_name(value)
+    variants = {name}
+    if name.endswith("ies") and len(name) > 3:
+        variants.add(name[:-3] + "y")
+    elif name.endswith(("ches", "shes", "xes", "zes", "oes")) and len(name) > 2:
+        variants.add(name[:-2])
+    elif name.endswith("s") and not name.endswith("ss") and len(name) > 1:
+        variants.add(name[:-1])
+    elif name.endswith("y") and len(name) > 1 and not name.endswith(("ay", "ey", "iy", "oy", "uy")):
+        variants.add(name[:-1] + "ies")
+    else:
+        variants.add(name + "s")
+    return tuple(sorted(variants))
+
+
 @dataclass(frozen=True)
 class StockLot:
     lot_id: str

@@ -49,12 +49,35 @@ class _NoToolSecurityContext:
 _MISSING_TOOL_SECURITY_CONTEXT = _MissingToolSecurityContext()
 NO_TOOL_SECURITY_CONTEXT = _NoToolSecurityContext()
 
-# Persistent working directory for agent subprocesses.
-# Resolves to <repo_root>/data, which is the bind-mounted volume in Docker
-# (/app/data) and the local data directory for manual installs.
-# Using this as cwd and HOME prevents the agent from silently creating files
-# in ephemeral container layers that are lost on the next rebuild.
-_AGENT_WORKDIR = DATA_DIR
+# Persistent working directory for agent subprocesses. This is deliberately a
+# dedicated child, not the application state root: model-controlled tools must
+# never get a filesystem root that also contains auth, sessions, databases,
+# integrations, or secrets.
+_AGENT_WORKDIR = os.path.realpath(os.path.join(DATA_DIR, "agent_workspace"))
+os.makedirs(_AGENT_WORKDIR, mode=0o700, exist_ok=True)
+_APPLICATION_DATA_ROOT = os.path.realpath(DATA_DIR)
+
+
+def _path_is_within(path: str, root: str) -> bool:
+    """Return whether canonical *path* is *root* or a child of it."""
+    path = os.path.normcase(os.path.realpath(path))
+    root = os.path.normcase(os.path.realpath(root))
+    try:
+        return os.path.commonpath([path, root]) == root
+    except ValueError:
+        return False
+
+
+def _is_application_state_path(path: str) -> bool:
+    """Keep application state out of model-controlled filesystem roots.
+
+    ``/tmp`` is a legitimate fallback root for short-lived files, and in
+    some deployments DATA_DIR itself may live below it.  A broad temporary
+    root must not therefore re-admit the application database, sessions, or
+    credentials.  The one intentional exception is the dedicated agent
+    workspace child.
+    """
+    return _path_is_within(path, _APPLICATION_DATA_ROOT) and not _path_is_within(path, _AGENT_WORKDIR)
 
 
 
@@ -120,16 +143,32 @@ def _is_sensitive_path(resolved: str) -> bool:
     return filename in _SENSITIVE_FILE_PATTERNS_CF
 
 
+def _reject_hardlink_alias(raw_path: str, resolved: str) -> None:
+    """Reject regular files with multiple directory entries.
+
+    realpath closes symlink escapes, but cannot identify a hard link to an
+    application-owned inode. Refusing multiply-linked regular files keeps the
+    model-controlled boundary conservative without requiring a second app-wide
+    inode index.
+    """
+    try:
+        if os.path.isfile(resolved) and os.stat(resolved).st_nlink > 1:
+            raise ValueError(f"path '{raw_path}' is a multiply-linked file")
+    except OSError:
+        return
+
+
 def _tool_path_roots() -> list[str]:
     """Return the list of directory roots that read_file / write_file
     may touch. Default: project data/ + system temp dirs. Extra roots
     are loaded from the ``tool_path_extra_roots`` setting.
     """
     roots: list[str] = []
+    extra_roots: list[str] = []
 
-    # Project data directory — the agent's primary workspace.
-    from src.constants import DATA_DIR
-    roots.append(DATA_DIR)
+    # Only the dedicated agent workspace is a project root. The application
+    # DATA_DIR itself is intentionally never an agent-tool root.
+    roots.append(_AGENT_WORKDIR)
 
     # /tmp (and its macOS realpath /private/tmp).
     roots.append("/tmp")
@@ -145,19 +184,23 @@ def _tool_path_roots() -> list[str]:
     if tmpdir:
         roots.append(tmpdir)
 
-    # Opt-in extra roots from settings.
+    # Opt-in extra roots from settings. These are explicit operator-approved
+    # roots (the upload bridge uses this for owner-authorized attachments), so
+    # retain them as independent canonical roots. They still pass the same
+    # sensitive-path and symlink/hard-link checks below; the dedicated agent
+    # workspace remains the default when no extra root is configured.
     try:
         from src.settings import get_setting
         extra = get_setting("tool_path_extra_roots")
         if isinstance(extra, list):
-            roots.extend(str(r) for r in extra if r)
+            extra_roots.extend(str(r) for r in extra if r)
     except Exception:
         pass
 
     # Deduplicate; resolve symlinks so containment is unambiguous.
     seen: set[str] = set()
     out: list[str] = []
-    for r in roots:
+    for r in roots + extra_roots:
         try:
             real = os.path.realpath(r)
         except OSError:
@@ -192,11 +235,17 @@ def _resolve_tool_path(raw_path: str) -> str:
     expanded = os.path.expanduser(str(raw_path).strip())
     resolved = os.path.realpath(expanded)
 
+    # A hard link can make a file outside the workspace appear beneath it
+    # while realpath remains inside.
+    _reject_hardlink_alias(raw_path, resolved)
+
     if _is_sensitive_path(resolved):
         raise ValueError(
             f"path '{raw_path}' is inside a sensitive directory "
             f"(e.g. .ssh, .gnupg) or matches a sensitive filename"
         )
+    if _is_application_state_path(resolved):
+        raise ValueError(f"path '{raw_path}' is outside the allowed roots")
 
     for root in _tool_path_roots():
         if resolved == root:
@@ -224,9 +273,12 @@ def _resolve_tool_path_in_workspace(workspace: str, raw_path: str) -> str:
     if raw_path is None or not str(raw_path).strip():
         raise ValueError("path is required")
     base = os.path.realpath(workspace)
+    if _is_application_state_path(base):
+        raise ValueError(f"workspace '{workspace}' is application state")
     expanded = os.path.expanduser(str(raw_path).strip())
     candidate = expanded if os.path.isabs(expanded) else os.path.join(base, expanded)
     resolved = os.path.realpath(candidate)
+    _reject_hardlink_alias(raw_path, resolved)
     if _is_sensitive_path(resolved):
         raise ValueError(
             f"path '{raw_path}' is inside a sensitive directory "
@@ -280,6 +332,8 @@ def vet_workspace(raw: str) -> Optional[str]:
         return None
     resolved = os.path.realpath(os.path.expanduser(raw))
     if not os.path.isdir(resolved) or _is_sensitive_path(resolved):
+        return None
+    if _is_application_state_path(resolved):
         return None
     # Reject filesystem roots: binding / (or a Windows drive/UNC root) as the
     # workspace would make every absolute path "inside" it, collapsing the
@@ -410,6 +464,13 @@ _MCP_TOOL_MAP = {
     "web_fetch":      ("web_fetch",  "web_fetch"),
     "generate_image": ("image_gen",  "generate_image"),
 }
+
+# These bindings used to be exposed as MCP servers, but their implementations
+# now live in-process. Keep the legacy map above for compatibility with older
+# callers; the dispatcher must not manufacture a qualified MCP name for them.
+_NATIVE_TOOL_NAMES = frozenset({
+    "bash", "python", "read_file", "write_file", "web_search", "web_fetch",
+})
 _EMAIL_MCP_OWNER_ARG = "_odysseus_owner"
 
 
@@ -706,10 +767,19 @@ async def execute_tool_block(
 
     approval_claimed = False
     if exact_approval is not None:
+        # An exact approval is an owner-authenticated control-plane grant. It
+        # must be usable for actions that were never tainted by external
+        # content (for example the bounded network-scan plan), while the
+        # sealed owner/session/action binding below still prevents replay or
+        # scope widening.  External-context taint remains relevant to the
+        # ordinary pre-approval policy decision, but is not a prerequisite for
+        # consuming an already displayed exact approval.
         if (
             not isinstance(security_context, ToolRunSecurityContext)
-            or not security_context.external_untrusted_context_seen
-            or not exact_approval.pending.external_untrusted_context_seen
+            or not (
+                security_context.external_untrusted_context_seen
+                or security_context.approval_gate_bypassed
+            )
         ):
             return (
                 f"{getattr(block, 'tool_type', None)}: BLOCKED",
@@ -989,10 +1059,18 @@ async def _execute_tool_block_impl(
     # Route MCP-extracted tools through the MCP manager. Forward
     # the progress callback so long-running subprocess tools
     # (bash, python) can stream `tool_progress` events to the UI.
-    if tool in _MCP_TOOL_MAP:
+    if tool in _MCP_TOOL_MAP and tool not in _NATIVE_TOOL_NAMES:
         first_line = content.split(chr(10))[0][:80]
         desc = f"{tool}: {first_line}"
         result = await _call_mcp_tool(tool, content, progress_cb=progress_cb)
+    elif tool in _NATIVE_TOOL_NAMES:
+        # Native folded tools are application capabilities, not dynamic MCP
+        # servers. Routing web_search through the old MCP alias causes a
+        # healthy SearXNG instance to look unavailable at the manager gate.
+        first_line = content.split(chr(10))[0][:80]
+        desc = f"{tool}: {first_line}"
+        result = await _direct_fallback(tool, content, progress_cb=progress_cb) \
+            or {"error": f"{tool}: execution failed", "exit_code": 1}
     elif tool in ("grep", "glob", "ls", "get_workspace"):
         # Code-navigation tools — no MCP server; run the direct implementation.
         first_line = content.split(chr(10))[0][:80]
@@ -1435,20 +1513,135 @@ async def _execute_manage_assets_binding(block, owner=None):
         if not owner:
             raise PermissionError("authenticated IT asset owner is required")
         payload = _ody_v34_json.loads(block.content or "{}")
+        # ``manage_assets`` is the established transport name for both the
+        # hardware CMDB and the owner-scoped kitchen inventory capability.
+        # Reads must follow the same canonical inventory path as writes when
+        # the request carries an inventory discriminator; otherwise a grocery
+        # list was incorrectly sent to the IT asset CLI and appeared empty.
+        _inventory_action = isinstance(payload, dict) and payload.get("action") in {
+            "list", "search", "get", "add_item", "update_item", "archive_item",
+            "remove_from_grocery", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+            "recipe_list", "recipe_search", "recipe_get", "recipe_add", "recipe_missing", "recipe_missing_by_name",
+            "recipe_queue_missing", "recipe_queue_missing_by_name", "recipe_can_make", "recipe_suggest", "recipe_cook",
+        }
+        _inventory_marker = isinstance(payload, dict) and (
+            payload.get("domain") in {"kitchen", "household"}
+            or payload.get("list_name") in {"grocery", "pantry", "fridge", "freezer"}
+            or payload.get("shopping_list") is not None
+            or payload.get("storage_area") in {"pantry", "fridge", "freezer"}
+            or payload.get("item_kind") in {"ingredient", "consumable"}
+        )
+        # The model-facing inventory contract permits the canonical action
+        # name to carry the domain when it is unambiguous.  In particular,
+        # ``add_item``/stock movement actions cannot be hardware-CMDB actions;
+        # accept those payloads without requiring the model to echo optional
+        # presentation metadata such as ``list_name``.
+        _inventory_marker = _inventory_marker or (
+            isinstance(payload, dict)
+            and payload.get("action") in {
+                "add_item", "update_item", "archive_item", "add_stock",
+                "remove_from_grocery", "consume_stock", "adjust_stock",
+            }
+        )
         # Kitchen/household inventory actions share the canonical inventory
         # capability and transport with IT assets. Delegate their persistence
         # to the existing transactional service rather than creating a second
         # binding or installer-like subsystem.
-        if isinstance(payload, dict) and payload.get("action") in {
-            "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
-        }:
+        _recipe_action = isinstance(payload, dict) and payload.get("action") in {
+            "recipe_list", "recipe_search", "recipe_get", "recipe_add", "recipe_missing", "recipe_missing_by_name",
+            "recipe_queue_missing", "recipe_queue_missing_by_name", "recipe_can_make", "recipe_suggest", "recipe_cook",
+        }
+        if _recipe_action:
+            recipe_payload = dict(payload)
+            recipe_payload["action"] = recipe_payload["action"].removeprefix("recipe_")
+            if recipe_payload.get("recipe_name") and not recipe_payload.get("name"):
+                recipe_payload["name"] = recipe_payload.pop("recipe_name")
+            # Some compatible local models emit the natural field name
+            # ``dish_name`` and a JSON-encoded ingredient list even though the
+            # canonical recipe contract uses ``name`` and structured
+            # ingredient objects. Normalize that bounded transport variation
+            # here so a valid owner request is not rejected before the
+            # inventory service can validate and persist it.
+            if recipe_payload.get("dish_name") and not recipe_payload.get("name"):
+                recipe_payload["name"] = recipe_payload.pop("dish_name")
+            raw_ingredients = recipe_payload.get("ingredients")
+            if isinstance(raw_ingredients, str):
+                try:
+                    raw_ingredients = _ody_v34_json.loads(raw_ingredients)
+                except (TypeError, ValueError):
+                    raw_ingredients = None
+            if isinstance(raw_ingredients, list):
+                normalized_ingredients = []
+                for ingredient in raw_ingredients[:64]:
+                    if isinstance(ingredient, str):
+                        ingredient = {"name": ingredient, "quantity": 1, "unit": "each"}
+                    elif isinstance(ingredient, dict):
+                        ingredient = dict(ingredient)
+                        ingredient.setdefault("quantity", 1)
+                        ingredient.setdefault("unit", "each")
+                    else:
+                        continue
+                    if str(ingredient.get("name") or "").strip():
+                        normalized_ingredients.append(ingredient)
+                recipe_payload["ingredients"] = normalized_ingredients
+            if recipe_payload.get("recipe_query") and not recipe_payload.get("query"):
+                recipe_payload["query"] = recipe_payload.pop("recipe_query")
+            from src.agent_tools.inventory_tools import ManageRecipesTool
+            result = dict(await ManageRecipesTool().execute(
+                _ody_v34_json.dumps(recipe_payload, sort_keys=True), {"owner": owner},
+            ))
+            result.setdefault("success", result.get("exit_code", 1) == 0 and not result.get("error"))
+            result["canonical_store"] = "inventory_service"
+            result["provenance"] = "CANONICAL_RECIPE"
+            if result.get("success") and recipe_payload.get("action") in {
+                "queue_missing", "queue_missing_by_name",
+            }:
+                # Queueing missing ingredients is a write: prove the
+                # canonical Grocery projection before the result can close
+                # the owner's durable run.  The model never supplies this
+                # readback; it is obtained from the trusted service.
+                try:
+                    from src.inventory_service import get_inventory_service
+                    service = get_inventory_service()
+                    queued = result.get("queued")
+                    if isinstance(queued, dict):
+                        queued = queued.get("queued")
+                    queued = queued if isinstance(queued, list) else []
+                    readback = []
+                    for row in queued:
+                        item = row.get("item") if isinstance(row, dict) else None
+                        item_id = item.get("id") if isinstance(item, dict) else None
+                        if not item_id:
+                            raise ValueError("recipe queue readback reference missing")
+                        current = service.get_item(owner, str(item_id))
+                        if current.get("shopping_list") is not True:
+                            raise ValueError("recipe queue readback did not confirm Grocery state")
+                        readback.append({
+                            "item": current,
+                            "lots": service.list_lots(owner, str(item_id)),
+                        })
+                    result["verification"] = {
+                        "status": "VERIFIED",
+                        "readback": {"grocery_items": readback},
+                    }
+                except Exception:
+                    result["verification"] = {
+                        "status": "INCOMPLETE",
+                        "reason": "recipe grocery readback unavailable",
+                    }
+            return "manage_assets", {
+                "output": _ody_v34_json.dumps(result, default=str, sort_keys=True),
+                "data": result,
+                **result,
+            }
+        if _inventory_action and _inventory_marker:
             from src.agent_tools.inventory_tools import ManageInventoryTool
             result = dict(await ManageInventoryTool().execute(
                 _ody_v34_json.dumps(payload, sort_keys=True), {"owner": owner},
             ))
             result.setdefault("success", result.get("exit_code", 1) == 0 and not result.get("error"))
             result["canonical_store"] = "inventory_service"
-            result["provenance"] = "USER_ASSERTED" if payload.get("action") in {"add_item", "add_stock", "update_asset"} else "CANONICAL_INVENTORY"
+            result["provenance"] = "USER_ASSERTED" if payload.get("action") in {"add_item", "update_item", "add_stock", "update_asset"} else "CANONICAL_INVENTORY"
             if result.get("success"):
                 # Verify the write through the same transactional service
                 # before final delivery. The readback is evidence metadata,
@@ -1465,7 +1658,15 @@ async def _execute_manage_assets_binding(block, owner=None):
                         movements = result.get("movements") or []
                         first = movements[0] if movements and isinstance(movements[0], dict) else {}
                         item_id = first.get("item_id")
-                    if item_id:
+                    if str(payload.get("action") or "") == "remove_from_grocery" and payload.get("clear"):
+                        current = service.list_items(owner, list_name="grocery")
+                        if current:
+                            raise ValueError("grocery clear readback still contains queued items")
+                        result["verification"] = {
+                            "status": "VERIFIED",
+                            "readback": {"list_name": "grocery", "items": []},
+                        }
+                    elif item_id:
                         result["verification"] = {
                             "status": "VERIFIED",
                             "readback": {
@@ -1473,18 +1674,49 @@ async def _execute_manage_assets_binding(block, owner=None):
                                 "lots": service.list_lots(owner, str(item_id)),
                             },
                         }
+                    elif isinstance(result.get("items"), list) and result["items"]:
+                        readback = []
+                        action = str(payload.get("action") or "")
+                        expected_shopping = payload.get("shopping_list")
+                        for item in result["items"]:
+                            if not isinstance(item, dict) or not item.get("id"):
+                                raise ValueError("inventory item readback reference missing")
+                            current = service.get_item(owner, str(item["id"]))
+                            if action == "archive_item" and not current.get("archived"):
+                                raise ValueError("inventory archive readback did not confirm archived state")
+                            if action == "add_item":
+                                if current.get("archived"):
+                                    raise ValueError("inventory add readback returned an archived item")
+                                if isinstance(expected_shopping, bool) and current.get("shopping_list") is not expected_shopping:
+                                    raise ValueError("inventory add readback returned the wrong list state")
+                            readback.append({
+                                "item": current,
+                                "lots": service.list_lots(owner, str(item["id"])),
+                            })
+                        result["verification"] = {
+                            "status": "VERIFIED",
+                            "readback": {"items": readback},
+                        }
                     else:
                         result["verification"] = {"status": "INCOMPLETE", "reason": "no affected inventory item reference"}
                 except Exception:
                     # The write Result remains durable, but no unsupported
                     # current-state claim may be made without readback.
                     result["verification"] = {"status": "INCOMPLETE", "reason": "inventory readback unavailable"}
-            return "manage_assets", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), **result}
+            return "manage_assets", {
+                "output": _ody_v34_json.dumps(result, default=str, sort_keys=True),
+                "data": result,
+                **result,
+            }
         argv = _ody_v34_asset_argv(payload, owner=owner)
 
         def _run():
             return _ody_v34_subprocess.run(
-                argv, cwd="/app", text=True, capture_output=True,
+                # The runtime may be a container mounted at /app or a
+                # checked-out host process. Resolve the trusted application
+                # root from this module instead of assuming a deployment cwd.
+                argv, cwd=str(pathlib.Path(__file__).resolve().parent.parent),
+                text=True, capture_output=True,
                 timeout=45, check=False,
             )
 
@@ -1794,9 +2026,25 @@ async def _execute_read_household_binding(block, owner=None):
         from src.inventory_service import get_inventory_service
         service = get_inventory_service()
         if action == "overview":
-            result = service.household_overview(owner, expiry_days=int(payload.get("expiry_days") or 30))
+            list_name = str(payload.get("list_name") or "").strip().casefold()
+            if list_name in {"grocery", "pantry", "fridge", "freezer"}:
+                result = {"list_name": list_name, "items": service.list_items(owner, list_name=list_name)}
+            elif str(payload.get("view") or "").strip().casefold() == "expiring":
+                overview = service.household_overview(
+                    owner, expiry_days=int(payload.get("expiry_days") or 30),
+                )
+                result = {
+                    "view": "expiring",
+                    "expiring_lots": overview.get("expiring_lots", []),
+                    "freshness": overview.get("freshness", {}),
+                    "canonical_store": overview.get("canonical_store"),
+                }
+            else:
+                result = service.household_overview(owner, expiry_days=int(payload.get("expiry_days") or 30))
         elif action == "list_items":
-            result = {"items": service.list_items(owner, domain=payload.get("domain"))}
+            result = {"list_name": payload.get("list_name"), "items": service.list_items(
+                owner, domain=payload.get("domain"), list_name=payload.get("list_name"),
+            )}
         elif action == "search_items":
             query = str(payload.get("query") or "").strip()
             if not query:
@@ -1811,6 +2059,25 @@ async def _execute_read_household_binding(block, owner=None):
         return "read_household", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
     except Exception as exc:
         return "read_household", {"error": str(exc), "output": str(exc), "exit_code": 1}
+
+
+async def _execute_read_finance_binding(block, owner=None):
+    """Expose only bounded deterministic Finance projections to Chat."""
+    try:
+        payload = _ody_v34_json.loads(block.content or "{}")
+        action = str(payload.get("action") or "").strip().casefold()
+        if action not in {"coverage", "transactions", "spending", "cash_flow", "shared_expenses"}:
+            raise ValueError("unsupported read-only Finance action")
+        if not owner:
+            raise PermissionError("authenticated Finance owner is required")
+        from core.database import SessionLocal
+        from src.finance_service import FinanceService
+        with SessionLocal() as db:
+            result = FinanceService(db).read_finance(str(owner), action, payload)
+        result = _with_canonical_read_status(result)
+        return "read_finance", {"output": _ody_v34_json.dumps(result, default=str, sort_keys=True), "exit_code": 0, "success": True, "data": result}
+    except Exception as exc:
+        return "read_finance", {"error": str(exc), "output": str(exc), "exit_code": 1}
 
 async def _execute_read_setup_binding(block, owner=None):
     """Adapt Setup Center's secret-free owner projection to a read binding."""
@@ -2039,6 +2306,7 @@ _CAPABILITY_V1_EXECUTORS = {
     "read_memory": _execute_read_memory_binding,
     "read_work": _execute_read_work_binding,
     "read_household": _execute_read_household_binding,
+    "read_finance": _execute_read_finance_binding,
     "read_setup": _execute_read_setup_binding,
     "read_career": _execute_read_career_binding,
     "read_communications": _execute_read_communications_binding,
@@ -2121,7 +2389,19 @@ async def execute_tool_block(block, *args, **kwargs):
         exact_approval = kwargs.get("exact_approval")
         if action is None or not action.known:
             return (f"{block.tool_type}: BLOCKED", {"error": "Unknown registered ActionSpec.", "exit_code": 1, "blocked": True, "policy": "actionspec"})
-        if action.approval.value == "exact" and exact_approval is None and not grant_id:
+        chat_session_action_allowed = (
+            isinstance(kwargs.get("security_context"), ToolRunSecurityContext)
+            and kwargs["security_context"].chat_session_allows(
+                block.tool_type,
+                block.content,
+            )
+        )
+        if (
+            action.approval.value == "exact"
+            and exact_approval is None
+            and not grant_id
+            and not chat_session_action_allowed
+        ):
             return (f"{block.tool_type}: BLOCKED", {"error": "This exact ActionSpec requires exact approval.", "exit_code": 1, "blocked": True, "policy": "exact_tool_approval"})
         if grant_id:
             owner = kwargs.get("owner")

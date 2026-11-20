@@ -71,6 +71,8 @@ class InventoryItem(TimestampMixin, Base):
     barcode = Column(String, nullable=True)
     default_unit = Column(String, nullable=False, default="each")
     reorder_point = Column(QUANTITY_TYPE, nullable=True)
+    shopping_list = Column(Boolean, nullable=False, default=False)
+    storage_area = Column(String(16), nullable=True)
     location_id = Column(
         String,
         ForeignKey("inventory_locations.id", ondelete="SET NULL"),
@@ -350,6 +352,35 @@ class InventoryDraft(TimestampMixin, Base):
     )
 
 
+class InventorySharePolicy(TimestampMixin, Base):
+    """Explicit household visibility for owner-scoped kitchen state.
+
+    Household membership remains authoritative in the existing household
+    service. This table only records which household resources are shared and
+    whether members may mutate them; it never turns membership into blanket
+    access to private inventory.
+    """
+
+    __tablename__ = "inventory_share_policies"
+
+    id = Column(String, primary_key=True)
+    household_id = Column(String, nullable=False, index=True)
+    resource = Column(String(32), nullable=False)
+    enabled = Column(Boolean, nullable=False, default=False)
+    allow_member_mutation = Column(Boolean, nullable=False, default=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "resource IN ('kitchen_inventory', 'recipes')",
+            name="ck_inventory_share_resource",
+        ),
+        UniqueConstraint(
+            "household_id", "resource",
+            name="uq_inventory_share_household_resource",
+        ),
+    )
+
+
 INVENTORY_TABLES = (
     InventoryLocation.__table__,
     InventoryItem.__table__,
@@ -360,4 +391,5 @@ INVENTORY_TABLES = (
     InventoryRecipeIngredient.__table__,
     InventoryRecipeCook.__table__,
     InventoryDraft.__table__,
+    InventorySharePolicy.__table__,
 )

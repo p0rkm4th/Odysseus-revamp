@@ -106,14 +106,18 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             *(
                 ActionSpec(
                     action_id=action,
-                    effects=("read_private",) if action in {"summary", "list", "search", "get"} else ("write_private",),
+                    effects=("read_private",) if action in {
+                        "summary", "list", "search", "get", "recipe_list", "recipe_suggest", "recipe_search", "recipe_get",
+                        "recipe_missing", "recipe_missing_by_name", "recipe_can_make",
+                    } else ("write_private",),
                     executor_key="manage_assets",
                 )
                 for action in (
                     "summary", "list", "search", "get", "add", "update",
                     "record_observation", "link_component", "unlink_component",
-                    "retire", "merge", "add_item", "add_stock", "consume_stock",
-                    "adjust_stock", "update_asset",
+                    "retire", "merge", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock",
+                    "adjust_stock", "update_asset", "recipe_list", "recipe_suggest", "recipe_search", "recipe_get", "recipe_add",
+                    "recipe_missing", "recipe_missing_by_name", "recipe_queue_missing", "recipe_queue_missing_by_name", "recipe_can_make", "recipe_cook",
                 )
             )
         ),
@@ -141,6 +145,11 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
             ActionSpec(action_id=action, effects=("read_private",), executor_key="read_household")
             for action in ("overview", "list_items", "search_items", "get_item")
         )),
+    ),
+    "finance.read": CapabilitySpec(
+        capability_id="finance.read",
+        description="Owner-scoped deterministic, read-only Finance analysis.",
+        actions=_actions(*(ActionSpec(action_id=action, effects=("read_private",), executor_key="read_finance") for action in ("coverage", "transactions", "spending", "cash_flow", "shared_expenses"))),
     ),
     "setup.read": CapabilitySpec(
         capability_id="setup.read",
@@ -187,8 +196,19 @@ CAPABILITY_REGISTRY: Mapping[str, CapabilitySpec] = MappingProxyType({
         actions=_actions(*(
             ActionSpec(
                 action_id=action,
-                effects=("read_private",) if not action.startswith("execute_") else ("admin_change",),
-                approval=ApprovalMode.EXACT if action.startswith("execute_") else ApprovalMode.NONE,
+                effects=(
+                    ("brokered_network_read",)
+                    if action in {"execute_network_discovery", "execute_network_service_enumeration"}
+                    else ("read_private",) if not action.startswith("execute_") else ("admin_change",)
+                ),
+                # The plan is read-only, but the broker execution is still an
+                # owner-authorized network operation.  Keep the exact approval
+                # boundary even though the operation itself is non-mutating;
+                # target scope and intent must be approved together.
+                approval=(
+                    ApprovalMode.EXACT
+                    if action.startswith("execute_") else ApprovalMode.NONE
+                ),
                 executor_key="manage_homelab",
                 execution_location=("host_broker" if action in {"execute_network_discovery", "execute_network_service_enumeration", "execute_diagnostic_install"} else "remote_ssh" if action in {"ssh_connect_test", "remote_host_inspect"} else "application"),
                 target_scope=("private_network" if action in {"plan_network_discovery", "execute_network_discovery", "plan_network_service_enumeration", "execute_network_service_enumeration"} else "owner_asset" if action in {"ssh_connect_test", "remote_host_inspect"} else None),
@@ -328,10 +348,15 @@ TOOL_CAPABILITY_IDS: Mapping[str, str] = MappingProxyType({
     "read_memory": "memory.read",
     "read_work": "work.read",
     "read_household": "household.read",
+    "read_finance": "finance.read",
     "read_setup": "setup.read",
     "read_career": "career.read",
     "read_communications": "communications.read",
     "developer_read": "developer.read",
+    # Model-facing adapter for the existing owner-granted developer lease.
+    # It intentionally shares the same capability contract; this is not a
+    # second authority or a browser-controlled shell.
+    "yolo_shell": "developer.workspace_shell",
     "web_search": "web.evidence",
     "web_fetch": "web.evidence",
 })
@@ -347,6 +372,7 @@ DEFAULT_READ_ACTIONS: Mapping[str, str] = MappingProxyType({
     "read_memory": "summarize_owner_memory",
     "read_work": "overview",
     "read_household": "overview",
+    "read_finance": "coverage",
     "read_setup": "state",
     "read_career": "overview",
     "read_communications": "overview",

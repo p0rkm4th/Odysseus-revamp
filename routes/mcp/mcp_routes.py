@@ -78,6 +78,25 @@ def _mcp_oauth_token_missing(oauth_cfg, *, strict: bool = True) -> bool:
     return bool(token_file and not os.path.exists(token_file))
 
 
+def _parse_mcp_args(raw_args: str) -> list[str]:
+    """Parse MCP command arguments without silently changing invalid input.
+
+    An omitted/blank form field is the only non-JSON value that means no
+    arguments.  Configuration supplied by an operator must otherwise be a
+    JSON array of strings; accepting a scalar (or turning malformed JSON into
+    ``[]``) can persist a configuration different from the one they entered.
+    """
+    if raw_args is None or not str(raw_args).strip():
+        return []
+    try:
+        parsed = json.loads(raw_args)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise HTTPException(400, "Args must be a JSON array, for example [\"--flag\"]") from exc
+    if not isinstance(parsed, list) or not all(isinstance(item, str) for item in parsed):
+        raise HTTPException(400, "Args must be a JSON array of strings")
+    return parsed
+
+
 def _apply_mcp_oauth_env(env: dict, oauth_cfg) -> None:
     """Pass sanitized Gmail package paths to MCP servers that honor them."""
     if not oauth_cfg or not isinstance(env, dict):
@@ -182,10 +201,9 @@ def setup_mcp_routes(mcp_manager: McpManager):
             raise HTTPException(400, "url is required for HTTP transport")
 
         # Parse JSON fields
-        try:
-            parsed_args = json.loads(args) if args else []
-        except json.JSONDecodeError:
-            parsed_args = []
+        # Validate before any OAuth file write, DB write, or connection
+        # attempt.  Invalid args must never degrade into an empty command.
+        parsed_args = _parse_mcp_args(args)
         try:
             parsed_env = json.loads(env) if env else {}
         except json.JSONDecodeError:

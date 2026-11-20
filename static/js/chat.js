@@ -4173,10 +4173,19 @@ import { loadPanel } from './panels.js';
         } else if (roundHolder !== holder) {
           // Check if there's thinking content worth showing
           const _thinkingOnly = markdownModule.extractThinkingBlocks(_streamDisplayText(roundText));
+          const _existingRoundBody = roundHolder.querySelector('.body');
+          const _existingRoundText = _existingRoundBody
+            ? _existingRoundBody.textContent.trim()
+            : '';
           if (_thinkingOnly.thinkingBlocks?.length && !_thinkingOnly.content) {
             // Show thinking in a collapsed section even if no visible reply text
-            const _body4c = roundHolder.querySelector('.body');
+            const _body4c = _existingRoundBody;
             if (_body4c) _body4c.innerHTML = markdownModule.processWithThinking(_streamDisplayText(roundText));
+          } else if (_existingRoundText) {
+            // A response_replace event may already have rendered the
+            // canonical deterministic answer while the terminal round's raw
+            // buffer remains empty. Preserve that visible answer.
+            roundHolder.style.display = '';
           } else {
             roundHolder.style.display = 'none';
             // Thread above expected a bubble below — remove has-bottom since bubble is hidden
@@ -4316,6 +4325,39 @@ import { loadPanel } from './panels.js';
           }
         }
       } // end if (!_isBgFinal)
+
+      // Some deterministic first-class reads finish with no provider text:
+      // the server persists the canonical answer and emits the tool result,
+      // but a fast response_replace/DONE sequence can leave the live bubble
+      // showing only the tool card.  Converge the visible chat with the
+      // persisted session instead of making the owner reload manually.  Keep
+      // the current-session check so a background stream cannot hijack a chat
+      // the owner has opened since starting the request.
+      const _toolOnlyThread = (roundHolder && roundHolder.querySelector('.agent-thread-node'))
+        || holder.querySelector('.agent-thread-node')
+        || document.querySelector('.msg-ai.streaming .agent-thread-node')
+        || (lastToolThread && lastToolThread.isConnected ? lastToolThread : null);
+      const _toolOnlyVisibleText = _streamDisplayText(
+        roundText || accumulated,
+        { final: _docFenceOpened },
+      ).trim();
+      const _toolOnlyMarker = /^(?:done|complete|completed|finished|okay|ok)[.!]?$/i.test(_toolOnlyVisibleText);
+      if ((!_toolOnlyVisibleText || _toolOnlyMarker)
+          && _toolOnlyThread
+          && sessionModule.getCurrentSessionId() === streamSessionId) {
+        // Persistence is committed just after the terminal stream event in
+        // some tool-only paths. Retry once after that commit window instead
+        // of leaving the owner on a successful tool card with no answer.
+        [250, 1000].forEach((delay) => setTimeout(() => {
+          if (sessionModule.getCurrentSessionId() !== streamSessionId) return;
+          sessionModule.selectSession(streamSessionId, {
+            keepSidebar: true,
+            showLoading: false,
+          }).catch((err) => {
+            console.warn('[chat] failed to reload persisted tool answer:', err);
+          });
+        }, delay));
+      }
 
     } catch (err) {
       // If a Stop or timeout was waiting for an identity header and the POST
@@ -4675,7 +4717,7 @@ import { loadPanel } from './panels.js';
             if (_box && sessionModule.getCurrentSessionId() === _timeoutSessionId) {
               var _timeoutMsg = document.createElement('div');
               _timeoutMsg.className = 'msg msg-ai';
-              _timeoutMsg.innerHTML = '<div class="role">Odysseus</div><div class="body" style="opacity:0.6;font-style:italic;">Research clarification timed out. Toggle research again to start over.</div>';
+              _timeoutMsg.innerHTML = '<div class="role">Hades</div><div class="body" style="opacity:0.6;font-style:italic;">Research clarification timed out. Toggle research again to start over.</div>';
               _box.appendChild(_timeoutMsg);
               uiModule.scrollHistory();
             }

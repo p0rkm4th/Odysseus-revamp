@@ -132,6 +132,30 @@ def ensure_agent_run(
             .order_by(WorkRun.updated_at.desc())
             .first()
         )
+        if active is not None and (active.continuation_state or {}).get("phase") == "COMPLETE":
+            # A compatibility/streaming path can persist the terminal
+            # continuation pointer before its denormalized Run status. Do not
+            # reuse that stale row for a later owner turn; only reconcile it
+            # when no action is still proposed, awaiting approval, approved,
+            # or executing. A genuinely resumable action remains authoritative.
+            unfinished = db.query(WorkAction).filter(
+                WorkAction.run_id == active.id,
+                WorkAction.status.in_(("proposed", "awaiting_approval", "approved", "executing")),
+            ).count()
+            if not unfinished:
+                active.status = "completed"
+                active.lifecycle_state = "succeeded"
+                active.ended_at = now()
+                active.current_step = "completed: durable continuation reconciled"
+                active.revision += 1
+                WorkEngine(db).event(
+                    owner,
+                    "run.reconciled_terminal",
+                    run_id=active.id,
+                    payload={"reason": "continuation phase COMPLETE"},
+                )
+                db.commit()
+                active = None
         if active is not None and (
             continuation or active.domain in domains.intersection(_WORK_DOMAINS)
         ):
@@ -432,18 +456,100 @@ def recent_session_reference_context(owner: str, session_id: str, *, limit: int 
     return None
 
 
+def recent_session_network_discovery_context(
+    owner: str,
+    session_id: str,
+    *,
+    max_age_seconds: int = 900,
+) -> dict[str, Any] | None:
+    """Return the sealed host set from a recent discovery in this chat.
+
+    A service follow-up such as "check port 22 on the responding hosts" is
+    allowed to inherit only the exact candidates returned by a successful
+    discovery for the same authenticated owner and chat session.  This is a
+    continuation reference, not a second authority store: the result was
+    already produced by the canonical discovery Action and its target scope
+    remains bounded by the later service ActionSpec/broker policy.
+
+    The short age bound prevents an old chat result from silently becoming a
+    current network scan.  When it expires, the caller must stage a fresh
+    discovery instead.
+    """
+    owner = str(owner or "").strip()
+    session_id = str(session_id or "").strip()
+    if not owner or not session_id:
+        return None
+    with SessionLocal() as db:
+        rows = (
+            db.query(WorkResult, WorkAction, WorkRun)
+            .join(WorkAction, WorkAction.id == WorkResult.action_id)
+            .join(WorkRun, WorkRun.id == WorkResult.run_id)
+            .filter(
+                WorkResult.owner == owner,
+                WorkRun.owner == owner,
+                WorkRun.session_id == session_id,
+                WorkAction.action_id == "execute_network_discovery",
+            )
+            .order_by(WorkResult.created_at.desc(), WorkResult.id.desc())
+            .limit(20)
+            .all()
+        )
+        for result, action, run in rows:
+            data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
+            if data.get("success") is not True:
+                continue
+            created_at = result.created_at
+            if created_at is not None:
+                observed = created_at
+                if getattr(observed, "tzinfo", None) is None:
+                    observed = observed.replace(tzinfo=now().tzinfo)
+                age = (now() - observed).total_seconds()
+                if age < 0 or age > max(0, int(max_age_seconds)):
+                    continue
+            targets: list[str] = []
+            for item in data.get("asset_draft_candidates") or []:
+                if not isinstance(item, dict):
+                    continue
+                addresses = item.get("ip_addresses") or []
+                if isinstance(addresses, str):
+                    addresses = [addresses]
+                for address in addresses:
+                    target = str(address or "").strip()
+                    if target and target not in targets:
+                        targets.append(target)
+                    if len(targets) >= 256:
+                        break
+                if len(targets) >= 256:
+                    break
+            if not targets:
+                continue
+            return {
+                "network_discovery_targets": targets,
+                "network_discovery_run_id": str(run.id),
+                "network_discovery_result_id": str(result.id),
+                "network_discovery_observed_at": created_at.isoformat() if created_at else None,
+                "network_discovery_scope": (action.normalized_input or {}).get("cidr")
+                if isinstance(action.normalized_input, dict) else None,
+            }
+    return None
+
+
 def reference_context_for_turn(
     owner: str | None,
     session_id: str | None,
     run_id: str | None,
     *,
     structured_reference: bool = False,
+    network_service_reference: bool = False,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]]]:
     """Resolve the bounded durable reference sources for one turn.
 
     The active Run is preferred. Recent session results are consulted only for
-    an explicit structured reference, preventing unrelated turns from
-    inheriting stale ordinal/pronoun context.
+    an explicit structured reference, or for the narrow network service
+    continuation detected by the canonical intent contract. This prevents
+    unrelated turns from inheriting stale state while allowing a request such
+    as "check port 22 on the responding hosts" to use the sealed host set from
+    the immediately preceding discovery.
     """
     active: dict[str, Any] | None = None
     session: dict[str, Any] | None = None
@@ -455,12 +561,37 @@ def reference_context_for_turn(
     reference = active.get("reference_context") if isinstance(active, dict) else None
     entities = reference.get("entities", []) if isinstance(reference, dict) else []
     active_entities = entities if isinstance(entities, list) else []
-    if owner and session_id and not active_entities and structured_reference:
+    if owner and session_id and not active_entities and network_service_reference:
+        try:
+            session = recent_session_network_discovery_context(str(owner), str(session_id))
+        except Exception:
+            session = None
+    elif owner and session_id and not active_entities and structured_reference:
         try:
             session = recent_session_reference_context(str(owner), str(session_id))
         except Exception:
             session = None
     return active, session, active_entities
+
+
+def select_network_service_reference(
+    active: dict[str, Any] | None,
+    session: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Choose the most specific sealed host reference for a service follow-up.
+
+    Every active Run has a reference-context envelope, including Runs that do
+    not yet contain a network result. That empty envelope must not hide the
+    populated owner/session-scoped discovery result from the preceding turn.
+    """
+    for candidate in (active, session):
+        if isinstance(candidate, dict) and candidate.get("network_discovery_targets"):
+            return candidate
+    if isinstance(active, dict):
+        return active
+    if isinstance(session, dict):
+        return session
+    return None
 
 
 def _latest_result_references(results: list[Any]) -> list[dict[str, Any]]:
@@ -574,7 +705,27 @@ def prepare_action(
                     {"lifecycle_state": "waiting_input", "current_step": f"precheck required: {', '.join(missing)}"},
                 )
                 return None
+        # Preserve the exact server-owned discovery result for a natural
+        # follow-up even if the model emits a second plain
+        # ``read_network_observations`` block without the internal reference.
+        # The model cannot widen this scope: the reference is copied only from
+        # the Run's authenticated continuation state and is checked again by
+        # the Homelab executor against the same owner and action type.
+        if spec.action_id == "read_network_observations" and not payload.get("result_id"):
+            carried_context = run.continuation_state.get("reference_context") if isinstance(run.continuation_state, dict) else None
+            if isinstance(carried_context, dict) and carried_context.get("network_discovery_result_id"):
+                payload["result_id"] = str(carried_context["network_discovery_result_id"])
         if spec.action_id in {"plan_network_service_enumeration", "execute_network_service_enumeration"} and not payload.get("targets"):
+            carried_context = run.continuation_state.get("reference_context") if isinstance(run.continuation_state, dict) else None
+            carried_targets = (
+                carried_context.get("network_discovery_targets")
+                if isinstance(carried_context, dict) else None
+            )
+            if isinstance(carried_targets, list):
+                payload["targets"] = [
+                    str(target).strip() for target in carried_targets[:256]
+                    if str(target).strip()
+                ]
             discovery = (
                 db.query(WorkResult)
                 .join(WorkAction, WorkAction.id == WorkResult.action_id)
@@ -605,8 +756,36 @@ def prepare_action(
                         break
                 if len(targets) >= 256:
                     break
-            if targets:
+            if targets and not payload.get("targets"):
                 payload["targets"] = targets
+        # A continuation may carry only the canonical execute action. Before
+        # an exact approval is sealed, bind it to the server-issued discovery
+        # plan already persisted in this Run. Never resolve a new interface
+        # or infer authority from transcript text at this boundary.
+        if spec.action_id == "execute_network_discovery" and not payload.get("plan_digest"):
+            planned_result = (
+                db.query(WorkResult)
+                .join(WorkAction, WorkAction.id == WorkResult.action_id)
+                .filter(
+                    WorkResult.owner == owner,
+                    WorkResult.run_id == run.id,
+                    WorkAction.action_id == "plan_network_discovery",
+                )
+                .order_by(WorkResult.created_at.desc())
+                .first()
+            )
+            planned_data = (
+                planned_result.domain_reference
+                if planned_result and isinstance(planned_result.domain_reference, dict)
+                else {}
+            )
+            planned_digest = str(
+                planned_data.get("operation_digest")
+                or planned_data.get("plan_digest")
+                or ""
+            ).strip().lower()
+            if planned_digest:
+                payload["plan_digest"] = planned_digest
         planned_resources = payload.pop("_hades_target_resources", None)
         target_resources = list(spec.target_resources)
         if isinstance(planned_resources, list):
@@ -677,6 +856,23 @@ def prepare_action(
         return action["id"]
 
 
+def bound_action_input(owner: str, action_id: str) -> dict[str, Any] | None:
+    """Return one owner-scoped Action's normalized input for execution adapters."""
+    with SessionLocal() as db:
+        row = (
+            db.query(WorkAction)
+            .join(WorkRun, WorkRun.id == WorkAction.run_id)
+            .filter(
+                WorkAction.id == str(action_id),
+                WorkRun.owner == str(owner),
+            )
+            .one_or_none()
+        )
+        if row is None or not isinstance(row.normalized_input, dict):
+            return None
+        return dict(row.normalized_input)
+
+
 def bind_approval(owner: str, action_id: str, approval_reference: str) -> dict[str, Any] | None:
     with SessionLocal() as db:
         return WorkEngine(db).bind_approval(owner, action_id, approval_reference)
@@ -685,6 +881,59 @@ def bind_approval(owner: str, action_id: str, approval_reference: str) -> dict[s
 def resume_approval(owner: str, action_id: str, approval_reference: str) -> dict[str, Any] | None:
     with SessionLocal() as db:
         return WorkEngine(db).resume_approved_action(owner, action_id, approval_reference)
+
+
+def persist_approved_result(
+    owner: str,
+    origin_run_id: str,
+    approval_reference: str,
+    tool_name: str,
+    content: Any,
+    result: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Attach a chat approval's executed result to its durable Action.
+
+    The approval route consumes the in-memory card and resumes the agent
+    stream directly, so it does not pass through the normal per-round action
+    persistence hook. Keep that path canonical by recovering the already
+    sealed Action, resuming it, and using the same result/verification code as
+    ordinary tool rounds.
+    """
+    action_id = prepare_action(
+        owner,
+        origin_run_id,
+        tool_name,
+        content,
+        approval_reference=approval_reference,
+    )
+    if not action_id:
+        return None
+    with SessionLocal() as db:
+        action = (
+            db.query(WorkAction)
+            .join(WorkRun)
+            .filter(
+                WorkAction.id == str(action_id),
+                WorkRun.owner == str(owner),
+            )
+            .one_or_none()
+        )
+        status = str(action.status or "") if action is not None else ""
+    if status == "awaiting_approval":
+        resume_approval(owner, action_id, approval_reference)
+    completed = record_result(owner, action_id, result)
+    # Approval callbacks resume the stream outside the ordinary tool-round
+    # hook.  Run the same server-owned verifier here so an approved network
+    # action cannot return a successful observation while its durable Run is
+    # left in VERIFYING until a later, unrelated chat turn.
+    if completed and completed.get("run_lifecycle_state") == "verifying":
+        verification = verify_bound_action(owner, action_id)
+        if verification is not None:
+            completed["verification"] = verification
+            completed["run_lifecycle_state"] = verification.get(
+                "run_lifecycle_state", completed["run_lifecycle_state"],
+            )
+    return completed
 
 
 def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[str, Any] | None:
@@ -735,6 +984,16 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
                 work.fail_read_deliverable(owner, action.run_id, reason=action.error)
             return {"action_id": action.id, "status": "failed"}
         safe_data = result.get("data")
+        if safe_data is None and action.tool_binding_name == "manage_assets":
+            # The established manage_assets transport historically returned
+            # its structured inventory/recipe payload at the top level. Keep
+            # the bridge tolerant of that transport shape while the binding
+            # emits the canonical ``data`` envelope; never persist rendered
+            # output or error text as durable result truth.
+            safe_data = {
+                key: value for key, value in result.items()
+                if key not in {"output", "error"}
+            }
         try:
             encoded = json.dumps(safe_data, ensure_ascii=False, default=str)
             safe_data = json.loads(encoded[:100000]) if len(encoded) <= 100000 else {"truncated": True}
@@ -826,7 +1085,58 @@ def record_result(owner: str, action_id: str, result: dict[str, Any]) -> dict[st
             completed["read_completion"] = work.complete_read_deliverable(
                 owner, action.run_id, action.id, result=safe_data,
             )
+        elif (
+            action.effect_class in {"write_private", "write_shared"}
+            and isinstance(safe_data, dict)
+            and isinstance(safe_data.get("verification"), dict)
+            and str(safe_data["verification"].get("status") or "").upper() == "VERIFIED"
+        ):
+            completed["write_completion"] = work.complete_verified_write(
+                owner, action.run_id, action.id, result=safe_data,
+            )
+            completed["run_lifecycle_state"] = completed["write_completion"].get(
+                "lifecycle_state", refreshed_run.lifecycle_state,
+            )
         return completed
+
+
+def network_continuation_projection(owner: str, run_id: str) -> dict[str, Any] | None:
+    """Return the next network step from canonical Work state only.
+
+    A chat transcript is presentation evidence, not an authorization record.
+    Network continuation therefore reads the completed, owner-scoped plan
+    Result attached to this Run and refuses to reconstruct a digest from
+    assistant/user text.  Existing execution Actions are terminal for this
+    projection; retries must be planned explicitly by the normal operation.
+    """
+    with SessionLocal() as db:
+        run = db.query(WorkRun).filter_by(id=str(run_id), owner=str(owner)).one_or_none()
+        if run is None or run.status in {"completed", "failed", "cancelled"}:
+            return None
+        actions = db.query(WorkAction).filter_by(run_id=run.id).order_by(WorkAction.sequence.asc()).all()
+        for action_name, execution_name in (
+            ("plan_network_discovery", "execute_network_discovery"),
+            ("plan_network_service_enumeration", "execute_network_service_enumeration"),
+        ):
+            plan = next((row for row in reversed(actions) if row.action_id == action_name and row.status == "completed"), None)
+            if plan is None:
+                continue
+            if any(row.action_id == execution_name for row in actions):
+                continue
+            result = db.query(WorkResult).filter_by(
+                owner=str(owner), run_id=run.id, action_id=plan.id,
+            ).order_by(WorkResult.created_at.desc()).first()
+            data = result.domain_reference if result and isinstance(result.domain_reference, dict) else {}
+            digest = str(data.get("operation_digest") or "").strip().lower()
+            if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+                continue
+            return {
+                "tool": "manage_homelab",
+                "action": execution_name,
+                "content": json.dumps({"action": execution_name, "plan_digest": digest}, sort_keys=True),
+                "plan_digest": digest,
+            }
+    return None
 
 
 def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
@@ -853,13 +1163,34 @@ def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
             return {"verified": False, "reason": "structured action result is missing"}
         data = result.domain_reference if isinstance(result.domain_reference, dict) else {}
         required = tuple(action.verification or ())
+        work = WorkEngine(db)
+        run = db.query(WorkRun).filter_by(id=action.run_id, owner=str(owner)).one()
+        other_pending = db.query(WorkAction).filter(
+            WorkAction.run_id == run.id,
+            WorkAction.status.notin_(("completed", "failed", "rejected", "cancelled", "expired")),
+            WorkAction.id != action.id,
+        ).count()
+        if other_pending:
+            return {"verified": False, "reason": "run has another pending action"}
+        # Older approval callbacks could persist the Action and Result but
+        # miss the lifecycle transition into VERIFYING. Reconcile that
+        # server-owned state only when there is no other pending Action; never
+        # use this recovery to bypass a later approval in the same Run.
+        if run.lifecycle_state == "planning":
+            work.verified_execution_step(owner, run.id, "ready", reason="reconciling completed bound result")
+            work.verified_execution_step(owner, run.id, "executing", reason="reconciling completed bound result")
+            work.verified_execution_step(owner, run.id, "verifying", reason="reconciling completed bound result")
+        elif run.lifecycle_state == "ready":
+            work.verified_execution_step(owner, run.id, "executing", reason="reconciling completed bound result")
+            work.verified_execution_step(owner, run.id, "verifying", reason="reconciling completed bound result")
+        elif run.lifecycle_state == "executing":
+            work.verified_execution_step(owner, run.id, "verifying", reason="reconciling completed bound result")
         if action.action_id == "execute_network_discovery":
             checks = {
                 "observations_persisted": data.get("observations_recorded") is True,
                 "network_map_reconciled": data.get("network_map_reconciled") is True,
             }
             missing = [name for name in required if not checks.get(name, False)]
-            work = WorkEngine(db)
             if missing:
                 outcome = work.complete_verification(
                     str(owner), action.run_id, success=False,
@@ -877,7 +1208,6 @@ def verify_bound_action(owner: str, action_id: str) -> dict[str, Any] | None:
                 "network_map_reconciled": data.get("network_map_reconciled") is True,
             }
             missing = [name for name in required if not checks.get(name, False)]
-            work = WorkEngine(db)
             outcome = work.complete_verification(
                 str(owner), action.run_id, success=not missing,
                 details={"checks": checks, "missing": missing, "observation_count": data.get("observation_count", 0), "verifier": "network_service_observation"},

@@ -45,6 +45,84 @@ def test_agent_network_intent_creates_one_owner_session_run_and_reuses_it(monkey
         engine.dispose()
 
 
+def test_network_service_reference_uses_sealed_same_session_discovery(monkeypatch):
+    sealed = {
+        "network_discovery_targets": ["192.168.10.4", "192.168.10.7"],
+        "network_discovery_run_id": "run-discovery",
+    }
+    monkeypatch.setattr(bridge, "continuation_run_projection", lambda *_args: None)
+    monkeypatch.setattr(
+        bridge,
+        "recent_session_network_discovery_context",
+        lambda owner, session_id: sealed if (owner, session_id) == ("alice", "chat-network") else None,
+    )
+
+    active, session, entities = bridge.reference_context_for_turn(
+        "alice",
+        "chat-network",
+        None,
+        network_service_reference=True,
+    )
+
+    assert active is None
+    assert session == sealed
+    assert entities == []
+
+
+def test_network_result_read_preserves_exact_discovery_result_reference(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-network-result", "what did that scan find?",
+            intent={"domains": ["network_ops"], "domain_concept": "NETWORK", "operation_class": "READ"},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.continuation_state = {
+                **run.continuation_state,
+                "reference_context": {
+                    "network_discovery_result_id": "result-exact",
+                },
+            }
+            db.commit()
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "read_network_observations"},
+        )
+        with session_factory() as db:
+            action = db.query(WorkAction).filter_by(id=action_id).one()
+            assert action.normalized_input["result_id"] == "result-exact"
+    finally:
+        engine.dispose()
+
+
+def test_stale_complete_continuation_is_reconciled_before_new_owner_turn(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-stale-complete", "scan my network",
+            intent={"domains": ["network_ops"], "domain_concept": "NETWORK", "operation_class": "EXECUTE"},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.continuation_state = {**run.continuation_state, "phase": "COMPLETE"}
+            db.commit()
+
+        replacement = bridge.ensure_agent_run(
+            "alice", "chat-stale-complete", "scan my network again",
+            intent={"domains": ["network_ops"], "domain_concept": "NETWORK", "operation_class": "EXECUTE"},
+        )
+        assert replacement != run_id
+        with session_factory() as db:
+            stale = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            assert stale.status == "completed"
+            assert stale.lifecycle_state == "succeeded"
+    finally:
+        engine.dispose()
+
+
 def test_completed_asset_result_projects_ordered_refs_for_next_turn(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
@@ -392,6 +470,45 @@ def test_canonical_read_is_a_terminal_durable_run_result(monkeypatch):
         engine.dispose()
 
 
+def test_verified_inventory_write_persists_payload_and_closes_run(monkeypatch):
+    """Inventory writes must not remain planning after canonical readback."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-inventory-write", "Put rice in the pantry",
+            intent={
+                "domains": ["household"],
+                "domain_concept": "HOUSEHOLD_ITEM",
+                "operation_class": "UPDATE",
+            },
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_assets", {
+                "action": "add_stock", "domain": "kitchen", "name": "rice",
+                "quantity": 1, "unit": "kg", "storage_area": "pantry",
+            },
+        )
+        completed = bridge.record_result(
+            "alice", action_id,
+            {
+                "success": True,
+                "item": {"id": "item-rice", "name": "rice"},
+                "verification": {"status": "VERIFIED", "readback": {"item": {"id": "item-rice"}}},
+            },
+        )
+        assert completed["write_completion"]["lifecycle_state"] == "succeeded"
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            stored = db.query(WorkResult).filter_by(run_id=run_id, owner="alice").one()
+            assert run.status == "completed"
+            assert run.lifecycle_state == "succeeded"
+            assert stored.domain_reference["verification"]["status"] == "VERIFIED"
+            assert stored.domain_reference["item"]["id"] == "item-rice"
+    finally:
+        engine.dispose()
+
+
 def test_canonical_read_unavailable_is_not_recorded_as_success(monkeypatch):
     engine, session_factory = _session_factory()
     monkeypatch.setattr(bridge, "SessionLocal", session_factory)
@@ -537,15 +654,16 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
             assert action.status == "proposed"
             assert action.sealed_input_digest
             assert run.continuation_state["pending_action_id"] == action_id
-            assert run.continuation_state["phase"] == "PROPOSED"
+            assert run.continuation_state["phase"] == "READY"
 
         approval_id = "approval-chat-2"
         bound = bridge.bind_approval("alice", action_id, approval_id)
         assert bound["status"] == "awaiting_approval"
         resumed = bridge.resume_approval("alice", action_id, approval_id)
         assert resumed["status"] == "approved"
-        completed = bridge.record_result(
-            "alice", action_id,
+        completed = bridge.persist_approved_result(
+            "alice", run_id, approval_id, "manage_homelab",
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
             {"data": {
                 "hosts": [{"ip": "192.168.10.1", "inference": {"label": "router", "confidence": 0.8}}],
                 "observations_recorded": True,
@@ -554,8 +672,8 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
             }},
         )
         assert completed["status"] == "completed"
-        assert completed["run_lifecycle_state"] == "verifying"
-        verification = bridge.verify_bound_action("alice", action_id)
+        assert completed["run_lifecycle_state"] == "succeeded"
+        verification = completed["verification"]
         assert verification["verified"] is True
         assert verification["run_lifecycle_state"] == "succeeded"
         with session_factory() as db:
@@ -566,6 +684,36 @@ def test_agent_binding_projects_network_action_approval_and_result(monkeypatch):
             assert run.lifecycle_state == "succeeded"
             assert result.provenance["source"] == "canonical ToolBinding"
             assert result.domain_reference["hosts"][0]["inference"]["label"] == "router"
+    finally:
+        engine.dispose()
+
+
+def test_network_verifier_recovers_legacy_run_missing_verifying_transition(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-legacy-network", "scan my private network",
+            intent={"domains": ["network_ops"]},
+        )
+        action_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab",
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
+        )
+        bridge.bind_approval("alice", action_id, "approval-legacy-network")
+        bridge.resume_approval("alice", action_id, "approval-legacy-network")
+        bridge.record_result(
+            "alice", action_id,
+            {"data": {"observations_recorded": True, "network_map_reconciled": True, "observation_count": 2}},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.lifecycle_state = "planning"
+            run.status = "running"
+            db.commit()
+        verification = bridge.verify_bound_action("alice", action_id)
+        assert verification["verified"] is True
+        assert verification["run_lifecycle_state"] == "succeeded"
     finally:
         engine.dispose()
 
@@ -639,6 +787,97 @@ def test_service_enumeration_inherits_exact_discovery_targets_and_verifies_proje
         verification = bridge.verify_bound_action("alice", action_id)
         assert verification["verified"] is True
         assert verification["run_lifecycle_state"] == "succeeded"
+    finally:
+        engine.dispose()
+
+
+def test_recent_session_discovery_targets_survive_terminal_run_for_service_followup(monkeypatch):
+    """A completed discovery remains a bounded chat reference on the next turn."""
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        first_run = bridge.ensure_agent_run(
+            "alice", "chat-network-followup", "scan my network",
+            intent={"domains": ["network_ops"]},
+        )
+        discovery_id = bridge.prepare_action(
+            "alice", first_run, "manage_homelab",
+            {"action": "execute_network_discovery", "cidr": "192.168.10.0/24"},
+        )
+        bridge.bind_approval("alice", discovery_id, "approval-discovery-followup")
+        bridge.resume_approval("alice", discovery_id, "approval-discovery-followup")
+        bridge.record_result(
+            "alice", discovery_id,
+            {"data": {
+                "success": True,
+                "asset_draft_candidates": [
+                    {"ip_addresses": ["192.168.10.4", "192.168.10.6"]},
+                ],
+                "observations_recorded": True,
+                "network_map_reconciled": True,
+            }},
+        )
+        bridge.verify_bound_action("alice", discovery_id)
+
+        context = bridge.recent_session_network_discovery_context(
+            "alice", "chat-network-followup",
+        )
+        assert context["network_discovery_targets"] == ["192.168.10.4", "192.168.10.6"]
+
+        second_run = bridge.ensure_agent_run(
+            "alice", "chat-network-followup",
+            "check port 22 on the responding hosts",
+            intent={"domains": ["network_ops"]},
+            reference_context=context,
+        )
+        plan_id = bridge.prepare_action(
+            "alice", second_run, "manage_homelab",
+            {"action": "plan_network_service_enumeration"},
+        )
+        with session_factory() as db:
+            plan = db.query(WorkAction).filter_by(id=plan_id).one()
+        assert plan.normalized_input["targets"] == ["192.168.10.4", "192.168.10.6"]
+    finally:
+        engine.dispose()
+
+
+def test_empty_active_reference_does_not_hide_session_discovery_reference():
+    selected = bridge.select_network_service_reference(
+        {"entities": [], "last": None},
+        {"network_discovery_targets": ["192.168.10.4"]},
+    )
+    assert selected["network_discovery_targets"] == ["192.168.10.4"]
+
+
+def test_network_continuation_uses_canonical_plan_result_not_transcript(monkeypatch):
+    engine, session_factory = _session_factory()
+    monkeypatch.setattr(bridge, "SessionLocal", session_factory)
+    try:
+        run_id = bridge.ensure_agent_run(
+            "alice", "chat-network-continuation", "scan local network",
+            intent={"domains": ["network_ops"]},
+        )
+        with session_factory() as db:
+            run = db.query(WorkRun).filter_by(id=run_id, owner="alice").one()
+            run.plan = [
+                {"sequence": 1, "capability_id": "homelab.manage", "action_id": "plan_network_discovery"},
+                {"sequence": 2, "capability_id": "homelab.manage", "action_id": "execute_network_discovery"},
+            ]
+            db.commit()
+        plan_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab", {"action": "plan_network_discovery"},
+        )
+        bridge.record_result("alice", plan_id, {"data": {"operation_digest": "a" * 64}})
+        continuation = bridge.network_continuation_projection("alice", run_id)
+        assert continuation["action"] == "execute_network_discovery"
+        assert json.loads(continuation["content"])["plan_digest"] == "a" * 64
+        assert bridge.network_continuation_projection("bob", run_id) is None
+        execute_id = bridge.prepare_action(
+            "alice", run_id, "manage_homelab", {"action": "execute_network_discovery"},
+        )
+        with session_factory() as db:
+            execute = db.query(WorkAction).filter_by(id=execute_id).one()
+            assert execute.normalized_input["plan_digest"] == "a" * 64
     finally:
         engine.dispose()
 

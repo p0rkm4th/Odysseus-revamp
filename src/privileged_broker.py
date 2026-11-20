@@ -12,8 +12,13 @@ import struct
 import subprocess
 import time
 
+from src.constants import DATA_DIR
+
 SOCKET_PATH = "/run/odysseus-privd.sock"
-HOST_NETWORK_SOCKET_PATH = "/run/odysseus-host-broker/network.sock"
+# Keep the host-network socket beside the application's durable data by
+# default. Deployments may still override this with
+# ODYSSEUS_HOST_NETWORK_BROKER_SOCKET (or pass --socket to the broker).
+HOST_NETWORK_SOCKET_PATH = str(Path(DATA_DIR) / "host-broker" / "network.sock")
 AUDIT_PATH = Path(os.getenv("ODYSSEUS_BROKER_AUDIT_PATH", "/app/data/logs/privileged_broker.log"))
 MAX_REQUEST = 16384
 MAX_RESPONSE = 65536
@@ -25,6 +30,10 @@ ALLOWED_PACKAGES = frozenset({
     "gcc", "git", "tmux", "make",
 })
 ALLOWED_EXECUTABLES = frozenset({"ip", "ss", "nmap", "dig", "host", "nslookup", "traceroute"})
+READ_ONLY_ACTIONS = frozenset({
+    "status", "read_network_context", "run_network_discovery",
+    "run_network_service_enumeration", "verify_executables",
+})
 PKG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9+._:-]{0,79}$")
 
 
@@ -45,9 +54,15 @@ def peercred(conn):
 
 
 def peer_is_allowed(pid, uid, gid, allowed_pid, allowed_uid, allowed_gid):
-    """Return whether a connecting peer matches the broker's sealed identity."""
+    """Return whether a peer matches the broker's sealed identity.
+
+    ``allowed_pid=0`` is the explicit service configuration for a same-user
+    read-only broker when the application is not running in Compose.  It
+    disables only PID pinning; UID/GID and the broker's action allowlist still
+    apply.  A non-zero PID remains an exact process pin.
+    """
     return (
-        pid == allowed_pid
+        (allowed_pid == 0 or pid == allowed_pid)
         and uid == allowed_uid
         and gid == allowed_gid
     )
@@ -101,7 +116,7 @@ def validate_packages(value):
     return out
 
 
-def run_root(argv, timeout=300):
+def run_root(argv, timeout=300, max_output_chars=20000):
     env = {
         "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
         "DEBIAN_FRONTEND": "noninteractive",
@@ -121,7 +136,7 @@ def run_root(argv, timeout=300):
     )
     return {
         "returncode": cp.returncode,
-        "output": (cp.stdout or "")[-20000:],
+        "output": (cp.stdout or "")[-max_output_chars:],
     }
 
 
@@ -158,6 +173,56 @@ def _network_namespace_id():
         return None
 
 
+def _bounded_network_context(raw_addresses: str, raw_routes: str) -> tuple[str, str]:
+    """Keep host-context replies bounded even when Docker left many bridges.
+
+    The broker response has a fixed upper bound.  Down/stale container bridges
+    are not useful for resolving an owner's current LAN and can otherwise
+    truncate the structured reply before HADES can parse it.
+    """
+    try:
+        addresses = json.loads(raw_addresses)
+        routes = json.loads(raw_routes)
+    except (TypeError, ValueError):
+        return raw_addresses, raw_routes
+    if not isinstance(addresses, list) or not isinstance(routes, list):
+        return raw_addresses, raw_routes
+    # Only default-route devices are needed to retain an otherwise-down
+    # interface.  Including every route device would re-admit hundreds of
+    # stale Docker bridge interfaces and recreate the oversized reply.
+    route_devices = {
+        str(route.get("dev") or "")
+        for route in routes
+        if isinstance(route, dict)
+        and route.get("dst") == "default"
+        and route.get("dev")
+    }
+    kept = []
+    for item in addresses:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("ifname") or "")
+        state = str(item.get("operstate") or "").upper()
+        flags = {str(flag).upper() for flag in (item.get("flags") or [])}
+        active = state in {"UP", "UNKNOWN"} or (not state and "LOWER_UP" in flags)
+        if active or name in route_devices or name == "lo":
+            kept.append(item)
+    # A route is useful when it explains an included interface. Keep default
+    # routes and directly relevant link routes; discard stale bridge routes.
+    kept_names = {str(item.get("ifname") or "") for item in kept}
+    kept_routes = [
+        route for route in routes
+        if isinstance(route, dict)
+        and (
+            route.get("dst") == "default"
+            or str(route.get("dev") or "") in kept_names
+        )
+    ]
+    return json.dumps(kept, separators=(",", ":")), json.dumps(
+        kept_routes, separators=(",", ":")
+    )
+
+
 def handle(req, allowed_pid, allowed_uid, *, execution_location="APPLICATION_RUNTIME", read_only=False):
     action = req.get("action")
 
@@ -180,19 +245,26 @@ def handle(req, allowed_pid, allowed_uid, *, execution_location="APPLICATION_RUN
         }
 
     if action == "read_network_context":
-        addresses = run_root(["ip", "-j", "addr"], timeout=10)
-        routes = run_root(["ip", "-j", "route"], timeout=10)
+        # Read enough raw JSON to filter stale container bridges before the
+        # normal response bound is applied. The filtered result remains small.
+        addresses = run_root(["ip", "-j", "addr"], timeout=10, max_output_chars=100000)
+        routes = run_root(["ip", "-j", "route"], timeout=10, max_output_chars=100000)
+        bounded_addresses, bounded_routes = _bounded_network_context(
+            addresses["output"], routes["output"],
+        )
         return {
             "ok": addresses["returncode"] == 0 and routes["returncode"] == 0,
             "action": action,
-            "addresses": addresses["output"],
-            "routes": routes["output"],
+            "addresses": bounded_addresses,
+            "routes": bounded_routes,
             "exit_code": max(addresses["returncode"], routes["returncode"]),
             "execution_location": execution_location,
             "network_namespace_id": _network_namespace_id(),
         }
 
-    if read_only:
+    # A read-only host broker may perform bounded network observation.  It must
+    # still reject package installation or any future mutating action.
+    if read_only and action not in READ_ONLY_ACTIONS:
         return {"ok": False, "error": "host network broker is read-only"}
 
     if action == "run_network_discovery":
@@ -319,11 +391,15 @@ def serve(
         with conn:
             pid, uid, gid = peercred(conn)
 
-            expected_pid = (
+            resolved_compose_pid = (
                 compose_service_pid(compose_project, compose_service)
-                if compose_project and compose_service else allowed_pid
+                if compose_project and compose_service else None
             )
-            if expected_pid is None or not peer_is_allowed(
+            # A missing Compose service must not brick the explicitly
+            # configured same-user read-only fallback.  If the service is
+            # present, retain the stronger exact-PID binding.
+            expected_pid = resolved_compose_pid if resolved_compose_pid is not None else allowed_pid
+            if not peer_is_allowed(
                 pid,
                 uid,
                 gid,

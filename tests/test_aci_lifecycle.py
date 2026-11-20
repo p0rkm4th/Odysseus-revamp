@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import date
 
 from src.aci import (
     CapabilityGapResolution,
@@ -8,14 +9,27 @@ from src.aci import (
     CompositeStep,
     SelectionMode,
     canonical_read_fast_path_payload,
+    canonical_inventory_mutation_payload,
+    _inventory_payload_complete,
     canonical_asset_read_answer,
     canonical_household_read_answer,
     canonical_network_read_answer,
     canonical_homelab_read_answer,
     canonical_tool_result_projection,
     canonical_inventory_mutation_answer,
+    canonical_recipe_missing_answer,
+    canonical_recipe_cook_answer,
+    canonical_recipe_queue_answer,
+    canonical_recipe_list_answer,
+    canonical_recipe_suggest_answer,
     canonical_result_answer,
     is_aci_general_fallback_candidate,
+    is_recipe_composition_request,
+    recipe_composition_name,
+    is_recipe_cook_request,
+    recipe_cook_name,
+    is_recipe_missing_request,
+    recipe_missing_name,
     project_final_answer,
     project_model_decision,
     AnswerSource,
@@ -51,6 +65,228 @@ from src.intent_contracts import canonical_domain_projection, compile_intent, re
 from src.capability_registry import action_for_tool, capability_for_tool
 from src.tool_capabilities import ToolEffect, capabilities_for_action
 from src.tool_policy import web_access_mode
+
+
+def test_recipe_composition_routes_to_recipe_capable_tools():
+    assert is_recipe_composition_request(
+        "I want to make spaghetti tonight. Add the ingredients I am missing to my shopping list."
+    )
+    assert not is_recipe_composition_request("Add spaghetti to my grocery list")
+    assert not is_recipe_composition_request(
+        "I want to make spaghetti tonight. What are we missing?"
+    )
+
+
+def test_recipe_composition_understands_natural_variants_and_bounds_dish_name():
+    variants = (
+        "I wanna make spaghetti, add ingredients to the shopping list",
+        "I want to make spaghetti and add what I need to grocery",
+        "Add the missing ingredients for spaghetti to my grocery list",
+    )
+    for request in variants:
+        assert is_recipe_composition_request(request)
+        assert recipe_composition_name(request) == "spaghetti"
+
+
+def test_named_dish_preface_keeps_explicit_grocery_items_on_inventory_path():
+    assert not is_recipe_composition_request(
+        "I wanna make spaghetti tonight. Add spaghetti, tomato sauce, and parmesan to the shopping list."
+    )
+    assert is_recipe_composition_request(
+        "I wanna make spaghetti tonight. Add the ingredients I am missing to the shopping list."
+    )
+    assert is_recipe_composition_request(
+        "I wanna make spaghetti tonight. Add the individual things I am missing to the shopping list."
+    )
+
+
+def test_recipe_composition_drops_sentence_article_before_saved_recipe_lookup():
+    request = (
+        "I want to make the Shared pasta test. Add whatever ingredients "
+        "we are missing to my grocery list."
+    )
+    assert recipe_composition_name(request) == "Shared pasta test"
+
+
+def test_explicit_cook_request_routes_to_saved_recipe_without_model_prose():
+    request = "Cook our Shared pasta test recipe with what we have."
+    assert is_recipe_cook_request(request)
+    assert recipe_cook_name(request) == "Shared pasta test"
+
+
+def test_recipe_discovery_question_cannot_become_a_cook_mutation():
+    assert not is_recipe_cook_request("What can I cook tonight without spending much?")
+
+
+def test_kitchen_delete_uses_bounded_archive_for_named_items():
+    query = "delete the basil-test, dogfood test, and ketchup from the kitchen"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_inventory_mutation_payload(resolved.action_id, query)
+    assert resolved.action_id == "archive_item"
+    assert payload["items"] == ["basil-test", "dogfood test", "ketchup"]
+
+
+def test_recipe_missing_question_uses_bounded_saved_recipe_lookup():
+    question = "What am I missing for spaghetti?"
+    assert is_recipe_missing_request(question)
+    assert recipe_missing_name(question) == "spaghetti"
+    natural_question = "I want to make spaghetti tonight. What are we missing?"
+    assert is_recipe_missing_request(natural_question)
+    assert recipe_missing_name(natural_question) == "spaghetti"
+
+
+def test_recipe_missing_question_understands_conversational_cooking_plans():
+    variants = (
+        "I want spaghetti tonight. What are we missing?",
+        "We're having tacos tonight; what do we need?",
+        "Planning lasagna for dinner — what am I missing?",
+    )
+    for question in variants:
+        assert is_recipe_missing_request(question)
+        assert recipe_missing_name(question) in {"spaghetti", "tacos", "lasagna"}
+
+
+def test_recipe_missing_question_does_not_turn_vague_cooking_into_recipe_lookup():
+    question = "I want something easy tonight. What are we missing?"
+    assert not is_recipe_missing_request(question)
+    assert recipe_missing_name(question) is None
+
+
+def test_recipe_catalog_question_does_not_become_a_fictitious_recipe_lookup():
+    question = "What recipes can I make right now, and what ingredients are missing for the others?"
+    assert not is_recipe_missing_request(question)
+
+
+def test_canonical_recipe_missing_answer_is_read_only_and_grounded():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_missing_by_name"}',
+        "output": '{"missing":{"shortages":[{"name":"spaghetti","missing":"200","unit":"g"}]}}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_missing_answer([event]) == (
+        "You're missing: spaghetti (200 g). You can ask me to add those to Grocery."
+    )
+
+
+def test_canonical_recipe_missing_answer_preserves_ambiguity_guidance():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_missing_by_name"}',
+        "output": '{"error":"I found multiple saved recipes for that dish. Choose one before I compare ingredients or change Grocery.","error_code":"recipe_ambiguous"}',
+        "exit_code": 1,
+    }
+    assert canonical_recipe_missing_answer([event]) == (
+        "I found multiple saved recipes for that dish. Choose one before I compare ingredients."
+    )
+
+
+def test_canonical_recipe_cook_answer_requires_structured_success():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_cook"}',
+        "output": '{"cook":{"id":"cook-1","movement_ids":["movement-1"]}}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_cook_answer([event]) == (
+        "Cooked the saved recipe and verified the canonical stock deduction."
+    )
+
+
+def test_canonical_recipe_queue_answer_lists_verified_grocery_items():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_queue_missing_by_name"}',
+        "output": '{"queued":{"queued":[{"item":{"name":"spaghetti"}},{"item":{"name":"tomato sauce"}}]}}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_queue_answer([event]) == (
+        "Added the missing recipe ingredients to Grocery: spaghetti, tomato sauce."
+    )
+
+
+def test_canonical_recipe_queue_answer_explains_missing_saved_recipe():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_queue_missing_by_name"}',
+        "output": '{"error":"No saved recipe matched that dish. Import or paste a recipe first."}',
+        "exit_code": 1,
+    }
+    assert "Import or paste the recipe first" in canonical_recipe_queue_answer([event])
+
+
+def test_canonical_recipe_queue_answer_preserves_ambiguity_guidance():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_queue_missing_by_name"}',
+        "output": '{"error":"I found multiple saved recipes for that dish. Choose one before I compare ingredients or change Grocery.","error_code":"recipe_ambiguous"}',
+        "exit_code": 1,
+    }
+    assert canonical_recipe_queue_answer([event]) == (
+        "I found multiple saved recipes for that dish. Choose one before I queue ingredients."
+    )
+
+
+def test_canonical_recipe_suggest_answer_uses_structured_availability_result():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_suggest"}',
+        "output": '{"available_only":true,"recipes":[{"name":"Rice Bowl","can_make":true,"missing_count":0}]}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_suggest_answer([event]) == "You can make: Rice Bowl (ready)."
+
+
+def test_canonical_recipe_suggest_answer_labels_ingredient_filter():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","ingredient_query":"chicken"}',
+        "output": '{"success":true,"ingredient_query":"chicken","recipes":[{"name":"Chicken Rice","can_make":true,"missing_count":0}]}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_suggest_answer([event]) == "Recipes using chicken: Chicken Rice (ready)."
+
+
+def test_canonical_recipe_suggest_answer_labels_expiring_ingredient_filter():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","ingredient_query":"chicken","use_expiring":true}',
+        "output": '{"success":true,"ingredient_query":"chicken","use_expiring":true,"recipes":[{"name":"Chicken Rice","can_make":false,"missing_count":1}]}',
+        "exit_code": 0,
+    }
+    assert canonical_recipe_suggest_answer([event]) == (
+        "Recipes using chicken before it goes bad: Chicken Rice (missing 1 item)."
+    )
+
+
+def test_canonical_recipe_suggest_answer_qualifies_unavailable_budget_ranking():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","budget_constraint":true}',
+        "output": '{"available_only":true,"budget_constraint":true,"recipes":[{"name":"Rice Bowl","can_make":true,"missing_count":0}]}',
+        "exit_code": 0,
+    }
+    answer = canonical_recipe_suggest_answer([event])
+    assert answer.startswith("You can make: Rice Bowl (ready).")
+    assert "not a cost ranking" in answer
+
+
+def test_empty_budget_recipe_result_still_discloses_cost_limit():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","budget_constraint":true}',
+        "output": '{"available_only":true,"recipes":[]}',
+        "exit_code": 0,
+    }
+    answer = canonical_recipe_suggest_answer([event])
+    assert "couldn't find a saved recipe" in answer
+    assert "not a cost ranking" in answer
+
+
+def test_budget_recipe_discovery_can_report_bounded_near_matches():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"recipe_suggest","budget_constraint":true}',
+        "output": '{"available_only":false,"budget_constraint":true,"recipes":[{"name":"Spaghetti","can_make":false,"missing_count":3}]}',
+        "exit_code": 0,
+    }
+    answer = canonical_recipe_suggest_answer([event])
+    assert answer.startswith("Closest saved recipes: Spaghetti (missing 3 items).")
+    assert "not a cost ranking" in answer
 
 
 def test_owner_computer_collection_variants_compile_to_canonical_asset_reads():
@@ -199,6 +435,62 @@ def test_canonical_household_read_answer_uses_only_inventory_result():
     }]) == "No kitchen or household inventory is recorded for this owner."
 
 
+def test_canonical_household_read_answer_hides_inventory_storage_precision():
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": '{"list_name":"pantry","items":[{"name":"Rice","domain":"kitchen","stock_quantity":"1500.000000","default_unit":"g"}]}',
+    }])
+    assert answer == "I found 1 pantry item on hand:\n- Rice (domain=kitchen, quantity=1500 g)"
+
+
+def test_canonical_household_read_answer_renders_expiring_stock():
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": json.dumps({
+            "view": "expiring",
+            "freshness": {"expiry_horizon_days": 30},
+            "expiring_lots": [{
+                "status": "expiring",
+                "item": {"name": "Spinach"},
+                "lot": {"quantity": "250.000000", "unit": "g", "expiry_date": "2026-09-13"},
+            }],
+        }),
+    }])
+    assert answer == "Food to use soon (within 30 days):\n- Spinach: 250 g (use by 2026-09-13)"
+
+
+def test_expiring_household_read_payload_preserves_bounded_horizon():
+    from src.intent_contracts import compile_intent, resolve_intent
+
+    frame = compile_intent("What food do we have that needs used soon?")
+    resolved = resolve_intent(frame)
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(),
+        query="What food do we have that needs used soon?",
+    )
+    assert payload == {"action": "overview", "view": "expiring", "expiry_days": 30}
+
+
+def test_grocery_read_fast_path_preserves_list_scope_and_answer_label():
+    from src.aci import canonical_read_fast_path_payload
+    from src.intent_contracts import compile_intent, resolve_intent
+
+    frame = compile_intent("Show my grocery list")
+    resolved = resolve_intent(frame)
+    assert frame.filters["list_name"] == "grocery"
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query="Show my grocery list",
+    )
+    assert payload == {"action": "overview", "list_name": "grocery"}
+    answer = canonical_household_read_answer([{
+        "tool": "read_household", "exit_code": 0,
+        "output": '{"list_name":"grocery","items":[{"name":"Ketchup","domain":"kitchen","stock_quantity":"0","default_unit":"each"}]}',
+    }])
+    assert answer.startswith("I found 1 item to buy")
+    assert "Ketchup" in answer
+    assert "quantity=" not in answer
+
+
 def test_canonical_result_answer_selects_one_authoritative_source():
     answer = canonical_result_answer([{
         "tool": "manage_assets", "exit_code": 0,
@@ -326,6 +618,61 @@ def test_large_network_result_is_projected_before_truncated_transport_output():
     assert answer == "I found 1 persisted network observation:\n- Thanatos"
 
 
+def test_completed_network_discovery_has_terminal_grounded_answer():
+    projection = canonical_tool_result_projection("manage_homelab", {
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA",
+            "action": "execute_network_discovery",
+            "target": "192.168.10.0/24",
+            "success": True,
+            "candidate_count": 3,
+            "observations_recorded": True,
+            "network_map_reconciled": True,
+            "requires_explicit_inventory_review": True,
+        }),
+        "exit_code": 0,
+    })
+    assert projection["candidate_count"] == 3
+    answer = canonical_network_read_answer([{
+        "tool": "manage_homelab",
+        "exit_code": 0,
+        "command": '{"action":"execute_network_discovery"}',
+        "output": "truncated transport text",
+        "result_projection": projection,
+    }])
+    assert answer == (
+        "Network discovery completed for 192.168.10.0/24: 3 responding hosts observed. "
+        "The observations were recorded for review; no device identity was inferred."
+    )
+
+
+def test_completed_service_scan_has_terminal_grounded_answer():
+    projection = canonical_tool_result_projection("manage_homelab", {
+        "output": json.dumps({
+            "status": "SUCCESS_WITH_DATA",
+            "action": "execute_network_service_enumeration",
+            "success": True,
+            "observation_count": 1,
+            "observations_recorded": True,
+            "network_map_reconciled": True,
+            "service_observations": [{
+                "ip": "192.168.10.4",
+                "services": [{"port": 443, "protocol": "tcp", "service": "https", "product": "nginx", "version": "1.2"}],
+            }],
+        }),
+        "exit_code": 0,
+    })
+    answer = canonical_network_read_answer([{
+        "tool": "manage_homelab", "exit_code": 0,
+        "result_projection": projection,
+    }])
+    assert answer == (
+        "Service scan completed for 1 responding host.\n"
+        "- 192.168.10.4: 443/tcp https (nginx 1.2).\n"
+        "The observations were recorded for review; service names and versions are observed evidence, not confirmed device identity."
+    )
+
+
 def test_homelab_inspection_has_grounded_deterministic_answer():
     projection = canonical_tool_result_projection("manage_homelab", {
         "output": json.dumps({
@@ -375,6 +722,36 @@ def test_canonical_inventory_mutation_answer_requires_structured_result_and_read
     assert "verification is incomplete" in canonical_inventory_mutation_answer([event])
     event["exit_code"] = 1
     assert "not completed" in canonical_inventory_mutation_answer([event])
+
+
+def test_canonical_inventory_archive_answer_requires_all_item_readback():
+    event = {
+        "tool": "manage_assets", "exit_code": 0,
+        "command": '{"action":"archive_item","items":["basil","sauce"]}',
+        "output": json.dumps({
+            "success": True,
+            "items": [{"id": "i-1", "name": "basil"}, {"id": "i-2", "name": "sauce"}],
+            "verification": {"status": "VERIFIED", "readback": {"items": []}},
+        }),
+    }
+    assert canonical_inventory_mutation_answer([event]) == (
+        "Archived from kitchen inventory basil, sauce; the canonical inventory readback is verified."
+    )
+
+
+def test_canonical_inventory_multi_add_answer_lists_verified_items():
+    event = {
+        "tool": "manage_assets", "exit_code": 0,
+        "command": '{"action":"add_item","items":["rice","milk"]}',
+        "output": json.dumps({
+            "success": True,
+            "items": [{"id": "i-1", "name": "rice"}, {"id": "i-2", "name": "milk"}],
+            "verification": {"status": "VERIFIED", "readback": {"items": []}},
+        }),
+    }
+    assert canonical_inventory_mutation_answer([event]) == (
+        "Recorded grocery items rice, milk; the canonical inventory readback is verified."
+    )
 
 
 def test_canonical_memory_and_work_reads_have_terminal_answers():
@@ -461,6 +838,247 @@ def test_provisional_intent_projection_owns_supported_route_entry():
     assert owned is True
     assert intent["continuation"] is False
     assert intent["retrieval_query"] == "what network am i on"
+
+
+def test_finance_followup_reuses_bounded_recent_finance_context():
+    messages = [
+        {"role": "user", "content": "How much have I spent at restaurants this year?"},
+        {"role": "assistant", "content": "Here is your spending summary."},
+    ]
+    intent, owned = provisional_intent_projection(messages, "What about last month?")
+    assert owned is True
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "How much did I spend on Restaurants last month"
+    frame = compile_intent(intent["retrieval_query"])
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["category"] == "Restaurants"
+    assert frame.filters["start"] != "2026-01-01"
+
+
+def test_finance_pending_question_reuses_prior_spending_scope():
+    messages = [
+        {"role": "user", "content": "How much did I spend at Publix this year?"},
+        {"role": "assistant", "content": "Posted spending at Publix: USD 25.72. Pending spending not included."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "Does that include pending transactions?",
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "How much did I spend at Publix this year?"
+    frame = compile_intent(intent["retrieval_query"])
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["merchant"] == "publix"
+    assert frame.filters["view"] == "spending"
+
+
+def test_inventory_correction_reuses_prior_recipe_grocery_context():
+    messages = [
+        {"role": "user", "content": "I wanna make spaghetti, add ingredients to the shopping list."},
+        {"role": "assistant", "content": "Added the missing recipe ingredients to Grocery."},
+    ]
+    intent, owned = provisional_intent_projection(messages, "Actually, don't add onions.")
+    assert owned is True
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "Remove onions from my grocery list."
+    frame = compile_intent(intent["retrieval_query"])
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert resolved.action_id == "remove_from_grocery"
+    assert canonical_inventory_mutation_payload(
+        resolved.action_id, intent["retrieval_query"],
+    )["name"] == "onions"
+
+
+def test_inventory_correction_without_prior_grocery_context_stays_unbound():
+    intent, owned = provisional_intent_projection(
+        [{"role": "user", "content": "I like onions."}],
+        "Actually, don't add onions.",
+    )
+    assert owned is False
+    assert intent is None
+
+
+def test_finance_followup_with_latest_user_in_message_history_uses_prior_turn():
+    messages = [
+        {"role": "user", "content": "How much did I spend at Publix this year?"},
+        {"role": "assistant", "content": "Here is your spending summary."},
+        {"role": "user", "content": "What about last month?"},
+    ]
+    intent, owned = provisional_intent_projection(messages, "What about last month?")
+    assert owned is True
+    assert intent["retrieval_query"].casefold() == "how much did i spend at publix last month"
+    frame = compile_intent(intent["retrieval_query"])
+    assert frame.filters["merchant"] == "publix"
+    assert frame.filters["start"].endswith("-01")
+    assert frame.filters["start"] < frame.filters["end"]
+
+
+def test_new_finance_request_wins_over_stale_continuation_messages():
+    messages = [
+        {"role": "user", "content": "Continue"},
+        {"role": "assistant", "content": "Continue when ready."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "How much have I spent at Publix this month?",
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "How much have I spent at Publix this month?"
+
+
+def test_finance_csv_correction_reuses_recent_finance_read_context():
+    messages = [
+        {"role": "user", "content": "How much have I spent at Publix this month?"},
+        {"role": "assistant", "content": "I found no matching transactions."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "But there's two on the CSV",
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+    assert "Publix" in intent["retrieval_query"]
+
+
+def test_finance_answer_correction_reuses_recent_finance_read_context():
+    messages = [
+        {"role": "user", "content": "How much have I spent at Publix this month?"},
+        {"role": "assistant", "content": "Posted spending at Publix: USD 25.7200."},
+    ]
+    intent, owned = provisional_intent_projection(messages, "You're missing one")
+    assert owned is True
+    assert intent["continuation"] is False
+    assert "Publix" in intent["retrieval_query"]
+
+
+def test_finance_access_pushback_reuses_canonical_csv_read_context():
+    messages = [
+        {"role": "user", "content": "Walk me through my finances from the last 3 months"},
+        {"role": "assistant", "content": "I don't have access to your financial data. Please paste a CSV."},
+    ]
+    intent, owned = provisional_intent_projection(messages, "You should see the CSV already")
+    assert owned is True
+    assert intent["continuation"] is False
+    assert "Walk me through my finances" in intent["retrieval_query"]
+
+
+def test_ranked_finance_followup_projects_bounded_largest_outflows():
+    messages = [
+        {"role": "user", "content": "How much did I spend this year?"},
+        {"role": "assistant", "content": "Posted spending for 2026: USD 500.00."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "What were the most expensive single line items from that?"
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+    assert "How much did I spend this year?" in intent["retrieval_query"]
+    assert "most expensive" in intent["retrieval_query"]
+
+
+def test_independent_ranked_finance_question_does_not_inherit_stale_category():
+    messages = [
+        {"role": "user", "content": "How much did I spend on insurance this year?"},
+        {"role": "assistant", "content": "Posted spending for insurance: none recorded."},
+    ]
+    intent, owned = provisional_intent_projection(
+        messages, "What was my most expensive purchase this year?"
+    )
+    assert owned is True
+    assert intent["continuation"] is False
+
+    from src.intent_contracts import compile_intent
+
+    frame = compile_intent("What was my most expensive purchase this year?")
+    assert frame.filters.get("category") is None
+    assert frame.filters["sort"] == "amount_desc"
+
+
+def test_legacy_chat_finance_correction_reuses_recent_finance_read_context():
+    from src.agent_loop import _classify_agent_request
+
+    messages = [
+        {"role": "user", "content": "How much have I spent at Publix this month?"},
+        {"role": "assistant", "content": "Posted spending at Publix: USD 25.7200."},
+    ]
+    intent = _classify_agent_request(messages, "You're missing one")
+    assert intent["continuation"] is False
+    assert "Publix" in intent["retrieval_query"]
+
+
+def test_legacy_chat_inventory_list_followup_reaches_household_read_context():
+    from src.agent_loop import _classify_agent_request
+
+    messages = [
+        {"role": "user", "content": "Add ketchup to the grocery list"},
+        {"role": "assistant", "content": "Recorded ketchup; the canonical inventory readback is verified."},
+    ]
+    intent = _classify_agent_request(messages, "What's in the list")
+    assert intent["continuation"] is False
+    assert intent["retrieval_query"] == "Show my grocery list."
+
+
+def test_inventory_mutation_uses_grounded_fast_path_without_model_json():
+    from src.aci import project_action_selection
+
+    intent = {
+        "intent_frame": {
+            "domain_concept": "HOUSEHOLD_ITEM",
+            "operation_class": "CREATE",
+            "read_explicit": False,
+            "filters": {},
+        },
+        "resolved_contract": {
+            "binding": "manage_assets",
+            "action_id": "add_item",
+        },
+    }
+    projection = project_action_selection(
+        intent=intent,
+        relevant_tools={"manage_assets"},
+        disabled_tools=set(),
+        owner="scotty",
+        active_run=None,
+        query="Add doritos to my grocery list",
+    )
+    assert projection.mode.value == "DIRECT_ACTION"
+    assert projection.fast_path == {
+        "action": "add_item",
+        "name": "doritos",
+        "domain": "kitchen",
+        "item_kind": "ingredient",
+        "list_name": "grocery",
+        "shopping_list": True,
+        "idempotency_key": projection.fast_path["idempotency_key"],
+    }
+
+
+def test_explicit_network_scope_is_server_grounded_as_authorized_plan():
+    projection = project_action_selection(
+        intent={
+            "intent_frame": {
+                "domain_concept": "NETWORK",
+                "operation_class": "EXECUTE",
+                "read_explicit": False,
+                "filters": {},
+            },
+            "resolved_contract": {
+                "binding": "manage_homelab",
+                "action_id": "plan_network_discovery",
+            },
+        },
+        relevant_tools={"manage_homelab"},
+        disabled_tools=set(),
+        owner="scotty",
+        active_run=None,
+        query="Scan my network at 192.168.10.254/24",
+        network_cidr="192.168.10.0/24",
+    )
+    assert projection.choice_map["A"]["payload"] == {
+        "action": "plan_network_discovery",
+        "cidr": "192.168.10.0/24",
+        "scope_authorization": "EXPLICITLY_AUTHORIZED",
+    }
 
 
 def test_aci_completion_uses_canonical_transition_not_legacy_verifier():
@@ -563,8 +1181,181 @@ def test_canonical_projection_does_not_depend_on_route_tool_preparation():
     assert set(item["binding"] for item in projection.choice_map.values()) == {"manage_homelab"}
 
 
+def test_inventory_action_projection_grounds_natural_grocery_name():
+    projection = project_action_selection(
+        intent=_intent("Add rice to my grocery list."),
+        relevant_tools=["manage_assets"],
+        disabled_tools=set(),
+        owner="owner",
+        active_run=None,
+        query="Add rice to my grocery list.",
+    )
+    selected = next(
+        value for value in projection.choice_map.values()
+        if value["payload"].get("action") == "add_item"
+    )
+    assert selected["payload"] == {
+        "action": "add_item",
+        "name": "rice",
+        "domain": "kitchen",
+        "item_kind": "ingredient",
+        "list_name": "grocery",
+        "shopping_list": True,
+        "idempotency_key": selected["payload"]["idempotency_key"],
+    }
+
+
+def test_inventory_action_projection_uses_run_scope_for_repeated_owner_requests():
+    def payload_for(run_id):
+        projection = project_action_selection(
+            intent=_intent("Add 250 g of rice to the pantry."),
+            relevant_tools=["manage_assets"],
+            disabled_tools=set(),
+            owner="owner",
+            active_run=None,
+            query="Add 250 g of rice to the pantry.",
+            operation_scope=run_id,
+        )
+        return next(
+            value["payload"] for value in projection.choice_map.values()
+            if value["payload"].get("action") == "add_stock"
+        )
+
+    first = payload_for("run-a")
+    retry = payload_for("run-a")
+    later = payload_for("run-b")
+    assert first["idempotency_key"] == retry["idempotency_key"]
+    assert first["idempotency_key"] != later["idempotency_key"]
+
+
+def test_inventory_mutation_grounding_accepts_the_grocery_list():
+    payload = canonical_inventory_mutation_payload("add_item", "Add doritos to the grocery list")
+    assert payload is not None
+    assert payload["name"] == "doritos"
+    assert payload["shopping_list"] is True
+
+
+def test_inventory_mutation_grounding_leaves_recipe_composition_to_recipe_path():
+    assert canonical_inventory_mutation_payload(
+        "add_item", "Add the ingredients I am missing to my shopping list",
+    ) is None
+
+
+def test_inventory_mutation_grounding_covers_stock_and_consumption_without_ids():
+    purchased = canonical_inventory_mutation_payload(
+        "add_stock", "I bought two 1-kilogram bags of rice; put them in the pantry."
+    )
+    assert purchased is not None
+    assert purchased["name"] == "rice"
+    assert purchased["quantity"] == 2.0
+    assert purchased["unit"] == "kilogram"
+    assert purchased["storage_area"] == "pantry"
+
+    consumed = canonical_inventory_mutation_payload("consume_stock", "Use 500 grams of rice.")
+    assert consumed is not None
+    assert consumed["name"] == "rice"
+    assert consumed["quantity"] == 500.0
+    assert consumed["unit"] == "grams"
+
+    counted = canonical_inventory_mutation_payload(
+        "consume_stock", "Use 1 count of shared milk from the fridge."
+    )
+    assert counted is not None
+    assert counted["name"] == "shared milk"
+    assert counted["quantity"] == 1.0
+    assert counted["unit"] == "each"
+
+
+def test_inventory_mutation_grounding_normalizes_counted_package_purchases():
+    purchased = canonical_inventory_mutation_payload(
+        "add_stock", "I bought two jars of tomato sauce; put them in the pantry."
+    )
+    assert purchased is not None
+    assert purchased["name"] == "tomato sauce"
+    assert purchased["quantity"] == 2
+    assert purchased["unit"] == "each"
+    assert purchased["storage_area"] == "pantry"
+
+
+def test_inventory_mutation_grounding_accepts_volume_units():
+    purchased = canonical_inventory_mutation_payload(
+        "add_stock", "Add 2 l of milk to our shared pantry."
+    )
+    assert purchased is not None
+    assert purchased["name"] == "milk"
+    assert purchased["quantity"] == 2.0
+    assert purchased["unit"] == "l"
+    assert purchased["storage_area"] == "pantry"
+
+    consumed = canonical_inventory_mutation_payload(
+        "consume_stock", "Use 500 ml of milk from our shared pantry."
+    )
+    assert consumed is not None
+    assert consumed["name"] == "milk"
+    assert consumed["quantity"] == 500.0
+    assert consumed["unit"] == "ml"
+
+
+def test_inventory_mutation_idempotency_is_scoped_to_the_durable_turn():
+    first = canonical_inventory_mutation_payload(
+        "add_stock", "Add 250 g of rice to the pantry.", operation_scope="run-a",
+    )
+    retry = canonical_inventory_mutation_payload(
+        "add_stock", "Add 250 g of rice to the pantry.", operation_scope="run-a",
+    )
+    later = canonical_inventory_mutation_payload(
+        "add_stock", "Add 250 g of rice to the pantry.", operation_scope="run-b",
+    )
+    assert first is not None and retry is not None and later is not None
+    assert first["idempotency_key"] == retry["idempotency_key"]
+    assert first["idempotency_key"] != later["idempotency_key"]
+
+
+def test_inventory_mutation_grounding_can_unqueue_a_grocery_item():
+    payload = canonical_inventory_mutation_payload(
+        "remove_from_grocery", "Remove rice from my grocery list.",
+    )
+    assert payload is not None
+    assert payload["name"] == "rice"
+    assert payload["action"] == "remove_from_grocery"
+
+
+def test_inventory_mutation_grounding_resolves_grocery_clear_without_item_ids():
+    payload = canonical_inventory_mutation_payload(
+        "remove_from_grocery", "Clear my grocery list.",
+    )
+    assert payload is not None
+    assert payload["clear"] is True
+    assert _inventory_payload_complete(payload, "remove_from_grocery")
+
+
+def test_canonical_grocery_clear_answer_requires_verified_empty_readback():
+    event = {
+        "tool": "manage_assets",
+        "command": '{"action":"remove_from_grocery","clear":true}',
+        "output": '{"clear":true,"verification":{"status":"VERIFIED","readback":{"items":[]}}}',
+        "exit_code": 0,
+    }
+    assert canonical_inventory_mutation_answer([event]) == (
+        "Done. Your grocery list is empty; the canonical inventory readback is verified."
+    )
+
+
+def test_canonical_saved_recipe_list_answer_does_not_render_household_items():
+    event = {
+        "tool": "manage_assets", "command": '{"action":"recipe_list"}',
+        "output": '{"recipes":[{"name":"Shared pasta test"}]}', "exit_code": 0,
+    }
+    assert canonical_recipe_list_answer([event]) == (
+        "Your saved recipes: Shared pasta test."
+    )
+
+
 def test_action_projection_carries_canonical_dependency_plan():
     intent = _intent("discover hosts on 192.168.10.0/24")
+    # Ordinary discovery is intentionally projected as a server-owned plan;
+    # exercise the dependency contract explicitly on the execute ActionSpec.
+    intent["resolved_contract"]["action_id"] = "execute_network_discovery"
     projection = project_action_selection(
         intent=intent,
         relevant_tools=["manage_homelab"],
@@ -893,6 +1684,67 @@ def test_aci_turn_does_not_reenter_legacy_tool_index_projection(monkeypatch):
     assert owner_metrics["aci_compatibility_fallback"] is False
 
 
+def test_finance_read_fast_path_executes_without_model_round(monkeypatch):
+    """A natural Finance read must not depend on Qwen emitting an ACI packet."""
+    import src.agent_loop as agent_loop
+    today = date.today()
+    today_text = today.isoformat()
+    year_start = date(today.year, 1, 1).isoformat()
+
+    monkeypatch.setattr(agent_loop, "get_setting", lambda key, default=None: default, raising=False)
+    monkeypatch.setattr(agent_loop, "get_mcp_manager", lambda: None, raising=False)
+    monkeypatch.setattr(agent_loop, "blocked_tools_for_owner", lambda owner: set(), raising=False)
+    monkeypatch.setattr(agent_loop, "estimate_tokens", lambda *args, **kwargs: 10, raising=False)
+
+    executed = []
+
+    async def fake_execute(block, *args, **kwargs):
+        executed.append((block.tool_type, json.loads(block.content)))
+        return block.tool_type, {
+            "action": "spending",
+            "status": "SUCCESS_WITH_DATA",
+            "posted_outflow_by_currency": {"USD": "42.5000"},
+            "coverage": {
+                "coverage_state": "AVAILABLE",
+                "as_of": "2026-09-11T12:00:00Z",
+                "coverage_limitations": [],
+            },
+            "output": json.dumps({
+                "action": "spending",
+                "start": year_start,
+                "end": today_text,
+                "posted_outflow_by_currency": {"USD": "42.5000"},
+                "coverage": {
+                    "coverage_state": "AVAILABLE",
+                    "as_of": "2026-09-11T12:00:00Z",
+                    "coverage_limitations": [],
+                },
+            }),
+            "exit_code": 0,
+        }
+
+    async def unexpected_model_round(*args, **kwargs):
+        raise AssertionError("Finance fast path re-entered the model")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(agent_loop, "stream_llm_with_fallback", unexpected_model_round, raising=False)
+    events = _collect_stream_events(agent_loop.stream_agent_loop(
+        "http://local.test/v1",
+        "small-local-model",
+        [{"role": "user", "content": "How much did I spend this year?"}],
+        aci_mode="aci",
+        tool_executor=fake_execute,
+    ))
+
+    assert executed == [("read_finance", {
+        "action": "spending",
+        "start": year_start,
+        "end": today_text,
+    })]
+    assert any(event.get("type") == "response_replace" for event in events)
+    assert any(event.get("type") == "metrics" for event in events)
+
+
 def test_canonical_aci_turn_does_not_append_legacy_hard_capability_directive(monkeypatch):
     import src.agent_loop as agent_loop
 
@@ -1091,6 +1943,16 @@ def test_post_result_transition_projects_completion_without_loop_authority():
     assert failed.state.value == "BLOCKED"
     assert failed.answer_only is True
     assert failed.framework_event == "canonical_action_failure"
+
+
+def test_retryable_inventory_shape_failure_can_receive_bounded_repair():
+    retry = project_post_result_transition(
+        {"error_code": "grocery_item_placeholder", "retryable": True, "exit_code": 1},
+        selected_action={"binding": "manage_assets", "action_id": "add_item"},
+    )
+    assert retry.state.value == "BLOCKED"
+    assert retry.answer_only is False
+
 
 
 def test_composition_only_accepts_registered_primitives_and_acyclic_graphs():

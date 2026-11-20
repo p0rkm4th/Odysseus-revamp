@@ -138,7 +138,7 @@ async function load(el) {
   body.innerHTML = loadingState('Loading OSINT workspace…');
   let cases = [];
   try { const data = await api('/api/research/library?limit=100'); cases = data.research || []; } catch (_) { /* The intake remains usable if the library is unavailable. */ }
-  body.innerHTML = `${moduleHeader({icon:'osint', title:'OSINT', description:'Public-source investigations with evidence, provenance, and bounded depth.', primary:'New Investigation', primaryId:'osint-new-header'})}${tabBar()}<div id="osint-tab-content">${renderTab(cases)}</div>`;
+  body.innerHTML = `${moduleHeader({icon:'osint', title:'OSINT', description:'Public-source investigations with evidence, provenance, and bounded depth.', primary:'New Investigation', primaryId:'osint-new-header', showIcon:false})}${tabBar()}<div id="osint-tab-content">${renderTab(cases)}</div>`;
   body.querySelectorAll('[data-osint-tab]').forEach(button => button.addEventListener('click', () => { currentTab = button.dataset.osintTab; load(el); }));
   body.querySelector('[data-osint-tab].active')?.scrollIntoView({block:'nearest', inline:'nearest'});
   body.querySelector('#osint-new-header')?.addEventListener('click', () => { currentTab='New Investigation'; load(el); });

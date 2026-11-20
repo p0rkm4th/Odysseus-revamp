@@ -7,12 +7,13 @@ ActionSpec, policy, approval, and Result code remain authoritative.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from enum import StrEnum
 import hashlib
 import json
 import logging
 import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from src.capability_registry import CAPABILITY_REGISTRY, action_for_tool, capability_for_tool
@@ -27,6 +28,37 @@ from src.tool_capabilities import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _display_finance_amount(value: Any, currency: Any = "") -> str:
+    """Render owner-facing money without exposing storage scale noise."""
+    code = str(currency or "").strip().upper()
+    places = 0 if code in {"JPY", "KRW", "CLP", "VND"} else 3 if code in {"BHD", "JOD", "KWD", "OMR", "TND"} else 2
+    try:
+        amount = Decimal(str(value or "0")).quantize(
+            Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP,
+        )
+        return format(amount, "f")
+    except (InvalidOperation, ValueError, TypeError):
+        return str(value or "0")
+
+
+def _display_inventory_quantity(value: Any) -> str:
+    """Render canonical inventory quantities without storage-scale noise.
+
+    Inventory keeps six decimal places for deterministic unit conversion. That
+    precision is useful for arithmetic but is not owner-facing language.
+    Preserve meaningful fractional digits while removing trailing zeroes and
+    never alter the canonical value itself.
+    """
+    try:
+        quantity = Decimal(str(value))
+        rendered = format(quantity, "f")
+        if "." in rendered:
+            rendered = rendered.rstrip("0").rstrip(".")
+        return rendered or "0"
+    except (InvalidOperation, ValueError, TypeError):
+        return str(value or "0")
 
 
 def stream_aci_turn(*args: Any, **kwargs: Any):
@@ -1475,6 +1507,186 @@ def is_aci_general_fallback_candidate(
     )
 
 
+def is_recipe_composition_request(text: str) -> bool:
+    """Route named-dish ingredient requests to recipe-capable tools.
+
+    These requests are multi-step composition workflows, not a single
+    ``add_item`` mutation. This helper only chooses the routing path; the
+    inventory service remains authoritative for every persisted change.
+    """
+    value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
+    if not value:
+        return False
+    # A named-dish preface does not erase a concrete grocery set the owner
+    # supplied in the same sentence.  Route "make spaghetti; add spaghetti,
+    # sauce, and parmesan" through the ordinary bounded inventory mutation;
+    # reserve recipe composition for requests such as "add the ingredients I
+    # am missing", where the system would otherwise have to invent or look up
+    # a recipe.
+    explicit_add = re.search(
+        r"\b(?:add|put)\s+(.+?)\s+(?:to|on)\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list\b",
+        value,
+        re.IGNORECASE,
+    )
+    if explicit_add:
+        names = explicit_add.group(1).strip(" .,!?:;")
+        if names and not re.match(
+            r"^(?:(?:the|those|these|my|some|all)\s+)?(?:individual\s+)?"
+            r"(?:missing\s+)?(?:ingredients?|items?|things?|what|whatever|stuff)\b",
+            names,
+            re.IGNORECASE,
+        ):
+            return False
+    has_named_dish_action = bool(re.search(
+        r"\b(?:make|cook|prepare)\s+(?!(?:a|the)?\s*(?:grocery|shopping)\s+list\b)"
+        r"[a-z0-9][^.!?,]{1,120}", value,
+    ))
+    has_dish_intent = bool(re.search(
+        r"\b(?:make|cook|prepare|fix|have)\b.+\b(?:for|tonight|today|dinner|lunch|meal)\b"
+        r"|\b(?:recipe|ingredients?)\b", value,
+    )) or has_named_dish_action
+    # Asking what is missing is a read-only stock comparison.  Only an
+    # explicit queue/purchase verb should enter the mutation route; otherwise
+    # "I want to make spaghetti tonight. What are we missing?" must not add
+    # anything to Grocery merely because the word "missing" is present.
+    asks_for_grocery = bool(re.search(
+        r"\b(?:add|put|queue|buy)\b", value,
+    ))
+    return has_dish_intent and asks_for_grocery
+
+
+def recipe_composition_name(text: str) -> str | None:
+    """Extract only the named dish span for saved-recipe lookup."""
+    match = re.search(
+        r"\b(?:make|cook|prepare)\s+(?!(?:a|the)?\s*(?:grocery|shopping)\s+list\b)"
+        r"(.+?)(?=\s+(?:and\s+)?(?:add|put|queue|buy|need|missing|shopping|grocery|with|using|from)\b"
+        r"|\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal))\b|[.!?,]|$)",
+        str(text or ""), re.IGNORECASE,
+    )
+    if match:
+        value = match.group(1).strip()
+    else:
+        match = re.search(
+            r"\b(?:ingredients?|items?)\s+(?:for|of)\s+(?:the\s+)?(.+?)"
+            r"(?=\s+(?:to|on)\s+(?:my\s+)?(?:grocery|shopping)\s+list\b|[.!?,]|$)",
+            str(text or ""), re.IGNORECASE,
+        )
+        value = match.group(1).strip() if match else ""
+    value = re.sub(r"\s+", " ", value)
+    # Articles belong to the surrounding sentence, not to the saved recipe
+    # name.  Keeping them here makes a natural request such as "make the
+    # lasagna" miss an otherwise exact canonical recipe lookup.
+    value = re.sub(r"^(?:a|an|the|our|my)\s+", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"\s+recipe$", "", value, flags=re.IGNORECASE)
+    return value[:200] or None
+
+
+def is_recipe_cook_request(text: str) -> bool:
+    """Recognize an explicit request to cook one saved recipe from stock."""
+    value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
+    # Interrogative discovery requests such as "what can I cook tonight?"
+    # belong to the read-only recipe suggestion path. They must never be
+    # interpreted as permission to consume inventory.
+    if re.match(r"^(?:what|which|show|give|suggest|can\s+i)\b", value):
+        return False
+    return bool(value and re.search(r"\b(?:cook|prepare)\b", value) and recipe_composition_name(text))
+
+
+def recipe_cook_name(text: str) -> str | None:
+    """Extract a bounded saved-recipe name from an explicit cook request."""
+    return recipe_composition_name(text)
+
+
+def is_recipe_missing_request(text: str) -> bool:
+    """Recognize a read-only request to compare a saved recipe with stock."""
+    value = re.sub(r"\s+", " ", str(text or "").strip().casefold())
+    if not value:
+        return False
+    asks_missing = bool(re.search(r"\b(?:missing|need|short)\b", value))
+    names_recipe = bool(re.search(r"\b(?:recipe|ingredients?|for)\b", value))
+    # Plural catalog questions such as "what recipes can I make" or "what
+    # ingredients are missing for the others" describe the saved-recipe
+    # collection, not one named dish. Let the canonical recipe suggestion
+    # reader answer those questions instead of extracting "the others" as a
+    # fictitious recipe name.
+    catalog_question = bool(re.search(
+        r"\b(?:what|which|show|list)\s+recipes?\b|\b(?:the|those|these|all)\s+others?\b",
+        value,
+    ))
+    names_dish = not catalog_question and bool(re.search(
+        r"\b(?:make|cook|prepare)\s+(?!a\s+grocery\b)[a-z0-9]",
+        value,
+    ))
+    # Owners often name the dish through an ordinary plan rather than an
+    # imperative: "I want spaghetti tonight" or "we're having tacos".  The
+    # bounded extractor below only treats that as a recipe when it can isolate
+    # a concrete dish span; generic phrases such as "something easy" remain
+    # ordinary discovery/fallback requests.
+    names_dish = names_dish or (not catalog_question and bool(
+        _natural_recipe_missing_name(text)
+    ))
+    return bool(
+        asks_missing
+        and (names_dish or (names_recipe and not catalog_question))
+        and not re.search(r"\b(?:add|put|queue|buy|shopping|grocery)\b", value)
+    )
+
+
+def recipe_missing_name(text: str) -> str | None:
+    """Extract a bounded saved-recipe name from a comparison question."""
+    # Prefer a direct conversational plan before the generic "for/from"
+    # fallback.  Otherwise "planning lasagna for dinner — what do I need?"
+    # can capture the tail of the sentence as the recipe name.
+    value = _natural_recipe_missing_name(text) or ""
+    if value:
+        return value[:200]
+    match = re.search(
+        r"\b(?:for|from)\s+(?:the\s+)?(.+?)(?:\s+recipe)?(?:[?.!,]|$)",
+        str(text or ""), re.IGNORECASE,
+    )
+    value = re.sub(r"\s+", " ", match.group(1).strip()) if match else ""
+    if not value:
+        # Natural read-only questions often name the dish after "make" rather
+        # than using "for": "I want to make spaghetti tonight; what are we
+        # missing?" Reuse the same bounded dish-span extractor as the queue
+        # route, without changing the operation class.
+        value = recipe_composition_name(text) or ""
+    if not value:
+        value = _natural_recipe_missing_name(text) or ""
+    return value[:200] or None
+
+
+def _natural_recipe_missing_name(text: str) -> str | None:
+    """Extract a concrete dish from a conversational cooking plan.
+
+    This deliberately stays narrow.  It supports ordinary forms such as
+    "I want spaghetti tonight" and "we're having tacos; what do we need?"
+    without turning vague requests like "something easy" into a fictitious
+    saved-recipe lookup.
+    """
+    match = re.search(
+        r"\b(?:want|wanna|have|having|make|making|cook|cooking|prepare|"
+        r"preparing|plan|planning)\s+"
+        r"(?:(?:to|for)\s+)?"
+        r"(?:(?:make|cook|prepare|have)\s+)?"
+        r"(?:(?:a|an|the|our|my)\s+)?"
+        r"(?P<name>[a-z0-9][^.!?,;]*?)"
+        r"(?=\s+(?:tonight|today|for\s+(?:dinner|lunch|a\s+meal)|"
+        r"what|which|how)\b|[.!?,;]|$)",
+        str(text or ""),
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+    value = re.sub(r"\s+", " ", match.group("name").strip())
+    if not value:
+        return None
+    first_word = value.casefold().split()[0]
+    if first_word in {"something", "anything", "whatever", "what", "which", "recipe", "recipes", "food", "stuff"}:
+        return None
+    return value[:200]
+
+
 def usage_bucket(
     *,
     round_num: int,
@@ -1977,6 +2189,83 @@ def last_user_message(messages: Sequence[Mapping[str, Any]]) -> str:
     return ""
 
 
+def _finance_followup_query(
+    messages: Sequence[Mapping[str, Any]], latest: str,
+) -> str | None:
+    """Turn a bounded Finance period follow-up into a canonical read query.
+
+    A phrase such as ``What about last month?`` is not independently a
+    Finance query.  The prior *user* Finance request supplies the bounded
+    subject (merchant/category/view), while the current user turn supplies
+    only the new period.  Assistant prose and tool output are deliberately
+    ignored so they cannot become query authority.
+    """
+    from src.intent_contracts import compile_intent
+
+    latest_text = str(latest or "").strip()
+    period = re.search(
+        r"\b(?:last|previous|this|that|next)\s+(?:month|week|year)\b|"
+        r"\b(?:past|last|previous)\s+(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
+        latest_text,
+        re.IGNORECASE,
+    )
+    if not period:
+        return None
+
+    prior_frame = None
+    seen_latest = False
+    for message in reversed(tuple(messages or ())):
+        if str(message.get("role") or "") != "user":
+            continue
+        content = message.get("content", "")
+        if isinstance(content, list):
+            content = " ".join(
+                str(block.get("text") or "")
+                for block in content
+                if isinstance(block, Mapping)
+            )
+        content = str(content or "").strip()
+        if not content:
+            continue
+        # Some transports include the current user turn in ``messages`` and
+        # some pass it separately.  Exclude exactly that latest turn once.
+        if not seen_latest and content.casefold() == latest_text.casefold():
+            seen_latest = True
+            continue
+        candidate = compile_intent(content, continuation=False)
+        if candidate.domain_concept == "FINANCE" and candidate.operation_class == "READ":
+            prior_frame = candidate
+            break
+        if not seen_latest:
+            # When the transport omits the separately supplied latest turn,
+            # the first user message is already the prior anchor.
+            seen_latest = True
+            if candidate.domain_concept == "FINANCE":
+                prior_frame = candidate
+                break
+    if prior_frame is None:
+        return None
+
+    filters = dict(prior_frame.filters or {})
+    view = str(filters.get("view") or "spending").casefold()
+    if view == "cash_flow":
+        base = "What was my inflow and outflow"
+    elif view == "transactions":
+        base = "Show my transactions"
+    elif str(filters.get("direction") or "").casefold() == "inflow":
+        base = "How much was my inflow"
+    else:
+        base = "How much did I spend"
+
+    merchant = str(filters.get("merchant") or "").strip()
+    category = str(filters.get("category") or "").strip()
+    if merchant:
+        base += f" at {merchant}"
+    elif category:
+        base += f" on {category}"
+    return f"{base} {period.group(0)}"
+
+
 def user_turn_count(messages: Sequence[Mapping[str, Any]]) -> int:
     """Count user turns without considering injected/system envelopes."""
     return sum(1 for message in messages or () if message.get("role") == "user")
@@ -2009,19 +2298,287 @@ def provisional_intent_projection(
     from src.intent_contracts import DOMAIN_CONTRACTS, compile_intent, is_explicit_continuation
 
     latest = str(text or "")
+    recent_query = recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+    # A recipe/grocery correction is often elliptical: after Hades queues a
+    # recipe's shortages, the owner may say "Actually, don't add onions." The
+    # current turn contains the concrete item and exclusion; the prior
+    # owner-authored turn supplies the grocery context. Assistant prose is not
+    # used as authority. Re-express the bounded correction as the canonical
+    # unqueue operation so it crosses the ordinary inventory policy,
+    # persistence, and readback path instead of letting the model claim that
+    # it changed state.
+    inventory_correction_query = None
+    prior_owner_text = " ".join(
+        str(message.get("content") or "")
+        for message in (messages or ())
+        if str(message.get("role") or "") == "user"
+        and str(message.get("content") or "").strip().casefold() != latest.strip().casefold()
+    )
+    has_inventory_anchor = bool(re.search(
+        r"\b(?:grocery|groceries|shopping\s+list|recipe|ingredients?|pantry|fridge|freezer)\b",
+        prior_owner_text,
+        re.IGNORECASE,
+    ))
+    if has_inventory_anchor:
+        correction_match = re.search(
+            r"\b(?:don['’]?t|do\s+not|dont)\s+(?:add|put|include|buy|queue)\s+"
+            r"(.+?)(?:\s+(?:to|on)\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list)?\s*[.!?]*$|"
+            r"\b(?:leave\s+out|skip)\s+(.+?)\s*[.!?]*$",
+            latest,
+            re.IGNORECASE,
+        )
+        if correction_match:
+            corrected_name = next(
+                (value for value in correction_match.groups() if value), ""
+            ).strip(" .,!?:;")
+            corrected_name = re.sub(
+                r"^(?:the|an|a|those|these|some)\s+",
+                "",
+                corrected_name,
+                flags=re.IGNORECASE,
+            ).strip(" .,!?:;")
+            if corrected_name and not re.fullmatch(
+                r"(?:the\s+)?(?:ingredients?|items?|things?|stuff|what\s+i\s+need)",
+                corrected_name,
+                re.IGNORECASE,
+            ):
+                inventory_correction_query = (
+                    f"Remove {corrected_name} from my grocery list."
+                )
+    finance_followup = bool(
+        re.search(
+            r"\b(?:last|previous|this|that|next)\s+(?:month|week|year)\b|"
+            r"\b(?:past|last|previous)\s+(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
+            latest, re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|cash\s+flow|"
+            r"transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
+    finance_pending_followup = bool(
+        re.search(
+            r"\b(?:does|did|is|are)\b.{0,32}\b(?:include|including|count)\b.{0,32}\bpending\b|"
+            r"\b(?:include|including|count)\b.{0,32}\bpending\b",
+            latest,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|"
+            r"cash\s+flow|transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
+    finance_pending_anchor = None
+    if finance_pending_followup:
+        seen_latest = False
+        for message in reversed(tuple(messages or ())):
+            if str(message.get("role") or "") != "user":
+                continue
+            content = message.get("content", "")
+            if isinstance(content, list):
+                content = " ".join(
+                    str(block.get("text") or "")
+                    for block in content
+                    if isinstance(block, Mapping)
+                )
+            content = str(content or "").strip()
+            if not content:
+                continue
+            if not seen_latest and content.casefold() == latest.casefold():
+                seen_latest = True
+                continue
+            candidate = compile_intent(content, continuation=False)
+            if candidate.domain_concept == "FINANCE" and candidate.operation_class == "READ":
+                finance_pending_anchor = content
+                break
+            if not seen_latest:
+                seen_latest = True
+    # Corrections to a just-retrieved Finance result are often elliptical:
+    # "there are two on the CSV" or "that merchant is missing". Keep these
+    # in the bounded Finance continuation path when the recent user context
+    # already contains an unambiguous Finance read. This does not make a new
+    # scope or action authoritative; the contextual frame still supplies the
+    # existing read contract and owner scope.
+    finance_correction_followup = bool(
+        re.search(
+            r"\b(?:csv|bank(?:ing)?|transaction(?:s)?|merchant|statement|"
+            r"publix|spent|spending|expense(?:s)?)\b",
+            latest,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|"
+            r"cash\s+flow|transaction|transactions|financial|finance|finances|"
+            r"bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
+    recent_finance_answer = ""
+    for message in reversed(messages or ()):
+        if str(message.get("role") or "") == "assistant":
+            recent_finance_answer = str(message.get("content") or "")
+            break
+    finance_answer_correction = bool(
+        re.search(r"\b(?:missing|missed|another|one|two|both|wrong|incorrect)\b", latest, re.IGNORECASE)
+        and re.search(r"\b(?:posted spending|pending spending|finance coverage|cash flow|transactions?)\b", recent_finance_answer, re.IGNORECASE)
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|cash\s+flow|"
+            r"transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
+    finance_access_correction = bool(
+        re.search(
+            r"\b(?:you\s+do\s+too|you\s+have\s+(?:it|that)|already\s+(?:have|uploaded|shared)\b|"
+            r"should\s+see\s+(?:the\s+)?(?:csv|statement)|"
+            r"(?:it|the\s+data)\s+is\s+(?:in|on)\s+(?:the\s+)?(?:csv|statement))\b",
+            latest,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:financial|finance|finances|bank|banking|csv|statement|transaction|transactions|"
+            r"spend|spent|spending|expense|expenses)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:don't|do\s+not|cannot|can't|no\s+access|not\s+access|"
+            r"share|paste|upload|provide|external\s+services?)\b",
+            recent_finance_answer,
+            re.IGNORECASE,
+        )
+    )
+    finance_period_correction = bool(
+        re.search(
+            r"\b(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+months?\b",
+            latest, re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|"
+            r"cash\s+flow|transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query, re.IGNORECASE,
+        )
+    )
+    finance_ranked_followup = bool(
+        re.search(
+            r"\b(?:most\s+expensive|largest|biggest|highest|top)\b.{0,48}\b"
+            r"(?:charge|charges|purchase|purchases|transaction|transactions|line\s+items?)\b",
+            latest,
+            re.IGNORECASE,
+        )
+        and re.search(
+            r"\b(?:spend|spent|spending|expense|expenses|budget|inflow|outflow|"
+            r"cash\s+flow|transaction|transactions|financial|finance|finances|bank|banking|csv)\b",
+            recent_query,
+            re.IGNORECASE,
+        )
+    )
     continuation = (
         is_explicit_continuation(latest)
         or assistant_requested_followup(messages)
         or is_contextual_retry_continuation(messages, latest)
         or is_contextual_reference_followup(messages, latest)
+        or finance_followup
+        or finance_pending_followup
+        or finance_correction_followup
+        or finance_answer_correction
+        or finance_period_correction
+        or finance_access_correction
     )
-    frame = compile_intent(latest, continuation=continuation)
+    finance_followup_query = _finance_followup_query(messages, latest) if finance_followup else None
+    contextual_finance_read = (
+        finance_followup
+        or finance_pending_followup
+        or finance_correction_followup
+        or finance_answer_correction
+        or finance_period_correction
+        or finance_access_correction
+        or finance_ranked_followup
+    )
+    # A stale continuation marker must not demote a new, independently
+    # classifiable owner request. This occurs after an interrupted turn where
+    # the UI may leave a literal "Continue" message in the session. Compile
+    # the latest request directly first; only inherit continuation semantics
+    # when the new text is genuinely underspecified.
+    direct_frame = compile_intent(latest, continuation=False)
+    direct_request_owned = direct_frame.domain_concept in DOMAIN_CONTRACTS
+    if inventory_correction_query:
+        frame = compile_intent(inventory_correction_query, continuation=False)
+        continuation = False
+    elif finance_pending_anchor:
+        # The pending question is a semantic follow-up to the prior Finance
+        # read, not a request for an unconstrained transaction ledger. Reuse
+        # only the prior owner-authored Finance scope; the current question
+        # still controls the answer wording below.
+        frame = compile_intent(finance_pending_anchor, continuation=False)
+        continuation = False
+    elif direct_request_owned:
+        frame = direct_frame
+        continuation = False
+    else:
+        frame = compile_intent(latest, continuation=continuation)
+    # A short follow-up such as "what about last month?" is not independently
+    # classifiable, but it remains a Finance turn when the bounded recent
+    # conversation contains an unambiguous Finance read.  Feed the canonical
+    # compiler the bounded context; never use transcript text as authority for
+    # effects or scope.
+    if frame.domain_concept not in DOMAIN_CONTRACTS and continuation:
+        contextual_query = recent_query
+        # The bounded prior user turn is the domain anchor; compiling it as a
+        # continuation would intentionally turn its own words into CONTINUE.
+        contextual_frame = compile_intent(contextual_query)
+        if contextual_frame.domain_concept in DOMAIN_CONTRACTS:
+            frame = contextual_frame
+    if finance_followup_query:
+        # Recompile the merged, user-authored Finance request so its new
+        # period reaches the canonical Action payload. The earlier frame is
+        # only a continuation marker and must not silently retain the old
+        # range.
+        followup_frame = compile_intent(finance_followup_query, continuation=False)
+        if followup_frame.domain_concept == "FINANCE":
+            frame = followup_frame
+    if finance_ranked_followup and frame.domain_concept == "FINANCE":
+        # An independent ranked question owns its own bounded scope.  Only
+        # explicit references such as "from that" may inherit the prior
+        # Finance read; otherwise a stale category (for example insurance)
+        # must not leak into "my most expensive purchase this year".
+        filters = dict(frame.filters)
+        ranked_context_reference = bool(re.search(
+            r"\b(?:from|of|within|using)\s+(?:that|those|these|the\s+above)\b",
+            latest,
+            re.IGNORECASE,
+        ))
+        if ranked_context_reference:
+            prior = compile_intent(recent_query)
+            if prior.domain_concept == "FINANCE":
+                filters = dict(prior.filters)
+        filters.update({"view": "transactions", "sort": "amount_desc", "direction": "outflow", "limit": 10})
+        frame = replace(frame, filters=filters)
+    if contextual_finance_read and frame.domain_concept == "FINANCE":
+        # This is a fresh bounded read using the prior Finance question as
+        # context, not a durable Work continuation.
+        continuation = False
     if frame.domain_concept not in DOMAIN_CONTRACTS:
         return None, False
-    retrieval_query = (
-        recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
-        if continuation else latest
-    )
+    if inventory_correction_query:
+        retrieval_query = inventory_correction_query
+    elif finance_followup_query:
+        retrieval_query = finance_followup_query
+    elif finance_pending_anchor:
+        retrieval_query = finance_pending_anchor
+    elif finance_ranked_followup:
+        retrieval_query = f"{recent_query}\n{latest}".strip()
+    else:
+        retrieval_query = (
+            recent_context_for_retrieval(messages, max_user=5, max_chars=1800)
+            if continuation or contextual_finance_read else latest
+        )
     explanatory = bool(re.search(
         r"\b(?:explain|define|teach\s+me|how\s+does|why)\b",
         latest,
@@ -2203,7 +2760,7 @@ def action_trace(
 
 
 _CANONICAL_READ_EVENT_NAMES = frozenset({
-    "read_memory", "read_work", "read_assets", "manage_assets",
+    "read_memory", "read_work", "read_finance", "read_assets", "manage_assets",
     "manage_homelab", "read_security", "read_osint", "read_setup",
     "read_integrations", "read_documents", "read_contacts",
 })
@@ -2297,6 +2854,7 @@ def semanticize_internal_action_names(text: str) -> str:
         "read_memory": "saved-memory read",
         "manage_assets": "technical asset operation",
         "read_work": "work overview read",
+        "read_finance": "finance read",
     }
     value = str(text or "")
     for internal, label in replacements.items():
@@ -2437,6 +2995,7 @@ def resolve_turn_disposition(
     *,
     model_fallback: bool = False,
     clarification_only: bool = False,
+    awaiting_approval: bool = False,
     answer_only: bool = False,
     completion_satisfied: bool = False,
     fast_path: bool = False,
@@ -2453,6 +3012,12 @@ def resolve_turn_disposition(
         return TurnDisposition.MODEL_FALLBACK
     if clarification_only:
         return TurnDisposition.CLARIFY
+    # Approval is a non-terminal turn boundary.  It must take precedence over
+    # any answer/completion flags that may have been set earlier in the loop
+    # (for example, when a model streamed "Done." before the server created
+    # the approval card).  The requested action has not executed yet.
+    if awaiting_approval:
+        return TurnDisposition.AWAIT_APPROVAL
     if answer_only or completion_satisfied:
         return TurnDisposition.ANSWER
     if fast_path:
@@ -2988,9 +3553,57 @@ def canonical_read_fast_path_payload(
     query: str = "",
 ) -> dict[str, Any]:
     """Build a complete payload for a framework-selected safe read."""
+    if frame is not None and not isinstance(frame, Mapping) and hasattr(frame, "as_dict"):
+        frame = frame.as_dict()
     if binding == "manage_assets" and action == "get":
         return canonical_asset_read_payload(frame)
+    # Web bindings are single-purpose transports: their ActionSpec is
+    # `search`/`fetch`, while the actual user-authored query or URL is the
+    # required bounded input. Omitting it produces an apparently successful
+    # empty/default search and leaves the model to invent the answer.
+    if binding == "web_search" and action == "search":
+        return {"query": str(query or "").strip()[:1000]}
+    if binding == "web_fetch" and action == "fetch":
+        return {"url": str(query or "").strip()[:2000]}
     payload = {"action": action}
+    if binding == "read_finance" and action in {"spending", "transactions"}:
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        merchant = str(filters.get("merchant") or "").strip()
+        if merchant:
+            payload["merchant"] = merchant[:100]
+        category = str(filters.get("category") or "").strip()
+        if category:
+            payload["category"] = category[:100]
+        for key in ("start", "end"):
+            value = str(filters.get(key) or "").strip()
+            if value:
+                payload[key] = value[:10]
+        for key, allowed in (("status", {"posted", "pending"}), ("direction", {"inflow", "outflow"})):
+            value = str(filters.get(key) or "").strip().casefold()
+            if value in allowed:
+                payload[key] = value
+        sort = str(filters.get("sort") or "").strip().casefold()
+        if sort == "amount_desc":
+            payload["sort"] = sort
+            payload["direction"] = "outflow"
+            payload["status"] = "posted"
+            payload["limit"] = min(max(int(filters.get("limit") or 10), 1), 20)
+    if binding == "read_household" and action in {"overview", "list_items"}:
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        list_name = str(filters.get("list_name") or "").strip().casefold()
+        if list_name in {"grocery", "pantry", "fridge", "freezer"}:
+            payload["list_name"] = list_name
+        elif action == "overview" and str(filters.get("view") or "").strip().casefold() == "expiring":
+            payload["view"] = "expiring"
+            payload["expiry_days"] = min(max(int(filters.get("expiry_days") or 30), 0), 365)
+    if binding == "manage_homelab" and action == "read_network_observations":
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        view = str(filters.get("view") or "").strip().casefold()
+        if view in {"observations", "unidentified", "roles"}:
+            payload["view"] = view
     if binding == "manage_assets" and action in {"list", "search"}:
         frame = frame if isinstance(frame, Mapping) else {}
         filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
@@ -3006,6 +3619,24 @@ def canonical_read_fast_path_payload(
                 r"\bhow\s+many\b", requested_query, re.IGNORECASE
             ):
                 payload["result_projection"] = "count"
+    if binding == "manage_assets" and action == "recipe_suggest":
+        frame = frame if isinstance(frame, Mapping) else {}
+        filters = frame.get("filters") if isinstance(frame.get("filters"), Mapping) else {}
+        if filters.get("available_only"):
+            payload["available_only"] = True
+        if filters.get("budget_constraint"):
+            # This flag qualifies the deterministic recipe result.  It does
+            # not authorize a price calculation or make the model infer one.
+            payload["budget_constraint"] = True
+        if filters.get("max_shortages") is not None:
+            payload["max_shortages"] = min(max(int(filters.get("max_shortages") or 0), 0), 32)
+        ingredient_query = str(filters.get("ingredient_query") or "").strip()
+        if ingredient_query:
+            payload["ingredient_query"] = ingredient_query[:100]
+        if filters.get("use_expiring"):
+            payload["use_expiring"] = True
+            payload["expiry_days"] = min(max(int(filters.get("expiry_days") or 30), 0), 365)
+        payload["limit"] = min(max(int(filters.get("limit") or 20), 1), 50)
     if action == "summarize_owner_memory":
         payload["query"] = query or "what do you remember about me"
     elif binding == "developer_read":
@@ -3025,6 +3656,230 @@ def canonical_read_fast_path_payload(
         elif view == "map":
             payload["query"] = "**/*"
     return payload
+
+
+def canonical_inventory_mutation_payload(
+    action: str,
+    query: str,
+    *,
+    operation_scope: str | None = None,
+) -> dict[str, Any] | None:
+    """Ground simple owner inventory mutations without trusting model prose."""
+    action = str(action or "").strip()
+    text = re.sub(r"\s+", " ", str(query or "").strip())
+    if not text:
+        return None
+    # Idempotency belongs to one durable owner turn, not to the natural
+    # language itself. Repeating the same request after a completed turn must
+    # be a new operation, while retries inside the same Work run must replay
+    # safely. Legacy direct callers without a run scope retain the stable
+    # text-derived key used by their deterministic fixtures.
+    scope = str(operation_scope or "").strip()
+    key_material = f"{action}:{scope}:{text.casefold()}" if scope else f"{action}:{text.casefold()}"
+    key = hashlib.sha256(key_material.encode("utf-8")).hexdigest()[:24]
+    if action == "add_item":
+        match = re.search(
+            r"\b(?:add|put)\s+(.+?)\s+(?:to|on)\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list\b",
+            text, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        name = match.group(1).strip(" .,!?:;")
+        if not 1 <= len(name) <= 200:
+            return None
+        # A recipe-composition request is not a single grocery item. Leave it
+        # for the recipe-capable model path instead of projecting the owner's
+        # request phrase (for example, "the ingredients I am missing") into
+        # canonical inventory.
+        if re.match(
+            r"^(?:(?:the|those|these|my|some|all)\s+)?(?:ingredients?|items?)\b",
+            name,
+            re.IGNORECASE,
+        ):
+            return None
+        # Keep an explicit owner-authored set as separate canonical items.
+        # Recipe-shaped text (for example, "add ingredients for spaghetti")
+        # intentionally remains a single value and is rejected by the service
+        # rather than guessed into a recipe.
+        parts = [part.strip(" .,!?:;") for part in name.split(",")]
+        if len(parts) > 1 and re.match(r"^and\s+", parts[-1], re.IGNORECASE):
+            parts[-1] = re.sub(r"^and\s+", "", parts[-1], flags=re.IGNORECASE).strip(" .,!?:;")
+        parts = [part for part in parts if part]
+        if len(parts) > 1 and all(1 <= len(part) <= 200 for part in parts):
+            return {
+                "action": action, "items": parts, "domain": "kitchen",
+                "item_kind": "ingredient", "list_name": "grocery",
+                "shopping_list": True, "idempotency_key": f"inventory:{key}",
+            }
+        return {
+            "action": action, "name": name, "domain": "kitchen",
+            "item_kind": "ingredient", "list_name": "grocery",
+            "shopping_list": True, "idempotency_key": f"inventory:{key}",
+        }
+
+    if action == "archive_item":
+        match = re.search(
+            r"\b(?:delete|remove|retire|forget)\s+(.+?)\s+from\s+"
+            r"(?:(?:my|the)\s+)?(?:kitchen|pantry|fridge|freezer|inventory|stock)\b",
+            text, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        raw_names = match.group(1).strip(" .,!?:;")
+        if re.fullmatch(r"(?:everything|all|all\s+items)", raw_names, re.IGNORECASE):
+            return None
+        names = [part.strip(" .,!?:;") for part in raw_names.split(",")]
+        if len(names) > 1 and re.match(r"^and\s+", names[-1], re.IGNORECASE):
+            names[-1] = re.sub(r"^and\s+", "", names[-1], flags=re.IGNORECASE).strip(" .,!?:;")
+        names = [re.sub(r"^(?:the|an|a)\s+", "", part, flags=re.IGNORECASE) for part in names if part]
+        if not names or len(names) > 32 or not all(1 <= len(part) <= 200 for part in names):
+            return None
+        return {
+            "action": action, "items": names, "domain": "kitchen",
+            "storage_area": "kitchen", "idempotency_key": f"inventory:{key}",
+        }
+
+    units = r"kg|kilograms?|g|grams?|ml|milliliters?|l|liters?|litres?|lb|pounds?|oz|ounces?|each|counts?|items?|units?"
+    words = {"one": 1, "a": 1, "an": 1, "two": 2, "three": 3,
+             "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+             "nine": 9, "ten": 10}
+    if action == "add_stock":
+        destination = re.search(
+            r"\b(?:in|into|to)\s+(?:(?:my|our|the)\s+)?(?:shared\s+)?"
+            r"(pantry|fridge|freezer)\b", text, re.IGNORECASE,
+        )
+        if not destination:
+            destination = re.search(r"\b(pantry|fridge|freezer)\b", text, re.IGNORECASE)
+        if not destination:
+            return None
+        before = text[:destination.start()].strip(" .,;:")
+        # A purchase often ends with a placement clause ("...; put them in
+        # the pantry"). Only the purchase noun phrase is an item selector.
+        before = re.split(r"\s*[;,]\s*(?:put|place|store)\b", before, maxsplit=1, flags=re.IGNORECASE)[0]
+        before = re.sub(r"^I\s+", "", before, flags=re.IGNORECASE)
+
+        # Owners commonly describe counted purchases by package rather than
+        # by the canonical ``each`` unit: "two jars of sauce", "a bottle of
+        # oil", or "3 cans of beans".  The package is presentation language,
+        # not a new inventory unit.  Ground it to a bounded count while
+        # preserving the ingredient name and the existing storage destination.
+        package_match = re.search(
+            rf"(?:bought|buy|purchased|purchase|add|put|store|place)?\s*"
+            rf"(?:(\d+(?:\.\d+)?|{'|'.join(words)})\s+)?"
+            r"(?:jars?|cans?|bottles?|cartons?|boxes?|packages?|packs?|"
+            r"containers?|bunches?|heads?|loaves?)\s+of\s+(.+)$",
+            before, re.IGNORECASE,
+        )
+        if package_match:
+            count, name = package_match.groups()
+            count_value = words.get(count.casefold(), None) if count and not count[0].isdigit() else (float(count) if count else 1)
+            name = name.strip(" .,!?:;")
+            if name and count_value is not None and count_value > 0:
+                return {
+                    "action": action, "name": name, "domain": "kitchen",
+                    "item_kind": "ingredient", "quantity": count_value,
+                    "unit": "each", "storage_area": destination.group(1).casefold(),
+                    "idempotency_key": f"inventory:{key}",
+                }
+
+        match = re.search(
+            rf"(?:bought|buy|purchased|purchase|add|put|store|place)?\s*"
+            rf"(?:(\d+(?:\.\d+)?|{'|'.join(words)})\s+)?"
+            rf"(\d+(?:\.\d+)?)\s*[- ]?\s*({units})\s+(?:bags?\s+of\s+|bottles?\s+of\s+|of\s+)?(.+)$",
+            before, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        count, quantity, unit, name = match.groups()
+        count_value = words.get(count.casefold(), None) if count and not count[0].isdigit() else (float(count) if count else 1)
+        quantity_value = float(quantity) * count_value if count_value is not None else float(quantity)
+        name = name.strip(" .,!?:;")
+        if not name or quantity_value <= 0:
+            return None
+        return {
+            "action": action, "name": name, "domain": "kitchen",
+            "item_kind": "ingredient", "quantity": quantity_value,
+            "unit": unit.casefold(), "storage_area": destination.group(1).casefold(),
+            "idempotency_key": f"inventory:{key}",
+        }
+
+    if action == "remove_from_grocery":
+        # A set-valued grocery clear is resolved against canonical state by
+        # the service.  Do not turn "all" into model-supplied item names or
+        # stable-ID homework; the bounded action owns the current set.
+        if re.search(
+            r"\b(?:clear|empty)\s+(?:(?:out|off)\s+)?(?:all\s+)?(?:of\s+)?"
+            r"(?:the\s+)?(?:items?\s+on\s+)?(?:(?:my|the)\s+)?"
+            r"(?:grocery|shopping)\s+list\b"
+            r"|\b(?:delete|remove)\s+(?:all|everything)\s+(?:of\s+)?"
+            r"(?:the\s+)?(?:items?\s+)?(?:from|on)\s+(?:(?:my|the)\s+)?"
+            r"(?:grocery|shopping)\s+list\b",
+            text, re.IGNORECASE,
+        ):
+            return {
+                "action": action, "clear": True, "list_name": "grocery",
+                "domain": "kitchen", "idempotency_key": f"inventory:{key}",
+            }
+        match = re.search(
+            r"\b(?:remove|take)\s+(.+?)\s+from\s+(?:(?:my|the)\s+)?(?:grocery|shopping)\s+list\b",
+            text, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        name = match.group(1).strip(" .,!?:;")
+        if not 1 <= len(name) <= 200:
+            return None
+        return {
+            "action": action, "name": name, "domain": "kitchen",
+            "idempotency_key": f"inventory:{key}",
+        }
+    if action == "consume_stock":
+        match = re.search(
+            rf"\b(?:use|used|consume|consumed|take|took)\s+"
+            rf"(\d+(?:\.\d+)?|{'|'.join(words)})\s*({units})\s+(?:of\s+)?(.+)$",
+            text, re.IGNORECASE,
+        )
+        if not match:
+            return None
+        quantity, unit, name = match.groups()
+        quantity = words.get(quantity.casefold(), quantity)
+        unit = unit.casefold()
+        if unit in {"count", "counts", "item", "items", "unit", "units"}:
+            unit = "each"
+        name = re.sub(
+            r"\s+from\s+(?:(?:my|our|the)\s+)?(?:shared\s+)?"
+            r"(?:pantry|fridge|freezer)\b.*$",
+            "", name, flags=re.IGNORECASE,
+        ).strip()
+        return {
+            "action": action, "name": name.strip(" .,!?:;"),
+            "quantity": float(quantity), "unit": unit.casefold(),
+            "idempotency_key": f"inventory:{key}",
+        }
+    return None
+
+
+def _inventory_payload_complete(payload: Mapping[str, Any], action: str) -> bool:
+    if action == "add_item":
+        items = payload.get("items")
+        return bool(
+            (isinstance(items, list) and items and all(str(item).strip() for item in items))
+            or str(payload.get("name") or "").strip()
+        )
+    if action == "remove_from_grocery":
+        return bool(payload.get("clear")) or bool(str(payload.get("name") or "").strip())
+    if action == "archive_item":
+        items = payload.get("items")
+        return bool(
+            (isinstance(items, list) and items and all(str(item).strip() for item in items))
+            or str(payload.get("name") or "").strip()
+        )
+    return (
+        bool(str(payload.get("name") or "").strip())
+        and payload.get("quantity") is not None
+        and bool(str(payload.get("unit") or "").strip())
+        and bool(str(payload.get("idempotency_key") or "").strip())
+    )
 
 
 def canonical_asset_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
@@ -3153,28 +4008,67 @@ def canonical_household_read_answer(tool_events: Sequence[Mapping[str, Any]]) ->
     }:
         return None
 
+    if str(payload.get("view") or "").strip().casefold() == "expiring":
+        rows = payload.get("expiring_lots")
+        if not isinstance(rows, list):
+            return None
+        horizon = (payload.get("freshness") or {}).get("expiry_horizon_days", 30)
+        if not rows:
+            return f"I found no stocked food expiring within the next {horizon} days."
+        lines = [f"Food to use soon (within {horizon} days):"]
+        for row in rows[:100]:
+            if not isinstance(row, Mapping):
+                continue
+            item = row.get("item") if isinstance(row.get("item"), Mapping) else {}
+            lot = row.get("lot") if isinstance(row.get("lot"), Mapping) else {}
+            name = str(item.get("name") or "Unnamed item").strip()
+            status = str(row.get("status") or "expiring").strip().lower()
+            expiry = str(lot.get("expiry_date") or "date unknown").strip()
+            quantity = _display_inventory_quantity(lot.get("quantity"))
+            unit = str(lot.get("unit") or "").strip()
+            label = "expired" if status == "expired" else "use by"
+            lines.append(f"- {name}: {quantity}{(' ' + unit) if unit else ''} ({label} {expiry})")
+        if len(rows) > 100:
+            lines.append(f"- …and {len(rows) - 100} more")
+        return "\n".join(lines)
+
     items = payload.get("items")
     if not isinstance(items, list):
         item = payload.get("item")
         items = [item] if isinstance(item, Mapping) else None
     if items is None:
         return None
+    list_name = str(payload.get("list_name") or "").strip().casefold()
     if not items:
-        return "No kitchen or household inventory is recorded for this owner."
+        return f"Your {list_name} list is empty." if list_name else "No kitchen or household inventory is recorded for this owner."
 
-    lines = [f"I found {len(items)} kitchen/household item{'s' if len(items) != 1 else ''}:"]
+    labels = {
+        "grocery": ("item to buy", "items to buy"),
+        "pantry": ("pantry item on hand", "pantry items on hand"),
+        "fridge": ("fridge item on hand", "fridge items on hand"),
+        "freezer": ("freezer item on hand", "freezer items on hand"),
+    }
+    singular, plural = labels.get(
+        list_name,
+        (f"{list_name} item" if list_name else "kitchen/household item",
+         f"{list_name} items" if list_name else "kitchen/household items"),
+    )
+    lines = [f"I found {len(items)} {singular if len(items) == 1 else plural}:"]
     for item in items[:100]:
         if not isinstance(item, Mapping):
             continue
         name = str(item.get("name") or item.get("id") or "Unnamed item").strip()
         details: list[str] = []
         domain = item.get("domain")
-        quantity = item.get("stock_quantity", item.get("quantity"))
+        # A grocery queue is a missing/to-buy projection. Do not leak a
+        # possibly stale lot total into the answer and accidentally imply the
+        # item is already owned. Storage lists are explicitly on-hand stock.
+        quantity = None if list_name == "grocery" else item.get("stock_quantity", item.get("quantity"))
         unit = item.get("default_unit", item.get("unit"))
         if domain not in (None, ""):
             details.append(f"domain={domain}")
         if quantity not in (None, ""):
-            details.append(f"quantity={quantity}")
+            details.append(f"quantity={_display_inventory_quantity(quantity)}")
             if unit not in (None, ""):
                 details[-1] += f" {unit}"
         lines.append(f"- {name}" + (f" ({', '.join(details)})" if details else ""))
@@ -3244,6 +4138,55 @@ def canonical_network_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> s
             lines.append(f"- {label}")
         if len(nodes) > 50:
             lines.append(f"- …and {len(nodes) - 50} more")
+        if str(payload.get("view") or "").strip().casefold() == "observations":
+            lines.append("These are persisted observations; current health was not directly verified for every node.")
+        return "\n".join(lines)
+    if action == "execute_network_discovery":
+        if payload.get("success") is not True:
+            return None
+        target = str(payload.get("target") or "the authorized private network").strip()
+        count = payload.get("candidate_count")
+        try:
+            count_text = str(max(0, int(count)))
+        except (TypeError, ValueError):
+            count_text = "the observed"
+        suffix = "host" if count_text == "1" else "hosts"
+        persisted = payload.get("observations_recorded") is True
+        message = f"Network discovery completed for {target}: {count_text} responding {suffix} observed."
+        if persisted:
+            message += " The observations were recorded for review; no device identity was inferred."
+        else:
+            message += " The observations were returned, but durable recording was not confirmed."
+        return message
+    if action == "execute_network_service_enumeration":
+        if payload.get("success") is not True:
+            return None
+        observations = payload.get("service_observations")
+        if not isinstance(observations, list):
+            observations = []
+        lines = [
+            f"Service scan completed for {len(observations)} responding host"
+            f"{'s' if len(observations) != 1 else ''}."
+        ]
+        for observation in observations[:50]:
+            if not isinstance(observation, Mapping):
+                continue
+            host = str(observation.get("ip") or "unknown host")
+            services = observation.get("services") if isinstance(observation.get("services"), list) else []
+            if not services:
+                lines.append(f"- {host}: no open services observed in the bounded scan.")
+                continue
+            rendered = []
+            for service in services[:32]:
+                if not isinstance(service, Mapping):
+                    continue
+                label = f"{service.get('port')}/{service.get('protocol') or 'tcp'}"
+                name = str(service.get("service") or "unknown").strip()
+                version = " ".join(str(service.get(key) or "").strip() for key in ("product", "version")).strip()
+                rendered.append(f"{label} {name}{f' ({version})' if version else ''}")
+            lines.append(f"- {host}: {', '.join(rendered) if rendered else 'no open services observed'}.")
+        if payload.get("observations_recorded") is True:
+            lines.append("The observations were recorded for review; service names and versions are observed evidence, not confirmed device identity.")
         return "\n".join(lines)
     return None
 
@@ -3291,19 +4234,124 @@ def canonical_tool_result_projection(
     answer renderers retain the small structured fields needed to describe the
     completed read. This projection is evidence, not another state store.
     """
-    if str(tool_name or "").strip() != "manage_homelab" or not isinstance(result, Mapping):
+    if not isinstance(result, Mapping):
         return None
-    raw = result.get("output")
-    if isinstance(raw, Mapping):
-        payload = raw
+    tool_name = str(tool_name or "").strip()
+    data_payload = result.get("data") if isinstance(result.get("data"), Mapping) else None
+    serialized_payload = None
+    try:
+        parsed_output = json.loads(str(result.get("output") or ""))
+        if isinstance(parsed_output, Mapping):
+            serialized_payload = parsed_output
+    except (TypeError, ValueError):
+        serialized_payload = None
+
+    # Registered executors normally return the complete structured result in
+    # ``data``.  Some compatibility/transport paths retain only a compact
+    # coverage envelope there while the complete bounded Finance projection is
+    # still present in ``output``.  Prefer the structured envelope, but merge
+    # the serialized result when it carries fields the envelope omitted.  A
+    # missing merge here turns a successful read into the generic ``Done.``
+    # fallback even though the executor produced valid totals.
+    if tool_name == "read_finance" and data_payload is not None and serialized_payload is not None:
+        payload = dict(serialized_payload)
+        serialized_coverage = serialized_payload.get("coverage")
+        data_coverage = data_payload.get("coverage")
+        payload.update(data_payload)
+        if isinstance(serialized_coverage, Mapping) and isinstance(data_coverage, Mapping):
+            payload["coverage"] = {**serialized_coverage, **data_coverage}
+    elif data_payload is not None:
+        payload = data_payload
     else:
-        try:
-            payload = json.loads(str(raw or ""))
-        except (TypeError, ValueError):
-            return None
+        payload = serialized_payload
     if not isinstance(payload, Mapping):
         return None
     action = str(payload.get("action") or "").strip()
+    if tool_name == "read_finance":
+        # FinanceService returns the action's result payload rather than
+        # repeating the request verb inside it. Infer only from its
+        # unambiguous result shape; this is routing metadata, not a new
+        # authority decision.
+        if not action:
+            if isinstance(payload.get("transactions"), list):
+                action = "transactions"
+            elif "posted_outflow_by_currency" in payload:
+                action = "spending"
+            elif isinstance(payload.get("by_currency"), Mapping):
+                action = "cash_flow"
+            elif isinstance(payload.get("shared_expenses"), list):
+                action = "shared_expenses"
+            elif "coverage_state" in payload or "transaction_date_start" in payload:
+                action = "coverage"
+        coverage = payload.get("coverage") if isinstance(payload.get("coverage"), Mapping) else {}
+        common = {
+            "action": action,
+            "status": payload.get("status"),
+            "start": payload.get("start"),
+            "end": payload.get("end"),
+            "coverage": {
+                key: coverage.get(key)
+                for key in (
+                    "as_of", "account_count", "transaction_date_start",
+                    "transaction_date_end", "posted_count", "pending_count",
+                    "coverage_state", "coverage_limitations", "data_sources",
+                    "requested_range_exceeds_coverage",
+                )
+                if key in coverage
+            },
+        }
+        if action == "transactions":
+            rows = payload.get("transactions")
+            common["transactions"] = [
+                {
+                    key: row.get(key)
+                    for key in (
+                        "transaction_date", "merchant", "description", "amount",
+                        "currency", "status", "direction",
+                    )
+                    if row.get(key) not in (None, "")
+                }
+                for row in (rows[:20] if isinstance(rows, list) else [])
+                if isinstance(row, Mapping)
+            ]
+            common["returned_count"] = len(rows) if isinstance(rows, list) else 0
+            common["limit"] = payload.get("limit")
+        elif action == "spending":
+            for key in (
+                "posted_outflow_by_currency", "posted_outflow_by_category",
+                "posted_outflow_by_merchant", "pending_outflow_by_currency",
+                "pending_outflow_count", "merchant", "category",
+            ):
+                if key in payload:
+                    common[key] = payload.get(key)
+        elif action == "cash_flow" and isinstance(payload.get("by_currency"), Mapping):
+            common["by_currency"] = payload.get("by_currency")
+        elif action == "shared_expenses":
+            expenses = payload.get("shared_expenses")
+            common["shared_expenses"] = expenses[:50] if isinstance(expenses, list) else []
+        elif action == "coverage":
+            # Coverage is already compact; keep the projection explicit so
+            # answer rendering does not depend on serialized tool text.
+            common.update({
+                key: payload.get(key)
+                for key in (
+                    "account_count", "as_of", "transaction_date_start",
+                    "transaction_date_end", "posted_count", "pending_count",
+                    "coverage_state", "coverage_limitations", "data_sources",
+                    "requested_range_exceeds_coverage", "ingestion_complete",
+                )
+                if key in payload
+            })
+        # The executor's structured data may still contain Python ``date``,
+        # ``datetime``, or Decimal values even though its serialized output is
+        # JSON text. This projection is emitted inside SSE metrics and saved
+        # metadata, so normalize it before it crosses that transport boundary.
+        try:
+            return json.loads(json.dumps(common, default=str))
+        except (TypeError, ValueError):
+            return None
+    if tool_name != "manage_homelab":
+        return None
     common = {
         "action": action,
         "status": payload.get("status"),
@@ -3339,6 +4387,28 @@ def canonical_tool_result_projection(
             "edges": list(raw_edges[:50]) if isinstance(raw_edges, list) else [],
             "node_count": payload.get("node_count"),
             "edge_count": payload.get("edge_count"),
+            "view": payload.get("view"),
+        })
+        return common
+    if action == "execute_network_discovery":
+        common.update({
+            "success": payload.get("success") is True,
+            "candidate_count": payload.get("candidate_count"),
+            "observations_recorded": payload.get("observations_recorded") is True,
+            "network_map_reconciled": payload.get("network_map_reconciled") is True,
+            "requires_explicit_inventory_review": bool(
+                payload.get("requires_explicit_inventory_review")
+            ),
+        })
+        return common
+    if action == "execute_network_service_enumeration":
+        observations = payload.get("service_observations")
+        common.update({
+            "success": payload.get("success") is True,
+            "observation_count": payload.get("observation_count"),
+            "observations_recorded": payload.get("observations_recorded") is True,
+            "service_observations": list(observations[:50]) if isinstance(observations, list) else [],
+            "network_map_reconciled": payload.get("network_map_reconciled") is True,
         })
         return common
     if action == "inspect_host":
@@ -3447,6 +4517,28 @@ def canonical_action_failure_answer(
     return None
 
 
+def canonical_web_search_answer(
+    tool_events: Sequence[Mapping[str, Any]],
+) -> str | None:
+    """Render the successful public-search payload instead of model filler.
+
+    Local models commonly emit ``Done.`` after a web tool call.  Search output
+    is already bounded and source-bearing at the native handler boundary, so
+    it is the authoritative answer payload for this turn; asking the model to
+    restate it can discard the weather/fact result or claim completion without
+    showing evidence.
+    """
+    for event in reversed(tuple(tool_events or ())):
+        if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "web_search":
+            continue
+        if event.get("ask_user") or event.get("exit_code") not in (None, 0):
+            continue
+        output = str(event.get("output") or "").strip()
+        if output:
+            return output
+    return None
+
+
 def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render the terminal inventory mutation from its structured Result."""
     event = next(iter(reversed(tuple(tool_events or ()))), None)
@@ -3458,7 +4550,7 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     except (TypeError, ValueError):
         return None
     if not isinstance(request, Mapping) or request.get("action") not in {
-        "add_item", "add_stock", "consume_stock", "adjust_stock", "update_asset",
+        "add_item", "add_stock", "consume_stock", "remove_from_grocery", "archive_item", "adjust_stock", "update_asset",
     } or not isinstance(payload, Mapping):
         return None
     if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
@@ -3466,19 +4558,240 @@ def canonical_inventory_mutation_answer(tool_events: Sequence[Mapping[str, Any]]
     action = str(request.get("action"))
     verification = payload.get("verification")
     verified = isinstance(verification, Mapping) and verification.get("status") == "VERIFIED"
-    item = payload.get("item") or payload.get("asset") or {}
-    name = item.get("name") if isinstance(item, Mapping) else None
-    label = str(name or request.get("name") or "the inventory item").strip()
+    if action in {"add_item", "archive_item"} and isinstance(payload.get("items"), list):
+        names = [
+            str(item.get("name") or "").strip()
+            for item in payload["items"]
+            if isinstance(item, Mapping) and str(item.get("name") or "").strip()
+        ]
+        label = ", ".join(names) if names else "the inventory items"
+    else:
+        item = payload.get("item") or payload.get("asset") or {}
+        name = item.get("name") if isinstance(item, Mapping) else None
+        label = str(name or request.get("name") or "the inventory item").strip()
     verb = {
         "add_item": "Recorded",
         "add_stock": "Added stock for",
         "consume_stock": "Consumed stock for",
+        "remove_from_grocery": "Removed from the grocery list",
+        "archive_item": "Archived from kitchen inventory",
         "adjust_stock": "Adjusted stock for",
         "update_asset": "Updated",
     }[action]
+    if action == "add_item" and isinstance(payload.get("items"), list):
+        verb = "Recorded grocery items"
+    if action == "remove_from_grocery" and request.get("clear"):
+        if verified:
+            return "Done. Your grocery list is empty; the canonical inventory readback is verified."
+        return "The grocery list change was written, but I could not verify that the list is empty."
     if verified:
         return f"{verb} {label}; the canonical inventory readback is verified."
     return f"{verb} {label}; the write succeeded but canonical readback verification is incomplete."
+
+
+def canonical_recipe_queue_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render saved-recipe grocery composition from its structured result."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") not in {
+        "recipe_queue_missing", "recipe_queue_missing_by_name",
+    } or not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        detail = str(payload.get("error") or payload.get("message") or "").strip()
+        if "no saved recipe matched" in detail.casefold():
+            return (
+                "I don’t have a saved recipe for that dish yet. Import or paste "
+                "the recipe first, and I’ll compare it with your stock and queue "
+                "only what’s missing."
+            )
+        detail_lower = detail.casefold()
+        if (
+            "more than one saved recipe" in detail_lower
+            or "multiple saved recipes" in detail_lower
+            or str(payload.get("error_code") or "").casefold() == "recipe_ambiguous"
+        ):
+            return "I found multiple saved recipes for that dish. Choose one before I queue ingredients."
+        return "I couldn't compare that recipe with your stock, so nothing was added to Grocery."
+    queued = payload.get("queued")
+    if isinstance(queued, Mapping):
+        queued = queued.get("queued")
+    if not isinstance(queued, list):
+        return None
+    names = []
+    for row in queued:
+        if isinstance(row, Mapping):
+            item = row.get("item") if isinstance(row.get("item"), Mapping) else row
+            name = str(item.get("name") or "").strip()
+            if name and name not in names:
+                names.append(name)
+    if not names:
+        return "I checked the saved recipe against your current stock; nothing was added to Grocery."
+    return "Added the missing recipe ingredients to Grocery: " + ", ".join(names) + "."
+
+
+def canonical_recipe_list_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render the saved-recipe collection without substituting pantry state."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") != "recipe_list":
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        return "I couldn't read your saved recipes; no recipe list is confirmed."
+    recipes = payload.get("recipes")
+    if not isinstance(recipes, list):
+        return None
+    names = [
+        str(recipe.get("name") or "").strip()
+        for recipe in recipes
+        if isinstance(recipe, Mapping) and str(recipe.get("name") or "").strip()
+    ]
+    if not names:
+        return "You don't have any saved recipes yet."
+    return "Your saved recipes: " + ", ".join(names) + "."
+
+
+def canonical_recipe_suggest_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render deterministic recipe availability/shortage suggestions."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") != "recipe_suggest":
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        return "I couldn't compare your saved recipes with current stock; no inventory was changed."
+    recipes = payload.get("recipes")
+    if not isinstance(recipes, list):
+        return None
+    budget_requested = bool(payload.get("budget_constraint") or request.get("budget_constraint"))
+    ingredient_query = str(payload.get("ingredient_query") or request.get("ingredient_query") or "").strip()
+    use_expiring = bool(payload.get("use_expiring") or request.get("use_expiring"))
+    budget_note = (
+        " I can compare what you have, but I do not have a verified ingredient-price "
+        "or budget projection, so this is not a cost ranking."
+        if budget_requested
+        else ""
+    )
+    if not recipes:
+        if payload.get("available_only"):
+            return "I couldn't find a saved recipe you can make from current stock." + budget_note
+        if ingredient_query:
+            suffix = " before it goes bad" if use_expiring else ""
+            return f"I couldn't find a saved recipe using {ingredient_query}{suffix}."
+        return "I couldn't find saved recipes within that shortage limit." + budget_note
+    labels = []
+    for recipe in recipes:
+        if not isinstance(recipe, Mapping):
+            continue
+        name = str(recipe.get("name") or "").strip()
+        if not name:
+            continue
+        if recipe.get("can_make"):
+            labels.append(f"{name} (ready)")
+        else:
+            count = recipe.get("missing_count")
+            labels.append(f"{name} (missing {count} item{'s' if count != 1 else ''})")
+    if not labels:
+        return None
+    if ingredient_query:
+        prefix = f"Recipes using {ingredient_query}{' before it goes bad' if use_expiring else ''}"
+    else:
+        prefix = "You can make" if payload.get("available_only") else "Closest saved recipes"
+    answer = prefix + ": " + ", ".join(labels) + "."
+    return answer + budget_note
+
+
+def canonical_recipe_missing_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render a read-only saved-recipe stock comparison."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") != "recipe_missing_by_name":
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        detail = str(payload.get("error") or payload.get("message") or "").strip()
+        if "no saved recipe matched" in detail.casefold():
+            return "I don’t have a saved recipe for that dish yet. Import or paste the recipe first, and I’ll compare it with your stock."
+        detail_lower = detail.casefold()
+        if (
+            "more than one saved recipe" in detail_lower
+            or "multiple saved recipes" in detail_lower
+            or str(payload.get("error_code") or "").casefold() == "recipe_ambiguous"
+        ):
+            return "I found multiple saved recipes for that dish. Choose one before I compare ingredients."
+        return "I couldn't compare that recipe with your stock. No inventory was changed."
+    missing = payload.get("missing")
+    if not isinstance(missing, Mapping):
+        return None
+    shortages = missing.get("shortages")
+    if not isinstance(shortages, list):
+        return None
+    if not shortages:
+        return "You have everything needed for that recipe in stock."
+    names = []
+    for row in shortages:
+        if isinstance(row, Mapping):
+            name = str(row.get("name") or "").strip()
+            amount = _display_inventory_quantity(row.get("missing"))
+            unit = str(row.get("unit") or "").strip()
+            if name and name not in names:
+                names.append(f"{name} ({amount} {unit})".strip())
+    return "You're missing: " + ", ".join(names) + ". You can ask me to add those to Grocery." if names else None
+
+
+def canonical_recipe_cook_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Render the structured result of cooking a saved recipe."""
+    event = next(iter(reversed(tuple(tool_events or ()))), None)
+    if not isinstance(event, Mapping) or str(event.get("tool") or "").strip() != "manage_assets":
+        return None
+    try:
+        request = json.loads(str(event.get("command") or "{}"))
+        payload = json.loads(str(event.get("output") or ""))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(request, Mapping) or request.get("action") != "recipe_cook":
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if event.get("exit_code") not in (None, 0) or payload.get("success") is False:
+        detail = str(payload.get("error") or payload.get("message") or "").strip()
+        if "no saved recipe matched" in detail.casefold():
+            return "I don't have a saved recipe for that dish yet. Import or paste it first; no stock was changed."
+        if "more than one saved recipe" in detail.casefold():
+            return "I found multiple saved recipes for that dish. Choose one before I cook it."
+        return "I couldn't cook that recipe. No stock change is confirmed."
+    cooked = payload.get("cook")
+    if not isinstance(cooked, Mapping) or not cooked.get("id"):
+        return None
+    return "Cooked the saved recipe and verified the canonical stock deduction."
 
 
 def canonical_memory_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
@@ -3531,6 +4844,193 @@ def canonical_work_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str 
     return f"I found {total} work record{'s' if total != 1 else ''} ({labels})."
 
 
+def canonical_finance_read_answer(
+    tool_events: Sequence[Mapping[str, Any]],
+    *,
+    owner_query: str = "",
+) -> str | None:
+    """Render deterministic Finance reads instead of accepting a bare model completion."""
+    event = next(
+        (item for item in reversed(tuple(tool_events or ()))
+         if isinstance(item, Mapping) and str(item.get("tool") or "").strip() == "read_finance"),
+        None,
+    )
+    if event is None or event.get("exit_code") not in (None, 0):
+        return None
+    # Large transaction reads are intentionally capped before they are saved
+    # in chat metadata. Prefer the bounded structured projection attached by
+    # the executor; parsing the display text first makes a valid read degrade
+    # to a bare model completion when the serialized ledger preview is cut in
+    # the middle of JSON.
+    payload = event.get("result_projection")
+    if not isinstance(payload, Mapping):
+        try:
+            payload = json.loads(str(event.get("output") or ""))
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(payload, Mapping) or str(payload.get("status") or "").upper() in {
+        "FAILED", "UNAVAILABLE", "INVALID_RESULT", "ERROR",
+    }:
+        return None
+
+    coverage = payload.get("coverage") if isinstance(payload.get("coverage"), Mapping) else payload
+    limitations = coverage.get("coverage_limitations") if isinstance(coverage.get("coverage_limitations"), list) else []
+    source_names = []
+    for source in coverage.get("data_sources", []) if isinstance(coverage.get("data_sources"), list) else []:
+        if isinstance(source, Mapping):
+            label = "local CSV" if source.get("source") == "local_csv" else str(source.get("source") or "provider")
+            if label not in source_names:
+                source_names.append(label)
+    action = str(payload.get("action") or "").casefold()
+    lines: list[str] = []
+    if "posted_outflow_by_currency" in payload:
+        if re.search(
+            r"\b(?:does|did|is|are)\b.{0,32}\b(?:include|including|count)\b.{0,32}\bpending\b|"
+            r"\b(?:include|including|count)\b.{0,32}\bpending\b",
+            str(owner_query or ""),
+            re.IGNORECASE,
+        ):
+            pending = payload.get("pending_outflow_by_currency") or {}
+            pending_count = payload.get("pending_outflow_count") or 0
+            pending_rendered = ", ".join(
+                f"{currency} {_display_finance_amount(amount, currency)}"
+                for currency, amount in pending.items()
+            ) or "none recorded"
+            total_rendered = ", ".join(
+                f"{currency} {_display_finance_amount(amount, currency)}"
+                for currency, amount in (payload.get("posted_outflow_by_currency") or {}).items()
+            ) or "none recorded"
+            answer = (
+                "No. The spending total is posted transactions only; pending transactions are excluded. "
+                f"Posted spending for the requested range is {total_rendered}. "
+                f"Pending outflows tracked separately: {pending_rendered} "
+                f"({pending_count} transaction{'s' if pending_count != 1 else ''})."
+            )
+            if coverage.get("as_of"):
+                answer += f" As of {coverage['as_of']}."
+            if limitations:
+                answer += " Coverage limitation: " + "; ".join(str(item) for item in limitations) + "."
+            return answer
+        period = f"{payload.get('start', 'the requested period')} through {payload.get('end', 'today')}"
+        totals = payload.get("posted_outflow_by_currency") or {}
+        rendered = ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in totals.items()) or "none recorded"
+        merchant = str(payload.get("merchant") or "").strip()
+        category = str(payload.get("category") or "").strip()
+        subject = f"at {merchant} " if merchant else ""
+        if category == "dining_out":
+            subject += "for dining out "
+        elif category:
+            subject += f"for {category} "
+        lines.append(f"Posted spending {subject}for {period}: {rendered}.")
+        categories = payload.get("posted_outflow_by_category") or {}
+        if categories:
+            def _category_sort(item: tuple[str, Any]) -> Decimal:
+                values = item[1] if isinstance(item[1], Mapping) else {}
+                # Sorting is only meaningful within a currency. Keep the
+                # stable provider order when currencies are mixed so we never
+                # imply an FX conversion.
+                if len(values) == 1:
+                    try:
+                        return Decimal(str(next(iter(values.values()))))
+                    except Exception:
+                        return Decimal("0")
+                return Decimal("0")
+            category_items = list(categories.items())
+            if len({currency for values in categories.values() if isinstance(values, Mapping) for currency in values}) <= 1:
+                category_items.sort(key=_category_sort, reverse=True)
+            parts = []
+            for category, values in category_items[:12]:
+                parts.append(f"{category}: " + ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in values.items()))
+            lines.append("By category: " + "; ".join(parts) + ".")
+            if len(category_items) > 1:
+                top_category, top_values = category_items[0]
+                top_text = ", ".join(
+                    f"{currency} {_display_finance_amount(amount, currency)}"
+                    for currency, amount in top_values.items()
+                )
+                lines.append(
+                    f"What stands out: {top_category} is the largest recorded spending category in this range ({top_text})."
+                )
+        merchants = payload.get("posted_outflow_by_merchant")
+        if isinstance(merchants, Mapping) and merchants:
+            merchant_items = list(merchants.items())
+            currencies = {currency for values in merchants.values() if isinstance(values, Mapping) for currency in values}
+            if len(currencies) == 1:
+                def _merchant_sort(item: tuple[str, Any]) -> Decimal:
+                    values = item[1] if isinstance(item[1], Mapping) else {}
+                    try:
+                        return Decimal(str(next(iter(values.values()))))
+                    except Exception:
+                        return Decimal("0")
+                merchant_items.sort(key=_merchant_sort, reverse=True)
+                lines.append(
+                    "Largest merchant totals: " + "; ".join(
+                        f"{merchant} {currency} {_display_finance_amount(amount, currency)}"
+                        for merchant, values in merchant_items[:5]
+                        for currency, amount in (values.items() if isinstance(values, Mapping) else ())
+                    ) + "."
+                )
+        pending = payload.get("pending_outflow_by_currency") or {}
+        if pending:
+            pending_rendered = ", ".join(f"{currency} {_display_finance_amount(amount, currency)}" for currency, amount in pending.items())
+            pending_count = payload.get("pending_outflow_count") or 0
+            lines.append(f"Pending spending {subject}not included in the posted total: {pending_rendered} ({pending_count} transaction{'s' if pending_count != 1 else ''}).")
+    elif isinstance(payload.get("by_currency"), Mapping):
+        period = f"{payload.get('start', 'the requested period')} through {payload.get('end', 'today')}"
+        parts = []
+        for currency, values in payload["by_currency"].items():
+            if isinstance(values, Mapping):
+                parts.append(
+                    f"{currency}: inflow {_display_finance_amount(values.get('posted_inflow', '0'), currency)}, "
+                    f"outflow {_display_finance_amount(values.get('posted_outflow', '0'), currency)}, "
+                    f"net {_display_finance_amount(values.get('net_raw_flow', '0'), currency)}"
+                )
+        lines.append(f"Cash flow for {period}: " + "; ".join(parts) + ".")
+    elif isinstance(payload.get("transactions"), list):
+        transactions = payload["transactions"]
+        lines.append(f"I found {len(transactions)} matching Finance transaction{'s' if len(transactions) != 1 else ''} in the bounded result.")
+        for row in transactions[:20]:
+            if isinstance(row, Mapping):
+                currency = row.get('currency', '')
+                lines.append(f"- {row.get('transaction_date', 'date unknown')}: {row.get('merchant') or row.get('description') or 'unnamed'} — {currency} {_display_finance_amount(row.get('amount', ''), currency)} ({row.get('status', 'posted')})")
+        returned_count = payload.get("returned_count")
+        if isinstance(returned_count, int) and returned_count > len(transactions):
+            lines.append(f"- …and {returned_count - len(transactions)} more in the bounded result.")
+        elif len(transactions) > 20:
+            lines.append(f"- …and {len(transactions) - 20} more in the bounded result.")
+        transaction_coverage = coverage if isinstance(coverage, Mapping) else {}
+        pending_count = transaction_coverage.get("pending_count")
+        posted_count = transaction_coverage.get("posted_count")
+        if pending_count is not None or posted_count is not None:
+            lines.append(
+                "This view includes pending rows when they match the request; "
+                f"the requested coverage records {pending_count or 0} pending and "
+                f"{posted_count or 0} posted transaction(s). Pending transactions "
+                "are not included in posted spending totals."
+            )
+    elif isinstance(payload.get("shared_expenses"), list):
+        lines.append(f"I found {len(payload['shared_expenses'])} explicitly shared household expense{'s' if len(payload['shared_expenses']) != 1 else ''}.")
+    elif action == "coverage" or "coverage_state" in payload:
+        state = str(coverage.get("coverage_state") or "UNKNOWN").lower()
+        lines.append(f"Finance coverage is {state}; {coverage.get('posted_count', 0)} posted and {coverage.get('pending_count', 0)} pending transactions are recorded.")
+        if coverage.get("transaction_date_start") and coverage.get("transaction_date_end"):
+            lines.append(f"Canonical transaction dates run from {coverage['transaction_date_start']} through {coverage['transaction_date_end']}.")
+    if not lines:
+        return None
+    if source_names:
+        lines.append("Source: " + ", ".join(source_names) + ".")
+    if coverage.get("as_of"):
+        lines.append(f"As of {coverage['as_of']}.")
+    if limitations:
+        lines.append("Coverage limitation: " + "; ".join(str(item) for item in limitations) + ".")
+    if "posted_outflow_by_currency" in payload and not payload.get("merchant") and not payload.get("category"):
+        lines.append(
+            "Guidance: use the largest category or merchant above as a review starting point; "
+            "these are descriptive records, not a forecast or a recommendation to spend or move money."
+        )
+    return "\n".join(lines)
+
+
 def canonical_structured_empty_read_answer(tool_events: Sequence[Mapping[str, Any]]) -> str | None:
     """Render a successful structured empty read without model synthesis.
 
@@ -3567,6 +5067,8 @@ def canonical_structured_empty_read_answer(tool_events: Sequence[Mapping[str, An
 
 def canonical_result_answer(
     tool_events: Sequence[Mapping[str, Any]],
+    *,
+    owner_query: str = "",
 ) -> CanonicalAnswer | None:
     """Select one deterministic owner-state answer for a completed turn.
 
@@ -3576,9 +5078,16 @@ def canonical_result_answer(
     authoritative or merely another piece of model prose.
     """
     candidates = (
+        (canonical_web_search_answer(tool_events), "bounded web-search Result"),
+        (canonical_recipe_suggest_answer(tool_events), "canonical recipe availability Result"),
+        (canonical_recipe_list_answer(tool_events), "canonical saved recipe Result"),
+        (canonical_recipe_missing_answer(tool_events), "canonical recipe stock Result"),
+        (canonical_recipe_queue_answer(tool_events), "canonical recipe grocery Result"),
+        (canonical_recipe_cook_answer(tool_events), "canonical recipe cook Result"),
         (canonical_inventory_mutation_answer(tool_events), "inventory mutation Result"),
         (canonical_memory_read_answer(tool_events), "canonical Memory Result"),
         (canonical_work_read_answer(tool_events), "canonical Work Result"),
+        (canonical_finance_read_answer(tool_events, owner_query=owner_query), "canonical Finance Result"),
         (canonical_network_read_answer(tool_events), "canonical Network Result"),
         (canonical_homelab_read_answer(tool_events), "canonical Homelab Result"),
         (canonical_asset_read_answer(tool_events), "canonical Asset Result"),
@@ -3602,9 +5111,10 @@ def project_final_answer(
     intent_domains: Sequence[str] = (),
     stored_evidence: bool = False,
     clarification_only: bool = False,
+    owner_query: str = "",
 ) -> tuple[str, CanonicalAnswer | None]:
     """Select the authoritative answer before the transport emits it."""
-    canonical = canonical_result_answer(tool_events)
+    canonical = canonical_result_answer(tool_events, owner_query=owner_query)
     if canonical is not None:
         return canonical.content, canonical
     if clarification_only:
@@ -3880,6 +5390,7 @@ def project_action_selection(
     profile: Any = None,
     network_cidr: str | None = None,
     read_payload_builder: Callable[..., Mapping[str, Any]] | None = None,
+    operation_scope: str | None = None,
 ) -> ActionProjection:
     """Build one bounded ActionCard packet from canonical semantic inputs."""
     frame = intent.get("intent_frame") if isinstance(intent.get("intent_frame"), Mapping) else {}
@@ -3952,6 +5463,25 @@ def project_action_selection(
     for index, item in enumerate(selected):
         choice = chr(ord("A") + index)
         payload: dict[str, Any] = {"action": item["action_id"]}
+        # The bounded ACI packet carries the canonical action choice, while
+        # owner-authored arguments still need deterministic grounding. For a
+        # natural grocery add, the item name is the span between "add" and
+        # the grocery-list destination; do not make a small local model
+        # invent the name or require it to emit a second private schema.
+        if item["binding"] == "manage_assets" and item["action_id"] in {
+            "add_item", "add_stock", "consume_stock", "remove_from_grocery", "archive_item",
+        }:
+            grounded = canonical_inventory_mutation_payload(
+                item["action_id"],
+                query,
+                operation_scope=(
+                    str(operation_scope or "").strip()
+                    or str((active_run or {}).get("id") or "").strip()
+                    or None
+                ),
+            )
+            if grounded:
+                payload.update(grounded)
         if item["action_id"] == "summarize_owner_memory":
             payload["query"] = query
         if item["binding"] == "web_search":
@@ -3960,6 +5490,12 @@ def project_action_selection(
             payload["url"] = query
         if item["action_id"] == "plan_network_discovery" and network_cidr:
             payload["cidr"] = str(network_cidr)
+            # An explicit CIDR in the owner turn is the bounded scope
+            # authorization for the plan. Keep this server-owned grounding
+            # here rather than accepting an authorization field invented by
+            # the model. Context-derived scans still use CURRENT_CONTEXT in
+            # HomelabOperations and do not receive this flag.
+            payload["scope_authorization"] = "EXPLICITLY_AUTHORIZED"
         dependency_plan = dependency_manager.ensure_action(
             str(item.get("binding") or ""),
             str(item.get("action_id") or ""),
@@ -4044,13 +5580,39 @@ def project_action_selection(
                 if desired_action == "summarize_owner_memory":
                     fast_path["query"] = query
             mode = SelectionMode.DIRECT_ACTION
+    # Bounded inventory mutations already have server-grounded arguments from
+    # the owner request. Do not make the model re-encode a private action
+    # decision for these canonical operations: malformed or empty model
+    # JSON previously caused ordinary grocery additions to fall through to
+    # prose even though the requested item and destination were unambiguous.
+    if (
+        frame.get("domain_concept") == "HOUSEHOLD_ITEM"
+        and frame.get("operation_class") in {"CREATE", "UPDATE", "EXECUTE", "DELETE"}
+        and desired_binding == "manage_assets"
+        and desired_action in {"add_item", "add_stock", "consume_stock", "remove_from_grocery", "archive_item"}
+        and desired_binding in candidate_bindings
+        and desired_binding not in disabled
+    ):
+        selected_payload = next(
+            (
+                dict(value.get("payload") or {})
+                for value in choices.values()
+                if value.get("binding") == desired_binding
+                and value.get("payload", {}).get("action") == desired_action
+            ),
+            None,
+        )
+        if selected_payload and _inventory_payload_complete(selected_payload, desired_action):
+            fast_path = selected_payload
+            mode = SelectionMode.DIRECT_ACTION
     if mode is SelectionMode.NEED_CONTEXT:
         return ActionProjection(None, {}, None, mode, reason, clarification_instruction, "Which service or systemd unit should I restart?", ("action_target_clarification",))
     safety_messages = {
         "strong_identity_required": "I can't merge or identify assets by IP address alone; I need a strong identity such as a system UUID, serial, or MAC.",
         "public_scope_requires_authorization": "I can't scan a public or external range without an explicitly authorized target scope.",
-        "network_scope_requires_authorization": "I can't start an active network deep dive without an explicitly authorized target scope, such as a bounded CIDR. I can report the current host network context without scanning.",
+        "network_scope_requires_authorization": "I need one current, private network scope before I can scan. I can inspect the current host context to resolve that safely.",
         "action_revalidation_required": "I can't approve or replay a changed or completed Action; it must be freshly revalidated through the normal approval path.",
+        "inventory_quantity_required": "How much stock should I put in the pantry, fridge, or freezer? Include a quantity and unit; I won't claim a stock change without it.",
     }
     for constraint, message in safety_messages.items():
         if constraint in set(frame.get("constraints") or ()):
@@ -4107,13 +5669,22 @@ def safe_contract_fallback_selection(
         spec = action_for_tool(binding, {"action": action})
     except Exception:
         return None
-    if not (
+    inventory_mutation = binding == "manage_assets" and action in {
+        "add_item", "add_stock", "consume_stock",
+    }
+    safe_read = (
         spec
         and spec.known
         and spec.approval.value == "none"
         and not spec.writes
         and set(spec.effects).issubset({"read_private"})
-    ):
+    )
+    safe_inventory = (
+        inventory_mutation
+        and isinstance(selected.get("payload"), Mapping)
+        and _inventory_payload_complete(selected["payload"], action)
+    )
+    if not (spec and spec.known and (safe_read or safe_inventory)):
         return None
     return selected
 
@@ -4384,6 +5955,7 @@ def project_post_result_transition(
         state is PostResultState.BLOCKED
         and isinstance(selected_action, Mapping)
         and not bool(isinstance(result, Mapping) and result.get("approval_required"))
+        and not bool(isinstance(result, Mapping) and result.get("retryable"))
     ):
         return PostResultTransition(
             state,

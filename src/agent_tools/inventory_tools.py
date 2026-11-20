@@ -16,11 +16,11 @@ from typing import Any, Mapping
 logger = logging.getLogger(__name__)
 
 INVENTORY_ACTIONS = frozenset({
-    "list", "search", "get", "add_item", "add_stock", "consume_stock",
+    "list", "search", "get", "add_item", "update_item", "archive_item", "remove_from_grocery", "add_stock", "consume_stock",
     "adjust_stock", "get_components", "update_asset", "create_intake_draft",
 })
 RECIPE_ACTIONS = frozenset({
-    "list", "get", "can_make", "add", "cook",
+    "list", "suggest", "search", "get", "can_make", "missing", "missing_by_name", "queue_missing", "queue_missing_by_name", "add", "cook",
 })
 
 
@@ -75,6 +75,52 @@ async def _execute(content: str, ctx: Mapping[str, Any], *, method: str, actions
         # Do not log request payloads or exception text: both may contain
         # private inventory/recipe names supplied by the owner.
         logger.warning("%s service call failed (%s)", method, type(exc).__name__)
+        if method == "manage_recipes":
+            from src.inventory_service import InventoryError, InventoryNotFound
+            if isinstance(exc, InventoryNotFound):
+                return {
+                    "error": (
+                        "No saved recipe matched that dish. Import or paste the recipe first; "
+                        "I will compare it with current stock before changing Grocery."
+                    ),
+                    "error_code": "recipe_not_found",
+                    "retryable": True,
+                    "exit_code": 1,
+                }
+            if isinstance(exc, InventoryError) and "more than one saved recipe" in str(exc).casefold():
+                return {
+                    "error": (
+                        "I found multiple saved recipes for that dish. Choose one before I "
+                        "compare ingredients or change Grocery."
+                    ),
+                    "error_code": "recipe_ambiguous",
+                    "retryable": True,
+                    "exit_code": 1,
+                }
+        if method == "manage_inventory" and "individual grocery items" in str(exc):
+            return {
+                "error": (
+                    "The grocery action used a request phrase instead of concrete items. "
+                    "No change was made. For a named dish, use the recipe actions with "
+                    "individual ingredients, compare stock, then queue the missing items; "
+                    "otherwise ask the owner for the individual items."
+                ),
+                "error_code": "grocery_item_placeholder",
+                "retryable": True,
+                "exit_code": 1,
+            }
+        if method == "manage_inventory":
+            from src.inventory_service import InventoryNotFound
+            if isinstance(exc, InventoryNotFound):
+                return {
+                    "error": (
+                        "One or more requested inventory items were not found. "
+                        "No change was made; check the item names and try again."
+                    ),
+                    "error_code": "inventory_item_not_found",
+                    "retryable": True,
+                    "exit_code": 1,
+                }
         return {
             "error": "The inventory service could not complete that request. No change was confirmed.",
             "exit_code": 1,

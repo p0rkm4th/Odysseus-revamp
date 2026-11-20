@@ -34,7 +34,7 @@ def test_preview_is_structured_and_owner_scoped(db):
     assert preview["actions"][0]["contract"]["approval"] == "exact"
     assert preview["targets"] == ["network:private_scope"]
     assert preview["target_entities"] == preview["targets"]
-    assert preview["effect_classes"] == ["admin_change"]
+    assert preview["effect_classes"] == ["brokered_network_read"]
     assert preview["capability_health"] == [{"capability_id": "homelab.manage", "status": "available", "actions": ["execute_network_discovery"]}]
     assert preview["reversibility"][0]["irreversible"] is False
     with pytest.raises(Exception):

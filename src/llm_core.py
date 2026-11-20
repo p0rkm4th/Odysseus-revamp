@@ -830,6 +830,7 @@ def _build_ollama_payload(
     tools: Optional[List[Dict]] = None,
     num_ctx: Optional[int] = None,
     response_format=None,
+    reasoning_mode: str = "ordinary",
 ) -> Dict:
     """Build the JSON payload for Ollama's /api/chat endpoint.
 
@@ -858,22 +859,23 @@ def _build_ollama_payload(
         payload["options"] = options
     if tools:
         payload["tools"] = _alias_harmony_tools(tools, model)
-    # Keep the machine/content channels separate for normal Ollama chat too:
-    # Qwen3 otherwise spends a short answer budget in ``message.thinking``
-    # and leaves no user-visible content.  Structured decisions below repeat
-    # this assignment for clarity. Deliberate reasoning modes use their own
-    # provider adapter/request path rather than this ordinary chat builder.
+    # Keep ordinary conversation and machine decisions separate.  Thinking
+    # models should be allowed to emit their provider reasoning channel for a
+    # normal conversation, but a strict decision packet must remain a compact
+    # schema-first response.  The mode is explicit so response_format cannot
+    # accidentally become the only reason a caller disables reasoning.
     if _supports_thinking(model):
-        payload["think"] = False
+        payload["think"] = _reasoning_enabled(reasoning_mode)
     if response_format:
         payload["format"] = response_format
-        # A strict ACI DecisionContract is a machine channel, not a free-form
-        # reasoning transcript. Native Ollama otherwise defaults thinking
-        # models such as Qwen3 to the `message.thinking` field, leaving
-        # `message.content` empty and making the bounded decision parser see
-        # malformed JSON. The OpenAI-compatible path already applies the
-        # equivalent transport separation below.
-        payload["think"] = False
+        # Preserve the safe historical default for callers that already use
+        # response_format but have not yet opted into the explicit mode. An
+        # explicit structured preference remains independently configurable,
+        # but defaults to off so JSON decisions are not stranded in thinking.
+        if reasoning_mode == "structured":
+            payload["think"] = _reasoning_enabled("structured")
+        elif reasoning_mode == "ordinary":
+            payload["think"] = False
     return payload
 
 
@@ -1557,6 +1559,19 @@ def _anthropic_rejects_temperature(model: str) -> bool:
 # https://docs.mistral.ai/capabilities/reasoning/. Override via env var
 # ODYSSEUS_MISTRAL_REASONING_EFFORT (e.g. set to "medium" for cheaper chat).
 _MISTRAL_REASONING_EFFORT = os.getenv("ODYSSEUS_MISTRAL_REASONING_EFFORT", "high")
+
+# Reasoning is a presentation/quality choice for ordinary conversation, not
+# an authority choice.  Keep it independently configurable from the strict
+# machine-decision path.  ``on`` is the useful default for local thinking
+# models; ``off`` remains available for latency-sensitive deployments.
+_ORDINARY_REASONING = os.getenv("ODYSSEUS_ORDINARY_REASONING", "on").strip().lower()
+_STRUCTURED_REASONING = os.getenv("ODYSSEUS_STRUCTURED_REASONING", "off").strip().lower()
+
+
+def _reasoning_enabled(mode: str = "ordinary") -> bool:
+    """Return the configured provider reasoning preference for a call mode."""
+    preference = _STRUCTURED_REASONING if mode == "structured" else _ORDINARY_REASONING
+    return preference in {"1", "true", "yes", "on", "enabled", "high", "medium", "low"}
 
 # Models that support structured thinking — may output </think> without opening tag
 _THINKING_MODEL_PATTERNS = (
@@ -2687,7 +2702,7 @@ async def stream_llm(url: str, model: str, messages: List[Dict], temperature: fl
                      timeout: int = LLMConfig.STREAM_TIMEOUT, prompt_type: Optional[str] = None,
                      tools: Optional[List[Dict]] = None, session_id: Optional[str] = None,
                      tool_choice_none: bool = False, workload: str = "foreground",
-                     response_format=None):
+                     response_format=None, reasoning_mode: str = "ordinary"):
     target_url = _stream_target_url(url)
     async with _local_model_slot(target_url, model, workload):
         async for chunk in _stream_llm_inner(
@@ -2703,6 +2718,7 @@ async def stream_llm(url: str, model: str, messages: List[Dict], temperature: fl
             session_id=session_id,
             tool_choice_none=tool_choice_none,
             response_format=response_format,
+            reasoning_mode=reasoning_mode,
         ):
             yield chunk
 
@@ -2711,7 +2727,8 @@ async def _stream_llm_inner(url: str, model: str, messages: List[Dict], temperat
                             max_tokens: int = LLMConfig.DEFAULT_MAX_TOKENS, headers: Optional[Dict] = None,
                             timeout: int = LLMConfig.STREAM_TIMEOUT, prompt_type: Optional[str] = None,
                             tools: Optional[List[Dict]] = None, session_id: Optional[str] = None,
-                            tool_choice_none: bool = False, response_format=None):
+                            tool_choice_none: bool = False, response_format=None,
+                            reasoning_mode: str = "ordinary"):
     """Stream LLM responses with improved error handling.
 
     Yields SSE chunks:
@@ -2750,6 +2767,7 @@ async def _stream_llm_inner(url: str, model: str, messages: List[Dict], temperat
             model, messages_copy, temperature, max_tokens,
             stream=True, tools=tools, num_ctx=get_context_length(url, model),
             response_format=response_format,
+            reasoning_mode=reasoning_mode,
         )
     elif provider == "chatgpt-subscription":
         target_url = _normalize_chatgpt_subscription_url(url)
@@ -2781,14 +2799,19 @@ async def _stream_llm_inner(url: str, model: str, messages: List[Dict], temperat
         # Effort level is configurable via ODYSSEUS_MISTRAL_REASONING_EFFORT
         # (high / medium / low / none); default "high".
         if provider == "mistral" and _supports_thinking(model):
-            payload["reasoning_effort"] = _MISTRAL_REASONING_EFFORT
+            payload["reasoning_effort"] = (
+                _MISTRAL_REASONING_EFFORT
+                if _reasoning_enabled(reasoning_mode)
+                else "none"
+            )
         # For Ollama's OpenAI-compat /v1 endpoint, send both controls: some
         # runtimes ignore ``think:false`` but honor ``reasoning_effort:none``.
         # Keep this provider/runtime-specific rather than changing reasoning
         # behavior for other backends.
         if _is_ollama_openai_compat_url(url) and _supports_thinking(model):
-            payload["think"] = False
-            payload["reasoning_effort"] = "none"
+            enabled = _reasoning_enabled(reasoning_mode)
+            payload["think"] = enabled
+            payload["reasoning_effort"] = "high" if enabled else "none"
         _apply_local_cache_affinity(payload, url, session_id)
         _apply_local_generation_stability(payload, target_url, model)
         _scrub_openai_chat_tool_reasoning(payload, target_url, model)
@@ -3256,6 +3279,24 @@ async def _stream_llm_inner(url: str, model: str, messages: List[Dict], temperat
                                     text = err.get("message") if isinstance(err, dict) else str(err)
                                     yield f'event: error\ndata: {json.dumps({"error": text or "Upstream request failed", "status": status})}\n\n'
                                     return
+                                # A few OpenAI-compatible gateways wrap the
+                                # reasoning delta as an event rather than as a
+                                # choices.delta field. Normalize it here so
+                                # every downstream consumer receives the same
+                                # canonical thinking SSE event.
+                                event_type = str(j.get("type") or j.get("event") or "").lower()
+                                if event_type in {"reasoning", "thinking", "reasoning_delta", "thinking_delta"}:
+                                    event_text = (
+                                        j.get("delta")
+                                        or j.get("reasoning")
+                                        or j.get("reasoning_content")
+                                        or j.get("thinking")
+                                        or j.get("text")
+                                        or ""
+                                    )
+                                    if isinstance(event_text, str) and event_text:
+                                        yield _stream_delta_event(event_text, thinking=True)
+                                    continue
                                 chunk_model = j.get("model")
                                 if isinstance(chunk_model, str) and chunk_model.strip():
                                     _actual_model = chunk_model.strip()

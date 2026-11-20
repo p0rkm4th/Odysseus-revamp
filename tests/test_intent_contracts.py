@@ -1,3 +1,6 @@
+import calendar
+from datetime import date
+
 import pytest
 
 from src.intent_contracts import (
@@ -13,6 +16,7 @@ from src.intent_contracts import (
     resolve_structured_reference,
     explicit_private_discovery_cidr,
     is_explicit_network_discovery_request,
+    is_network_observation_result_request,
     is_network_prerequisite_request,
     is_network_service_enumeration_request,
     network_discovery_request_cidr,
@@ -25,6 +29,410 @@ from src.aci import is_contextual_reference_followup
 
 def test_contract_registry_is_complete_for_registered_contracts():
     assert validate_contracts() == []
+
+
+@pytest.mark.parametrize("query", [
+    "What did that scan find?",
+    "Which hosts responded, and what did that scan actually find?",
+    "Show me the results of the previous scan.",
+])
+def test_completed_network_scan_followup_is_a_read_not_a_new_approval(query):
+    assert is_network_observation_result_request(query) is True
+    assert is_explicit_network_discovery_request(query) is False
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "READ"
+    assert frame.read_explicit is True
+    assert resolved.action_id == "read_network_observations"
+
+
+@pytest.mark.parametrize(("query", "view", "action"), [
+    ("What can I make with what we have?", "available", "recipe_suggest"),
+    ("Show me recipes where I am only missing one or two things.", "few_shortages", "recipe_suggest"),
+])
+def test_recipe_availability_questions_use_canonical_stock_planning(query, view, action):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["view"] == view
+    assert resolved.available is True
+    assert resolved.action_id == action
+
+
+def test_budget_constraint_on_cooking_request_keeps_recipe_objective():
+    frame = compile_intent("What can I cook tonight without spending much?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["view"] == "available"
+    assert frame.filters["budget_constraint"] is True
+    assert frame.filters["available_only"] is False
+    assert resolved.action_id == "recipe_suggest"
+
+
+def test_explicit_on_hand_recipe_question_stays_ready_only():
+    frame = compile_intent("What can I make with what we have?")
+    assert frame.filters["available_only"] is True
+
+
+def test_modifier_new_does_not_turn_network_observation_into_create():
+    frame = compile_intent("Anything new on my network?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "NETWORK"
+    assert frame.operation_class == "READ"
+    assert resolved.action_id == "read_network_observations"
+
+
+def test_recipe_availability_payload_is_bounded_and_read_only():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "Show me recipes where I am only missing one or two things."
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
+    )
+    assert payload == {"action": "recipe_suggest", "max_shortages": 2, "limit": 20}
+
+
+def test_recipe_catalog_question_keeps_ready_and_missing_recipes_in_scope():
+    query = "What recipes can I make right now, and what ingredients are missing for the others?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters["view"] == "available"
+    assert frame.filters["available_only"] is False
+    assert resolved.action_id == "recipe_suggest"
+
+
+def test_recipe_ingredient_question_uses_bounded_canonical_filter():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "What recipes use the chicken before it goes bad?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.filters == {
+        "view": "ingredient", "ingredient_query": "chicken",
+        "use_expiring": True, "expiry_days": 30,
+    }
+    assert resolved.action_id == "recipe_suggest"
+    assert canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
+    ) == {
+        "action": "recipe_suggest", "ingredient_query": "chicken",
+        "use_expiring": True, "expiry_days": 30, "limit": 20,
+    }
+
+
+@pytest.mark.parametrize(("query", "view", "action"), [
+    ("How much have I spent this month?", "spending", "spending"),
+    ("How much money for this month specifically did I spend?", "spending", "spending"),
+    ("What have I spent on restaurants lately?", "spending", "spending"),
+    ("What's my inflow and outflow since the first?", "cash_flow", "cash_flow"),
+    ("Show me my recent transactions.", "transactions", "transactions"),
+    ("Is my financial data up to date?", "coverage", "coverage"),
+])
+def test_finance_read_view_is_preserved_by_canonical_resolution(query, view, action):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters.get("view") == view
+    assert resolved.available is True
+    assert resolved.action_id == action
+
+
+@pytest.mark.parametrize("query", [
+    "Go over my finances for me.",
+    "Check the CSV for my finances.",
+    "It's in my financial CSV that was uploaded earlier.",
+])
+def test_finance_file_and_overview_language_enters_canonical_read_path(query):
+    frame = compile_intent(query)
+    assert frame.domain_concept == "FINANCE"
+    assert resolve_intent(frame).available is True
+
+
+def test_broad_finance_year_request_uses_spending_overview_not_coverage_only():
+    frame = compile_intent("Show me all my finances for the year")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["start"].endswith("-01-01")
+
+
+def test_finance_walk_through_uses_bounded_spending_overview():
+    frame = compile_intent("Walk me through my finances from the last 3 months")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    today = date.today()
+    month_index = today.year * 12 + today.month - 1 - 3
+    year, month_zero = divmod(month_index, 12)
+    expected_day = min(today.day, calendar.monthrange(year, month_zero + 1)[1])
+    assert frame.filters["start"] == date(year, month_zero + 1, expected_day).isoformat()
+    assert frame.filters["end"] == today.isoformat()
+    assert "merchant" not in frame.filters
+
+
+def test_finance_insight_question_uses_bounded_spending_overview():
+    frame = compile_intent("What stands out in my finances this year?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+
+
+def test_generic_restaurant_phrase_is_category_not_literal_merchant():
+    frame = compile_intent("How much did I spend at restaurants this year?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["category"] == "Restaurants"
+    assert "merchant" not in frame.filters
+
+
+def test_finance_walkme_transcription_typo_stays_on_canonical_read_path():
+    frame = compile_intent("Walkme through my past 4 months of finances")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    today = date.today()
+    month_index = today.year * 12 + today.month - 1 - 4
+    year, month_zero = divmod(month_index, 12)
+    expected_day = min(today.day, calendar.monthrange(year, month_zero + 1)[1])
+    assert frame.filters["start"] == date(year, month_zero + 1, expected_day).isoformat()
+    assert frame.filters["end"] == today.isoformat()
+
+
+def test_paycheck_question_uses_bounded_posted_inflow_transactions():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "Where's my paychecks?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "transactions"
+    assert frame.filters["category"] == "Paycheck"
+    assert frame.filters["direction"] == "inflow"
+    assert frame.filters["status"] == "posted"
+    payload = canonical_read_fast_path_payload(resolved.binding_name, resolved.action_id, frame.as_dict(), query=query)
+    assert payload["category"] == "Paycheck"
+    assert payload["direction"] == "inflow"
+    assert payload["status"] == "posted"
+
+
+def test_paid_question_with_transcription_spacing_uses_bounded_paycheck_read():
+    query = "Howmuch have i been paid over the past 5 months?"
+    frame = compile_intent(query)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "transactions"
+    assert frame.filters["category"] == "Paycheck"
+    assert frame.filters["direction"] == "inflow"
+    assert frame.filters["status"] == "posted"
+
+
+
+def test_finance_merchant_selector_reaches_deterministic_spending_payload():
+    from src.aci import canonical_read_fast_path_payload
+
+    frame = compile_intent("How much did I spend this month at Publix?")
+    resolved = resolve_intent(frame)
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["merchant"] == "publix"
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(),
+        query="How much did I spend this month at Publix?",
+    )
+    assert payload["action"] == "spending"
+    assert payload["merchant"] == "publix"
+    assert payload["start"].endswith("-09-01")
+    assert payload["end"]
+
+
+def test_finance_category_selector_preserves_category_and_year_range():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "How much did I spend on insurance this year?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["category"] == "insurance"
+    assert frame.filters["start"].endswith("-01-01")
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
+    )
+    assert payload["category"] == "insurance"
+    assert payload["start"].endswith("-01-01")
+
+
+def test_explicit_finance_calendar_year_is_not_reduced_to_current_month():
+    query = "What was my spending in 2026?"
+    frame = compile_intent(query)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["start"] == "2026-01-01"
+    assert frame.filters["end"] == "2026-12-31"
+
+
+def test_ranked_finance_read_is_bounded_to_posted_outflows():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "What was my most expensive purchase this year?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_read_fast_path_payload(resolved.binding_name, resolved.action_id, frame.as_dict(), query=query)
+    assert payload["action"] == "transactions"
+    assert payload["status"] == "posted"
+    assert payload["direction"] == "outflow"
+    assert "category" not in payload
+
+
+def test_concise_merchant_spending_question_is_not_unfiltered():
+    from src.aci import canonical_read_fast_path_payload
+
+    frame = compile_intent("How much at Publix?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters == {"view": "spending", "merchant": "publix"}
+    assert canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(),
+        query="How much at Publix?",
+    ) == {"action": "spending", "merchant": "publix"}
+
+
+def test_merchant_selector_stops_before_natural_month_phrase():
+    frame = compile_intent("How much did I spend at Publix in September?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["merchant"] == "publix"
+    assert frame.filters["start"].endswith("-09-01")
+    assert frame.filters["end"].endswith("-09-30")
+
+
+def test_named_month_range_reaches_finance_fast_path_payload():
+    from src.aci import canonical_read_fast_path_payload
+
+    query = "How much did I spend at Publix in September?"
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_read_fast_path_payload(
+        resolved.binding_name, resolved.action_id, frame.as_dict(), query=query,
+    )
+    assert payload["merchant"] == "publix"
+    assert payload["start"].endswith("-09-01")
+    assert payload["end"].endswith("-09-30")
+
+
+def test_month_after_spending_for_is_a_date_not_a_category():
+    frame = compile_intent("Show my posted spending for September")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert "category" not in frame.filters
+    assert frame.filters["start"].endswith("-09-01")
+    assert frame.filters["end"].endswith("-09-30")
+
+
+def test_relative_year_range_does_not_default_to_current_month():
+    frame = compile_intent("How much did I spend dining out this year?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["start"].endswith("-01-01")
+    assert frame.filters["end"]
+
+
+def test_year_phrase_with_for_the_year_reaches_full_year_range():
+    frame = compile_intent("Show me all my finances for the year")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["start"].endswith("-01-01")
+    assert frame.filters["end"]
+
+
+def test_relative_multi_month_range_does_not_default_to_current_month():
+    frame = compile_intent("How much did I spend dining out in the past 6 months?")
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["view"] == "spending"
+    assert frame.filters["category"] == "dining_out"
+    assert frame.filters["start"] != date.today().replace(day=1).isoformat()
+    assert frame.filters["end"] == date.today().isoformat()
+
+
+def test_month_count_correction_reuses_finance_context():
+    from src.agent_loop import _classify_agent_request
+
+    messages = [
+        {"role": "user", "content": "How much have I spent dining out in the past 6 months?"},
+        {"role": "assistant", "content": "Posted spending for September."},
+    ]
+    projection = _classify_agent_request(messages, "Six months, not September")
+    assert projection is not None
+    frame = compile_intent(projection["retrieval_query"], continuation=projection["continuation"])
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["start"] != date.today().replace(day=1).isoformat()
+    assert frame.filters["category"] == "dining_out"
+
+
+def test_short_finance_period_correction_reaches_bounded_read():
+    from src.agent_loop import _classify_agent_request
+
+    messages = [
+        {"role": "user", "content": "How much did I spend dining out this year?"},
+        {"role": "assistant", "content": "Posted spending for September."},
+    ]
+    projection = _classify_agent_request(messages, "This year, not month")
+    frame = compile_intent(
+        projection["retrieval_query"],
+        continuation=projection["continuation"],
+    )
+    assert projection["continuation"] is False
+    assert frame.domain_concept == "FINANCE"
+    assert frame.filters["start"].endswith("-01-01")
+
+
+def test_dining_out_and_restaurant_filters_are_explicit():
+    dining = compile_intent("How much did I spend dining out this year?")
+    restaurants = compile_intent("What have I spent on restaurants lately?")
+    assert dining.filters["category"] == "dining_out"
+    assert restaurants.filters["category"] == "Restaurants"
+
+
+def test_grocery_removal_resolves_to_owner_scoped_unqueue_action():
+    frame = compile_intent("Remove rice from my grocery list.")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "DELETE"
+    assert resolved.available is True
+    assert resolved.action_id == "remove_from_grocery"
+
+
+@pytest.mark.parametrize("query", [
+    "Clear my grocery list.",
+    "Empty the shopping list.",
+    "Delete everything on the grocery list.",
+])
+def test_grocery_clear_is_a_bounded_set_unqueue_action(query):
+    from src.aci import canonical_inventory_mutation_payload
+
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    payload = canonical_inventory_mutation_payload(resolved.action_id, query)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "DELETE"
+    assert resolved.action_id == "remove_from_grocery"
+    assert payload == {
+        "action": "remove_from_grocery",
+        "clear": True,
+        "list_name": "grocery",
+        "domain": "kitchen",
+        "idempotency_key": payload["idempotency_key"],
+    }
+
+
+@pytest.mark.parametrize("query", [
+    "What recipes do I have?",
+    "Show my saved recipes.",
+    "What cooking recipes do we have?",
+])
+def test_saved_recipe_questions_use_the_canonical_recipe_collection(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "RECIPE"
+    assert frame.read_explicit is True
+    assert resolved.binding_name == "manage_assets"
+    assert resolved.action_id == "recipe_list"
 
 
 def test_contextual_reference_followup_uses_recent_semantic_context_only():
@@ -66,6 +474,19 @@ def test_network_action_predicates_are_semantic_and_non_authorizing():
     assert is_network_service_enumeration_request("enumerate services on discovered hosts")
     assert not is_explicit_network_discovery_request("what is a network scan?")
     assert not is_network_service_enumeration_request("show the network discovery status")
+
+
+@pytest.mark.parametrize("query", [
+    "Check my network for open ports on the responding devices",
+    "Check what is on port 22 on the responding hosts",
+])
+def test_port_scan_language_resolves_to_bounded_service_enumeration(query):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.operation_class == "EXECUTE"
+    assert frame.filters["view"] == "service_enumeration"
+    assert resolved.action_id == "plan_network_service_enumeration"
+    assert resolved.binding_name == "manage_homelab"
 
 
 @pytest.mark.parametrize("text, expected", [
@@ -142,6 +563,78 @@ def test_inventory_state_is_a_canonical_asset_read_but_household_inventory_is_no
     assert household.domain_concept == "HOUSEHOLD_ITEM"
 
 
+@pytest.mark.parametrize(("query", "operation", "action"), [
+    ("Add rice to my grocery list.", "CREATE", "add_item"),
+    ("Add 250 g of rice to the pantry.", "UPDATE", "add_stock"),
+    ("Add 2 l of milk to the pantry.", "UPDATE", "add_stock"),
+    ("I bought two 1-kilogram bags of rice; put them in the pantry.", "UPDATE", "add_stock"),
+    ("Use 500 grams of rice.", "EXECUTE", "consume_stock"),
+])
+def test_natural_grocery_and_pantry_stock_language_uses_inventory_actions(query, operation, action):
+    frame = compile_intent(query)
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == operation
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "inventory.manage"
+    assert resolved.binding_name == "manage_assets"
+    assert resolved.action_id == action
+
+
+def test_explicit_multi_item_grocery_request_is_grounded_as_individual_items():
+    from src.aci import canonical_inventory_mutation_payload
+
+    payload = canonical_inventory_mutation_payload(
+        "add_item", "add rice, milk, and eggs to my shopping list"
+    )
+    assert payload is not None
+    assert payload["items"] == ["rice", "milk", "eggs"]
+    assert "name" not in payload
+
+    named_item = canonical_inventory_mutation_payload(
+        "add_item", "add macaroni and cheese to my shopping list"
+    )
+    assert named_item["name"] == "macaroni and cheese"
+
+
+def test_singular_grocery_read_uses_the_canonical_household_path():
+    frame = compile_intent("Show my grocery list.")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "READ"
+    assert resolved.available is True
+    assert resolved.contract.capability_id == "household.read"
+    assert resolved.binding_name == "read_household"
+
+
+def test_natural_shared_fridge_question_reaches_canonical_inventory_read():
+    frame = compile_intent("What do we have in the shared fridge right now?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.filters["list_name"] == "fridge"
+    assert resolved.available is True
+    assert resolved.binding_name == "read_household"
+
+
+def test_freezer_typo_still_reaches_canonical_storage_read():
+    frame = compile_intent("whats in the frezer rn")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.operation_class == "READ"
+    assert frame.filters["list_name"] == "freezer"
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_household"
+
+
+def test_use_soon_question_projects_expiry_aware_household_read():
+    frame = compile_intent("What food do we have that needs used soon?")
+    resolved = resolve_intent(frame)
+    assert frame.domain_concept == "HOUSEHOLD_ITEM"
+    assert frame.filters == {"view": "expiring", "expiry_days": 30}
+    assert resolved.action_id == "overview"
+    assert resolved.binding_name == "read_household"
+
+
 @pytest.mark.parametrize("query", [
     "look up summary in my technical asset state",
     "show my technical asset list information",
@@ -179,6 +672,8 @@ def test_conceptual_component_question_does_not_become_asset_read():
 
 @pytest.mark.parametrize("query", [
     "Show me what's in the kitchen.",
+    "What's on the house grocery list?",
+    "Dude, check my grocery list and don't fail me now",
     "Add angel hair pasta to my kitchen inventory.",
 ])
 def test_household_owner_turn_enters_bounded_aci_capability_path(query):
@@ -545,6 +1040,9 @@ def test_registered_collection_read_accepts_empty_typed_collection():
 @pytest.mark.parametrize(("query", "concept", "action_id", "binding"), [
     ("What is the status of my homelab services?", "SERVICE", "service_status", "manage_homelab"),
     ("Inspect my homelab host", "HOMELAB_HOST", "inspect_host", "manage_homelab"),
+    ("Which server looks unhealthy?", "NETWORK", "read_network_observations", "manage_homelab"),
+    ("Which server was acting weird earlier?", "NETWORK", "read_network_observations", "manage_homelab"),
+    ("What is the health of my servers?", "NETWORK", "read_network_observations", "manage_homelab"),
     ("Show my security engagements", "SECURITY_ENGAGEMENT", "list_engagements", "manage_security_assessment"),
     ("Show my security evidence", "SECURITY_EVIDENCE", "list_evidence", "manage_security_assessment"),
     ("What research history do I have?", "RESEARCH", "list_cases", "manage_osint"),
@@ -609,6 +1107,13 @@ def test_unqualified_service_restart_requires_target_clarification(query):
 def test_security_boundary_constraints_are_framework_resolvable(query, constraint):
     frame = compile_intent(query)
     assert constraint in frame.constraints
+
+
+def test_pantry_stock_addition_requires_a_bounded_quantity():
+    missing = compile_intent("Add shared dogfood salt to the pantry.")
+    supplied = compile_intent("Add 500 g of shared dogfood salt to the pantry.")
+    assert "inventory_quantity_required" in missing.constraints
+    assert "inventory_quantity_required" not in supplied.constraints
 
 
 def test_osint_reads_compile_to_the_existing_case_store_binding():
